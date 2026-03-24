@@ -13,7 +13,7 @@ const TEST_USER = {
   uid: 'cbdf46d7-7d66-4d43-8495-e1432a2ab071'
 };
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://fintech-secure-3.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://user360-admin-revamp.preview.emergentagent.com';
 
 test.describe('GST Invoice API Tests', () => {
   test('User invoices API returns correct structure', async ({ request }) => {

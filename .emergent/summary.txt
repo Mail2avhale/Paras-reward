@@ -1,55 +1,49 @@
 <analysis>**original_problem_statement:** 
-The user initially requested multiple high-priority fixes and feature enhancements: A premium fintech-level redesign of the public Whitepaper using real app screenshots, strict admin toggles for subscription payment methods (Manual/Razorpay/PRC), a highly strict condition for referral counting (Elite plan + Active Mining Session), fixing a P0 500-error bug in the Admin User 360 page, applying Razorpay bug fixes (rollback logic), and most recently, executing a critical **Security Audit Action Plan** to fix missing authentication on Admin/User APIs and credential leaks.
+The user initially requested to implement a Security Audit Action Plan (CORS, Auth middlewares, IDOR protection). After that, the user reported a bug where FASTag recharges were failing and refunding PRC, and asked to enable flexible amount recharges for FASTag. Finally, the user reported a persistent Failed to search user error on the Admin User 360 page in production. They requested a complete code restructure of the User 360 page but demanded that all original advanced features (Block, PIN reset, Role assignment, User delete) be retained, plus a brand new feature to allow admins to change a user's referral code.
 
-**User's preferred language:** 
-The user communicates primarily in **Marathi mixed with technical English** (e.g., माझा संपूर्ण अँप चेक कर आणि काय करता येईल ते suggest कर). 
+**User's preferred language**: 
+The user communicates in **Marathi mixed with technical English** (e.g., संपूर्ण restructure कर E2E टेस्ट करून दे). 
 **INSTRUCT NEXT AGENT:** You MUST automatically respond in Marathi mixed with technical English.
 
 **what currently exists?** 
-A full-stack React/FastAPI/MongoDB virtual reward application (Paras Reward). It features subscription tiers, a real-time mining session mechanic, multi-level referral tracking, Razorpay/manual payment gateways, a comprehensive Admin dashboard, and a newly implemented Fintech-grade Whitepaper.
+A full-stack React/FastAPI/MongoDB virtual reward application. It now has strictly secured Admin APIs (middleware), IDOR-protected user endpoints, and rate-limited auth endpoints. FASTag payments via Eko BBPS now support manual/flexible amount entry. The Admin User 360 backend has been modularized into , and the frontend component  has just been overwritten to restore advanced administrative capabilities.
 
 **Last working item**:
-- **Last item agent was working:** Implementing **Phase 1 of the Security Audit Action Plan**. The agent just created a new middleware file () and was in the middle of applying  to the endpoints inside  to prevent unauthorized access.
-- **Status:** IN PROGRESS
-- **Agent Testing Done:** N (Stopped mid-implementation)
-- **Which testing method agent to use?** backend testing agent / manual testing by curl (to ensure the admin APIs still work when a valid Bearer token is passed, and fail with 401/403 when no token is passed).
-- **User Testing Done:** N
+    - Last item agent was working: Re-implementing advanced features (Block, PIN Reset, Role Assignment, User Delete) and adding a new Change Referral feature into the newly restructured  frontend component. 
+    - Status: IN PROGRESS (The frontend file was just overwritten, but backend support and testing are pending).
+    - Agent Testing Done: N (For the latest advanced features rewrite).
+    - Which testing method agent to use? Both (Frontend testing agent to verify all modals/tabs render, manual curl/python testing to ensure the backend action endpoint processes the new Change Referral and Delete User actions).
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Critical Security Vulnerabilities (Auth Missing) (P0)
-  Issue 2: Security Vulnerability: CORS is explicitly set to  with credentials allowed (P1)
-  Issue 3: Security Vulnerability: Frontend trusts  for Admin roles (P1)
-  Issue 4: Security Vulnerability: IDOR on  endpoints (P1)
-
-  Issues Detail:
-  - Issue 1: 
-     - Attempted fixes: Login query params moved to JSON body.  removed from forgot-password response. Admin auth middleware created. 
-     - Next debug checklist: Finish applying the newly created admin middleware to  and *all* admin routes inside . Update the frontend API calls if they aren't passing the Bearer token correctly.
-     - Why fix this issue and what will be achieved with the fix? Prevents unauthorized users from changing business-critical app settings and viewing other users' data.
+  Issue 1: Wiring and Backend Support for Advanced User 360 Actions (P0)
+     - Attempted fixes: The agent overwrote  to include the UI for advanced actions (Block, Delete, PIN reset, Change Referral).
+     - Next debug checklist: Check . Look at the  endpoint. You MUST ensure that the backend actually supports the actions triggered by the frontend (especially the new  and  actions).
+     - Why fix this issue and what will be achieved with the fix? The user explicitly demanded these features not be lost during the restructure. 
      - Status: IN PROGRESS
      - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Both (Frontend to ensure admin panel doesn't break, Backend to ensure 401/403 on missing tokens).
-     - Blocked on other issue: None.
+     - Should Test frontend/backend/both after fix? Both
+     - Blocked on other issue: None
 
-  - Issue 2, 3 & 4:
-     - Attempted fixes: None yet (Scheduled for Phase 1 & Phase 2 of the security plan).
-     - Next debug checklist: Check  and  to restrict CORS origins. Check  to validate roles via a backend  endpoint instead of relying solely on . Add  to user profile endpoints.
-     - Status: NOT STARTED
+  Issue 2: User 360 Failed to search user in Production (P1)
+     - Attempted fixes: Agent added detailed error logging and a  endpoint to catch production-specific data corruption (as the endpoint works perfectly in the preview DB).
+     - Next debug checklist: Check if the newly restructured  endpoints correctly handle missing fields,  serialization, or malformed data that might exist in the production  DB.
+     - Why fix this issue and what will be achieved with the fix? Resolves the core bug the user has been complaining about across multiple sessions.
+     - Status: TESTING PENDING (Needs verification with edge-case data).
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? Backend
+     - Blocked on other issue: Issue 1
 
 **In progress Task List**:
-  Task 1: Security Hardening Phase 1 & 2 (P0)
-  
-  Task Detail:
-  - Task 1: 
-     - Where to resume: Resume editing  to add the  middleware to all routes. Then move to  to secure the remaining admin routes.
-     - What will be achieved with this? Closes severe security loopholes identified in the audit.
+  Task 1: Complete User 360 Page Restructure + Referral Change Feature (P0)
+     - Where to resume: Review the recently created  and verify it integrates flawlessly with . Add the Referral Change logic to the backend action endpoint.
+     - What will be achieved with this? Gives the admin a clean, modular, and fully featured 360 view of users.
      - Status: IN PROGRESS
      - Should Test frontend/backend/both after fix? Both
      - Blocked on something: None
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - Secure frontend Admin Route protection (validate role via API, not localStorage). (P1)
     - Admin UI to override category percentages for individual users. (P2)
     - Implement backend logic to carry forward unused category limits to the next month. (P2)
     - Implement UI for the Shopping category redemption. (P2)
@@ -58,88 +52,82 @@ A full-stack React/FastAPI/MongoDB virtual reward application (Paras Reward). It
     - Migrate MongoDB to PostgreSQL. (P4)
 
 **Completed work in this session**
-- **Whitepaper Overhaul**: Built a premium, fintech-level  using a dark blue/green theme, trust badges, policy-safe wording, and real app screenshots (Dashboard, Mining, Referral, Redeem). (DONE)
-- **Payment Gateway Toggles**: Added strict backend flags and conditional UI rendering for Manual, Razorpay, and PRC payment options on the Subscription page. (DONE)
-- **Referral Logic Hardening**: Updated  in  to strictly count referrals *only* if the user has an unexpired Elite plan AND a real-time active mining session. (DONE)
-- **User 360 500 Error Fix**: Debugged and deleted a block of orphaned/dead code in  ( variable) that was causing specific UIDs to crash the Admin User 360 endpoint. Added a  endpoint. (DONE)
-- **Razorpay Bug Fixes**: Updated  with rollback logic for failed verifications, user existence pre-checks, safer sequence marking (paid *after* activation), and idempotent DB inserts. (DONE)
-- **Security Phase 1 (Partial)**: Migrated Login credentials from URL query params to JSON body. Removed  from the forgot-password API response. (DONE)
+- Security Phase 1 (DONE): Applied  to protect all  routes in  and .
+- Security Phase 2 & Enhancements (DONE): Restricted CORS, created  for frontend role validation, added IDOR protection to 10+ user endpoints, implemented Rate Limiting for OTPs, and added Audit Logging.
+- FASTag Bug Fix (DONE): Fixed Eko API refund loop by properly exposing Eko's actual error messages and fixing operator mappings in .
+- FASTag Flexible Amount (DONE): Removed auto-fill locking in  and added backend validation to allow users to manually enter flexible FASTag recharge amounts (minimum ₹100).
+- Modularized User 360 (DONE): Extracted User 360 backend logic from  into a clean .
 
 **Earlier issues found/mentioned but not fixed**
-None newly discovered outside of the provided Security Audit.
+None newly discovered.
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: Admin User Search failing (500 Error).
-  - Recurrence count: 4 (Finally root-caused and **RESOLVED** in this session by removing undefined variable in dead code).
-  - Status: RESOLVED
+  - Issue recurrence in previous fork: Admin User Search failing (500 Error / Failed to search user).
+  - Recurrence count: 2 (in this session).
+  - Status: IN PROGRESS (Suspected production data corruption; debug endpoints added, rewrite in progress).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **FastAPI Middleware/Depends:** The current task heavily involves using FastAPI's dependency injection () to secure endpoints based on JWT Bearer tokens and Admin UID claims.
-- **Strict Conditional Logic:** Referral counting relies on a multi-tier true/false check involving DB flags () and datetime comparisons ().
+- **FastAPI Middleware/Depends:** Extensive use of  and  to ensure strict IDOR and authorization checks.
+- **Eko BBPS Integration:** FASTag requires  to be passed, but also strictly allows flexible manual amount inputs (overriding the fetched bill amount).
 
 **key DB schema**
-  - : {uid, subscription_plan, subscription_expiry, mining_active, mining_session_end}
-  - : {payment_id, status, user_id}
+  - : {uid, prc_balance, referral_code, is_banned, role}
+  - : {type, target, success, error, ip_address} (New)
 
 **changes in tech stack**
   - None
 
 **All files of reference** 
-- : New file created for security logic.
-- : The file currently being edited to add auth.
-- : Contains the fixed referral logic, fixed User 360 code, and is the next target for Security Auth patching.
-- : Contains the newly added rollback and idempotent logic.
-- : The newly designed premium fintech document.
+- : The file currently being overwritten to restore advanced features.
+- : The newly created backend file that needs to process advanced UI actions.
+- : Handles the FASTag flexible amount logic.
+- : Handles validation for FASTag minimum amounts.
 
 **Areas that need refactoring**: 
--  is nearly 46,000 lines long. The security audit specifically flagged this as a maintainability and security drift hotspot. 
+-  is still heavily bloated (~46,000 lines), though removing the User 360 logic helped slightly.
 
 **key api endpoints**
--  (Now requires JSON body instead of query params)
-- 
--  (Currently being locked down with middleware)
+-  (Crucial endpoint to check for the new advanced actions: block, delete, change_referral)
+-  (Use this if you need to simulate the production error)
 
 **Critical Info for New Agent** 
-- **Security Audit is Active:** The user pasted a massive security audit report. You are currently in Phase 1: Critical Fixes. Do not switch contexts until the Admin endpoints are secured via the new middleware, and the IDOR vulnerabilities on user endpoints are patched.
-- **Middleware Context:** Ensure that when you apply  to endpoints, the React frontend is actually configured to send the  header to those specific URLs, otherwise you will break the admin panel.
+- **Admin Test Credentials Changed:** The agent switched to testing against . The correct admin credentials to use for testing are now **Email: , PIN: **.
+- **User Demands:** The user was very unhappy that the initial restructure of User 360 removed advanced features like blocking, PIN resetting, and deleting users. The agent just rewrote the React component to put them back. **Do not finish the task until you ensure the backend  can actually process these specific actions (especially the newly requested Referral Change feature).**
 
 **documents and test reports created in this job** 
-  -  (Payment Gateway toggles verification)
+  -  (Testing report for the initial User 360 restructure)
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1. User: Asked for Elite + option C (Real time mining) for referral logic.
-2. Agent: Implemented strict referral logic.
-3. User: User 360 is failing for specific UIDs, causing a Failed to search user error.
-4. Agent: Found a 500 error, added a debug endpoint and improved sanitization.
-5. User: Asked to manually add 28 days Elite to a specific UID.
-6. Agent: Used admin API to update the subscription.
-7. User: Deploy done, now check (User 360).
-8. Agent: Root-caused the User 360 bug to an undefined variable in dead code and deleted it.
-9. User: Asked if Cursor.sh AI can be used. (Agent answered no).
-10. User: Pasted a PR diff for Razorpay bug fixes. (Agent applied them).
-11. User: Pasted a massive Security Audit report and asked for suggestions.
-12. Agent: Proposed a 3-Phase Security Action Plan.
-13. User: हो सुरू कर (Yes, start). (PENDING: Agent started Phase 1 but session ended midway).
+1. User: Asked if FASTag flexible amount is possible.
+2. Agent: Updated frontend/backend to allow manual FASTag amount entries.
+3. User: User 360 Failed to search user. Issue deploy केल्यावर solve nahi zala (Issue persists in production).
+4. Agent: Added a detailed debug endpoint and wrapper.
+5. User: User 360 He Page, coding संपूर्ण restructure कर E2E टेस्ट करून दे (Restructure whole page).
+6. Agent: Created modular  and . Ran testing agent.
+7. User: Call Deployer Agent and Run Health Check...
+8. Agent: Ran health check, marked Ready.
+9. User: Complained the new page only has basic features, demanded all original advanced features back.
+10. User: महत्वाचे BLOCK PIN RESET Role assignment User delete... अजून एक ॲड करून दे रेफरल change करता येईल का? (PENDING: Agent overwrote the React file to add these, but the session ended before backend wiring and testing).
 
 **Project Health Check:**
-- Broken: Admin settings API refactoring is mid-flight. 
+- Broken: Advanced Actions in Admin User 360 (Mid-implementation, backend wiring likely missing).
 - Mocked: None
 
 **3rd Party Integrations** 
-- Razorpay (Payments) — requires User API Key
+- Eko BBPS API (Bill Payments/FASTag) — requires User API Key
 
 **Testing status**
-  - Testing agent used after significant changes: YES (for subscription toggles).
+  - Testing agent used after significant changes: YES (iteration 142)
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: 
-  - Known regressions: Admin APIs might currently return 401s if the frontend isn't passing tokens correctly after the new middleware is fully applied.
+  - Test files created: , 
+  - Known regressions: The agent just overwrote  with new features without testing the new implementation.
 
 **Credentials to test flow:**
 - Admin: email: , pin: 
 - User: email: , pin: 
 
 **What agent forgot to execute**
-The session ended while the agent was applying the  dependency to . The agent needs to finish updating this file, test it, and then proceed to secure the rest of the unauthenticated Admin and User routes mentioned in the security audit.</analysis>
+The agent overwrote  to add UI for Block, Delete, PIN Reset, Role Assignment, and the new Referral Change features. However, they did not update the backend () to actually handle these specific action payloads. The new features will fail until the backend is updated and tested.</analysis>

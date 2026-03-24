@@ -10,6 +10,8 @@ from datetime import datetime, timezone, timedelta
 import logging
 import re
 import uuid
+import random
+import bcrypt
 
 router = APIRouter(prefix="/admin/user360", tags=["Admin User 360"])
 
@@ -253,10 +255,12 @@ async def get_user_full_360(uid: str):
 # ========== USER ACTIONS ==========
 
 class UserActionRequest(BaseModel):
-    action: str  # ban, unban, add_prc, deduct_prc, update_plan
+    action: str  # ban, unban, block_user, unblock_user, add_prc, deduct_prc, update_plan, reset_pin, change_role, change_referral, delete_user
     value: Optional[Any] = None
     reason: Optional[str] = None
     admin_id: Optional[str] = None
+    new_role: Optional[str] = None
+    new_referrer: Optional[str] = None
 
 
 @router.post("/action/{uid}")
@@ -333,11 +337,112 @@ async def perform_user_action(uid: str, request: UserActionRequest):
         })
         
     elif request.action == "update_plan":
-        valid_plans = ["free", "startup", "growth", "elite"]
+        valid_plans = ["free", "explorer", "startup", "growth", "elite"]
         if request.value not in valid_plans:
             raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {valid_plans}")
         
         update_data["subscription_plan"] = request.value
+    
+    # Block user (alias for ban)
+    elif request.action == "block_user":
+        update_data["is_banned"] = True
+        update_data["ban_reason"] = request.reason or "Admin action"
+        update_data["banned_at"] = timestamp
+    
+    # Unblock user (alias for unban)
+    elif request.action == "unblock_user":
+        update_data["is_banned"] = False
+        update_data["ban_reason"] = None
+        update_data["unbanned_at"] = timestamp
+    
+    # Reset PIN - Generate new random 6-digit PIN
+    elif request.action == "reset_pin":
+        import random
+        import bcrypt
+        new_pin = str(random.randint(100000, 999999))
+        hashed_pin = bcrypt.hashpw(new_pin.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        update_data["hashed_pin"] = hashed_pin
+        update_data["pin_hash"] = hashed_pin  # Backward compatibility
+        update_data["pin_reset_at"] = timestamp
+        
+        # Return new PIN in response
+        await db.users.update_one({"uid": uid}, {"$set": update_data})
+        await db.admin_audit_logs.insert_one({
+            "admin_id": request.admin_id,
+            "action": "reset_pin",
+            "target_user": uid,
+            "reason": request.reason,
+            "timestamp": timestamp
+        })
+        return {
+            "success": True,
+            "message": "PIN reset successfully",
+            "new_pin": new_pin,
+            "updated_fields": list(update_data.keys())
+        }
+    
+    # Change user role
+    elif request.action == "change_role":
+        valid_roles = ["user", "sub_admin", "admin"]
+        new_role = request.new_role or request.value
+        if new_role not in valid_roles:
+            raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
+        
+        update_data["role"] = new_role
+        update_data["role_updated_at"] = timestamp
+    
+    # Change referral (new referrer UID)
+    elif request.action == "change_referral":
+        new_referrer = request.new_referrer or request.value
+        
+        if new_referrer and new_referrer.lower() == "remove":
+            # Remove referral
+            update_data["referred_by"] = None
+            update_data["referral_removed_at"] = timestamp
+        else:
+            # Validate new referrer exists
+            referrer_user = await db.users.find_one({"uid": new_referrer})
+            if not referrer_user:
+                raise HTTPException(status_code=404, detail=f"Referrer user not found: {new_referrer}")
+            
+            if new_referrer == uid:
+                raise HTTPException(status_code=400, detail="User cannot be their own referrer")
+            
+            old_referrer = user.get("referred_by")
+            update_data["referred_by"] = new_referrer
+            update_data["referral_changed_at"] = timestamp
+            update_data["previous_referrer"] = old_referrer
+    
+    # Delete user permanently
+    elif request.action == "delete_user":
+        # Archive user data before deletion
+        user_archive = {
+            **sanitize_doc(user),
+            "deleted_at": timestamp,
+            "deleted_by_admin": request.admin_id,
+            "deletion_reason": request.reason or "Admin action"
+        }
+        await db.deleted_users_archive.insert_one(user_archive)
+        
+        # Delete from users collection
+        await db.users.delete_one({"uid": uid})
+        
+        # Log deletion
+        await db.admin_audit_logs.insert_one({
+            "admin_id": request.admin_id,
+            "action": "delete_user",
+            "target_user": uid,
+            "user_email": user.get("email"),
+            "user_name": user.get("name"),
+            "reason": request.reason,
+            "timestamp": timestamp
+        })
+        
+        return {
+            "success": True,
+            "message": f"User {uid} deleted permanently. Archived in deleted_users_archive collection.",
+            "deleted_uid": uid
+        }
         
     else:
         raise HTTPException(status_code=400, detail=f"Unknown action: {request.action}")

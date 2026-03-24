@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://fintech-secure-3.preview.emergentagent.com/setup
+   https://user360-admin-revamp.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
