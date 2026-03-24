@@ -1049,9 +1049,10 @@ class AdminAuthMiddleware(BaseHTTPMiddleware):
     SECURITY: Middleware to protect all /admin/ routes
     Requires valid JWT token with admin role
     """
-    # Routes that should be excluded from auth check (non-sensitive admin read endpoints)
+    # Routes that should be excluded from auth check (public endpoints under /admin)
     EXCLUDED_ROUTES = [
         "/api/admin/payment-gateways-status",  # Public payment gateway status
+        "/api/admin/popup/active",  # Public popup for user dashboard
     ]
     
     async def dispatch(self, request, call_next):
