@@ -2491,3 +2491,548 @@ async def reverse_single_subscription(request: Request):
     except Exception as e:
         logging.error(f"[REVERSE-SUB] Error: {e}")
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
+
+
+
+# ==================== REVENUE DASHBOARD APIs ====================
+
+@router.get("/admin/revenue-dashboard")
+async def get_revenue_dashboard():
+    """Get revenue statistics for dashboard with daily/weekly/monthly breakdown"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        now = datetime.now(timezone.utc)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - timedelta(days=now.weekday())
+        month_start = today_start.replace(day=1)
+        year_start = today_start.replace(month=1, day=1)
+        
+        # Get all paid orders
+        paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(10000)
+        
+        # Calculate revenue metrics
+        total_revenue = 0
+        today_revenue = 0
+        week_revenue = 0
+        month_revenue = 0
+        year_revenue = 0
+        
+        # Daily revenue for last 30 days (for chart)
+        daily_revenue = {}
+        for i in range(30):
+            date = (today_start - timedelta(days=i)).strftime("%Y-%m-%d")
+            daily_revenue[date] = 0
+        
+        # Monthly revenue for last 12 months
+        monthly_revenue = {}
+        for i in range(12):
+            month_date = today_start.replace(day=1) - timedelta(days=i*30)
+            month_key = month_date.strftime("%Y-%m")
+            monthly_revenue[month_key] = 0
+        
+        # Payment method breakdown
+        payment_methods = {"upi": 0, "card": 0, "netbanking": 0, "wallet": 0, "other": 0}
+        
+        # Plan breakdown
+        plan_revenue = {"elite": 0, "startup": 0, "growth": 0, "other": 0}
+        
+        for order in paid_orders:
+            amount = order.get("amount", 0)
+            paid_at = order.get("paid_at") or order.get("created_at")
+            
+            if isinstance(paid_at, str):
+                try:
+                    paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
+                except:
+                    continue
+            
+            if not paid_at:
+                continue
+                
+            # Make timezone aware if not
+            if paid_at.tzinfo is None:
+                paid_at = paid_at.replace(tzinfo=timezone.utc)
+            
+            total_revenue += amount
+            
+            # Today
+            if paid_at >= today_start:
+                today_revenue += amount
+            
+            # This week
+            if paid_at >= week_start:
+                week_revenue += amount
+            
+            # This month
+            if paid_at >= month_start:
+                month_revenue += amount
+            
+            # This year
+            if paid_at >= year_start:
+                year_revenue += amount
+            
+            # Daily breakdown (last 30 days)
+            date_key = paid_at.strftime("%Y-%m-%d")
+            if date_key in daily_revenue:
+                daily_revenue[date_key] += amount
+            
+            # Monthly breakdown
+            month_key = paid_at.strftime("%Y-%m")
+            if month_key in monthly_revenue:
+                monthly_revenue[month_key] += amount
+            
+            # Payment method
+            method = order.get("payment_method", "other") or "other"
+            if method in payment_methods:
+                payment_methods[method] += amount
+            else:
+                payment_methods["other"] += amount
+            
+            # Plan breakdown
+            plan = (order.get("plan_name", "") or "").lower()
+            if "elite" in plan:
+                plan_revenue["elite"] += amount
+            elif "startup" in plan:
+                plan_revenue["startup"] += amount
+            elif "growth" in plan:
+                plan_revenue["growth"] += amount
+            else:
+                plan_revenue["other"] += amount
+        
+        # Convert daily_revenue to sorted list for chart
+        daily_chart = [
+            {"date": date, "revenue": daily_revenue[date]}
+            for date in sorted(daily_revenue.keys())
+        ]
+        
+        # Convert monthly to sorted list
+        monthly_chart = [
+            {"month": month, "revenue": monthly_revenue[month]}
+            for month in sorted(monthly_revenue.keys())
+        ]
+        
+        # Success rate
+        total_orders = await db.razorpay_orders.count_documents({})
+        paid_count = len(paid_orders)
+        failed_count = await db.razorpay_orders.count_documents({"status": {"$in": ["failed", "error"]}})
+        
+        success_rate = (paid_count / total_orders * 100) if total_orders > 0 else 0
+        
+        return {
+            "success": True,
+            "revenue": {
+                "total": total_revenue,
+                "today": today_revenue,
+                "this_week": week_revenue,
+                "this_month": month_revenue,
+                "this_year": year_revenue
+            },
+            "charts": {
+                "daily": daily_chart,
+                "monthly": monthly_chart
+            },
+            "payment_methods": payment_methods,
+            "plan_breakdown": plan_revenue,
+            "stats": {
+                "total_orders": total_orders,
+                "paid_orders": paid_count,
+                "failed_orders": failed_count,
+                "success_rate": round(success_rate, 1)
+            }
+        }
+        
+    except Exception as e:
+        logging.error(f"[REVENUE-DASHBOARD] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/admin/orders-by-date")
+async def get_orders_by_date_range(
+    date_from: str = None,
+    date_to: str = None,
+    status: str = None,
+    search: str = None,
+    limit: int = 100,
+    skip: int = 0
+):
+    """Get orders filtered by date range"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        query = {}
+        
+        # Date range filter
+        if date_from or date_to:
+            date_query = {}
+            if date_from:
+                try:
+                    from_date = datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                    date_query["$gte"] = from_date
+                except:
+                    pass
+            if date_to:
+                try:
+                    to_date = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                    date_query["$lte"] = to_date
+                except:
+                    pass
+            if date_query:
+                query["$or"] = [
+                    {"paid_at": date_query},
+                    {"created_at": date_query}
+                ]
+        
+        # Status filter
+        if status and status != "all":
+            query["status"] = status
+        
+        # Search filter
+        if search:
+            search_conditions = [
+                {"order_id": {"$regex": search, "$options": "i"}},
+                {"payment_id": {"$regex": search, "$options": "i"}},
+                {"user_name": {"$regex": search, "$options": "i"}},
+                {"user_email": {"$regex": search, "$options": "i"}},
+                {"user_mobile": {"$regex": search, "$options": "i"}},
+                {"payment_vpa": {"$regex": search, "$options": "i"}},
+                {"acquirer_data.rrn": {"$regex": search, "$options": "i"}}
+            ]
+            if "$or" in query:
+                # Combine with date filter using $and
+                query = {"$and": [query, {"$or": search_conditions}]}
+            else:
+                query["$or"] = search_conditions
+        
+        orders = await db.razorpay_orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        total = await db.razorpay_orders.count_documents(query)
+        
+        # Calculate totals for filtered results
+        all_filtered = await db.razorpay_orders.find(query).to_list(10000)
+        total_amount = sum(o.get("amount", 0) for o in all_filtered if o.get("status") == "paid")
+        
+        # Format orders
+        result = []
+        for order in orders:
+            acquirer_data = order.get("acquirer_data", {})
+            utr = acquirer_data.get("rrn") or acquirer_data.get("utr") or acquirer_data.get("bank_transaction_id")
+            
+            result.append({
+                "order_id": order.get("order_id"),
+                "user_id": order.get("user_id"),
+                "user_name": order.get("user_name", "Unknown"),
+                "user_email": order.get("user_email"),
+                "user_mobile": order.get("user_mobile"),
+                "plan_name": order.get("plan_name", "").title(),
+                "plan_type": order.get("plan_type"),
+                "amount": order.get("amount", 0),
+                "status": order.get("status"),
+                "payment_id": order.get("payment_id"),
+                "payment_method": order.get("payment_method"),
+                "payment_vpa": order.get("payment_vpa"),
+                "utr_number": utr,
+                "created_at": order.get("created_at"),
+                "paid_at": order.get("paid_at"),
+                "refund_id": order.get("refund_id"),
+                "refund_status": order.get("refund_status"),
+                "refunded_at": order.get("refunded_at")
+            })
+        
+        return {
+            "success": True,
+            "orders": result,
+            "total": total,
+            "filtered_revenue": total_amount
+        }
+        
+    except Exception as e:
+        logging.error(f"[ORDERS-BY-DATE] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== INVOICE GENERATION ====================
+
+@router.get("/admin/invoice/{order_id}")
+async def generate_invoice(order_id: str):
+    """Generate invoice data for a paid order"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        order = await db.razorpay_orders.find_one({"order_id": order_id})
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        if order.get("status") != "paid":
+            raise HTTPException(status_code=400, detail="Invoice can only be generated for paid orders")
+        
+        # Get user details
+        user = await db.users.find_one({"uid": order.get("user_id")}, {"_id": 0})
+        
+        # Generate invoice number
+        paid_at = order.get("paid_at") or order.get("created_at")
+        if isinstance(paid_at, str):
+            try:
+                paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
+            except:
+                paid_at = datetime.now(timezone.utc)
+        
+        invoice_number = f"PR-{paid_at.strftime('%Y%m%d')}-{order_id[-6:].upper()}"
+        
+        # Calculate GST (18%)
+        amount = order.get("amount", 0)
+        base_amount = round(amount / 1.18, 2)
+        gst_amount = round(amount - base_amount, 2)
+        
+        # Plan details
+        plan_name = order.get("plan_name", "Elite").title()
+        plan_type = order.get("plan_type", "monthly").title()
+        
+        duration_map = {
+            "monthly": "1 Month",
+            "quarterly": "3 Months",
+            "half_yearly": "6 Months",
+            "yearly": "12 Months"
+        }
+        duration = duration_map.get(order.get("plan_type", "monthly"), "1 Month")
+        
+        invoice_data = {
+            "invoice_number": invoice_number,
+            "invoice_date": paid_at.isoformat() if paid_at else None,
+            "order_id": order_id,
+            "payment_id": order.get("payment_id"),
+            "payment_method": order.get("payment_method", "Online"),
+            "utr_number": order.get("acquirer_data", {}).get("rrn"),
+            
+            # Customer details
+            "customer": {
+                "name": user.get("full_name") or user.get("name") if user else order.get("user_name", "Customer"),
+                "email": user.get("email") if user else order.get("user_email"),
+                "mobile": user.get("mobile") if user else order.get("user_mobile"),
+                "address": user.get("address") if user else None
+            },
+            
+            # Company details
+            "company": {
+                "name": "PARAS REWARD TECHNOLOGIES PRIVATE LIMITED",
+                "address": "Maharashtra, India",
+                "gstin": "27XXXXXXXXXXXXXXX",  # Add your GSTIN
+                "pan": "XXXXXXXXXX",  # Add your PAN
+                "email": "support@parasreward.com",
+                "phone": "+91-XXXXXXXXXX"
+            },
+            
+            # Line items
+            "items": [
+                {
+                    "description": f"{plan_name} Subscription - {plan_type}",
+                    "duration": duration,
+                    "hsn_code": "998314",  # SAC code for subscription services
+                    "quantity": 1,
+                    "unit_price": base_amount,
+                    "amount": base_amount
+                }
+            ],
+            
+            # Totals
+            "subtotal": base_amount,
+            "cgst": round(gst_amount / 2, 2),
+            "sgst": round(gst_amount / 2, 2),
+            "igst": 0,  # For same state, use CGST+SGST
+            "total_tax": gst_amount,
+            "total_amount": amount,
+            
+            # Payment status
+            "payment_status": "PAID",
+            "paid_at": paid_at.isoformat() if paid_at else None
+        }
+        
+        return {
+            "success": True,
+            "invoice": invoice_data
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[INVOICE] Error generating invoice for {order_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== REFUND PROCESSING ====================
+
+class RefundRequest(BaseModel):
+    order_id: str
+    reason: str
+    amount: Optional[float] = None  # None = full refund
+    admin_pin: str
+
+
+@router.post("/admin/initiate-refund")
+async def initiate_refund(request: RefundRequest):
+    """Initiate refund for a paid order via Razorpay API"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    if not razorpay_client:
+        raise HTTPException(status_code=500, detail="Razorpay not configured")
+    
+    # Verify admin PIN
+    if request.admin_pin != "153759":
+        raise HTTPException(status_code=403, detail="Invalid admin PIN")
+    
+    try:
+        # Get order
+        order = await db.razorpay_orders.find_one({"order_id": request.order_id})
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        if order.get("status") != "paid":
+            raise HTTPException(status_code=400, detail=f"Cannot refund order with status: {order.get('status')}")
+        
+        if order.get("refund_status") == "processed":
+            raise HTTPException(status_code=400, detail="Order already refunded")
+        
+        payment_id = order.get("payment_id")
+        if not payment_id:
+            raise HTTPException(status_code=400, detail="Payment ID not found for this order")
+        
+        # Calculate refund amount
+        original_amount = order.get("amount", 0)
+        refund_amount = request.amount if request.amount else original_amount
+        
+        if refund_amount > original_amount:
+            raise HTTPException(status_code=400, detail=f"Refund amount cannot exceed original amount (₹{original_amount})")
+        
+        # Convert to paise
+        refund_amount_paise = int(refund_amount * 100)
+        
+        # Initiate refund via Razorpay
+        try:
+            refund = razorpay_client.payment.refund(payment_id, {
+                "amount": refund_amount_paise,
+                "speed": "normal",  # or "optimum" for instant refund
+                "notes": {
+                    "reason": request.reason,
+                    "order_id": request.order_id,
+                    "initiated_by": "admin"
+                }
+            })
+            
+            logging.info(f"[REFUND] Initiated refund for payment {payment_id}: {refund}")
+            
+        except Exception as e:
+            logging.error(f"[REFUND] Razorpay API error: {e}")
+            raise HTTPException(status_code=400, detail=f"Razorpay refund failed: {str(e)}")
+        
+        # Update order in database
+        await db.razorpay_orders.update_one(
+            {"order_id": request.order_id},
+            {
+                "$set": {
+                    "refund_id": refund.get("id"),
+                    "refund_status": refund.get("status", "pending"),
+                    "refund_amount": refund_amount,
+                    "refund_reason": request.reason,
+                    "refunded_at": datetime.now(timezone.utc),
+                    "status": "refunded" if refund.get("status") == "processed" else "refund_pending"
+                }
+            }
+        )
+        
+        # Get user info
+        user = await db.users.find_one({"uid": order.get("user_id")}, {"_id": 0, "name": 1, "email": 1})
+        
+        # Log the refund action
+        await db.admin_actions.insert_one({
+            "action": "refund_initiated",
+            "order_id": request.order_id,
+            "payment_id": payment_id,
+            "refund_id": refund.get("id"),
+            "refund_amount": refund_amount,
+            "reason": request.reason,
+            "user_id": order.get("user_id"),
+            "user_name": user.get("name") if user else None,
+            "timestamp": datetime.now(timezone.utc)
+        })
+        
+        return {
+            "success": True,
+            "message": f"Refund of ₹{refund_amount} initiated successfully",
+            "refund": {
+                "id": refund.get("id"),
+                "status": refund.get("status"),
+                "amount": refund_amount,
+                "payment_id": payment_id,
+                "speed": refund.get("speed", "normal")
+            },
+            "user": {
+                "name": user.get("name") if user else order.get("user_name"),
+                "email": user.get("email") if user else order.get("user_email")
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REFUND] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/admin/refund-status/{order_id}")
+async def get_refund_status(order_id: str):
+    """Check refund status from Razorpay"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    if not razorpay_client:
+        raise HTTPException(status_code=500, detail="Razorpay not configured")
+    
+    try:
+        order = await db.razorpay_orders.find_one({"order_id": order_id})
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        refund_id = order.get("refund_id")
+        if not refund_id:
+            return {"success": True, "refund_status": "not_initiated", "message": "No refund initiated for this order"}
+        
+        # Fetch refund status from Razorpay
+        try:
+            refund = razorpay_client.refund.fetch(refund_id)
+            
+            # Update local status if changed
+            if refund.get("status") != order.get("refund_status"):
+                new_status = "refunded" if refund.get("status") == "processed" else "refund_pending"
+                await db.razorpay_orders.update_one(
+                    {"order_id": order_id},
+                    {"$set": {"refund_status": refund.get("status"), "status": new_status}}
+                )
+            
+            return {
+                "success": True,
+                "refund": {
+                    "id": refund.get("id"),
+                    "status": refund.get("status"),
+                    "amount": refund.get("amount", 0) / 100,
+                    "speed": refund.get("speed"),
+                    "created_at": refund.get("created_at")
+                }
+            }
+            
+        except Exception as e:
+            logging.error(f"[REFUND-STATUS] Razorpay API error: {e}")
+            return {
+                "success": True,
+                "refund_status": order.get("refund_status", "unknown"),
+                "refund_id": refund_id,
+                "message": "Could not fetch latest status from Razorpay"
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REFUND-STATUS] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

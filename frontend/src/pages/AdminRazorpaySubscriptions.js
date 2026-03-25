@@ -4,7 +4,8 @@ import axios from 'axios';
 import { 
   ArrowLeft, CreditCard, CheckCircle, Clock, XCircle, 
   TrendingUp, Users, IndianRupee, RefreshCw, Search,
-  Filter, Calendar, ChevronDown, AlertTriangle, Trash2
+  Filter, Calendar, ChevronDown, AlertTriangle, Trash2,
+  Download, FileText, RotateCcw, BarChart3, PieChart
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -28,6 +29,28 @@ const AdminRazorpaySubscriptions = ({ user }) => {
   const [sortBy, setSortBy] = useState('latest');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  
+  // Date range filters
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  
+  // Revenue dashboard state
+  const [showRevenueDashboard, setShowRevenueDashboard] = useState(false);
+  const [revenueData, setRevenueData] = useState(null);
+  const [revenueLoading, setRevenueLoading] = useState(false);
+  
+  // Refund modal state
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundOrder, setRefundOrder] = useState(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [adminPin, setAdminPin] = useState('');
+  
+  // Invoice modal state
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceData, setInvoiceData] = useState(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
   
   // Manual activation state
   const [showManualModal, setShowManualModal] = useState(false);
@@ -77,7 +100,17 @@ const AdminRazorpaySubscriptions = ({ user }) => {
       if (searchQuery) {
         params += `${params.includes('?') && params.length > 1 ? '&' : ''}search=${encodeURIComponent(searchQuery)}`;
       }
-      const res = await axios.get(`${API}/admin/razorpay-subscriptions${params}`);
+      // Add date range filters
+      if (dateFrom) {
+        params += `${params.includes('?') && params.length > 1 ? '&' : ''}date_from=${dateFrom}`;
+      }
+      if (dateTo) {
+        params += `${params.includes('?') && params.length > 1 ? '&' : ''}date_to=${dateTo}`;
+      }
+      
+      // Use date-filtered endpoint if dates are set
+      const endpoint = (dateFrom || dateTo) ? '/razorpay/admin/orders-by-date' : '/admin/razorpay-subscriptions';
+      const res = await axios.get(`${API}${endpoint}${params}`);
       setOrders(res.data.orders || []);
       setStats(res.data.stats || {});
     } catch (error) {
@@ -87,6 +120,175 @@ const AdminRazorpaySubscriptions = ({ user }) => {
       setLoading(false);
     }
   };
+  
+  // Fetch Revenue Dashboard Data
+  const fetchRevenueDashboard = async () => {
+    try {
+      setRevenueLoading(true);
+      const res = await axios.get(`${API}/razorpay/admin/revenue-dashboard`);
+      setRevenueData(res.data);
+      setShowRevenueDashboard(true);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to load revenue data');
+    } finally {
+      setRevenueLoading(false);
+    }
+  };
+  
+  // Generate Invoice
+  const generateInvoice = async (orderId) => {
+    try {
+      setInvoiceLoading(true);
+      const res = await axios.get(`${API}/razorpay/admin/invoice/${orderId}`);
+      setInvoiceData(res.data.invoice);
+      setShowInvoiceModal(true);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to generate invoice');
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
+  
+  // Print Invoice
+  const printInvoice = () => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice - ${invoiceData?.invoice_number}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+          .header { text-align: center; border-bottom: 2px solid #10b981; padding-bottom: 20px; margin-bottom: 30px; }
+          .header h1 { color: #10b981; margin: 0; }
+          .header p { color: #666; margin: 5px 0; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+          .info-box { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+          .info-box h3 { margin: 0 0 10px 0; color: #333; font-size: 14px; text-transform: uppercase; }
+          .info-box p { margin: 5px 0; color: #555; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+          th { background: #f8f9fa; font-weight: 600; }
+          .totals { text-align: right; }
+          .totals p { margin: 8px 0; }
+          .total-final { font-size: 20px; font-weight: bold; color: #10b981; }
+          .footer { text-align: center; color: #999; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
+          .paid-stamp { color: #10b981; font-size: 24px; font-weight: bold; text-align: center; padding: 20px; border: 3px solid #10b981; border-radius: 8px; margin: 20px 0; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>PARAS REWARD</h1>
+          <p>PARAS REWARD TECHNOLOGIES PRIVATE LIMITED</p>
+          <p>Tax Invoice</p>
+        </div>
+        
+        <div class="info-grid">
+          <div class="info-box">
+            <h3>Invoice Details</h3>
+            <p><strong>Invoice No:</strong> ${invoiceData?.invoice_number}</p>
+            <p><strong>Date:</strong> ${new Date(invoiceData?.invoice_date).toLocaleDateString('en-IN')}</p>
+            <p><strong>Payment ID:</strong> ${invoiceData?.payment_id || 'N/A'}</p>
+          </div>
+          <div class="info-box">
+            <h3>Bill To</h3>
+            <p><strong>${invoiceData?.customer?.name}</strong></p>
+            <p>${invoiceData?.customer?.email || ''}</p>
+            <p>${invoiceData?.customer?.mobile || ''}</p>
+          </div>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>HSN/SAC</th>
+              <th>Qty</th>
+              <th>Rate</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${invoiceData?.items?.map(item => `
+              <tr>
+                <td>${item.description}</td>
+                <td>${item.hsn_code}</td>
+                <td>${item.quantity}</td>
+                <td>₹${item.unit_price?.toFixed(2)}</td>
+                <td>₹${item.amount?.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        
+        <div class="totals">
+          <p>Subtotal: ₹${invoiceData?.subtotal?.toFixed(2)}</p>
+          <p>CGST (9%): ₹${invoiceData?.cgst?.toFixed(2)}</p>
+          <p>SGST (9%): ₹${invoiceData?.sgst?.toFixed(2)}</p>
+          <p class="total-final">Total: ₹${invoiceData?.total_amount?.toFixed(2)}</p>
+        </div>
+        
+        <div class="paid-stamp">✓ PAID</div>
+        
+        <div class="footer">
+          <p>Thank you for your business!</p>
+          <p>This is a computer-generated invoice and does not require a signature.</p>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+  
+  // Open Refund Modal
+  const openRefundModal = (order) => {
+    setRefundOrder(order);
+    setRefundAmount(order.amount?.toString() || '');
+    setRefundReason('');
+    setAdminPin('');
+    setShowRefundModal(true);
+  };
+  
+  // Process Refund
+  const processRefund = async () => {
+    if (!refundReason.trim()) {
+      toast.error('Please enter refund reason');
+      return;
+    }
+    if (!adminPin) {
+      toast.error('Please enter admin PIN');
+      return;
+    }
+    
+    try {
+      setRefundLoading(true);
+      const res = await axios.post(`${API}/razorpay/admin/initiate-refund`, {
+        order_id: refundOrder.order_id,
+        reason: refundReason,
+        amount: refundAmount ? parseFloat(refundAmount) : null,
+        admin_pin: adminPin
+      });
+      
+      toast.success(res.data.message);
+      setShowRefundModal(false);
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error(error.response?.data?.detail || 'Refund failed');
+    } finally {
+      setRefundLoading(false);
+    }
+  };
+  
+  // Clear date filters
+  const clearDateFilters = () => {
+    setDateFrom('');
+    setDateTo('');
+  };
 
   // Debounced search
   useEffect(() => {
@@ -94,7 +296,7 @@ const AdminRazorpaySubscriptions = ({ user }) => {
       fetchData();
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, dateFrom, dateTo]);
 
   // Fraud cleanup functions
   const previewFraudCleanup = async () => {
@@ -409,6 +611,51 @@ const AdminRazorpaySubscriptions = ({ user }) => {
             <span className="text-slate-500 text-sm">Failed</span>
           </div>
           <p className="text-2xl font-bold text-red-400">{stats.failed_orders || 0}</p>
+        </div>
+      </div>
+      
+      {/* Revenue Dashboard Button */}
+      <div className="px-5 mt-4">
+        <button
+          onClick={fetchRevenueDashboard}
+          disabled={revenueLoading}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg"
+        >
+          <BarChart3 className={`w-5 h-5 ${revenueLoading ? 'animate-pulse' : ''}`} />
+          <span>{revenueLoading ? 'Loading...' : '📊 Revenue Dashboard & Analytics'}</span>
+        </button>
+      </div>
+      
+      {/* Date Range Filters */}
+      <div className="px-5 mt-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Calendar className="w-4 h-4 text-slate-500" />
+          <span className="text-slate-600 text-sm font-medium">Filter by Date</span>
+        </div>
+        <div className="flex gap-2 items-center">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-sm"
+            placeholder="From"
+          />
+          <span className="text-slate-500">to</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-sm"
+            placeholder="To"
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              onClick={clearDateFilters}
+              className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm hover:bg-slate-200"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -766,6 +1013,34 @@ const AdminRazorpaySubscriptions = ({ user }) => {
                   <p className="text-red-300 text-xs">Use SYNC button to fix this.</p>
                 </div>
               )}
+              
+              {/* Action Buttons for Paid Orders */}
+              {order.status === 'paid' && (
+                <div className="mt-3 pt-3 border-t border-slate-200 flex gap-2">
+                  <button
+                    onClick={() => generateInvoice(order.order_id)}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-500/10 text-blue-600 text-sm font-medium hover:bg-blue-500/20 transition-all"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Invoice
+                  </button>
+                  {!order.refund_status && (
+                    <button
+                      onClick={() => openRefundModal(order)}
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-500/10 text-red-600 text-sm font-medium hover:bg-red-500/20 transition-all"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Refund
+                    </button>
+                  )}
+                  {order.refund_status && (
+                    <div className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-orange-500/10 text-orange-600 text-sm">
+                      <RotateCcw className="w-4 h-4" />
+                      {order.refund_status === 'processed' ? '✅ Refunded' : '⏳ Refund Pending'}
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           ))
         )}
@@ -892,6 +1167,313 @@ const AdminRazorpaySubscriptions = ({ user }) => {
                 <Trash2 className="w-4 h-4" />
                 {cleanupLoading ? 'Processing...' : 'Execute Cleanup'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Revenue Dashboard Modal */}
+      {showRevenueDashboard && revenueData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <BarChart3 className="w-6 h-6 text-emerald-500" />
+                Revenue Dashboard
+              </h2>
+              <button
+                onClick={() => setShowRevenueDashboard(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg"
+              >
+                <XCircle className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-6">
+              {/* Revenue Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                  <p className="text-slate-500 text-xs mb-1">Today</p>
+                  <p className="text-xl font-bold text-emerald-600">₹{revenueData.revenue?.today?.toLocaleString() || 0}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+                  <p className="text-slate-500 text-xs mb-1">This Week</p>
+                  <p className="text-xl font-bold text-blue-600">₹{revenueData.revenue?.this_week?.toLocaleString() || 0}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30">
+                  <p className="text-slate-500 text-xs mb-1">This Month</p>
+                  <p className="text-xl font-bold text-purple-600">₹{revenueData.revenue?.this_month?.toLocaleString() || 0}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                  <p className="text-slate-500 text-xs mb-1">This Year</p>
+                  <p className="text-xl font-bold text-amber-600">₹{revenueData.revenue?.this_year?.toLocaleString() || 0}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-100 border border-slate-300">
+                  <p className="text-slate-500 text-xs mb-1">All Time</p>
+                  <p className="text-xl font-bold text-slate-800">₹{revenueData.revenue?.total?.toLocaleString() || 0}</p>
+                </div>
+              </div>
+              
+              {/* Stats */}
+              <div className="grid grid-cols-4 gap-3">
+                <div className="p-3 rounded-lg bg-slate-50 text-center">
+                  <p className="text-2xl font-bold text-slate-800">{revenueData.stats?.total_orders || 0}</p>
+                  <p className="text-xs text-slate-500">Total Orders</p>
+                </div>
+                <div className="p-3 rounded-lg bg-emerald-50 text-center">
+                  <p className="text-2xl font-bold text-emerald-600">{revenueData.stats?.paid_orders || 0}</p>
+                  <p className="text-xs text-slate-500">Paid</p>
+                </div>
+                <div className="p-3 rounded-lg bg-red-50 text-center">
+                  <p className="text-2xl font-bold text-red-600">{revenueData.stats?.failed_orders || 0}</p>
+                  <p className="text-xs text-slate-500">Failed</p>
+                </div>
+                <div className="p-3 rounded-lg bg-blue-50 text-center">
+                  <p className="text-2xl font-bold text-blue-600">{revenueData.stats?.success_rate || 0}%</p>
+                  <p className="text-xs text-slate-500">Success Rate</p>
+                </div>
+              </div>
+              
+              {/* Payment Method Breakdown */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <PieChart className="w-4 h-4" />
+                  Payment Method Revenue
+                </h3>
+                <div className="grid grid-cols-5 gap-2">
+                  {Object.entries(revenueData.payment_methods || {}).map(([method, amount]) => (
+                    <div key={method} className="p-3 rounded-lg bg-slate-50 text-center">
+                      <p className="text-sm font-bold text-slate-700">₹{amount?.toLocaleString() || 0}</p>
+                      <p className="text-xs text-slate-500 uppercase">{method}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Plan Breakdown */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">Revenue by Plan</h3>
+                <div className="grid grid-cols-4 gap-2">
+                  {Object.entries(revenueData.plan_breakdown || {}).map(([plan, amount]) => (
+                    <div key={plan} className={`p-3 rounded-lg text-center ${
+                      plan === 'elite' ? 'bg-amber-50' : 
+                      plan === 'startup' ? 'bg-blue-50' : 
+                      plan === 'growth' ? 'bg-purple-50' : 'bg-slate-50'
+                    }`}>
+                      <p className="text-sm font-bold text-slate-700">₹{amount?.toLocaleString() || 0}</p>
+                      <p className="text-xs text-slate-500 uppercase">{plan}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Daily Revenue Chart (Simple Bar representation) */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">Last 30 Days Revenue</h3>
+                <div className="h-40 flex items-end gap-1 overflow-x-auto pb-2">
+                  {revenueData.charts?.daily?.slice(-30).map((day, i) => {
+                    const maxRevenue = Math.max(...(revenueData.charts?.daily?.map(d => d.revenue) || [1]));
+                    const height = maxRevenue > 0 ? (day.revenue / maxRevenue * 100) : 0;
+                    return (
+                      <div key={i} className="flex-shrink-0 flex flex-col items-center" style={{ width: '20px' }}>
+                        <div 
+                          className="w-3 bg-emerald-500 rounded-t hover:bg-emerald-600 transition-all cursor-pointer"
+                          style={{ height: `${Math.max(height, 2)}%` }}
+                          title={`${day.date}: ₹${day.revenue}`}
+                        />
+                        {i % 5 === 0 && (
+                          <span className="text-[8px] text-slate-400 mt-1 -rotate-45">
+                            {day.date?.slice(5)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Invoice Modal */}
+      {showInvoiceModal && invoiceData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-800">Invoice #{invoiceData.invoice_number}</h2>
+              <button
+                onClick={() => setShowInvoiceModal(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg"
+              >
+                <XCircle className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              {/* Company Header */}
+              <div className="text-center pb-4 border-b border-slate-200">
+                <h1 className="text-xl font-bold text-emerald-600">PARAS REWARD</h1>
+                <p className="text-xs text-slate-500">{invoiceData.company?.name}</p>
+              </div>
+              
+              {/* Invoice Details */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-500">Invoice Date</p>
+                  <p className="font-medium text-slate-800">
+                    {new Date(invoiceData.invoice_date).toLocaleDateString('en-IN')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Payment ID</p>
+                  <p className="font-mono text-xs text-slate-800">{invoiceData.payment_id}</p>
+                </div>
+              </div>
+              
+              {/* Customer Details */}
+              <div className="bg-slate-50 rounded-lg p-3">
+                <p className="text-xs text-slate-500 mb-1">Bill To</p>
+                <p className="font-semibold text-slate-800">{invoiceData.customer?.name}</p>
+                <p className="text-sm text-slate-600">{invoiceData.customer?.email}</p>
+                <p className="text-sm text-slate-600">{invoiceData.customer?.mobile}</p>
+              </div>
+              
+              {/* Items */}
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <div className="bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 grid grid-cols-3">
+                  <span>Description</span>
+                  <span className="text-center">HSN</span>
+                  <span className="text-right">Amount</span>
+                </div>
+                {invoiceData.items?.map((item, i) => (
+                  <div key={i} className="px-3 py-2 text-sm grid grid-cols-3 border-t border-slate-100">
+                    <span className="text-slate-800">{item.description}</span>
+                    <span className="text-center text-slate-500">{item.hsn_code}</span>
+                    <span className="text-right font-medium text-slate-800">₹{item.amount?.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Totals */}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Subtotal</span>
+                  <span className="text-slate-800">₹{invoiceData.subtotal?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">CGST (9%)</span>
+                  <span className="text-slate-800">₹{invoiceData.cgst?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">SGST (9%)</span>
+                  <span className="text-slate-800">₹{invoiceData.sgst?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-slate-200">
+                  <span className="font-semibold text-slate-800">Total</span>
+                  <span className="font-bold text-emerald-600 text-lg">₹{invoiceData.total_amount?.toFixed(2)}</span>
+                </div>
+              </div>
+              
+              {/* Paid Stamp */}
+              <div className="text-center py-3 border-2 border-emerald-500 rounded-lg">
+                <span className="text-emerald-600 font-bold text-xl">✓ PAID</span>
+              </div>
+              
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button
+                  onClick={printInvoice}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600"
+                >
+                  <Download className="w-4 h-4" />
+                  Download / Print
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Refund Modal */}
+      {showRefundModal && refundOrder && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md">
+            <div className="p-4 border-b border-slate-200">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <RotateCcw className="w-5 h-5 text-red-500" />
+                Process Refund
+              </h2>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              {/* Order Details */}
+              <div className="bg-slate-50 rounded-lg p-3">
+                <p className="text-sm text-slate-500">Order: <span className="font-mono text-slate-700">{refundOrder.order_id}</span></p>
+                <p className="text-sm text-slate-500">Customer: <span className="font-medium text-slate-700">{refundOrder.user_name}</span></p>
+                <p className="text-sm text-slate-500">Original Amount: <span className="font-bold text-emerald-600">₹{refundOrder.amount}</span></p>
+              </div>
+              
+              {/* Warning */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-600 text-sm font-medium">⚠️ Warning</p>
+                <p className="text-red-500 text-xs">Refund will be initiated via Razorpay. This action cannot be undone.</p>
+              </div>
+              
+              {/* Refund Amount */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Refund Amount (₹)</label>
+                <input
+                  type="number"
+                  value={refundAmount}
+                  onChange={(e) => setRefundAmount(e.target.value)}
+                  max={refundOrder.amount}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800"
+                  placeholder={`Max: ₹${refundOrder.amount}`}
+                />
+                <p className="text-xs text-slate-500 mt-1">Leave empty for full refund</p>
+              </div>
+              
+              {/* Reason */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Refund Reason *</label>
+                <textarea
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800"
+                  placeholder="Enter reason for refund..."
+                />
+              </div>
+              
+              {/* Admin PIN */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Admin PIN *</label>
+                <input
+                  type="password"
+                  value={adminPin}
+                  onChange={(e) => setAdminPin(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800"
+                  placeholder="Enter admin PIN to confirm"
+                />
+              </div>
+              
+              {/* Actions */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setShowRefundModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={processRefund}
+                  disabled={refundLoading || !refundReason}
+                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white font-medium disabled:opacity-50"
+                >
+                  {refundLoading ? 'Processing...' : 'Initiate Refund'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
