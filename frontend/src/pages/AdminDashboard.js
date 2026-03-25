@@ -677,42 +677,42 @@ const HeroStatCard = ({ icon: Icon, label, value, subValue, color, onClick }) =>
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-slate-500 text-xs font-medium mb-1">{label}</p>
-          <p className="text-2xl font-bold text-slate-800">{typeof value === 'number' ? value.toLocaleString() : value}</p>
-          <p className={`text-xs ${textColors[color]} mt-1 font-medium`}>{subValue}</p>
+          <p className="text-slate-600 text-[13px] font-semibold mb-1.5 uppercase tracking-wide">{label}</p>
+          <p className="text-[28px] font-bold text-slate-900">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+          <p className={`text-[13px] ${textColors[color]} mt-1.5 font-semibold`}>{subValue}</p>
         </div>
-        <div className={`w-12 h-12 rounded-xl ${iconColors[color]} flex items-center justify-center`}>
-          <Icon className="w-6 h-6" />
+        <div className={`w-14 h-14 rounded-xl ${iconColors[color]} flex items-center justify-center`}>
+          <Icon className="w-7 h-7" />
         </div>
       </div>
     </Card>
   );
 };
 
-// Subscription Card Component - BULKPE STYLE
+// Subscription Card Component - BULKPE STYLE - ENHANCED
 const SubscriptionCard = ({ plan, count, total, color, icon, onClick, price }) => {
   const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
   
   const colorClasses = {
-    gray: { bg: 'bg-slate-100', bar: 'bg-slate-400', text: 'text-slate-500', border: 'border-slate-200' },
-    blue: { bg: 'bg-blue-100', bar: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-200' },
-    purple: { bg: 'bg-purple-100', bar: 'bg-purple-500', text: 'text-purple-600', border: 'border-purple-200' },
-    amber: { bg: 'bg-orange-100', bar: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-200' },
+    gray: { bg: 'bg-slate-100', bar: 'bg-slate-400', text: 'text-slate-600', border: 'border-slate-200' },
+    blue: { bg: 'bg-blue-100', bar: 'bg-blue-500', text: 'text-blue-700', border: 'border-blue-200' },
+    purple: { bg: 'bg-purple-100', bar: 'bg-purple-500', text: 'text-purple-700', border: 'border-purple-200' },
+    amber: { bg: 'bg-orange-100', bar: 'bg-orange-500', text: 'text-orange-700', border: 'border-orange-200' },
   };
 
   return (
     <div 
-      className={`p-4 bg-white rounded-xl border ${colorClasses[color].border} ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200' : ''}`}
+      className={`p-5 bg-white rounded-xl border ${colorClasses[color].border} ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200' : ''}`}
       onClick={onClick}
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-lg">{icon}</span>
-        <span className={`text-xs font-semibold ${colorClasses[color].text}`}>{percentage}%</span>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xl">{icon}</span>
+        <span className={`text-[13px] font-bold ${colorClasses[color].text}`}>{percentage}%</span>
       </div>
-      <p className="text-xl font-bold text-slate-800">{count.toLocaleString()}</p>
-      <p className="text-xs text-slate-500 font-medium">{plan}</p>
-      {price && <p className={`text-xs ${colorClasses[color].text} mt-1`}>{price}</p>}
-      <div className={`h-1.5 ${colorClasses[color].bg} rounded-full overflow-hidden mt-3`}>
+      <p className="text-[24px] font-bold text-slate-900">{count.toLocaleString()}</p>
+      <p className="text-[14px] text-slate-700 font-semibold mt-1">{plan}</p>
+      {price && <p className={`text-[13px] ${colorClasses[color].text} mt-1 font-medium`}>{price}</p>}
+      <div className={`h-2 ${colorClasses[color].bg} rounded-full overflow-hidden mt-4`}>
         <div 
           className={`h-full ${colorClasses[color].bar} rounded-full transition-all duration-500`}
           style={{ width: `${percentage}%` }}
@@ -722,52 +722,52 @@ const SubscriptionCard = ({ plan, count, total, color, icon, onClick, price }) =
   );
 };
 
-// Mini Stat Card Component - BULKPE STYLE
+// Mini Stat Card Component - BULKPE STYLE - ENHANCED
 const MiniStatCard = ({ value, label, color, highlight }) => {
   const colorClasses = {
-    gray: 'text-slate-600',
-    emerald: 'text-emerald-600',
-    amber: 'text-amber-600',
-    red: 'text-red-600',
-    blue: 'text-blue-600',
+    gray: 'text-slate-700',
+    emerald: 'text-emerald-700',
+    amber: 'text-amber-700',
+    red: 'text-red-700',
+    blue: 'text-blue-700',
   };
 
   return (
-    <div className={`text-center p-3 rounded-xl ${highlight ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50'}`}>
-      <p className={`text-xl font-bold ${colorClasses[color]}`}>{value}</p>
-      <p className="text-[10px] text-slate-500 font-medium">{label}</p>
+    <div className={`text-center p-4 rounded-xl ${highlight ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50'}`}>
+      <p className={`text-[22px] font-bold ${colorClasses[color]}`}>{value}</p>
+      <p className="text-[12px] text-slate-600 font-semibold mt-1 uppercase tracking-wide">{label}</p>
     </div>
   );
 };
 
-// Quick Action Card Component - BULKPE STYLE
+// Quick Action Card Component - BULKPE STYLE - ENHANCED
 const QuickActionCard = ({ icon: Icon, label, badge, color, onClick }) => {
   const colorClasses = {
-    blue: 'bg-blue-50 border-blue-100 hover:bg-blue-100 text-blue-600',
-    purple: 'bg-purple-50 border-purple-100 hover:bg-purple-100 text-purple-600',
-    emerald: 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100 text-emerald-600',
-    amber: 'bg-amber-50 border-amber-100 hover:bg-amber-100 text-amber-600',
-    cyan: 'bg-cyan-50 border-cyan-100 hover:bg-cyan-100 text-cyan-600',
-    pink: 'bg-pink-50 border-pink-100 hover:bg-pink-100 text-pink-600',
-    teal: 'bg-teal-50 border-teal-100 hover:bg-teal-100 text-teal-600',
-    red: 'bg-red-50 border-red-100 hover:bg-red-100 text-red-600',
-    orange: 'bg-orange-50 border-orange-100 hover:bg-orange-100 text-orange-600',
-    gray: 'bg-slate-50 border-slate-100 hover:bg-slate-100 text-slate-600',
+    blue: 'bg-blue-50 border-blue-100 hover:bg-blue-100 text-blue-700',
+    purple: 'bg-purple-50 border-purple-100 hover:bg-purple-100 text-purple-700',
+    emerald: 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100 text-emerald-700',
+    amber: 'bg-amber-50 border-amber-100 hover:bg-amber-100 text-amber-700',
+    cyan: 'bg-cyan-50 border-cyan-100 hover:bg-cyan-100 text-cyan-700',
+    pink: 'bg-pink-50 border-pink-100 hover:bg-pink-100 text-pink-700',
+    teal: 'bg-teal-50 border-teal-100 hover:bg-teal-100 text-teal-700',
+    red: 'bg-red-50 border-red-100 hover:bg-red-100 text-red-700',
+    orange: 'bg-orange-50 border-orange-100 hover:bg-orange-100 text-orange-700',
+    gray: 'bg-slate-50 border-slate-100 hover:bg-slate-100 text-slate-700',
   };
 
   return (
     <button
       onClick={onClick}
-      className={`relative p-3 rounded-xl border transition-all duration-200 ${colorClasses[color]} text-center hover:scale-105 active:scale-95`}
+      className={`relative p-4 rounded-xl border transition-all duration-200 ${colorClasses[color]} text-center hover:scale-105 active:scale-95`}
       data-testid={`quick-action-${label.toLowerCase()}`}
     >
       {badge > 0 && (
-        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-slate-800 text-[10px] rounded-full flex items-center justify-center font-bold shadow-sm">
+        <span className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-red-500 text-white text-[11px] rounded-full flex items-center justify-center font-bold shadow-sm">
           {badge > 9 ? '9+' : badge}
         </span>
       )}
-      <Icon className="w-5 h-5 mx-auto mb-1" />
-      <p className="text-[10px] font-semibold truncate">{label}</p>
+      <Icon className="w-6 h-6 mx-auto mb-1.5" />
+      <p className="text-[12px] font-bold truncate">{label}</p>
     </button>
   );
 };

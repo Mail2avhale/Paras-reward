@@ -327,17 +327,17 @@ const AdminLayout = ({ children, user, onLogout }) => {
         key={item.id}
         data-testid={`admin-sidebar-${item.id}`}
         onClick={() => handleNavigation(item.path)}
-        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mx-2 my-0.5 transition-colors duration-200 ${
+        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl mx-2 my-0.5 transition-colors duration-200 ${
           isSubItem ? 'pl-10' : ''
         } ${
           active
             ? 'bg-purple-600 text-white shadow-lg shadow-purple-200'
-            : 'text-slate-600 hover:bg-purple-50 hover:text-purple-700'
+            : 'text-slate-700 hover:bg-purple-50 hover:text-purple-700'
         }`}
         title={sidebarCollapsed ? item.label : ''}
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
-        {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+        {!sidebarCollapsed && <span className="text-[15px] font-medium">{item.label}</span>}
       </button>
     );
   };
@@ -358,17 +358,17 @@ const AdminLayout = ({ children, user, onLogout }) => {
         <button
           data-testid={`admin-sidebar-group-${groupKey}`}
           onClick={() => !sidebarCollapsed && toggleGroup(groupKey)}
-          className={`w-full flex items-center justify-between px-4 py-3 mx-2 rounded-xl transition-colors duration-200 ${
+          className={`w-full flex items-center justify-between px-4 py-3.5 mx-2 rounded-xl transition-colors duration-200 ${
             groupActive
               ? 'bg-purple-50 text-purple-700 border-l-4 border-purple-600'
-              : 'text-slate-600 hover:bg-slate-50'
+              : 'text-slate-700 hover:bg-slate-50'
           }`}
           title={sidebarCollapsed ? group.label : ''}
         >
           <div className="flex items-center gap-3">
             <Icon className="h-5 w-5 flex-shrink-0" />
             {!sidebarCollapsed && (
-              <span className="text-sm font-semibold">{group.label}</span>
+              <span className="text-[15px] font-semibold">{group.label}</span>
             )}
             {!sidebarCollapsed && showTotalBadge && (
               <span className="px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[22px] text-center">
@@ -395,15 +395,15 @@ const AdminLayout = ({ children, user, onLogout }) => {
                   key={subItem.id}
                   data-testid={`admin-sidebar-${subItem.id}`}
                   onClick={() => handleNavigation(subItem.path)}
-                  className={`w-full flex items-center justify-between pl-12 pr-4 py-2.5 mx-2 rounded-xl transition-colors duration-200 ${
+                  className={`w-full flex items-center justify-between pl-12 pr-4 py-3 mx-2 rounded-xl transition-colors duration-200 ${
                     active
                       ? 'bg-purple-600 text-white'
-                      : 'text-slate-500 hover:bg-purple-50 hover:text-purple-700'
+                      : 'text-slate-600 hover:bg-purple-50 hover:text-purple-700'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <SubIcon className="h-4 w-4 flex-shrink-0" />
-                    <span className="text-sm">{subItem.label}</span>
+                    <span className="text-[14px] font-medium">{subItem.label}</span>
                   </div>
                   {hasPending && (
                     <span className={`px-2 py-0.5 text-xs font-bold rounded-full min-w-[22px] text-center ${

@@ -204,40 +204,40 @@ const AdminMembers = () => {
     fetchMembers();
   }, [fetchMembers]);
 
-  // Stats Card Component
+  // Stats Card Component - ENHANCED TYPOGRAPHY
   const StatsCard = ({ icon: Icon, title, value, subtitle, color, trend }) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white backdrop-blur-sm border border-slate-200 rounded-2xl p-4 md:p-5`}
+      className={`bg-white backdrop-blur-sm border border-slate-200 rounded-2xl p-5 md:p-6`}
     >
       <div className="flex items-start justify-between">
-        <div className={`p-2 md:p-3 rounded-xl ${color}`}>
-          <Icon className="w-5 h-5 md:w-6 md:h-6 text-slate-800" />
+        <div className={`p-3 rounded-xl ${color}`}>
+          <Icon className="w-6 h-6 md:w-7 md:h-7 text-slate-800" />
         </div>
         {trend !== undefined && (
-          <div className={`flex items-center gap-1 text-xs md:text-sm ${trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {trend >= 0 ? <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4" /> : <ArrowDownRight className="w-3 h-3 md:w-4 md:h-4" />}
+          <div className={`flex items-center gap-1 text-[13px] md:text-[14px] font-semibold ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {trend >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
             {Math.abs(trend)}%
           </div>
         )}
       </div>
-      <div className="mt-3 md:mt-4">
-        <p className="text-2xl md:text-3xl font-bold text-slate-800">{value?.toLocaleString() || 0}</p>
-        <p className="text-slate-500 text-xs md:text-sm mt-1">{title}</p>
-        {subtitle && <p className="text-slate-500 text-xs mt-1">{subtitle}</p>}
+      <div className="mt-4">
+        <p className="text-[28px] md:text-[32px] font-bold text-slate-900">{value?.toLocaleString() || 0}</p>
+        <p className="text-slate-700 text-[14px] md:text-[15px] mt-1 font-medium">{title}</p>
+        {subtitle && <p className="text-slate-500 text-[13px] mt-1">{subtitle}</p>}
       </div>
     </motion.div>
   );
 
-  // Period selector
+  // Period selector - ENHANCED
   const PeriodSelector = () => (
     <div className="flex flex-wrap gap-2 items-center">
       {['today', 'week', 'month', 'year', 'custom'].map((p) => (
         <button
           key={p}
           onClick={() => setPeriod(p)}
-          className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${
+          className={`px-4 py-2 rounded-xl text-[13px] md:text-[14px] font-semibold transition-all ${
             period === p
               ? 'bg-purple-600 text-slate-800'
               : 'bg-white text-slate-500 hover:bg-slate-100'
