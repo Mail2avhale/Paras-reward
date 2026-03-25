@@ -138,7 +138,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   // If redirecting to external page, show loading
   if (activeTab && externalRoutes[activeTab]) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white p-6 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-950 text-slate-800 p-6 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
       </div>
     );
@@ -148,7 +148,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   if (activeTab === systemTab) {
     return (
       <Suspense fallback={
-        <div className="min-h-screen bg-gray-950 text-white p-6 flex items-center justify-center">
+        <div className="min-h-screen bg-gray-950 text-slate-800 p-6 flex items-center justify-center">
           <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
         </div>
       }>
@@ -161,7 +161,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   if (activeTab && adminSettingsTabs.includes(activeTab)) {
     return (
       <Suspense fallback={
-        <div className="min-h-screen bg-gray-950 text-white p-6 flex items-center justify-center">
+        <div className="min-h-screen bg-gray-950 text-slate-800 p-6 flex items-center justify-center">
           <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
         </div>
       }>
@@ -173,22 +173,22 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   // If unknown tab, show message
   if (activeTab) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white p-6">
+      <div className="min-h-screen bg-gray-950 text-slate-800 p-6">
         <button 
           onClick={() => navigate('/admin/settings-hub')}
-          className="flex items-center gap-2 text-gray-400 hover:text-white mb-6"
+          className="flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-6"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to Settings Hub
         </button>
-        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div className="bg-white rounded-xl p-6 border border-slate-200">
           <h2 className="text-xl font-bold mb-4 capitalize">{activeTab.replace('-', ' ')} Settings</h2>
-          <p className="text-gray-400">
+          <p className="text-slate-500">
             This settings section is being moved to Admin Settings.
           </p>
           <button
             onClick={() => navigate('/admin/settings-hub?tab=payment')}
-            className="mt-4 px-4 py-2 bg-amber-500 hover:bg-amber-600 rounded-lg text-white"
+            className="mt-4 px-4 py-2 bg-amber-500 hover:bg-amber-600 rounded-lg text-slate-800"
           >
             Go to Admin Settings
           </button>
@@ -201,20 +201,20 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   return (
     <div className="min-h-screen bg-gray-950">
       {/* Header */}
-      <div className="px-4 py-6 border-b border-gray-800">
+      <div className="px-4 py-6 border-b border-slate-200">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/admin')}
-            className="w-10 h-10 rounded-xl bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors"
+            className="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 flex items-center justify-center transition-colors"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-400" />
+            <ArrowLeft className="w-5 h-5 text-slate-500" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
               <Settings className="w-6 h-6 text-purple-500" />
               Settings Hub
             </h1>
-            <p className="text-gray-500 text-sm mt-1">Manage all system configurations in one place</p>
+            <p className="text-slate-500 text-sm mt-1">Manage all system configurations in one place</p>
           </div>
         </div>
       </div>
@@ -238,15 +238,15 @@ const AdminSettingsHub = ({ user, onLogout }) => {
                 
                 {/* Icon */}
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-4 shadow-lg`}>
-                  <Icon className="w-6 h-6 text-white" />
+                  <Icon className="w-6 h-6 text-slate-800" />
                 </div>
                 
                 {/* Content */}
-                <h3 className="text-white font-semibold text-lg mb-2 flex items-center gap-2">
+                <h3 className="text-slate-800 font-semibold text-lg mb-2 flex items-center gap-2">
                   {category.label}
-                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-800 group-hover:translate-x-1 transition-all" />
                 </h3>
-                <p className="text-gray-400 text-sm leading-relaxed">
+                <p className="text-slate-500 text-sm leading-relaxed">
                   {category.description}
                 </p>
               </motion.button>
@@ -264,8 +264,8 @@ const AdminSettingsHub = ({ user, onLogout }) => {
               <Sparkles className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h3 className="text-white font-semibold mb-2">Quick Tips</h3>
-              <ul className="text-gray-400 text-sm space-y-1">
+              <h3 className="text-slate-800 font-semibold mb-2">Quick Tips</h3>
+              <ul className="text-slate-500 text-sm space-y-1">
                 <li>• Use <span className="text-purple-400">Payment Settings</span> to update UPI and bank details</li>
                 <li>• Configure subscription pricing in <span className="text-purple-400">System Settings</span></li>
                 <li>• Set redemption limits in <span className="text-purple-400">Redeem Safety</span></li>
@@ -326,11 +326,11 @@ const SystemTasksSection = () => {
 
   return (
     <div className="mt-8">
-      <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+      <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
         <Clock className="w-5 h-5 text-blue-400" />
         System Tasks (Manual Trigger)
       </h2>
-      <p className="text-gray-400 text-sm mb-4">
+      <p className="text-slate-500 text-sm mb-4">
         Run these tasks daily to keep the system healthy. Click to run manually.
       </p>
       
@@ -357,9 +357,9 @@ const SystemTasksSection = () => {
                     <Icon className={`w-5 h-5 text-${task.color}-400`} />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">{task.name}</h3>
-                    <p className="text-gray-400 text-sm mt-1">{task.description}</p>
-                    <p className="text-gray-500 text-xs mt-2">
+                    <h3 className="text-slate-800 font-semibold">{task.name}</h3>
+                    <p className="text-slate-500 text-sm mt-1">{task.description}</p>
+                    <p className="text-slate-500 text-xs mt-2">
                       <span className="text-blue-400">Recommended:</span> {task.recommended}
                     </p>
                     {lastRun[task.id] && (
@@ -376,8 +376,8 @@ const SystemTasksSection = () => {
                 disabled={isLoading}
                 className={`mt-4 w-full py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                   isLoading 
-                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
-                    : `bg-${task.color}-500 hover:bg-${task.color}-600 text-white`
+                    ? 'bg-gray-700 text-slate-500 cursor-not-allowed' 
+                    : `bg-${task.color}-500 hover:bg-${task.color}-600 text-slate-800`
                 }`}
                 data-testid={`run-${task.id}`}
               >

@@ -78,7 +78,7 @@ const AdminFinancialRatios = ({ user }) => {
   const underlying = data?.underlying_data || {};
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-financial-ratios">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6" data-testid="admin-financial-ratios">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -86,7 +86,7 @@ const AdminFinancialRatios = ({ user }) => {
             <Activity className="h-7 w-7 text-purple-600" />
             Financial Ratios & Health
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Business health indicators based on {data?.period}</p>
+          <p className="text-sm text-slate-500 mt-1">Business health indicators based on {data?.period}</p>
         </div>
         <Button variant="outline" onClick={fetchData} size="sm" disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -95,20 +95,20 @@ const AdminFinancialRatios = ({ user }) => {
       </div>
 
       {/* Health Score Card */}
-      <Card className={`p-6 mb-6 bg-gradient-to-r ${getHealthColor(data?.health_status)} text-white`}>
+      <Card className={`p-6 mb-6 bg-gradient-to-r ${getHealthColor(data?.health_status)} text-slate-800`}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-white/80 text-sm font-medium">Business Health Score</p>
+            <p className="text-slate-800/80 text-sm font-medium">Business Health Score</p>
             <div className="flex items-baseline gap-2 mt-2">
               <h1 className="text-5xl font-bold">{data?.health_score}</h1>
               <span className="text-2xl font-medium">/100</span>
             </div>
-            <p className="text-white/80 mt-2 capitalize font-medium">
+            <p className="text-slate-800/80 mt-2 capitalize font-medium">
               Status: {data?.health_status?.replace('_', ' ')}
             </p>
           </div>
           <div className="text-right">
-            <Heart className="h-16 w-16 text-white/30" />
+            <Heart className="h-16 w-16 text-slate-800/30" />
           </div>
         </div>
       </Card>
@@ -120,7 +120,7 @@ const AdminFinancialRatios = ({ user }) => {
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="font-semibold text-gray-900">Current Ratio</h3>
-              <p className="text-xs text-gray-500 mt-1">{ratios.current_ratio?.description}</p>
+              <p className="text-xs text-slate-500 mt-1">{ratios.current_ratio?.description}</p>
             </div>
             <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${getStatusColor(ratios.current_ratio?.status)}`}>
               {ratios.current_ratio?.status}
@@ -129,11 +129,11 @@ const AdminFinancialRatios = ({ user }) => {
           <div className="flex items-end justify-between">
             <div>
               <p className="text-3xl font-bold text-gray-900">{ratios.current_ratio?.value}</p>
-              <p className="text-sm text-gray-500">Benchmark: {ratios.current_ratio?.benchmark}</p>
+              <p className="text-sm text-slate-500">Benchmark: {ratios.current_ratio?.benchmark}</p>
             </div>
             <Gauge className={`h-10 w-10 ${ratios.current_ratio?.status === 'good' ? 'text-green-500' : ratios.current_ratio?.status === 'fair' ? 'text-amber-500' : 'text-red-500'}`} />
           </div>
-          <div className="mt-4 p-3 bg-gray-800/50 rounded-lg text-sm text-gray-600">
+          <div className="mt-4 p-3 bg-slate-50 rounded-lg text-sm text-gray-600">
             <p>Measures ability to pay short-term debts. Higher than 2.0 is ideal.</p>
           </div>
         </Card>
@@ -143,7 +143,7 @@ const AdminFinancialRatios = ({ user }) => {
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="font-semibold text-gray-900">Quick Ratio</h3>
-              <p className="text-xs text-gray-500 mt-1">{ratios.quick_ratio?.description}</p>
+              <p className="text-xs text-slate-500 mt-1">{ratios.quick_ratio?.description}</p>
             </div>
             <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${getStatusColor(ratios.quick_ratio?.status)}`}>
               {ratios.quick_ratio?.status}
@@ -152,11 +152,11 @@ const AdminFinancialRatios = ({ user }) => {
           <div className="flex items-end justify-between">
             <div>
               <p className="text-3xl font-bold text-gray-900">{ratios.quick_ratio?.value}</p>
-              <p className="text-sm text-gray-500">Benchmark: {ratios.quick_ratio?.benchmark}</p>
+              <p className="text-sm text-slate-500">Benchmark: {ratios.quick_ratio?.benchmark}</p>
             </div>
             <BarChart3 className={`h-10 w-10 ${ratios.quick_ratio?.status === 'good' ? 'text-green-500' : 'text-red-500'}`} />
           </div>
-          <div className="mt-4 p-3 bg-gray-800/50 rounded-lg text-sm text-gray-600">
+          <div className="mt-4 p-3 bg-slate-50 rounded-lg text-sm text-gray-600">
             <p>Liquidity without inventory. Should be at least 1.0.</p>
           </div>
         </Card>
@@ -166,7 +166,7 @@ const AdminFinancialRatios = ({ user }) => {
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="font-semibold text-gray-900">Profit Margin</h3>
-              <p className="text-xs text-gray-500 mt-1">{ratios.profit_margin?.description}</p>
+              <p className="text-xs text-slate-500 mt-1">{ratios.profit_margin?.description}</p>
             </div>
             <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${getStatusColor(ratios.profit_margin?.status)}`}>
               {ratios.profit_margin?.status}
@@ -175,7 +175,7 @@ const AdminFinancialRatios = ({ user }) => {
           <div className="flex items-end justify-between">
             <div>
               <p className="text-3xl font-bold text-gray-900">{ratios.profit_margin?.value}%</p>
-              <p className="text-sm text-gray-500">Benchmark: {ratios.profit_margin?.benchmark}%</p>
+              <p className="text-sm text-slate-500">Benchmark: {ratios.profit_margin?.benchmark}%</p>
             </div>
             {ratios.profit_margin?.value >= 0 ? (
               <TrendingUp className="h-10 w-10 text-green-500" />
@@ -183,7 +183,7 @@ const AdminFinancialRatios = ({ user }) => {
               <TrendingDown className="h-10 w-10 text-red-500" />
             )}
           </div>
-          <div className="mt-4 p-3 bg-gray-800/50 rounded-lg text-sm text-gray-600">
+          <div className="mt-4 p-3 bg-slate-50 rounded-lg text-sm text-gray-600">
             <p>Percentage of revenue retained as profit. Higher is better.</p>
           </div>
         </Card>
@@ -193,7 +193,7 @@ const AdminFinancialRatios = ({ user }) => {
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="font-semibold text-gray-900">Expense Ratio</h3>
-              <p className="text-xs text-gray-500 mt-1">{ratios.expense_ratio?.description}</p>
+              <p className="text-xs text-slate-500 mt-1">{ratios.expense_ratio?.description}</p>
             </div>
             <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${getStatusColor(ratios.expense_ratio?.status)}`}>
               {ratios.expense_ratio?.status}
@@ -202,11 +202,11 @@ const AdminFinancialRatios = ({ user }) => {
           <div className="flex items-end justify-between">
             <div>
               <p className="text-3xl font-bold text-gray-900">{ratios.expense_ratio?.value}%</p>
-              <p className="text-sm text-gray-500">Benchmark: ≤{ratios.expense_ratio?.benchmark}%</p>
+              <p className="text-sm text-slate-500">Benchmark: ≤{ratios.expense_ratio?.benchmark}%</p>
             </div>
             <PieChart className={`h-10 w-10 ${ratios.expense_ratio?.status === 'good' ? 'text-green-500' : ratios.expense_ratio?.status === 'fair' ? 'text-amber-500' : 'text-red-500'}`} />
           </div>
-          <div className="mt-4 p-3 bg-gray-800/50 rounded-lg text-sm text-gray-600">
+          <div className="mt-4 p-3 bg-slate-50 rounded-lg text-sm text-gray-600">
             <p>Percentage of revenue spent on expenses. Lower is better.</p>
           </div>
         </Card>

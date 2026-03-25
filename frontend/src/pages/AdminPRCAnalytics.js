@@ -50,8 +50,8 @@ const AdminPRCAnalytics = ({ user }) => {
     <Card className={`p-5 bg-gradient-to-br ${color} border-0 shadow-lg`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-white/80">{title}</p>
-          <p className="text-2xl font-bold text-white mt-1">
+          <p className="text-sm font-medium text-slate-800/80">{title}</p>
+          <p className="text-2xl font-bold text-slate-800 mt-1">
             {prefix}{formatNumber(value)}{suffix}
           </p>
           {change !== undefined && (
@@ -61,8 +61,8 @@ const AdminPRCAnalytics = ({ user }) => {
             </div>
           )}
         </div>
-        <div className="p-3 bg-gray-900/20 rounded-xl">
-          <Icon className="h-6 w-6 text-white" />
+        <div className="p-3 bg-white/20 rounded-xl">
+          <Icon className="h-6 w-6 text-slate-800" />
         </div>
       </div>
     </Card>
@@ -80,7 +80,7 @@ const AdminPRCAnalytics = ({ user }) => {
       <div className="p-6">
         <div className="text-center py-20">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="text-gray-500 mt-4">Loading PRC Analytics...</p>
+          <p className="text-slate-500 mt-4">Loading PRC Analytics...</p>
         </div>
       </div>
     );
@@ -90,8 +90,8 @@ const AdminPRCAnalytics = ({ user }) => {
     return (
       <div className="p-6">
         <Card className="p-12 text-center">
-          <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">No analytics data available</p>
+          <Activity className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+          <p className="text-slate-500">No analytics data available</p>
           <Button onClick={fetchAnalytics} className="mt-4">
             <RefreshCw className="h-4 w-4 mr-2" /> Retry
           </Button>
@@ -107,8 +107,8 @@ const AdminPRCAnalytics = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">PRC Analytics Dashboard</h1>
-          <p className="text-gray-500">Comprehensive PRC flow analysis and profit/loss tracking</p>
+          <h1 className="text-2xl font-bold text-slate-800">PRC Analytics Dashboard</h1>
+          <p className="text-slate-500">Comprehensive PRC flow analysis and profit/loss tracking</p>
         </div>
         <div className="flex items-center gap-2">
           {['day', 'week', 'month', 'year'].map((p) => (
@@ -129,7 +129,7 @@ const AdminPRCAnalytics = ({ user }) => {
       </div>
 
       {/* Health Score */}
-      <Card className="p-6 bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 text-white">
+      <Card className="p-6 bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 text-slate-800">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold opacity-90">Platform Health Score</h2>
@@ -215,23 +215,23 @@ const AdminPRCAnalytics = ({ user }) => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 text-center">
           <Users className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-white">{userData.total}</p>
-          <p className="text-sm text-gray-500">Total Users</p>
+          <p className="text-2xl font-bold text-slate-800">{userData.total}</p>
+          <p className="text-sm text-slate-500">Total Users</p>
         </Card>
         <Card className="p-4 text-center">
           <Award className="h-8 w-8 text-amber-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-white">{userData.vip}</p>
-          <p className="text-sm text-gray-500">VIP Members</p>
+          <p className="text-2xl font-bold text-slate-800">{userData.vip}</p>
+          <p className="text-sm text-slate-500">VIP Members</p>
         </Card>
         <Card className="p-4 text-center">
-          <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-white">{userData.free}</p>
-          <p className="text-sm text-gray-500">Free Users</p>
+          <Users className="h-8 w-8 text-slate-500 mx-auto mb-2" />
+          <p className="text-2xl font-bold text-slate-800">{userData.free}</p>
+          <p className="text-sm text-slate-500">Free Users</p>
         </Card>
         <Card className="p-4 text-center">
           <Coins className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-white">{formatNumber(userData.avg_balance)}</p>
-          <p className="text-sm text-gray-500">Avg Balance/User</p>
+          <p className="text-2xl font-bold text-slate-800">{formatNumber(userData.avg_balance)}</p>
+          <p className="text-sm text-slate-500">Avg Balance/User</p>
         </Card>
       </div>
 
@@ -239,7 +239,7 @@ const AdminPRCAnalytics = ({ user }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* PRC Flow Chart */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <BarChart2 className="h-5 w-5 text-purple-600" />
             PRC Flow Over Time
           </h3>
@@ -262,7 +262,7 @@ const AdminPRCAnalytics = ({ user }) => {
 
         {/* Cumulative Area Chart */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <Activity className="h-5 w-5 text-purple-600" />
             Cumulative PRC Trend
           </h3>
@@ -288,7 +288,7 @@ const AdminPRCAnalytics = ({ user }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* PRC Usage Breakdown */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <PieChartIcon className="h-5 w-5 text-purple-600" />
             PRC Usage Breakdown
           </h3>
@@ -318,7 +318,7 @@ const AdminPRCAnalytics = ({ user }) => {
                   <div key={item.category} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                      <span className="text-gray-300">{item.category}</span>
+                      <span className="text-slate-600">{item.category}</span>
                     </div>
                     <span className="font-semibold">{formatNumber(item.amount)}</span>
                   </div>
@@ -326,7 +326,7 @@ const AdminPRCAnalytics = ({ user }) => {
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-slate-500">
               <PieChartIcon className="h-12 w-12 mx-auto mb-2 opacity-30" />
               <p>No usage data for this period</p>
             </div>
@@ -335,7 +335,7 @@ const AdminPRCAnalytics = ({ user }) => {
 
         {/* PRC Source Breakdown */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <Zap className="h-5 w-5 text-purple-600" />
             PRC Source Breakdown
           </h3>
@@ -365,7 +365,7 @@ const AdminPRCAnalytics = ({ user }) => {
                   <div key={item.source} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[(index + 3) % COLORS.length] }} />
-                      <span className="text-gray-300">{item.source}</span>
+                      <span className="text-slate-600">{item.source}</span>
                     </div>
                     <span className="font-semibold">{formatNumber(item.amount)}</span>
                   </div>
@@ -373,7 +373,7 @@ const AdminPRCAnalytics = ({ user }) => {
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-slate-500">
               <Zap className="h-12 w-12 mx-auto mb-2 opacity-30" />
               <p>No source data for this period</p>
             </div>
@@ -383,18 +383,18 @@ const AdminPRCAnalytics = ({ user }) => {
 
       {/* Summary Table */}
       <Card className="p-6">
-        <h3 className="text-lg font-bold text-white mb-4">Period Summary</h3>
+        <h3 className="text-lg font-bold text-slate-800 mb-4">Period Summary</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Metric</th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">{periodLabels[period]}</th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">Change</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-500">Metric</th>
+                <th className="text-right py-3 px-4 text-sm font-semibold text-slate-500">{periodLabels[period]}</th>
+                <th className="text-right py-3 px-4 text-sm font-semibold text-slate-500">Change</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b hover:bg-gray-800/50">
+              <tr className="border-b hover:bg-slate-50">
                 <td className="py-3 px-4 flex items-center gap-2">
                   <Coins className="h-4 w-4 text-green-600" /> PRC Created
                 </td>
@@ -403,7 +403,7 @@ const AdminPRCAnalytics = ({ user }) => {
                   {summary.prc_created_change >= 0 ? '+' : ''}{summary.prc_created_change}%
                 </td>
               </tr>
-              <tr className="border-b hover:bg-gray-800/50">
+              <tr className="border-b hover:bg-slate-50">
                 <td className="py-3 px-4 flex items-center gap-2">
                   <ShoppingCart className="h-4 w-4 text-blue-600" /> PRC Used
                 </td>
@@ -412,7 +412,7 @@ const AdminPRCAnalytics = ({ user }) => {
                   {summary.prc_used_change >= 0 ? '+' : ''}{summary.prc_used_change}%
                 </td>
               </tr>
-              <tr className="border-b hover:bg-gray-800/50">
+              <tr className="border-b hover:bg-slate-50">
                 <td className="py-3 px-4 flex items-center gap-2">
                   <Flame className="h-4 w-4 text-orange-600" /> PRC Burned
                 </td>
@@ -421,14 +421,14 @@ const AdminPRCAnalytics = ({ user }) => {
                   {summary.prc_burned_change >= 0 ? '+' : ''}{summary.prc_burned_change}%
                 </td>
               </tr>
-              <tr className="border-b hover:bg-gray-800/50">
+              <tr className="border-b hover:bg-slate-50">
                 <td className="py-3 px-4 flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-purple-600" /> In Circulation
                 </td>
                 <td className="py-3 px-4 text-right font-semibold">{summary.prc_in_circulation.toLocaleString()}</td>
-                <td className="py-3 px-4 text-right text-gray-400">-</td>
+                <td className="py-3 px-4 text-right text-slate-500">-</td>
               </tr>
-              <tr className="border-b hover:bg-gray-800/50">
+              <tr className="border-b hover:bg-slate-50">
                 <td className="py-3 px-4 flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-amber-600" /> VIP Revenue
                 </td>
@@ -437,7 +437,7 @@ const AdminPRCAnalytics = ({ user }) => {
                   {summary.vip_revenue_change >= 0 ? '+' : ''}{summary.vip_revenue_change}%
                 </td>
               </tr>
-              <tr className="hover:bg-gray-800/50">
+              <tr className="hover:bg-slate-50">
                 <td className="py-3 px-4 flex items-center gap-2 font-bold">
                   {summary.profit_loss >= 0 ? 
                     <TrendingUp className="h-4 w-4 text-green-600" /> : 

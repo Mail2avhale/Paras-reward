@@ -111,7 +111,7 @@ const AdminCapitalManagement = ({ user }) => {
       case 'opening_capital': return 'bg-green-500/20 text-green-400';
       case 'additional_capital': return 'bg-blue-500/20 text-blue-400';
       case 'drawings': return 'bg-red-500/20 text-red-400';
-      default: return 'bg-gray-700 text-gray-300';
+      default: return 'bg-gray-700 text-slate-600';
     }
   };
 
@@ -124,7 +124,7 @@ const AdminCapitalManagement = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-capital-management">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6" data-testid="admin-capital-management">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -132,7 +132,7 @@ const AdminCapitalManagement = ({ user }) => {
             <Landmark className="h-7 w-7 text-emerald-600" />
             Capital & Owner's Equity
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Manage capital investments, additional capital, and owner's drawings</p>
+          <p className="text-sm text-slate-500 mt-1">Manage capital investments, additional capital, and owner's drawings</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchCapitalData} size="sm" disabled={loading}>
@@ -154,56 +154,56 @@ const AdminCapitalManagement = ({ user }) => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Opening Capital */}
-        <Card className="p-5 bg-gradient-to-br from-emerald-500 to-green-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-emerald-500 to-green-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-emerald-100 text-sm font-medium">Opening Capital</p>
               <h2 className="text-2xl font-bold mt-1">{formatCurrency(capitalData?.opening_capital)}</h2>
               <p className="text-emerald-200 text-xs mt-1">Initial investment</p>
             </div>
-            <div className="bg-gray-900/20 p-2 rounded-lg">
+            <div className="bg-white/20 p-2 rounded-lg">
               <PiggyBank className="h-6 w-6" />
             </div>
           </div>
         </Card>
 
         {/* Additional Capital */}
-        <Card className="p-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-blue-100 text-sm font-medium">Additional Capital</p>
               <h2 className="text-2xl font-bold mt-1">{formatCurrency(capitalData?.additional_capital)}</h2>
               <p className="text-blue-200 text-xs mt-1">Further investments</p>
             </div>
-            <div className="bg-gray-900/20 p-2 rounded-lg">
+            <div className="bg-white/20 p-2 rounded-lg">
               <TrendingUp className="h-6 w-6" />
             </div>
           </div>
         </Card>
 
         {/* Drawings */}
-        <Card className="p-5 bg-gradient-to-br from-red-500 to-rose-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-red-500 to-rose-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-red-100 text-sm font-medium">Owner's Drawings</p>
               <h2 className="text-2xl font-bold mt-1">{formatCurrency(capitalData?.drawings)}</h2>
               <p className="text-red-200 text-xs mt-1">Withdrawn amount</p>
             </div>
-            <div className="bg-gray-900/20 p-2 rounded-lg">
+            <div className="bg-white/20 p-2 rounded-lg">
               <TrendingDown className="h-6 w-6" />
             </div>
           </div>
         </Card>
 
         {/* Total Equity */}
-        <Card className="p-5 bg-gradient-to-br from-purple-500 to-violet-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-purple-500 to-violet-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-purple-100 text-sm font-medium">Total Equity</p>
               <h2 className="text-2xl font-bold mt-1">{formatCurrency(capitalData?.total_equity)}</h2>
               <p className="text-purple-200 text-xs mt-1">Net owner's equity</p>
             </div>
-            <div className="bg-gray-900/20 p-2 rounded-lg">
+            <div className="bg-white/20 p-2 rounded-lg">
               <CircleDollarSign className="h-6 w-6" />
             </div>
           </div>
@@ -217,22 +217,22 @@ const AdminCapitalManagement = ({ user }) => {
           Equity Calculation
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-          <div className="p-3 bg-gray-900 rounded-lg shadow-sm">
-            <p className="text-xs text-gray-500">Opening Capital</p>
+          <div className="p-3 bg-white rounded-lg shadow-sm">
+            <p className="text-xs text-slate-500">Opening Capital</p>
             <p className="text-lg font-bold text-emerald-600">{formatCurrency(capitalData?.opening_capital)}</p>
           </div>
-          <div className="p-3 bg-gray-900 rounded-lg shadow-sm flex items-center justify-center">
-            <span className="text-2xl text-gray-400">+</span>
+          <div className="p-3 bg-white rounded-lg shadow-sm flex items-center justify-center">
+            <span className="text-2xl text-slate-500">+</span>
           </div>
-          <div className="p-3 bg-gray-900 rounded-lg shadow-sm">
-            <p className="text-xs text-gray-500">Additional Capital</p>
+          <div className="p-3 bg-white rounded-lg shadow-sm">
+            <p className="text-xs text-slate-500">Additional Capital</p>
             <p className="text-lg font-bold text-blue-600">{formatCurrency(capitalData?.additional_capital)}</p>
           </div>
-          <div className="p-3 bg-gray-900 rounded-lg shadow-sm flex items-center justify-center">
-            <span className="text-2xl text-gray-400">−</span>
+          <div className="p-3 bg-white rounded-lg shadow-sm flex items-center justify-center">
+            <span className="text-2xl text-slate-500">−</span>
           </div>
-          <div className="p-3 bg-gray-900 rounded-lg shadow-sm">
-            <p className="text-xs text-gray-500">Drawings</p>
+          <div className="p-3 bg-white rounded-lg shadow-sm">
+            <p className="text-xs text-slate-500">Drawings</p>
             <p className="text-lg font-bold text-red-600">{formatCurrency(capitalData?.drawings)}</p>
           </div>
         </div>
@@ -249,7 +249,7 @@ const AdminCapitalManagement = ({ user }) => {
             <Wallet className="h-5 w-5 text-emerald-600" />
             Capital Entries History
           </h3>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-slate-500">
             {capitalData?.entries_count || 0} entries
           </span>
         </div>
@@ -269,14 +269,14 @@ const AdminCapitalManagement = ({ user }) => {
               {!capitalData?.entries?.length ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-12 text-center">
-                    <PiggyBank className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No capital entries yet</p>
-                    <p className="text-sm text-gray-400 mt-1">Add your opening capital to balance the books</p>
+                    <PiggyBank className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                    <p className="text-slate-500">No capital entries yet</p>
+                    <p className="text-sm text-slate-500 mt-1">Add your opening capital to balance the books</p>
                   </td>
                 </tr>
               ) : (
                 capitalData.entries.map((entry, idx) => (
-                  <tr key={entry.entry_id || idx} className="hover:bg-gray-800/50">
+                  <tr key={entry.entry_id || idx} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {formatDate(entry.date)}
                     </td>
@@ -288,7 +288,7 @@ const AdminCapitalManagement = ({ user }) => {
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {entry.description || '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-slate-500">
                       {entry.reference_no || '-'}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -318,7 +318,7 @@ const AdminCapitalManagement = ({ user }) => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gray-900 rounded-xl shadow-xl max-w-md w-full"
+              className="bg-white rounded-xl shadow-xl max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b flex items-center justify-between">
@@ -326,7 +326,7 @@ const AdminCapitalManagement = ({ user }) => {
                   <Landmark className="h-5 w-5 text-emerald-600" />
                   Add Capital Entry
                 </h3>
-                <button onClick={() => setShowEntryModal(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setShowEntryModal(false)} className="text-slate-500 hover:text-gray-600">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -334,7 +334,7 @@ const AdminCapitalManagement = ({ user }) => {
               <div className="p-6 space-y-4">
                 {/* Entry Type */}
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-2 block">Entry Type</label>
+                  <label className="text-sm font-medium text-slate-600 mb-2 block">Entry Type</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: 'opening_capital', label: 'Opening Capital', icon: PiggyBank, color: 'emerald' },
@@ -347,11 +347,11 @@ const AdminCapitalManagement = ({ user }) => {
                         className={`p-3 rounded-lg border-2 flex flex-col items-center gap-1 transition-all ${
                           entryForm.entry_type === type.id
                             ? `border-${type.color}-500 bg-${type.color}-50`
-                            : 'border-gray-700 hover:border-gray-300'
+                            : 'border-slate-200 hover:border-gray-300'
                         }`}
                         data-testid={`entry-type-${type.id}`}
                       >
-                        <type.icon className={`h-5 w-5 ${entryForm.entry_type === type.id ? `text-${type.color}-600` : 'text-gray-400'}`} />
+                        <type.icon className={`h-5 w-5 ${entryForm.entry_type === type.id ? `text-${type.color}-600` : 'text-slate-500'}`} />
                         <span className={`text-xs font-medium ${entryForm.entry_type === type.id ? `text-${type.color}-700` : 'text-gray-600'}`}>
                           {type.label}
                         </span>
@@ -362,9 +362,9 @@ const AdminCapitalManagement = ({ user }) => {
 
                 {/* Amount */}
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">Amount (₹)</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">Amount (₹)</label>
                   <div className="relative">
-                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                     <input
                       type="number"
                       value={entryForm.amount}
@@ -378,9 +378,9 @@ const AdminCapitalManagement = ({ user }) => {
 
                 {/* Date */}
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">Date</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">Date</label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                     <input
                       type="date"
                       value={entryForm.date}
@@ -392,7 +392,7 @@ const AdminCapitalManagement = ({ user }) => {
 
                 {/* Description */}
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">Description</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">Description</label>
                   <input
                     type="text"
                     value={entryForm.description}
@@ -408,7 +408,7 @@ const AdminCapitalManagement = ({ user }) => {
 
                 {/* Reference No */}
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">Reference No (Optional)</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">Reference No (Optional)</label>
                   <input
                     type="text"
                     value={entryForm.reference_no}

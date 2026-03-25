@@ -16,12 +16,12 @@ import PaymentRetryQueueWidget from '@/components/admin/PaymentRetryQueueWidget'
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Skeleton Loading Component
+// Skeleton Loading Component - BULKPE STYLE
 const SkeletonCard = ({ className = "" }) => (
-  <div className={`animate-pulse bg-gray-800/50 rounded-xl p-4 ${className}`}>
-    <div className="h-4 bg-gray-700 rounded w-1/3 mb-3"></div>
-    <div className="h-8 bg-gray-700 rounded w-1/2 mb-2"></div>
-    <div className="h-3 bg-gray-700 rounded w-2/3"></div>
+  <div className={`animate-pulse bg-white rounded-2xl p-5 border border-slate-100 shadow-sm ${className}`}>
+    <div className="h-4 bg-slate-200 rounded w-1/3 mb-3"></div>
+    <div className="h-8 bg-slate-200 rounded w-1/2 mb-2"></div>
+    <div className="h-3 bg-slate-200 rounded w-2/3"></div>
   </div>
 );
 
@@ -166,24 +166,24 @@ const AdminDashboard = ({ user }) => {
   const totalUsers = stats?.users?.total || 0;
   const conversionRate = totalUsers > 0 ? ((totalPaidUsers / totalUsers) * 100).toFixed(1) : 0;
 
-  // Skeleton Loading State
+  // Skeleton Loading State - BULKPE STYLE
   if (loading && !stats) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-4 md:p-6 pb-24 space-y-6">
+      <div className="space-y-6" data-testid="admin-dashboard-loading">
         {/* Header Skeleton */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="h-8 bg-gray-800 rounded w-48 mb-2 animate-pulse"></div>
-            <div className="h-4 bg-gray-800 rounded w-32 animate-pulse"></div>
+            <div className="h-8 bg-slate-200 rounded w-48 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-slate-200 rounded w-32 animate-pulse"></div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-800 rounded-full animate-pulse"></div>
-            <div className="w-24 h-9 bg-gray-800 rounded animate-pulse"></div>
+            <div className="w-10 h-10 bg-slate-200 rounded-xl animate-pulse"></div>
+            <div className="w-24 h-9 bg-slate-200 rounded-xl animate-pulse"></div>
           </div>
         </div>
         
         {/* Stats Cards Skeleton */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
@@ -191,32 +191,32 @@ const AdminDashboard = ({ user }) => {
         </div>
         
         {/* Subscription Overview Skeleton */}
-        <div className="grid grid-cols-4 gap-3">
-          <SkeletonCard className="h-24" />
-          <SkeletonCard className="h-24" />
-          <SkeletonCard className="h-24" />
-          <SkeletonCard className="h-24" />
+        <div className="grid grid-cols-4 gap-4">
+          <SkeletonCard className="h-28" />
+          <SkeletonCard className="h-28" />
+          <SkeletonCard className="h-28" />
+          <SkeletonCard className="h-28" />
         </div>
         
         {/* KYC & PRC Cards Skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <SkeletonCard className="h-40" />
-          <SkeletonCard className="h-40" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <SkeletonCard className="h-44" />
+          <SkeletonCard className="h-44" />
         </div>
         
         {/* Quick Actions Skeleton */}
-        <SkeletonCard className="h-32" />
+        <SkeletonCard className="h-36" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-4 md:p-6 pb-24 space-y-6">
-      {/* Header */}
+    <div className="space-y-6" data-testid="admin-dashboard">
+      {/* Header - BULKPE STYLE */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-          <p className="text-gray-500 text-sm">Welcome back, {user?.name || 'Admin'}</p>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Admin Dashboard</h1>
+          <p className="text-slate-500 text-sm">Welcome back, {user?.name || 'Admin'}</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Bulk Fix All Users Button */}
@@ -231,19 +231,19 @@ const AdminDashboard = ({ user }) => {
               }
             }}
             disabled={bulkFixing || (bulkFixJob && bulkFixJob.status === 'running')}
-            className={`${bulkFixJob && bulkFixJob.status === 'running' ? 'text-blue-400 border-blue-500/50 animate-pulse' : 'text-purple-400 border-purple-500/50 hover:bg-purple-500/10'}`}
+            className={`rounded-xl ${bulkFixJob && bulkFixJob.status === 'running' ? 'text-blue-600 border-blue-200 bg-blue-50 animate-pulse' : 'text-purple-600 border-purple-200 bg-purple-50 hover:bg-purple-100'}`}
           >
             <Zap className={`w-4 h-4 mr-2 ${bulkFixing || (bulkFixJob && bulkFixJob.status === 'running') ? 'animate-spin' : ''}`} />
             {bulkFixJob && bulkFixJob.status === 'running' 
               ? `Fixing... ${bulkFixJob.progress || 0}%` 
-              : '🔧 Auto Fix All'}
+              : 'Auto Fix All'}
           </Button>
           {/* Login As User Button */}
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => setShowLoginAsUser(true)}
-            className="text-orange-400 border-orange-500/50 hover:bg-orange-500/10"
+            className="text-orange-600 border-orange-200 bg-orange-50 hover:bg-orange-100 rounded-xl"
           >
             <UserCog className="w-4 h-4 mr-2" />
             Login As User
@@ -253,33 +253,35 @@ const AdminDashboard = ({ user }) => {
             size="sm" 
             onClick={() => fetchDashboardData(true)}
             disabled={refreshing}
-            className="text-gray-300 border-gray-700 hover:bg-gray-800"
+            className="text-slate-600 border-slate-200 bg-white hover:bg-slate-50 rounded-xl"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
-          <div className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full flex items-center gap-2">
-            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+          <div className="px-4 py-2 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-xl flex items-center gap-2 border border-emerald-100">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
             Admin
           </div>
         </div>
       </div>
 
-      {/* Action Required Alert */}
+      {/* Action Required Alert - BULKPE STYLE */}
       {(stats?.kyc?.pending > 0 || stats?.subscription_payments?.pending > 0 || stats?.vip_payments?.pending > 0) && (
-        <Card className="p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30">
+        <Card className="p-5 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 rounded-2xl shadow-sm">
           <div className="flex items-start gap-3">
-            <Bell className="w-5 h-5 text-amber-500 animate-bounce" />
+            <div className="p-2 bg-amber-100 rounded-xl">
+              <Bell className="w-5 h-5 text-amber-600" />
+            </div>
             <div className="flex-1">
-              <h3 className="text-sm font-bold text-amber-400 mb-2">⚡ Action Required</h3>
-              <div className="flex flex-wrap gap-3">
+              <h3 className="text-sm font-bold text-amber-700 mb-2">Action Required</h3>
+              <div className="flex flex-wrap gap-4">
                 {stats?.kyc?.pending > 0 && (
-                  <button onClick={() => navigate('/admin/kyc')} className="text-sm text-amber-300 hover:text-amber-200 flex items-center gap-1">
+                  <button onClick={() => navigate('/admin/kyc')} className="text-sm text-amber-600 hover:text-amber-800 flex items-center gap-1 font-medium">
                     <UserCheck className="w-4 h-4" /> {stats.kyc.pending} KYC Pending <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
                 {stats?.vip_payments?.pending > 0 && (
-                  <button onClick={() => navigate('/admin/subscriptions')} className="text-sm text-amber-300 hover:text-amber-200 flex items-center gap-1">
+                  <button onClick={() => navigate('/admin/subscriptions')} className="text-sm text-amber-600 hover:text-amber-800 flex items-center gap-1 font-medium">
                     <CreditCard className="w-4 h-4" /> {stats.vip_payments.pending} Payments Pending <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
@@ -289,46 +291,52 @@ const AdminDashboard = ({ user }) => {
         </Card>
       )}
 
-      {/* Bulk Fix Results Panel - Running Job or Results */}
+      {/* Bulk Fix Results Panel - BULKPE STYLE */}
       {(bulkFixJob || bulkFixResult) && (
-        <Card className={`p-4 ${
-          bulkFixJob?.status === 'running' ? 'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/30' :
-          bulkFixJob?.status === 'completed' ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30' :
-          bulkFixResult?.dry_run ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30' : 
-          'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30'
+        <Card className={`p-5 rounded-2xl shadow-sm ${
+          bulkFixJob?.status === 'running' ? 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200' :
+          bulkFixJob?.status === 'completed' ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' :
+          bulkFixResult?.dry_run ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200' : 
+          'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
         }`}>
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3 flex-1">
-              <Zap className={`w-5 h-5 ${
-                bulkFixJob?.status === 'running' ? 'text-blue-400 animate-pulse' :
-                bulkFixJob?.status === 'completed' ? 'text-green-400' :
-                bulkFixResult?.dry_run ? 'text-purple-400' : 'text-green-400'
-              }`} />
+              <div className={`p-2 rounded-xl ${
+                bulkFixJob?.status === 'running' ? 'bg-blue-100' :
+                bulkFixJob?.status === 'completed' ? 'bg-green-100' :
+                bulkFixResult?.dry_run ? 'bg-purple-100' : 'bg-green-100'
+              }`}>
+                <Zap className={`w-5 h-5 ${
+                  bulkFixJob?.status === 'running' ? 'text-blue-600 animate-pulse' :
+                  bulkFixJob?.status === 'completed' ? 'text-green-600' :
+                  bulkFixResult?.dry_run ? 'text-purple-600' : 'text-green-600'
+                }`} />
+              </div>
               <div className="flex-1">
                 <h3 className={`text-sm font-bold mb-2 ${
-                  bulkFixJob?.status === 'running' ? 'text-blue-400' :
-                  bulkFixJob?.status === 'completed' ? 'text-green-400' :
-                  bulkFixResult?.dry_run ? 'text-purple-400' : 'text-green-400'
+                  bulkFixJob?.status === 'running' ? 'text-blue-700' :
+                  bulkFixJob?.status === 'completed' ? 'text-green-700' :
+                  bulkFixResult?.dry_run ? 'text-purple-700' : 'text-green-700'
                 }`}>
-                  {bulkFixJob?.status === 'running' ? '🔄 Bulk Fix Running...' :
-                   bulkFixJob?.status === 'completed' ? '✅ Bulk Fix Completed' :
-                   bulkFixResult?.dry_run ? '🔍 Issues Found (Preview)' : '✅ Issues Fixed'}
+                  {bulkFixJob?.status === 'running' ? 'Bulk Fix Running...' :
+                   bulkFixJob?.status === 'completed' ? 'Bulk Fix Completed' :
+                   bulkFixResult?.dry_run ? 'Issues Found (Preview)' : 'Issues Fixed'}
                 </h3>
                 
                 {/* Progress Bar for Running Job */}
                 {bulkFixJob?.status === 'running' && (
                   <div className="mb-3">
-                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                    <div className="flex justify-between text-xs text-slate-500 mb-1">
                       <span>Processing {bulkFixJob.processed || 0} of {bulkFixJob.total_users} users</span>
                       <span>{bulkFixJob.progress || 0}%</span>
                     </div>
-                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-2 bg-blue-100 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
                         style={{ width: `${bulkFixJob.progress || 0}%` }}
                       />
                     </div>
-                    <p className="text-gray-500 text-xs mt-1">Fixed: {bulkFixJob.issues_fixed || 0} issues | PRC Refunded: {bulkFixJob.prc_refunded || 0}</p>
+                    <p className="text-slate-500 text-xs mt-1">Fixed: {bulkFixJob.issues_fixed || 0} issues | PRC Refunded: {bulkFixJob.prc_refunded || 0}</p>
                   </div>
                 )}
                 
@@ -336,20 +344,20 @@ const AdminDashboard = ({ user }) => {
                 {bulkFixJob?.status === 'completed' && bulkFixJob.results && (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-400">Users Processed</p>
-                      <p className="text-white font-bold">{bulkFixJob.results.processed || 0}</p>
+                      <p className="text-slate-500">Users Processed</p>
+                      <p className="text-slate-800 font-bold">{bulkFixJob.results.processed || 0}</p>
                     </div>
                     <div>
-                      <p className="text-gray-400">Users Fixed</p>
-                      <p className="text-white font-bold">{bulkFixJob.results.users_with_issues || 0}</p>
+                      <p className="text-slate-500">Users Fixed</p>
+                      <p className="text-slate-800 font-bold">{bulkFixJob.results.users_with_issues || 0}</p>
                     </div>
                     <div>
-                      <p className="text-gray-400">Issues Fixed</p>
-                      <p className="text-white font-bold">{bulkFixJob.results.issues_fixed || 0}</p>
+                      <p className="text-slate-500">Issues Fixed</p>
+                      <p className="text-slate-800 font-bold">{bulkFixJob.results.issues_fixed || 0}</p>
                     </div>
                     <div>
-                      <p className="text-gray-400">PRC Refunded</p>
-                      <p className="text-green-400 font-bold">{bulkFixJob.results.prc_refunded || 0} PRC</p>
+                      <p className="text-slate-500">PRC Refunded</p>
+                      <p className="text-green-600 font-bold">{bulkFixJob.results.prc_refunded || 0} PRC</p>
                     </div>
                   </div>
                 )}
@@ -359,33 +367,33 @@ const AdminDashboard = ({ user }) => {
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <p className="text-gray-400">Users Scanned</p>
-                        <p className="text-white font-bold">{bulkFixResult.summary?.total_users_scanned || 0}</p>
+                        <p className="text-slate-500">Users Scanned</p>
+                        <p className="text-slate-800 font-bold">{bulkFixResult.summary?.total_users_scanned || 0}</p>
                       </div>
                       <div>
-                        <p className="text-gray-400">Users with Issues</p>
-                        <p className="text-white font-bold">{bulkFixResult.summary?.users_with_issues || 0}</p>
+                        <p className="text-slate-500">Users with Issues</p>
+                        <p className="text-slate-800 font-bold">{bulkFixResult.summary?.users_with_issues || 0}</p>
                       </div>
                       <div>
-                        <p className="text-gray-400">Total Issues</p>
-                        <p className="text-white font-bold">{bulkFixResult.summary?.total_issues_found || 0}</p>
+                        <p className="text-slate-500">Total Issues</p>
+                        <p className="text-slate-800 font-bold">{bulkFixResult.summary?.total_issues_found || 0}</p>
                       </div>
                       <div>
-                        <p className="text-gray-400">PRC Refunded</p>
-                        <p className="text-green-400 font-bold">{bulkFixResult.summary?.total_prc_refunded || 0} PRC</p>
+                        <p className="text-slate-500">PRC Refunded</p>
+                        <p className="text-green-600 font-bold">{bulkFixResult.summary?.total_prc_refunded || 0} PRC</p>
                       </div>
                     </div>
                     {bulkFixResult.affected_users?.length > 0 && (
                       <div className="mt-3">
-                        <p className="text-gray-400 text-xs mb-2">Affected Users:</p>
+                        <p className="text-slate-500 text-xs mb-2">Affected Users:</p>
                         <div className="flex flex-wrap gap-2">
                           {bulkFixResult.affected_users.slice(0, 5).map((u, idx) => (
-                            <span key={idx} className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-300">
+                            <span key={idx} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-600">
                               {u.name || u.email?.split('@')[0]}
                             </span>
                           ))}
                           {bulkFixResult.affected_users.length > 5 && (
-                            <span className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-400">
+                            <span className="px-2 py-1 bg-slate-100 rounded-lg text-xs text-slate-500">
                               +{bulkFixResult.affected_users.length - 5} more
                             </span>
                           )}
@@ -398,7 +406,7 @@ const AdminDashboard = ({ user }) => {
             </div>
             <button 
               onClick={() => { setBulkFixResult(null); setBulkFixJob(null); }} 
-              className="text-gray-500 hover:text-white"
+              className="text-slate-400 hover:text-slate-600"
               disabled={bulkFixJob?.status === 'running'}
             >
               <XCircle className="w-5 h-5" />
@@ -407,8 +415,8 @@ const AdminDashboard = ({ user }) => {
         </Card>
       )}
 
-      {/* Hero Stats - Large Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Hero Stats - Large Cards - BULKPE STYLE */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <HeroStatCard
           icon={Users}
           label="Total Users"
@@ -435,14 +443,14 @@ const AdminDashboard = ({ user }) => {
         />
       </div>
 
-      {/* Subscription Breakdown - Beautiful Progress Bars */}
-      <Card className="p-5 bg-gradient-to-br from-gray-900/80 to-gray-950 border-gray-800">
+      {/* Subscription Breakdown - BULKPE STYLE */}
+      <Card className="p-6 bg-white border-slate-200 rounded-2xl shadow-sm">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-white flex items-center gap-2">
-            <Star className="w-5 h-5 text-amber-400" />
+          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+            <Star className="w-5 h-5 text-amber-500" />
             Subscription Overview
           </h3>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/admin/subscriptions')} className="text-purple-400 hover:text-purple-300">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/admin/subscriptions')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-xl">
             Manage <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </div>
@@ -487,47 +495,49 @@ const AdminDashboard = ({ user }) => {
         </div>
 
         {/* Revenue Stats */}
-        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-800">
+        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-100">
           <div 
-            className="text-center p-2 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-all"
+            className="text-center p-3 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors duration-200"
             onClick={() => navigate('/admin/finance')}
           >
-            <p className="text-2xl font-bold text-emerald-400">₹{(stats?.revenue?.vip_fees || 0).toLocaleString()}</p>
-            <p className="text-xs text-gray-500">Subscription Revenue</p>
+            <p className="text-2xl font-bold text-emerald-600">₹{(stats?.revenue?.vip_fees || 0).toLocaleString()}</p>
+            <p className="text-xs text-slate-500 font-medium">Subscription Revenue</p>
           </div>
           <div 
-            className="text-center p-2 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-all"
+            className="text-center p-3 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors duration-200"
             onClick={() => navigate('/admin/ledger')}
           >
-            <p className="text-2xl font-bold text-blue-400">📒</p>
-            <p className="text-xs text-gray-500">Ledger View</p>
+            <p className="text-2xl font-bold text-blue-600">📒</p>
+            <p className="text-xs text-slate-500 font-medium">Ledger View</p>
           </div>
           <div 
-            className="text-center p-2 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-all"
+            className="text-center p-3 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors duration-200"
             onClick={() => navigate('/admin/subscriptions?tab=approved')}
           >
-            <p className="text-2xl font-bold text-purple-400">{stats?.vip_payments?.approved || 0}</p>
-            <p className="text-xs text-gray-500">Approved Payments</p>
+            <p className="text-2xl font-bold text-purple-600">{stats?.vip_payments?.approved || 0}</p>
+            <p className="text-xs text-slate-500 font-medium">Approved Payments</p>
           </div>
           <div 
-            className="text-center p-2 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-all"
+            className="text-center p-3 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors duration-200"
             onClick={() => navigate('/admin/subscriptions?tab=pending')}
           >
-            <p className="text-2xl font-bold text-amber-400">{stats?.vip_payments?.pending || 0}</p>
-            <p className="text-xs text-gray-500">Pending Approval</p>
+            <p className="text-2xl font-bold text-amber-600">{stats?.vip_payments?.pending || 0}</p>
+            <p className="text-xs text-slate-500 font-medium">Pending Approval</p>
           </div>
         </div>
       </Card>
 
-      {/* KYC & Verification Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="p-5 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 border-cyan-500/20">
+      {/* KYC & Verification Stats - BULKPE STYLE */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <Card className="p-6 bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200 rounded-2xl shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <BadgeCheck className="w-5 h-5 text-cyan-400" />
+            <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+              <div className="p-2 bg-cyan-100 rounded-xl">
+                <BadgeCheck className="w-5 h-5 text-cyan-600" />
+              </div>
               KYC Verification
             </h3>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/kyc')} className="text-cyan-400 hover:text-cyan-300">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/kyc')} className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-100 rounded-xl">
               Verify <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
@@ -540,13 +550,15 @@ const AdminDashboard = ({ user }) => {
           </div>
         </Card>
 
-        <Card className="p-5 bg-gradient-to-br from-purple-500/5 to-pink-500/5 border-purple-500/20">
+        <Card className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200 rounded-2xl shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <Wallet className="w-5 h-5 text-purple-400" />
+            <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+              <div className="p-2 bg-purple-100 rounded-xl">
+                <Wallet className="w-5 h-5 text-purple-600" />
+              </div>
               PRC Economy
             </h3>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/prc-economy')} className="text-purple-400 hover:text-purple-300">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/prc-economy')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-100 rounded-xl">
               Control <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
@@ -559,17 +571,18 @@ const AdminDashboard = ({ user }) => {
         </Card>
       </div>
 
-      {/* Quick Actions Grid */}
-      <Card className="p-4 bg-gray-900/50 border-gray-800">
-        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-          <Zap className="w-5 h-5 text-yellow-400" />
+      {/* Quick Actions Grid - BULKPE STYLE */}
+      <Card className="p-5 bg-white border-slate-200 rounded-2xl shadow-sm">
+        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <div className="p-2 bg-yellow-100 rounded-xl">
+            <Zap className="w-5 h-5 text-yellow-600" />
+          </div>
           Quick Actions
         </h3>
-        <div className="grid grid-cols-5 md:grid-cols-10 gap-2">
+        <div className="grid grid-cols-5 md:grid-cols-10 gap-3">
           <QuickActionCard icon={Users} label="Users" color="blue" onClick={() => navigate('/admin/users')} />
           <QuickActionCard icon={Crown} label="Subs" badge={stats?.vip_payments?.pending} color="purple" onClick={() => navigate('/admin/subscriptions')} />
           <QuickActionCard icon={BadgeCheck} label="KYC" badge={stats?.kyc?.pending} color="cyan" onClick={() => navigate('/admin/kyc')} />
-          {/* Orders QuickAction removed - Marketplace deprecated */}
           <QuickActionCard icon={Wallet} label="Wallets" color="teal" onClick={() => navigate('/admin/company-wallets')} />
           <QuickActionCard icon={Shield} label="Security" color="red" onClick={() => navigate('/admin/security')} />
           <QuickActionCard icon={AlertTriangle} label="PRC Ctrl" color="orange" onClick={() => navigate('/admin/prc-economy')} />
@@ -577,35 +590,39 @@ const AdminDashboard = ({ user }) => {
         </div>
       </Card>
 
-      {/* KYC & Activity Section - Orders section removed */}
+      {/* KYC & Activity Section - BULKPE STYLE */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pending KYC Preview */}
-        <Card className="p-4 bg-gray-900/50 border-gray-800">
+        <Card className="p-5 bg-white border-slate-200 rounded-2xl shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <BadgeCheck className="w-5 h-5 text-cyan-400" />
+            <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+              <div className="p-2 bg-cyan-100 rounded-xl">
+                <BadgeCheck className="w-5 h-5 text-cyan-600" />
+              </div>
               Pending KYC Verifications
             </h3>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/kyc')} className="text-cyan-400 hover:text-cyan-300">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/kyc')} className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 rounded-xl">
               View All <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
           {pendingKYC.length === 0 ? (
-            <div className="text-center py-4">
-              <CheckCircle className="w-8 h-8 text-emerald-500/50 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">All KYC verified!</p>
+            <div className="text-center py-6">
+              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="w-6 h-6 text-emerald-600" />
+              </div>
+              <p className="text-slate-500 text-sm font-medium">All KYC verified!</p>
             </div>
           ) : (
             <div className="space-y-2">
               {pendingKYC.slice(0, 3).map((kyc) => (
-                <div key={kyc.document_id || kyc._id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-xl">
+                <div key={kyc.document_id || kyc._id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors duration-200">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                      <UserCheck className="w-4 h-4 text-cyan-400" />
+                    <div className="w-9 h-9 rounded-xl bg-cyan-100 flex items-center justify-center">
+                      <UserCheck className="w-4 h-4 text-cyan-600" />
                     </div>
-                    <span className="text-white text-sm">{kyc.user_name || 'Unknown'}</span>
+                    <span className="text-slate-800 text-sm font-medium">{kyc.user_name || 'Unknown'}</span>
                   </div>
-                  <span className="text-gray-500 text-xs px-2 py-1 bg-gray-800 rounded-full">{kyc.document_type || 'Document'}</span>
+                  <span className="text-slate-500 text-xs px-3 py-1 bg-white border border-slate-200 rounded-lg">{kyc.document_type || 'Document'}</span>
                 </div>
               ))}
             </div>
@@ -629,39 +646,40 @@ const AdminDashboard = ({ user }) => {
 };
 
 // Hero Stat Card Component
+// Hero Stat Card Component - BULKPE STYLE
 const HeroStatCard = ({ icon: Icon, label, value, subValue, color, onClick }) => {
   const colorClasses = {
-    blue: 'from-blue-500/20 to-blue-600/10 border-blue-500/30 hover:border-blue-400/50',
-    purple: 'from-purple-500/20 to-purple-600/10 border-purple-500/30 hover:border-purple-400/50',
-    emerald: 'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 hover:border-emerald-400/50',
-    amber: 'from-amber-500/20 to-amber-600/10 border-amber-500/30 hover:border-amber-400/50',
+    blue: 'bg-blue-50 border-blue-100 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/50',
+    purple: 'bg-purple-50 border-purple-100 hover:border-purple-200 hover:shadow-lg hover:shadow-purple-100/50',
+    emerald: 'bg-emerald-50 border-emerald-100 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-100/50',
+    amber: 'bg-orange-50 border-orange-100 hover:border-orange-200 hover:shadow-lg hover:shadow-orange-100/50',
   };
   
   const iconColors = {
-    blue: 'text-blue-400 bg-blue-500/20',
-    purple: 'text-purple-400 bg-purple-500/20',
-    emerald: 'text-emerald-400 bg-emerald-500/20',
-    amber: 'text-amber-400 bg-amber-500/20',
+    blue: 'text-blue-600 bg-blue-100',
+    purple: 'text-purple-600 bg-purple-100',
+    emerald: 'text-emerald-600 bg-emerald-100',
+    amber: 'text-orange-600 bg-orange-100',
   };
 
   const textColors = {
-    blue: 'text-blue-400',
-    purple: 'text-purple-400',
-    emerald: 'text-emerald-400',
-    amber: 'text-amber-400',
+    blue: 'text-blue-600',
+    purple: 'text-purple-600',
+    emerald: 'text-emerald-600',
+    amber: 'text-orange-600',
   };
 
   return (
     <Card 
-      className={`p-4 bg-gradient-to-br ${colorClasses[color]} cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]`}
+      className={`p-5 ${colorClasses[color]} rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-1`}
       onClick={onClick}
       data-testid={`hero-stat-${label.toLowerCase().replace(' ', '-')}`}
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-400 text-xs mb-1">{label}</p>
-          <p className="text-2xl font-bold text-white">{typeof value === 'number' ? value.toLocaleString() : value}</p>
-          <p className={`text-xs ${textColors[color]} mt-1`}>{subValue}</p>
+          <p className="text-slate-500 text-xs font-medium mb-1">{label}</p>
+          <p className="text-2xl font-bold text-slate-800">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+          <p className={`text-xs ${textColors[color]} mt-1 font-medium`}>{subValue}</p>
         </div>
         <div className={`w-12 h-12 rounded-xl ${iconColors[color]} flex items-center justify-center`}>
           <Icon className="w-6 h-6" />
@@ -671,30 +689,30 @@ const HeroStatCard = ({ icon: Icon, label, value, subValue, color, onClick }) =>
   );
 };
 
-// Subscription Card Component
+// Subscription Card Component - BULKPE STYLE
 const SubscriptionCard = ({ plan, count, total, color, icon, onClick, price }) => {
   const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
   
   const colorClasses = {
-    gray: { bg: 'bg-gray-500/20', bar: 'bg-gray-500', text: 'text-gray-400' },
-    blue: { bg: 'bg-blue-500/20', bar: 'bg-blue-500', text: 'text-blue-400' },
-    purple: { bg: 'bg-purple-500/20', bar: 'bg-purple-500', text: 'text-purple-400' },
-    amber: { bg: 'bg-amber-500/20', bar: 'bg-amber-500', text: 'text-amber-400' },
+    gray: { bg: 'bg-slate-100', bar: 'bg-slate-400', text: 'text-slate-500', border: 'border-slate-200' },
+    blue: { bg: 'bg-blue-100', bar: 'bg-blue-500', text: 'text-blue-600', border: 'border-blue-200' },
+    purple: { bg: 'bg-purple-100', bar: 'bg-purple-500', text: 'text-purple-600', border: 'border-purple-200' },
+    amber: { bg: 'bg-orange-100', bar: 'bg-orange-500', text: 'text-orange-600', border: 'border-orange-200' },
   };
 
   return (
     <div 
-      className={`p-3 bg-gray-800/50 rounded-xl ${onClick ? 'cursor-pointer hover:bg-gray-800/80 transition-all' : ''}`}
+      className={`p-4 bg-white rounded-xl border ${colorClasses[color].border} ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-lg">{icon}</span>
-        <span className={`text-xs ${colorClasses[color].text}`}>{percentage}%</span>
+        <span className={`text-xs font-semibold ${colorClasses[color].text}`}>{percentage}%</span>
       </div>
-      <p className="text-xl font-bold text-white">{count.toLocaleString()}</p>
-      <p className="text-xs text-gray-500">{plan}</p>
+      <p className="text-xl font-bold text-slate-800">{count.toLocaleString()}</p>
+      <p className="text-xs text-slate-500 font-medium">{plan}</p>
       {price && <p className={`text-xs ${colorClasses[color].text} mt-1`}>{price}</p>}
-      <div className={`h-1.5 ${colorClasses[color].bg} rounded-full overflow-hidden mt-2`}>
+      <div className={`h-1.5 ${colorClasses[color].bg} rounded-full overflow-hidden mt-3`}>
         <div 
           className={`h-full ${colorClasses[color].bar} rounded-full transition-all duration-500`}
           style={{ width: `${percentage}%` }}
@@ -704,52 +722,52 @@ const SubscriptionCard = ({ plan, count, total, color, icon, onClick, price }) =
   );
 };
 
-// Mini Stat Card Component
+// Mini Stat Card Component - BULKPE STYLE
 const MiniStatCard = ({ value, label, color, highlight }) => {
   const colorClasses = {
-    gray: 'text-gray-400',
-    emerald: 'text-emerald-400',
-    amber: 'text-amber-400',
-    red: 'text-red-400',
-    blue: 'text-blue-400',
+    gray: 'text-slate-600',
+    emerald: 'text-emerald-600',
+    amber: 'text-amber-600',
+    red: 'text-red-600',
+    blue: 'text-blue-600',
   };
 
   return (
-    <div className={`text-center p-3 rounded-xl ${highlight ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-gray-800/50'}`}>
+    <div className={`text-center p-3 rounded-xl ${highlight ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50'}`}>
       <p className={`text-xl font-bold ${colorClasses[color]}`}>{value}</p>
-      <p className="text-[10px] text-gray-500">{label}</p>
+      <p className="text-[10px] text-slate-500 font-medium">{label}</p>
     </div>
   );
 };
 
-// Quick Action Card Component
+// Quick Action Card Component - BULKPE STYLE
 const QuickActionCard = ({ icon: Icon, label, badge, color, onClick }) => {
   const colorClasses = {
-    blue: 'bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20 text-blue-400',
-    purple: 'bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/20 text-purple-400',
-    emerald: 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400',
-    amber: 'bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/20 text-amber-400',
-    cyan: 'bg-cyan-500/10 border-cyan-500/20 hover:bg-cyan-500/20 text-cyan-400',
-    pink: 'bg-pink-500/10 border-pink-500/20 hover:bg-pink-500/20 text-pink-400',
-    teal: 'bg-teal-500/10 border-teal-500/20 hover:bg-teal-500/20 text-teal-400',
-    red: 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20 text-red-400',
-    orange: 'bg-orange-500/10 border-orange-500/20 hover:bg-orange-500/20 text-orange-400',
-    gray: 'bg-gray-800 border-gray-700 hover:bg-gray-700 text-gray-400',
+    blue: 'bg-blue-50 border-blue-100 hover:bg-blue-100 text-blue-600',
+    purple: 'bg-purple-50 border-purple-100 hover:bg-purple-100 text-purple-600',
+    emerald: 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100 text-emerald-600',
+    amber: 'bg-amber-50 border-amber-100 hover:bg-amber-100 text-amber-600',
+    cyan: 'bg-cyan-50 border-cyan-100 hover:bg-cyan-100 text-cyan-600',
+    pink: 'bg-pink-50 border-pink-100 hover:bg-pink-100 text-pink-600',
+    teal: 'bg-teal-50 border-teal-100 hover:bg-teal-100 text-teal-600',
+    red: 'bg-red-50 border-red-100 hover:bg-red-100 text-red-600',
+    orange: 'bg-orange-50 border-orange-100 hover:bg-orange-100 text-orange-600',
+    gray: 'bg-slate-50 border-slate-100 hover:bg-slate-100 text-slate-600',
   };
 
   return (
     <button
       onClick={onClick}
-      className={`relative p-2 rounded-xl border transition-all ${colorClasses[color]} text-center hover:scale-105 active:scale-95`}
+      className={`relative p-3 rounded-xl border transition-all duration-200 ${colorClasses[color]} text-center hover:scale-105 active:scale-95`}
       data-testid={`quick-action-${label.toLowerCase()}`}
     >
       {badge > 0 && (
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-slate-800 text-[10px] rounded-full flex items-center justify-center font-bold shadow-sm">
           {badge > 9 ? '9+' : badge}
         </span>
       )}
       <Icon className="w-5 h-5 mx-auto mb-1" />
-      <p className="text-[10px] font-medium truncate">{label}</p>
+      <p className="text-[10px] font-semibold truncate">{label}</p>
     </button>
   );
 };

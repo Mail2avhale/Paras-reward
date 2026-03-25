@@ -85,7 +85,7 @@ const AdminTrialBalance = ({ user }) => {
       case 'equity': return 'text-purple-600 bg-purple-500/10';
       case 'income': return 'text-green-600 bg-green-500/10';
       case 'expenses': return 'text-orange-600 bg-orange-500/10';
-      default: return 'text-gray-600 bg-gray-800/50';
+      default: return 'text-gray-600 bg-slate-50';
     }
   };
 
@@ -98,7 +98,7 @@ const AdminTrialBalance = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-trial-balance">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6" data-testid="admin-trial-balance">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -106,7 +106,7 @@ const AdminTrialBalance = ({ user }) => {
             <Scale className="h-7 w-7 text-indigo-600" />
             Trial Balance & Chart of Accounts
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Verify accounting accuracy and view account structure</p>
+          <p className="text-sm text-slate-500 mt-1">Verify accounting accuracy and view account structure</p>
         </div>
         <Button variant="outline" onClick={fetchData} size="sm" disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -126,7 +126,7 @@ const AdminTrialBalance = ({ user }) => {
             className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
               activeTab === tab.id
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-300'
+                : 'border-transparent text-slate-500 hover:text-slate-600'
             }`}
             data-testid={`tab-${tab.id}`}
           >
@@ -167,16 +167,16 @@ const AdminTrialBalance = ({ user }) => {
 
             {/* Totals Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+              <Card className="p-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-slate-800">
                 <p className="text-blue-100 text-sm font-medium">Total Debits</p>
                 <h2 className="text-2xl font-bold mt-1">{formatCurrency(trialBalance.totals?.total_debit)}</h2>
               </Card>
-              <Card className="p-5 bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+              <Card className="p-5 bg-gradient-to-br from-purple-500 to-pink-600 text-slate-800">
                 <p className="text-purple-100 text-sm font-medium">Total Credits</p>
                 <h2 className="text-2xl font-bold mt-1">{formatCurrency(trialBalance.totals?.total_credit)}</h2>
               </Card>
-              <Card className={`p-5 ${trialBalance.totals?.is_balanced ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-600'} text-white`}>
-                <p className="text-white/80 text-sm font-medium">Difference</p>
+              <Card className={`p-5 ${trialBalance.totals?.is_balanced ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-600'} text-slate-800`}>
+                <p className="text-slate-800/80 text-sm font-medium">Difference</p>
                 <h2 className="text-2xl font-bold mt-1">{formatCurrency(Math.abs(trialBalance.totals?.difference))}</h2>
               </Card>
             </div>
@@ -203,14 +203,14 @@ const AdminTrialBalance = ({ user }) => {
                   <tbody className="divide-y">
                     {!trialBalance?.accounts?.length ? (
                       <tr>
-                        <td colSpan={4} className="px-4 py-12 text-center text-gray-500">
+                        <td colSpan={4} className="px-4 py-12 text-center text-slate-500">
                           No accounts with balances
                         </td>
                       </tr>
                     ) : (
                       trialBalance.accounts.map((account, idx) => (
-                        <tr key={idx} className="hover:bg-gray-800/50">
-                          <td className="px-4 py-3 text-sm font-mono text-gray-500">{account.code}</td>
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 text-sm font-mono text-slate-500">{account.code}</td>
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">{account.name}</td>
                           <td className="px-4 py-3 text-right font-mono text-sm">
                             {account.debit > 0 ? (
@@ -264,7 +264,7 @@ const AdminTrialBalance = ({ user }) => {
             className="space-y-4"
           >
             {/* Summary */}
-            <Card className="p-4 bg-gray-800/50">
+            <Card className="p-4 bg-slate-50">
               <p className="text-sm text-gray-600">
                 Total Accounts: <span className="font-bold">{chartOfAccounts.total_accounts}</span>
               </p>
@@ -288,7 +288,7 @@ const AdminTrialBalance = ({ user }) => {
                       </div>
                       <div className="text-left">
                         <h3 className="font-semibold text-gray-900">{data.name}</h3>
-                        <p className="text-xs text-gray-500">Code: {data.code} | {data.accounts.length} accounts</p>
+                        <p className="text-xs text-slate-500">Code: {data.code} | {data.accounts.length} accounts</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -296,9 +296,9 @@ const AdminTrialBalance = ({ user }) => {
                         {formatCurrency(data.total)}
                       </span>
                       {expandedCategories[category] ? (
-                        <ChevronDown className="h-5 w-5 text-gray-400" />
+                        <ChevronDown className="h-5 w-5 text-slate-500" />
                       ) : (
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                        <ChevronRight className="h-5 w-5 text-slate-500" />
                       )}
                     </div>
                   </button>
@@ -313,7 +313,7 @@ const AdminTrialBalance = ({ user }) => {
                         className="overflow-hidden"
                       >
                         <table className="w-full">
-                          <thead className="bg-gray-800/50">
+                          <thead className="bg-slate-50">
                             <tr>
                               <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Code</th>
                               <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Account Name</th>
@@ -324,8 +324,8 @@ const AdminTrialBalance = ({ user }) => {
                           </thead>
                           <tbody className="divide-y">
                             {data.accounts.map((account, idx) => (
-                              <tr key={idx} className="hover:bg-gray-800/50">
-                                <td className="px-4 py-2 text-sm font-mono text-gray-500">{account.code}</td>
+                              <tr key={idx} className="hover:bg-slate-50">
+                                <td className="px-4 py-2 text-sm font-mono text-slate-500">{account.code}</td>
                                 <td className="px-4 py-2 text-sm font-medium text-gray-900">{account.name}</td>
                                 <td className="px-4 py-2">
                                   <span className="text-xs px-2 py-1 rounded-full bg-gray-700 text-gray-600 capitalize">

@@ -165,10 +165,10 @@ const AdminAccountingDashboard = ({ user }) => {
 
   const getRiskColor = (status) => {
     switch(status) {
-      case 'SAFE': return 'text-green-600 bg-green-500/20';
-      case 'WARNING': return 'text-yellow-600 bg-yellow-500/20';
-      case 'CRITICAL': return 'text-red-600 bg-red-500/20';
-      default: return 'text-gray-400 bg-gray-800';
+      case 'SAFE': return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+      case 'WARNING': return 'text-amber-700 bg-amber-50 border-amber-200';
+      case 'CRITICAL': return 'text-red-700 bg-red-50 border-red-200';
+      default: return 'text-slate-500 bg-slate-50 border-slate-200';
     }
   };
 
@@ -184,42 +184,43 @@ const AdminAccountingDashboard = ({ user }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-800/50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20" data-testid="accounting-loading">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
-          <p className="text-gray-400">Loading Accounting Dashboard...</p>
+          <p className="text-slate-500 font-medium">Loading Accounting Dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-800/50">
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/admin')} size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <BarChart3 className="h-6 w-6 text-purple-600" />
-                Fintech Accounting System
-              </h1>
-              <p className="text-sm text-gray-500">Advanced P&L, Liability & Risk Management</p>
-            </div>
+    <div className="space-y-6" data-testid="accounting-dashboard">
+      {/* Header - BULKPE STYLE */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate('/admin')} size="sm" className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
+              <div className="p-2 bg-purple-100 rounded-xl">
+                <BarChart3 className="h-5 w-5 text-purple-600" />
+              </div>
+              Fintech Accounting System
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">Advanced P&L, Liability & Risk Management</p>
           </div>
-          <div className="flex items-center gap-3">
-            {/* View Mode Toggle */}
-            <div className="flex bg-gray-900 rounded-lg shadow-sm border overflow-hidden" data-testid="view-mode-toggle">
-              <button
-                onClick={() => setViewMode('quick')}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-                  viewMode === 'quick' 
-                    ? 'bg-purple-600 text-white' 
-                    : 'text-gray-400 hover:bg-gray-800'
+        </div>
+        <div className="flex items-center gap-3">
+          {/* View Mode Toggle - BULKPE STYLE */}
+          <div className="flex bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" data-testid="view-mode-toggle">
+            <button
+              onClick={() => setViewMode('quick')}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors duration-200 ${
+                viewMode === 'quick' 
+                    ? 'bg-purple-600 text-slate-800' 
+                    : 'text-slate-500 hover:bg-slate-50'
                 }`}
                 data-testid="quick-view-btn"
               >
@@ -228,10 +229,10 @@ const AdminAccountingDashboard = ({ user }) => {
               </button>
               <button
                 onClick={() => setViewMode('detailed')}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors duration-200 ${
                   viewMode === 'detailed' 
-                    ? 'bg-purple-600 text-white' 
-                    : 'text-gray-400 hover:bg-gray-800'
+                    ? 'bg-purple-600 text-slate-800' 
+                    : 'text-slate-500 hover:bg-slate-50'
                 }`}
                 data-testid="detailed-view-btn"
               >
@@ -239,52 +240,52 @@ const AdminAccountingDashboard = ({ user }) => {
                 Detailed
               </button>
             </div>
-            <Button onClick={fetchAllData} disabled={loading}>
+            <Button onClick={fetchAllData} disabled={loading} className="rounded-xl bg-purple-600 hover:bg-purple-700 text-slate-800">
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>
         </div>
 
-        {/* QUICK VIEW MODE */}
+        {/* QUICK VIEW MODE - BULKPE STYLE */}
         {viewMode === 'quick' && quickViewData && (
           <div className="space-y-6" data-testid="quick-view-dashboard">
             {/* Main Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
               {/* Total Income */}
               <Card 
-                className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-green-500/30 cursor-pointer hover:shadow-lg transition-shadow" 
+                className="p-5 bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 rounded-2xl cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200" 
                 data-testid="total-income-card"
                 onClick={() => navigate('/admin/income-sources')}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-green-400">Total Income</span>
-                  <div className="p-2 bg-green-500/20 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  <span className="text-sm font-semibold text-emerald-700">Total Income</span>
+                  <div className="p-2 bg-emerald-100 rounded-xl">
+                    <TrendingUp className="h-5 w-5 text-emerald-600" />
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-green-400">
+                <div className="text-2xl font-bold text-emerald-700">
                   {formatCurrency(quickViewData.masterSummary?.income?.total || 0)}
                 </div>
-                <div className="text-xs text-green-600 mt-1">All revenue sources</div>
+                <div className="text-xs text-emerald-600 mt-1 font-medium">All revenue sources</div>
               </Card>
 
               {/* Total Expense */}
               <Card 
-                className="p-5 bg-gradient-to-br from-red-50 to-rose-50 border-red-500/30 cursor-pointer hover:shadow-lg transition-shadow" 
+                className="p-5 bg-gradient-to-br from-red-50 to-rose-50 border-red-200 rounded-2xl cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200" 
                 data-testid="total-expense-card"
                 onClick={() => navigate('/admin/expenses')}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-red-400">Total Expense</span>
-                  <div className="p-2 bg-red-500/20 rounded-lg">
+                  <span className="text-sm font-semibold text-red-700">Total Expense</span>
+                  <div className="p-2 bg-red-100 rounded-xl">
                     <TrendingDown className="h-5 w-5 text-red-600" />
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-red-400">
+                <div className="text-2xl font-bold text-red-700">
                   {formatCurrency(quickViewData.masterSummary?.expense?.total || 0)}
                 </div>
-                <div className="text-xs text-red-600 mt-1">All outflows</div>
+                <div className="text-xs text-red-600 mt-1 font-medium">All outflows</div>
               </Card>
 
               {/* Net P&L */}
@@ -367,24 +368,24 @@ const AdminAccountingDashboard = ({ user }) => {
                   Income Breakdown
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-gray-700 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
-                    <span className="text-gray-400">Ad Revenue</span>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200 hover:bg-slate-50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
+                    <span className="text-slate-500">Ad Revenue</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.ad_revenue || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-gray-700 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/subscription-management'); }}>
-                    <span className="text-gray-400">Subscription</span>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200 hover:bg-slate-50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/subscription-management'); }}>
+                    <span className="text-slate-500">Subscription</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.subscription || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-gray-700 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
-                    <span className="text-gray-400">Commission</span>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200 hover:bg-slate-50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
+                    <span className="text-slate-500">Commission</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.commission || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-gray-700 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
-                    <span className="text-gray-400">Interest</span>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200 hover:bg-slate-50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
+                    <span className="text-slate-500">Interest</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.interest || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
-                    <span className="text-gray-400">Penalty/Forfeit</span>
+                  <div className="flex justify-between items-center py-2 hover:bg-slate-50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
+                    <span className="text-slate-500">Penalty/Forfeit</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.penalty_forfeit || 0)}</span>
                   </div>
                 </div>
@@ -397,12 +398,12 @@ const AdminAccountingDashboard = ({ user }) => {
                   Expense Breakdown
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-gray-700 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/fixed-expenses'); }}>
-                    <span className="text-gray-400">Operational Expenses</span>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200 hover:bg-slate-50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/fixed-expenses'); }}>
+                    <span className="text-slate-500">Operational Expenses</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.expense?.operational || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/expenses'); }}>
-                    <span className="text-gray-400">Redemption Payouts</span>
+                  <div className="flex justify-between items-center py-2 hover:bg-slate-50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/expenses'); }}>
+                    <span className="text-slate-500">Redemption Payouts</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.expense?.redeem_payouts || 0)}</span>
                   </div>
                 </div>
@@ -428,9 +429,9 @@ const AdminAccountingDashboard = ({ user }) => {
                     {formatCurrency(quickViewData.masterSummary?.prc_stats?.inr_liability || 0)}
                   </div>
                 </div>
-                <div className="bg-gray-800/50 p-4 rounded-lg text-center">
-                  <div className="text-sm text-gray-400 mb-1">Conversion Rate</div>
-                  <div className="text-2xl font-bold text-gray-300">
+                <div className="bg-slate-50 p-4 rounded-lg text-center">
+                  <div className="text-sm text-slate-500 mb-1">Conversion Rate</div>
+                  <div className="text-2xl font-bold text-slate-600">
                     1 INR = {quickViewData.masterSummary?.prc_stats?.conversion_rate || 10} PRC
                   </div>
                 </div>
@@ -480,7 +481,7 @@ const AdminAccountingDashboard = ({ user }) => {
         )}
 
         {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6 bg-gray-900 p-2 rounded-lg shadow-sm overflow-x-auto">
+        <div className="flex flex-wrap gap-2 mb-6 bg-white p-2 rounded-lg shadow-sm overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -489,8 +490,8 @@ const AdminAccountingDashboard = ({ user }) => {
                 onClick={() => handleTabChange(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'bg-purple-600 text-white'
-                    : 'text-gray-400 hover:bg-gray-800'
+                    ? 'bg-purple-600 text-slate-800'
+                    : 'text-slate-500 hover:bg-white'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -508,7 +509,7 @@ const AdminAccountingDashboard = ({ user }) => {
               {/* Risk Score */}
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-500">Risk Score</span>
+                  <span className="text-sm text-slate-500">Risk Score</span>
                   <span className={`px-2 py-1 rounded text-xs font-bold ${getRiskColor(dashboardData.risk.status)}`}>
                     {dashboardData.risk.status}
                   </span>
@@ -528,11 +529,11 @@ const AdminAccountingDashboard = ({ user }) => {
               {/* PRC Circulating */}
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-500">Circulating PRC</span>
+                  <span className="text-sm text-slate-500">Circulating PRC</span>
                   <Coins className="h-5 w-5 text-purple-500" />
                 </div>
                 <div className="text-2xl font-bold">{formatPRC(dashboardData.prc_supply.circulating)}</div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-slate-500">
                   INR Value: {formatCurrency(dashboardData.prc_supply.circulating_inr_value)}
                 </div>
               </Card>
@@ -540,11 +541,11 @@ const AdminAccountingDashboard = ({ user }) => {
               {/* INR Liability */}
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-500">INR Liability</span>
+                  <span className="text-sm text-slate-500">INR Liability</span>
                   <Receipt className="h-5 w-5 text-red-500" />
                 </div>
                 <div className="text-2xl font-bold text-red-600">{formatCurrency(dashboardData.liability.total_inr_liability)}</div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-slate-500">
                   Reserve: {formatCurrency(dashboardData.liability.reserve_fund)}
                 </div>
               </Card>
@@ -552,7 +553,7 @@ const AdminAccountingDashboard = ({ user }) => {
               {/* Backing Ratio */}
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-500">Backing Ratio</span>
+                  <span className="text-sm text-slate-500">Backing Ratio</span>
                   <span className={`px-2 py-1 rounded text-xs font-bold ${
                     dashboardData.liability.backing_status === 'SAFE' ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'
                   }`}>
@@ -562,7 +563,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 <div className="text-2xl font-bold">
                   {dashboardData.liability.backing_ratio === '∞' ? '∞' : dashboardData.liability.backing_ratio}x
                 </div>
-                <div className="text-xs text-gray-500">Target: ≥ 1.0x</div>
+                <div className="text-xs text-slate-500">Target: ≥ 1.0x</div>
               </Card>
             </div>
 
@@ -576,11 +577,11 @@ const AdminAccountingDashboard = ({ user }) => {
                 </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Total Minted</span>
+                    <span className="text-slate-500">Total Minted</span>
                     <span className="font-semibold text-green-600">{formatPRC(dashboardData.prc_supply.total_minted)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Total Burned</span>
+                    <span className="text-slate-500">Total Burned</span>
                     <span className="font-semibold text-red-600">{formatPRC(dashboardData.prc_supply.total_burned)}</span>
                   </div>
                   <hr />
@@ -599,11 +600,11 @@ const AdminAccountingDashboard = ({ user }) => {
                 </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Revenue</span>
+                    <span className="text-slate-500">Revenue</span>
                     <span className="font-semibold text-green-600">{formatCurrency(dashboardData.financials.monthly_revenue)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Expenses</span>
+                    <span className="text-slate-500">Expenses</span>
                     <span className="font-semibold text-red-600">{formatCurrency(dashboardData.financials.monthly_expenses)}</span>
                   </div>
                   <hr />
@@ -625,8 +626,8 @@ const AdminAccountingDashboard = ({ user }) => {
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {dashboardData.wallets?.map((wallet, idx) => (
-                  <div key={idx} className="bg-gray-800/50 p-4 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-1">{wallet.wallet_name || wallet.wallet_type}</div>
+                  <div key={idx} className="bg-slate-50 p-4 rounded-lg">
+                    <div className="text-xs text-slate-500 mb-1">{wallet.wallet_name || wallet.wallet_type}</div>
                     <div className="text-lg font-bold">{formatCurrency(wallet.balance)}</div>
                   </div>
                 ))}
@@ -646,21 +647,21 @@ const AdminAccountingDashboard = ({ user }) => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-gray-100">{dashboardData.overview.total_users}</div>
-                  <div className="text-sm text-gray-500">Total Users</div>
+                  <div className="text-sm text-slate-500">Total Users</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-purple-600">{dashboardData.overview.vip_users}</div>
-                  <div className="text-sm text-gray-500">VIP Users</div>
+                  <div className="text-sm text-slate-500">VIP Users</div>
                 </div>
                 <div className="text-center">
                   <div className="text-xl font-bold text-gray-100">{dashboardData.overview.conversion_rate}</div>
-                  <div className="text-sm text-gray-500">Conversion Rate</div>
+                  <div className="text-sm text-slate-500">Conversion Rate</div>
                 </div>
                 <div className="text-center">
                   <div className="text-xl font-bold text-blue-600">
                     {((dashboardData.overview.vip_users / dashboardData.overview.total_users) * 100).toFixed(1)}%
                   </div>
-                  <div className="text-sm text-gray-500">VIP Conversion</div>
+                  <div className="text-sm text-slate-500">VIP Conversion</div>
                 </div>
               </div>
             </Card>
@@ -683,17 +684,17 @@ const AdminAccountingDashboard = ({ user }) => {
                     <div className="text-2xl font-bold text-green-400">{formatPRC(mintLedger.summary.total_minted)}</div>
                   </div>
                   {Object.entries(mintLedger.summary.by_source || {}).slice(0, 3).map(([source, data]) => (
-                    <div key={source} className="bg-gray-800/50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-500 capitalize">{source.replace('_', ' ')}</div>
+                    <div key={source} className="bg-slate-50 p-4 rounded-lg">
+                      <div className="text-sm text-slate-500 capitalize">{source.replace('_', ' ')}</div>
                       <div className="text-lg font-bold">{formatPRC(data.prc)}</div>
-                      <div className="text-xs text-gray-400">{data.count} transactions</div>
+                      <div className="text-xs text-slate-500">{data.count} transactions</div>
                     </div>
                   ))}
                 </div>
                 {/* Table */}
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-gray-800">
+                    <thead className="bg-white">
                       <tr>
                         <th className="px-4 py-2 text-left">Date</th>
                         <th className="px-4 py-2 text-left">User</th>
@@ -704,7 +705,7 @@ const AdminAccountingDashboard = ({ user }) => {
                     </thead>
                     <tbody>
                       {mintLedger.entries.map((entry, idx) => (
-                        <tr key={idx} className="border-b hover:bg-gray-800/50">
+                        <tr key={idx} className="border-b hover:bg-slate-50">
                           <td className="px-4 py-2">{new Date(entry.created_at).toLocaleDateString()}</td>
                           <td className="px-4 py-2 text-xs">{entry.user_id?.slice(0, 8)}...</td>
                           <td className="px-4 py-2">
@@ -713,7 +714,7 @@ const AdminAccountingDashboard = ({ user }) => {
                             </span>
                           </td>
                           <td className="px-4 py-2 text-right font-semibold text-green-600">+{entry.amount?.toFixed(2)}</td>
-                          <td className="px-4 py-2 text-xs text-gray-500">{entry.description?.slice(0, 50)}</td>
+                          <td className="px-4 py-2 text-xs text-slate-500">{entry.description?.slice(0, 50)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -721,7 +722,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-gray-500">Loading mint ledger...</div>
+              <div className="text-center py-8 text-slate-500">Loading mint ledger...</div>
             )}
           </Card>
         )}
@@ -748,33 +749,33 @@ const AdminAccountingDashboard = ({ user }) => {
                     <div className="text-sm text-red-600">INR Pending</div>
                     <div className="text-2xl font-bold text-red-400">{formatCurrency(liabilityLedger.summary.inr_pending)}</div>
                   </div>
-                  <div className="bg-gray-800/50 p-4 rounded-lg">
-                    <div className="text-sm text-gray-400">Conversion Rate</div>
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <div className="text-sm text-slate-500">Conversion Rate</div>
                     <div className="text-xl font-bold">1 INR = {liabilityLedger.summary.conversion_rate} PRC</div>
                   </div>
                 </div>
                 
                 {/* Ageing Analysis */}
-                <div className="mb-6 p-4 bg-gray-800/50 rounded-lg">
+                <div className="mb-6 p-4 bg-slate-50 rounded-lg">
                   <h4 className="font-semibold mb-3">Liability Ageing</h4>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">{formatCurrency(liabilityLedger.ageing.safe_0_7_days)}</div>
-                      <div className="text-sm text-gray-500">0-7 Days (Safe)</div>
+                      <div className="text-sm text-slate-500">0-7 Days (Safe)</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-yellow-600">{formatCurrency(liabilityLedger.ageing.warning_8_30_days)}</div>
-                      <div className="text-sm text-gray-500">8-30 Days (Warning)</div>
+                      <div className="text-sm text-slate-500">8-30 Days (Warning)</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-red-600">{formatCurrency(liabilityLedger.ageing.critical_31_plus_days)}</div>
-                      <div className="text-sm text-gray-500">31+ Days (Critical)</div>
+                      <div className="text-sm text-slate-500">31+ Days (Critical)</div>
                     </div>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-gray-500">Loading liability ledger...</div>
+              <div className="text-center py-8 text-slate-500">Loading liability ledger...</div>
             )}
           </Card>
         )}
@@ -802,8 +803,8 @@ const AdminAccountingDashboard = ({ user }) => {
                     <div className="text-sm text-orange-600">Total Liability</div>
                     <div className="text-2xl font-bold text-orange-400">{formatCurrency(reserveFund.total_liability_inr)}</div>
                   </div>
-                  <div className="bg-gray-800/50 p-4 rounded-lg">
-                    <div className="text-sm text-gray-400">Backing Ratio</div>
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <div className="text-sm text-slate-500">Backing Ratio</div>
                     <div className="text-2xl font-bold">{reserveFund.backing_ratio}x</div>
                   </div>
                   <div className={`p-4 rounded-lg ${reserveFund.status === 'SAFE' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
@@ -826,10 +827,10 @@ const AdminAccountingDashboard = ({ user }) => {
                     <h4 className="font-semibold mb-3">Recent Activity</h4>
                     <div className="space-y-2">
                       {reserveFund.history.slice(0, 10).map((entry, idx) => (
-                        <div key={idx} className="flex justify-between items-center p-3 bg-gray-800/50 rounded">
+                        <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 rounded">
                           <div>
                             <span className="text-sm">{entry.reason}</span>
-                            <div className="text-xs text-gray-500">{new Date(entry.created_at).toLocaleString()}</div>
+                            <div className="text-xs text-slate-500">{new Date(entry.created_at).toLocaleString()}</div>
                           </div>
                           <span className={`font-semibold ${entry.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
                             {entry.type === 'credit' ? '+' : '-'}{formatCurrency(entry.amount)}
@@ -841,7 +842,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 )}
               </>
             ) : (
-              <div className="text-center py-8 text-gray-500">Loading reserve fund data...</div>
+              <div className="text-center py-8 text-slate-500">Loading reserve fund data...</div>
             )}
           </Card>
         )}
@@ -864,25 +865,25 @@ const AdminAccountingDashboard = ({ user }) => {
                 {dailySummaries.trends && (
                   <div className="grid grid-cols-4 gap-4 mb-6">
                     <div className={`p-3 rounded-lg ${dailySummaries.trends.prc_minted_change >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                      <div className="text-xs text-gray-500">PRC Minted Change</div>
+                      <div className="text-xs text-slate-500">PRC Minted Change</div>
                       <div className={`font-bold ${dailySummaries.trends.prc_minted_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {dailySummaries.trends.prc_minted_change >= 0 ? '+' : ''}{dailySummaries.trends.prc_minted_change}
                       </div>
                     </div>
                     <div className={`p-3 rounded-lg ${dailySummaries.trends.prc_burned_change >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                      <div className="text-xs text-gray-500">PRC Burned Change</div>
+                      <div className="text-xs text-slate-500">PRC Burned Change</div>
                       <div className={`font-bold ${dailySummaries.trends.prc_burned_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {dailySummaries.trends.prc_burned_change >= 0 ? '+' : ''}{dailySummaries.trends.prc_burned_change}
                       </div>
                     </div>
                     <div className={`p-3 rounded-lg ${dailySummaries.trends.revenue_change >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                      <div className="text-xs text-gray-500">Revenue Change</div>
+                      <div className="text-xs text-slate-500">Revenue Change</div>
                       <div className={`font-bold ${dailySummaries.trends.revenue_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {dailySummaries.trends.revenue_change >= 0 ? '+' : ''}₹{dailySummaries.trends.revenue_change}
                       </div>
                     </div>
                     <div className={`p-3 rounded-lg ${dailySummaries.trends.risk_score_change >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                      <div className="text-xs text-gray-500">Risk Score Change</div>
+                      <div className="text-xs text-slate-500">Risk Score Change</div>
                       <div className={`font-bold ${dailySummaries.trends.risk_score_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {dailySummaries.trends.risk_score_change >= 0 ? '+' : ''}{dailySummaries.trends.risk_score_change}
                       </div>
@@ -892,7 +893,7 @@ const AdminAccountingDashboard = ({ user }) => {
 
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-gray-800">
+                    <thead className="bg-white">
                       <tr>
                         <th className="px-3 py-2 text-left">Date</th>
                         <th className="px-3 py-2 text-right">Active Users</th>
@@ -906,7 +907,7 @@ const AdminAccountingDashboard = ({ user }) => {
                     </thead>
                     <tbody>
                       {dailySummaries.summaries?.map((summary, idx) => (
-                        <tr key={idx} className="border-b hover:bg-gray-800/50">
+                        <tr key={idx} className="border-b hover:bg-slate-50">
                           <td className="px-3 py-2">{summary.date}</td>
                           <td className="px-3 py-2 text-right">{summary.active_users}</td>
                           <td className="px-3 py-2 text-right text-green-600">{summary.prc_minted?.toFixed(2)}</td>
@@ -928,7 +929,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-gray-500">Loading daily summaries...</div>
+              <div className="text-center py-8 text-slate-500">Loading daily summaries...</div>
             )}
           </Card>
         )}
@@ -966,7 +967,7 @@ const AdminAccountingDashboard = ({ user }) => {
 
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-gray-800">
+                    <thead className="bg-white">
                       <tr>
                         <th className="px-3 py-2 text-left">User</th>
                         <th className="px-3 py-2 text-left">Membership</th>
@@ -978,16 +979,16 @@ const AdminAccountingDashboard = ({ user }) => {
                     </thead>
                     <tbody>
                       {userCostAnalysis.users?.map((user, idx) => (
-                        <tr key={idx} className="border-b hover:bg-gray-800/50">
+                        <tr key={idx} className="border-b hover:bg-slate-50">
                           <td className="px-3 py-2">
                             <div className="font-medium">{user.name || 'N/A'}</div>
-                            <div className="text-xs text-gray-500">{user.email}</div>
+                            <div className="text-xs text-slate-500">{user.email}</div>
                           </td>
                           <td className="px-3 py-2">
                             <span className={`px-2 py-1 rounded text-xs ${
                               ['startup', 'growth', 'elite', 'vip'].includes(user.subscription_plan) 
                                 ? 'bg-purple-500/20 text-purple-400' 
-                                : 'bg-gray-800'
+                                : 'bg-white'
                             }`}>
                               {user.subscription_plan || 'explorer'}
                             </span>
@@ -1009,7 +1010,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-gray-500">Loading user cost analysis...</div>
+              <div className="text-center py-8 text-slate-500">Loading user cost analysis...</div>
             )}
           </Card>
         )}
@@ -1018,7 +1019,7 @@ const AdminAccountingDashboard = ({ user }) => {
         {activeTab === 'settings' && accountingSettings && (
           <Card className="p-6">
             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <Settings className="h-5 w-5 text-gray-400" />
+              <Settings className="h-5 w-5 text-slate-500" />
               Accounting Settings
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1030,7 +1031,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 </h4>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <label className="text-sm text-gray-500">PRC per 1 INR</label>
+                    <label className="text-sm text-slate-500">PRC per 1 INR</label>
                     <input
                       type="number"
                       value={accountingSettings.prc_per_inr}
@@ -1042,7 +1043,7 @@ const AdminAccountingDashboard = ({ user }) => {
                     Update
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">Current: 1 INR = {accountingSettings.prc_per_inr} PRC</p>
+                <p className="text-xs text-slate-500 mt-2">Current: 1 INR = {accountingSettings.prc_per_inr} PRC</p>
               </div>
 
               {/* Reserve Fund Percentage */}
@@ -1053,7 +1054,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 </h4>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <label className="text-sm text-gray-500">% of Daily Profit</label>
+                    <label className="text-sm text-slate-500">% of Daily Profit</label>
                     <input
                       type="number"
                       min="0"
@@ -1077,7 +1078,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 </h4>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <label className="text-sm text-gray-500">Days of Inactivity</label>
+                    <label className="text-sm text-slate-500">Days of Inactivity</label>
                     <input
                       type="number"
                       min="30"
@@ -1090,7 +1091,7 @@ const AdminAccountingDashboard = ({ user }) => {
                     Update
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">PRC will be burned after {accountingSettings.inactive_expiry_days} days of user inactivity</p>
+                <p className="text-xs text-slate-500 mt-2">PRC will be burned after {accountingSettings.inactive_expiry_days} days of user inactivity</p>
               </div>
 
               {/* Liability Thresholds */}
@@ -1101,7 +1102,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 </h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm text-gray-500">Warning Threshold (Backing Ratio)</label>
+                    <label className="text-sm text-slate-500">Warning Threshold (Backing Ratio)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -1111,7 +1112,7 @@ const AdminAccountingDashboard = ({ user }) => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-gray-500">Critical Threshold (Backing Ratio)</label>
+                    <label className="text-sm text-slate-500">Critical Threshold (Backing Ratio)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -1131,9 +1132,8 @@ const AdminAccountingDashboard = ({ user }) => {
             </div>
           </Card>
         )}
-          </>
-        )}
-      </div>
+      </>
+    )}
     </div>
   );
 };

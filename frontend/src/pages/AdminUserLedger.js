@@ -137,15 +137,15 @@ const AdminUserLedger = ({ user }) => {
   };
 
   return (
-    <div className="p-6 bg-gray-800/50 min-h-screen" data-testid="admin-user-ledger">
+    <div className="p-6 bg-slate-50 min-h-screen" data-testid="admin-user-ledger">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Book className="h-6 w-6 text-purple-600" />
             User Wallet Ledger
           </h1>
-          <p className="text-gray-500 mt-1">Comprehensive view of all user transactions (Read-only)</p>
+          <p className="text-slate-500 mt-1">Comprehensive view of all user transactions (Read-only)</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -177,7 +177,7 @@ const AdminUserLedger = ({ user }) => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 bg-gradient-to-br from-green-500 to-green-600 text-white">
+        <Card className="p-4 bg-gradient-to-br from-green-500 to-green-600 text-slate-800">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm">Total Credits</p>
@@ -192,7 +192,7 @@ const AdminUserLedger = ({ user }) => {
           </div>
         </Card>
         
-        <Card className="p-4 bg-gradient-to-br from-red-500 to-red-600 text-white">
+        <Card className="p-4 bg-gradient-to-br from-red-500 to-red-600 text-slate-800">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-red-100 text-sm">Total Debits</p>
@@ -207,7 +207,7 @@ const AdminUserLedger = ({ user }) => {
           </div>
         </Card>
         
-        <Card className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+        <Card className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 text-slate-800">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm">Total Transactions</p>
@@ -217,7 +217,7 @@ const AdminUserLedger = ({ user }) => {
           </div>
         </Card>
         
-        <Card className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+        <Card className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 text-slate-800">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm">Unique Users</p>
@@ -238,7 +238,7 @@ const AdminUserLedger = ({ user }) => {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">User ID</label>
+              <label className="text-sm text-slate-500 mb-1 block">User ID</label>
               <Input
                 placeholder="Enter User ID"
                 value={filters.user_id}
@@ -247,7 +247,7 @@ const AdminUserLedger = ({ user }) => {
               />
             </div>
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">Wallet Type</label>
+              <label className="text-sm text-slate-500 mb-1 block">Wallet Type</label>
               <select
                 className="w-full p-2 border rounded-lg"
                 value={filters.wallet_type}
@@ -260,7 +260,7 @@ const AdminUserLedger = ({ user }) => {
               </select>
             </div>
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">Transaction Type</label>
+              <label className="text-sm text-slate-500 mb-1 block">Transaction Type</label>
               <select
                 className="w-full p-2 border rounded-lg"
                 value={filters.transaction_type}
@@ -273,7 +273,7 @@ const AdminUserLedger = ({ user }) => {
               </select>
             </div>
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">From Date</label>
+              <label className="text-sm text-slate-500 mb-1 block">From Date</label>
               <Input
                 type="date"
                 value={filters.date_from}
@@ -282,7 +282,7 @@ const AdminUserLedger = ({ user }) => {
               />
             </div>
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">To Date</label>
+              <label className="text-sm text-slate-500 mb-1 block">To Date</label>
               <Input
                 type="date"
                 value={filters.date_to}
@@ -306,29 +306,29 @@ const AdminUserLedger = ({ user }) => {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full" data-testid="ledger-table">
-            <thead className="bg-gray-800/50 border-b">
+            <thead className="bg-slate-50 border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transaction ID</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Wallet</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Balance After</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Transaction ID</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">User</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Wallet</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Amount</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Balance After</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Description</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan="8" className="px-4 py-8 text-center text-slate-500">
                     <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
                     Loading transactions...
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan="8" className="px-4 py-8 text-center text-slate-500">
                     No transactions found
                   </td>
                 </tr>
@@ -336,34 +336,34 @@ const AdminUserLedger = ({ user }) => {
                 transactions.map((txn) => {
                   const Icon = getTypeIcon(txn.type);
                   return (
-                    <tr key={txn.transaction_id} className="hover:bg-gray-800/50">
-                      <td className="px-4 py-3 text-sm font-mono text-gray-400">
+                    <tr key={txn.transaction_id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-sm font-mono text-slate-500">
                         {txn.transaction_id?.slice(0, 15)}...
                       </td>
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-white">{txn.user_name}</div>
-                        <div className="text-xs text-gray-500">{txn.user_email}</div>
+                        <div className="text-sm font-medium text-slate-800">{txn.user_name}</div>
+                        <div className="text-xs text-slate-500">{txn.user_email}</div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(txn.type)} bg-gray-800`}>
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(txn.type)} bg-white`}>
                           <Icon className="h-3 w-3" />
                           {txn.type?.replace(/_/g, ' ')}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-400 capitalize">
+                      <td className="px-4 py-3 text-sm text-slate-500 capitalize">
                         {txn.wallet_type?.replace(/_/g, ' ')}
                       </td>
                       <td className={`px-4 py-3 text-sm font-medium text-right ${getTypeColor(txn.type)}`}>
                         {['mining', 'tap_game', 'referral', 'cashback', 'admin_credit'].includes(txn.type) ? '+' : '-'}
                         {txn.amount?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-400 text-right">
+                      <td className="px-4 py-3 text-sm text-slate-500 text-right">
                         {txn.balance_after?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">
+                      <td className="px-4 py-3 text-sm text-slate-500 max-w-xs truncate">
                         {txn.description}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 py-3 text-sm text-slate-500">
                         {formatDate(txn.created_at)}
                       </td>
                     </tr>

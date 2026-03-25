@@ -130,11 +130,11 @@ const AdminPRCEconomyDashboard = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Coins className="w-7 h-7 text-amber-500" />
             PRC Token Economy
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Real-time economy monitoring & control</p>
+          <p className="text-slate-500 text-sm mt-1">Real-time economy monitoring & control</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Manual Pause/Resume Control */}
@@ -163,7 +163,7 @@ const AdminPRCEconomyDashboard = () => {
             variant="outline"
             onClick={() => fetchDashboard(true)}
             disabled={refreshing}
-            className="border-gray-700 text-gray-300"
+            className="border-slate-200 text-slate-600"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
@@ -182,7 +182,7 @@ const AdminPRCEconomyDashboard = () => {
                 <p className="text-red-300 text-sm">
                   Reason: {pauseStatus.reason || 'Emergency protection'}
                 </p>
-                <p className="text-gray-400 text-xs mt-1">
+                <p className="text-slate-500 text-xs mt-1">
                   Auto-resumes: {pauseStatus.paused_until ? new Date(pauseStatus.paused_until).toLocaleString('en-IN') : 'Unknown'}
                 </p>
               </div>
@@ -190,7 +190,7 @@ const AdminPRCEconomyDashboard = () => {
             <Button
               onClick={handleResumeRedeem}
               disabled={pauseLoading}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-slate-800"
             >
               {pauseLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
               Resume Now
@@ -220,9 +220,9 @@ const AdminPRCEconomyDashboard = () => {
             <DollarSign className="w-8 h-8 text-amber-400" />
             <span className="text-xs text-amber-300 bg-amber-500/20 px-2 py-1 rounded">LIVE</span>
           </div>
-          <p className="text-3xl font-bold text-white mt-2">{prc_rate?.current || 10}</p>
+          <p className="text-3xl font-bold text-slate-800 mt-2">{prc_rate?.current || 10}</p>
           <p className="text-amber-300 text-sm">PRC = ₹1</p>
-          <p className="text-gray-400 text-xs mt-1">
+          <p className="text-slate-500 text-xs mt-1">
             ₹{prc_rate?.inr_value?.toFixed(4) || '0.10'} per PRC
           </p>
         </Card>
@@ -230,7 +230,7 @@ const AdminPRCEconomyDashboard = () => {
         {/* Stability Score */}
         <Card className={`p-4 bg-gradient-to-br ${getStabilityBg(stability?.stability_score || 50)} border`}>
           <div className="flex items-center justify-between">
-            <Gauge className="w-8 h-8 text-white" />
+            <Gauge className="w-8 h-8 text-slate-800" />
             <span className={`text-xs ${getStabilityColor(stability?.stability_score || 50)} bg-black/30 px-2 py-1 rounded`}>
               {stability?.health_status?.toUpperCase() || 'UNKNOWN'}
             </span>
@@ -238,7 +238,7 @@ const AdminPRCEconomyDashboard = () => {
           <p className={`text-3xl font-bold ${getStabilityColor(stability?.stability_score || 50)} mt-2`}>
             {stability?.stability_score || 0}
           </p>
-          <p className="text-gray-300 text-sm">Stability Score</p>
+          <p className="text-slate-600 text-sm">Stability Score</p>
         </Card>
 
         {/* Circulating Supply */}
@@ -247,7 +247,7 @@ const AdminPRCEconomyDashboard = () => {
             <Coins className="w-8 h-8 text-blue-400" />
             <BarChart3 className="w-5 h-5 text-blue-300" />
           </div>
-          <p className="text-2xl font-bold text-white mt-2">
+          <p className="text-2xl font-bold text-slate-800 mt-2">
             {(supply?.circulating / 1000000)?.toFixed(2) || '0'}M
           </p>
           <p className="text-blue-300 text-sm">Circulating PRC</p>
@@ -261,15 +261,15 @@ const AdminPRCEconomyDashboard = () => {
               &gt;{(settings?.whale_threshold / 1000)}K
             </span>
           </div>
-          <p className="text-3xl font-bold text-white mt-2">{whale_wallets?.count || 0}</p>
+          <p className="text-3xl font-bold text-slate-800 mt-2">{whale_wallets?.count || 0}</p>
           <p className="text-purple-300 text-sm">Whale Wallets</p>
-          <p className="text-gray-400 text-xs mt-1">{settings?.whale_burn_rate}% burn rate</p>
+          <p className="text-slate-500 text-xs mt-1">{settings?.whale_burn_rate}% burn rate</p>
         </Card>
       </div>
 
       {/* Rate Factors */}
-      <Card className="p-5 bg-gray-800/50 border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <Card className="p-5 bg-slate-50 border-slate-200">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
           <Scale className="w-5 h-5 text-amber-400" />
           Dynamic Rate Factors
         </h3>
@@ -278,22 +278,22 @@ const AdminPRCEconomyDashboard = () => {
             const isPositive = value < 1;
             const label = key.replace('_factor', '').replace('_', ' ');
             return (
-              <div key={key} className="bg-gray-900/50 rounded-lg p-3 text-center">
-                <p className="text-gray-400 text-xs capitalize mb-1">{label}</p>
-                <p className={`text-xl font-bold ${isPositive ? 'text-green-400' : value > 1 ? 'text-red-400' : 'text-gray-300'}`}>
+              <div key={key} className="bg-white rounded-lg p-3 text-center">
+                <p className="text-slate-500 text-xs capitalize mb-1">{label}</p>
+                <p className={`text-xl font-bold ${isPositive ? 'text-green-400' : value > 1 ? 'text-red-400' : 'text-slate-600'}`}>
                   {value?.toFixed(2) || '1.00'}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500">
                   {isPositive ? '↑ Value Up' : value > 1 ? '↓ Value Down' : 'Neutral'}
                 </p>
               </div>
             );
           })}
         </div>
-        <div className="mt-4 p-3 bg-gray-900/50 rounded-lg flex items-center justify-between">
-          <span className="text-gray-400">Rate Calculation:</span>
+        <div className="mt-4 p-3 bg-white rounded-lg flex items-center justify-between">
+          <span className="text-slate-500">Rate Calculation:</span>
           <span className="text-amber-400 font-mono text-sm">
-            Base({prc_rate?.base || 10}) × Factors = <span className="text-white font-bold">{prc_rate?.current || 10} PRC/₹1</span>
+            Base({prc_rate?.base || 10}) × Factors = <span className="text-slate-800 font-bold">{prc_rate?.current || 10} PRC/₹1</span>
           </span>
         </div>
       </Card>
@@ -301,8 +301,8 @@ const AdminPRCEconomyDashboard = () => {
       {/* Two Column Layout */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Redeem Pressure */}
-        <Card className="p-5 bg-gray-800/50 border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <Card className="p-5 bg-slate-50 border-slate-200">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
             <Activity className="w-5 h-5 text-cyan-400" />
             Redeem Pressure Monitor
           </h3>
@@ -330,24 +330,24 @@ const AdminPRCEconomyDashboard = () => {
             </div>
             
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Current: {((redeem_pressure?.redeem_pressure || 0) * 100).toFixed(2)}%</span>
-              <span className="text-gray-500">Safe: {((redeem_pressure?.safe_threshold || 0.15) * 100)}%</span>
+              <span className="text-slate-500">Current: {((redeem_pressure?.redeem_pressure || 0) * 100).toFixed(2)}%</span>
+              <span className="text-slate-500">Safe: {((redeem_pressure?.safe_threshold || 0.15) * 100)}%</span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-900/50 rounded-lg p-3">
-                <p className="text-gray-400 text-xs">Today's Redeems</p>
-                <p className="text-xl font-bold text-white">
+              <div className="bg-white rounded-lg p-3">
+                <p className="text-slate-500 text-xs">Today's Redeems</p>
+                <p className="text-xl font-bold text-slate-800">
                   {redeem_pressure?.total_redeemed_today?.toLocaleString() || 0}
                 </p>
-                <p className="text-gray-500 text-xs">PRC</p>
+                <p className="text-slate-500 text-xs">PRC</p>
               </div>
-              <div className="bg-gray-900/50 rounded-lg p-3">
-                <p className="text-gray-400 text-xs">Active Users</p>
-                <p className="text-xl font-bold text-white">
+              <div className="bg-white rounded-lg p-3">
+                <p className="text-slate-500 text-xs">Active Users</p>
+                <p className="text-xl font-bold text-slate-800">
                   {redeem_pressure?.active_users?.toLocaleString() || 0}
                 </p>
-                <p className="text-gray-500 text-xs">30-day active</p>
+                <p className="text-slate-500 text-xs">30-day active</p>
               </div>
             </div>
 
@@ -369,8 +369,8 @@ const AdminPRCEconomyDashboard = () => {
         </Card>
 
         {/* Stability Components */}
-        <Card className="p-5 bg-gray-800/50 border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <Card className="p-5 bg-slate-50 border-slate-200">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
             <Shield className="w-5 h-5 text-green-400" />
             Stability Components
           </h3>
@@ -382,10 +382,10 @@ const AdminPRCEconomyDashboard = () => {
               const isPenalty = key.includes('penalty');
               
               return (
-                <div key={key} className="flex items-center justify-between p-2 bg-gray-900/50 rounded">
-                  <span className="text-gray-400 text-sm capitalize">{label}</span>
+                <div key={key} className="flex items-center justify-between p-2 bg-white rounded">
+                  <span className="text-slate-500 text-sm capitalize">{label}</span>
                   <span className={`font-mono font-bold ${
-                    isPenalty ? 'text-red-400' : isPositive ? 'text-green-400' : 'text-gray-400'
+                    isPenalty ? 'text-red-400' : isPositive ? 'text-green-400' : 'text-slate-500'
                   }`}>
                     {isPositive && !isPenalty ? '+' : ''}{value}
                   </span>
@@ -393,9 +393,9 @@ const AdminPRCEconomyDashboard = () => {
               );
             })}
             
-            <div className="border-t border-gray-700 pt-3 mt-3">
+            <div className="border-t border-slate-200 pt-3 mt-3">
               <div className="flex items-center justify-between">
-                <span className="text-white font-semibold">Total Score</span>
+                <span className="text-slate-800 font-semibold">Total Score</span>
                 <span className={`text-2xl font-bold ${getStabilityColor(stability?.stability_score || 0)}`}>
                   {stability?.stability_score || 0}/100
                 </span>
@@ -405,10 +405,10 @@ const AdminPRCEconomyDashboard = () => {
 
           {/* Recommendations */}
           {stability?.recommendations?.length > 0 && (
-            <div className="mt-4 p-3 bg-gray-900/50 rounded-lg">
-              <p className="text-gray-400 text-xs mb-2">Recommendations:</p>
+            <div className="mt-4 p-3 bg-white rounded-lg">
+              <p className="text-slate-500 text-xs mb-2">Recommendations:</p>
               {stability.recommendations.map((rec, i) => (
-                <p key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                <p key={i} className="text-sm text-slate-600 flex items-start gap-2">
                   <ChevronRight className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                   {rec}
                 </p>
@@ -420,8 +420,8 @@ const AdminPRCEconomyDashboard = () => {
 
       {/* Whale Wallets */}
       {whale_wallets?.top_whales?.length > 0 && (
-        <Card className="p-5 bg-gray-800/50 border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <Card className="p-5 bg-slate-50 border-slate-200">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
             <Wallet className="w-5 h-5 text-purple-400" />
             Top Whale Wallets
             <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-1 rounded ml-2">
@@ -432,7 +432,7 @@ const AdminPRCEconomyDashboard = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-gray-400 text-sm border-b border-gray-700">
+                <tr className="text-slate-500 text-sm border-b border-slate-200">
                   <th className="text-left py-2 px-3">User</th>
                   <th className="text-right py-2 px-3">Balance</th>
                   <th className="text-right py-2 px-3">Daily Burn</th>
@@ -440,22 +440,22 @@ const AdminPRCEconomyDashboard = () => {
               </thead>
               <tbody>
                 {whale_wallets.top_whales.map((whale, i) => (
-                  <tr key={whale.uid || i} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                  <tr key={whale.uid || i} className="border-b border-slate-200/50 hover:bg-slate-100/30">
                     <td className="py-3 px-3">
-                      <p className="text-white font-medium">{whale.name || 'Unknown'}</p>
-                      <p className="text-gray-500 text-xs">{whale.email || whale.uid}</p>
+                      <p className="text-slate-800 font-medium">{whale.name || 'Unknown'}</p>
+                      <p className="text-slate-500 text-xs">{whale.email || whale.uid}</p>
                     </td>
                     <td className="text-right py-3 px-3">
                       <p className="text-amber-400 font-mono font-bold">
                         {whale.prc_balance?.toLocaleString() || 0}
                       </p>
-                      <p className="text-gray-500 text-xs">PRC</p>
+                      <p className="text-slate-500 text-xs">PRC</p>
                     </td>
                     <td className="text-right py-3 px-3">
                       <p className="text-red-400 font-mono">
                         -{((whale.prc_balance || 0) * 0.02).toFixed(2)}
                       </p>
-                      <p className="text-gray-500 text-xs">PRC/day</p>
+                      <p className="text-slate-500 text-xs">PRC/day</p>
                     </td>
                   </tr>
                 ))}
@@ -466,33 +466,33 @@ const AdminPRCEconomyDashboard = () => {
       )}
 
       {/* Settings Summary */}
-      <Card className="p-5 bg-gray-800/50 border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Target className="w-5 h-5 text-gray-400" />
+      <Card className="p-5 bg-slate-50 border-slate-200">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <Target className="w-5 h-5 text-slate-500" />
           Economy Settings
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div className="bg-gray-900/50 rounded-lg p-3">
-            <p className="text-gray-400">Normal Burn</p>
-            <p className="text-white font-bold">{settings?.normal_burn_rate || 1}%/day</p>
+          <div className="bg-white rounded-lg p-3">
+            <p className="text-slate-500">Normal Burn</p>
+            <p className="text-slate-800 font-bold">{settings?.normal_burn_rate || 1}%/day</p>
           </div>
-          <div className="bg-gray-900/50 rounded-lg p-3">
-            <p className="text-gray-400">Whale Burn</p>
+          <div className="bg-white rounded-lg p-3">
+            <p className="text-slate-500">Whale Burn</p>
             <p className="text-purple-400 font-bold">{settings?.whale_burn_rate || 2}%/day</p>
           </div>
-          <div className="bg-gray-900/50 rounded-lg p-3">
-            <p className="text-gray-400">Whale Threshold</p>
-            <p className="text-white font-bold">{(settings?.whale_threshold || 500000).toLocaleString()} PRC</p>
+          <div className="bg-white rounded-lg p-3">
+            <p className="text-slate-500">Whale Threshold</p>
+            <p className="text-slate-800 font-bold">{(settings?.whale_threshold || 500000).toLocaleString()} PRC</p>
           </div>
-          <div className="bg-gray-900/50 rounded-lg p-3">
-            <p className="text-gray-400">Rate Limits</p>
-            <p className="text-white font-bold">{settings?.rate_limits?.min || 6} - {settings?.rate_limits?.max || 20} PRC/₹1</p>
+          <div className="bg-white rounded-lg p-3">
+            <p className="text-slate-500">Rate Limits</p>
+            <p className="text-slate-800 font-bold">{settings?.rate_limits?.min || 6} - {settings?.rate_limits?.max || 20} PRC/₹1</p>
           </div>
         </div>
       </Card>
 
       {/* Timestamp */}
-      <p className="text-gray-500 text-xs text-center">
+      <p className="text-slate-500 text-xs text-center">
         Last updated: {dashboard?.generated_at ? new Date(dashboard.generated_at).toLocaleString('en-IN') : 'Unknown'}
       </p>
     </div>

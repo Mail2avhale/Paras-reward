@@ -245,7 +245,7 @@ const AdminCashBankBook = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -253,7 +253,7 @@ const AdminCashBankBook = ({ user }) => {
             <Banknote className="h-7 w-7 text-purple-600" />
             Cash & Bank Book
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Manage company cash and bank transactions</p>
+          <p className="text-sm text-slate-500 mt-1">Manage company cash and bank transactions</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={fetchAllData} size="sm">
@@ -278,7 +278,7 @@ const AdminCashBankBook = ({ user }) => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* Cash Balance Card */}
-        <Card className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-green-100 text-sm font-medium">💵 Cash in Hand</p>
@@ -292,14 +292,14 @@ const AdminCashBankBook = ({ user }) => {
                 </span>
               </div>
             </div>
-            <div className="bg-gray-900/20 p-3 rounded-xl">
+            <div className="bg-white/20 p-3 rounded-xl">
               <Wallet className="h-8 w-8" />
             </div>
           </div>
         </Card>
 
         {/* Bank Balance Card */}
-        <Card className="p-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-blue-100 text-sm font-medium">🏦 Bank Balance</p>
@@ -314,21 +314,21 @@ const AdminCashBankBook = ({ user }) => {
                 </span>
               </div>
             </div>
-            <div className="bg-gray-900/20 p-3 rounded-xl">
+            <div className="bg-white/20 p-3 rounded-xl">
               <Building2 className="h-8 w-8" />
             </div>
           </div>
         </Card>
 
         {/* Total Balance Card */}
-        <Card className="p-5 bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-purple-500 to-pink-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-purple-100 text-sm font-medium">💰 Total Balance</p>
               <h2 className="text-3xl font-bold mt-2">{formatCurrency(summary?.total_balance)}</h2>
               <p className="text-purple-200 text-sm mt-3">Cash + Bank Combined</p>
             </div>
-            <div className="bg-gray-900/20 p-3 rounded-xl">
+            <div className="bg-white/20 p-3 rounded-xl">
               <IndianRupee className="h-8 w-8" />
             </div>
           </div>
@@ -348,7 +348,7 @@ const AdminCashBankBook = ({ user }) => {
             className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
               activeTab === tab.id
                 ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-300'
+                : 'border-transparent text-slate-500 hover:text-slate-600'
             }`}
           >
             <tab.icon className="h-4 w-4" />
@@ -374,11 +374,11 @@ const AdminCashBankBook = ({ user }) => {
                 Recent Cash Transactions
               </h3>
               {cashBook.entries.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No cash transactions yet</p>
+                <p className="text-slate-500 text-center py-8">No cash transactions yet</p>
               ) : (
                 <div className="space-y-3 max-h-80 overflow-y-auto">
                   {cashBook.entries.slice(0, 5).map((entry, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${
                           entry.entry_type === 'expense' || entry.entry_type === 'transfer_out'
@@ -392,7 +392,7 @@ const AdminCashBankBook = ({ user }) => {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-900">{entry.description}</p>
-                          <p className="text-xs text-gray-500">{formatDate(entry.date)}</p>
+                          <p className="text-xs text-slate-500">{formatDate(entry.date)}</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -403,7 +403,7 @@ const AdminCashBankBook = ({ user }) => {
                           {entry.entry_type === 'expense' || entry.entry_type === 'transfer_out' ? '-' : '+'}
                           {formatCurrency(entry.amount)}
                         </p>
-                        <p className="text-xs text-gray-500">Bal: {formatCurrency(entry.running_balance)}</p>
+                        <p className="text-xs text-slate-500">Bal: {formatCurrency(entry.running_balance)}</p>
                       </div>
                     </div>
                   ))}
@@ -418,11 +418,11 @@ const AdminCashBankBook = ({ user }) => {
                 Recent Bank Transactions
               </h3>
               {bankBook.entries.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No bank transactions yet</p>
+                <p className="text-slate-500 text-center py-8">No bank transactions yet</p>
               ) : (
                 <div className="space-y-3 max-h-80 overflow-y-auto">
                   {bankBook.entries.slice(0, 5).map((entry, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${
                           entry.entry_type === 'expense' || entry.entry_type === 'transfer_out'
@@ -436,7 +436,7 @@ const AdminCashBankBook = ({ user }) => {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-900">{entry.description}</p>
-                          <p className="text-xs text-gray-500">{formatDate(entry.date)}</p>
+                          <p className="text-xs text-slate-500">{formatDate(entry.date)}</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -447,7 +447,7 @@ const AdminCashBankBook = ({ user }) => {
                           {entry.entry_type === 'expense' || entry.entry_type === 'transfer_out' ? '-' : '+'}
                           {formatCurrency(entry.amount)}
                         </p>
-                        <p className="text-xs text-gray-500">Bal: {formatCurrency(entry.running_balance)}</p>
+                        <p className="text-xs text-slate-500">Bal: {formatCurrency(entry.running_balance)}</p>
                       </div>
                     </div>
                   ))}
@@ -501,18 +501,18 @@ const AdminCashBankBook = ({ user }) => {
                   <tbody className="divide-y">
                     {(activeTab === 'cash' ? cashBook.entries : bankBook.entries).length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
+                        <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
                           No entries yet. Click "Add Entry" to get started.
                         </td>
                       </tr>
                     ) : (
                       (activeTab === 'cash' ? cashBook.entries : bankBook.entries).map((entry, idx) => (
-                        <tr key={idx} className="hover:bg-gray-800/50">
+                        <tr key={idx} className="hover:bg-slate-50">
                           <td className="px-4 py-3 text-sm">{formatDate(entry.date)}</td>
                           <td className="px-4 py-3">
                             <p className="text-sm font-medium text-gray-900">{entry.description}</p>
                             {entry.reference_no && (
-                              <p className="text-xs text-gray-500">Ref: {entry.reference_no}</p>
+                              <p className="text-xs text-slate-500">Ref: {entry.reference_no}</p>
                             )}
                           </td>
                           <td className="px-4 py-3">
@@ -555,7 +555,7 @@ const AdminCashBankBook = ({ user }) => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-gray-900 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
           >
             <div className="p-6 border-b">
               <div className="flex items-center justify-between">
@@ -563,7 +563,7 @@ const AdminCashBankBook = ({ user }) => {
                   <Plus className="h-5 w-5 text-purple-600" />
                   Add New Entry
                 </h3>
-                <button onClick={() => setShowEntryModal(false)} className="p-2 hover:bg-gray-700 rounded-full">
+                <button onClick={() => setShowEntryModal(false)} className="p-2 hover:bg-slate-100 rounded-full">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -572,12 +572,12 @@ const AdminCashBankBook = ({ user }) => {
             <div className="p-6 space-y-4">
               {/* Account Selection */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Account</label>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">Account</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setEntryForm({...entryForm, account: 'cash'})}
                     className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
-                      entryForm.account === 'cash' ? 'border-green-500 bg-green-500/10' : 'border-gray-700'
+                      entryForm.account === 'cash' ? 'border-green-500 bg-green-500/10' : 'border-slate-200'
                     }`}
                   >
                     <Wallet className="h-5 w-5 text-green-600" />
@@ -586,7 +586,7 @@ const AdminCashBankBook = ({ user }) => {
                   <button
                     onClick={() => setEntryForm({...entryForm, account: 'bank'})}
                     className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
-                      entryForm.account === 'bank' ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700'
+                      entryForm.account === 'bank' ? 'border-blue-500 bg-blue-500/10' : 'border-slate-200'
                     }`}
                   >
                     <Building2 className="h-5 w-5 text-blue-600" />
@@ -597,13 +597,13 @@ const AdminCashBankBook = ({ user }) => {
 
               {/* Entry Type */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Entry Type</label>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">Entry Type</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setEntryForm({...entryForm, entry_type: 'income', category: ''})}
                     className={`flex-1 p-3 rounded-lg border-2 ${
                       entryForm.entry_type === 'income' || entryForm.entry_type === 'capital'
-                        ? 'border-green-500 bg-green-500/10' : 'border-gray-700'
+                        ? 'border-green-500 bg-green-500/10' : 'border-slate-200'
                     }`}
                   >
                     <ArrowUpRight className="h-5 w-5 text-green-600 mx-auto" />
@@ -612,7 +612,7 @@ const AdminCashBankBook = ({ user }) => {
                   <button
                     onClick={() => setEntryForm({...entryForm, entry_type: 'expense', category: ''})}
                     className={`flex-1 p-3 rounded-lg border-2 ${
-                      entryForm.entry_type === 'expense' ? 'border-red-500 bg-red-500/10' : 'border-gray-700'
+                      entryForm.entry_type === 'expense' ? 'border-red-500 bg-red-500/10' : 'border-slate-200'
                     }`}
                   >
                     <ArrowDownRight className="h-5 w-5 text-red-600 mx-auto" />
@@ -623,14 +623,14 @@ const AdminCashBankBook = ({ user }) => {
 
               {/* Category */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Category</label>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">Category</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(entryForm.entry_type === 'expense' ? categories.expense : categories.income).map(cat => (
                     <button
                       key={cat.value}
                       onClick={() => setEntryForm({...entryForm, category: cat.value, entry_type: cat.value === 'capital' ? 'capital' : entryForm.entry_type})}
                       className={`p-2 rounded-lg border text-left flex items-center gap-2 text-sm ${
-                        entryForm.category === cat.value ? 'border-purple-500 bg-purple-500/10' : 'border-gray-700 hover:bg-gray-800/50'
+                        entryForm.category === cat.value ? 'border-purple-500 bg-purple-500/10' : 'border-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       <cat.icon className="h-4 w-4 text-gray-600" />
@@ -642,7 +642,7 @@ const AdminCashBankBook = ({ user }) => {
 
               {/* Amount */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-1 block">Amount (₹)</label>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">Amount (₹)</label>
                 <input
                   type="number"
                   value={entryForm.amount}
@@ -655,7 +655,7 @@ const AdminCashBankBook = ({ user }) => {
 
               {/* Description with Auto-Categorization */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-1 block">Description</label>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">Description</label>
                 <input
                   type="text"
                   value={entryForm.description}
@@ -667,7 +667,7 @@ const AdminCashBankBook = ({ user }) => {
                 
                 {/* Auto-suggestion indicator */}
                 {isAutoSuggesting && (
-                  <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+                  <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
                     <Sparkles className="h-4 w-4 animate-pulse text-amber-500" />
                     <span>Analyzing description...</span>
                   </div>
@@ -690,7 +690,7 @@ const AdminCashBankBook = ({ user }) => {
                       </div>
                       <button
                         onClick={applyAutoSuggestion}
-                        className="text-xs px-2 py-1 bg-amber-500/10 text-white rounded hover:bg-amber-600 transition-colors"
+                        className="text-xs px-2 py-1 bg-amber-500/10 text-slate-800 rounded hover:bg-amber-600 transition-colors"
                         data-testid="apply-suggestion-btn"
                       >
                         Apply
@@ -703,7 +703,7 @@ const AdminCashBankBook = ({ user }) => {
 
               {/* Reference No */}
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-1 block">Reference No (Optional)</label>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">Reference No (Optional)</label>
                 <input
                   type="text"
                   value={entryForm.reference_no}
@@ -733,7 +733,7 @@ const AdminCashBankBook = ({ user }) => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-gray-900 rounded-2xl max-w-md w-full"
+            className="bg-white rounded-2xl max-w-md w-full"
           >
             <div className="p-6 border-b">
               <div className="flex items-center justify-between">
@@ -741,7 +741,7 @@ const AdminCashBankBook = ({ user }) => {
                   <ArrowLeftRight className="h-5 w-5 text-purple-600" />
                   Transfer Between Accounts
                 </h3>
-                <button onClick={() => setShowTransferModal(false)} className="p-2 hover:bg-gray-700 rounded-full">
+                <button onClick={() => setShowTransferModal(false)} className="p-2 hover:bg-slate-100 rounded-full">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -750,7 +750,7 @@ const AdminCashBankBook = ({ user }) => {
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-4">
                 <div className="flex-1">
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">From</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">From</label>
                   <select
                     value={transferForm.from_account}
                     onChange={(e) => setTransferForm({...transferForm, from_account: e.target.value, to_account: e.target.value === 'cash' ? 'bank' : 'cash'})}
@@ -760,9 +760,9 @@ const AdminCashBankBook = ({ user }) => {
                     <option value="bank">🏦 Bank</option>
                   </select>
                 </div>
-                <ArrowLeftRight className="h-6 w-6 text-gray-400 mt-6" />
+                <ArrowLeftRight className="h-6 w-6 text-slate-500 mt-6" />
                 <div className="flex-1">
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">To</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">To</label>
                   <select
                     value={transferForm.to_account}
                     onChange={(e) => setTransferForm({...transferForm, to_account: e.target.value})}
@@ -775,7 +775,7 @@ const AdminCashBankBook = ({ user }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-1 block">Amount (₹)</label>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">Amount (₹)</label>
                 <input
                   type="number"
                   value={transferForm.amount}
@@ -786,7 +786,7 @@ const AdminCashBankBook = ({ user }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-1 block">Description (Optional)</label>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">Description (Optional)</label>
                 <input
                   type="text"
                   value={transferForm.description}
@@ -816,7 +816,7 @@ const AdminCashBankBook = ({ user }) => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-gray-900 rounded-2xl max-w-md w-full"
+            className="bg-white rounded-2xl max-w-md w-full"
           >
             <div className="p-6 border-b">
               <div className="flex items-center justify-between">
@@ -824,7 +824,7 @@ const AdminCashBankBook = ({ user }) => {
                   <Settings className="h-5 w-5 text-purple-600" />
                   Set Opening Balance
                 </h3>
-                <button onClick={() => setShowOpeningBalanceModal(false)} className="p-2 hover:bg-gray-700 rounded-full">
+                <button onClick={() => setShowOpeningBalanceModal(false)} className="p-2 hover:bg-slate-100 rounded-full">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -832,12 +832,12 @@ const AdminCashBankBook = ({ user }) => {
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Account</label>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">Account</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setOpeningBalanceForm({...openingBalanceForm, account_type: 'cash'})}
                     className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
-                      openingBalanceForm.account_type === 'cash' ? 'border-green-500 bg-green-500/10' : 'border-gray-700'
+                      openingBalanceForm.account_type === 'cash' ? 'border-green-500 bg-green-500/10' : 'border-slate-200'
                     }`}
                   >
                     <Wallet className="h-5 w-5 text-green-600" />
@@ -846,7 +846,7 @@ const AdminCashBankBook = ({ user }) => {
                   <button
                     onClick={() => setOpeningBalanceForm({...openingBalanceForm, account_type: 'bank'})}
                     className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
-                      openingBalanceForm.account_type === 'bank' ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700'
+                      openingBalanceForm.account_type === 'bank' ? 'border-blue-500 bg-blue-500/10' : 'border-slate-200'
                     }`}
                   >
                     <Building2 className="h-5 w-5 text-blue-600" />
@@ -858,7 +858,7 @@ const AdminCashBankBook = ({ user }) => {
               {openingBalanceForm.account_type === 'bank' && (
                 <>
                   <div>
-                    <label className="text-sm font-medium text-gray-300 mb-1 block">Bank Name</label>
+                    <label className="text-sm font-medium text-slate-600 mb-1 block">Bank Name</label>
                     <input
                       type="text"
                       value={openingBalanceForm.bank_name}
@@ -868,7 +868,7 @@ const AdminCashBankBook = ({ user }) => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-300 mb-1 block">Account Number</label>
+                    <label className="text-sm font-medium text-slate-600 mb-1 block">Account Number</label>
                     <input
                       type="text"
                       value={openingBalanceForm.account_number}
@@ -881,7 +881,7 @@ const AdminCashBankBook = ({ user }) => {
               )}
 
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-1 block">Opening Balance (₹)</label>
+                <label className="text-sm font-medium text-slate-600 mb-1 block">Opening Balance (₹)</label>
                 <input
                   type="number"
                   value={openingBalanceForm.amount}

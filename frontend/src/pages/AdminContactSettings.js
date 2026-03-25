@@ -84,38 +84,38 @@ const AdminContactSettings = ({ user }) => {
             <Button
               variant="outline"
               onClick={() => navigate('/admin/settings-hub')}
-              className="flex items-center gap-2 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+              className="flex items-center gap-2 bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                  <Building2 className="h-5 w-5 text-white" />
+                  <Building2 className="h-5 w-5 text-slate-800" />
                 </div>
                 Contact Settings
               </h1>
-              <p className="text-gray-400 text-sm mt-1">Configure company contact information for Landing page & Contact Us</p>
+              <p className="text-slate-500 text-sm mt-1">Configure company contact information for Landing page & Contact Us</p>
             </div>
           </div>
         </div>
 
         {/* Company Information */}
-        <Card className="p-6 bg-gray-900/50 border-gray-800 mb-6">
+        <Card className="p-6 bg-white border-slate-200 mb-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center">
-              <Building className="h-5 w-5 text-white" />
+              <Building className="h-5 w-5 text-slate-800" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Company Information</h2>
-              <p className="text-gray-400 text-sm">Basic company details</p>
+              <h2 className="text-xl font-bold text-slate-800">Company Information</h2>
+              <p className="text-slate-500 text-sm">Basic company details</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Building2 className="h-4 w-4 text-purple-400" />
                 Company Name *
               </label>
@@ -124,82 +124,82 @@ const AdminContactSettings = ({ user }) => {
                 placeholder="PARAS REWARD PVT LTD"
                 value={settings.company_name}
                 onChange={(e) => handleChange('company_name', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
           </div>
         </Card>
 
         {/* Address Information */}
-        <Card className="p-6 bg-gray-900/50 border-gray-800 mb-6">
+        <Card className="p-6 bg-white border-slate-200 mb-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-white" />
+              <MapPin className="h-5 w-5 text-slate-800" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Address</h2>
-              <p className="text-gray-400 text-sm">Company registered address</p>
+              <h2 className="text-xl font-bold text-slate-800">Address</h2>
+              <p className="text-slate-500 text-sm">Company registered address</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
-              <label className="text-sm font-medium text-gray-300 mb-2 block">Address Line 1 *</label>
+              <label className="text-sm font-medium text-slate-600 mb-2 block">Address Line 1 *</label>
               <input
                 type="text"
                 placeholder="Building name, Street address"
                 value={settings.address_line1}
                 onChange={(e) => handleChange('address_line1', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="text-sm font-medium text-gray-300 mb-2 block">Address Line 2</label>
+              <label className="text-sm font-medium text-slate-600 mb-2 block">Address Line 2</label>
               <input
                 type="text"
                 placeholder="Area, Landmark (optional)"
                 value={settings.address_line2}
                 onChange={(e) => handleChange('address_line2', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-300 mb-2 block">City *</label>
+              <label className="text-sm font-medium text-slate-600 mb-2 block">City *</label>
               <input
                 type="text"
                 placeholder="Mumbai"
                 value={settings.city}
                 onChange={(e) => handleChange('city', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-300 mb-2 block">State *</label>
+              <label className="text-sm font-medium text-slate-600 mb-2 block">State *</label>
               <input
                 type="text"
                 placeholder="Maharashtra"
                 value={settings.state}
                 onChange={(e) => handleChange('state', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-300 mb-2 block">Pincode *</label>
+              <label className="text-sm font-medium text-slate-600 mb-2 block">Pincode *</label>
               <input
                 type="text"
                 placeholder="400001"
                 value={settings.pincode}
                 onChange={(e) => handleChange('pincode', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Globe className="h-4 w-4 text-green-400" />
                 Country
               </label>
@@ -208,27 +208,27 @@ const AdminContactSettings = ({ user }) => {
                 placeholder="India"
                 value={settings.country}
                 onChange={(e) => handleChange('country', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
           </div>
         </Card>
 
         {/* Contact Details */}
-        <Card className="p-6 bg-gray-900/50 border-gray-800 mb-6">
+        <Card className="p-6 bg-white border-slate-200 mb-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
-              <Phone className="h-5 w-5 text-white" />
+              <Phone className="h-5 w-5 text-slate-800" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Contact Details</h2>
-              <p className="text-gray-400 text-sm">Phone numbers and email addresses</p>
+              <h2 className="text-xl font-bold text-slate-800">Contact Details</h2>
+              <p className="text-slate-500 text-sm">Phone numbers and email addresses</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Phone className="h-4 w-4 text-amber-400" />
                 Primary Phone *
               </label>
@@ -237,12 +237,12 @@ const AdminContactSettings = ({ user }) => {
                 placeholder="+91 9876543210"
                 value={settings.phone_primary}
                 onChange={(e) => handleChange('phone_primary', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Phone className="h-4 w-4 text-amber-400" />
                 Secondary Phone
               </label>
@@ -251,12 +251,12 @@ const AdminContactSettings = ({ user }) => {
                 placeholder="+91 9876543211 (optional)"
                 value={settings.phone_secondary}
                 onChange={(e) => handleChange('phone_secondary', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Mail className="h-4 w-4 text-blue-400" />
                 Support Email *
               </label>
@@ -265,12 +265,12 @@ const AdminContactSettings = ({ user }) => {
                 placeholder="Info@parasreward.com"
                 value={settings.email_support}
                 onChange={(e) => handleChange('email_support', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <AtSign className="h-4 w-4 text-blue-400" />
                 Business Email
               </label>
@@ -279,12 +279,12 @@ const AdminContactSettings = ({ user }) => {
                 placeholder="Info@parasreward.com (optional)"
                 value={settings.email_business}
                 onChange={(e) => handleChange('email_business', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Clock className="h-4 w-4 text-cyan-400" />
                 Working Hours
               </label>
@@ -293,7 +293,7 @@ const AdminContactSettings = ({ user }) => {
                 placeholder="9:00 AM - 6:00 PM (Mon-Sat)"
                 value={settings.working_hours}
                 onChange={(e) => handleChange('working_hours', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -303,13 +303,13 @@ const AdminContactSettings = ({ user }) => {
         <Card className="p-6 bg-gradient-to-br from-blue-900/30 to-purple-900/30 border-blue-500/30 mb-6">
           <div className="flex items-center gap-3 mb-4">
             <CheckCircle className="h-5 w-5 text-green-400" />
-            <h3 className="text-lg font-semibold text-white">Preview - How it will appear on Contact Us page</h3>
+            <h3 className="text-lg font-semibold text-slate-800">Preview - How it will appear on Contact Us page</h3>
           </div>
           
-          <div className="bg-gray-900/50 rounded-xl p-6 space-y-4">
-            <div className="text-2xl font-bold text-white">{settings.company_name || 'Company Name'}</div>
+          <div className="bg-white rounded-xl p-6 space-y-4">
+            <div className="text-2xl font-bold text-slate-800">{settings.company_name || 'Company Name'}</div>
             
-            <div className="flex items-start gap-3 text-gray-300">
+            <div className="flex items-start gap-3 text-slate-600">
               <MapPin className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
               <div>
                 {settings.address_line1 && <div>{settings.address_line1}</div>}
@@ -322,22 +322,22 @@ const AdminContactSettings = ({ user }) => {
             </div>
             
             {settings.phone_primary && (
-              <div className="flex items-center gap-3 text-gray-300">
+              <div className="flex items-center gap-3 text-slate-600">
                 <Phone className="h-5 w-5 text-amber-400 flex-shrink-0" />
                 <span>{settings.phone_primary}</span>
-                {settings.phone_secondary && <span className="text-gray-500">| {settings.phone_secondary}</span>}
+                {settings.phone_secondary && <span className="text-slate-500">| {settings.phone_secondary}</span>}
               </div>
             )}
             
             {settings.email_support && (
-              <div className="flex items-center gap-3 text-gray-300">
+              <div className="flex items-center gap-3 text-slate-600">
                 <Mail className="h-5 w-5 text-blue-400 flex-shrink-0" />
                 <span>{settings.email_support}</span>
               </div>
             )}
             
             {settings.working_hours && (
-              <div className="flex items-center gap-3 text-gray-300">
+              <div className="flex items-center gap-3 text-slate-600">
                 <Clock className="h-5 w-5 text-cyan-400 flex-shrink-0" />
                 <span>{settings.working_hours}</span>
               </div>
@@ -350,7 +350,7 @@ const AdminContactSettings = ({ user }) => {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl"
+            className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-slate-800 font-semibold rounded-xl"
           >
             {saving ? (
               <>

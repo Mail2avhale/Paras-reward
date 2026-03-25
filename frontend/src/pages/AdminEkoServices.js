@@ -409,11 +409,11 @@ const AdminEkoServices = ({ user }) => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
               <Wallet className="w-6 h-6 text-green-500" />
               Admin Eko Services
             </h1>
-            <p className="text-gray-400 text-sm">Direct Eko API - No Approval Required</p>
+            <p className="text-slate-500 text-sm">Direct Eko API - No Approval Required</p>
           </div>
         </div>
         <Button onClick={fetchEkoBalance} variant="outline" size="sm" className="h-10 px-3">
@@ -429,7 +429,7 @@ const AdminEkoServices = ({ user }) => {
             {balanceLoading ? (
               <Loader2 className="w-6 h-6 animate-spin text-green-400 mt-1" />
             ) : ekoBalance?.success ? (
-              <p className="text-3xl font-bold text-white">₹{parseFloat(ekoBalance.balance || 0).toLocaleString()}</p>
+              <p className="text-3xl font-bold text-slate-800">₹{parseFloat(ekoBalance.balance || 0).toLocaleString()}</p>
             ) : (
               <p className="text-red-400 text-sm">{ekoBalance?.error || 'Failed to load balance'}</p>
             )}
@@ -465,33 +465,33 @@ const AdminEkoServices = ({ user }) => {
       </div>
 
       {/* Service Forms */}
-      <Card className="p-6 bg-gray-900 border-gray-800">
+      <Card className="p-6 bg-white border-slate-200">
         {/* Mobile Recharge */}
         {activeTab === 'mobile' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-blue-400" />
               Mobile Prepaid Recharge
             </h2>
             
             <div className="grid gap-4">
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Mobile Number</label>
+                <label className="text-slate-500 text-sm mb-1 block">Mobile Number</label>
                 <Input
                   value={mobileNumber}
                   onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="10-digit mobile number"
-                  className="h-12 text-lg bg-gray-800 border-gray-700"
+                  className="h-12 text-lg bg-white border-slate-200"
                   maxLength={10}
                 />
               </div>
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Operator</label>
+                <label className="text-slate-500 text-sm mb-1 block">Operator</label>
                 <select
                   value={mobileOperator}
                   onChange={(e) => setMobileOperator(e.target.value)}
-                  className="w-full h-12 px-3 text-lg bg-gray-800 border border-gray-700 rounded-md text-white"
+                  className="w-full h-12 px-3 text-lg bg-white border border-slate-200 rounded-md text-slate-800"
                 >
                   <option value="">Select Operator</option>
                   {mobileOperators.map((op) => (
@@ -501,11 +501,11 @@ const AdminEkoServices = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Circle</label>
+                <label className="text-slate-500 text-sm mb-1 block">Circle</label>
                 <select
                   value={mobileCircle}
                   onChange={(e) => setMobileCircle(e.target.value)}
-                  className="w-full h-12 px-3 text-lg bg-gray-800 border border-gray-700 rounded-md text-white"
+                  className="w-full h-12 px-3 text-lg bg-white border border-slate-200 rounded-md text-slate-800"
                 >
                   <option value="">Select Circle</option>
                   {circles.map((c) => (
@@ -515,13 +515,13 @@ const AdminEkoServices = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Amount (₹)</label>
+                <label className="text-slate-500 text-sm mb-1 block">Amount (₹)</label>
                 <Input
                   type="number"
                   value={mobileAmount}
                   onChange={(e) => setMobileAmount(e.target.value)}
                   placeholder="Enter amount"
-                  className="h-12 text-lg bg-gray-800 border-gray-700"
+                  className="h-12 text-lg bg-white border-slate-200"
                 />
               </div>
               
@@ -540,28 +540,28 @@ const AdminEkoServices = ({ user }) => {
         {/* DTH Recharge */}
         {activeTab === 'dth' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <Tv className="w-5 h-5 text-purple-400" />
               DTH Recharge
             </h2>
             
             <div className="grid gap-4">
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Subscriber ID / VC Number</label>
+                <label className="text-slate-500 text-sm mb-1 block">Subscriber ID / VC Number</label>
                 <Input
                   value={dthNumber}
                   onChange={(e) => setDthNumber(e.target.value)}
                   placeholder="Enter subscriber ID"
-                  className="h-12 text-lg bg-gray-800 border-gray-700"
+                  className="h-12 text-lg bg-white border-slate-200"
                 />
               </div>
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">DTH Operator</label>
+                <label className="text-slate-500 text-sm mb-1 block">DTH Operator</label>
                 <select
                   value={dthOperator}
                   onChange={(e) => setDthOperator(e.target.value)}
-                  className="w-full h-12 px-3 text-lg bg-gray-800 border border-gray-700 rounded-md text-white"
+                  className="w-full h-12 px-3 text-lg bg-white border border-slate-200 rounded-md text-slate-800"
                 >
                   <option value="">Select Operator</option>
                   {dthOperators.map((op) => (
@@ -571,13 +571,13 @@ const AdminEkoServices = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Amount (₹)</label>
+                <label className="text-slate-500 text-sm mb-1 block">Amount (₹)</label>
                 <Input
                   type="number"
                   value={dthAmount}
                   onChange={(e) => setDthAmount(e.target.value)}
                   placeholder="Enter amount"
-                  className="h-12 text-lg bg-gray-800 border-gray-700"
+                  className="h-12 text-lg bg-white border-slate-200"
                 />
               </div>
               
@@ -596,28 +596,28 @@ const AdminEkoServices = ({ user }) => {
         {/* Electricity */}
         {activeTab === 'electricity' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <Zap className="w-5 h-5 text-yellow-400" />
               Electricity Bill Payment
             </h2>
             
             <div className="grid gap-4">
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Consumer Number</label>
+                <label className="text-slate-500 text-sm mb-1 block">Consumer Number</label>
                 <Input
                   value={elecConsumerNo}
                   onChange={(e) => setElecConsumerNo(e.target.value)}
                   placeholder="Enter consumer number"
-                  className="h-12 text-lg bg-gray-800 border-gray-700"
+                  className="h-12 text-lg bg-white border-slate-200"
                 />
               </div>
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Electricity Board</label>
+                <label className="text-slate-500 text-sm mb-1 block">Electricity Board</label>
                 <select
                   value={elecOperator}
                   onChange={(e) => setElecOperator(e.target.value)}
-                  className="w-full h-12 px-3 text-lg bg-gray-800 border border-gray-700 rounded-md text-white"
+                  className="w-full h-12 px-3 text-lg bg-white border border-slate-200 rounded-md text-slate-800"
                 >
                   <option value="">Select Board</option>
                   {electricityOperators.map((op) => (
@@ -627,13 +627,13 @@ const AdminEkoServices = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Amount (₹)</label>
+                <label className="text-slate-500 text-sm mb-1 block">Amount (₹)</label>
                 <Input
                   type="number"
                   value={elecAmount}
                   onChange={(e) => setElecAmount(e.target.value)}
                   placeholder="Enter bill amount"
-                  className="h-12 text-lg bg-gray-800 border-gray-700"
+                  className="h-12 text-lg bg-white border-slate-200"
                 />
               </div>
               
@@ -652,41 +652,41 @@ const AdminEkoServices = ({ user }) => {
         {/* DMT Transfer */}
         {activeTab === 'dmt' && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <Building2 className="w-5 h-5 text-green-400" />
               Direct Money Transfer (DMT)
             </h2>
             
             <div className="grid gap-4">
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Recipient Mobile Number</label>
+                <label className="text-slate-500 text-sm mb-1 block">Recipient Mobile Number</label>
                 <Input
                   value={dmtMobile}
                   onChange={(e) => setDmtMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="10-digit mobile number"
-                  className="h-12 text-lg bg-gray-800 border-gray-700"
+                  className="h-12 text-lg bg-white border-slate-200"
                   maxLength={10}
                 />
               </div>
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Bank Account Number</label>
+                <label className="text-slate-500 text-sm mb-1 block">Bank Account Number</label>
                 <Input
                   value={dmtAccountNo}
                   onChange={(e) => setDmtAccountNo(e.target.value)}
                   placeholder="Enter account number"
-                  className="h-12 text-lg bg-gray-800 border-gray-700"
+                  className="h-12 text-lg bg-white border-slate-200"
                 />
               </div>
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">IFSC Code</label>
+                <label className="text-slate-500 text-sm mb-1 block">IFSC Code</label>
                 <div className="flex gap-2">
                   <Input
                     value={dmtIfsc}
                     onChange={(e) => setDmtIfsc(e.target.value.toUpperCase())}
                     placeholder="e.g., SBIN0001234"
-                    className="h-12 text-lg bg-gray-800 border-gray-700 flex-1"
+                    className="h-12 text-lg bg-white border-slate-200 flex-1"
                   />
                   <Button
                     onClick={handleVerifyAccount}
@@ -721,23 +721,23 @@ const AdminEkoServices = ({ user }) => {
               )}
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Beneficiary Name</label>
+                <label className="text-slate-500 text-sm mb-1 block">Beneficiary Name</label>
                 <Input
                   value={dmtBeneficiaryName}
                   onChange={(e) => setDmtBeneficiaryName(e.target.value)}
                   placeholder="Account holder name"
-                  className="h-12 text-lg bg-gray-800 border-gray-700"
+                  className="h-12 text-lg bg-white border-slate-200"
                 />
               </div>
               
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Amount (₹)</label>
+                <label className="text-slate-500 text-sm mb-1 block">Amount (₹)</label>
                 <Input
                   type="number"
                   value={dmtAmount}
                   onChange={(e) => setDmtAmount(e.target.value)}
                   placeholder="Minimum ₹100"
-                  className="h-12 text-lg bg-gray-800 border-gray-700"
+                  className="h-12 text-lg bg-white border-slate-200"
                 />
               </div>
               
@@ -756,8 +756,8 @@ const AdminEkoServices = ({ user }) => {
 
       {/* Recent Transactions */}
       {recentTransactions.length > 0 && (
-        <Card className="p-4 bg-gray-900 border-gray-800">
-          <h3 className="text-lg font-bold text-white mb-3">Recent Transactions</h3>
+        <Card className="p-4 bg-white border-slate-200">
+          <h3 className="text-lg font-bold text-slate-800 mb-3">Recent Transactions</h3>
           <div className="space-y-2 max-h-60 overflow-y-auto">
             {recentTransactions.map((txn) => (
               <div 
@@ -771,13 +771,13 @@ const AdminEkoServices = ({ user }) => {
                     ) : (
                       <XCircle className="w-4 h-4 text-red-400" />
                     )}
-                    <span className="text-white font-medium">{txn.type}</span>
+                    <span className="text-slate-800 font-medium">{txn.type}</span>
                   </div>
-                  <span className="text-gray-400 text-xs">
+                  <span className="text-slate-500 text-xs">
                     {new Date(txn.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
-                <div className="mt-1 text-sm text-gray-300">
+                <div className="mt-1 text-sm text-slate-600">
                   {Object.entries(txn.data).map(([key, value]) => (
                     <span key={key} className="mr-3">{key}: {value}</span>
                   ))}
@@ -786,7 +786,7 @@ const AdminEkoServices = ({ user }) => {
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-cyan-400 text-xs font-mono">{txn.response.txn_ref}</span>
                     <Copy 
-                      className="w-3 h-3 text-gray-500 hover:text-cyan-400 cursor-pointer" 
+                      className="w-3 h-3 text-slate-500 hover:text-cyan-400 cursor-pointer" 
                       onClick={() => copyToClipboard(txn.response.txn_ref)}
                     />
                   </div>

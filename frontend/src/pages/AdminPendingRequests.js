@@ -136,13 +136,13 @@ export default function AdminPendingRequests() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Pending Requests Manager</h1>
-            <p className="text-gray-400 text-sm">Fail pending requests and refund PRC</p>
+            <h1 className="text-2xl font-bold text-slate-800">Pending Requests Manager</h1>
+            <p className="text-slate-500 text-sm">Fail pending requests and refund PRC</p>
           </div>
           <Button 
             onClick={() => { fetchPendingRequests(); fetchEkoBalance(); }}
             variant="outline"
-            className="border-gray-700"
+            className="border-slate-200"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -158,11 +158,11 @@ export default function AdminPendingRequests() {
                   <Wallet className="h-6 w-6 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Eko Wallet Balance</p>
+                  <p className="text-slate-500 text-sm">Eko Wallet Balance</p>
                   <p className="text-2xl font-bold text-green-400">₹{ekoBalance.balance?.toLocaleString()}</p>
                 </div>
               </div>
-              <div className="text-right text-sm text-gray-400">
+              <div className="text-right text-sm text-slate-500">
                 <p>Locked: ₹{ekoBalance.locked?.toLocaleString() || 0}</p>
                 <p>Available: ₹{(ekoBalance.balance - (ekoBalance.locked || 0))?.toLocaleString()}</p>
               </div>
@@ -172,31 +172,31 @@ export default function AdminPendingRequests() {
 
         {/* Stats & Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+          <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-4">
             <div className="flex items-center gap-3">
               <Clock className="h-5 w-5 text-yellow-400" />
               <div>
-                <p className="text-gray-400 text-sm">Pending Requests</p>
-                <p className="text-xl font-bold text-white">{stats.total}</p>
+                <p className="text-slate-500 text-sm">Pending Requests</p>
+                <p className="text-xl font-bold text-slate-800">{stats.total}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+          <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-4">
             <div className="flex items-center gap-3">
               <IndianRupee className="h-5 w-5 text-amber-400" />
               <div>
-                <p className="text-gray-400 text-sm">Total PRC Locked</p>
+                <p className="text-slate-500 text-sm">Total PRC Locked</p>
                 <p className="text-xl font-bold text-amber-400">{stats.totalPrc.toLocaleString()}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+          <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-4">
             <div className="flex items-center gap-3">
               <IndianRupee className="h-5 w-5 text-blue-400" />
               <div>
-                <p className="text-gray-400 text-sm">Total INR Value</p>
+                <p className="text-slate-500 text-sm">Total INR Value</p>
                 <p className="text-xl font-bold text-blue-400">₹{stats.totalInr.toLocaleString()}</p>
               </div>
             </div>
@@ -206,7 +206,7 @@ export default function AdminPendingRequests() {
             <Button
               onClick={handleFailAll}
               disabled={failingAll || stats.total === 0}
-              className="w-full h-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-bold"
+              className="w-full h-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-slate-800 font-bold"
               data-testid="fail-all-btn"
             >
               {failingAll ? (
@@ -222,11 +222,11 @@ export default function AdminPendingRequests() {
         {/* Filters */}
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400" />
+            <Filter className="h-4 w-4 text-slate-500" />
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="bg-gray-800/50 border border-gray-700/50 text-white rounded-lg px-3 py-2"
+              className="bg-slate-50 border border-slate-200/50 text-slate-800 rounded-lg px-3 py-2"
             >
               <option value="all">All Types</option>
               <option value="bill_payments">Bill Payments</option>
@@ -235,19 +235,19 @@ export default function AdminPendingRequests() {
           </div>
           <div className="flex-1 max-w-md">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <Input
                 placeholder="Search by name, user ID, request ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-800/50 border-gray-700/50 text-white"
+                className="pl-10 bg-slate-50 border-slate-200/50 text-slate-800"
               />
             </div>
           </div>
         </div>
 
         {/* Requests Table */}
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-2xl overflow-hidden">
+        <div className="bg-slate-50 border border-slate-200/50 rounded-2xl overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
@@ -256,26 +256,26 @@ export default function AdminPendingRequests() {
             <div className="text-center py-12">
               <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
               <p className="text-green-400 font-semibold">No Pending Requests!</p>
-              <p className="text-gray-400 text-sm">All requests have been processed</p>
+              <p className="text-slate-500 text-sm">All requests have been processed</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-900/50">
+                <thead className="bg-white">
                   <tr>
-                    <th className="text-left text-gray-400 text-sm font-medium p-4">User</th>
-                    <th className="text-left text-gray-400 text-sm font-medium p-4">Type</th>
-                    <th className="text-right text-gray-400 text-sm font-medium p-4">Amount</th>
-                    <th className="text-right text-gray-400 text-sm font-medium p-4">PRC to Refund</th>
-                    <th className="text-center text-gray-400 text-sm font-medium p-4">Action</th>
+                    <th className="text-left text-slate-500 text-sm font-medium p-4">User</th>
+                    <th className="text-left text-slate-500 text-sm font-medium p-4">Type</th>
+                    <th className="text-right text-slate-500 text-sm font-medium p-4">Amount</th>
+                    <th className="text-right text-slate-500 text-sm font-medium p-4">PRC to Refund</th>
+                    <th className="text-center text-slate-500 text-sm font-medium p-4">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/50">
                   {filteredRequests.map((request, idx) => (
-                    <tr key={request.request_id || idx} className="hover:bg-gray-700/20 transition-colors">
+                    <tr key={request.request_id || idx} className="hover:bg-slate-100/20 transition-colors">
                       <td className="p-4">
-                        <p className="text-white font-medium">{request.user_name || 'Unknown'}</p>
-                        <p className="text-gray-400 text-xs">{request.user_id}</p>
+                        <p className="text-slate-800 font-medium">{request.user_name || 'Unknown'}</p>
+                        <p className="text-slate-500 text-xs">{request.user_id}</p>
                       </td>
                       <td className="p-4">
                         <span className={`px-2 py-1 rounded-full text-xs ${
@@ -287,7 +287,7 @@ export default function AdminPendingRequests() {
                         </span>
                       </td>
                       <td className="p-4 text-right">
-                        <p className="text-white">₹{request.amount_inr?.toLocaleString() || 0}</p>
+                        <p className="text-slate-800">₹{request.amount_inr?.toLocaleString() || 0}</p>
                       </td>
                       <td className="p-4 text-right">
                         <p className="text-amber-400 font-semibold">{request.prc?.toLocaleString() || 0} PRC</p>

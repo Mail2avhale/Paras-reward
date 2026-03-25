@@ -115,17 +115,17 @@ const AdminSystemSettings = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => window.history.back()}
-              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+              className="p-2 rounded-lg bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <Settings className="w-8 h-8 text-purple-500" />
             <div>
-              <h1 className="text-2xl font-bold text-white">System Settings</h1>
-              <p className="text-gray-400 text-sm">Configure PRC rates, limits & mining</p>
+              <h1 className="text-2xl font-bold text-slate-800">System Settings</h1>
+              <p className="text-slate-500 text-sm">Configure PRC rates, limits & mining</p>
             </div>
           </div>
-          <Button onClick={fetchSettings} variant="outline" className="border-gray-700">
+          <Button onClick={fetchSettings} variant="outline" className="border-slate-200">
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -134,20 +134,20 @@ const AdminSystemSettings = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* PRC Rate Settings */}
-          <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
+          <div className="bg-white rounded-xl p-5 border border-slate-200">
             <div className="flex items-center gap-2 mb-4">
               <Coins className="w-5 h-5 text-amber-400" />
-              <h2 className="text-lg font-semibold text-white">PRC Rate Control</h2>
+              <h2 className="text-lg font-semibold text-slate-800">PRC Rate Control</h2>
             </div>
             
             <div className="space-y-4">
-              <div className="bg-gray-800 rounded-lg p-3">
-                <p className="text-gray-400 text-sm">Current Dynamic Rate</p>
+              <div className="bg-white rounded-lg p-3">
+                <p className="text-slate-500 text-sm">Current Dynamic Rate</p>
                 <p className="text-2xl font-bold text-amber-400">{prcRateSettings.current_rate || 50} PRC/₹</p>
               </div>
               
               <div className="flex items-center justify-between">
-                <label className="text-gray-300">Manual Override</label>
+                <label className="text-slate-600">Manual Override</label>
                 <button
                   onClick={() => setPrcRateSettings(prev => ({ ...prev, manual_override: !prev.manual_override }))}
                   className={`w-12 h-6 rounded-full transition-colors ${
@@ -162,12 +162,12 @@ const AdminSystemSettings = () => {
               
               {prcRateSettings.manual_override && (
                 <div>
-                  <label className="text-gray-400 text-sm mb-1 block">Manual Rate (PRC per ₹1)</label>
+                  <label className="text-slate-500 text-sm mb-1 block">Manual Rate (PRC per ₹1)</label>
                   <Input
                     type="number"
                     value={prcRateSettings.manual_rate}
                     onChange={(e) => setPrcRateSettings(prev => ({ ...prev, manual_rate: parseFloat(e.target.value) }))}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-200 text-slate-800"
                   />
                 </div>
               )}
@@ -180,22 +180,22 @@ const AdminSystemSettings = () => {
           </div>
 
           {/* Redeem Limit Settings */}
-          <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
+          <div className="bg-white rounded-xl p-5 border border-slate-200">
             <div className="flex items-center gap-2 mb-4">
               <Target className="w-5 h-5 text-green-400" />
-              <h2 className="text-lg font-semibold text-white">Monthly Redeem Limit</h2>
+              <h2 className="text-lg font-semibold text-slate-800">Monthly Redeem Limit</h2>
             </div>
             
             <div className="space-y-4">
-              <div className="bg-gray-800 rounded-lg p-3">
-                <p className="text-gray-400 text-sm">Formula</p>
-                <p className="text-white text-sm font-mono">
+              <div className="bg-white rounded-lg p-3">
+                <p className="text-slate-500 text-sm">Formula</p>
+                <p className="text-slate-800 text-sm font-mono">
                   Plan Price × {redeemSettings.multiplier_1} × {redeemSettings.multiplier_2} × (1 + Referrals × {redeemSettings.referral_bonus_percent}%)
                 </p>
               </div>
               
               <div className="flex items-center justify-between">
-                <label className="text-gray-300">Enabled</label>
+                <label className="text-slate-600">Enabled</label>
                 <button
                   onClick={() => setRedeemSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
                   className={`w-12 h-6 rounded-full transition-colors ${
@@ -210,37 +210,37 @@ const AdminSystemSettings = () => {
               
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="text-gray-400 text-xs mb-1 block">Multiplier 1</label>
+                  <label className="text-slate-500 text-xs mb-1 block">Multiplier 1</label>
                   <Input
                     type="number"
                     value={redeemSettings.multiplier_1}
                     onChange={(e) => setRedeemSettings(prev => ({ ...prev, multiplier_1: parseInt(e.target.value) }))}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-200 text-slate-800"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-400 text-xs mb-1 block">Multiplier 2</label>
+                  <label className="text-slate-500 text-xs mb-1 block">Multiplier 2</label>
                   <Input
                     type="number"
                     value={redeemSettings.multiplier_2}
                     onChange={(e) => setRedeemSettings(prev => ({ ...prev, multiplier_2: parseInt(e.target.value) }))}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-200 text-slate-800"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-400 text-xs mb-1 block">Referral %</label>
+                  <label className="text-slate-500 text-xs mb-1 block">Referral %</label>
                   <Input
                     type="number"
                     value={redeemSettings.referral_bonus_percent}
                     onChange={(e) => setRedeemSettings(prev => ({ ...prev, referral_bonus_percent: parseInt(e.target.value) }))}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-200 text-slate-800"
                   />
                 </div>
               </div>
               
               <div className="bg-blue-900/30 border border-blue-800 rounded-lg p-3">
                 <p className="text-blue-400 text-xs font-medium mb-1">Example: Elite Plan (₹799)</p>
-                <p className="text-white text-sm">
+                <p className="text-slate-800 text-sm">
                   ₹799 × {redeemSettings.multiplier_1} × {redeemSettings.multiplier_2} = <span className="text-green-400 font-bold">{(799 * redeemSettings.multiplier_1 * redeemSettings.multiplier_2).toLocaleString()} PRC</span>/month
                 </p>
               </div>
@@ -253,10 +253,10 @@ const AdminSystemSettings = () => {
           </div>
 
           {/* Mining Rate Settings */}
-          <div className="bg-gray-900 rounded-xl p-5 border border-gray-800 lg:col-span-2">
+          <div className="bg-white rounded-xl p-5 border border-slate-200 lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="w-5 h-5 text-purple-400" />
-              <h2 className="text-lg font-semibold text-white">Mining Rates by Plan</h2>
+              <h2 className="text-lg font-semibold text-slate-800">Mining Rates by Plan</h2>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -265,19 +265,19 @@ const AdminSystemSettings = () => {
                   plan === 'elite' ? 'bg-amber-900/20 border-amber-700' :
                   plan === 'growth' ? 'bg-green-900/20 border-green-700' :
                   plan === 'startup' ? 'bg-blue-900/20 border-blue-700' :
-                  'bg-gray-800 border-gray-700'
+                  'bg-white border-slate-200'
                 }`}>
                   <p className={`text-sm font-semibold mb-3 ${
                     plan === 'elite' ? 'text-amber-400' :
                     plan === 'growth' ? 'text-green-400' :
                     plan === 'startup' ? 'text-blue-400' :
-                    'text-gray-400'
+                    'text-slate-500'
                   }`}>
                     {plan.toUpperCase()}
                   </p>
                   <div className="space-y-2">
                     <div>
-                      <label className="text-gray-500 text-xs">Base Rate (PRC/hr)</label>
+                      <label className="text-slate-500 text-xs">Base Rate (PRC/hr)</label>
                       <Input
                         type="number"
                         value={settings.base_rate}
@@ -285,11 +285,11 @@ const AdminSystemSettings = () => {
                           ...prev,
                           [plan]: { ...prev[plan], base_rate: parseInt(e.target.value) }
                         }))}
-                        className="bg-gray-900 border-gray-700 text-white h-8 text-sm"
+                        className="bg-white border-slate-200 text-slate-800 h-8 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="text-gray-500 text-xs">Tap Bonus (PRC)</label>
+                      <label className="text-slate-500 text-xs">Tap Bonus (PRC)</label>
                       <Input
                         type="number"
                         value={settings.tap_bonus}
@@ -297,7 +297,7 @@ const AdminSystemSettings = () => {
                           ...prev,
                           [plan]: { ...prev[plan], tap_bonus: parseInt(e.target.value) }
                         }))}
-                        className="bg-gray-900 border-gray-700 text-white h-8 text-sm"
+                        className="bg-white border-slate-200 text-slate-800 h-8 text-sm"
                       />
                     </div>
                   </div>

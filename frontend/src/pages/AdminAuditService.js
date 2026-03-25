@@ -109,7 +109,7 @@ const AdminAuditService = ({ user }) => {
       critical: 'bg-red-500/20 text-red-400 border-red-500/30',
       high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
       normal: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      low: 'bg-gray-700 text-gray-300 border-gray-700'
+      low: 'bg-gray-700 text-slate-600 border-slate-200'
     };
     return badges[severity] || badges.normal;
   };
@@ -131,7 +131,7 @@ const AdminAuditService = ({ user }) => {
             <Shield className="h-7 w-7 text-purple-600" />
             Audit Service
           </h1>
-          <p className="text-gray-500">Track all system activities and changes</p>
+          <p className="text-slate-500">Track all system activities and changes</p>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={() => setShowFilters(!showFilters)} variant="outline" size="sm">
@@ -174,7 +174,7 @@ const AdminAuditService = ({ user }) => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{total.toLocaleString()}</p>
-                <p className="text-xs text-gray-500">Total Logs</p>
+                <p className="text-xs text-slate-500">Total Logs</p>
               </div>
             </div>
           </Card>
@@ -186,7 +186,7 @@ const AdminAuditService = ({ user }) => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{suspicious.length}</p>
-                <p className="text-xs text-gray-500">Suspicious</p>
+                <p className="text-xs text-slate-500">Suspicious</p>
               </div>
             </div>
           </Card>
@@ -198,7 +198,7 @@ const AdminAuditService = ({ user }) => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.action_types?.length || 0}</p>
-                <p className="text-xs text-gray-500">Action Types</p>
+                <p className="text-xs text-slate-500">Action Types</p>
               </div>
             </div>
           </Card>
@@ -210,7 +210,7 @@ const AdminAuditService = ({ user }) => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{alerts.length}</p>
-                <p className="text-xs text-gray-500">Pending Alerts</p>
+                <p className="text-xs text-slate-500">Pending Alerts</p>
               </div>
             </div>
           </Card>
@@ -222,7 +222,7 @@ const AdminAuditService = ({ user }) => {
         <Card className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
-              <label className="text-xs text-gray-500">Search</label>
+              <label className="text-xs text-slate-500">Search</label>
               <Input
                 placeholder="Search..."
                 value={filters.search}
@@ -230,7 +230,7 @@ const AdminAuditService = ({ user }) => {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500">Action Type</label>
+              <label className="text-xs text-slate-500">Action Type</label>
               <select
                 className="w-full px-3 py-2 border rounded-lg"
                 value={filters.action_type}
@@ -243,7 +243,7 @@ const AdminAuditService = ({ user }) => {
               </select>
             </div>
             <div>
-              <label className="text-xs text-gray-500">Severity</label>
+              <label className="text-xs text-slate-500">Severity</label>
               <select
                 className="w-full px-3 py-2 border rounded-lg"
                 value={filters.severity}
@@ -257,7 +257,7 @@ const AdminAuditService = ({ user }) => {
               </select>
             </div>
             <div>
-              <label className="text-xs text-gray-500">User ID</label>
+              <label className="text-xs text-slate-500">User ID</label>
               <Input
                 placeholder="User ID..."
                 value={filters.user_id}
@@ -265,7 +265,7 @@ const AdminAuditService = ({ user }) => {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500">Start Date</label>
+              <label className="text-xs text-slate-500">Start Date</label>
               <Input
                 type="date"
                 value={filters.start_date}
@@ -273,7 +273,7 @@ const AdminAuditService = ({ user }) => {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500">End Date</label>
+              <label className="text-xs text-slate-500">End Date</label>
               <Input
                 type="date"
                 value={filters.end_date}
@@ -307,14 +307,14 @@ const AdminAuditService = ({ user }) => {
                   {getActionIcon(log.action_type)}
                   <div>
                     <p className="font-medium text-sm">{log.action_type}</p>
-                    <p className="text-xs text-gray-500">{log.admin_email || log.target_user_email}</p>
+                    <p className="text-xs text-slate-500">{log.admin_email || log.target_user_email}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityBadge(log.severity)}`}>
                     {log.severity}
                   </span>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     {new Date(log.timestamp).toLocaleString()}
                   </p>
                 </div>
@@ -328,7 +328,7 @@ const AdminAuditService = ({ user }) => {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-800/50">
+            <thead className="bg-slate-50">
               <tr>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600">Timestamp</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600">Action</th>
@@ -347,16 +347,16 @@ const AdminAuditService = ({ user }) => {
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-500">
+                  <td colSpan={6} className="text-center py-8 text-slate-500">
                     No audit logs found
                   </td>
                 </tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.log_id} className="border-b hover:bg-gray-800/50">
+                  <tr key={log.log_id} className="border-b hover:bg-slate-50">
                     <td className="py-3 px-4 text-sm">
                       <p className="font-medium">{new Date(log.timestamp).toLocaleDateString()}</p>
-                      <p className="text-xs text-gray-500">{new Date(log.timestamp).toLocaleTimeString()}</p>
+                      <p className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</p>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -366,7 +366,7 @@ const AdminAuditService = ({ user }) => {
                     </td>
                     <td className="py-3 px-4 text-sm">
                       <p>{log.admin_email || log.target_user_email || '-'}</p>
-                      {log.ip_address && <p className="text-xs text-gray-500">IP: {log.ip_address}</p>}
+                      {log.ip_address && <p className="text-xs text-slate-500">IP: {log.ip_address}</p>}
                     </td>
                     <td className="py-3 px-4 text-sm max-w-xs truncate" title={log.details}>
                       {log.details || '-'}
@@ -407,55 +407,55 @@ const AdminAuditService = ({ user }) => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">Audit Log Details</h2>
-                <button onClick={() => setSelectedLog(null)} className="text-gray-500 hover:text-gray-300">✕</button>
+                <button onClick={() => setSelectedLog(null)} className="text-slate-500 hover:text-slate-600">✕</button>
               </div>
               
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-gray-500">Log ID</p>
+                    <p className="text-xs text-slate-500">Log ID</p>
                     <p className="font-mono text-sm">{selectedLog.log_id}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Timestamp</p>
+                    <p className="text-xs text-slate-500">Timestamp</p>
                     <p className="text-sm">{new Date(selectedLog.timestamp).toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Action Type</p>
+                    <p className="text-xs text-slate-500">Action Type</p>
                     <p className="text-sm font-medium">{selectedLog.action_type}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Severity</p>
+                    <p className="text-xs text-slate-500">Severity</p>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityBadge(selectedLog.severity)}`}>
                       {selectedLog.severity || 'normal'}
                     </span>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Admin</p>
+                    <p className="text-xs text-slate-500">Admin</p>
                     <p className="text-sm">{selectedLog.admin_email || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Target User</p>
+                    <p className="text-xs text-slate-500">Target User</p>
                     <p className="text-sm">{selectedLog.target_user_email || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">IP Address</p>
+                    <p className="text-xs text-slate-500">IP Address</p>
                     <p className="text-sm font-mono">{selectedLog.ip_address || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Entity</p>
+                    <p className="text-xs text-slate-500">Entity</p>
                     <p className="text-sm">{selectedLog.entity_type}: {selectedLog.entity_id || '-'}</p>
                   </div>
                 </div>
                 
                 <div>
-                  <p className="text-xs text-gray-500">Details</p>
-                  <p className="text-sm p-3 bg-gray-800/50 rounded-lg">{selectedLog.details || 'No details'}</p>
+                  <p className="text-xs text-slate-500">Details</p>
+                  <p className="text-sm p-3 bg-slate-50 rounded-lg">{selectedLog.details || 'No details'}</p>
                 </div>
                 
                 {selectedLog.old_value && (
                   <div>
-                    <p className="text-xs text-gray-500">Old Value</p>
+                    <p className="text-xs text-slate-500">Old Value</p>
                     <pre className="text-xs p-3 bg-red-500/10 rounded-lg overflow-auto">
                       {JSON.stringify(selectedLog.old_value, null, 2)}
                     </pre>
@@ -464,7 +464,7 @@ const AdminAuditService = ({ user }) => {
                 
                 {selectedLog.new_value && (
                   <div>
-                    <p className="text-xs text-gray-500">New Value</p>
+                    <p className="text-xs text-slate-500">New Value</p>
                     <pre className="text-xs p-3 bg-green-500/10 rounded-lg overflow-auto">
                       {JSON.stringify(selectedLog.new_value, null, 2)}
                     </pre>

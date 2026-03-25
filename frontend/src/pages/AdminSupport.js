@@ -177,7 +177,7 @@ const AdminSupport = ({ user }) => {
         </span>
       ),
       'closed': (
-        <span className="px-3 py-1 bg-gray-700 text-gray-300 text-xs rounded-full flex items-center gap-1.5 font-medium">
+        <span className="px-3 py-1 bg-gray-700 text-slate-600 text-xs rounded-full flex items-center gap-1.5 font-medium">
           <Archive className="h-3 w-3" /> Closed
         </span>
       )
@@ -198,7 +198,7 @@ const AdminSupport = ({ user }) => {
         </span>
       ),
       'low': (
-        <span className="px-3 py-1 bg-gray-700 text-gray-300 text-xs rounded-full flex items-center gap-1.5 font-medium">
+        <span className="px-3 py-1 bg-gray-700 text-slate-600 text-xs rounded-full flex items-center gap-1.5 font-medium">
           <Clock className="h-3 w-3" /> Low
         </span>
       )
@@ -231,15 +231,15 @@ const AdminSupport = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-              <Ticket className="h-5 w-5 text-white" />
+              <Ticket className="h-5 w-5 text-slate-800" />
             </div>
             Support Center
           </h1>
-          <p className="text-gray-400 mt-1">Manage customer support tickets efficiently</p>
+          <p className="text-slate-500 mt-1">Manage customer support tickets efficiently</p>
         </div>
-        <Button onClick={fetchTickets} className="bg-gray-800 hover:bg-gray-700 border border-gray-700">
+        <Button onClick={fetchTickets} className="bg-white hover:bg-slate-100 border border-slate-200">
           <RefreshCw className="h-4 w-4 mr-2" /> Refresh
         </Button>
       </div>
@@ -250,7 +250,7 @@ const AdminSupport = ({ user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-blue-400 font-medium">Total Tickets</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">{stats.total}</p>
             </div>
             <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
               <Ticket className="h-5 w-5 text-blue-400" />
@@ -262,7 +262,7 @@ const AdminSupport = ({ user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-yellow-400 font-medium">Open</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.open}</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">{stats.open}</p>
             </div>
             <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
               <Clock className="h-5 w-5 text-yellow-400" />
@@ -274,7 +274,7 @@ const AdminSupport = ({ user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-purple-400 font-medium">In Progress</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.inProgress}</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">{stats.inProgress}</p>
             </div>
             <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
               <Zap className="h-5 w-5 text-purple-400" />
@@ -286,7 +286,7 @@ const AdminSupport = ({ user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-green-400 font-medium">Resolved</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.resolved}</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">{stats.resolved}</p>
             </div>
             <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
               <CheckCircle className="h-5 w-5 text-green-400" />
@@ -298,7 +298,7 @@ const AdminSupport = ({ user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-red-400 font-medium">High Priority</p>
-              <p className="text-2xl font-bold text-white mt-1">{stats.highPriority}</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">{stats.highPriority}</p>
             </div>
             <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-red-400" />
@@ -308,22 +308,22 @@ const AdminSupport = ({ user }) => {
       </div>
 
       {/* Search & Filters */}
-      <Card className="p-4 mb-6 bg-gray-900/50 border-gray-800">
+      <Card className="p-4 mb-6 bg-white border-slate-200">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
               <Input
                 placeholder="Search by ticket ID, subject, customer..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-800 border-gray-700 text-white"
+                className="pl-10 bg-white border-slate-200 text-slate-800"
               />
             </div>
             <Button 
               variant="outline" 
               onClick={() => setShowFilters(!showFilters)}
-              className="bg-gray-800 border-gray-700 text-gray-300"
+              className="bg-white border-slate-200 text-slate-600"
             >
               <Filter className="h-4 w-4 mr-2" /> 
               Filters
@@ -332,13 +332,13 @@ const AdminSupport = ({ user }) => {
           </div>
           
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-800">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200">
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Status</label>
+                <label className="text-xs text-slate-500 mb-1 block">Status</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-sm"
                 >
                   <option value="all">All Status</option>
                   <option value="open">Open</option>
@@ -348,11 +348,11 @@ const AdminSupport = ({ user }) => {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Priority</label>
+                <label className="text-xs text-slate-500 mb-1 block">Priority</label>
                 <select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-sm"
                 >
                   <option value="all">All Priority</option>
                   <option value="high">High</option>
@@ -361,11 +361,11 @@ const AdminSupport = ({ user }) => {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Category</label>
+                <label className="text-xs text-slate-500 mb-1 block">Category</label>
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-sm"
                 >
                   <option value="all">All Categories</option>
                   {categories.map(cat => (
@@ -382,13 +382,13 @@ const AdminSupport = ({ user }) => {
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto"></div>
-          <p className="text-gray-400 mt-4">Loading tickets...</p>
+          <p className="text-slate-500 mt-4">Loading tickets...</p>
         </div>
       ) : filteredTickets.length === 0 ? (
-        <Card className="p-12 text-center bg-gray-900/50 border-gray-800">
+        <Card className="p-12 text-center bg-white border-slate-200">
           <Ticket className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">No Tickets Found</h3>
-          <p className="text-gray-400">No support tickets match your search criteria</p>
+          <h3 className="text-xl font-semibold text-slate-800 mb-2">No Tickets Found</h3>
+          <p className="text-slate-500">No support tickets match your search criteria</p>
         </Card>
       ) : (
         <>
@@ -396,7 +396,7 @@ const AdminSupport = ({ user }) => {
             {paginatedTickets.map((ticket) => (
               <Card 
                 key={ticket.ticket_id} 
-                className={`p-4 cursor-pointer transition-all hover:border-purple-500/50 bg-gray-900/50 border-gray-800 ${
+                className={`p-4 cursor-pointer transition-all hover:border-purple-500/50 bg-white border-slate-200 ${
                   selectedTicket?.ticket_id === ticket.ticket_id ? 'ring-2 ring-purple-500 border-purple-500' : ''
                 }`}
                 onClick={() => setSelectedTicket(ticket)}
@@ -405,29 +405,29 @@ const AdminSupport = ({ user }) => {
                   <div className="flex items-start gap-4 flex-1">
                     <div className={`p-3 rounded-xl flex-shrink-0 ${
                       ticket.priority === 'high' ? 'bg-red-500/20' : 
-                      ticket.priority === 'medium' ? 'bg-orange-500/20' : 'bg-gray-800'
+                      ticket.priority === 'medium' ? 'bg-orange-500/20' : 'bg-white'
                     }`}>
                       <MessageSquare className={`h-6 w-6 ${
                         ticket.priority === 'high' ? 'text-red-400' : 
-                        ticket.priority === 'medium' ? 'text-orange-400' : 'text-gray-400'
+                        ticket.priority === 'medium' ? 'text-orange-400' : 'text-slate-500'
                       }`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold text-white truncate">{ticket.subject}</h3>
-                        <span className="text-xs text-gray-500 font-mono">#{ticket.ticket_id?.slice(-8)}</span>
+                        <h3 className="font-semibold text-slate-800 truncate">{ticket.subject}</h3>
+                        <span className="text-xs text-slate-500 font-mono">#{ticket.ticket_id?.slice(-8)}</span>
                       </div>
-                      <p className="text-sm text-gray-400 mt-1 line-clamp-1">{ticket.description}</p>
+                      <p className="text-sm text-slate-500 mt-1 line-clamp-1">{ticket.description}</p>
                       <div className="flex items-center gap-4 mt-2 flex-wrap">
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <span className="text-xs text-slate-500 flex items-center gap-1">
                           <UserCircle className="h-3 w-3" />
                           {ticket.user_name || 'Unknown User'}
                         </span>
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <span className="text-xs text-slate-500 flex items-center gap-1">
                           <Tag className="h-3 w-3" />
                           {ticket.category || 'General'}
                         </span>
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <span className="text-xs text-slate-500 flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {getTimeSince(ticket.created_at)}
                         </span>
@@ -458,16 +458,16 @@ const AdminSupport = ({ user }) => {
       {/* Ticket Detail Modal */}
       {selectedTicket && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col bg-gray-900 border-gray-800">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col bg-white border-slate-200">
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-800 bg-gray-900/80">
+            <div className="p-6 border-b border-slate-200 bg-white/80">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h2 className="text-xl font-bold text-white">{selectedTicket.subject}</h2>
+                    <h2 className="text-xl font-bold text-slate-800">{selectedTicket.subject}</h2>
                     <button 
                       onClick={() => copyTicketId(selectedTicket.ticket_id)}
-                      className="text-xs text-gray-400 font-mono bg-gray-800 px-2 py-1 rounded flex items-center gap-1 hover:bg-gray-700"
+                      className="text-xs text-slate-500 font-mono bg-white px-2 py-1 rounded flex items-center gap-1 hover:bg-slate-100"
                     >
                       <Hash className="h-3 w-3" />
                       {selectedTicket.ticket_id?.slice(-8)}
@@ -475,11 +475,11 @@ const AdminSupport = ({ user }) => {
                     </button>
                   </div>
                   <div className="flex items-center gap-4 mt-2 flex-wrap">
-                    <span className="text-sm text-gray-400 flex items-center gap-1">
+                    <span className="text-sm text-slate-500 flex items-center gap-1">
                       <UserCircle className="h-4 w-4" />
                       {selectedTicket.user_name || selectedTicket.user_id}
                     </span>
-                    <span className="text-sm text-gray-400 flex items-center gap-1">
+                    <span className="text-sm text-slate-500 flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       {new Date(selectedTicket.created_at).toLocaleString()}
                     </span>
@@ -487,7 +487,7 @@ const AdminSupport = ({ user }) => {
                 </div>
                 <button 
                   onClick={() => setSelectedTicket(null)} 
-                  className="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                  className="text-slate-500 hover:text-slate-800 p-2 hover:bg-white rounded-lg transition-colors"
                 >
                   <XCircle className="h-6 w-6" />
                 </button>
@@ -495,13 +495,13 @@ const AdminSupport = ({ user }) => {
             </div>
 
             {/* Ticket Info Bar */}
-            <div className="px-6 py-3 bg-gray-800/50 border-b border-gray-800 flex flex-wrap items-center gap-4">
+            <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Status:</span>
+                <span className="text-xs text-slate-500">Status:</span>
                 <select
                   value={selectedTicket.status}
                   onChange={(e) => handleStatusChange(selectedTicket.ticket_id, e.target.value)}
-                  className="text-xs bg-gray-700 border-0 rounded px-2 py-1 text-white"
+                  className="text-xs bg-gray-700 border-0 rounded px-2 py-1 text-slate-800"
                   disabled={processing}
                 >
                   <option value="open">Open</option>
@@ -511,11 +511,11 @@ const AdminSupport = ({ user }) => {
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Priority:</span>
+                <span className="text-xs text-slate-500">Priority:</span>
                 <select
                   value={selectedTicket.priority}
                   onChange={(e) => handlePriorityChange(selectedTicket.ticket_id, e.target.value)}
-                  className="text-xs bg-gray-700 border-0 rounded px-2 py-1 text-white"
+                  className="text-xs bg-gray-700 border-0 rounded px-2 py-1 text-slate-800"
                   disabled={processing}
                 >
                   <option value="low">Low</option>
@@ -524,7 +524,7 @@ const AdminSupport = ({ user }) => {
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Category:</span>
+                <span className="text-xs text-slate-500">Category:</span>
                 <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">
                   {selectedTicket.category || 'General'}
                 </span>
@@ -535,18 +535,18 @@ const AdminSupport = ({ user }) => {
             <div className="flex-1 overflow-y-auto p-6">
               {/* Original Description */}
               <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                <h4 className="text-sm font-medium text-slate-600 mb-2 flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Original Message
                 </h4>
-                <div className="p-4 bg-gray-800/50 rounded-xl border border-gray-700">
-                  <p className="text-gray-300 whitespace-pre-wrap">{selectedTicket.description}</p>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <p className="text-slate-600 whitespace-pre-wrap">{selectedTicket.description}</p>
                 </div>
               </div>
 
               {/* Conversation Thread */}
               <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
                   <MessageCircle className="h-4 w-4" />
                   Conversation ({ticketReplies.length} replies)
                 </h4>
@@ -556,7 +556,7 @@ const AdminSupport = ({ user }) => {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
                   </div>
                 ) : ticketReplies.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-slate-500">
                     <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
                     <p>No replies yet. Start the conversation!</p>
                   </div>
@@ -569,8 +569,8 @@ const AdminSupport = ({ user }) => {
                       >
                         <div className={`max-w-[80%] ${
                           reply.user_role === 'admin' 
-                            ? 'bg-gradient-to-br from-purple-600 to-pink-600 text-white' 
-                            : 'bg-gray-800 text-gray-200'
+                            ? 'bg-gradient-to-br from-purple-600 to-pink-600 text-slate-800' 
+                            : 'bg-white text-gray-200'
                         } rounded-2xl p-4`}>
                           <div className="flex items-center gap-2 mb-2">
                             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -622,7 +622,7 @@ const AdminSupport = ({ user }) => {
                     variant="outline"
                     onClick={() => handleStatusChange(selectedTicket.ticket_id, 'closed')}
                     disabled={processing}
-                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                    className="border-gray-600 text-slate-600 hover:bg-white"
                   >
                     <Archive className="h-4 w-4 mr-1" /> Close Ticket
                   </Button>
@@ -632,14 +632,14 @@ const AdminSupport = ({ user }) => {
 
             {/* Reply Input */}
             {selectedTicket.status !== 'closed' && (
-              <div className="p-4 border-t border-gray-800 bg-gray-900/80">
+              <div className="p-4 border-t border-slate-200 bg-white/80">
                 <div className="flex gap-3">
                   <Input
                     placeholder="Type your reply to the customer..."
                     value={replyMessage}
                     onChange={(e) => setReplyMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleReply()}
-                    className="flex-1 bg-gray-800 border-gray-700 text-white"
+                    className="flex-1 bg-white border-slate-200 text-slate-800"
                     disabled={processing}
                   />
                   <Button 

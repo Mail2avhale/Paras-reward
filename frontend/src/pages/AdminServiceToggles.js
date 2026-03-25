@@ -144,21 +144,21 @@ const AdminServiceToggles = ({ user }) => {
               variant="ghost" 
               size="sm" 
               onClick={() => navigate('/admin')}
-              className="text-gray-400 hover:text-white"
+              className="text-slate-500 hover:text-slate-800"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-white">Service Management</h1>
-              <p className="text-gray-400 text-sm">Enable or disable services temporarily</p>
+              <h1 className="text-2xl font-bold text-slate-800">Service Management</h1>
+              <p className="text-slate-500 text-sm">Enable or disable services temporarily</p>
             </div>
           </div>
           <Button 
             variant="outline" 
             size="sm" 
             onClick={fetchServices}
-            className="border-gray-700"
+            className="border-slate-200"
           >
             <RefreshCw className="w-4 h-4 mr-1" />
             Refresh
@@ -188,7 +188,7 @@ const AdminServiceToggles = ({ user }) => {
             return (
               <Card 
                 key={key} 
-                className={`p-4 bg-gray-900 border-gray-800 ${!isEnabled ? 'opacity-60' : ''}`}
+                className={`p-4 bg-white border-slate-200 ${!isEnabled ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -196,7 +196,7 @@ const AdminServiceToggles = ({ user }) => {
                       <Icon className={`w-5 h-5 text-${color}-400`} />
                     </div>
                     <div>
-                      <p className="text-white font-medium">{service.name}</p>
+                      <p className="text-slate-800 font-medium">{service.name}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {isEnabled ? (
                           <span className="flex items-center text-xs text-green-400">
@@ -232,76 +232,76 @@ const AdminServiceToggles = ({ user }) => {
 
         {/* Last Updated */}
         {updatedAt && (
-          <p className="text-center text-gray-500 text-sm mt-6">
+          <p className="text-center text-slate-500 text-sm mt-6">
             Last updated: {new Date(updatedAt).toLocaleString()}
           </p>
         )}
         
         {/* DMT Limits Section */}
-        <Card className="mt-8 p-6 bg-gray-900 border-gray-800">
+        <Card className="mt-8 p-6 bg-white border-slate-200">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-cyan-500/20">
               <Send className="w-5 h-5 text-cyan-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">DMT Global Limits</h2>
-              <p className="text-gray-400 text-sm">Set transfer limits for all users</p>
+              <h2 className="text-lg font-bold text-slate-800">DMT Global Limits</h2>
+              <p className="text-slate-500 text-sm">Set transfer limits for all users</p>
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Daily Limit */}
             <div>
-              <label className="block text-gray-400 text-sm mb-2">Daily Limit (₹)</label>
+              <label className="block text-slate-500 text-sm mb-2">Daily Limit (₹)</label>
               <input
                 type="number"
                 value={dmtLimits.daily_limit}
                 onChange={(e) => setDmtLimits(prev => ({...prev, daily_limit: parseInt(e.target.value) || 0}))}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-cyan-500"
               />
             </div>
             
             {/* Weekly Limit */}
             <div>
-              <label className="block text-gray-400 text-sm mb-2">Weekly Limit (₹)</label>
+              <label className="block text-slate-500 text-sm mb-2">Weekly Limit (₹)</label>
               <input
                 type="number"
                 value={dmtLimits.weekly_limit}
                 onChange={(e) => setDmtLimits(prev => ({...prev, weekly_limit: parseInt(e.target.value) || 0}))}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-cyan-500"
               />
             </div>
             
             {/* Monthly Limit */}
             <div>
-              <label className="block text-gray-400 text-sm mb-2">Monthly Limit (₹)</label>
+              <label className="block text-slate-500 text-sm mb-2">Monthly Limit (₹)</label>
               <input
                 type="number"
                 value={dmtLimits.monthly_limit}
                 onChange={(e) => setDmtLimits(prev => ({...prev, monthly_limit: parseInt(e.target.value) || 0}))}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-cyan-500"
               />
             </div>
             
             {/* Per Transaction Limit */}
             <div>
-              <label className="block text-gray-400 text-sm mb-2">Per Transaction Limit (₹)</label>
+              <label className="block text-slate-500 text-sm mb-2">Per Transaction Limit (₹)</label>
               <input
                 type="number"
                 value={dmtLimits.per_txn_limit}
                 onChange={(e) => setDmtLimits(prev => ({...prev, per_txn_limit: parseInt(e.target.value) || 0}))}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-cyan-500"
               />
             </div>
             
             {/* Min Amount */}
             <div>
-              <label className="block text-gray-400 text-sm mb-2">Minimum Amount (₹)</label>
+              <label className="block text-slate-500 text-sm mb-2">Minimum Amount (₹)</label>
               <input
                 type="number"
                 value={dmtLimits.min_amount}
                 onChange={(e) => setDmtLimits(prev => ({...prev, min_amount: parseInt(e.target.value) || 0}))}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-cyan-500"
               />
             </div>
           </div>
@@ -324,7 +324,7 @@ const AdminServiceToggles = ({ user }) => {
           </div>
           
           {dmtLimits.updated_at && (
-            <p className="text-gray-500 text-xs mt-4">
+            <p className="text-slate-500 text-xs mt-4">
               Last updated: {new Date(dmtLimits.updated_at).toLocaleString()}
               {dmtLimits.updated_by && ` by ${dmtLimits.updated_by}`}
             </p>

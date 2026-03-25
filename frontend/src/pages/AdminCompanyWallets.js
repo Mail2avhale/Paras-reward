@@ -125,7 +125,7 @@ const AdminCompanyWallets = ({ user }) => {
       case 'redeem_reserve': return 'bg-green-500/20 text-green-600';
       case 'charity': return 'bg-pink-500/20 text-pink-600';
       case 'profit': return 'bg-yellow-500/20 text-yellow-600';
-      default: return 'bg-gray-800 text-gray-400';
+      default: return 'bg-white text-slate-500';
     }
   };
 
@@ -138,15 +138,15 @@ const AdminCompanyWallets = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-6">
+    <div className="min-h-screen bg-slate-50 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Wallet className="h-6 w-6 text-purple-600" />
             Company Master Wallets
           </h1>
-          <p className="text-sm text-gray-500">Manage internal company wallets</p>
+          <p className="text-sm text-slate-500">Manage internal company wallets</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchWallets}>
@@ -165,13 +165,13 @@ const AdminCompanyWallets = ({ user }) => {
       </div>
 
       {/* Total Balance Card */}
-      <Card className="p-6 mb-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+      <Card className="p-6 mb-6 bg-gradient-to-r from-purple-600 to-pink-600 text-slate-800">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-purple-100 text-sm">Total Company Balance</p>
             <h2 className="text-4xl font-bold mt-1">₹{totalBalance.toLocaleString('en-IN')}</h2>
           </div>
-          <div className="bg-gray-900/20 p-4 rounded-xl">
+          <div className="bg-white/20 p-4 rounded-xl">
             <Wallet className="h-10 w-10" />
           </div>
         </div>
@@ -186,11 +186,11 @@ const AdminCompanyWallets = ({ user }) => {
                 {getWalletIcon(wallet.wallet_type)}
               </div>
             </div>
-            <h3 className="font-semibold text-white text-sm">{wallet.wallet_name}</h3>
-            <p className="text-2xl font-bold text-white mt-1">
+            <h3 className="font-semibold text-slate-800 text-sm">{wallet.wallet_name}</h3>
+            <p className="text-2xl font-bold text-slate-800 mt-1">
               ₹{wallet.balance.toLocaleString('en-IN')}
             </p>
-            <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
+            <div className="flex items-center justify-between mt-3 text-xs text-slate-500">
               <span className="text-green-600">+₹{wallet.total_credit?.toLocaleString('en-IN') || 0}</span>
               <span className="text-red-600">-₹{wallet.total_debit?.toLocaleString('en-IN') || 0}</span>
             </div>
@@ -201,7 +201,7 @@ const AdminCompanyWallets = ({ user }) => {
       {/* Wallet Distribution Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <Card className="p-6">
-          <h3 className="font-semibold text-white mb-4">Wallet Distribution</h3>
+          <h3 className="font-semibold text-slate-800 mb-4">Wallet Distribution</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -226,15 +226,15 @@ const AdminCompanyWallets = ({ user }) => {
 
         {/* Recent Transactions */}
         <Card className="p-6">
-          <h3 className="font-semibold text-white mb-4">Recent Transactions</h3>
+          <h3 className="font-semibold text-slate-800 mb-4">Recent Transactions</h3>
           {transactions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-slate-500">
               No transactions yet
             </div>
           ) : (
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {transactions.map((txn, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-full ${txn.type === 'credit' ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
                       {txn.type === 'credit' ? (
@@ -245,7 +245,7 @@ const AdminCompanyWallets = ({ user }) => {
                     </div>
                     <div>
                       <p className="text-sm font-medium">{txn.description || 'Transaction'}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-500">
                         {txn.from_wallet || txn.wallet_type} → {txn.to_wallet || '-'}
                       </p>
                     </div>
@@ -270,7 +270,7 @@ const AdminCompanyWallets = ({ user }) => {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-300">From Wallet</label>
+                <label className="text-sm font-medium text-slate-600">From Wallet</label>
                 <select
                   value={transferForm.from_wallet}
                   onChange={(e) => setTransferForm({...transferForm, from_wallet: e.target.value})}
@@ -285,7 +285,7 @@ const AdminCompanyWallets = ({ user }) => {
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300">To Wallet</label>
+                <label className="text-sm font-medium text-slate-600">To Wallet</label>
                 <select
                   value={transferForm.to_wallet}
                   onChange={(e) => setTransferForm({...transferForm, to_wallet: e.target.value})}
@@ -298,7 +298,7 @@ const AdminCompanyWallets = ({ user }) => {
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300">Amount (₹)</label>
+                <label className="text-sm font-medium text-slate-600">Amount (₹)</label>
                 <input
                   type="number"
                   value={transferForm.amount}
@@ -308,7 +308,7 @@ const AdminCompanyWallets = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300">Description</label>
+                <label className="text-sm font-medium text-slate-600">Description</label>
                 <input
                   type="text"
                   value={transferForm.description}
@@ -340,7 +340,7 @@ const AdminCompanyWallets = ({ user }) => {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-300">Wallet</label>
+                <label className="text-sm font-medium text-slate-600">Wallet</label>
                 <select
                   value={adjustForm.wallet_type}
                   onChange={(e) => setAdjustForm({...adjustForm, wallet_type: e.target.value})}
@@ -353,7 +353,7 @@ const AdminCompanyWallets = ({ user }) => {
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300">Type</label>
+                <label className="text-sm font-medium text-slate-600">Type</label>
                 <div className="flex gap-4 mt-2">
                   <label className="flex items-center gap-2">
                     <input
@@ -376,7 +376,7 @@ const AdminCompanyWallets = ({ user }) => {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300">Amount (₹)</label>
+                <label className="text-sm font-medium text-slate-600">Amount (₹)</label>
                 <input
                   type="number"
                   value={adjustForm.amount}
@@ -386,7 +386,7 @@ const AdminCompanyWallets = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300">Description</label>
+                <label className="text-sm font-medium text-slate-600">Description</label>
                 <input
                   type="text"
                   value={adjustForm.description}

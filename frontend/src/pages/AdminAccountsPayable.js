@@ -117,7 +117,7 @@ const AdminAccountsPayable = ({ user }) => {
   const summary = data?.summary || {};
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-ap">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6" data-testid="admin-ap">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -125,7 +125,7 @@ const AdminAccountsPayable = ({ user }) => {
             <ArrowUpRight className="h-7 w-7 text-red-600" />
             Accounts Payable (AP)
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Accounts Payable - Money owed BY your business</p>
+          <p className="text-sm text-slate-500 mt-1">Accounts Payable - Money owed BY your business</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchData} size="sm" disabled={loading}>
@@ -141,23 +141,23 @@ const AdminAccountsPayable = ({ user }) => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <Card className="p-5 bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-amber-500 to-orange-600 text-slate-800">
           <p className="text-amber-100 text-sm">Pending</p>
           <h2 className="text-2xl font-bold mt-1">{formatCurrency(summary.total_pending)}</h2>
         </Card>
-        <Card className="p-5 bg-gradient-to-br from-red-500 to-rose-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-red-500 to-rose-600 text-slate-800">
           <p className="text-red-100 text-sm">Overdue</p>
           <h2 className="text-2xl font-bold mt-1">{formatCurrency(summary.total_overdue)}</h2>
         </Card>
-        <Card className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 text-slate-800">
           <p className="text-green-100 text-sm">Paid</p>
           <h2 className="text-2xl font-bold mt-1">{formatCurrency(summary.total_paid)}</h2>
         </Card>
-        <Card className="p-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-slate-800">
           <p className="text-blue-100 text-sm">Outstanding</p>
           <h2 className="text-2xl font-bold mt-1">{formatCurrency(summary.total_outstanding)}</h2>
         </Card>
-        <Card className="p-5 bg-gradient-to-br from-purple-500 to-violet-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-purple-500 to-violet-600 text-slate-800">
           <div className="flex items-center gap-2">
             <Coins className="h-5 w-5 text-purple-200" />
             <p className="text-purple-100 text-sm">PRC Liability</p>
@@ -173,7 +173,7 @@ const AdminAccountsPayable = ({ user }) => {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
-              filter === f ? 'bg-red-600 text-white' : 'bg-gray-900 text-gray-600 hover:bg-gray-700'
+              filter === f ? 'bg-red-600 text-slate-800' : 'bg-white text-gray-600 hover:bg-slate-100'
             }`}
           >
             {f}
@@ -199,13 +199,13 @@ const AdminAccountsPayable = ({ user }) => {
             <tbody className="divide-y">
               {!data?.payables?.length ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
                     No payables found
                   </td>
                 </tr>
               ) : (
                 data.payables.map((item) => (
-                  <tr key={item.bill_id} className="hover:bg-gray-800/50">
+                  <tr key={item.bill_id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-sm font-mono text-gray-900">{item.bill_id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.vendor_name}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{item.description || '-'}</td>
@@ -254,18 +254,18 @@ const AdminAccountsPayable = ({ user }) => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gray-900 rounded-xl shadow-xl max-w-md w-full"
+              className="bg-white rounded-xl shadow-xl max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b flex items-center justify-between">
                 <h3 className="text-lg font-semibold">New Bill/Payable</h3>
-                <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setShowAddModal(false)} className="text-slate-500 hover:text-gray-600">
                   <X className="h-5 w-5" />
                 </button>
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">Vendor Name *</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">Vendor Name *</label>
                   <input
                     type="text"
                     value={form.vendor_name}
@@ -275,7 +275,7 @@ const AdminAccountsPayable = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">Amount (₹) *</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">Amount (₹) *</label>
                   <input
                     type="number"
                     value={form.amount}
@@ -285,7 +285,7 @@ const AdminAccountsPayable = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">Description</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">Description</label>
                   <input
                     type="text"
                     value={form.description}
@@ -295,7 +295,7 @@ const AdminAccountsPayable = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">Due Date</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">Due Date</label>
                   <input
                     type="date"
                     value={form.due_date}
@@ -304,7 +304,7 @@ const AdminAccountsPayable = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1 block">Category</label>
+                  <label className="text-sm font-medium text-slate-600 mb-1 block">Category</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}

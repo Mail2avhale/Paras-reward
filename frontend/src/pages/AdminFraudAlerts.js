@@ -94,7 +94,7 @@ const AdminFraudAlerts = ({ user }) => {
       case 'critical': return 'bg-red-500/20 text-red-400 border-red-500/30';
       case 'high': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
       case 'medium': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      default: return 'bg-gray-800 text-gray-300 border-gray-700';
+      default: return 'bg-white text-slate-600 border-slate-200';
     }
   };
 
@@ -103,8 +103,8 @@ const AdminFraudAlerts = ({ user }) => {
       case 'pending': return 'bg-yellow-500/20 text-yellow-400';
       case 'investigating': return 'bg-blue-500/20 text-blue-400';
       case 'resolved': return 'bg-green-500/20 text-green-400';
-      case 'false_positive': return 'bg-gray-800 text-gray-300';
-      default: return 'bg-gray-800 text-gray-300';
+      case 'false_positive': return 'bg-white text-slate-600';
+      default: return 'bg-white text-slate-600';
     }
   };
 
@@ -126,15 +126,15 @@ const AdminFraudAlerts = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-6">
+    <div className="min-h-screen bg-slate-50 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Shield className="h-6 w-6 text-red-600" />
             Fraud Detection & Alerts
           </h1>
-          <p className="text-sm text-gray-500">Monitor and manage suspicious activities</p>
+          <p className="text-sm text-slate-500">Monitor and manage suspicious activities</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchAlerts}>
@@ -156,12 +156,12 @@ const AdminFraudAlerts = ({ user }) => {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <Card className="p-4 cursor-pointer hover:shadow-md" onClick={() => setStatusFilter('')}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-800 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-gray-400" />
+            <div className="p-2 bg-white rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-slate-500" />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats.total_alerts || 0}</p>
-              <p className="text-xs text-gray-500">Total Alerts</p>
+              <p className="text-xs text-slate-500">Total Alerts</p>
             </div>
           </div>
         </Card>
@@ -172,7 +172,7 @@ const AdminFraudAlerts = ({ user }) => {
             </div>
             <div>
               <p className="text-2xl font-bold text-yellow-600">{stats.pending || 0}</p>
-              <p className="text-xs text-gray-500">Pending</p>
+              <p className="text-xs text-slate-500">Pending</p>
             </div>
           </div>
         </Card>
@@ -183,7 +183,7 @@ const AdminFraudAlerts = ({ user }) => {
             </div>
             <div>
               <p className="text-2xl font-bold text-blue-600">{stats.investigating || 0}</p>
-              <p className="text-xs text-gray-500">Investigating</p>
+              <p className="text-xs text-slate-500">Investigating</p>
             </div>
           </div>
         </Card>
@@ -194,18 +194,18 @@ const AdminFraudAlerts = ({ user }) => {
             </div>
             <div>
               <p className="text-2xl font-bold text-green-600">{stats.resolved || 0}</p>
-              <p className="text-xs text-gray-500">Resolved</p>
+              <p className="text-xs text-slate-500">Resolved</p>
             </div>
           </div>
         </Card>
         <Card className={`p-4 cursor-pointer hover:shadow-md ${statusFilter === 'false_positive' ? 'ring-2 ring-gray-500' : ''}`} onClick={() => setStatusFilter('false_positive')}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-800 rounded-lg">
-              <XCircle className="h-5 w-5 text-gray-400" />
+            <div className="p-2 bg-white rounded-lg">
+              <XCircle className="h-5 w-5 text-slate-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-400">{stats.false_positive || 0}</p>
-              <p className="text-xs text-gray-500">False Positive</p>
+              <p className="text-2xl font-bold text-slate-500">{stats.false_positive || 0}</p>
+              <p className="text-xs text-slate-500">False Positive</p>
             </div>
           </div>
         </Card>
@@ -214,7 +214,7 @@ const AdminFraudAlerts = ({ user }) => {
       {/* Alerts List */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-white">Alert Queue</h3>
+          <h3 className="font-semibold text-slate-800">Alert Queue</h3>
           {statusFilter && (
             <Button variant="outline" size="sm" onClick={() => setStatusFilter('')}>
               Clear Filter
@@ -235,7 +235,7 @@ const AdminFraudAlerts = ({ user }) => {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-white">
+                      <h4 className="font-semibold text-slate-800">
                         {alert.alert_type?.replace(/_/g, ' ').toUpperCase()}
                       </h4>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(alert.status)}`}>
@@ -245,11 +245,11 @@ const AdminFraudAlerts = ({ user }) => {
                         {alert.severity}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-400 mt-1">{alert.description}</p>
+                    <p className="text-sm text-slate-500 mt-1">{alert.description}</p>
                     
                     {/* Affected Users */}
                     {alert.affected_users && (
-                      <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+                      <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
                         <Users className="h-4 w-4" />
                         <span>{alert.user_count || alert.affected_users.length} users affected</span>
                       </div>
@@ -257,19 +257,19 @@ const AdminFraudAlerts = ({ user }) => {
                     
                     {/* IP/Device Info */}
                     {alert.ip_address && (
-                      <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+                      <div className="mt-1 flex items-center gap-2 text-sm text-slate-500">
                         <Globe className="h-4 w-4" />
                         <span>IP: {alert.ip_address}</span>
                       </div>
                     )}
                     {alert.device_id && (
-                      <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+                      <div className="mt-1 flex items-center gap-2 text-sm text-slate-500">
                         <Smartphone className="h-4 w-4" />
                         <span>Device: {alert.device_id.slice(0, 20)}...</span>
                       </div>
                     )}
                     
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-slate-500 mt-2">
                       {new Date(alert.created_at).toLocaleString()}
                     </p>
                   </div>
@@ -291,7 +291,7 @@ const AdminFraudAlerts = ({ user }) => {
           ))}
           
           {alerts.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-slate-500">
               <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No fraud alerts found</p>
               <p className="text-sm">Click "Run Detection" to scan for suspicious activities</p>
@@ -319,14 +319,14 @@ const AdminFraudAlerts = ({ user }) => {
               Review Alert
             </h3>
             
-            <div className="bg-gray-800/50 p-4 rounded-lg mb-4">
+            <div className="bg-slate-50 p-4 rounded-lg mb-4">
               <p className="font-semibold">{selectedAlert.alert_type?.replace(/_/g, ' ')}</p>
-              <p className="text-sm text-gray-400 mt-1">{selectedAlert.description}</p>
+              <p className="text-sm text-slate-500 mt-1">{selectedAlert.description}</p>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-300">Update Status</label>
+                <label className="text-sm font-medium text-slate-600">Update Status</label>
                 <select
                   value={actionForm.status}
                   onChange={(e) => setActionForm({...actionForm, status: e.target.value})}
@@ -340,7 +340,7 @@ const AdminFraudAlerts = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-gray-300">Action to Take</label>
+                <label className="text-sm font-medium text-slate-600">Action to Take</label>
                 <select
                   value={actionForm.action_taken}
                   onChange={(e) => setActionForm({...actionForm, action_taken: e.target.value})}
@@ -354,7 +354,7 @@ const AdminFraudAlerts = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-gray-300">Notes</label>
+                <label className="text-sm font-medium text-slate-600">Notes</label>
                 <textarea
                   value={actionForm.notes}
                   onChange={(e) => setActionForm({...actionForm, notes: e.target.value})}

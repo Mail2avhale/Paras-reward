@@ -165,16 +165,16 @@ PARAS REWARD refund policy for various transactions.
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-800/50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Loader className="h-8 w-8 animate-spin text-purple-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-800/50 pb-20">
+    <div className="min-h-screen bg-slate-50 pb-20">
       {/* Header */}
-      <div className="bg-gray-900 border-b sticky top-0 z-10">
+      <div className="bg-white border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -207,8 +207,8 @@ PARAS REWARD refund policy for various transactions.
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-900 text-gray-300 hover:bg-gray-700'
+                    ? 'bg-purple-600 text-slate-800'
+                    : 'bg-white text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -227,7 +227,7 @@ PARAS REWARD refund policy for various transactions.
               }
               {tabs.find(t => t.id === activeTab)?.label}
             </h2>
-            <p className="text-sm text-gray-500 mt-1">Edit the content using Markdown format</p>
+            <p className="text-sm text-slate-500 mt-1">Edit the content using Markdown format</p>
           </div>
 
           <textarea

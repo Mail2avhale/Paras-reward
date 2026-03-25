@@ -170,7 +170,7 @@ const AdminProfitLoss = ({ user }) => {
       <div className="p-6 flex items-center justify-center min-h-screen">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-purple-500 mx-auto" />
-          <p className="text-gray-400 mt-4">Loading P&L Data...</p>
+          <p className="text-slate-500 mt-4">Loading P&L Data...</p>
         </div>
       </div>
     );
@@ -201,11 +201,11 @@ const AdminProfitLoss = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <DollarSign className="h-7 w-7 text-green-500" />
             Profit & Loss Statement
           </h1>
-          <p className="text-gray-500">{data?.period_label || 'Financial Overview'}</p>
+          <p className="text-slate-500">{data?.period_label || 'Financial Overview'}</p>
         </div>
         
         {/* Period Selector */}
@@ -216,7 +216,7 @@ const AdminProfitLoss = ({ user }) => {
               variant={period === p ? 'default' : 'outline'}
               onClick={() => setPeriod(p)}
               size="sm"
-              className={period === p ? 'bg-purple-600 hover:bg-purple-700' : 'border-gray-700'}
+              className={period === p ? 'bg-purple-600 hover:bg-purple-700' : 'border-slate-200'}
             >
               {p === 'day' ? 'Today' : p === 'week' ? 'This Week' : p === 'month' ? 'This Month' : 'This Year'}
             </Button>
@@ -224,7 +224,7 @@ const AdminProfitLoss = ({ user }) => {
           
           {(period === 'month' || period === 'year') && (
             <select
-              className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white"
+              className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800"
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
             >
@@ -236,7 +236,7 @@ const AdminProfitLoss = ({ user }) => {
           
           {period === 'month' && (
             <select
-              className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white"
+              className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
             >
@@ -246,7 +246,7 @@ const AdminProfitLoss = ({ user }) => {
             </select>
           )}
           
-          <Button onClick={fetchPLData} variant="outline" size="sm" className="border-gray-700">
+          <Button onClick={fetchPLData} variant="outline" size="sm" className="border-slate-200">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
@@ -263,24 +263,24 @@ const AdminProfitLoss = ({ user }) => {
             <div className="flex items-center gap-3 mb-2">
               <span className="text-4xl">{summary.status_emoji || '📊'}</span>
               <div>
-                <h2 className="text-3xl font-bold text-white">
+                <h2 className="text-3xl font-bold text-slate-800">
                   {summary.status === 'profit' ? 'PROFIT' : summary.status === 'loss' ? 'LOSS' : 'BREAKEVEN'}
                 </h2>
-                <p className="text-gray-300">{summary.status_message}</p>
+                <p className="text-slate-600">{summary.status_message}</p>
               </div>
             </div>
             
             <div className="grid grid-cols-3 gap-4 mt-4">
               <div>
-                <p className="text-xs text-gray-400">Revenue</p>
+                <p className="text-xs text-slate-500">Revenue</p>
                 <p className="text-xl font-bold text-green-400">{formatCurrency(summary.gross_revenue)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Expenses</p>
+                <p className="text-xs text-slate-500">Expenses</p>
                 <p className="text-xl font-bold text-red-400">{formatCurrency(summary.total_expenses)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Net</p>
+                <p className="text-xs text-slate-500">Net</p>
                 <p className={`text-xl font-bold ${summary.net_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {formatCurrency(summary.net_profit)}
                 </p>
@@ -301,11 +301,11 @@ const AdminProfitLoss = ({ user }) => {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-white">{summary.health_score || 0}</span>
-                <span className="text-xs text-gray-400">Health Score</span>
+                <span className="text-3xl font-bold text-slate-800">{summary.health_score || 0}</span>
+                <span className="text-xs text-slate-500">Health Score</span>
               </div>
             </div>
-            <p className="text-sm text-gray-400 mt-2">Profit Margin: {summary.profit_margin || 0}%</p>
+            <p className="text-sm text-slate-500 mt-2">Profit Margin: {summary.profit_margin || 0}%</p>
           </div>
         </div>
       </Card>
@@ -319,7 +319,7 @@ const AdminProfitLoss = ({ user }) => {
               <h3 className="font-medium text-blue-300 mb-2">Insights</h3>
               <ul className="space-y-1">
                 {insights.map((insight, i) => (
-                  <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                  <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
                     <ChevronRight className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
                     {insight}
                   </li>
@@ -344,8 +344,8 @@ const AdminProfitLoss = ({ user }) => {
           
           <div className="space-y-3">
             {Object.entries(revenue.breakdown || {}).map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between py-2 border-b border-gray-700/50">
-                <span className="text-sm text-gray-300">
+              <div key={key} className="flex items-center justify-between py-2 border-b border-slate-200/50">
+                <span className="text-sm text-slate-600">
                   {key === 'processing_fees' ? '🔧 Processing Fees (₹10 × services)' :
                    key === 'admin_charges' ? '💼 Admin Charges (20%)' :
                    key === 'vip_memberships' ? '👑 VIP Memberships' :
@@ -362,8 +362,8 @@ const AdminProfitLoss = ({ user }) => {
           
           {/* Revenue Details */}
           {revenue.details && (
-            <div className="mt-4 pt-4 border-t border-gray-700">
-              <p className="text-xs text-gray-500">
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <p className="text-xs text-slate-500">
                 VIP Members: {revenue.details.vip_count || 0} | 
                 Bill Payments: {revenue.details.bill_payments_count || 0} |
                 Gift Vouchers: {revenue.details.gift_voucher_count || 0}
@@ -384,8 +384,8 @@ const AdminProfitLoss = ({ user }) => {
           
           <div className="space-y-3">
             {Object.entries(expensesData.breakdown || {}).map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between py-2 border-b border-gray-700/50">
-                <span className="text-sm text-gray-300">
+              <div key={key} className="flex items-center justify-between py-2 border-b border-slate-200/50">
+                <span className="text-sm text-slate-600">
                   {key === 'bill_payment_payouts' ? '📄 Bill Payment Payouts (INR)' :
                    key === 'gift_voucher_payouts' ? '🎁 Gift Voucher Payouts (INR)' :
                    key === 'withdrawal_payouts' ? '💸 PRC Redeem Payouts (INR)' :
@@ -421,13 +421,13 @@ const AdminProfitLoss = ({ user }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Bill Payments */}
             {revenue.details.bill_payments_count > 0 && (
-              <div className="p-4 bg-gray-800/50 rounded-lg">
+              <div className="p-4 bg-slate-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <FileText className="w-5 h-5 text-blue-400" />
-                  <span className="font-medium text-white">Bill Payments</span>
+                  <span className="font-medium text-slate-800">Bill Payments</span>
                 </div>
                 <p className="text-2xl font-bold text-blue-400">{revenue.details.bill_payments_count}</p>
-                <div className="mt-2 text-xs text-gray-400 space-y-1">
+                <div className="mt-2 text-xs text-slate-500 space-y-1">
                   <p>Processing: {formatCurrency(revenue.details.bill_processing_fees || 0)}</p>
                   <p>Admin (20%): {formatCurrency(revenue.details.bill_admin_charges || 0)}</p>
                 </div>
@@ -436,13 +436,13 @@ const AdminProfitLoss = ({ user }) => {
             
             {/* Gift Vouchers */}
             {revenue.details.gift_voucher_count > 0 && (
-              <div className="p-4 bg-gray-800/50 rounded-lg">
+              <div className="p-4 bg-slate-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Heart className="w-5 h-5 text-pink-400" />
-                  <span className="font-medium text-white">Gift Vouchers</span>
+                  <span className="font-medium text-slate-800">Gift Vouchers</span>
                 </div>
                 <p className="text-2xl font-bold text-pink-400">{revenue.details.gift_voucher_count}</p>
-                <div className="mt-2 text-xs text-gray-400 space-y-1">
+                <div className="mt-2 text-xs text-slate-500 space-y-1">
                   <p>Processing: {formatCurrency(revenue.details.gift_processing_fees || 0)}</p>
                   <p>Admin (20%): {formatCurrency(revenue.details.gift_admin_charges || 0)}</p>
                 </div>
@@ -451,13 +451,13 @@ const AdminProfitLoss = ({ user }) => {
             
             {/* Luxury Claims */}
             {revenue.details.luxury_claims_count > 0 && (
-              <div className="p-4 bg-gray-800/50 rounded-lg">
+              <div className="p-4 bg-slate-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <CreditCard className="w-5 h-5 text-amber-400" />
-                  <span className="font-medium text-white">Luxury Claims</span>
+                  <span className="font-medium text-slate-800">Luxury Claims</span>
                 </div>
                 <p className="text-2xl font-bold text-amber-400">{revenue.details.luxury_claims_count}</p>
-                <div className="mt-2 text-xs text-gray-400 space-y-1">
+                <div className="mt-2 text-xs text-slate-500 space-y-1">
                   <p>Processing: {formatCurrency(revenue.details.luxury_processing_fees || 0)}</p>
                   <p>Admin (20%): {formatCurrency(revenue.details.luxury_admin_charges || 0)}</p>
                 </div>
@@ -466,13 +466,13 @@ const AdminProfitLoss = ({ user }) => {
             
             {/* Withdrawals */}
             {revenue.details.withdrawal_count > 0 && (
-              <div className="p-4 bg-gray-800/50 rounded-lg">
+              <div className="p-4 bg-slate-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Wallet className="w-5 h-5 text-green-400" />
-                  <span className="font-medium text-white">Withdrawals</span>
+                  <span className="font-medium text-slate-800">Withdrawals</span>
                 </div>
                 <p className="text-2xl font-bold text-green-400">{revenue.details.withdrawal_count}</p>
-                <div className="mt-2 text-xs text-gray-400 space-y-1">
+                <div className="mt-2 text-xs text-slate-500 space-y-1">
                   <p>Processing: {formatCurrency(revenue.details.withdrawal_processing_fees || 0)}</p>
                   <p>Admin (20%): {formatCurrency(revenue.details.withdrawal_admin_charges || 0)}</p>
                 </div>
@@ -481,13 +481,13 @@ const AdminProfitLoss = ({ user }) => {
             
             {/* Bank Redeems (PRC to Bank) */}
             {revenue.details.bank_withdrawal_rev_count > 0 && (
-              <div className="p-4 bg-gray-800/50 rounded-lg border border-cyan-500/30">
+              <div className="p-4 bg-slate-50 rounded-lg border border-cyan-500/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Building className="w-5 h-5 text-cyan-400" />
-                  <span className="font-medium text-white">Bank Redeems</span>
+                  <span className="font-medium text-slate-800">Bank Redeems</span>
                 </div>
                 <p className="text-2xl font-bold text-cyan-400">{revenue.details.bank_withdrawal_rev_count}</p>
-                <div className="mt-2 text-xs text-gray-400 space-y-1">
+                <div className="mt-2 text-xs text-slate-500 space-y-1">
                   <p>Processing: {formatCurrency(revenue.details.bank_withdrawal_processing_fees || 0)}</p>
                   <p>Admin (20%): {formatCurrency(revenue.details.bank_withdrawal_admin_charges || 0)}</p>
                 </div>
@@ -497,7 +497,7 @@ const AdminProfitLoss = ({ user }) => {
           
           {/* Total Fee Revenue */}
           <div className="mt-4 pt-4 border-t border-purple-500/30 flex justify-between items-center">
-            <span className="text-gray-300">Total Fee Revenue:</span>
+            <span className="text-slate-600">Total Fee Revenue:</span>
             <span className="text-xl font-bold text-purple-400">
               {formatCurrency((revenue.breakdown?.processing_fees || 0) + (revenue.breakdown?.admin_charges || 0))}
             </span>
@@ -509,7 +509,7 @@ const AdminProfitLoss = ({ user }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Pie */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4">Revenue Breakdown</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Revenue Breakdown</h3>
           {revenueChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
@@ -523,13 +523,13 @@ const AdminProfitLoss = ({ user }) => {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-500">No revenue data</div>
+            <div className="text-center py-12 text-slate-500">No revenue data</div>
           )}
         </Card>
 
         {/* Expense Pie */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4">Expense Breakdown</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Expense Breakdown</h3>
           {expenseChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
@@ -543,7 +543,7 @@ const AdminProfitLoss = ({ user }) => {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-500">No expense data</div>
+            <div className="text-center py-12 text-slate-500">No expense data</div>
           )}
         </Card>
       </div>
@@ -551,7 +551,7 @@ const AdminProfitLoss = ({ user }) => {
       {/* Expense Management */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <Receipt className="h-5 w-5 text-purple-500" />
             Manual Expenses (Personal Expenses)
           </h3>
@@ -562,32 +562,32 @@ const AdminProfitLoss = ({ user }) => {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-800/50">
+            <thead className="bg-slate-50">
               <tr>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400">Date</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400">Category</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400">Description</th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400">Amount</th>
-                <th className="text-center py-3 px-4 text-xs font-semibold text-gray-400">Actions</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500">Date</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500">Category</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500">Description</th>
+                <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500">Amount</th>
+                <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500">Actions</th>
               </tr>
             </thead>
             <tbody>
               {expenses.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-gray-500">
+                  <td colSpan={5} className="text-center py-8 text-slate-500">
                     No expenses recorded. Click "Add Expense" to start tracking.
                   </td>
                 </tr>
               ) : (
                 expenses.map((exp) => (
-                  <tr key={exp.expense_id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-4 text-sm text-gray-300">
+                  <tr key={exp.expense_id} className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="py-3 px-4 text-sm text-slate-600">
                       {new Date(exp.date).toLocaleDateString('en-IN')}
                     </td>
-                    <td className="py-3 px-4 text-sm font-medium text-white">
+                    <td className="py-3 px-4 text-sm font-medium text-slate-800">
                       {exp.category?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-400 max-w-xs truncate">
+                    <td className="py-3 px-4 text-sm text-slate-500 max-w-xs truncate">
                       {exp.description || '-'}
                     </td>
                     <td className="py-3 px-4 text-sm font-bold text-right text-red-400">
@@ -609,31 +609,31 @@ const AdminProfitLoss = ({ user }) => {
       {/* Fixed Monthly Expenses */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <Calendar className="h-5 w-5 text-amber-500" />
             Fixed Monthly Expenses (Regular Expenses)
           </h3>
-          <Button variant="outline" size="sm" className="border-gray-700" onClick={() => window.location.href = '/admin/fixed-expenses'}>
+          <Button variant="outline" size="sm" className="border-slate-200" onClick={() => window.location.href = '/admin/fixed-expenses'}>
             Manage
           </Button>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {fixedExpenses.length > 0 ? fixedExpenses.map((fe) => (
-            <div key={fe.expense_id} className="p-4 bg-gray-800/50 rounded-lg">
-              <p className="text-sm text-gray-400">{fe.name}</p>
+            <div key={fe.expense_id} className="p-4 bg-slate-50 rounded-lg">
+              <p className="text-sm text-slate-500">{fe.name}</p>
               <p className="text-lg font-bold text-amber-400">{formatCurrency(fe.monthly_amount)}/mo</p>
             </div>
           )) : (
-            <div className="col-span-4 text-center py-4 text-gray-500">
+            <div className="col-span-4 text-center py-4 text-slate-500">
               No fixed expenses set. Add your monthly recurring costs.
             </div>
           )}
         </div>
         
         {fixedExpenses.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between">
-            <span className="text-gray-400">Total Monthly Fixed Cost:</span>
+          <div className="mt-4 pt-4 border-t border-slate-200 flex justify-between">
+            <span className="text-slate-500">Total Monthly Fixed Cost:</span>
             <span className="font-bold text-amber-400">
               {formatCurrency(fixedExpenses.reduce((sum, fe) => sum + (fe.monthly_amount || 0), 0))}
             </span>
@@ -652,35 +652,35 @@ const AdminProfitLoss = ({ user }) => {
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-4 bg-gray-800/50 rounded-lg">
-              <p className="text-sm text-gray-400 mb-1">{monthComparison.current_month?.label}</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(monthComparison.current_month?.revenue)}</p>
-              <div className="mt-2 text-xs text-gray-400">
+            <div className="p-4 bg-slate-50 rounded-lg">
+              <p className="text-sm text-slate-500 mb-1">{monthComparison.current_month?.label}</p>
+              <p className="text-2xl font-bold text-slate-800">{formatCurrency(monthComparison.current_month?.revenue)}</p>
+              <div className="mt-2 text-xs text-slate-500">
                 <p>New Users: {monthComparison.current_month?.new_users}</p>
                 <p>New Paid: {monthComparison.current_month?.new_paid_users}</p>
               </div>
             </div>
             
-            <div className="p-4 bg-gray-800/50 rounded-lg">
-              <p className="text-sm text-gray-400 mb-1">{monthComparison.previous_month?.label}</p>
-              <p className="text-2xl font-bold text-gray-400">{formatCurrency(monthComparison.previous_month?.revenue)}</p>
-              <div className="mt-2 text-xs text-gray-400">
+            <div className="p-4 bg-slate-50 rounded-lg">
+              <p className="text-sm text-slate-500 mb-1">{monthComparison.previous_month?.label}</p>
+              <p className="text-2xl font-bold text-slate-500">{formatCurrency(monthComparison.previous_month?.revenue)}</p>
+              <div className="mt-2 text-xs text-slate-500">
                 <p>New Users: {monthComparison.previous_month?.new_users}</p>
                 <p>New Paid: {monthComparison.previous_month?.new_paid_users}</p>
               </div>
             </div>
             
-            <div className="p-4 bg-gray-800/50 rounded-lg">
-              <p className="text-sm text-gray-400 mb-2">Growth</p>
+            <div className="p-4 bg-slate-50 rounded-lg">
+              <p className="text-sm text-slate-500 mb-2">Growth</p>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-300">Revenue</span>
+                  <span className="text-sm text-slate-600">Revenue</span>
                   <span className={`font-bold ${monthComparison.changes?.revenue >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {monthComparison.changes?.revenue >= 0 ? '+' : ''}{monthComparison.changes?.revenue}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-300">Users</span>
+                  <span className="text-sm text-slate-600">Users</span>
                   <span className={`font-bold ${monthComparison.changes?.new_users >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {monthComparison.changes?.new_users >= 0 ? '+' : ''}{monthComparison.changes?.new_users}%
                   </span>
@@ -700,30 +700,30 @@ const AdminProfitLoss = ({ user }) => {
           </h3>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-3xl font-bold text-amber-400">{paidWalletSummary.summary.total_paid_users}</p>
-              <p className="text-xs text-gray-400">Paid Users</p>
+              <p className="text-xs text-slate-500">Paid Users</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-2xl font-bold text-purple-400">{paidWalletSummary.summary.total_prc_balance?.toLocaleString()}</p>
-              <p className="text-xs text-gray-400">Total PRC Balance</p>
+              <p className="text-xs text-slate-500">Total PRC Balance</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-2xl font-bold text-green-400">{formatCurrency(paidWalletSummary.summary.total_prc_inr_value)}</p>
-              <p className="text-xs text-gray-400">INR Value</p>
+              <p className="text-xs text-slate-500">INR Value</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-2xl font-bold text-blue-400">{formatCurrency(paidWalletSummary.summary.total_redeemed_inr)}</p>
-              <p className="text-xs text-gray-400">Total Redeemed</p>
+              <p className="text-xs text-slate-500">Total Redeemed</p>
             </div>
           </div>
           
           <div className="grid grid-cols-3 gap-4">
             {Object.entries(paidWalletSummary.balance_by_plan || {}).map(([plan, data]) => (
-              <div key={plan} className="p-3 bg-gray-800/30 rounded-lg">
-                <span className="font-medium text-white capitalize">{plan}</span>
-                <p className="text-lg font-bold text-white">{data.total_prc?.toLocaleString()} PRC</p>
-                <p className="text-xs text-gray-400">{data.user_count} users</p>
+              <div key={plan} className="p-3 bg-slate-50 rounded-lg">
+                <span className="font-medium text-slate-800 capitalize">{plan}</span>
+                <p className="text-lg font-bold text-slate-800">{data.total_prc?.toLocaleString()} PRC</p>
+                <p className="text-xs text-slate-500">{data.user_count} users</p>
               </div>
             ))}
           </div>
@@ -739,21 +739,21 @@ const AdminProfitLoss = ({ user }) => {
           </h3>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-2xl font-bold text-green-400">{formatCurrency(subscriptionRevenue.total_revenue)}</p>
-              <p className="text-xs text-gray-400">Total Revenue</p>
+              <p className="text-xs text-slate-500">Total Revenue</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
-              <p className="text-2xl font-bold text-white">{subscriptionRevenue.total_subscriptions}</p>
-              <p className="text-xs text-gray-400">Total Subs</p>
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-slate-800">{subscriptionRevenue.total_subscriptions}</p>
+              <p className="text-xs text-slate-500">Total Subs</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-2xl font-bold text-blue-400">{subscriptionRevenue.new_vs_renewal?.new?.count || 0}</p>
-              <p className="text-xs text-gray-400">New</p>
+              <p className="text-xs text-slate-500">New</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-2xl font-bold text-amber-400">{subscriptionRevenue.new_vs_renewal?.renewal_rate || 0}%</p>
-              <p className="text-xs text-gray-400">Renewal Rate</p>
+              <p className="text-xs text-slate-500">Renewal Rate</p>
             </div>
           </div>
         </Card>
@@ -768,33 +768,33 @@ const AdminProfitLoss = ({ user }) => {
           </h3>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-2xl font-bold text-purple-400">{prcLiability.total_prc_in_circulation?.toLocaleString()}</p>
-              <p className="text-xs text-gray-400">Total PRC</p>
+              <p className="text-xs text-slate-500">Total PRC</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-2xl font-bold text-red-400">{formatCurrency(prcLiability.total_inr_liability)}</p>
-              <p className="text-xs text-gray-400">INR Liability</p>
+              <p className="text-xs text-slate-500">INR Liability</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-2xl font-bold text-green-400">+{prcLiability.rates_30d?.daily_mining?.toLocaleString()}</p>
-              <p className="text-xs text-gray-400">Daily Mining</p>
+              <p className="text-xs text-slate-500">Daily Mining</p>
             </div>
-            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+            <div className="p-4 bg-slate-50 rounded-lg text-center">
               <p className="text-2xl font-bold text-orange-400">-{prcLiability.rates_30d?.daily_burn?.toLocaleString()}</p>
-              <p className="text-xs text-gray-400">Daily Burn</p>
+              <p className="text-xs text-slate-500">Daily Burn</p>
             </div>
           </div>
           
-          <div className="p-4 bg-gray-800/30 rounded-lg">
-            <p className="text-sm text-gray-400 mb-2">Liability Projections</p>
+          <div className="p-4 bg-slate-50 rounded-lg">
+            <p className="text-sm text-slate-500 mb-2">Liability Projections</p>
             <div className="flex items-center gap-6">
               <div>
-                <p className="text-xs text-gray-500">30 Days</p>
+                <p className="text-xs text-slate-500">30 Days</p>
                 <p className="text-lg font-bold text-yellow-400">{formatCurrency(prcLiability.projection?.['30_day_liability_inr'])}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">90 Days</p>
+                <p className="text-xs text-slate-500">90 Days</p>
                 <p className="text-lg font-bold text-orange-400">{formatCurrency(prcLiability.projection?.['90_day_liability_inr'])}</p>
               </div>
             </div>
@@ -812,15 +812,15 @@ const AdminProfitLoss = ({ user }) => {
           
           <div className="grid grid-cols-3 gap-4">
             {cashFlowProjection.projections?.map((proj, idx) => (
-              <div key={idx} className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-gray-400 mb-2">{proj.month}</p>
+              <div key={idx} className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-500 mb-2">{proj.month}</p>
                 <div className="space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-xs text-gray-400">Revenue</span>
+                    <span className="text-xs text-slate-500">Revenue</span>
                     <span className="text-green-400">{formatCurrency(proj.projected_revenue)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-xs text-gray-400">Profit</span>
+                    <span className="text-xs text-slate-500">Profit</span>
                     <span className={proj.projected_profit >= 0 ? 'text-green-400' : 'text-red-400'}>
                       {formatCurrency(proj.projected_profit)}
                     </span>
@@ -835,18 +835,18 @@ const AdminProfitLoss = ({ user }) => {
       {/* Add Expense Modal */}
       {showAddExpense && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md bg-gray-900 border-gray-700">
+          <Card className="w-full max-w-md bg-white border-slate-200">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Add New Expense</h2>
-                <button onClick={() => setShowAddExpense(false)} className="text-gray-500 hover:text-gray-300 text-2xl">&times;</button>
+                <h2 className="text-xl font-bold text-slate-800">Add New Expense</h2>
+                <button onClick={() => setShowAddExpense(false)} className="text-slate-500 hover:text-slate-600 text-2xl">&times;</button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-gray-400 block mb-1">Category *</label>
+                  <label className="text-sm text-slate-500 block mb-1">Category *</label>
                   <select
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800"
                     value={expenseForm.category}
                     onChange={(e) => setExpenseForm({...expenseForm, category: e.target.value})}
                   >
@@ -858,38 +858,38 @@ const AdminProfitLoss = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400 block mb-1">Amount (₹) *</label>
+                  <label className="text-sm text-slate-500 block mb-1">Amount (₹) *</label>
                   <Input
                     type="number"
                     placeholder="0"
                     value={expenseForm.amount}
                     onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-slate-200"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400 block mb-1">Date</label>
+                  <label className="text-sm text-slate-500 block mb-1">Date</label>
                   <Input
                     type="date"
                     value={expenseForm.date}
                     onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-slate-200"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400 block mb-1">Description</label>
+                  <label className="text-sm text-slate-500 block mb-1">Description</label>
                   <Input
                     placeholder="What was this expense for?"
                     value={expenseForm.description}
                     onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-slate-200"
                   />
                 </div>
 
                 <div className="flex gap-3 pt-4">
-                  <Button variant="outline" onClick={() => setShowAddExpense(false)} className="flex-1 border-gray-700">
+                  <Button variant="outline" onClick={() => setShowAddExpense(false)} className="flex-1 border-slate-200">
                     Cancel
                   </Button>
                   <Button onClick={handleAddExpense} className="flex-1 bg-purple-600 hover:bg-purple-700">

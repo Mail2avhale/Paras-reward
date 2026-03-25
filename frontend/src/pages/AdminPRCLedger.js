@@ -97,7 +97,7 @@ const AdminPRCLedger = ({ user }) => {
   const summary = ledgerData?.summary || {};
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-prc-ledger">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6" data-testid="admin-prc-ledger">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -105,7 +105,7 @@ const AdminPRCLedger = ({ user }) => {
             <Coins className="h-7 w-7 text-amber-500" />
             PRC Ledger
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Track all PRC mining, consumption, and burning transactions</p>
+          <p className="text-sm text-slate-500 mt-1">Track all PRC mining, consumption, and burning transactions</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={fetchLedger} size="sm" disabled={loading}>
@@ -128,56 +128,56 @@ const AdminPRCLedger = ({ user }) => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {/* Total Mined */}
-        <Card className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-green-100 text-sm font-medium">Total Mined (CR)</p>
               <h2 className="text-2xl font-bold mt-1">{formatPRC(summary.total_mined_prc)} PRC</h2>
               <p className="text-green-200 text-sm mt-1">≈ {formatCurrency(summary.total_mined_inr)}</p>
             </div>
-            <div className="bg-gray-900/20 p-2 rounded-lg">
+            <div className="bg-white/20 p-2 rounded-lg">
               <TrendingUp className="h-6 w-6" />
             </div>
           </div>
         </Card>
 
         {/* Total Consumed */}
-        <Card className="p-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-blue-500 to-indigo-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-blue-100 text-sm font-medium">Total Consumed (DR)</p>
               <h2 className="text-2xl font-bold mt-1">{formatPRC(summary.total_consumed_prc)} PRC</h2>
               <p className="text-blue-200 text-sm mt-1">≈ {formatCurrency(summary.total_consumed_inr)}</p>
             </div>
-            <div className="bg-gray-900/20 p-2 rounded-lg">
+            <div className="bg-white/20 p-2 rounded-lg">
               <TrendingDown className="h-6 w-6" />
             </div>
           </div>
         </Card>
 
         {/* Total Burned */}
-        <Card className="p-5 bg-gradient-to-br from-orange-500 to-red-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-orange-500 to-red-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-orange-100 text-sm font-medium">Total Burned</p>
               <h2 className="text-2xl font-bold mt-1">{formatPRC(summary.total_burned_prc)} PRC</h2>
               <p className="text-orange-200 text-sm mt-1">≈ {formatCurrency(summary.total_burned_inr)}</p>
             </div>
-            <div className="bg-gray-900/20 p-2 rounded-lg">
+            <div className="bg-white/20 p-2 rounded-lg">
               <Flame className="h-6 w-6" />
             </div>
           </div>
         </Card>
 
         {/* Net Circulation */}
-        <Card className="p-5 bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+        <Card className="p-5 bg-gradient-to-br from-purple-500 to-pink-600 text-slate-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-purple-100 text-sm font-medium">Net in Circulation</p>
               <h2 className="text-2xl font-bold mt-1">{formatPRC(summary.net_circulation_prc)} PRC</h2>
               <p className="text-purple-200 text-sm mt-1">{summary.conversion_rate}</p>
             </div>
-            <div className="bg-gray-900/20 p-2 rounded-lg">
+            <div className="bg-white/20 p-2 rounded-lg">
               <Wallet className="h-6 w-6" />
             </div>
           </div>
@@ -196,8 +196,8 @@ const AdminPRCLedger = ({ user }) => {
             onClick={() => { setFilter(f.id); setPage(1); }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === f.id
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-900 text-gray-600 hover:bg-gray-700'
+                ? 'bg-purple-600 text-slate-800'
+                : 'bg-white text-gray-600 hover:bg-slate-100'
             }`}
             data-testid={`filter-${f.id}`}
           >
@@ -213,7 +213,7 @@ const AdminPRCLedger = ({ user }) => {
             <BarChart3 className="h-5 w-5 text-amber-600" />
             PRC Transaction Ledger
           </h3>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-slate-500">
             Showing {ledgerData?.entries?.length || 0} of {ledgerData?.pagination?.total || 0}
           </span>
         </div>
@@ -233,20 +233,20 @@ const AdminPRCLedger = ({ user }) => {
             <tbody className="divide-y">
               {!ledgerData?.entries?.length ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
                     No PRC transactions found
                   </td>
                 </tr>
               ) : (
                 ledgerData.entries.map((entry, idx) => (
-                  <tr key={entry.id || idx} className="hover:bg-gray-800/50">
+                  <tr key={entry.id || idx} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {formatDate(entry.date)}
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium text-gray-900">{entry.description}</p>
                       {entry.user_id && (
-                        <p className="text-xs text-gray-500">User: {entry.user_id.substring(0, 8)}...</p>
+                        <p className="text-xs text-slate-500">User: {entry.user_id.substring(0, 8)}...</p>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -256,7 +256,7 @@ const AdminPRCLedger = ({ user }) => {
                         entry.type === 'referral' ? 'bg-purple-500/20 text-purple-400' :
                         entry.type === 'prc_burn' ? 'bg-red-500/20 text-red-400' :
                         entry.type === 'order' ? 'bg-orange-500/20 text-orange-400' :
-                        'bg-gray-700 text-gray-300'
+                        'bg-gray-700 text-slate-600'
                       }`}>
                         {entry.type?.replace('_', ' ').toUpperCase()}
                       </span>

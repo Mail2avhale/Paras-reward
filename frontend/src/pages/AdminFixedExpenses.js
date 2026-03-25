@@ -167,7 +167,7 @@ const AdminFixedExpenses = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-6">
+    <div className="min-h-screen bg-slate-50 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -175,7 +175,7 @@ const AdminFixedExpenses = ({ user }) => {
             <Building className="h-6 w-6 text-orange-600" />
             Fixed Expenses Management
           </h1>
-          <p className="text-sm text-gray-500">Track monthly recurring expenses</p>
+          <p className="text-sm text-slate-500">Track monthly recurring expenses</p>
         </div>
         <div className="flex gap-2">
           <select
@@ -204,7 +204,7 @@ const AdminFixedExpenses = ({ user }) => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Expenses</p>
+              <p className="text-sm text-slate-500">Total Expenses</p>
               <p className="text-2xl font-bold text-gray-900">₹{totalAmount.toLocaleString('en-IN')}</p>
             </div>
             <div className="p-3 bg-purple-500/20 rounded-lg">
@@ -215,7 +215,7 @@ const AdminFixedExpenses = ({ user }) => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Paid</p>
+              <p className="text-sm text-slate-500">Paid</p>
               <p className="text-2xl font-bold text-green-600">₹{paidAmount.toLocaleString('en-IN')}</p>
             </div>
             <div className="p-3 bg-green-500/20 rounded-lg">
@@ -226,7 +226,7 @@ const AdminFixedExpenses = ({ user }) => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Pending</p>
+              <p className="text-sm text-slate-500">Pending</p>
               <p className="text-2xl font-bold text-yellow-600">₹{pendingAmount.toLocaleString('en-IN')}</p>
             </div>
             <div className="p-3 bg-yellow-500/20 rounded-lg">
@@ -237,7 +237,7 @@ const AdminFixedExpenses = ({ user }) => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Entries</p>
+              <p className="text-sm text-slate-500">Total Entries</p>
               <p className="text-2xl font-bold text-gray-900">{total}</p>
             </div>
             <div className="p-3 bg-blue-500/20 rounded-lg">
@@ -312,7 +312,7 @@ const AdminFixedExpenses = ({ user }) => {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-sm text-gray-500 border-b">
+              <tr className="text-left text-sm text-slate-500 border-b">
                 <th className="pb-3">Month</th>
                 <th className="pb-3">Category</th>
                 <th className="pb-3">Description</th>
@@ -326,7 +326,7 @@ const AdminFixedExpenses = ({ user }) => {
               {expenses.map((expense) => {
                 const cat = EXPENSE_CATEGORIES.find(c => c.id === expense.expense_category);
                 return (
-                  <tr key={expense.expense_id} className="border-b hover:bg-gray-800/50">
+                  <tr key={expense.expense_id} className="border-b hover:bg-slate-50">
                     <td className="py-3">{expense.month}</td>
                     <td className="py-3">
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-700">
@@ -358,7 +358,7 @@ const AdminFixedExpenses = ({ user }) => {
               })}
               {expenses.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-500">
+                  <td colSpan={7} className="py-8 text-center text-slate-500">
                     No expenses found. Click "Add Expense" to start tracking.
                   </td>
                 </tr>
@@ -390,7 +390,7 @@ const AdminFixedExpenses = ({ user }) => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Category</label>
+                  <label className="text-sm font-medium text-slate-600">Category</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm({...form, category: e.target.value})}
@@ -402,7 +402,7 @@ const AdminFixedExpenses = ({ user }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Month</label>
+                  <label className="text-sm font-medium text-slate-600">Month</label>
                   <input
                     type="month"
                     value={form.month}
@@ -413,7 +413,7 @@ const AdminFixedExpenses = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-gray-300">Description *</label>
+                <label className="text-sm font-medium text-slate-600">Description *</label>
                 <input
                   type="text"
                   value={form.description}
@@ -425,7 +425,7 @@ const AdminFixedExpenses = ({ user }) => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Amount (₹) *</label>
+                  <label className="text-sm font-medium text-slate-600">Amount (₹) *</label>
                   <input
                     type="number"
                     value={form.amount}
@@ -435,7 +435,7 @@ const AdminFixedExpenses = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Vendor</label>
+                  <label className="text-sm font-medium text-slate-600">Vendor</label>
                   <input
                     type="text"
                     value={form.vendor}
@@ -448,7 +448,7 @@ const AdminFixedExpenses = ({ user }) => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Payment Status</label>
+                  <label className="text-sm font-medium text-slate-600">Payment Status</label>
                   <select
                     value={form.paid_status}
                     onChange={(e) => setForm({...form, paid_status: e.target.value})}
@@ -459,7 +459,7 @@ const AdminFixedExpenses = ({ user }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Payment Date</label>
+                  <label className="text-sm font-medium text-slate-600">Payment Date</label>
                   <input
                     type="date"
                     value={form.payment_date}
@@ -477,7 +477,7 @@ const AdminFixedExpenses = ({ user }) => {
                   onChange={(e) => setForm({...form, recurring: e.target.checked})}
                   className="rounded"
                 />
-                <label htmlFor="recurring" className="text-sm text-gray-300">
+                <label htmlFor="recurring" className="text-sm text-slate-600">
                   Recurring monthly expense
                 </label>
               </div>

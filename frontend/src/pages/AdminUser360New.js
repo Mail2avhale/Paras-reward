@@ -33,12 +33,12 @@ const Modal = ({ show, onClose, title, children, size = "md" }) => {
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm overflow-y-auto py-4">
-      <div className={`bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full ${sizeClasses[size]} mx-4 shadow-2xl max-h-[90vh] overflow-y-auto`}>
-        <div className="flex items-center justify-between mb-4 sticky top-0 bg-gray-900 pb-2">
-          <h3 className="text-xl font-bold text-white">{title}</h3>
+      <div className={`bg-white border border-slate-200 rounded-2xl p-6 w-full ${sizeClasses[size]} mx-4 shadow-2xl max-h-[90vh] overflow-y-auto`}>
+        <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-2">
+          <h3 className="text-xl font-bold text-slate-800">{title}</h3>
           <button 
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+            className="p-1 rounded-lg hover:bg-white text-slate-500 hover:text-slate-800 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -51,15 +51,15 @@ const Modal = ({ show, onClose, title, children, size = "md" }) => {
 
 // ========== STAT CARD ==========
 const StatCard = ({ icon: Icon, label, value, color = "amber", subtext }) => (
-  <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+  <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-4">
     <div className="flex items-center gap-3">
       <div className={`p-2 rounded-lg bg-${color}-500/20`}>
         <Icon className={`h-5 w-5 text-${color}-400`} />
       </div>
       <div>
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="text-xl font-bold text-white">{value}</p>
-        {subtext && <p className="text-xs text-gray-500">{subtext}</p>}
+        <p className="text-xs text-slate-500">{label}</p>
+        <p className="text-xl font-bold text-slate-800">{value}</p>
+        {subtext && <p className="text-xs text-slate-500">{subtext}</p>}
       </div>
     </div>
   </div>
@@ -92,10 +92,10 @@ const getStatusBadge = (status) => {
     success: 'bg-green-500/20 text-green-400 border-green-500/50',
     rejected: 'bg-red-500/20 text-red-400 border-red-500/50',
     failed: 'bg-red-500/20 text-red-400 border-red-500/50',
-    cancelled: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
+    cancelled: 'bg-gray-500/20 text-slate-500 border-gray-500/50',
     verified: 'bg-green-500/20 text-green-400 border-green-500/50'
   };
-  return badges[status?.toLowerCase()] || 'bg-gray-500/20 text-gray-400';
+  return badges[status?.toLowerCase()] || 'bg-gray-500/20 text-slate-500';
 };
 
 // ========== USER PROFILE CARD ==========
@@ -125,16 +125,16 @@ const UserProfileCard = ({ user, onEditClick }) => {
   const roleColor = roleColors[user.role] || 'gray';
   
   return (
-    <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700 p-6">
+    <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-slate-200 p-6">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-            <span className="text-2xl font-bold text-white">
+            <span className="text-2xl font-bold text-slate-800">
               {user.name?.charAt(0)?.toUpperCase() || 'U'}
             </span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
               {user.name || 'Unknown User'}
               {user.is_banned && (
                 <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1">
@@ -145,13 +145,13 @@ const UserProfileCard = ({ user, onEditClick }) => {
                 <BadgeCheck className="h-5 w-5 text-green-400" />
               )}
             </h2>
-            <p className="text-sm text-gray-400 flex items-center gap-2">
+            <p className="text-sm text-slate-500 flex items-center gap-2">
               UID: {user.uid}
-              <button onClick={() => copyToClipboard(user.uid)} className="hover:text-white transition-colors">
+              <button onClick={() => copyToClipboard(user.uid)} className="hover:text-slate-800 transition-colors">
                 <Copy className="h-3 w-3" />
               </button>
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Role: <span className={`text-${roleColor}-400 font-medium uppercase`}>{user.role || 'user'}</span>
             </p>
           </div>
@@ -168,24 +168,24 @@ const UserProfileCard = ({ user, onEditClick }) => {
             <Wallet className="h-4 w-4 text-amber-500" />
             <span className="text-amber-400 font-bold">{formatNumber((user.prc_balance || 0).toFixed(2))} PRC</span>
           </div>
-          <Button size="sm" variant="outline" onClick={onEditClick} className="border-gray-600 text-gray-300">
+          <Button size="sm" variant="outline" onClick={onEditClick} className="border-gray-600 text-slate-600">
             <Edit className="h-3 w-3 mr-1" /> Edit Profile
           </Button>
         </div>
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-700/50">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-200/50">
         <div className="flex items-center gap-2 text-sm">
-          <Mail className="h-4 w-4 text-gray-500" />
-          <span className="text-gray-300 truncate">{user.email || 'N/A'}</span>
+          <Mail className="h-4 w-4 text-slate-500" />
+          <span className="text-slate-600 truncate">{user.email || 'N/A'}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Phone className="h-4 w-4 text-gray-500" />
-          <span className="text-gray-300">{user.mobile || 'N/A'}</span>
+          <Phone className="h-4 w-4 text-slate-500" />
+          <span className="text-slate-600">{user.mobile || 'N/A'}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Calendar className="h-4 w-4 text-gray-500" />
-          <span className="text-gray-300">
+          <Calendar className="h-4 w-4 text-slate-500" />
+          <span className="text-slate-600">
             {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
           </span>
         </div>
@@ -198,33 +198,33 @@ const UserProfileCard = ({ user, onEditClick }) => {
       </div>
       
       {/* KYC Status */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 pt-3 border-t border-gray-700/50">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 pt-3 border-t border-slate-200/50">
         <div className="flex items-center gap-2 text-sm">
-          <Shield className="h-4 w-4 text-gray-500" />
-          <span className="text-gray-400">KYC:</span>
+          <Shield className="h-4 w-4 text-slate-500" />
+          <span className="text-slate-500">KYC:</span>
           <span className={`px-2 py-0.5 rounded text-xs ${
             user.kyc_status === 'verified' ? 'bg-green-500/20 text-green-400' :
             user.kyc_status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
             user.kyc_status === 'rejected' ? 'bg-red-500/20 text-red-400' :
-            'bg-gray-500/20 text-gray-400'
+            'bg-gray-500/20 text-slate-500'
           }`}>{user.kyc_status || 'Not Submitted'}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Activity className="h-4 w-4 text-gray-500" />
-          <span className="text-gray-400">Mining:</span>
+          <Activity className="h-4 w-4 text-slate-500" />
+          <span className="text-slate-500">Mining:</span>
           <span className={`px-2 py-0.5 rounded text-xs ${user.mining_active !== false ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
             {user.mining_active !== false ? 'Active' : 'Paused'}
           </span>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Clock className="h-4 w-4 text-gray-500" />
-          <span className="text-gray-400">Expiry:</span>
-          <span className="text-gray-300 text-xs">{formatDate(user.subscription_expiry || user.subscription_expires)}</span>
+          <Clock className="h-4 w-4 text-slate-500" />
+          <span className="text-slate-500">Expiry:</span>
+          <span className="text-slate-600 text-xs">{formatDate(user.subscription_expiry || user.subscription_expires)}</span>
         </div>
         {user.referred_by && (
           <div className="flex items-center gap-2 text-sm">
             <Users className="h-4 w-4 text-blue-400" />
-            <span className="text-gray-400">By:</span>
+            <span className="text-slate-500">By:</span>
             <span className="text-blue-400">{user.referred_by}</span>
           </div>
         )}
@@ -647,15 +647,15 @@ const AdminUser360New = ({ user: adminUser }) => {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/admin')} className="text-gray-400 hover:text-white">
+          <Button variant="ghost" onClick={() => navigate('/admin')} className="text-slate-500 hover:text-slate-800">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
               <Eye className="h-6 w-6 text-purple-400" />
               User 360° View
             </h1>
-            <p className="text-sm text-gray-400">Complete user analysis & management</p>
+            <p className="text-sm text-slate-500">Complete user analysis & management</p>
           </div>
         </div>
         
@@ -665,7 +665,7 @@ const AdminUser360New = ({ user: adminUser }) => {
             variant={viewMode === 'search' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setViewMode('search')}
-            className={viewMode === 'search' ? 'bg-purple-600' : 'border-gray-700'}
+            className={viewMode === 'search' ? 'bg-purple-600' : 'border-slate-200'}
           >
             <Search className="h-4 w-4 mr-2" /> Search
           </Button>
@@ -673,7 +673,7 @@ const AdminUser360New = ({ user: adminUser }) => {
             variant={viewMode === 'browse' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setViewMode('browse')}
-            className={viewMode === 'browse' ? 'bg-purple-600' : 'border-gray-700'}
+            className={viewMode === 'browse' ? 'bg-purple-600' : 'border-slate-200'}
           >
             <Users className="h-4 w-4 mr-2" /> Browse All
           </Button>
@@ -682,29 +682,29 @@ const AdminUser360New = ({ user: adminUser }) => {
 
       {/* Browse Mode */}
       {viewMode === 'browse' && (
-        <Card className="p-6 mb-6 bg-gray-900 border-gray-800">
+        <Card className="p-6 mb-6 bg-white border-slate-200">
           <div className="flex flex-wrap gap-4 mb-4">
             <Input
               placeholder="Search users..."
               value={browseSearch}
               onChange={(e) => { setBrowseSearch(e.target.value); setUserListPage(1); }}
-              className="flex-1 min-w-[200px] bg-gray-800 border-gray-700"
+              className="flex-1 min-w-[200px] bg-white border-slate-200"
             />
             <select value={filterRole} onChange={(e) => { setFilterRole(e.target.value); setUserListPage(1); }}
-              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
+              className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800">
               <option value="">All Roles</option>
               <option value="user">User</option>
               <option value="admin">Admin</option>
               <option value="manager">Manager</option>
             </select>
             <select value={filterPlan} onChange={(e) => { setFilterPlan(e.target.value); setUserListPage(1); }}
-              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
+              className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800">
               <option value="">All Plans</option>
               <option value="elite">Elite</option>
               <option value="explorer">Explorer</option>
             </select>
             <select value={filterKYC} onChange={(e) => { setFilterKYC(e.target.value); setUserListPage(1); }}
-              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
+              className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800">
               <option value="">All KYC</option>
               <option value="verified">Verified</option>
               <option value="pending">Pending</option>
@@ -715,14 +715,14 @@ const AdminUser360New = ({ user: adminUser }) => {
           {userListLoading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-purple-400" /></div>
           ) : userList.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">No users found</div>
+            <div className="text-center py-12 text-slate-500">No users found</div>
           ) : (
             <>
-              <div className="text-sm text-gray-400 mb-3">Showing {userList.length} of {userListTotal} users</div>
+              <div className="text-sm text-slate-500 mb-3">Showing {userList.length} of {userListTotal} users</div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-gray-400 border-b border-gray-700">
+                    <tr className="text-left text-slate-500 border-b border-slate-200">
                       <th className="pb-3">User</th>
                       <th className="pb-3">Role</th>
                       <th className="pb-3">Plan</th>
@@ -733,22 +733,22 @@ const AdminUser360New = ({ user: adminUser }) => {
                   </thead>
                   <tbody>
                     {userList.map((u) => (
-                      <tr key={u.uid} className="border-b border-gray-800 hover:bg-gray-800/50">
+                      <tr key={u.uid} className="border-b border-slate-200 hover:bg-slate-50">
                         <td className="py-3">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-semibold">
                               {u.name?.charAt(0)?.toUpperCase() || '?'}
                             </div>
                             <div>
-                              <div className="text-white font-medium">{u.name || 'Unknown'}</div>
-                              <div className="text-gray-500 text-xs">{u.email}</div>
+                              <div className="text-slate-800 font-medium">{u.name || 'Unknown'}</div>
+                              <div className="text-slate-500 text-xs">{u.email}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3"><span className={`px-2 py-0.5 rounded text-xs ${u.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-gray-500/20 text-gray-400'}`}>{u.role || 'user'}</span></td>
-                        <td className="py-3"><span className={`px-2 py-0.5 rounded text-xs ${u.subscription_plan === 'elite' ? 'bg-amber-500/20 text-amber-400' : 'bg-gray-500/20 text-gray-400'}`}>{u.subscription_plan || 'explorer'}</span></td>
-                        <td className="py-3"><span className={`px-2 py-0.5 rounded text-xs ${u.kyc_status === 'verified' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>{u.kyc_status || 'none'}</span></td>
-                        <td className="py-3 text-white font-mono">{formatNumber((u.prc_balance || 0).toFixed(0))}</td>
+                        <td className="py-3"><span className={`px-2 py-0.5 rounded text-xs ${u.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-gray-500/20 text-slate-500'}`}>{u.role || 'user'}</span></td>
+                        <td className="py-3"><span className={`px-2 py-0.5 rounded text-xs ${u.subscription_plan === 'elite' ? 'bg-amber-500/20 text-amber-400' : 'bg-gray-500/20 text-slate-500'}`}>{u.subscription_plan || 'explorer'}</span></td>
+                        <td className="py-3"><span className={`px-2 py-0.5 rounded text-xs ${u.kyc_status === 'verified' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-slate-500'}`}>{u.kyc_status || 'none'}</span></td>
+                        <td className="py-3 text-slate-800 font-mono">{formatNumber((u.prc_balance || 0).toFixed(0))}</td>
                         <td className="py-3">
                           <Button size="sm" onClick={() => { setSearchQuery(u.uid); setViewMode('search'); handleSearch(); }} className="bg-purple-600 hover:bg-purple-700">
                             <Eye className="h-3 w-3 mr-1" /> View
@@ -763,7 +763,7 @@ const AdminUser360New = ({ user: adminUser }) => {
               {/* Pagination */}
               <div className="flex justify-center gap-2 mt-4">
                 <Button size="sm" variant="outline" disabled={userListPage === 1} onClick={() => setUserListPage(p => p - 1)}>Previous</Button>
-                <span className="px-4 py-2 text-gray-400">Page {userListPage}</span>
+                <span className="px-4 py-2 text-slate-500">Page {userListPage}</span>
                 <Button size="sm" variant="outline" onClick={() => setUserListPage(p => p + 1)}>Next</Button>
               </div>
             </>
@@ -775,16 +775,16 @@ const AdminUser360New = ({ user: adminUser }) => {
       {viewMode === 'search' && (
         <>
           {/* Search Bar */}
-          <Card className="bg-gray-900/50 border-gray-700 p-4 mb-6">
+          <Card className="bg-white border-slate-200 p-4 mb-6">
             <div className="flex gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                 <Input
                   placeholder="Search by UID, email, mobile, PAN, Aadhaar..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="pl-10 bg-gray-800 border-gray-700 text-white"
+                  className="pl-10 bg-white border-slate-200 text-slate-800"
                   data-testid="user360-search-input"
                 />
               </div>
@@ -808,7 +808,7 @@ const AdminUser360New = ({ user: adminUser }) => {
           {loading && (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-              <span className="ml-3 text-gray-400">Loading user data...</span>
+              <span className="ml-3 text-slate-500">Loading user data...</span>
             </div>
           )}
           
@@ -832,7 +832,7 @@ const AdminUser360New = ({ user: adminUser }) => {
                       <div className="flex items-center gap-2">
                         <AlertTriangle className={`h-5 w-5 text-${risk.color}-400`} />
                         <div>
-                          <p className="text-xs text-gray-400">Risk Score</p>
+                          <p className="text-xs text-slate-500">Risk Score</p>
                           <p className={`text-xl font-bold text-${risk.color}-400`}>{risk.score}/100</p>
                           <span className={`text-xs px-2 py-0.5 rounded bg-${risk.color}-500/20 text-${risk.color}-400 uppercase`}>{risk.level}</span>
                         </div>
@@ -843,8 +843,8 @@ const AdminUser360New = ({ user: adminUser }) => {
               </div>
               
               {/* Quick Actions Row */}
-              <Card className="bg-gray-900/50 border-gray-700 p-4">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Card className="bg-white border-slate-200 p-4">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                   <Shield className="h-5 w-5 text-red-400" />
                   Admin Actions
                 </h3>
@@ -918,14 +918,14 @@ const AdminUser360New = ({ user: adminUser }) => {
               </Card>
               
               {/* Admin Notes */}
-              <Card className="bg-gray-900/50 border-gray-700 p-4">
-                <h3 className="text-sm font-semibold text-gray-400 mb-2">Admin Notes</h3>
+              <Card className="bg-white border-slate-200 p-4">
+                <h3 className="text-sm font-semibold text-slate-500 mb-2">Admin Notes</h3>
                 <div className="flex gap-2">
                   <textarea
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
                     placeholder="Add notes about this user..."
-                    className="flex-1 p-3 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none h-20"
+                    className="flex-1 p-3 bg-white border border-slate-200 rounded-lg text-slate-800 resize-none h-20"
                   />
                   <Button onClick={handleSaveNotes} disabled={actionLoading} className="bg-blue-600 hover:bg-blue-700">
                     Save
@@ -934,7 +934,7 @@ const AdminUser360New = ({ user: adminUser }) => {
               </Card>
               
               {/* Tabs */}
-              <Card className="bg-gray-900/50 border-gray-700 p-4">
+              <Card className="bg-white border-slate-200 p-4">
                 <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
                   {[
                     { id: 'transactions', label: 'Transactions', icon: Coins, count: userData.transactions?.length || 0 },
@@ -948,7 +948,7 @@ const AdminUser360New = ({ user: adminUser }) => {
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap ${
-                        activeTab === tab.id ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        activeTab === tab.id ? 'bg-purple-600 text-slate-800' : 'bg-white text-slate-500 hover:bg-slate-100'
                       }`}
                     >
                       <tab.icon className="h-4 w-4" />
@@ -963,24 +963,24 @@ const AdminUser360New = ({ user: adminUser }) => {
                   {activeTab === 'transactions' && (
                     <div className="space-y-2">
                       {!userData.transactions?.length ? (
-                        <p className="text-gray-500 text-center py-8">No transactions found</p>
+                        <p className="text-slate-500 text-center py-8">No transactions found</p>
                       ) : (
                         userData.transactions.slice(0, 50).map((txn, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                          <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg">
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${(txn.amount || 0) >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
                                 {(txn.amount || 0) >= 0 ? <TrendingUp className="h-4 w-4 text-green-400" /> : <TrendingDown className="h-4 w-4 text-red-400" />}
                               </div>
                               <div>
-                                <p className="text-white font-medium text-sm">{txn.type || txn.description || 'Transaction'}</p>
-                                <p className="text-gray-500 text-xs">{formatDate(txn.created_at)}</p>
+                                <p className="text-slate-800 font-medium text-sm">{txn.type || txn.description || 'Transaction'}</p>
+                                <p className="text-slate-500 text-xs">{formatDate(txn.created_at)}</p>
                               </div>
                             </div>
                             <div className="text-right">
                               <p className={`font-bold ${(txn.amount || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                 {(txn.amount || 0) >= 0 ? '+' : ''}{(txn.amount || 0).toFixed(2)} PRC
                               </p>
-                              <p className="text-gray-500 text-xs">Bal: {(txn.balance_after || 0).toFixed(2)}</p>
+                              <p className="text-slate-500 text-xs">Bal: {(txn.balance_after || 0).toFixed(2)}</p>
                             </div>
                           </div>
                         ))
@@ -991,13 +991,13 @@ const AdminUser360New = ({ user: adminUser }) => {
                   {activeTab === 'redeem' && (
                     <div className="space-y-2">
                       {!userData.redeem_requests?.length ? (
-                        <p className="text-gray-500 text-center py-8">No redemptions found</p>
+                        <p className="text-slate-500 text-center py-8">No redemptions found</p>
                       ) : (
                         userData.redeem_requests.slice(0, 30).map((req, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                          <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg">
                             <div>
-                              <p className="text-white font-medium">{req.service_type || req.request_type || 'Redemption'}</p>
-                              <p className="text-gray-500 text-xs">{formatDate(req.created_at)}</p>
+                              <p className="text-slate-800 font-medium">{req.service_type || req.request_type || 'Redemption'}</p>
+                              <p className="text-slate-500 text-xs">{formatDate(req.created_at)}</p>
                             </div>
                             <div className="text-right">
                               <p className="text-amber-400 font-bold">₹{req.amount_inr || req.amount || 0}</p>
@@ -1014,23 +1014,23 @@ const AdminUser360New = ({ user: adminUser }) => {
                       <div className="grid grid-cols-3 gap-4 mb-4">
                         <div className="text-center p-3 bg-blue-500/10 rounded-lg">
                           <p className="text-2xl font-bold text-blue-400">{userData.referral?.total_referrals || 0}</p>
-                          <p className="text-xs text-gray-400">Total</p>
+                          <p className="text-xs text-slate-500">Total</p>
                         </div>
                         <div className="text-center p-3 bg-green-500/10 rounded-lg">
                           <p className="text-2xl font-bold text-green-400">{userData.referral?.active_referrals || 0}</p>
-                          <p className="text-xs text-gray-400">Active</p>
+                          <p className="text-xs text-slate-500">Active</p>
                         </div>
                         <div className="text-center p-3 bg-amber-500/10 rounded-lg">
                           <p className="text-2xl font-bold text-amber-400">{formatNumber(userData.referral?.total_earnings || 0)}</p>
-                          <p className="text-xs text-gray-400">Earnings PRC</p>
+                          <p className="text-xs text-slate-500">Earnings PRC</p>
                         </div>
                       </div>
                       {userData.referral?.referrals?.length > 0 && (
                         <div className="space-y-2">
                           {userData.referral.referrals.slice(0, 20).map((ref, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                              <span className="text-gray-300">{ref.name || ref.email}</span>
-                              <span className="text-xs text-gray-500">{formatDate(ref.created_at)}</span>
+                            <div key={idx} className="flex items-center justify-between p-2 bg-white rounded">
+                              <span className="text-slate-600">{ref.name || ref.email}</span>
+                              <span className="text-xs text-slate-500">{formatDate(ref.created_at)}</span>
                             </div>
                           ))}
                         </div>
@@ -1041,17 +1041,17 @@ const AdminUser360New = ({ user: adminUser }) => {
                   {activeTab === 'subscriptions' && (
                     <div className="space-y-2">
                       {!userData.subscription_history?.length ? (
-                        <p className="text-gray-500 text-center py-8">No subscription history</p>
+                        <p className="text-slate-500 text-center py-8">No subscription history</p>
                       ) : (
                         userData.subscription_history.map((sub, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                          <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg">
                             <div>
-                              <p className="text-white font-medium capitalize">{sub.plan || sub.subscription_plan}</p>
-                              <p className="text-gray-500 text-xs">{formatDate(sub.created_at || sub.start_date)}</p>
+                              <p className="text-slate-800 font-medium capitalize">{sub.plan || sub.subscription_plan}</p>
+                              <p className="text-slate-500 text-xs">{formatDate(sub.created_at || sub.start_date)}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-gray-400 text-sm">Expires: {formatDate(sub.expiry || sub.end_date)}</p>
-                              <span className={`px-2 py-0.5 rounded text-xs ${sub.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>{sub.status || 'completed'}</span>
+                              <p className="text-slate-500 text-sm">Expires: {formatDate(sub.expiry || sub.end_date)}</p>
+                              <span className={`px-2 py-0.5 rounded text-xs ${sub.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-slate-500'}`}>{sub.status || 'completed'}</span>
                             </div>
                           </div>
                         ))
@@ -1062,22 +1062,22 @@ const AdminUser360New = ({ user: adminUser }) => {
                   {activeTab === 'logins' && (
                     <div className="space-y-2">
                       {!userData.login_history?.length ? (
-                        <p className="text-gray-500 text-center py-8">No login history</p>
+                        <p className="text-slate-500 text-center py-8">No login history</p>
                       ) : (
                         userData.login_history.slice(0, 30).map((login, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                          <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg">
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${login.success !== false ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
                                 {login.success !== false ? <Eye className="h-4 w-4 text-green-400" /> : <XCircle className="h-4 w-4 text-red-400" />}
                               </div>
                               <div>
-                                <p className="text-white text-sm">{login.success !== false ? 'Login' : 'Failed'}</p>
-                                <p className="text-gray-500 text-xs">{formatDate(login.timestamp || login.created_at)}</p>
+                                <p className="text-slate-800 text-sm">{login.success !== false ? 'Login' : 'Failed'}</p>
+                                <p className="text-slate-500 text-xs">{formatDate(login.timestamp || login.created_at)}</p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-gray-400 text-xs">{login.ip_address || 'N/A'}</p>
-                              <p className="text-gray-500 text-xs truncate max-w-32">{login.device || login.user_agent?.slice(0, 20) || 'Unknown'}</p>
+                              <p className="text-slate-500 text-xs">{login.ip_address || 'N/A'}</p>
+                              <p className="text-slate-500 text-xs truncate max-w-32">{login.device || login.user_agent?.slice(0, 20) || 'Unknown'}</p>
                             </div>
                           </div>
                         ))
@@ -1088,34 +1088,34 @@ const AdminUser360New = ({ user: adminUser }) => {
                   {activeTab === 'kyc' && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 bg-gray-800 rounded-lg">
-                          <p className="text-gray-400 text-xs mb-1">PAN Number</p>
-                          <p className="text-white font-mono">{userData.user?.pan_number || userData.kyc?.pan_number || 'Not Provided'}</p>
+                        <div className="p-3 bg-white rounded-lg">
+                          <p className="text-slate-500 text-xs mb-1">PAN Number</p>
+                          <p className="text-slate-800 font-mono">{userData.user?.pan_number || userData.kyc?.pan_number || 'Not Provided'}</p>
                         </div>
-                        <div className="p-3 bg-gray-800 rounded-lg">
-                          <p className="text-gray-400 text-xs mb-1">Aadhaar Number</p>
-                          <p className="text-white font-mono">{userData.user?.aadhaar_number ? `XXXX-XXXX-${userData.user.aadhaar_number.slice(-4)}` : 'Not Provided'}</p>
+                        <div className="p-3 bg-white rounded-lg">
+                          <p className="text-slate-500 text-xs mb-1">Aadhaar Number</p>
+                          <p className="text-slate-800 font-mono">{userData.user?.aadhaar_number ? `XXXX-XXXX-${userData.user.aadhaar_number.slice(-4)}` : 'Not Provided'}</p>
                         </div>
-                        <div className="p-3 bg-gray-800 rounded-lg">
-                          <p className="text-gray-400 text-xs mb-1">Bank Account</p>
-                          <p className="text-white">{userData.user?.bank_name || 'N/A'}</p>
-                          <p className="text-gray-400 text-xs">{userData.user?.bank_account_number || ''}</p>
+                        <div className="p-3 bg-white rounded-lg">
+                          <p className="text-slate-500 text-xs mb-1">Bank Account</p>
+                          <p className="text-slate-800">{userData.user?.bank_name || 'N/A'}</p>
+                          <p className="text-slate-500 text-xs">{userData.user?.bank_account_number || ''}</p>
                         </div>
-                        <div className="p-3 bg-gray-800 rounded-lg">
-                          <p className="text-gray-400 text-xs mb-1">UPI ID</p>
-                          <p className="text-white">{userData.user?.upi_id || 'Not Provided'}</p>
+                        <div className="p-3 bg-white rounded-lg">
+                          <p className="text-slate-500 text-xs mb-1">UPI ID</p>
+                          <p className="text-slate-800">{userData.user?.upi_id || 'Not Provided'}</p>
                         </div>
                       </div>
                       {userData.kyc && (
-                        <div className="p-4 bg-gray-800 rounded-lg">
-                          <p className="text-gray-400 text-xs mb-2">KYC Status</p>
+                        <div className="p-4 bg-white rounded-lg">
+                          <p className="text-slate-500 text-xs mb-2">KYC Status</p>
                           <div className="flex items-center gap-2">
                             <span className={`px-3 py-1 rounded text-sm ${
                               userData.kyc.status === 'verified' ? 'bg-green-500/20 text-green-400' :
                               userData.kyc.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
                               'bg-red-500/20 text-red-400'
                             }`}>{userData.kyc.status || userData.user?.kyc_status || 'Not Submitted'}</span>
-                            {userData.kyc.verified_at && <span className="text-gray-500 text-xs">Verified: {formatDate(userData.kyc.verified_at)}</span>}
+                            {userData.kyc.verified_at && <span className="text-slate-500 text-xs">Verified: {formatDate(userData.kyc.verified_at)}</span>}
                           </div>
                         </div>
                       )}
@@ -1130,8 +1130,8 @@ const AdminUser360New = ({ user: adminUser }) => {
           {!userData && !loading && !error && (
             <div className="text-center py-20">
               <User className="h-16 w-16 mx-auto text-gray-700 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-400 mb-2">Search for a User</h3>
-              <p className="text-gray-500">Enter UID, email, mobile, PAN, or Aadhaar number</p>
+              <h3 className="text-xl font-semibold text-slate-500 mb-2">Search for a User</h3>
+              <p className="text-slate-500">Enter UID, email, mobile, PAN, or Aadhaar number</p>
             </div>
           )}
         </>
@@ -1142,13 +1142,13 @@ const AdminUser360New = ({ user: adminUser }) => {
       {/* PIN Reset Modal */}
       <Modal show={showPinReset} onClose={() => { setShowPinReset(false); setNewPin(null); }} title="Reset PIN">
         <div className="space-y-4">
-          <p className="text-gray-400">Generate a new 6-digit PIN for this user.</p>
+          <p className="text-slate-500">Generate a new 6-digit PIN for this user.</p>
           {newPin && (
             <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-lg text-center">
-              <p className="text-sm text-gray-400 mb-2">New PIN:</p>
+              <p className="text-sm text-slate-500 mb-2">New PIN:</p>
               <div className="flex justify-center gap-2">
                 {newPin.split('').map((digit, i) => (
-                  <div key={i} className="w-10 h-12 bg-gray-800 border border-green-500/50 rounded flex items-center justify-center">
+                  <div key={i} className="w-10 h-12 bg-white border border-green-500/50 rounded flex items-center justify-center">
                     <span className="text-2xl font-bold text-green-400">{digit}</span>
                   </div>
                 ))}
@@ -1176,7 +1176,7 @@ const AdminUser360New = ({ user: adminUser }) => {
             {['user', 'manager', 'sub_admin', 'admin'].map(role => (
               <button key={role} onClick={() => setSelectedRole(role)}
                 className={`p-3 rounded-lg border text-center capitalize ${
-                  selectedRole === role ? 'border-purple-500 bg-purple-500/20 text-purple-400' : 'border-gray-700 bg-gray-800 text-gray-400'
+                  selectedRole === role ? 'border-purple-500 bg-purple-500/20 text-purple-400' : 'border-slate-200 bg-white text-slate-500'
                 }`}>{role.replace('_', ' ')}</button>
             ))}
           </div>
@@ -1188,7 +1188,7 @@ const AdminUser360New = ({ user: adminUser }) => {
           {selectedRole === 'manager' && (
             <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-sm">
               <p className="flex items-center gap-2 mb-2"><Shield className="h-4 w-4" />Manager has restricted admin access</p>
-              <p className="text-xs text-gray-400">Role change केल्यानंतर, User 360 मधून "Manage Permissions" button वापरून permissions set करा</p>
+              <p className="text-xs text-slate-500">Role change केल्यानंतर, User 360 मधून "Manage Permissions" button वापरून permissions set करा</p>
             </div>
           )}
           <div className="flex gap-3">
@@ -1203,25 +1203,25 @@ const AdminUser360New = ({ user: adminUser }) => {
       {/* Balance Adjust Modal */}
       <Modal show={showBalanceAdjust} onClose={() => setShowBalanceAdjust(false)} title="Adjust PRC Balance">
         <div className="space-y-4">
-          <div className="p-3 bg-gray-800 rounded-lg">
-            <p className="text-sm text-gray-400">Current Balance</p>
+          <div className="p-3 bg-white rounded-lg">
+            <p className="text-sm text-slate-500">Current Balance</p>
             <p className="text-2xl font-bold text-amber-400">{formatNumber((userData?.user?.prc_balance || 0).toFixed(2))} PRC</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => setBalanceOperation('add')} className={`p-3 rounded-lg flex items-center justify-center gap-2 ${balanceOperation === 'add' ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400'}`}>
+            <button onClick={() => setBalanceOperation('add')} className={`p-3 rounded-lg flex items-center justify-center gap-2 ${balanceOperation === 'add' ? 'bg-green-600 text-slate-800' : 'bg-white text-slate-500'}`}>
               <Plus className="h-4 w-4" />Add
             </button>
-            <button onClick={() => setBalanceOperation('deduct')} className={`p-3 rounded-lg flex items-center justify-center gap-2 ${balanceOperation === 'deduct' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400'}`}>
+            <button onClick={() => setBalanceOperation('deduct')} className={`p-3 rounded-lg flex items-center justify-center gap-2 ${balanceOperation === 'deduct' ? 'bg-red-600 text-slate-800' : 'bg-white text-slate-500'}`}>
               <Minus className="h-4 w-4" />Deduct
             </button>
           </div>
           <div>
-            <Label className="text-gray-400">Amount</Label>
-            <Input type="number" value={balanceAmount} onChange={(e) => setBalanceAmount(e.target.value)} placeholder="Enter amount" className="bg-gray-800 border-gray-700 mt-1" />
+            <Label className="text-slate-500">Amount</Label>
+            <Input type="number" value={balanceAmount} onChange={(e) => setBalanceAmount(e.target.value)} placeholder="Enter amount" className="bg-white border-slate-200 mt-1" />
           </div>
           <div>
-            <Label className="text-gray-400">Reason (optional)</Label>
-            <Input value={balanceReason} onChange={(e) => setBalanceReason(e.target.value)} placeholder="Reason for adjustment" className="bg-gray-800 border-gray-700 mt-1" />
+            <Label className="text-slate-500">Reason (optional)</Label>
+            <Input value={balanceReason} onChange={(e) => setBalanceReason(e.target.value)} placeholder="Reason for adjustment" className="bg-white border-slate-200 mt-1" />
           </div>
           <div className="flex gap-3">
             <Button onClick={() => setShowBalanceAdjust(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
@@ -1237,14 +1237,14 @@ const AdminUser360New = ({ user: adminUser }) => {
         <div className="space-y-4">
           {userData?.user?.referred_by && (
             <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-              <p className="text-sm text-gray-400">Current Referrer</p>
+              <p className="text-sm text-slate-500">Current Referrer</p>
               <p className="text-lg font-medium text-blue-400">{userData.user.referred_by}</p>
             </div>
           )}
           <div>
-            <Label className="text-gray-400">New Referrer UID</Label>
-            <Input value={newReferrer} onChange={(e) => setNewReferrer(e.target.value)} placeholder="Enter UID or 'remove'" className="bg-gray-800 border-gray-700 mt-1" />
-            <p className="text-xs text-gray-500 mt-1">Type "remove" to clear referral</p>
+            <Label className="text-slate-500">New Referrer UID</Label>
+            <Input value={newReferrer} onChange={(e) => setNewReferrer(e.target.value)} placeholder="Enter UID or 'remove'" className="bg-white border-slate-200 mt-1" />
+            <p className="text-xs text-slate-500 mt-1">Type "remove" to clear referral</p>
           </div>
           <div className="flex gap-3">
             <Button onClick={() => setShowReferralChange(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
@@ -1263,7 +1263,7 @@ const AdminUser360New = ({ user: adminUser }) => {
               <AlertTriangle className="h-6 w-6" />
               <span className="font-semibold">Warning: This cannot be undone!</span>
             </div>
-            <p className="text-gray-400 text-sm">This will permanently delete the user and all their data.</p>
+            <p className="text-slate-500 text-sm">This will permanently delete the user and all their data.</p>
           </div>
           <div className="flex gap-3">
             <Button onClick={() => setShowDeleteConfirm(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
@@ -1281,10 +1281,10 @@ const AdminUser360New = ({ user: adminUser }) => {
           <div>
             <h4 className="text-sm font-semibold text-indigo-400 mb-3 flex items-center gap-2"><User className="h-4 w-4" />Personal Information</h4>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-gray-400 text-xs">Full Name</Label><Input value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
-              <div><Label className="text-gray-400 text-xs">Date of Birth</Label><Input type="date" value={editForm.date_of_birth} onChange={(e) => setEditForm({...editForm, date_of_birth: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
-              <div><Label className="text-gray-400 text-xs">Gender</Label>
-                <select value={editForm.gender} onChange={(e) => setEditForm({...editForm, gender: e.target.value})} className="w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-white mt-1">
+              <div><Label className="text-slate-500 text-xs">Full Name</Label><Input value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">Date of Birth</Label><Input type="date" value={editForm.date_of_birth} onChange={(e) => setEditForm({...editForm, date_of_birth: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">Gender</Label>
+                <select value={editForm.gender} onChange={(e) => setEditForm({...editForm, gender: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-slate-800 mt-1">
                   <option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
                 </select>
               </div>
@@ -1295,9 +1295,9 @@ const AdminUser360New = ({ user: adminUser }) => {
           <div>
             <h4 className="text-sm font-semibold text-green-400 mb-3 flex items-center gap-2"><Phone className="h-4 w-4" />Contact Information</h4>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-gray-400 text-xs">Email</Label><Input value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
-              <div><Label className="text-gray-400 text-xs">Mobile</Label><Input value={editForm.mobile} onChange={(e) => setEditForm({...editForm, mobile: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
-              <div><Label className="text-gray-400 text-xs">Alternate Mobile</Label><Input value={editForm.alternate_mobile} onChange={(e) => setEditForm({...editForm, alternate_mobile: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">Email</Label><Input value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">Mobile</Label><Input value={editForm.mobile} onChange={(e) => setEditForm({...editForm, mobile: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">Alternate Mobile</Label><Input value={editForm.alternate_mobile} onChange={(e) => setEditForm({...editForm, alternate_mobile: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
             </div>
           </div>
           
@@ -1305,10 +1305,10 @@ const AdminUser360New = ({ user: adminUser }) => {
           <div>
             <h4 className="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2"><MapPin className="h-4 w-4" />Address</h4>
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2"><Label className="text-gray-400 text-xs">Street Address</Label><Input value={editForm.address} onChange={(e) => setEditForm({...editForm, address: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
-              <div><Label className="text-gray-400 text-xs">City</Label><Input value={editForm.city} onChange={(e) => setEditForm({...editForm, city: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
-              <div><Label className="text-gray-400 text-xs">State</Label><Input value={editForm.state} onChange={(e) => setEditForm({...editForm, state: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
-              <div><Label className="text-gray-400 text-xs">Pincode</Label><Input value={editForm.pincode} onChange={(e) => setEditForm({...editForm, pincode: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
+              <div className="col-span-2"><Label className="text-slate-500 text-xs">Street Address</Label><Input value={editForm.address} onChange={(e) => setEditForm({...editForm, address: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">City</Label><Input value={editForm.city} onChange={(e) => setEditForm({...editForm, city: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">State</Label><Input value={editForm.state} onChange={(e) => setEditForm({...editForm, state: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">Pincode</Label><Input value={editForm.pincode} onChange={(e) => setEditForm({...editForm, pincode: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
             </div>
           </div>
           
@@ -1316,8 +1316,8 @@ const AdminUser360New = ({ user: adminUser }) => {
           <div>
             <h4 className="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2"><Shield className="h-4 w-4" />KYC Documents</h4>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-gray-400 text-xs">PAN Number</Label><Input value={editForm.pan_number} onChange={(e) => setEditForm({...editForm, pan_number: e.target.value.toUpperCase()})} placeholder="ABCDE1234F" maxLength={10} className="bg-gray-800 border-gray-700 mt-1 uppercase" /></div>
-              <div><Label className="text-gray-400 text-xs">Aadhaar Number</Label><Input value={editForm.aadhaar_number} onChange={(e) => setEditForm({...editForm, aadhaar_number: e.target.value.replace(/\D/g, '')})} placeholder="123456789012" maxLength={12} className="bg-gray-800 border-gray-700 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">PAN Number</Label><Input value={editForm.pan_number} onChange={(e) => setEditForm({...editForm, pan_number: e.target.value.toUpperCase()})} placeholder="ABCDE1234F" maxLength={10} className="bg-white border-slate-200 mt-1 uppercase" /></div>
+              <div><Label className="text-slate-500 text-xs">Aadhaar Number</Label><Input value={editForm.aadhaar_number} onChange={(e) => setEditForm({...editForm, aadhaar_number: e.target.value.replace(/\D/g, '')})} placeholder="123456789012" maxLength={12} className="bg-white border-slate-200 mt-1" /></div>
             </div>
           </div>
           
@@ -1325,10 +1325,10 @@ const AdminUser360New = ({ user: adminUser }) => {
           <div>
             <h4 className="text-sm font-semibold text-cyan-400 mb-3 flex items-center gap-2"><CreditCard className="h-4 w-4" />Bank Details</h4>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-gray-400 text-xs">Bank Name</Label><Input value={editForm.bank_name} onChange={(e) => setEditForm({...editForm, bank_name: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
-              <div><Label className="text-gray-400 text-xs">Account Number</Label><Input value={editForm.bank_account_number} onChange={(e) => setEditForm({...editForm, bank_account_number: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
-              <div><Label className="text-gray-400 text-xs">IFSC Code</Label><Input value={editForm.bank_ifsc} onChange={(e) => setEditForm({...editForm, bank_ifsc: e.target.value.toUpperCase()})} className="bg-gray-800 border-gray-700 mt-1 uppercase" /></div>
-              <div><Label className="text-gray-400 text-xs">UPI ID</Label><Input value={editForm.upi_id} onChange={(e) => setEditForm({...editForm, upi_id: e.target.value})} placeholder="name@upi" className="bg-gray-800 border-gray-700 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">Bank Name</Label><Input value={editForm.bank_name} onChange={(e) => setEditForm({...editForm, bank_name: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">Account Number</Label><Input value={editForm.bank_account_number} onChange={(e) => setEditForm({...editForm, bank_account_number: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">IFSC Code</Label><Input value={editForm.bank_ifsc} onChange={(e) => setEditForm({...editForm, bank_ifsc: e.target.value.toUpperCase()})} className="bg-white border-slate-200 mt-1 uppercase" /></div>
+              <div><Label className="text-slate-500 text-xs">UPI ID</Label><Input value={editForm.upi_id} onChange={(e) => setEditForm({...editForm, upi_id: e.target.value})} placeholder="name@upi" className="bg-white border-slate-200 mt-1" /></div>
             </div>
           </div>
           
@@ -1336,17 +1336,17 @@ const AdminUser360New = ({ user: adminUser }) => {
           <div>
             <h4 className="text-sm font-semibold text-purple-400 mb-3 flex items-center gap-2"><Users className="h-4 w-4" />Nominee Details</h4>
             <div className="grid grid-cols-3 gap-4">
-              <div><Label className="text-gray-400 text-xs">Nominee Name</Label><Input value={editForm.nominee_name} onChange={(e) => setEditForm({...editForm, nominee_name: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
-              <div><Label className="text-gray-400 text-xs">Relation</Label>
-                <select value={editForm.nominee_relation} onChange={(e) => setEditForm({...editForm, nominee_relation: e.target.value})} className="w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-white mt-1">
+              <div><Label className="text-slate-500 text-xs">Nominee Name</Label><Input value={editForm.nominee_name} onChange={(e) => setEditForm({...editForm, nominee_name: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">Relation</Label>
+                <select value={editForm.nominee_relation} onChange={(e) => setEditForm({...editForm, nominee_relation: e.target.value})} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-slate-800 mt-1">
                   <option value="">Select</option><option value="spouse">Spouse</option><option value="father">Father</option><option value="mother">Mother</option><option value="son">Son</option><option value="daughter">Daughter</option><option value="brother">Brother</option><option value="sister">Sister</option><option value="other">Other</option>
                 </select>
               </div>
-              <div><Label className="text-gray-400 text-xs">Nominee Mobile</Label><Input value={editForm.nominee_mobile} onChange={(e) => setEditForm({...editForm, nominee_mobile: e.target.value})} className="bg-gray-800 border-gray-700 mt-1" /></div>
+              <div><Label className="text-slate-500 text-xs">Nominee Mobile</Label><Input value={editForm.nominee_mobile} onChange={(e) => setEditForm({...editForm, nominee_mobile: e.target.value})} className="bg-white border-slate-200 mt-1" /></div>
             </div>
           </div>
           
-          <div className="flex gap-3 pt-4 border-t border-gray-700">
+          <div className="flex gap-3 pt-4 border-t border-slate-200">
             <Button onClick={() => setShowEditProfile(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
             <Button onClick={handleSaveProfile} disabled={actionLoading} className="flex-1 bg-indigo-600 hover:bg-indigo-700">
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
@@ -1358,20 +1358,20 @@ const AdminUser360New = ({ user: adminUser }) => {
       {/* Subscription Modal */}
       <Modal show={showSubscription} onClose={() => setShowSubscription(false)} title="Subscription Management" size="lg">
         <div className="space-y-4">
-          <div className="p-3 bg-gray-800 rounded-lg">
-            <p className="text-gray-400 text-sm">Current Plan: <span className="text-amber-400 font-semibold capitalize">{userData?.user?.subscription_plan || 'Explorer'}</span></p>
-            <p className="text-gray-400 text-sm">Expiry: <span className="text-white">{formatDate(userData?.user?.subscription_expiry)}</span></p>
+          <div className="p-3 bg-white rounded-lg">
+            <p className="text-slate-500 text-sm">Current Plan: <span className="text-amber-400 font-semibold capitalize">{userData?.user?.subscription_plan || 'Explorer'}</span></p>
+            <p className="text-slate-500 text-sm">Expiry: <span className="text-slate-800">{formatDate(userData?.user?.subscription_expiry)}</span></p>
           </div>
           
           <div>
-            <Label className="text-gray-400">Select Plan</Label>
+            <Label className="text-slate-500">Select Plan</Label>
             <div className="grid grid-cols-2 gap-3 mt-2">
               {['explorer', 'elite'].map(plan => (
                 <button key={plan} onClick={() => setSubscriptionForm({...subscriptionForm, plan})}
                   className={`p-4 rounded-lg capitalize font-semibold ${
                     subscriptionForm.plan === plan 
-                      ? plan === 'elite' ? 'bg-amber-600 text-white' : 'bg-purple-600 text-white' 
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      ? plan === 'elite' ? 'bg-amber-600 text-slate-800' : 'bg-purple-600 text-slate-800' 
+                      : 'bg-white text-slate-500 hover:bg-slate-100'
                   }`}>
                   {plan === 'elite' && <Crown className="h-4 w-4 inline mr-2" />}
                   {plan}
@@ -1381,21 +1381,21 @@ const AdminUser360New = ({ user: adminUser }) => {
           </div>
           
           <div>
-            <Label className="text-gray-400">Duration (Days)</Label>
+            <Label className="text-slate-500">Duration (Days)</Label>
             <div className="grid grid-cols-4 gap-2 mt-2">
               {[28, 90, 180, 365].map(days => (
                 <button key={days} onClick={() => setSubscriptionForm({...subscriptionForm, duration: days})}
-                  className={`p-2 rounded-lg ${subscriptionForm.duration === days ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'}`}>
+                  className={`p-2 rounded-lg ${subscriptionForm.duration === days ? 'bg-purple-600 text-slate-800' : 'bg-white text-slate-500'}`}>
                   {days === 365 ? '1 Year' : `${days} Days`}
                 </button>
               ))}
             </div>
           </div>
           
-          <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-white rounded-lg">
             <div>
-              <p className="text-white font-medium">Free Subscription</p>
-              <p className="text-gray-400 text-sm">Grant without payment</p>
+              <p className="text-slate-800 font-medium">Free Subscription</p>
+              <p className="text-slate-500 text-sm">Grant without payment</p>
             </div>
             <button onClick={() => setSubscriptionForm({...subscriptionForm, isFree: !subscriptionForm.isFree})}
               className={`w-12 h-6 rounded-full ${subscriptionForm.isFree ? 'bg-green-500' : 'bg-gray-700'}`}>
@@ -1404,9 +1404,9 @@ const AdminUser360New = ({ user: adminUser }) => {
           </div>
           
           <div>
-            <Label className="text-gray-400">Notes</Label>
+            <Label className="text-slate-500">Notes</Label>
             <textarea value={subscriptionForm.notes} onChange={(e) => setSubscriptionForm({...subscriptionForm, notes: e.target.value})}
-              placeholder="Admin notes..." className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none h-20 mt-1" />
+              placeholder="Admin notes..." className="w-full p-3 bg-white border border-slate-200 rounded-lg text-slate-800 resize-none h-20 mt-1" />
           </div>
           
           <div className="flex gap-3">
@@ -1423,7 +1423,7 @@ const AdminUser360New = ({ user: adminUser }) => {
         {diagnoseLoading ? (
           <div className="flex flex-col items-center py-12">
             <Loader2 className="h-12 w-12 animate-spin text-purple-500 mb-4" />
-            <p className="text-gray-400">Running diagnostics...</p>
+            <p className="text-slate-500">Running diagnostics...</p>
           </div>
         ) : diagnoseData ? (
           <div className="space-y-4">
@@ -1435,14 +1435,14 @@ const AdminUser360New = ({ user: adminUser }) => {
             }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Health Score</p>
+                  <p className="text-slate-500 text-sm">Health Score</p>
                   <p className={`text-3xl font-bold ${diagnoseData.health_score >= 80 ? 'text-green-400' : diagnoseData.health_score >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
                     {diagnoseData.health_score}/100
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-gray-400 text-sm">Issues Found</p>
-                  <p className="text-2xl font-bold text-white">{diagnoseData.total_issues}</p>
+                  <p className="text-slate-500 text-sm">Issues Found</p>
+                  <p className="text-2xl font-bold text-slate-800">{diagnoseData.total_issues}</p>
                 </div>
               </div>
             </div>
@@ -1452,7 +1452,7 @@ const AdminUser360New = ({ user: adminUser }) => {
               <div className="text-center py-8">
                 <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-4" />
                 <p className="text-green-400 font-medium text-lg">All Good!</p>
-                <p className="text-gray-400">No issues found</p>
+                <p className="text-slate-500">No issues found</p>
               </div>
             ) : (
               <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -1469,8 +1469,8 @@ const AdminUser360New = ({ user: adminUser }) => {
                           issue.severity === 'critical' ? 'bg-red-500/30 text-red-300' :
                           issue.severity === 'high' ? 'bg-orange-500/30 text-orange-300' : 'bg-yellow-500/30 text-yellow-300'
                         }`}>{issue.severity?.toUpperCase()}</span>
-                        <p className="text-white font-medium mt-1">{issue.issue}</p>
-                        <p className="text-gray-400 text-sm">{issue.description}</p>
+                        <p className="text-slate-800 font-medium mt-1">{issue.issue}</p>
+                        <p className="text-slate-500 text-sm">{issue.description}</p>
                       </div>
                       {issue.can_auto_fix && (
                         <Button onClick={() => fixSingleIssue(issue.fix_action, issue.suggested_balance)} size="sm" className="bg-purple-600">Fix</Button>
@@ -1498,12 +1498,12 @@ const AdminUser360New = ({ user: adminUser }) => {
       {/* KYC Action Modal */}
       <Modal show={showKYCAction} onClose={() => { setShowKYCAction(false); setKycAction(''); setKycReason(''); }} title={kycAction === 'approve' ? 'Approve KYC' : 'Reject KYC'}>
         <div className="space-y-4">
-          <p className="text-gray-400">{kycAction === 'approve' ? 'Approve KYC verification for this user?' : 'Reject KYC verification. Please provide a reason.'}</p>
+          <p className="text-slate-500">{kycAction === 'approve' ? 'Approve KYC verification for this user?' : 'Reject KYC verification. Please provide a reason.'}</p>
           {kycAction === 'reject' && (
             <div>
-              <Label className="text-gray-400">Rejection Reason</Label>
+              <Label className="text-slate-500">Rejection Reason</Label>
               <textarea value={kycReason} onChange={(e) => setKycReason(e.target.value)}
-                placeholder="Enter reason for rejection..." className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none h-20 mt-1" />
+                placeholder="Enter reason for rejection..." className="w-full p-3 bg-white border border-slate-200 rounded-lg text-slate-800 resize-none h-20 mt-1" />
             </div>
           )}
           <div className="flex gap-3">

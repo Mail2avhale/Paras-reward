@@ -21,10 +21,10 @@ const Modal = ({ show, onClose, title, children, size = "md" }) => {
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className={`bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full ${sizeClasses[size]} mx-4 max-h-[90vh] overflow-y-auto`}>
+      <div className={`bg-white border border-slate-200 rounded-2xl p-6 w-full ${sizeClasses[size]} mx-4 max-h-[90vh] overflow-y-auto`}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-white">{title}</h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-800 text-gray-400">
+          <h3 className="text-xl font-bold text-slate-800">{title}</h3>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white text-slate-500">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -49,10 +49,10 @@ const getStatusBadge = (status, refunded) => {
     pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Pending' },
     processing: { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Processing' },
     retry_failed: { bg: 'bg-orange-500/20', text: 'text-orange-400', label: 'Retry Failed' },
-    resolved: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Resolved' },
+    resolved: { bg: 'bg-gray-500/20', text: 'text-slate-500', label: 'Resolved' },
     refunded: { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Refunded' }
   };
-  return badges[status] || { bg: 'bg-gray-500/20', text: 'text-gray-400', label: status };
+  return badges[status] || { bg: 'bg-gray-500/20', text: 'text-slate-500', label: status };
 };
 
 const AdminFailedTransactions = ({ user }) => {
@@ -249,18 +249,18 @@ const AdminFailedTransactions = ({ user }) => {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/admin')} className="text-gray-400">
+          <Button variant="ghost" onClick={() => navigate('/admin')} className="text-slate-500">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
               <AlertTriangle className="h-6 w-6 text-red-400" />
               Failed & Pending Transactions
             </h1>
-            <p className="text-sm text-gray-400">Manual refund and resolution management</p>
+            <p className="text-sm text-slate-500">Manual refund and resolution management</p>
           </div>
         </div>
-        <Button onClick={fetchTransactions} disabled={loading} variant="outline" className="border-gray-700">
+        <Button onClick={fetchTransactions} disabled={loading} variant="outline" className="border-slate-200">
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </Button>
       </div>
@@ -272,7 +272,7 @@ const AdminFailedTransactions = ({ user }) => {
             <XCircle className="h-8 w-8 text-red-400" />
             <div>
               <p className="text-2xl font-bold text-red-400">{stats.total_failed || 0}</p>
-              <p className="text-xs text-gray-400">Failed</p>
+              <p className="text-xs text-slate-500">Failed</p>
             </div>
           </div>
         </Card>
@@ -281,7 +281,7 @@ const AdminFailedTransactions = ({ user }) => {
             <Clock className="h-8 w-8 text-yellow-400" />
             <div>
               <p className="text-2xl font-bold text-yellow-400">{stats.total_pending || 0}</p>
-              <p className="text-xs text-gray-400">Pending</p>
+              <p className="text-xs text-slate-500">Pending</p>
             </div>
           </div>
         </Card>
@@ -290,7 +290,7 @@ const AdminFailedTransactions = ({ user }) => {
             <CheckCircle className="h-8 w-8 text-green-400" />
             <div>
               <p className="text-2xl font-bold text-green-400">{stats.total_refunded || 0}</p>
-              <p className="text-xs text-gray-400">Refunded</p>
+              <p className="text-xs text-slate-500">Refunded</p>
             </div>
           </div>
         </Card>
@@ -299,29 +299,29 @@ const AdminFailedTransactions = ({ user }) => {
             <AlertTriangle className="h-8 w-8 text-orange-400" />
             <div>
               <p className="text-2xl font-bold text-orange-400">{stats.total_not_refunded || 0}</p>
-              <p className="text-xs text-gray-400">Not Refunded</p>
+              <p className="text-xs text-slate-500">Not Refunded</p>
             </div>
           </div>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="bg-gray-900 border-gray-800 p-4 mb-6">
+      <Card className="bg-white border-slate-200 p-4 mb-6">
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <Input
                 placeholder="Search by ID, name, email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-gray-800 border-gray-700"
+                className="pl-10 bg-white border-slate-200"
               />
             </div>
           </div>
           
           <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
+            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800">
             <option value="all">All Status</option>
             <option value="failed">Failed</option>
             <option value="pending">Pending</option>
@@ -329,7 +329,7 @@ const AdminFailedTransactions = ({ user }) => {
           </select>
           
           <select value={serviceFilter} onChange={(e) => { setServiceFilter(e.target.value); setPage(1); }}
-            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
+            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800">
             <option value="all">All Services</option>
             {serviceTypes.map(st => (
               <option key={st.service_type} value={st.service_type}>
@@ -339,7 +339,7 @@ const AdminFailedTransactions = ({ user }) => {
           </select>
           
           <select value={daysFilter} onChange={(e) => { setDaysFilter(parseInt(e.target.value)); setPage(1); }}
-            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
+            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800">
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
             <option value={60}>Last 60 days</option>
@@ -349,8 +349,8 @@ const AdminFailedTransactions = ({ user }) => {
         
         {/* Bulk Actions */}
         {selectedIds.length > 0 && (
-          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-700">
-            <span className="text-sm text-gray-400">{selectedIds.length} selected</span>
+          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-200">
+            <span className="text-sm text-slate-500">{selectedIds.length} selected</span>
             <Button onClick={handleBulkRefund} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
               <Wallet className="h-4 w-4 mr-2" /> Bulk Refund
             </Button>
@@ -362,20 +362,20 @@ const AdminFailedTransactions = ({ user }) => {
       </Card>
 
       {/* Transactions Table */}
-      <Card className="bg-gray-900 border-gray-800 overflow-hidden">
+      <Card className="bg-white border-slate-200 overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
           </div>
         ) : filteredTransactions.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
+          <div className="text-center py-20 text-slate-500">
             <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No transactions found</p>
           </div>
         ) : (
           <>
-            <div className="p-4 border-b border-gray-800 flex justify-between items-center">
-              <span className="text-sm text-gray-400">Showing {filteredTransactions.length} of {total}</span>
+            <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+              <span className="text-sm text-slate-500">Showing {filteredTransactions.length} of {total}</span>
               <Button onClick={selectAllNotRefunded} size="sm" variant="outline" className="border-gray-600 text-xs">
                 Select All Not Refunded
               </Button>
@@ -384,7 +384,7 @@ const AdminFailedTransactions = ({ user }) => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-gray-400 border-b border-gray-800 bg-gray-800/50">
+                  <tr className="text-left text-slate-500 border-b border-slate-200 bg-slate-50">
                     <th className="p-3 w-10">
                       <input type="checkbox" 
                         checked={selectedIds.length === filteredTransactions.filter(t => !t.prc_refunded).length && selectedIds.length > 0}
@@ -404,7 +404,7 @@ const AdminFailedTransactions = ({ user }) => {
                   {filteredTransactions.map((txn) => {
                     const status = getStatusBadge(txn.status, txn.prc_refunded);
                     return (
-                      <tr key={txn.request_id} className="border-b border-gray-800 hover:bg-gray-800/30">
+                      <tr key={txn.request_id} className="border-b border-slate-200 hover:bg-slate-50">
                         <td className="p-3">
                           {!txn.prc_refunded && (
                             <input type="checkbox"
@@ -416,21 +416,21 @@ const AdminFailedTransactions = ({ user }) => {
                         </td>
                         <td className="p-3">
                           <div>
-                            <p className="text-white font-medium">{txn.user?.name || 'Unknown'}</p>
-                            <p className="text-gray-500 text-xs">{txn.user?.email}</p>
+                            <p className="text-slate-800 font-medium">{txn.user?.name || 'Unknown'}</p>
+                            <p className="text-slate-500 text-xs">{txn.user?.email}</p>
                             <p className="text-gray-600 text-xs font-mono">{txn.request_id?.slice(0, 8)}...</p>
                           </div>
                         </td>
                         <td className="p-3">
                           <div>
-                            <p className="text-white capitalize">{txn.service_type || 'N/A'}</p>
-                            <p className="text-gray-500 text-xs">{txn.consumer_number || txn.number || '-'}</p>
+                            <p className="text-slate-800 capitalize">{txn.service_type || 'N/A'}</p>
+                            <p className="text-slate-500 text-xs">{txn.consumer_number || txn.number || '-'}</p>
                           </div>
                         </td>
                         <td className="p-3">
                           <div>
                             <p className="text-amber-400 font-bold">{(txn.prc_amount || txn.total_prc || 0).toFixed(2)} PRC</p>
-                            <p className="text-gray-500 text-xs">₹{txn.amount_inr || txn.amount || 0}</p>
+                            <p className="text-slate-500 text-xs">₹{txn.amount_inr || txn.amount || 0}</p>
                           </div>
                         </td>
                         <td className="p-3">
@@ -444,7 +444,7 @@ const AdminFailedTransactions = ({ user }) => {
                           )}
                         </td>
                         <td className="p-3">
-                          <p className="text-gray-300 text-xs">{formatDate(txn.created_at)}</p>
+                          <p className="text-slate-600 text-xs">{formatDate(txn.created_at)}</p>
                         </td>
                         <td className="p-3">
                           <div className="flex gap-1">
@@ -467,7 +467,7 @@ const AdminFailedTransactions = ({ user }) => {
                               </Button>
                             )}
                             <Button size="sm" onClick={() => { setSelectedTxn(txn); setShowDetailModal(true); }} variant="ghost"
-                              className="text-gray-400 text-xs px-2 py-1 h-7">
+                              className="text-slate-500 text-xs px-2 py-1 h-7">
                               <Eye className="h-3 w-3" />
                             </Button>
                           </div>
@@ -480,14 +480,14 @@ const AdminFailedTransactions = ({ user }) => {
             </div>
             
             {/* Pagination */}
-            <div className="flex justify-center items-center gap-4 p-4 border-t border-gray-800">
+            <div className="flex justify-center items-center gap-4 p-4 border-t border-slate-200">
               <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                className="border-gray-700">
+                className="border-slate-200">
                 <ChevronLeft className="h-4 w-4" /> Previous
               </Button>
-              <span className="text-gray-400 text-sm">Page {page} of {pages}</span>
+              <span className="text-slate-500 text-sm">Page {page} of {pages}</span>
               <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => setPage(p => p + 1)}
-                className="border-gray-700">
+                className="border-slate-200">
                 Next <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -499,19 +499,19 @@ const AdminFailedTransactions = ({ user }) => {
       <Modal show={showRefundModal} onClose={() => { setShowRefundModal(false); setSelectedTxn(null); }} title="Manual Refund" size="md">
         {selectedTxn && (
           <div className="space-y-4">
-            <div className="p-3 bg-gray-800 rounded-lg">
-              <p className="text-gray-400 text-sm">User</p>
-              <p className="text-white font-medium">{selectedTxn.user?.name || 'Unknown'}</p>
-              <p className="text-gray-500 text-xs">{selectedTxn.user?.email}</p>
+            <div className="p-3 bg-white rounded-lg">
+              <p className="text-slate-500 text-sm">User</p>
+              <p className="text-slate-800 font-medium">{selectedTxn.user?.name || 'Unknown'}</p>
+              <p className="text-slate-500 text-xs">{selectedTxn.user?.email}</p>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-xs">Service</p>
-                <p className="text-white capitalize">{selectedTxn.service_type}</p>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-slate-500 text-xs">Service</p>
+                <p className="text-slate-800 capitalize">{selectedTxn.service_type}</p>
               </div>
-              <div className="p-3 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-xs">Original Amount</p>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-slate-500 text-xs">Original Amount</p>
                 <p className="text-amber-400 font-bold">{(selectedTxn.prc_amount || selectedTxn.total_prc || 0).toFixed(2)} PRC</p>
               </div>
             </div>
@@ -523,15 +523,15 @@ const AdminFailedTransactions = ({ user }) => {
             )}
             
             <div>
-              <label className="text-gray-400 text-sm">Refund Amount (PRC)</label>
+              <label className="text-slate-500 text-sm">Refund Amount (PRC)</label>
               <Input type="number" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)}
-                placeholder="Enter amount" className="mt-1 bg-gray-800 border-gray-700" />
+                placeholder="Enter amount" className="mt-1 bg-white border-slate-200" />
             </div>
             
             <div>
-              <label className="text-gray-400 text-sm">Reason</label>
+              <label className="text-slate-500 text-sm">Reason</label>
               <Input value={refundReason} onChange={(e) => setRefundReason(e.target.value)}
-                placeholder="Reason for refund" className="mt-1 bg-gray-800 border-gray-700" />
+                placeholder="Reason for refund" className="mt-1 bg-white border-slate-200" />
             </div>
             
             <div className="flex gap-3">
@@ -551,45 +551,45 @@ const AdminFailedTransactions = ({ user }) => {
         {selectedTxn && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-xs">Request ID</p>
-                <p className="text-white font-mono text-sm">{selectedTxn.request_id}</p>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-slate-500 text-xs">Request ID</p>
+                <p className="text-slate-800 font-mono text-sm">{selectedTxn.request_id}</p>
               </div>
-              <div className="p-3 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-xs">Status</p>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-slate-500 text-xs">Status</p>
                 <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(selectedTxn.status, selectedTxn.prc_refunded).bg} ${getStatusBadge(selectedTxn.status, selectedTxn.prc_refunded).text}`}>
                   {getStatusBadge(selectedTxn.status, selectedTxn.prc_refunded).label}
                 </span>
               </div>
-              <div className="p-3 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-xs">Service Type</p>
-                <p className="text-white capitalize">{selectedTxn.service_type}</p>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-slate-500 text-xs">Service Type</p>
+                <p className="text-slate-800 capitalize">{selectedTxn.service_type}</p>
               </div>
-              <div className="p-3 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-xs">Consumer Number</p>
-                <p className="text-white">{selectedTxn.consumer_number || selectedTxn.number || 'N/A'}</p>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-slate-500 text-xs">Consumer Number</p>
+                <p className="text-slate-800">{selectedTxn.consumer_number || selectedTxn.number || 'N/A'}</p>
               </div>
-              <div className="p-3 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-xs">PRC Amount</p>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-slate-500 text-xs">PRC Amount</p>
                 <p className="text-amber-400 font-bold">{(selectedTxn.prc_amount || selectedTxn.total_prc || 0).toFixed(2)} PRC</p>
               </div>
-              <div className="p-3 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-xs">INR Amount</p>
-                <p className="text-white">₹{selectedTxn.amount_inr || selectedTxn.amount || 0}</p>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-slate-500 text-xs">INR Amount</p>
+                <p className="text-slate-800">₹{selectedTxn.amount_inr || selectedTxn.amount || 0}</p>
               </div>
-              <div className="p-3 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-xs">Created At</p>
-                <p className="text-white text-sm">{formatDate(selectedTxn.created_at)}</p>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-slate-500 text-xs">Created At</p>
+                <p className="text-slate-800 text-sm">{formatDate(selectedTxn.created_at)}</p>
               </div>
-              <div className="p-3 bg-gray-800 rounded-lg">
-                <p className="text-gray-400 text-xs">Operator</p>
-                <p className="text-white">{selectedTxn.operator || selectedTxn.operator_name || 'N/A'}</p>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-slate-500 text-xs">Operator</p>
+                <p className="text-slate-800">{selectedTxn.operator || selectedTxn.operator_name || 'N/A'}</p>
               </div>
             </div>
             
             {selectedTxn.error_message && (
               <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                <p className="text-gray-400 text-xs mb-1">Error Message</p>
+                <p className="text-slate-500 text-xs mb-1">Error Message</p>
                 <p className="text-red-400">{selectedTxn.error_message}</p>
               </div>
             )}
@@ -605,16 +605,16 @@ const AdminFailedTransactions = ({ user }) => {
             )}
             
             {/* User Info */}
-            <div className="p-3 bg-gray-800 rounded-lg">
-              <p className="text-gray-400 text-xs mb-2">User Details</p>
+            <div className="p-3 bg-white rounded-lg">
+              <p className="text-slate-500 text-xs mb-2">User Details</p>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
                   {selectedTxn.user?.name?.charAt(0) || '?'}
                 </div>
                 <div>
-                  <p className="text-white font-medium">{selectedTxn.user?.name || 'Unknown'}</p>
-                  <p className="text-gray-500 text-xs">{selectedTxn.user?.email}</p>
-                  <p className="text-gray-500 text-xs">Balance: {(selectedTxn.user?.prc_balance || 0).toFixed(2)} PRC</p>
+                  <p className="text-slate-800 font-medium">{selectedTxn.user?.name || 'Unknown'}</p>
+                  <p className="text-slate-500 text-xs">{selectedTxn.user?.email}</p>
+                  <p className="text-slate-500 text-xs">Balance: {(selectedTxn.user?.prc_balance || 0).toFixed(2)} PRC</p>
                 </div>
               </div>
             </div>

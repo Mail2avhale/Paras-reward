@@ -14,7 +14,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 // Subscription plan colors
 const planColors = {
-  explorer: { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30' },
+  explorer: { bg: 'bg-gray-500/20', text: 'text-slate-500', border: 'border-gray-500/30' },
   startup: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
   growth: { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/30' },
   elite: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' }
@@ -22,7 +22,7 @@ const planColors = {
 
 // KYC status colors
 const kycColors = {
-  pending: { bg: 'bg-gray-500/20', text: 'text-gray-400' },
+  pending: { bg: 'bg-gray-500/20', text: 'text-slate-500' },
   submitted: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
   verified: { bg: 'bg-green-500/20', text: 'text-green-400' },
   rejected: { bg: 'bg-red-500/20', text: 'text-red-400' }
@@ -184,7 +184,7 @@ const AdminMembers = () => {
       className={`text-left py-3 px-2 md:px-4 font-medium text-xs md:text-sm cursor-pointer transition-colors whitespace-nowrap ${
         sortField === field 
           ? 'text-blue-400 bg-blue-500/5' 
-          : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+          : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
       }`}
       onClick={() => handleSort(field)}
       data-testid={testId}
@@ -209,11 +209,11 @@ const AdminMembers = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-4 md:p-5`}
+      className={`bg-white backdrop-blur-sm border border-slate-200 rounded-2xl p-4 md:p-5`}
     >
       <div className="flex items-start justify-between">
         <div className={`p-2 md:p-3 rounded-xl ${color}`}>
-          <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          <Icon className="w-5 h-5 md:w-6 md:h-6 text-slate-800" />
         </div>
         {trend !== undefined && (
           <div className={`flex items-center gap-1 text-xs md:text-sm ${trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -223,9 +223,9 @@ const AdminMembers = () => {
         )}
       </div>
       <div className="mt-3 md:mt-4">
-        <p className="text-2xl md:text-3xl font-bold text-white">{value?.toLocaleString() || 0}</p>
-        <p className="text-gray-400 text-xs md:text-sm mt-1">{title}</p>
-        {subtitle && <p className="text-gray-500 text-xs mt-1">{subtitle}</p>}
+        <p className="text-2xl md:text-3xl font-bold text-slate-800">{value?.toLocaleString() || 0}</p>
+        <p className="text-slate-500 text-xs md:text-sm mt-1">{title}</p>
+        {subtitle && <p className="text-slate-500 text-xs mt-1">{subtitle}</p>}
       </div>
     </motion.div>
   );
@@ -239,8 +239,8 @@ const AdminMembers = () => {
           onClick={() => setPeriod(p)}
           className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${
             period === p
-              ? 'bg-purple-600 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              ? 'bg-purple-600 text-slate-800'
+              : 'bg-white text-slate-500 hover:bg-slate-100'
           }`}
         >
           {p === 'today' ? 'Today' : 
@@ -255,14 +255,14 @@ const AdminMembers = () => {
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-white text-xs md:text-sm flex-1 md:flex-none"
+            className="bg-white border border-slate-200 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-slate-800 text-xs md:text-sm flex-1 md:flex-none"
           />
-          <span className="text-gray-400 self-center text-xs md:text-sm">to</span>
+          <span className="text-slate-500 self-center text-xs md:text-sm">to</span>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-white text-xs md:text-sm flex-1 md:flex-none"
+            className="bg-white border border-slate-200 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-slate-800 text-xs md:text-sm flex-1 md:flex-none"
           />
         </div>
       )}
@@ -273,7 +273,7 @@ const AdminMembers = () => {
   const FilterChip = ({ label, value, onClear }) => (
     <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs">
       {label}: {value}
-      <button onClick={onClear} className="hover:text-white">
+      <button onClick={onClear} className="hover:text-slate-800">
         <X className="w-3 h-3" />
       </button>
     </span>
@@ -293,13 +293,13 @@ const AdminMembers = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 md:mb-6">
           <div>
-            <h1 className="text-xl md:text-3xl font-bold text-white">Members Dashboard</h1>
-            <p className="text-gray-400 text-sm mt-1">Comprehensive member analytics</p>
+            <h1 className="text-xl md:text-3xl font-bold text-slate-800">Members Dashboard</h1>
+            <p className="text-slate-500 text-sm mt-1">Comprehensive member analytics</p>
           </div>
           <div className="flex gap-2 md:gap-3">
             <button
               onClick={fetchDashboard}
-              className="flex items-center gap-2 px-3 md:px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-white text-sm transition-colors"
+              className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white hover:bg-slate-100 rounded-lg text-slate-800 text-sm transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               <span className="hidden md:inline">Refresh</span>
@@ -349,17 +349,17 @@ const AdminMembers = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 md:p-5"
+            className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5"
           >
-            <h3 className="text-white font-semibold mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
+            <h3 className="text-slate-800 font-semibold mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
               <MapPin className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
               Top States
             </h3>
             <div className="space-y-2">
               {dashboard?.state_distribution?.slice(0, 6).map((state, idx) => (
-                <div key={idx} className="flex items-center justify-between py-1.5 md:py-2 border-b border-gray-800/50 last:border-0">
-                  <span className="text-gray-300 text-sm">{state.state || 'Unknown'}</span>
-                  <span className="text-white font-semibold text-sm">{state.count}</span>
+                <div key={idx} className="flex items-center justify-between py-1.5 md:py-2 border-b border-slate-200/50 last:border-0">
+                  <span className="text-slate-600 text-sm">{state.state || 'Unknown'}</span>
+                  <span className="text-slate-800 font-semibold text-sm">{state.count}</span>
                 </div>
               ))}
             </div>
@@ -370,9 +370,9 @@ const AdminMembers = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 md:p-5"
+            className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5"
           >
-            <h3 className="text-white font-semibold mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
+            <h3 className="text-slate-800 font-semibold mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
               <Award className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
               Top Earners
             </h3>
@@ -380,21 +380,21 @@ const AdminMembers = () => {
               {dashboard?.top_earners?.slice(0, 8).map((user, idx) => (
                 <div 
                   key={idx} 
-                  className="flex items-center justify-between py-1.5 md:py-2 border-b border-gray-800/50 last:border-0 cursor-pointer hover:bg-gray-800/30 rounded-lg px-2 -mx-2 transition-colors"
+                  className="flex items-center justify-between py-1.5 md:py-2 border-b border-slate-200/50 last:border-0 cursor-pointer hover:bg-slate-50 rounded-lg px-2 -mx-2 transition-colors"
                   onClick={() => navigate(`/admin/user-360?uid=${user.uid}`)}
                 >
                   <div className="flex items-center gap-2 md:gap-3">
                     <span className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                       idx === 0 ? 'bg-amber-500 text-black' :
                       idx === 1 ? 'bg-gray-400 text-black' :
-                      idx === 2 ? 'bg-orange-600 text-white' :
-                      'bg-gray-700 text-gray-300'
+                      idx === 2 ? 'bg-orange-600 text-slate-800' :
+                      'bg-gray-700 text-slate-600'
                     }`}>
                       {idx + 1}
                     </span>
                     <div>
-                      <p className="text-gray-300 text-xs md:text-sm truncate max-w-[120px] md:max-w-none">{user.name || 'Unknown'}</p>
-                      <p className="text-gray-500 text-xs hidden md:block">{user.email}</p>
+                      <p className="text-slate-600 text-xs md:text-sm truncate max-w-[120px] md:max-w-none">{user.name || 'Unknown'}</p>
+                      <p className="text-slate-500 text-xs hidden md:block">{user.email}</p>
                     </div>
                   </div>
                   <span className="text-green-400 font-semibold text-xs md:text-sm">{(user.prc_balance || 0).toFixed(0)} PRC</span>
@@ -408,32 +408,32 @@ const AdminMembers = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-gray-900/50 border border-gray-800 rounded-2xl p-3 md:p-5"
+          className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5"
         >
           {/* Header & Search */}
           <div className="flex flex-col gap-3 mb-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-white font-semibold text-base md:text-lg">All Members</h3>
-              <span className="text-gray-500 text-xs md:text-sm">
+              <h3 className="text-slate-800 font-semibold text-base md:text-lg">All Members</h3>
+              <span className="text-slate-500 text-xs md:text-sm">
                 {pagination?.total?.toLocaleString() || 0} members
               </span>
             </div>
             
             {/* Search Bar - Full Width on Mobile */}
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="text"
                 placeholder="Search by name, email, mobile..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50"
                 data-testid="member-search-input"
               />
               {search && (
                 <button 
                   onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -446,8 +446,8 @@ const AdminMembers = () => {
                 onClick={() => setShowFilters(!showFilters)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                   showFilters || activeFiltersCount > 0
-                    ? 'bg-purple-600 text-white' 
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    ? 'bg-purple-600 text-slate-800' 
+                    : 'bg-white text-slate-500 hover:bg-slate-100'
                 }`}
                 data-testid="toggle-filters-btn"
               >
@@ -492,7 +492,7 @@ const AdminMembers = () => {
               {(activeFiltersCount > 0 || sortField !== 'created_at' || search) && (
                 <button
                   onClick={clearAllFilters}
-                  className="flex items-center gap-1 px-2 py-1 text-gray-400 hover:text-white text-xs"
+                  className="flex items-center gap-1 px-2 py-1 text-slate-500 hover:text-slate-800 text-xs"
                 >
                   <RotateCcw className="w-3 h-3" />
                   Reset
@@ -510,11 +510,11 @@ const AdminMembers = () => {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3 mb-4 p-3 md:p-4 bg-gray-800/50 rounded-xl">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3 mb-4 p-3 md:p-4 bg-slate-50 rounded-xl">
                   <select
                     value={subscriptionFilter}
                     onChange={(e) => { setSubscriptionFilter(e.target.value); setPage(1); }}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                    className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm"
                     data-testid="filter-subscription"
                   >
                     <option value="">All Plans</option>
@@ -527,7 +527,7 @@ const AdminMembers = () => {
                   <select
                     value={kycFilter}
                     onChange={(e) => { setKycFilter(e.target.value); setPage(1); }}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                    className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm"
                     data-testid="filter-kyc"
                   >
                     <option value="">All KYC</option>
@@ -540,7 +540,7 @@ const AdminMembers = () => {
                   <select
                     value={activeFilter}
                     onChange={(e) => { setActiveFilter(e.target.value); setPage(1); }}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                    className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm"
                     data-testid="filter-status"
                   >
                     <option value="">All Status</option>
@@ -553,7 +553,7 @@ const AdminMembers = () => {
                     value={memberDateFrom}
                     onChange={(e) => { setMemberDateFrom(e.target.value); setPage(1); }}
                     placeholder="From Date"
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                    className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm"
                     data-testid="filter-date-from"
                   />
                   
@@ -562,7 +562,7 @@ const AdminMembers = () => {
                     value={memberDateTo}
                     onChange={(e) => { setMemberDateTo(e.target.value); setPage(1); }}
                     placeholder="To Date"
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                    className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm"
                     data-testid="filter-date-to"
                   />
                 </div>
@@ -573,7 +573,7 @@ const AdminMembers = () => {
           {/* Sort Indicator */}
           {sortField !== 'created_at' && (
             <div className="mb-3 flex items-center gap-2 text-xs md:text-sm">
-              <span className="text-gray-400">Sorted by:</span>
+              <span className="text-slate-500">Sorted by:</span>
               <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg font-medium">
                 {sortField === 'prc_balance' ? 'PRC Balance' :
                  sortField === 'redeem_limit' ? 'Redeem Limit' :
@@ -584,7 +584,7 @@ const AdminMembers = () => {
               </span>
               <button
                 onClick={() => { setSortField('created_at'); setSortDirection('desc'); }}
-                className="text-gray-400 hover:text-white"
+                className="text-slate-500 hover:text-slate-800"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -595,8 +595,8 @@ const AdminMembers = () => {
           <div className="overflow-x-auto -mx-3 md:mx-0">
             <table className="w-full min-w-[640px]">
               <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left py-3 px-2 md:px-4 text-gray-400 font-medium text-xs md:text-sm" data-testid="header-member">Member</th>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left py-3 px-2 md:px-4 text-slate-500 font-medium text-xs md:text-sm" data-testid="header-member">Member</th>
                   <SortableHeader field="prc_balance" testId="header-prc-balance">
                     PRC
                   </SortableHeader>
@@ -612,20 +612,20 @@ const AdminMembers = () => {
                   <SortableHeader field="created_at" testId="header-joined-date">
                     Joined
                   </SortableHeader>
-                  <th className="text-left py-3 px-2 md:px-4 text-gray-400 font-medium text-xs md:text-sm">Status</th>
+                  <th className="text-left py-3 px-2 md:px-4 text-slate-500 font-medium text-xs md:text-sm">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {membersLoading ? (
                   <tr>
-                    <td colSpan="7" className="py-8 text-center text-gray-400">
+                    <td colSpan="7" className="py-8 text-center text-slate-500">
                       <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
                       Loading...
                     </td>
                   </tr>
                 ) : members.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="py-8 text-center text-gray-400">
+                    <td colSpan="7" className="py-8 text-center text-slate-500">
                       {search || activeFiltersCount > 0 ? (
                         <div>
                           <p>No members found matching your filters</p>
@@ -651,7 +651,7 @@ const AdminMembers = () => {
                     return (
                       <tr 
                         key={member.uid} 
-                        className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
+                        className="border-b border-slate-200/50 hover:bg-slate-50 transition-colors"
                         data-testid={`member-row-${member.uid}`}
                       >
                         <td className="py-2 md:py-3 px-2 md:px-4">
@@ -659,10 +659,10 @@ const AdminMembers = () => {
                             className="cursor-pointer hover:text-blue-400 transition-colors"
                             onClick={() => navigate(`/admin/user-360?uid=${member.uid}`)}
                           >
-                            <p className="text-white font-medium text-sm hover:text-blue-400 truncate max-w-[140px] md:max-w-none">
+                            <p className="text-slate-800 font-medium text-sm hover:text-blue-400 truncate max-w-[140px] md:max-w-none">
                               {member.name || 'Unknown'}
                             </p>
-                            <p className="text-gray-500 text-xs truncate max-w-[140px] md:max-w-none">{member.email}</p>
+                            <p className="text-slate-500 text-xs truncate max-w-[140px] md:max-w-none">{member.email}</p>
                             <p className="text-gray-600 text-xs md:hidden">{member.mobile}</p>
                           </div>
                         </td>
@@ -672,7 +672,7 @@ const AdminMembers = () => {
                           </span>
                         </td>
                         <td className="py-2 md:py-3 px-2 md:px-4">
-                          <span className="text-white font-medium text-xs md:text-sm" data-testid={`redeem-limit-${member.uid}`}>
+                          <span className="text-slate-800 font-medium text-xs md:text-sm" data-testid={`redeem-limit-${member.uid}`}>
                             {totalLimit.toLocaleString()}
                           </span>
                         </td>
@@ -686,7 +686,7 @@ const AdminMembers = () => {
                             {availableLimit.toLocaleString()}
                           </span>
                         </td>
-                        <td className="py-2 md:py-3 px-2 md:px-4 text-gray-400 text-xs md:text-sm">
+                        <td className="py-2 md:py-3 px-2 md:px-4 text-slate-500 text-xs md:text-sm">
                           {member.created_at ? new Date(member.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '-'}
                         </td>
                         <td className="py-2 md:py-3 px-2 md:px-4">
@@ -708,39 +708,39 @@ const AdminMembers = () => {
 
           {/* Pagination */}
           {pagination && pagination.total_pages > 1 && (
-            <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-800">
-              <p className="text-gray-400 text-xs md:text-sm">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-200">
+              <p className="text-slate-500 text-xs md:text-sm">
                 {((page - 1) * 20) + 1} - {Math.min(page * 20, pagination.total)} of {pagination.total}
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage(1)}
                   disabled={page === 1}
-                  className="px-2 md:px-3 py-1.5 md:py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-xs md:text-sm"
+                  className="px-2 md:px-3 py-1.5 md:py-2 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-slate-800 text-xs md:text-sm"
                 >
                   First
                 </button>
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 md:px-4 py-1.5 md:py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-xs md:text-sm"
+                  className="px-3 md:px-4 py-1.5 md:py-2 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-slate-800 text-xs md:text-sm"
                 >
                   Prev
                 </button>
-                <span className="px-3 md:px-4 py-1.5 md:py-2 text-gray-400 text-xs md:text-sm">
+                <span className="px-3 md:px-4 py-1.5 md:py-2 text-slate-500 text-xs md:text-sm">
                   {page}/{pagination.total_pages}
                 </span>
                 <button
                   onClick={() => setPage(p => Math.min(pagination.total_pages, p + 1))}
                   disabled={page >= pagination.total_pages}
-                  className="px-3 md:px-4 py-1.5 md:py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-xs md:text-sm"
+                  className="px-3 md:px-4 py-1.5 md:py-2 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-slate-800 text-xs md:text-sm"
                 >
                   Next
                 </button>
                 <button
                   onClick={() => setPage(pagination.total_pages)}
                   disabled={page >= pagination.total_pages}
-                  className="px-2 md:px-3 py-1.5 md:py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-xs md:text-sm"
+                  className="px-2 md:px-3 py-1.5 md:py-2 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-slate-800 text-xs md:text-sm"
                 >
                   Last
                 </button>

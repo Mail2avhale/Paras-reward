@@ -512,7 +512,7 @@ const AdminKYC = ({ user }) => {
       verified: 'bg-green-500/20 text-green-400 border-green-500/50',
       rejected: 'bg-red-500/20 text-red-400 border-red-500/50'
     };
-    return badges[status] || 'bg-gray-500/20 text-gray-400';
+    return badges[status] || 'bg-gray-500/20 text-slate-500';
   };
 
   const formatDate = (dateString) => {
@@ -535,11 +535,11 @@ const AdminKYC = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <FileText className="w-7 h-7 text-blue-400" />
             KYC Verification
           </h1>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             Last updated: {lastRefresh.toLocaleTimeString()}
             <span className="ml-2 text-xs text-gray-600">(Press R to refresh, Ctrl+A to select all)</span>
           </p>
@@ -550,12 +550,12 @@ const AdminKYC = ({ user }) => {
             variant="outline"
             size="sm"
             disabled={loading}
-            className="border-gray-700"
+            className="border-slate-200"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer">
             <input
               type="checkbox"
               checked={autoRefresh}
@@ -622,7 +622,7 @@ const AdminKYC = ({ user }) => {
                 size="sm"
                 variant="ghost"
                 onClick={clearSelection}
-                className="text-gray-400 hover:text-white"
+                className="text-slate-500 hover:text-slate-800"
               >
                 Clear
               </Button>
@@ -654,15 +654,15 @@ const AdminKYC = ({ user }) => {
       )}
 
       {/* Filters */}
-      <Card className="p-4 mb-6 bg-gray-900 border-gray-800">
+      <Card className="p-4 mb-6 bg-white border-slate-200">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <Input
               placeholder="Search by name, email, Aadhaar, PAN..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-gray-800 border-gray-700 text-white"
+              className="pl-10 bg-white border-slate-200 text-slate-800"
             />
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -717,14 +717,14 @@ const AdminKYC = ({ user }) => {
                 variant={statusFilter === status ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleStatusChange(status)}
-                className={statusFilter === status ? 'bg-blue-600' : 'border-gray-700 text-gray-300'}
+                className={statusFilter === status ? 'bg-blue-600' : 'border-slate-200 text-slate-600'}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </Button>
             ))}
           </div>
         </div>
-        <div className="mt-2 text-sm text-gray-500">
+        <div className="mt-2 text-sm text-slate-500">
           Showing {filteredDocs.length} of {totalDocs} documents (Page {currentPage} of {totalPages})
         </div>
       </Card>
@@ -735,16 +735,16 @@ const AdminKYC = ({ user }) => {
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
       ) : filteredDocs.length === 0 ? (
-        <Card className="p-12 text-center bg-gray-900 border-gray-800">
+        <Card className="p-12 text-center bg-white border-slate-200">
           <FileText className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-          <p className="text-gray-400">No KYC documents found</p>
+          <p className="text-slate-500">No KYC documents found</p>
         </Card>
       ) : (
         <div className="space-y-3">
           {filteredDocs.map((doc) => (
             <Card
               key={doc.kyc_id}
-              className={`p-4 bg-gray-900 border-gray-800 hover:border-gray-700 transition-all cursor-pointer ${
+              className={`p-4 bg-white border-slate-200 hover:border-slate-200 transition-all cursor-pointer ${
                 doc.status === 'pending' ? 'border-l-4 border-l-yellow-500' : ''
               } ${selectedIds.has(doc.kyc_id) ? 'ring-2 ring-blue-500 bg-blue-900/20' : ''}`}
               onClick={() => setSelectedDoc(doc)}
@@ -755,23 +755,23 @@ const AdminKYC = ({ user }) => {
                   {doc.status === 'pending' && (
                     <button
                       onClick={(e) => toggleSelect(doc.kyc_id, e)}
-                      className="p-1 hover:bg-gray-700 rounded"
+                      className="p-1 hover:bg-slate-100 rounded"
                     >
                       {selectedIds.has(doc.kyc_id) ? (
                         <CheckSquare className="w-5 h-5 text-blue-400" />
                       ) : (
-                        <Square className="w-5 h-5 text-gray-500" />
+                        <Square className="w-5 h-5 text-slate-500" />
                       )}
                     </button>
                   )}
                   
-                  <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center">
-                    <User className="w-6 h-6 text-gray-400" />
+                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center">
+                    <User className="w-6 h-6 text-slate-500" />
                   </div>
                   <div>
-                    <p className="font-medium text-white">{doc.user_name || 'Unknown User'}</p>
-                    <p className="text-sm text-gray-400">{doc.user_email || doc.user_id}</p>
-                    <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                    <p className="font-medium text-slate-800">{doc.user_name || 'Unknown User'}</p>
+                    <p className="text-sm text-slate-500">{doc.user_email || doc.user_id}</p>
+                    <div className="flex gap-4 mt-1 text-xs text-slate-500">
                       {doc.aadhaar_number && <span>Aadhaar: •••• {doc.aadhaar_number.slice(-4)}</span>}
                       {doc.pan_number && <span>PAN: {doc.pan_number}</span>}
                     </div>
@@ -782,7 +782,7 @@ const AdminKYC = ({ user }) => {
                   <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(doc.status)}`}>
                     {doc.status?.toUpperCase()}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-slate-500">
                     {formatDate(doc.submitted_at)}
                   </span>
                   
@@ -817,7 +817,7 @@ const AdminKYC = ({ user }) => {
                     </div>
                   )}
                   
-                  <Button size="sm" variant="ghost" className="text-gray-400">
+                  <Button size="sm" variant="ghost" className="text-slate-500">
                     <Eye className="w-4 h-4 mr-1" /> View
                   </Button>
                 </div>
@@ -841,10 +841,10 @@ const AdminKYC = ({ user }) => {
       {/* Document Detail Modal */}
       {selectedDoc && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setSelectedDoc(null)}>
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700" onClick={(e) => e.stopPropagation()}>
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-slate-200" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">KYC Document Details</h2>
+                <h2 className="text-xl font-bold text-slate-800">KYC Document Details</h2>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedDoc(null)}>
                   <XCircle className="w-5 h-5" />
                 </Button>
@@ -853,72 +853,72 @@ const AdminKYC = ({ user }) => {
               {/* User Info */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
-                  <p className="text-gray-500 text-sm">Name</p>
-                  <p className="text-white font-medium">{selectedDoc.user_name || 'N/A'}</p>
+                  <p className="text-slate-500 text-sm">Name</p>
+                  <p className="text-slate-800 font-medium">{selectedDoc.user_name || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 text-sm">Email</p>
-                  <p className="text-white font-medium">{selectedDoc.user_email || 'N/A'}</p>
+                  <p className="text-slate-500 text-sm">Email</p>
+                  <p className="text-slate-800 font-medium">{selectedDoc.user_email || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 text-sm">Mobile</p>
-                  <p className="text-white font-medium">{selectedDoc.user_mobile || 'N/A'}</p>
+                  <p className="text-slate-500 text-sm">Mobile</p>
+                  <p className="text-slate-800 font-medium">{selectedDoc.user_mobile || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 text-sm">Status</p>
+                  <p className="text-slate-500 text-sm">Status</p>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(selectedDoc.status)}`}>
                     {selectedDoc.status?.toUpperCase()}
                   </span>
                 </div>
                 <div>
-                  <p className="text-gray-500 text-sm">Aadhaar Number</p>
-                  <p className="text-white font-medium">{selectedDoc.aadhaar_number || 'N/A'}</p>
+                  <p className="text-slate-500 text-sm">Aadhaar Number</p>
+                  <p className="text-slate-800 font-medium">{selectedDoc.aadhaar_number || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 text-sm">PAN Number</p>
-                  <p className="text-white font-medium">{selectedDoc.pan_number || 'N/A'}</p>
+                  <p className="text-slate-500 text-sm">PAN Number</p>
+                  <p className="text-slate-800 font-medium">{selectedDoc.pan_number || 'N/A'}</p>
                 </div>
               </div>
 
               {/* Documents */}
               <div className="space-y-4 mb-6">
-                <h3 className="text-lg font-medium text-white">Documents</h3>
+                <h3 className="text-lg font-medium text-slate-800">Documents</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {selectedDoc.aadhaar_front && (
                     <div>
-                      <p className="text-gray-500 text-sm mb-2">Aadhaar Front</p>
+                      <p className="text-slate-500 text-sm mb-2">Aadhaar Front</p>
                       <img 
                         src={selectedDoc.aadhaar_front} 
                         alt="Aadhaar Front" 
-                        className="w-full rounded-lg border border-gray-700"
+                        className="w-full rounded-lg border border-slate-200"
                       />
                     </div>
                   )}
                   {selectedDoc.aadhaar_back && (
                     <div>
-                      <p className="text-gray-500 text-sm mb-2">Aadhaar Back</p>
+                      <p className="text-slate-500 text-sm mb-2">Aadhaar Back</p>
                       <img 
                         src={selectedDoc.aadhaar_back} 
                         alt="Aadhaar Back" 
-                        className="w-full rounded-lg border border-gray-700"
+                        className="w-full rounded-lg border border-slate-200"
                       />
                     </div>
                   )}
                   {selectedDoc.pan_front && (
                     <div>
-                      <p className="text-gray-500 text-sm mb-2">PAN Card</p>
+                      <p className="text-slate-500 text-sm mb-2">PAN Card</p>
                       <img 
                         src={selectedDoc.pan_front} 
                         alt="PAN Card" 
-                        className="w-full rounded-lg border border-gray-700"
+                        className="w-full rounded-lg border border-slate-200"
                       />
                     </div>
                   )}
                 </div>
                 {!selectedDoc.aadhaar_front && !selectedDoc.aadhaar_back && !selectedDoc.pan_front && (
-                  <div className="text-center py-8 bg-gray-800 rounded-lg">
+                  <div className="text-center py-8 bg-white rounded-lg">
                     <Image className="w-12 h-12 mx-auto text-gray-600 mb-2" />
-                    <p className="text-gray-500">No document images available</p>
+                    <p className="text-slate-500">No document images available</p>
                   </div>
                 )}
               </div>
@@ -961,15 +961,15 @@ const AdminKYC = ({ user }) => {
       {/* Orphaned Records Modal */}
       {showOrphanedModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowOrphanedModal(false)}>
-          <Card className="w-full max-w-3xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700" onClick={(e) => e.stopPropagation()}>
+          <Card className="w-full max-w-3xl max-h-[80vh] overflow-y-auto bg-white border-slate-200" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                     <AlertCircle className="w-6 h-6 text-orange-500" />
                     Orphaned KYC Records
                   </h2>
-                  <p className="text-gray-400 text-sm mt-1">
+                  <p className="text-slate-500 text-sm mt-1">
                     Users with 'pending' status but no KYC document submitted
                   </p>
                 </div>
@@ -982,7 +982,7 @@ const AdminKYC = ({ user }) => {
                 <div className="text-center py-8">
                   <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
                   <p className="text-green-400 font-medium text-lg">All Good!</p>
-                  <p className="text-gray-400">No orphaned KYC records found.</p>
+                  <p className="text-slate-500">No orphaned KYC records found.</p>
                 </div>
               ) : (
                 <>
@@ -991,7 +991,7 @@ const AdminKYC = ({ user }) => {
                     <p className="text-orange-400 font-medium">
                       {orphanedUsers.length} orphaned records found
                     </p>
-                    <p className="text-gray-400 text-sm">
+                    <p className="text-slate-500 text-sm">
                       These users have 'pending' KYC status but no documents were submitted. 
                       After fixing, users can re-submit their documents.
                     </p>
@@ -1000,14 +1000,14 @@ const AdminKYC = ({ user }) => {
                   {/* User List */}
                   <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
                     {orphanedUsers.map((u) => (
-                      <div key={u.uid} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                      <div key={u.uid} className="flex items-center justify-between p-3 bg-white rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-                            <User className="w-5 h-5 text-gray-400" />
+                            <User className="w-5 h-5 text-slate-500" />
                           </div>
                           <div>
-                            <p className="text-white font-medium">{u.name}</p>
-                            <p className="text-gray-400 text-sm">{u.email || u.mobile}</p>
+                            <p className="text-slate-800 font-medium">{u.name}</p>
+                            <p className="text-slate-500 text-sm">{u.email || u.mobile}</p>
                           </div>
                         </div>
                         <Button
@@ -1055,15 +1055,15 @@ const AdminKYC = ({ user }) => {
       {/* Sync by Email Modal */}
       {showSyncModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowSyncModal(false)}>
-          <Card className="w-full max-w-md bg-gray-900 border-gray-700" onClick={(e) => e.stopPropagation()}>
+          <Card className="w-full max-w-md bg-white border-slate-200" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                     <Zap className="w-6 h-6 text-green-500" />
                     Sync KYC by Email
                   </h2>
-                  <p className="text-gray-400 text-sm mt-1">
+                  <p className="text-slate-500 text-sm mt-1">
                     Enter user's email or mobile to sync their KYC status
                   </p>
                 </div>
@@ -1074,12 +1074,12 @@ const AdminKYC = ({ user }) => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-gray-400 mb-1 block">Email / Mobile Number</label>
+                  <label className="text-sm text-slate-500 mb-1 block">Email / Mobile Number</label>
                   <Input
                     placeholder="example@email.com or 9876543210"
                     value={syncEmail}
                     onChange={(e) => setSyncEmail(e.target.value)}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-200 text-slate-800"
                     onKeyDown={(e) => e.key === 'Enter' && syncKYCByEmail()}
                   />
                 </div>

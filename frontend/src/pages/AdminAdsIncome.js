@@ -122,7 +122,7 @@ const AdminAdsIncome = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-6">
+    <div className="min-h-screen bg-slate-50 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -130,7 +130,7 @@ const AdminAdsIncome = ({ user }) => {
             <Smartphone className="h-6 w-6 text-blue-600" />
             Ads Income Management
           </h1>
-          <p className="text-sm text-gray-500">Track AdMob & Unity Ads revenue</p>
+          <p className="text-sm text-slate-500">Track AdMob & Unity Ads revenue</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchEntries}>
@@ -149,7 +149,7 @@ const AdminAdsIncome = ({ user }) => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Revenue</p>
+              <p className="text-sm text-slate-500">Total Revenue</p>
               <p className="text-2xl font-bold text-gray-900">₹{totalRevenue.toLocaleString('en-IN')}</p>
             </div>
             <div className="p-3 bg-green-500/20 rounded-lg">
@@ -160,7 +160,7 @@ const AdminAdsIncome = ({ user }) => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Impressions</p>
+              <p className="text-sm text-slate-500">Total Impressions</p>
               <p className="text-2xl font-bold text-gray-900">{totalImpressions.toLocaleString()}</p>
             </div>
             <div className="p-3 bg-blue-500/20 rounded-lg">
@@ -171,7 +171,7 @@ const AdminAdsIncome = ({ user }) => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Clicks</p>
+              <p className="text-sm text-slate-500">Total Clicks</p>
               <p className="text-2xl font-bold text-gray-900">{totalClicks.toLocaleString()}</p>
             </div>
             <div className="p-3 bg-purple-500/20 rounded-lg">
@@ -182,7 +182,7 @@ const AdminAdsIncome = ({ user }) => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Entries</p>
+              <p className="text-sm text-slate-500">Entries</p>
               <p className="text-2xl font-bold text-gray-900">{total}</p>
             </div>
             <div className="p-3 bg-yellow-500/20 rounded-lg">
@@ -205,15 +205,15 @@ const AdminAdsIncome = ({ user }) => {
               </div>
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-500">Revenue</p>
+                  <p className="text-slate-500">Revenue</p>
                   <p className="font-semibold">₹{s.total_revenue?.toLocaleString('en-IN') || 0}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Impressions</p>
+                  <p className="text-slate-500">Impressions</p>
                   <p className="font-semibold">{s.total_impressions?.toLocaleString() || 0}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Avg eCPM</p>
+                  <p className="text-slate-500">Avg eCPM</p>
                   <p className="font-semibold">₹{s.avg_ecpm?.toFixed(2) || 0}</p>
                 </div>
               </div>
@@ -246,7 +246,7 @@ const AdminAdsIncome = ({ user }) => {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-sm text-gray-500 border-b">
+              <tr className="text-left text-sm text-slate-500 border-b">
                 <th className="pb-3">Date</th>
                 <th className="pb-3">Network</th>
                 <th className="pb-3">Impressions</th>
@@ -258,7 +258,7 @@ const AdminAdsIncome = ({ user }) => {
             </thead>
             <tbody>
               {entries.map((entry) => (
-                <tr key={entry.entry_id} className="border-b hover:bg-gray-800/50">
+                <tr key={entry.entry_id} className="border-b hover:bg-slate-50">
                   <td className="py-3">{entry.date}</td>
                   <td className="py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -283,7 +283,7 @@ const AdminAdsIncome = ({ user }) => {
               ))}
               {entries.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-500">
+                  <td colSpan={7} className="py-8 text-center text-slate-500">
                     No entries yet. Click "Add Entry" to start tracking.
                   </td>
                 </tr>
@@ -314,7 +314,7 @@ const AdminAdsIncome = ({ user }) => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Date</label>
+                  <label className="text-sm font-medium text-slate-600">Date</label>
                   <input
                     type="date"
                     value={form.date}
@@ -323,7 +323,7 @@ const AdminAdsIncome = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Ad Network</label>
+                  <label className="text-sm font-medium text-slate-600">Ad Network</label>
                   <select
                     value={form.ad_network}
                     onChange={(e) => setForm({...form, ad_network: e.target.value})}
@@ -336,7 +336,7 @@ const AdminAdsIncome = ({ user }) => {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Impressions</label>
+                  <label className="text-sm font-medium text-slate-600">Impressions</label>
                   <input
                     type="number"
                     value={form.impressions}
@@ -346,7 +346,7 @@ const AdminAdsIncome = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">Clicks</label>
+                  <label className="text-sm font-medium text-slate-600">Clicks</label>
                   <input
                     type="number"
                     value={form.clicks}
@@ -356,7 +356,7 @@ const AdminAdsIncome = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">eCPM (₹)</label>
+                  <label className="text-sm font-medium text-slate-600">eCPM (₹)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -368,7 +368,7 @@ const AdminAdsIncome = ({ user }) => {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300">Revenue Amount (₹) *</label>
+                <label className="text-sm font-medium text-slate-600">Revenue Amount (₹) *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -379,7 +379,7 @@ const AdminAdsIncome = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300">Notes</label>
+                <label className="text-sm font-medium text-slate-600">Notes</label>
                 <input
                   type="text"
                   value={form.notes}

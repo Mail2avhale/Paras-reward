@@ -139,12 +139,12 @@ const AdminPRCRateControl = ({ user }) => {
             <Button
               variant="outline"
               onClick={() => navigate('/admin/settings-hub')}
-              className="flex items-center gap-2 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+              className="flex items-center gap-2 bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
             </Button>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-slate-800">
               Admin Tools
             </h1>
           </div>
@@ -152,7 +152,7 @@ const AdminPRCRateControl = ({ user }) => {
             variant="outline"
             onClick={fetchCurrentRate}
             disabled={loading}
-            className="bg-gray-800 border-gray-700 text-gray-300"
+            className="bg-white border-slate-200 text-slate-600"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -160,14 +160,14 @@ const AdminPRCRateControl = ({ user }) => {
         </div>
 
         {/* PRC Rate Control */}
-        <Card className="p-6 shadow-xl bg-gray-900/50 border-gray-800 mb-6" data-testid="prc-rate-control">
+        <Card className="p-6 shadow-xl bg-white border-slate-200 mb-6" data-testid="prc-rate-control">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
-              <TrendingUp className="h-6 w-6 text-white" />
+              <TrendingUp className="h-6 w-6 text-slate-800" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-100">PRC Rate Control</h2>
-              <p className="text-gray-400">Manually override the dynamic PRC rate</p>
+              <p className="text-slate-500">Manually override the dynamic PRC rate</p>
             </div>
           </div>
 
@@ -179,9 +179,9 @@ const AdminPRCRateControl = ({ user }) => {
           }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm mb-1">Current Rate</p>
-                <p className="text-4xl font-bold text-white">
-                  {currentRate} <span className="text-lg text-gray-400">PRC = ₹1</span>
+                <p className="text-slate-500 text-sm mb-1">Current Rate</p>
+                <p className="text-4xl font-bold text-slate-800">
+                  {currentRate} <span className="text-lg text-slate-500">PRC = ₹1</span>
                 </p>
               </div>
               <div className="text-right">
@@ -201,7 +201,7 @@ const AdminPRCRateControl = ({ user }) => {
                   )}
                 </span>
                 {overrideInfo && (
-                  <p className="text-gray-400 text-xs mt-2">
+                  <p className="text-slate-500 text-xs mt-2">
                     {overrideInfo.permanent ? 'Permanent override' : `Expires: ${new Date(overrideInfo.expires_at).toLocaleString()}`}
                   </p>
                 )}
@@ -212,21 +212,21 @@ const AdminPRCRateControl = ({ user }) => {
           {/* Set Override Form */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="text-sm font-medium text-gray-300 mb-2 block">New Rate (PRC = ₹1)</label>
+              <label className="text-sm font-medium text-slate-600 mb-2 block">New Rate (PRC = ₹1)</label>
               <input
                 type="number"
                 min="1"
                 placeholder="e.g., 10"
                 value={newRate}
                 onChange={(e) => setNewRate(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 data-testid="new-rate-input"
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-300 mb-2 block">
+              <label className="text-sm font-medium text-slate-600 mb-2 block">
                 Duration (hours)
-                <span className="text-gray-500 text-xs ml-1">(empty = permanent)</span>
+                <span className="text-slate-500 text-xs ml-1">(empty = permanent)</span>
               </label>
               <input
                 type="number"
@@ -234,7 +234,7 @@ const AdminPRCRateControl = ({ user }) => {
                 placeholder="e.g., 24"
                 value={expiresHours}
                 onChange={(e) => setExpiresHours(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 data-testid="expires-hours-input"
               />
             </div>
@@ -242,7 +242,7 @@ const AdminPRCRateControl = ({ user }) => {
               <Button
                 onClick={handleSetOverride}
                 disabled={savingRate || !newRate}
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white py-3"
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-800 py-3"
                 data-testid="set-override-btn"
               >
                 {savingRate ? (
@@ -289,14 +289,14 @@ const AdminPRCRateControl = ({ user }) => {
         </Card>
 
         {/* User Lookup */}
-        <Card className="p-6 shadow-xl bg-gray-900/50 border-gray-800" data-testid="user-lookup">
+        <Card className="p-6 shadow-xl bg-white border-slate-200" data-testid="user-lookup">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center">
-              <Search className="h-6 w-6 text-white" />
+              <Search className="h-6 w-6 text-slate-800" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-100">User Lookup</h2>
-              <p className="text-gray-400">Search by UID, mobile, email, or name</p>
+              <p className="text-slate-500">Search by UID, mobile, email, or name</p>
             </div>
           </div>
 
@@ -308,13 +308,13 @@ const AdminPRCRateControl = ({ user }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearchUser()}
-              className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               data-testid="user-search-input"
             />
             <Button
               onClick={handleSearchUser}
               disabled={searchingUser}
-              className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white px-6"
+              className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-slate-800 px-6"
               data-testid="search-user-btn"
             >
               {searchingUser ? (
@@ -331,9 +331,9 @@ const AdminPRCRateControl = ({ user }) => {
           {userResult && (
             <div className="space-y-4">
               {/* Basic Info */}
-              <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700">
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                     <User className="w-5 h-5 text-purple-400" />
                     {userResult.basic_info?.name}
                   </h3>
@@ -342,7 +342,7 @@ const AdminPRCRateControl = ({ user }) => {
                       ? 'bg-amber-500/20 text-amber-400' 
                       : userResult.basic_info?.subscription_plan === 'startup'
                         ? 'bg-blue-500/20 text-blue-400'
-                        : 'bg-gray-700 text-gray-400'
+                        : 'bg-gray-700 text-slate-500'
                   }`}>
                     {userResult.basic_info?.subscription_plan?.toUpperCase() || 'EXPLORER'}
                   </span>
@@ -350,8 +350,8 @@ const AdminPRCRateControl = ({ user }) => {
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-400">UID</p>
-                    <p className="text-white font-mono flex items-center gap-2">
+                    <p className="text-slate-500">UID</p>
+                    <p className="text-slate-800 font-mono flex items-center gap-2">
                       {userResult.basic_info?.uid?.substring(0, 8)}...
                       <button onClick={() => copyToClipboard(userResult.basic_info?.uid)} className="text-purple-400 hover:text-purple-300">
                         <Copy className="w-3 h-3" />
@@ -359,24 +359,24 @@ const AdminPRCRateControl = ({ user }) => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-400">Mobile</p>
-                    <p className="text-white">{userResult.basic_info?.mobile}</p>
+                    <p className="text-slate-500">Mobile</p>
+                    <p className="text-slate-800">{userResult.basic_info?.mobile}</p>
                   </div>
                   <div>
-                    <p className="text-gray-400">PRC Balance</p>
+                    <p className="text-slate-500">PRC Balance</p>
                     <p className="text-amber-400 font-semibold">{userResult.basic_info?.prc_balance?.toLocaleString()} PRC</p>
                   </div>
                   <div>
-                    <p className="text-gray-400">Total Mined</p>
+                    <p className="text-slate-500">Total Mined</p>
                     <p className="text-emerald-400">{userResult.basic_info?.total_mined?.toLocaleString()} PRC</p>
                   </div>
                 </div>
 
                 {userResult.basic_info?.subscription_expiry && (
                   <div className="mt-4 flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-400">Expiry:</span>
-                    <span className="text-white">{new Date(userResult.basic_info.subscription_expiry).toLocaleDateString()}</span>
+                    <Calendar className="w-4 h-4 text-slate-500" />
+                    <span className="text-slate-500">Expiry:</span>
+                    <span className="text-slate-800">{new Date(userResult.basic_info.subscription_expiry).toLocaleDateString()}</span>
                   </div>
                 )}
               </div>
@@ -391,20 +391,20 @@ const AdminPRCRateControl = ({ user }) => {
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-400">Base Rate</p>
-                      <p className="text-white">{userResult.mining_details.base_rate_per_hour} PRC/hr</p>
+                      <p className="text-slate-500">Base Rate</p>
+                      <p className="text-slate-800">{userResult.mining_details.base_rate_per_hour} PRC/hr</p>
                     </div>
                     <div>
-                      <p className="text-gray-400">Referral Bonus</p>
+                      <p className="text-slate-500">Referral Bonus</p>
                       <p className="text-emerald-400">+{userResult.mining_details.referral_bonus_per_hour} PRC/hr</p>
                     </div>
                     <div>
-                      <p className="text-gray-400">Boost Multiplier</p>
+                      <p className="text-slate-500">Boost Multiplier</p>
                       <p className="text-amber-400">{userResult.mining_details.boost_multiplier}x</p>
                     </div>
                     <div>
-                      <p className="text-gray-400">Final Rate</p>
-                      <p className="text-white font-bold">{userResult.mining_details.final_rate_per_hour} PRC/hr</p>
+                      <p className="text-slate-500">Final Rate</p>
+                      <p className="text-slate-800 font-bold">{userResult.mining_details.final_rate_per_hour} PRC/hr</p>
                     </div>
                   </div>
 
@@ -421,7 +421,7 @@ const AdminPRCRateControl = ({ user }) => {
                           <><XCircle className="w-3 h-3" /> Mining Inactive</>
                         )}
                       </span>
-                      <span className="text-gray-400 text-sm">
+                      <span className="text-slate-500 text-sm">
                         Daily: {userResult.mining_details.final_rate_per_day} PRC/day
                       </span>
                     </div>
@@ -431,8 +431,8 @@ const AdminPRCRateControl = ({ user }) => {
 
               {/* Referral Breakdown */}
               {userResult.referral_breakdown && (
-                <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+                <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                  <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2 mb-4">
                     <Users className="w-5 h-5 text-blue-400" />
                     Referral Breakdown
                   </h3>
@@ -440,17 +440,17 @@ const AdminPRCRateControl = ({ user }) => {
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                       <p className="text-blue-400 font-semibold mb-1">Level 1</p>
-                      <p className="text-white text-xl">{userResult.referral_breakdown.level_1?.total || 0}</p>
+                      <p className="text-slate-800 text-xl">{userResult.referral_breakdown.level_1?.total || 0}</p>
                       <p className="text-emerald-400 text-xs">{userResult.referral_breakdown.level_1?.active || 0} active</p>
                     </div>
                     <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
                       <p className="text-purple-400 font-semibold mb-1">Level 2</p>
-                      <p className="text-white text-xl">{userResult.referral_breakdown.level_2?.total || 0}</p>
+                      <p className="text-slate-800 text-xl">{userResult.referral_breakdown.level_2?.total || 0}</p>
                       <p className="text-emerald-400 text-xs">{userResult.referral_breakdown.level_2?.active || 0} active</p>
                     </div>
                     <div className="bg-pink-500/10 border border-pink-500/30 rounded-lg p-3">
                       <p className="text-pink-400 font-semibold mb-1">Level 3</p>
-                      <p className="text-white text-xl">{userResult.referral_breakdown.level_3?.total || 0}</p>
+                      <p className="text-slate-800 text-xl">{userResult.referral_breakdown.level_3?.total || 0}</p>
                       <p className="text-emerald-400 text-xs">{userResult.referral_breakdown.level_3?.active || 0} active</p>
                     </div>
                   </div>
@@ -468,20 +468,20 @@ const AdminPRCRateControl = ({ user }) => {
                   <div className="space-y-3 text-sm">
                     {userResult.faq_answers.why_balance_less && (
                       <div>
-                        <p className="text-gray-400">Why is balance less than total mined?</p>
-                        <p className="text-white">{userResult.faq_answers.why_balance_less}</p>
+                        <p className="text-slate-500">Why is balance less than total mined?</p>
+                        <p className="text-slate-800">{userResult.faq_answers.why_balance_less}</p>
                       </div>
                     )}
                     {userResult.faq_answers.why_mining_slow && (
                       <div>
-                        <p className="text-gray-400">Why mining is slow?</p>
-                        <p className="text-white">{userResult.faq_answers.why_mining_slow}</p>
+                        <p className="text-slate-500">Why mining is slow?</p>
+                        <p className="text-slate-800">{userResult.faq_answers.why_mining_slow}</p>
                       </div>
                     )}
                     {userResult.faq_answers.why_referral_inactive && (
                       <div>
-                        <p className="text-gray-400">Why referrals show inactive?</p>
-                        <p className="text-white">{userResult.faq_answers.why_referral_inactive}</p>
+                        <p className="text-slate-500">Why referrals show inactive?</p>
+                        <p className="text-slate-800">{userResult.faq_answers.why_referral_inactive}</p>
                       </div>
                     )}
                   </div>
@@ -492,10 +492,10 @@ const AdminPRCRateControl = ({ user }) => {
 
           {/* Empty State */}
           {!userResult && !searchingUser && (
-            <div className="text-center py-10 text-gray-400">
+            <div className="text-center py-10 text-slate-500">
               <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>Enter user details to search</p>
-              <p className="text-sm text-gray-500 mt-2">Search by UID, mobile number, email, or name</p>
+              <p className="text-sm text-slate-500 mt-2">Search by UID, mobile number, email, or name</p>
             </div>
           )}
         </Card>

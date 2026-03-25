@@ -111,35 +111,35 @@ const AdminDataBackup = ({ user }) => {
   return (
     <div className="min-h-screen bg-gray-950 pb-24">
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-800 px-5 py-4">
+      <div className="bg-white border-b border-slate-200 px-5 py-4">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/admin')}
-            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white flex items-center justify-center"
           >
-            <ArrowLeft className="w-5 h-5 text-white" />
+            <ArrowLeft className="w-5 h-5 text-slate-800" />
           </button>
           <div>
-            <h1 className="text-white text-xl font-bold">Data Backup & Archive</h1>
-            <p className="text-gray-400 text-sm">Manage your app's data</p>
+            <h1 className="text-slate-800 text-xl font-bold">Data Backup & Archive</h1>
+            <p className="text-slate-500 text-sm">Manage your app's data</p>
           </div>
         </div>
       </div>
 
       {/* Database Stats */}
       <div className="px-5 py-6">
-        <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+        <h2 className="text-slate-800 font-bold text-lg mb-4 flex items-center gap-2">
           <Database className="w-5 h-5 text-amber-500" />
           Database Statistics
         </h2>
         
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
-            <p className="text-gray-500 text-xs mb-1">Total Records</p>
-            <p className="text-2xl font-bold text-white">{stats?.total_records?.toLocaleString() || 0}</p>
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <p className="text-slate-500 text-xs mb-1">Total Records</p>
+            <p className="text-2xl font-bold text-slate-800">{stats?.total_records?.toLocaleString() || 0}</p>
           </div>
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
-            <p className="text-gray-500 text-xs mb-1">Archivable (6+ mo)</p>
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <p className="text-slate-500 text-xs mb-1">Archivable (6+ mo)</p>
             <p className="text-2xl font-bold text-amber-500">{stats?.archivable_records?.toLocaleString() || 0}</p>
           </div>
         </div>
@@ -153,9 +153,9 @@ const AdminDataBackup = ({ user }) => {
             { label: 'Messages', count: stats?.messages || 0, color: 'text-pink-400' },
             { label: 'Activities', count: stats?.activities || 0, color: 'text-cyan-400' },
           ].map((item, i) => (
-            <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-center">
+            <div key={i} className="bg-slate-50 rounded-lg p-3 text-center">
               <p className={`text-lg font-bold ${item.color}`}>{item.count.toLocaleString()}</p>
-              <p className="text-gray-500 text-xs">{item.label}</p>
+              <p className="text-slate-500 text-xs">{item.label}</p>
             </div>
           ))}
         </div>
@@ -163,7 +163,7 @@ const AdminDataBackup = ({ user }) => {
 
       {/* Export Section */}
       <div className="px-5 mb-6">
-        <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+        <h2 className="text-slate-800 font-bold text-lg mb-4 flex items-center gap-2">
           <Download className="w-5 h-5 text-emerald-500" />
           Export Backup
         </h2>
@@ -176,15 +176,15 @@ const AdminDataBackup = ({ user }) => {
               className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors ${
                 selectedExport === option.id 
                   ? 'bg-emerald-500/20 border-emerald-500/50' 
-                  : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
+                  : 'bg-white border-slate-200 hover:border-slate-200'
               }`}
             >
-              <option.icon className={`w-5 h-5 ${selectedExport === option.id ? 'text-emerald-400' : 'text-gray-500'}`} />
+              <option.icon className={`w-5 h-5 ${selectedExport === option.id ? 'text-emerald-400' : 'text-slate-500'}`} />
               <div className="flex-1 text-left">
-                <p className={`font-medium ${selectedExport === option.id ? 'text-emerald-400' : 'text-white'}`}>
+                <p className={`font-medium ${selectedExport === option.id ? 'text-emerald-400' : 'text-slate-800'}`}>
                   {option.label}
                 </p>
-                <p className="text-gray-500 text-xs">{option.description}</p>
+                <p className="text-slate-500 text-xs">{option.description}</p>
               </div>
               {selectedExport === option.id && <CheckCircle className="w-5 h-5 text-emerald-400" />}
             </button>
@@ -194,7 +194,7 @@ const AdminDataBackup = ({ user }) => {
         <button
           onClick={handleExport}
           disabled={exporting}
-          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-slate-800 font-semibold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {exporting ? (
             <>
@@ -212,7 +212,7 @@ const AdminDataBackup = ({ user }) => {
 
       {/* Archive Section */}
       <div className="px-5 mb-6">
-        <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+        <h2 className="text-slate-800 font-bold text-lg mb-4 flex items-center gap-2">
           <Archive className="w-5 h-5 text-amber-500" />
           Archive Old Data
         </h2>
@@ -222,7 +222,7 @@ const AdminDataBackup = ({ user }) => {
             <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
             <div>
               <p className="text-amber-400 font-medium">Archive moves old data to separate collections</p>
-              <p className="text-gray-400 text-sm mt-1">
+              <p className="text-slate-500 text-sm mt-1">
                 Records older than 6 months will be moved to archive. This helps keep your database fast.
                 Archived data can still be viewed but won't appear in regular queries.
               </p>
@@ -231,13 +231,13 @@ const AdminDataBackup = ({ user }) => {
         </div>
 
         {stats?.archivable_records > 0 && (
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 mb-4">
-            <p className="text-gray-400 text-sm mb-2">Records that will be archived:</p>
+          <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4">
+            <p className="text-slate-500 text-sm mb-2">Records that will be archived:</p>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(stats?.archivable_breakdown || {}).map(([key, value]) => (
                 value > 0 && (
                   <div key={key} className="flex justify-between text-sm">
-                    <span className="text-gray-500 capitalize">{key}</span>
+                    <span className="text-slate-500 capitalize">{key}</span>
                     <span className="text-amber-400 font-medium">{value.toLocaleString()}</span>
                   </div>
                 )
@@ -249,7 +249,7 @@ const AdminDataBackup = ({ user }) => {
         <button
           onClick={handleArchive}
           disabled={archiving || stats?.archivable_records === 0}
-          className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-slate-800 font-semibold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {archiving ? (
             <>
@@ -268,8 +268,8 @@ const AdminDataBackup = ({ user }) => {
       {/* Archive History */}
       {archiveHistory.length > 0 && (
         <div className="px-5">
-          <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-gray-500" />
+          <h2 className="text-slate-800 font-bold text-lg mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-slate-500" />
             Archive History
           </h2>
 
@@ -280,18 +280,18 @@ const AdminDataBackup = ({ user }) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-gray-900/50 border border-gray-800 rounded-xl p-3"
+                className="bg-white border border-slate-200 rounded-xl p-3"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-medium">{log.total_archived} records archived</span>
-                  <span className="text-gray-500 text-xs">
+                  <span className="text-slate-800 font-medium">{log.total_archived} records archived</span>
+                  <span className="text-slate-500 text-xs">
                     {new Date(log.archived_at).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(log.archived_counts || {}).map(([key, value]) => (
                     value > 0 && (
-                      <span key={key} className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-400">
+                      <span key={key} className="px-2 py-1 bg-white rounded text-xs text-slate-500">
                         {key}: {value}
                       </span>
                     )

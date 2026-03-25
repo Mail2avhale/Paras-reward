@@ -105,7 +105,7 @@ const AdminLiquidity = ({ user }) => {
       <div className="p-6">
         <div className="text-center py-20">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="text-gray-500 mt-4">Loading Liquidity Data...</p>
+          <p className="text-slate-500 mt-4">Loading Liquidity Data...</p>
         </div>
       </div>
     );
@@ -115,8 +115,8 @@ const AdminLiquidity = ({ user }) => {
     return (
       <div className="p-6">
         <Card className="p-12 text-center">
-          <Wallet className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Failed to load liquidity data</p>
+          <Wallet className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+          <p className="text-slate-500">Failed to load liquidity data</p>
           <Button onClick={fetchLiquidityData} className="mt-4">
             <RefreshCw className="h-4 w-4 mr-2" /> Retry
           </Button>
@@ -132,11 +132,11 @@ const AdminLiquidity = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Wallet className="h-7 w-7 text-purple-600" />
             Liquidity Management
           </h1>
-          <p className="text-gray-500">Monitor cash flow and manage reserves</p>
+          <p className="text-slate-500">Monitor cash flow and manage reserves</p>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={() => setShowUpdateReserves(true)} className="bg-purple-600 hover:bg-purple-700">
@@ -149,7 +149,7 @@ const AdminLiquidity = ({ user }) => {
       </div>
 
       {/* Health Status Banner */}
-      <Card className={`p-6 bg-gradient-to-r ${getHealthColor(health.status)} text-white`}>
+      <Card className={`p-6 bg-gradient-to-r ${getHealthColor(health.status)} text-slate-800`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {getHealthIcon(health.status)}
@@ -253,7 +253,7 @@ const AdminLiquidity = ({ user }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Ratios */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <Target className="h-5 w-5 text-purple-600" />
             Key Ratios
           </h3>
@@ -262,7 +262,7 @@ const AdminLiquidity = ({ user }) => {
             {/* Reserve Ratio */}
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-sm text-gray-400">Reserve Ratio</span>
+                <span className="text-sm text-slate-500">Reserve Ratio</span>
                 <span className={`font-bold ${ratios.reserve_ratio >= 50 ? 'text-green-600' : 'text-red-600'}`}>
                   {ratios.reserve_ratio?.toFixed(1)}%
                 </span>
@@ -273,13 +273,13 @@ const AdminLiquidity = ({ user }) => {
                   style={{ width: `${Math.min(100, ratios.reserve_ratio)}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Cash / PRC Value (Target: 50%+)</p>
+              <p className="text-xs text-slate-500 mt-1">Cash / PRC Value (Target: 50%+)</p>
             </div>
 
             {/* Liquidity Ratio */}
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-sm text-gray-400">Liquidity Ratio</span>
+                <span className="text-sm text-slate-500">Liquidity Ratio</span>
                 <span className={`font-bold ${ratios.liquidity_ratio >= 2 ? 'text-green-600' : 'text-red-600'}`}>
                   {ratios.liquidity_ratio?.toFixed(2)}x
                 </span>
@@ -290,13 +290,13 @@ const AdminLiquidity = ({ user }) => {
                   style={{ width: `${Math.min(100, ratios.liquidity_ratio * 20)}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Cash / Liabilities (Target: 2x+)</p>
+              <p className="text-xs text-slate-500 mt-1">Cash / Liabilities (Target: 2x+)</p>
             </div>
 
             {/* PRC Coverage */}
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-sm text-gray-400">PRC Coverage</span>
+                <span className="text-sm text-slate-500">PRC Coverage</span>
                 <span className={`font-bold ${ratios.prc_coverage >= 100 ? 'text-green-600' : 'text-yellow-600'}`}>
                   {ratios.prc_coverage?.toFixed(1)}%
                 </span>
@@ -307,20 +307,20 @@ const AdminLiquidity = ({ user }) => {
                   style={{ width: `${Math.min(100, ratios.prc_coverage)}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">% of PRC backed by cash</p>
+              <p className="text-xs text-slate-500 mt-1">% of PRC backed by cash</p>
             </div>
           </div>
         </Card>
 
         {/* Cash Reserves Breakdown */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-green-600" />
             Cash Reserves
           </h3>
           
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-500/20 rounded-lg">
                   <DollarSign className="h-5 w-5 text-blue-600" />
@@ -332,7 +332,7 @@ const AdminLiquidity = ({ user }) => {
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-500/20 rounded-lg">
                   <Wallet className="h-5 w-5 text-green-600" />
@@ -344,7 +344,7 @@ const AdminLiquidity = ({ user }) => {
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-500/20 rounded-lg">
                   <Zap className="h-5 w-5 text-purple-600" />
@@ -357,7 +357,7 @@ const AdminLiquidity = ({ user }) => {
             </div>
 
             {reserves.last_updated && (
-              <p className="text-xs text-gray-500 text-center">
+              <p className="text-xs text-slate-500 text-center">
                 Last updated: {new Date(reserves.last_updated).toLocaleString()}
               </p>
             )}
@@ -369,7 +369,7 @@ const AdminLiquidity = ({ user }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pending Liabilities */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-red-600" />
             Pending Liabilities
           </h3>
@@ -378,7 +378,7 @@ const AdminLiquidity = ({ user }) => {
             <div className="flex items-center justify-between p-3 border rounded-lg">
               <div>
                 <p className="font-medium">Pending Withdrawals</p>
-                <p className="text-xs text-gray-500">{liabilities.withdrawal_count} requests</p>
+                <p className="text-xs text-slate-500">{liabilities.withdrawal_count} requests</p>
               </div>
               <span className="text-lg font-bold text-red-600">
                 {formatCurrency(liabilities.pending_withdrawals)}
@@ -388,7 +388,7 @@ const AdminLiquidity = ({ user }) => {
             <div className="flex items-center justify-between p-3 border rounded-lg">
               <div>
                 <p className="font-medium">Pending Bill Payments</p>
-                <p className="text-xs text-gray-500">{liabilities.bill_count} requests</p>
+                <p className="text-xs text-slate-500">{liabilities.bill_count} requests</p>
               </div>
               <span className="text-lg font-bold text-red-600">
                 {formatCurrency(liabilities.pending_bill_payments)}
@@ -398,7 +398,7 @@ const AdminLiquidity = ({ user }) => {
             <div className="flex items-center justify-between p-3 border rounded-lg">
               <div>
                 <p className="font-medium">Pending Gift Vouchers</p>
-                <p className="text-xs text-gray-500">{liabilities.voucher_count} requests</p>
+                <p className="text-xs text-slate-500">{liabilities.voucher_count} requests</p>
               </div>
               <span className="text-lg font-bold text-red-600">
                 {formatCurrency(liabilities.pending_gift_vouchers)}
@@ -409,33 +409,33 @@ const AdminLiquidity = ({ user }) => {
 
         {/* Daily Averages */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <Activity className="h-5 w-5 text-purple-600" />
             Daily Averages (30 days)
           </h3>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">PRC Creation</span>
+              <span className="text-slate-500">PRC Creation</span>
               <span className="font-bold text-green-600">+{daily_averages.prc_creation?.toLocaleString()} PRC/day</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Cash Inflow</span>
+              <span className="text-slate-500">Cash Inflow</span>
               <span className="font-bold text-blue-600">{formatCurrency(daily_averages.cash_inflow)}/day</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Cash Outflow</span>
+              <span className="text-slate-500">Cash Outflow</span>
               <span className="font-bold text-red-600">{formatCurrency(daily_averages.cash_outflow)}/day</span>
             </div>
             
             <div className="pt-4 border-t">
               <div className="flex items-center justify-between">
-                <span className="text-white font-medium">Runway</span>
+                <span className="text-slate-800 font-medium">Runway</span>
                 <span className={`text-2xl font-bold ${daily_averages.runway_days > 90 ? 'text-green-600' : daily_averages.runway_days > 30 ? 'text-yellow-600' : 'text-red-600'}`}>
                   {daily_averages.runway_days} days
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Days of operation without new revenue</p>
+              <p className="text-xs text-slate-500 mt-1">Days of operation without new revenue</p>
             </div>
           </div>
         </Card>
@@ -443,7 +443,7 @@ const AdminLiquidity = ({ user }) => {
 
       {/* Cash Flow Chart */}
       <Card className="p-6">
-        <h3 className="text-lg font-bold text-white mb-4">30-Day Cash Flow</h3>
+        <h3 className="text-lg font-bold text-slate-800 mb-4">30-Day Cash Flow</h3>
         <ResponsiveContainer width="100%" height={350}>
           <AreaChart data={flow_data}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -461,7 +461,7 @@ const AdminLiquidity = ({ user }) => {
       {/* Recommendations */}
       {recommendations.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <Info className="h-5 w-5 text-blue-600" />
             Recommendations
           </h3>
@@ -477,8 +477,8 @@ const AdminLiquidity = ({ user }) => {
                     {rec.impact.toUpperCase()}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-white">{rec.title}</h4>
-                    <p className="text-sm text-gray-400 mt-1">{rec.description}</p>
+                    <h4 className="font-semibold text-slate-800">{rec.title}</h4>
+                    <p className="text-sm text-slate-500 mt-1">{rec.description}</p>
                   </div>
                 </div>
               </div>
@@ -494,12 +494,12 @@ const AdminLiquidity = ({ user }) => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">Update Cash Reserves</h2>
-                <button onClick={() => setShowUpdateReserves(false)} className="text-gray-500 hover:text-gray-300">✕</button>
+                <button onClick={() => setShowUpdateReserves(false)} className="text-slate-500 hover:text-slate-600">✕</button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-gray-400">Bank Balance (₹)</label>
+                  <label className="text-sm text-slate-500">Bank Balance (₹)</label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -509,7 +509,7 @@ const AdminLiquidity = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400">Cash in Hand (₹)</label>
+                  <label className="text-sm text-slate-500">Cash in Hand (₹)</label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -519,7 +519,7 @@ const AdminLiquidity = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400">Payment Gateway Balance (₹)</label>
+                  <label className="text-sm text-slate-500">Payment Gateway Balance (₹)</label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -529,7 +529,7 @@ const AdminLiquidity = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400">Notes (optional)</label>
+                  <label className="text-sm text-slate-500">Notes (optional)</label>
                   <Input
                     placeholder="Any notes about this update..."
                     value={reserveForm.notes}

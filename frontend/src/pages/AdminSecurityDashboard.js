@@ -276,14 +276,14 @@ const AdminSecurityDashboard = ({ user }) => {
   const getActionColor = (action) => {
     const colors = {
       login: 'bg-green-500/20 text-green-400',
-      logout: 'bg-gray-800 text-gray-100',
+      logout: 'bg-white text-gray-100',
       login_blocked_ip: 'bg-red-500/20 text-red-400',
       activate_lockdown: 'bg-red-500/20 text-red-400',
       deactivate_lockdown: 'bg-green-500/20 text-green-400',
       force_logout_all: 'bg-orange-500/20 text-orange-400',
       update_ip_whitelist: 'bg-blue-500/20 text-blue-400'
     };
-    return colors[action] || 'bg-gray-800 text-gray-100';
+    return colors[action] || 'bg-white text-gray-100';
   };
 
   if (loading) {
@@ -299,11 +299,11 @@ const AdminSecurityDashboard = ({ user }) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
             <Shield className="w-8 h-8 text-purple-600" />
             Security Dashboard
           </h1>
-          <p className="text-gray-400 mt-1">Admin Security Management</p>
+          <p className="text-slate-500 mt-1">Admin Security Management</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Alert Badge */}
@@ -383,8 +383,8 @@ const AdminSecurityDashboard = ({ user }) => {
             {alerts.length === 0 ? (
               <Card className="p-8 text-center">
                 <ShieldCheck className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                <p className="text-gray-400">No security alerts</p>
-                <p className="text-sm text-gray-400">System is secure ✓</p>
+                <p className="text-slate-500">No security alerts</p>
+                <p className="text-sm text-slate-500">System is secure ✓</p>
               </Card>
             ) : (
               alerts.map(alert => {
@@ -392,7 +392,7 @@ const AdminSecurityDashboard = ({ user }) => {
                 return (
                   <Card 
                     key={alert.alert_id} 
-                    className={`p-4 border-l-4 ${config.border} ${!alert.is_read ? config.bg : 'bg-gray-900'}`}
+                    className={`p-4 border-l-4 ${config.border} ${!alert.is_read ? config.bg : 'bg-white'}`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -407,15 +407,15 @@ const AdminSecurityDashboard = ({ user }) => {
                             </span>
                           )}
                         </div>
-                        <h3 className="font-bold text-white">{alert.title}</h3>
-                        <p className="text-sm text-gray-400 mt-1">{alert.message}</p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                        <h3 className="font-bold text-slate-800">{alert.title}</h3>
+                        <p className="text-sm text-slate-500 mt-1">{alert.message}</p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
                           <span>📍 IP: {alert.ip_address || 'N/A'}</span>
                           <span>⏰ {getTimeAgo(alert.created_at)}</span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className="text-xs text-gray-400">{formatDate(alert.created_at)}</span>
+                        <span className="text-xs text-slate-500">{formatDate(alert.created_at)}</span>
                         {!alert.is_read && (
                           <Button 
                             variant="ghost" 
@@ -436,7 +436,7 @@ const AdminSecurityDashboard = ({ user }) => {
           {/* Pagination */}
           {alertsTotal > 15 && (
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-400">Total: {alertsTotal} alerts</p>
+              <p className="text-sm text-slate-500">Total: {alertsTotal} alerts</p>
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
@@ -522,21 +522,21 @@ const AdminSecurityDashboard = ({ user }) => {
               Security Configuration
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-gray-400">Session Timeout</p>
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-500">Session Timeout</p>
                 <p className="text-lg font-bold">{dashboard.session_timeout_minutes} minutes</p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-gray-400">Max Login Attempts</p>
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-500">Max Login Attempts</p>
                 <p className="text-lg font-bold">{dashboard.rate_limit_login_attempts} per minute</p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-gray-400">Token Expiry</p>
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-500">Token Expiry</p>
                 <p className="text-lg font-bold">{dashboard.jwt_token_expiry_minutes} minutes</p>
               </div>
-              <div className="p-4 bg-gray-800/50 rounded-lg">
-                <p className="text-sm text-gray-400">IP Whitelist</p>
-                <p className={`text-lg font-bold ${dashboard.ip_whitelist_enabled ? 'text-green-600' : 'text-gray-500'}`}>
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-500">IP Whitelist</p>
+                <p className={`text-lg font-bold ${dashboard.ip_whitelist_enabled ? 'text-green-600' : 'text-slate-500'}`}>
                   {dashboard.ip_whitelist_enabled ? `✅ Enabled (${dashboard.ip_whitelist_count} IPs)` : '❌ Disabled'}
                 </p>
               </div>
@@ -549,8 +549,8 @@ const AdminSecurityDashboard = ({ user }) => {
       {activeTab === 'lockdown' && (
         <div className="space-y-6">
           <Card className={`p-6 ${dashboard?.lockdown_status?.lockdown_active 
-            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white' 
-            : 'bg-gradient-to-r from-green-500 to-green-600 text-white'}`}>
+            ? 'bg-gradient-to-r from-red-500 to-red-600 text-slate-800' 
+            : 'bg-gradient-to-r from-green-500 to-green-600 text-slate-800'}`}>
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -561,7 +561,7 @@ const AdminSecurityDashboard = ({ user }) => {
                   )}
                 </h2>
                 {dashboard?.lockdown_status?.lockdown_active && (
-                  <div className="mt-2 text-white/90">
+                  <div className="mt-2 text-slate-800/90">
                     <p>Type: {dashboard.lockdown_status.lockdown_type}</p>
                     <p>Reason: {dashboard.lockdown_status.lockdown_reason}</p>
                     <p>Since: {formatDate(dashboard.lockdown_status.lockdown_at)}</p>
@@ -571,7 +571,7 @@ const AdminSecurityDashboard = ({ user }) => {
               {dashboard?.lockdown_status?.lockdown_active && (
                 <Button 
                   onClick={handleDeactivateLockdown}
-                  className="bg-gray-900 text-red-600 hover:bg-gray-800"
+                  className="bg-white text-red-600 hover:bg-white"
                 >
                   <Unlock className="w-4 h-4 mr-2" />
                   Deactivate Lockdown
@@ -653,10 +653,10 @@ const AdminSecurityDashboard = ({ user }) => {
           </h2>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
               <div>
                 <p className="font-medium">Enable IP Whitelist</p>
-                <p className="text-sm text-gray-400">Only allow admin access from whitelisted IPs</p>
+                <p className="text-sm text-slate-500">Only allow admin access from whitelisted IPs</p>
               </div>
               <Button
                 variant={ipWhitelist.enabled ? 'default' : 'outline'}
@@ -682,7 +682,7 @@ const AdminSecurityDashboard = ({ user }) => {
 
             <div className="border rounded-lg divide-y">
               {ipWhitelist.whitelist.length === 0 ? (
-                <p className="p-4 text-center text-gray-500">No IPs whitelisted</p>
+                <p className="p-4 text-center text-slate-500">No IPs whitelisted</p>
               ) : (
                 ipWhitelist.whitelist.map((ip, idx) => (
                   <div key={idx} className="flex items-center justify-between p-3">
@@ -712,7 +712,7 @@ const AdminSecurityDashboard = ({ user }) => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-800/50">
+              <thead className="bg-slate-50">
                 <tr>
                   <th className="px-4 py-3 text-left">Timestamp</th>
                   <th className="px-4 py-3 text-left">Action</th>
@@ -723,8 +723,8 @@ const AdminSecurityDashboard = ({ user }) => {
               </thead>
               <tbody className="divide-y">
                 {auditLogs.map((log, idx) => (
-                  <tr key={idx} className="hover:bg-gray-800/50">
-                    <td className="px-4 py-3 text-gray-400">{formatDate(log.timestamp)}</td>
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-slate-500">{formatDate(log.timestamp)}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${getActionColor(log.action)}`}>
                         {log.action}
@@ -732,7 +732,7 @@ const AdminSecurityDashboard = ({ user }) => {
                     </td>
                     <td className="px-4 py-3">{log.entity_type}</td>
                     <td className="px-4 py-3 font-mono text-xs">{log.ip_address || '-'}</td>
-                    <td className="px-4 py-3 text-gray-400 max-w-xs truncate">
+                    <td className="px-4 py-3 text-slate-500 max-w-xs truncate">
                       {JSON.stringify(log.details || {})}
                     </td>
                   </tr>
@@ -742,7 +742,7 @@ const AdminSecurityDashboard = ({ user }) => {
           </div>
 
           <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-gray-400">Total: {auditTotal} logs</p>
+            <p className="text-sm text-slate-500">Total: {auditTotal} logs</p>
             <div className="flex gap-2">
               <Button 
                 variant="outline" 

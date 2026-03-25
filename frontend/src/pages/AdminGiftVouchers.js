@@ -285,30 +285,30 @@ const AdminGiftVouchers = ({ user }) => {
   return (
     <div className="min-h-screen bg-gray-950">
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-900 to-gray-950 border-b border-gray-800 sticky top-0 z-10">
+      <div className="bg-gradient-to-r from-gray-900 to-gray-950 border-b border-slate-200 sticky top-0 z-10">
         <div className="p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="text-gray-400 hover:text-white">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="text-slate-500 hover:text-slate-800">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+                <h1 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
                   <Gift className="w-6 h-6 text-purple-400" />
                   Gift Voucher Requests
                 </h1>
-                <p className="text-gray-500 text-xs">
+                <p className="text-slate-500 text-xs">
                   Last updated: {lastRefresh.toLocaleTimeString()}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button onClick={fetchRequests} variant="outline" size="sm" disabled={loading} className="border-gray-700 text-gray-300">
+              <Button onClick={fetchRequests} variant="outline" size="sm" disabled={loading} className="border-slate-200 text-slate-600">
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={autoRefresh}
@@ -383,8 +383,8 @@ const AdminGiftVouchers = ({ user }) => {
                 onClick={() => setTimeFilter(tf.id)}
                 className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                   timeFilter === tf.id
-                    ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30'
-                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+                    ? 'bg-purple-500 text-slate-800 shadow-lg shadow-purple-500/30'
+                    : 'bg-slate-50 text-slate-500 hover:bg-white hover:text-slate-800'
                 }`}
               >
                 <span className="mr-2">{tf.icon}</span>
@@ -396,18 +396,18 @@ const AdminGiftVouchers = ({ user }) => {
           {/* Search and Sort */}
           <div className="flex gap-3 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
               <Input
                 placeholder="Search by name, email, brand..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500"
+                className="pl-10 bg-white border-slate-200 text-slate-800 placeholder:text-slate-500"
               />
             </div>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 bg-gray-900/50 border border-gray-800 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500"
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 text-sm focus:outline-none focus:border-purple-500"
             >
               {sortOptions.map(opt => (
                 <option key={opt.id} value={opt.id}>{opt.label}</option>
@@ -418,7 +418,7 @@ const AdminGiftVouchers = ({ user }) => {
 
         {/* Status Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-3 bg-gray-900/50 border border-gray-800 p-1 rounded-xl">
+          <TabsList className="w-full grid grid-cols-3 bg-white border border-slate-200 p-1 rounded-xl">
             {statusTabs.map(tab => {
               const Icon = tab.icon;
               const count = getTabCount(tab.id);
@@ -437,7 +437,7 @@ const AdminGiftVouchers = ({ user }) => {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     activeTab === tab.id 
                       ? `bg-${tab.color}-500/30` 
-                      : 'bg-gray-800'
+                      : 'bg-white'
                   }`}>
                     {count}
                   </span>
@@ -453,8 +453,8 @@ const AdminGiftVouchers = ({ user }) => {
                 <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
               </div>
             ) : paginatedRequests.length === 0 ? (
-              <Card className="p-12 bg-gray-900/30 border-gray-800 text-center">
-                <div className="text-gray-500">
+              <Card className="p-12 bg-white/30 border-slate-200 text-center">
+                <div className="text-slate-500">
                   <Gift className="w-12 h-12 mx-auto mb-4 opacity-30" />
                   <p className="text-lg font-medium">No {activeTab} requests</p>
                   <p className="text-sm mt-1">
@@ -470,7 +470,7 @@ const AdminGiftVouchers = ({ user }) => {
                   return (
                     <Card 
                       key={req.request_id}
-                      className={`p-4 bg-gray-900/50 border-gray-800 hover:bg-gray-900/80 transition-all cursor-pointer ${
+                      className={`p-4 bg-white border-slate-200 hover:bg-white/80 transition-all cursor-pointer ${
                         selectedRequest?.request_id === req.request_id ? 'ring-2 ring-purple-500' : ''
                       }`}
                       onClick={() => setSelectedRequest(selectedRequest?.request_id === req.request_id ? null : req)}
@@ -486,7 +486,7 @@ const AdminGiftVouchers = ({ user }) => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-white truncate">{req.user_name || 'Unknown User'}</p>
+                              <p className="font-semibold text-slate-800 truncate">{req.user_name || 'Unknown User'}</p>
                               <span className={`text-xs px-2 py-0.5 rounded-full border ${
                                 req.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' :
                                 req.status === 'completed' ? 'bg-green-500/10 text-green-400 border-green-500/30' : 
@@ -498,14 +498,14 @@ const AdminGiftVouchers = ({ user }) => {
                               {req.status === 'pending' && <SLABadge createdAt={req.created_at} status={req.status} />}
                             </div>
                             <p className="text-purple-400 text-sm font-medium">{brand.name}</p>
-                            <p className="text-gray-500 text-sm truncate">{req.user_email}</p>
+                            <p className="text-slate-500 text-sm truncate">{req.user_email}</p>
                           </div>
                         </div>
 
                         {/* Amount */}
                         <div className="text-right">
-                          <p className="text-xl font-bold text-white">₹{(req.denomination || 0).toLocaleString()}</p>
-                          <p className="text-gray-500 text-xs">{formatDate(req.created_at)}</p>
+                          <p className="text-xl font-bold text-slate-800">₹{(req.denomination || 0).toLocaleString()}</p>
+                          <p className="text-slate-500 text-xs">{formatDate(req.created_at)}</p>
                           <p className="text-purple-400 text-xs">{(req.prc_amount || 0).toFixed(2)} PRC</p>
                         </div>
 
@@ -538,46 +538,46 @@ const AdminGiftVouchers = ({ user }) => {
 
                       {/* Expanded Details */}
                       {selectedRequest?.request_id === req.request_id && (
-                        <div className="mt-4 pt-4 border-t border-gray-800">
+                        <div className="mt-4 pt-4 border-t border-slate-200">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                             <div>
-                              <p className="text-gray-500 text-xs">Email</p>
-                              <p className="text-white">{req.user_email || 'N/A'}</p>
+                              <p className="text-slate-500 text-xs">Email</p>
+                              <p className="text-slate-800">{req.user_email || 'N/A'}</p>
                             </div>
                             <div>
-                              <p className="text-gray-500 text-xs">Subscription</p>
-                              <p className="text-white capitalize">{req.user_subscription_plan || 'N/A'}</p>
+                              <p className="text-slate-500 text-xs">Subscription</p>
+                              <p className="text-slate-800 capitalize">{req.user_subscription_plan || 'N/A'}</p>
                             </div>
                             <div>
-                              <p className="text-gray-500 text-xs">PRC Balance</p>
-                              <p className="text-white">{req.user_prc_balance?.toFixed(2) || '0.00'} PRC</p>
+                              <p className="text-slate-500 text-xs">PRC Balance</p>
+                              <p className="text-slate-800">{req.user_prc_balance?.toFixed(2) || '0.00'} PRC</p>
                             </div>
                             <div>
-                              <p className="text-gray-500 text-xs">Request ID</p>
-                              <p className="text-white font-mono text-xs">{req.request_id?.slice(0, 12)}...</p>
+                              <p className="text-slate-500 text-xs">Request ID</p>
+                              <p className="text-slate-800 font-mono text-xs">{req.request_id?.slice(0, 12)}...</p>
                             </div>
                           </div>
 
                           {/* Voucher Code Input for Pending */}
                           {req.status === 'pending' && (
-                            <div className="space-y-3 bg-gray-800/50 p-4 rounded-lg">
+                            <div className="space-y-3 bg-slate-50 p-4 rounded-lg">
                               <div>
-                                <label className="text-gray-400 text-xs block mb-1">Voucher Code *</label>
+                                <label className="text-slate-500 text-xs block mb-1">Voucher Code *</label>
                                 <Input
                                   placeholder="Enter voucher code to send to user"
                                   value={voucherCode}
                                   onChange={(e) => setVoucherCode(e.target.value)}
-                                  className="bg-gray-900 border-gray-700"
+                                  className="bg-white border-slate-200"
                                   onClick={(e) => e.stopPropagation()}
                                 />
                               </div>
                               <div>
-                                <label className="text-gray-400 text-xs block mb-1">Admin Notes (Optional)</label>
+                                <label className="text-slate-500 text-xs block mb-1">Admin Notes (Optional)</label>
                                 <Input
                                   placeholder="Add notes for this approval"
                                   value={adminNotes}
                                   onChange={(e) => setAdminNotes(e.target.value)}
-                                  className="bg-gray-900 border-gray-700"
+                                  className="bg-white border-slate-200"
                                   onClick={(e) => e.stopPropagation()}
                                 />
                               </div>
@@ -613,7 +613,7 @@ const AdminGiftVouchers = ({ user }) => {
                           {req.status === 'completed' && req.voucher_code && (
                             <div className="bg-green-500/10 border border-green-500/30 p-3 rounded-lg">
                               <p className="text-green-400 text-xs">Voucher Code Sent:</p>
-                              <p className="text-white font-mono">{req.voucher_code}</p>
+                              <p className="text-slate-800 font-mono">{req.voucher_code}</p>
                             </div>
                           )}
 
@@ -621,7 +621,7 @@ const AdminGiftVouchers = ({ user }) => {
                           {req.status === 'rejected' && req.admin_notes && (
                             <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-lg">
                               <p className="text-red-400 text-xs">Rejection Reason:</p>
-                              <p className="text-white">{req.admin_notes}</p>
+                              <p className="text-slate-800">{req.admin_notes}</p>
                             </div>
                           )}
                           
@@ -652,7 +652,7 @@ const AdminGiftVouchers = ({ user }) => {
             )}
 
             {/* Results Count */}
-            <div className="text-center text-gray-500 text-sm mt-4">
+            <div className="text-center text-slate-500 text-sm mt-4">
               Showing {paginatedRequests.length} of {filteredRequests.length} requests
             </div>
           </div>

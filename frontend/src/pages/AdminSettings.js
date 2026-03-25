@@ -341,26 +341,26 @@ const AdminSettings = ({ user }) => {
             <Button
               variant="outline"
               onClick={() => navigate('/admin/settings-hub')}
-              className="flex items-center gap-2 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+              className="flex items-center gap-2 bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
             >
               <ArrowLeft className="h-4 w-4" />
               All Settings
             </Button>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-slate-800">
               Payment & Social Settings
             </h1>
           </div>
         </div>
 
         {/* Social Media Settings */}
-        <Card className="p-6 shadow-xl bg-gray-900/50 border-gray-800">
+        <Card className="p-6 shadow-xl bg-white border-slate-200">
           <h2 className="text-2xl font-bold mb-6 text-gray-100">Social Media Links</h2>
-          <p className="text-gray-400 mb-8">Configure your social media profile links. These will be displayed in the footer and dashboard.</p>
+          <p className="text-slate-500 mb-8">Configure your social media profile links. These will be displayed in the footer and dashboard.</p>
 
           <div className="space-y-6">
             {/* Facebook */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Facebook className="h-5 w-5 text-blue-600" />
                 Facebook
               </label>
@@ -375,7 +375,7 @@ const AdminSettings = ({ user }) => {
 
             {/* Twitter */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Twitter className="h-5 w-5 text-blue-400" />
                 Twitter / X
               </label>
@@ -390,7 +390,7 @@ const AdminSettings = ({ user }) => {
 
             {/* Instagram */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Instagram className="h-5 w-5 text-pink-600" />
                 Instagram
               </label>
@@ -405,7 +405,7 @@ const AdminSettings = ({ user }) => {
 
             {/* LinkedIn */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Linkedin className="h-5 w-5 text-blue-400" />
                 LinkedIn
               </label>
@@ -420,7 +420,7 @@ const AdminSettings = ({ user }) => {
 
             {/* YouTube */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Youtube className="h-5 w-5 text-red-600" />
                 YouTube
               </label>
@@ -435,7 +435,7 @@ const AdminSettings = ({ user }) => {
 
             {/* Telegram */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <Send className="h-5 w-5 text-blue-500" />
                 Telegram
               </label>
@@ -450,7 +450,7 @@ const AdminSettings = ({ user }) => {
 
             {/* WhatsApp */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
                 <MessageCircle className="h-5 w-5 text-green-600" />
                 WhatsApp
               </label>
@@ -469,7 +469,7 @@ const AdminSettings = ({ user }) => {
             <Button
               onClick={handleSave}
               disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-3 text-lg"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-slate-800 px-8 py-3 text-lg"
             >
               <Save className="h-5 w-5 mr-2" />
               {loading ? 'Saving...' : 'Save Settings'}
@@ -478,14 +478,14 @@ const AdminSettings = ({ user }) => {
         </Card>
 
         {/* Registration Control */}
-        <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
+        <Card className="p-6 shadow-xl mt-6 bg-white border-slate-200">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-100 flex items-center gap-2">
                 <Users className="h-7 w-7 text-purple-600" />
                 Registration Control
               </h2>
-              <p className="text-gray-400 mt-2">Enable or disable new user registrations on the platform</p>
+              <p className="text-slate-500 mt-2">Enable or disable new user registrations on the platform</p>
             </div>
           </div>
 
@@ -508,7 +508,7 @@ const AdminSettings = ({ user }) => {
                 </>
               )}
             </div>
-            <p className="text-sm text-gray-300 ml-9">
+            <p className="text-sm text-slate-600 ml-9">
               {registrationEnabled 
                 ? 'New users can register and create accounts on the platform.' 
                 : 'New user registrations are blocked. Existing users can still login.'}
@@ -522,8 +522,8 @@ const AdminSettings = ({ user }) => {
               disabled={loadingRegistration}
               className={`w-full sm:w-auto px-8 py-4 text-lg font-semibold ${
                 registrationEnabled
-                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : 'bg-green-600 hover:bg-green-700 text-white'
+                  ? 'bg-red-600 hover:bg-red-700 text-slate-800'
+                  : 'bg-green-600 hover:bg-green-700 text-slate-800'
               }`}
             >
               {loadingRegistration ? (
@@ -547,10 +547,10 @@ const AdminSettings = ({ user }) => {
             <div className="flex items-start gap-2 mb-3">
               <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
               <div className="flex-1">
-                <label className="text-sm font-medium text-gray-300 block mb-2">
+                <label className="text-sm font-medium text-slate-600 block mb-2">
                   Custom Message for Disabled Registration
                 </label>
-                <p className="text-xs text-gray-400 mb-3">
+                <p className="text-xs text-slate-500 mb-3">
                   This message will be shown to users when they try to register while registration is disabled.
                 </p>
               </div>
@@ -565,7 +565,7 @@ const AdminSettings = ({ user }) => {
               className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
             />
             <div className="flex items-center justify-between mt-2">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-slate-500">
                 {registrationMessage.length}/300 characters
               </p>
               <Button
@@ -594,14 +594,14 @@ const AdminSettings = ({ user }) => {
         </Card>
 
         {/* Payment Gateway Toggles */}
-        <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800" data-testid="payment-gateway-toggles">
+        <Card className="p-6 shadow-xl mt-6 bg-white border-slate-200" data-testid="payment-gateway-toggles">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-              <CreditCard className="h-6 w-6 text-white" />
+              <CreditCard className="h-6 w-6 text-slate-800" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-100">Payment Gateway Controls</h2>
-              <p className="text-gray-400">Enable or disable payment methods for subscriptions</p>
+              <p className="text-slate-500">Enable or disable payment methods for subscriptions</p>
             </div>
           </div>
 
@@ -618,8 +618,8 @@ const AdminSettings = ({ user }) => {
                     <CreditCard className={`w-6 h-6 ${razorpayEnabled ? 'text-emerald-400' : 'text-red-400'}`} />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">Razorpay Online</h3>
-                    <p className="text-gray-400 text-xs">UPI, Cards, Net Banking</p>
+                    <h3 className="text-slate-800 font-semibold">Razorpay Online</h3>
+                    <p className="text-slate-500 text-xs">UPI, Cards, Net Banking</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -634,7 +634,7 @@ const AdminSettings = ({ user }) => {
                   )}
                 </div>
               </div>
-              <p className="text-gray-400 text-sm mb-4">
+              <p className="text-slate-500 text-sm mb-4">
                 {razorpayEnabled 
                   ? 'Users can pay via Razorpay for instant subscription activation.' 
                   : 'Online payment is disabled. Users cannot use Razorpay.'}
@@ -644,8 +644,8 @@ const AdminSettings = ({ user }) => {
                 disabled={togglingRazorpay}
                 className={`w-full ${
                   razorpayEnabled
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    ? 'bg-red-600 hover:bg-red-700 text-slate-800'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-slate-800'
                 }`}
                 data-testid="toggle-razorpay-btn"
               >
@@ -677,8 +677,8 @@ const AdminSettings = ({ user }) => {
                     <IndianRupee className={`w-6 h-6 ${manualPaymentEnabled ? 'text-amber-400' : 'text-red-400'}`} />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">Manual UPI/Bank</h3>
-                    <p className="text-gray-400 text-xs">Screenshot Upload</p>
+                    <h3 className="text-slate-800 font-semibold">Manual UPI/Bank</h3>
+                    <p className="text-slate-500 text-xs">Screenshot Upload</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -693,7 +693,7 @@ const AdminSettings = ({ user }) => {
                   )}
                 </div>
               </div>
-              <p className="text-gray-400 text-sm mb-4">
+              <p className="text-slate-500 text-sm mb-4">
                 {manualPaymentEnabled 
                   ? 'Users can pay manually via UPI/Bank transfer with screenshot upload.' 
                   : 'Manual payment is disabled. Users cannot use UPI/Bank transfer.'}
@@ -703,8 +703,8 @@ const AdminSettings = ({ user }) => {
                 disabled={togglingManual}
                 className={`w-full ${
                   manualPaymentEnabled
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-amber-600 hover:bg-amber-700 text-white'
+                    ? 'bg-red-600 hover:bg-red-700 text-slate-800'
+                    : 'bg-amber-600 hover:bg-amber-700 text-slate-800'
                 }`}
                 data-testid="toggle-manual-payment-btn"
               >
@@ -725,17 +725,17 @@ const AdminSettings = ({ user }) => {
             </div>
 
             {/* PRC Payment Gateway Card */}
-            <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                     prcPaymentEnabled ? 'bg-purple-500/20' : 'bg-gray-700'
                   }`}>
-                    <Coins className={`w-6 h-6 ${prcPaymentEnabled ? 'text-purple-400' : 'text-gray-500'}`} />
+                    <Coins className={`w-6 h-6 ${prcPaymentEnabled ? 'text-purple-400' : 'text-slate-500'}`} />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">Pay with PRC</h3>
-                    <p className="text-gray-400 text-xs">From Redeem Limit</p>
+                    <h3 className="text-slate-800 font-semibold">Pay with PRC</h3>
+                    <p className="text-slate-500 text-xs">From Redeem Limit</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -750,7 +750,7 @@ const AdminSettings = ({ user }) => {
                   )}
                 </div>
               </div>
-              <p className="text-gray-400 text-sm mb-4">
+              <p className="text-slate-500 text-sm mb-4">
                 {prcPaymentEnabled 
                   ? 'Users can pay for subscription using their PRC from redeem limit.' 
                   : 'PRC payment is disabled. Users cannot use PRC for subscription.'}
@@ -760,8 +760,8 @@ const AdminSettings = ({ user }) => {
                 disabled={togglingPrc}
                 className={`w-full ${
                   prcPaymentEnabled
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    ? 'bg-red-600 hover:bg-red-700 text-slate-800'
+                    : 'bg-purple-600 hover:bg-purple-700 text-slate-800'
                 }`}
                 data-testid="toggle-prc-payment-btn"
               >
@@ -800,17 +800,17 @@ const AdminSettings = ({ user }) => {
         </Card>
 
         {/* Elite Payment Settings */}
-        <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
+        <Card className="p-6 shadow-xl mt-6 bg-white border-slate-200">
           <h2 className="text-2xl font-bold mb-6 text-gray-100">💳 Elite Payment Settings</h2>
-          <p className="text-gray-400 mb-8">Configure payment details for Elite membership purchases. Users will see these details when purchasing Elite.</p>
+          <p className="text-slate-500 mb-8">Configure payment details for Elite membership purchases. Users will see these details when purchasing Elite.</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* UPI Settings */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-300 border-b pb-2">UPI Payment</h3>
+              <h3 className="text-lg font-semibold text-slate-600 border-b pb-2">UPI Payment</h3>
               
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">UPI ID</label>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">UPI ID</label>
                 <input
                   type="text"
                   placeholder="yourname@upi"
@@ -821,7 +821,7 @@ const AdminSettings = ({ user }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">QR Code Image</label>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">QR Code Image</label>
                 <input 
                   ref={qrInputRef}
                   type="file" 
@@ -852,27 +852,27 @@ const AdminSettings = ({ user }) => {
                       <img 
                         src={paymentConfig.qr_code_url} 
                         alt="QR Code Preview" 
-                        className="w-24 h-24 object-contain border rounded-lg bg-gray-900"
+                        className="w-24 h-24 object-contain border rounded-lg bg-white"
                       />
                       <button
                         onClick={() => handlePaymentConfigChange('qr_code_url', '')}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500/10 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500/10 text-slate-800 rounded-full flex items-center justify-center text-xs hover:bg-red-600"
                       >
                         ×
                       </button>
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">Max 2MB • JPG, PNG supported</p>
+                <p className="text-xs text-slate-500 mt-2">Max 2MB • JPG, PNG supported</p>
               </div>
             </div>
 
             {/* Bank Transfer Settings */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-300 border-b pb-2">Bank Transfer</h3>
+              <h3 className="text-lg font-semibold text-slate-600 border-b pb-2">Bank Transfer</h3>
               
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Account Holder Name</label>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">Account Holder Name</label>
                 <input
                   type="text"
                   placeholder="PARAS REWARD PVT LTD"
@@ -883,7 +883,7 @@ const AdminSettings = ({ user }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Bank Name</label>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">Bank Name</label>
                 <input
                   type="text"
                   placeholder="State Bank of India"
@@ -894,7 +894,7 @@ const AdminSettings = ({ user }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Account Number</label>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">Account Number</label>
                 <input
                   type="text"
                   placeholder="1234567890"
@@ -905,7 +905,7 @@ const AdminSettings = ({ user }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">IFSC Code</label>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">IFSC Code</label>
                 <input
                   type="text"
                   placeholder="SBIN0001234"
@@ -919,7 +919,7 @@ const AdminSettings = ({ user }) => {
 
           {/* Instructions */}
           <div className="mt-6">
-            <label className="text-sm font-medium text-gray-300 mb-2 block">Payment Instructions</label>
+            <label className="text-sm font-medium text-slate-600 mb-2 block">Payment Instructions</label>
             <textarea
               rows={3}
               placeholder="Enter instructions for users making VIP payment..."
@@ -934,7 +934,7 @@ const AdminSettings = ({ user }) => {
             <Button
               onClick={handleSavePaymentConfig}
               disabled={savingPayment}
-              className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 font-semibold"
+              className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 text-slate-800 px-8 py-3 font-semibold"
             >
               {savingPayment ? (
                 'Saving...'
@@ -963,24 +963,24 @@ const AdminSettings = ({ user }) => {
         </Card>
 
         {/* Redemption Charges Settings */}
-        <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
+        <Card className="p-6 shadow-xl mt-6 bg-white border-slate-200">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
-              <Receipt className="h-6 w-6 text-white" />
+              <Receipt className="h-6 w-6 text-slate-800" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-100">Redemption Charges</h2>
-              <p className="text-gray-400">Configure charges for Bill Payments & Gift Vouchers</p>
+              <p className="text-slate-500">Configure charges for Bill Payments & Gift Vouchers</p>
             </div>
           </div>
 
           {/* Formula Display */}
           <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-xl p-4 mb-6">
             <p className="text-emerald-400 text-sm font-semibold mb-2">Charge Formula:</p>
-            <p className="text-white font-mono text-sm">
+            <p className="text-slate-800 font-mono text-sm">
               Total PRC = (Amount + Processing Fee + Admin Charges) × 10
             </p>
-            <p className="text-gray-400 text-xs mt-2">
+            <p className="text-slate-500 text-xs mt-2">
               Where: Processing Fee = Flat ₹{redemptionCharges.processing_fee_inr}, Admin = {redemptionCharges.admin_charge_percent}% of Amount, 10 PRC = ₹1
             </p>
           </div>
@@ -998,7 +998,7 @@ const AdminSettings = ({ user }) => {
                 step="1"
                 value={redemptionCharges.processing_fee_inr}
                 onChange={(e) => setRedemptionCharges(prev => ({ ...prev, processing_fee_inr: parseFloat(e.target.value) || 0 }))}
-                className="w-full px-4 py-3 border border-orange-500/30 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-900 text-gray-200 font-mono text-lg"
+                className="w-full px-4 py-3 border border-orange-500/30 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white text-gray-200 font-mono text-lg"
               />
               <p className="text-sm text-orange-400/80 mt-2">
                 Flat fee charged on every redemption
@@ -1018,7 +1018,7 @@ const AdminSettings = ({ user }) => {
                 step="1"
                 value={redemptionCharges.admin_charge_percent}
                 onChange={(e) => setRedemptionCharges(prev => ({ ...prev, admin_charge_percent: parseFloat(e.target.value) || 0 }))}
-                className="w-full px-4 py-3 border border-purple-500/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-900 text-gray-200 font-mono text-lg"
+                className="w-full px-4 py-3 border border-purple-500/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-200 font-mono text-lg"
               />
               <p className="text-sm text-purple-400/80 mt-2">
                 Percentage of bill amount as admin fee
@@ -1027,22 +1027,22 @@ const AdminSettings = ({ user }) => {
           </div>
 
           {/* Example Calculation */}
-          <div className="mt-6 bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <p className="text-gray-400 text-sm font-semibold mb-3">Example: ₹100 Bill Payment</p>
+          <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <p className="text-slate-500 text-sm font-semibold mb-3">Example: ₹100 Bill Payment</p>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">Bill Amount</span>
-                <span className="text-white">₹100 = 1000 PRC</span>
+                <span className="text-slate-500">Bill Amount</span>
+                <span className="text-slate-800">₹100 = 1000 PRC</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Processing Fee</span>
+                <span className="text-slate-500">Processing Fee</span>
                 <span className="text-orange-400">+ ₹{redemptionCharges.processing_fee_inr} = {redemptionCharges.processing_fee_inr * 10} PRC</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Admin Charges ({redemptionCharges.admin_charge_percent}%)</span>
+                <span className="text-slate-500">Admin Charges ({redemptionCharges.admin_charge_percent}%)</span>
                 <span className="text-purple-400">+ ₹{100 * redemptionCharges.admin_charge_percent / 100} = {100 * redemptionCharges.admin_charge_percent / 100 * 10} PRC</span>
               </div>
-              <div className="flex justify-between pt-2 border-t border-gray-700 font-semibold">
+              <div className="flex justify-between pt-2 border-t border-slate-200 font-semibold">
                 <span className="text-amber-400">Total User Pays</span>
                 <span className="text-amber-400">₹{100 + redemptionCharges.processing_fee_inr + (100 * redemptionCharges.admin_charge_percent / 100)} = {(100 + redemptionCharges.processing_fee_inr + (100 * redemptionCharges.admin_charge_percent / 100)) * 10} PRC</span>
               </div>
@@ -1053,7 +1053,7 @@ const AdminSettings = ({ user }) => {
             <Button 
               onClick={handleSaveRedemptionCharges}
               disabled={savingRedemption}
-              className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold rounded-lg hover:from-emerald-600 hover:to-teal-700"
+              className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-800 font-semibold rounded-lg hover:from-emerald-600 hover:to-teal-700"
             >
               {savingRedemption ? 'Saving...' : 'Save Charges'}
             </Button>

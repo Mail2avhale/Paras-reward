@@ -93,18 +93,15 @@ const AdminLayout = ({ children, user, onLogout }) => {
   useEffect(() => {
     const fetchPendingCounts = async () => {
       try {
-        // Use Promise.allSettled to handle individual API failures gracefully
         const results = await Promise.allSettled([
           axios.get(`${API}/kyc/stats`),
           axios.get(`${API}/admin/vip-payments?status=pending&limit=1`),
           axios.get(`${API}/admin/bill-payment/requests?status=pending&limit=1`),
           axios.get(`${API}/admin/gift-voucher/requests?status=pending&limit=1`),
-          // luxury-claims API call REMOVED - feature deprecated
           axios.get(`${API}/admin/bank-redeem/requests?status=pending&page=1&limit=1`),
           axios.get(`${API}/rd/admin/redeem-requests?status=pending&skip=0&limit=1`)
         ]);
         
-        // Extract values safely
         const getValue = (result, extractor, defaultVal = 0) => {
           if (result.status === 'fulfilled') {
             try {
@@ -121,7 +118,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
           subscriptions: getValue(results[1], d => d?.total || d?.payments?.length),
           bills: getValue(results[2], d => d?.stats?.pending || d?.total),
           gifts: getValue(results[3], d => d?.stats?.pending || d?.requests?.length || d?.total),
-          // luxury count REMOVED - feature deprecated
           bankWithdrawals: getValue(results[4], d => d?.stats?.pending?.count || d?.total),
           rdRedeem: getValue(results[5], d => d?.stats?.pending || d?.total)
         });
@@ -131,7 +127,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
     };
     
     fetchPendingCounts();
-    // Refresh counts every 2 minutes
     const interval = setInterval(fetchPendingCounts, 120000);
     return () => clearInterval(interval);
   }, []);
@@ -145,10 +140,9 @@ const AdminLayout = ({ children, user, onLogout }) => {
           setUserPermissions(response.data.permissions || []);
         } catch (error) {
           console.error('Error fetching permissions:', error);
-          setUserPermissions(['users', 'subscription_payment', 'kyc']); // Default permissions
+          setUserPermissions(['users', 'subscription_payment', 'kyc']);
         }
       } else if (user?.role === 'admin') {
-        // Admin has all permissions
         setUserPermissions(['all']);
       }
       setPermissionsLoaded(true);
@@ -156,7 +150,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
     fetchPermissions();
   }, [user]);
 
-  // Check if user has permission for a menu item
   const hasPermission = (menuId) => {
     if (user?.role === 'admin') return true;
     if (!permissionsLoaded) return false;
@@ -164,31 +157,24 @@ const AdminLayout = ({ children, user, onLogout }) => {
     return userPermissions.includes(permissionId) || userPermissions.includes('all');
   };
 
-  // Regular menu items (not grouped) - Simplified and organized
+  // Regular menu items
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },
-    // Orders removed - Marketplace deprecated (December 2025)
-    // Delivery Partners removed - feature deprecated
-    // Marketplace removed - feature deprecated
-    // Chatbot Withdrawals removed - feature deprecated (March 2026)
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
     { id: 'performance-report', label: 'Admin Performance', icon: Award, path: '/admin/performance-report' },
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
     { id: 'contact-submissions', label: 'Contact Inquiries', icon: Mail, path: '/admin/contact-submissions' },
   ];
 
-  // Grouped menu items - Simplified structure
-  // Pending counts mapping for Request Approvals sub-items
   const pendingCountsMap = {
     'kyc': pendingCounts.kyc,
     'subscriptions': pendingCounts.subscriptions,
     'bill-payments': pendingCounts.bills,
     'gift-vouchers': pendingCounts.gifts,
     'bank-withdrawals': pendingCounts.bankWithdrawals
-    // recurring-deposits REMOVED - feature deprecated
   };
   
   const totalPendingApprovals = pendingCounts.kyc + pendingCounts.subscriptions + pendingCounts.bills + pendingCounts.gifts + pendingCounts.bankWithdrawals;
@@ -203,14 +189,9 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'bank-transfers', label: 'Redeem to Bank', icon: Banknote, path: '/admin/bank-transfers', highlight: true },
         { id: 'subscriptions', label: 'Subscription', icon: Crown, path: '/admin/subscriptions', pendingCount: pendingCounts.subscriptions },
         { id: 'razorpay-subs', label: 'Razorpay Payments', icon: CreditCard, path: '/admin/razorpay-subscriptions', highlight: true },
-        // redeem-v2 (AdminRedeemDashboard) REMOVED - deprecated March 2026
         { id: 'bbps-dashboard', label: 'BBPS Instant', icon: Activity, path: '/admin/bbps', highlight: true },
-        // DMT Bank Transfer removed - Eko API not working
-        // unified-payments removed - all pending rejected + refunded
         { id: 'eko-services', label: 'Eko Direct Services', icon: Zap, path: '/admin/eko-services', highlight: true },
-        // bill-payments removed - all pending rejected + refunded
         { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers', pendingCount: pendingCounts.gifts },
-        // recurring-deposits REMOVED - feature deprecated
       ]
     },
     finance: {
@@ -236,7 +217,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/admin/security' },
         { id: 'fraud-dashboard', label: 'Fraud Detection', icon: ShieldAlert, path: '/admin/fraud-dashboard' },
         { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
-        // PRC Burn Control - REMOVED (old system deprecated)
         { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/admin/data-backup' },
       ]
     },
@@ -255,30 +235,22 @@ const AdminLayout = ({ children, user, onLogout }) => {
     }
   };
 
-  // Map route paths to permission IDs (Cleaned - March 2026)
   const ROUTE_TO_PERMISSION = {
-    // General
     '/admin/members': 'members',
     '/admin/user360': 'user360',
     '/admin/analytics': 'analytics',
     '/admin/performance-report': 'performance-report',
-    
-    // Operations
     '/admin/kyc': 'kyc',
     '/admin/support': 'support',
     '/admin/contact-submissions': 'contact-submissions',
     '/admin/popup-messages': 'popup-messages',
     '/admin/error-monitor': 'error-monitor',
-    
-    // Payments
     '/admin/subscriptions': 'subscriptions',
     '/admin/bank-transfers': 'bank-transfers',
     '/admin/razorpay-subscriptions': 'razorpay-subs',
     '/admin/bbps': 'bbps-dashboard',
     '/admin/eko-services': 'eko-services',
     '/admin/gift-vouchers': 'gift-vouchers',
-    
-    // Finance
     '/admin/accounting': 'accounting',
     '/admin/company-wallets': 'company-wallets',
     '/admin/prc-analytics': 'prc-analytics',
@@ -286,46 +258,31 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/profit-loss': 'profit-loss',
     '/admin/user-ledger': 'user-ledger',
     '/admin/liquidity': 'liquidity',
-    
-    // Security
     '/admin/fraud-dashboard': 'fraud-dashboard',
     '/admin/fraud-alerts': 'fraud-alerts',
     '/admin/security': 'security',
     '/admin/prc-economy': 'prc-economy',
     '/admin/data-backup': 'data-backup',
-    
-    // Settings
     '/admin/settings-hub': 'settings-hub',
   };
 
-  // Check route permissions and redirect if unauthorized
   useEffect(() => {
-    // Wait for permissions to load before checking
     if (!permissionsLoaded) return;
-    
-    // Admin has full access
     if (user?.role === 'admin') return;
-    
-    // Dashboard is always accessible
     if (location.pathname === '/admin') return;
     
     const currentPath = location.pathname;
     const requiredPermission = ROUTE_TO_PERMISSION[currentPath];
     
-    // If this route requires a permission, check it
     if (requiredPermission) {
       const hasAccess = userPermissions.includes(requiredPermission);
-      // console.log(`Route ${currentPath} requires ${requiredPermission}, user has: ${hasAccess}`);
-      
       if (!hasAccess) {
-        // console.log(`Access denied to ${currentPath}, redirecting to /admin`);
         navigate('/admin');
       }
     }
   }, [location.pathname, permissionsLoaded, userPermissions, user, navigate]);
 
   const isActive = (path) => {
-    // Handle paths with query params
     if (path.includes('?')) {
       const [pathname, search] = path.split('?');
       return location.pathname === pathname && location.search.includes(search);
@@ -355,38 +312,37 @@ const AdminLayout = ({ children, user, onLogout }) => {
     setMobileMenuOpen(false);
   };
 
-  // Filter menu items based on permissions
   const filteredMenuItems = menuItems.filter(item => hasPermission(item.id));
   
-  // Filter grouped menu items based on permissions
   const getFilteredSubItems = (groupKey) => {
     return menuGroups[groupKey].subItems.filter(item => hasPermission(item.id));
   };
 
-  // Render a single menu item
+  // Render a single menu item - BULKPE STYLE
   const renderMenuItem = (item, isSubItem = false) => {
     const Icon = item.icon;
     const active = isActive(item.path);
     return (
       <button
         key={item.id}
+        data-testid={`admin-sidebar-${item.id}`}
         onClick={() => handleNavigation(item.path)}
-        className={`w-full flex items-center gap-3 px-4 py-3 transition-colors ${
+        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mx-2 my-0.5 transition-colors duration-200 ${
           isSubItem ? 'pl-10' : ''
         } ${
           active
-            ? 'bg-purple-600 text-white'
-            : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+            ? 'bg-purple-600 text-white shadow-lg shadow-purple-200'
+            : 'text-slate-600 hover:bg-purple-50 hover:text-purple-700'
         }`}
         title={sidebarCollapsed ? item.label : ''}
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
-        {!sidebarCollapsed && <span className="text-sm">{item.label}</span>}
+        {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
       </button>
     );
   };
 
-  // Render a group header with expandable sub-items
+  // Render a group header - BULKPE STYLE
   const renderMenuGroup = (groupKey) => {
     const group = menuGroups[groupKey];
     const Icon = group.icon;
@@ -395,42 +351,41 @@ const AdminLayout = ({ children, user, onLogout }) => {
     const filteredSubItems = getFilteredSubItems(groupKey);
     const showTotalBadge = groupKey === 'requestApprovals' && group.totalPending > 0;
     
-    // Don't render group if no items are accessible
     if (filteredSubItems.length === 0) return null;
 
     return (
-      <div key={groupKey}>
+      <div key={groupKey} className="mb-1">
         <button
+          data-testid={`admin-sidebar-group-${groupKey}`}
           onClick={() => !sidebarCollapsed && toggleGroup(groupKey)}
-          className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${
+          className={`w-full flex items-center justify-between px-4 py-3 mx-2 rounded-xl transition-colors duration-200 ${
             groupActive
-              ? 'bg-purple-900/50 text-purple-300 border-l-2 border-purple-500'
-              : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              ? 'bg-purple-50 text-purple-700 border-l-4 border-purple-600'
+              : 'text-slate-600 hover:bg-slate-50'
           }`}
           title={sidebarCollapsed ? group.label : ''}
         >
           <div className="flex items-center gap-3">
             <Icon className="h-5 w-5 flex-shrink-0" />
             {!sidebarCollapsed && (
-              <span className="text-sm font-medium">{group.label}</span>
+              <span className="text-sm font-semibold">{group.label}</span>
             )}
-            {/* Total pending badge for Request Approvals */}
             {!sidebarCollapsed && showTotalBadge && (
-              <span className="px-1.5 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[20px] text-center">
+              <span className="px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[22px] text-center">
                 {group.totalPending > 99 ? '99+' : group.totalPending}
               </span>
             )}
           </div>
           {!sidebarCollapsed && (
             <ChevronDown 
-              className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+              className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} 
             />
           )}
         </button>
         
         {/* Sub-items */}
         {!sidebarCollapsed && isExpanded && (
-          <div className="bg-gray-950/50">
+          <div className="mt-1 space-y-0.5">
             {filteredSubItems.map((subItem) => {
               const SubIcon = subItem.icon;
               const active = isActive(subItem.path);
@@ -438,21 +393,21 @@ const AdminLayout = ({ children, user, onLogout }) => {
               return (
                 <button
                   key={subItem.id}
+                  data-testid={`admin-sidebar-${subItem.id}`}
                   onClick={() => handleNavigation(subItem.path)}
-                  className={`w-full flex items-center justify-between pl-10 pr-4 py-2.5 transition-colors ${
+                  className={`w-full flex items-center justify-between pl-12 pr-4 py-2.5 mx-2 rounded-xl transition-colors duration-200 ${
                     active
                       ? 'bg-purple-600 text-white'
-                      : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                      : 'text-slate-500 hover:bg-purple-50 hover:text-purple-700'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <SubIcon className="h-4 w-4 flex-shrink-0" />
                     <span className="text-sm">{subItem.label}</span>
                   </div>
-                  {/* Individual pending count badge */}
                   {hasPending && (
-                    <span className={`px-1.5 py-0.5 text-xs font-bold rounded-full min-w-[20px] text-center ${
-                      active ? 'bg-white/20 text-white' : 'bg-amber-500 text-black'
+                    <span className={`px-2 py-0.5 text-xs font-bold rounded-full min-w-[22px] text-center ${
+                      active ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {subItem.pendingCount > 99 ? '99+' : subItem.pendingCount}
                     </span>
@@ -466,7 +421,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     );
   };
 
-  // Render mobile menu group
+  // Render mobile menu group - BULKPE STYLE
   const renderMobileMenuGroup = (groupKey) => {
     const group = menuGroups[groupKey];
     const Icon = group.icon;
@@ -475,36 +430,34 @@ const AdminLayout = ({ children, user, onLogout }) => {
     const filteredSubItems = getFilteredSubItems(groupKey);
     const showTotalBadge = groupKey === 'requestApprovals' && group.totalPending > 0;
     
-    // Don't render group if no items are accessible
     if (filteredSubItems.length === 0) return null;
 
     return (
-      <div key={groupKey}>
+      <div key={groupKey} className="mb-1">
         <button
           onClick={() => toggleGroup(groupKey)}
-          className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${
+          className={`w-full flex items-center justify-between px-4 py-3 mx-2 rounded-xl transition-colors duration-200 ${
             groupActive
-              ? 'bg-purple-900/50 text-purple-300 border-l-2 border-purple-500'
-              : 'text-gray-300 hover:bg-gray-800'
+              ? 'bg-purple-50 text-purple-700'
+              : 'text-slate-600 hover:bg-slate-50'
           }`}
         >
           <div className="flex items-center gap-3">
             <Icon className="h-5 w-5" />
-            <span className="text-sm font-medium">{group.label}</span>
-            {/* Total pending badge for Request Approvals */}
+            <span className="text-sm font-semibold">{group.label}</span>
             {showTotalBadge && (
-              <span className="px-1.5 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[20px] text-center">
+              <span className="px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full">
                 {group.totalPending > 99 ? '99+' : group.totalPending}
               </span>
             )}
           </div>
           <ChevronDown 
-            className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+            className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} 
           />
         </button>
         
         {isExpanded && (
-          <div className="bg-gray-950/50">
+          <div className="mt-1 space-y-0.5">
             {filteredSubItems.map((subItem) => {
               const SubIcon = subItem.icon;
               const active = isActive(subItem.path);
@@ -513,20 +466,19 @@ const AdminLayout = ({ children, user, onLogout }) => {
                 <button
                   key={subItem.id}
                   onClick={() => handleNavigation(subItem.path)}
-                  className={`w-full flex items-center justify-between pl-10 pr-4 py-2.5 transition-colors ${
+                  className={`w-full flex items-center justify-between pl-12 pr-4 py-2.5 mx-2 rounded-xl transition-colors duration-200 ${
                     active
                       ? 'bg-purple-600 text-white'
-                      : 'text-gray-400 hover:bg-gray-800'
+                      : 'text-slate-500 hover:bg-purple-50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <SubIcon className="h-4 w-4" />
                     <span className="text-sm">{subItem.label}</span>
                   </div>
-                  {/* Individual pending count badge */}
                   {hasPending && (
-                    <span className={`px-1.5 py-0.5 text-xs font-bold rounded-full min-w-[20px] text-center ${
-                      active ? 'bg-white/20 text-white' : 'bg-amber-500 text-black'
+                    <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                      active ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {subItem.pendingCount > 99 ? '99+' : subItem.pendingCount}
                     </span>
@@ -541,33 +493,33 @@ const AdminLayout = ({ children, user, onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex dark" data-admin="true">
-      {/* Sidebar - Desktop */}
+    <div className="min-h-screen bg-white flex" data-admin="true" data-testid="admin-layout">
+      {/* Sidebar - Desktop - BULKPE STYLE */}
       <aside
-        className={`hidden lg:flex flex-col bg-gray-900 text-white transition-all duration-300 border-r border-gray-800 ${
-          sidebarCollapsed ? 'w-20' : 'w-64'
+        className={`hidden lg:flex flex-col bg-white border-r border-slate-200 transition-all duration-300 shadow-sm ${
+          sidebarCollapsed ? 'w-20' : 'w-72'
         }`}
       >
         {/* Logo */}
-        <div className="p-4 border-b border-gray-800">
+        <div className="p-5 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="Logo" className="h-10 w-10 rounded-xl" />
+            <img src={LOGO_URL} alt="Logo" className="h-11 w-11 rounded-xl shadow-md" />
             {!sidebarCollapsed && (
               <div>
-                <h1 className="font-bold text-lg">PARAS REWARD</h1>
-                <p className="text-xs text-gray-500">Admin Panel</p>
+                <h1 className="font-bold text-lg text-slate-800 tracking-tight">PARAS REWARD</h1>
+                <p className="text-xs text-slate-400 font-medium">Admin Panel</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Menu */}
-        <nav className="flex-1 overflow-y-auto py-4">
-          {/* Regular menu items - filtered by permissions */}
+        <nav className="flex-1 overflow-y-auto py-4 px-2">
+          {/* Regular menu items */}
           {filteredMenuItems.map((item) => renderMenuItem(item))}
           
           {/* Divider */}
-          <div className="my-2 mx-4 border-t border-gray-800"></div>
+          <div className="my-4 mx-4 border-t border-slate-200"></div>
           
           {/* Request Approvals Group */}
           {renderMenuGroup('requestApprovals')}
@@ -584,8 +536,9 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
         {/* Collapse Toggle */}
         <button
+          data-testid="admin-sidebar-collapse"
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="p-4 border-t border-gray-800 flex items-center justify-center hover:bg-gray-800"
+          className="p-4 border-t border-slate-100 flex items-center justify-center hover:bg-slate-50 text-slate-400 transition-colors duration-200"
         >
           {sidebarCollapsed ? (
             <ChevronRight className="h-5 w-5" />
@@ -595,16 +548,17 @@ const AdminLayout = ({ children, user, onLogout }) => {
         </button>
 
         {/* User & Logout */}
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
           {!sidebarCollapsed && (
             <div className="mb-3">
-              <p className="text-sm font-medium truncate">{user?.name || 'Admin'}</p>
-              <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+              <p className="text-sm font-semibold text-slate-800 truncate">{user?.name || 'Admin'}</p>
+              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
             </div>
           )}
           <button
+            data-testid="admin-logout-btn"
             onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm text-white font-medium transition-colors duration-200"
             title="Logout"
           >
             <LogOut className="h-4 w-4" />
@@ -613,28 +567,27 @@ const AdminLayout = ({ children, user, onLogout }) => {
         </div>
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar Overlay - BULKPE STYLE */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-gray-900 text-white overflow-y-auto">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-80 bg-white shadow-2xl overflow-y-auto rounded-r-3xl">
             {/* Mobile Header */}
-            <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img src={LOGO_URL} alt="Logo" className="h-10 w-10 rounded-xl" />
+                <img src={LOGO_URL} alt="Logo" className="h-11 w-11 rounded-xl shadow-md" />
                 <div>
-                  <h1 className="font-bold">PARAS REWARD</h1>
-                  <p className="text-xs text-gray-400">Admin Panel</p>
+                  <h1 className="font-bold text-slate-800">PARAS REWARD</h1>
+                  <p className="text-xs text-slate-400">Admin Panel</p>
                 </div>
               </div>
-              <button onClick={() => setMobileMenuOpen(false)} className="p-2 hover:bg-gray-800 rounded-lg">
+              <button onClick={() => setMobileMenuOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-500">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Mobile Menu */}
-            <nav className="py-4">
-              {/* Regular menu items - filtered by permissions */}
+            <nav className="py-4 px-2">
               {filteredMenuItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
@@ -642,43 +595,36 @@ const AdminLayout = ({ children, user, onLogout }) => {
                   <button
                     key={item.id}
                     onClick={() => handleNavigation(item.path)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 transition-colors ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-colors duration-200 ${
                       active
                         ? 'bg-purple-600 text-white'
-                        : 'text-gray-300 hover:bg-gray-800'
+                        : 'text-slate-600 hover:bg-purple-50'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
-                    <span className="text-sm">{item.label}</span>
+                    <span className="text-sm font-medium">{item.label}</span>
                   </button>
                 );
               })}
               
               {/* Divider */}
-              <div className="my-2 mx-4 border-t border-gray-800"></div>
+              <div className="my-4 mx-4 border-t border-slate-200"></div>
               
-              {/* Request Approvals Group */}
               {renderMobileMenuGroup('requestApprovals')}
-              
-              {/* Finance Group */}
               {renderMobileMenuGroup('finance')}
-              
-              {/* Controls & Security Group */}
               {renderMobileMenuGroup('controls')}
-              
-              {/* Settings Group */}
               {renderMobileMenuGroup('settings')}
             </nav>
 
             {/* Mobile User & Logout */}
-            <div className="p-4 border-t border-gray-800">
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50">
               <div className="mb-3">
-                <p className="text-sm font-medium">{user?.name || 'Admin'}</p>
-                <p className="text-xs text-gray-400">{user?.email}</p>
+                <p className="text-sm font-semibold text-slate-800">{user?.name || 'Admin'}</p>
+                <p className="text-xs text-slate-400">{user?.email}</p>
               </div>
               <button
                 onClick={onLogout}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm text-white font-medium"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>
@@ -690,34 +636,46 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Top Bar - Dark Theme */}
-        <header className="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+        {/* Top Bar - BULKPE STYLE */}
+        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
           <div className="flex items-center gap-4">
             <button
+              data-testid="admin-mobile-menu"
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-800 rounded-lg text-gray-300"
+              className="lg:hidden p-2 hover:bg-slate-100 rounded-xl text-slate-600"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h2 className="text-lg font-semibold text-white">Admin Dashboard</h2>
+            <h2 className="text-lg font-semibold text-slate-800 tracking-tight">Admin Dashboard</h2>
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="p-2 hover:bg-gray-800 rounded-lg relative">
-              <Bell className="h-5 w-5 text-gray-400" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+            <button 
+              data-testid="admin-notifications"
+              className="p-2.5 hover:bg-slate-100 rounded-xl relative text-slate-600 transition-colors duration-200"
+            >
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 rounded-full">
-              <Shield className="h-4 w-4 text-purple-400" />
-              <span className="text-sm font-medium text-purple-300">Admin</span>
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-xl border border-purple-100">
+              <Shield className="h-4 w-4 text-purple-600" />
+              <span className="text-sm font-semibold text-purple-700">Admin</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white font-bold shadow-md">
+              {user?.name?.charAt(0)?.toUpperCase() || 'A'}
             </div>
           </div>
         </header>
 
-        {/* Page Content - Dark Background */}
-        <main className="flex-1 overflow-auto bg-gray-950 p-6">
+        {/* Page Content - BULKPE STYLE - Light Cream Background */}
+        <main className="flex-1 overflow-auto bg-white p-6 lg:p-8" data-testid="admin-main-content">
           {children}
         </main>
+
+        {/* Footer */}
+        <footer className="bg-white border-t border-slate-200 px-6 py-3 text-center">
+          <p className="text-xs text-slate-400">© 2021 - 2026 Paras Reward Technologies</p>
+        </footer>
       </div>
     </div>
   );

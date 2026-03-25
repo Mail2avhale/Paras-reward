@@ -86,7 +86,7 @@ const AdminFinancialReports = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-financial-reports">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6" data-testid="admin-financial-reports">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -94,7 +94,7 @@ const AdminFinancialReports = ({ user }) => {
             <FileText className="h-7 w-7 text-purple-600" />
             Financial Reports
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Monthly P&L, Balance Sheet, and PRC Flow Reports</p>
+          <p className="text-sm text-slate-500 mt-1">Monthly P&L, Balance Sheet, and PRC Flow Reports</p>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           {/* Month/Year Selector */}
@@ -136,7 +136,7 @@ const AdminFinancialReports = ({ user }) => {
             className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
               activeReport === tab.id
                 ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-300'
+                : 'border-transparent text-slate-500 hover:text-slate-600'
             }`}
             data-testid={`tab-${tab.id}`}
           >
@@ -159,22 +159,22 @@ const AdminFinancialReports = ({ user }) => {
           >
             {/* P&L Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+              <Card className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 text-slate-800">
                 <p className="text-green-100 text-sm">Total Income</p>
                 <h2 className="text-2xl font-bold mt-1">{formatCurrency(pnlData.income?.total)}</h2>
                 <ArrowUpRight className="h-5 w-5 mt-2 opacity-60" />
               </Card>
-              <Card className="p-5 bg-gradient-to-br from-red-500 to-rose-600 text-white">
+              <Card className="p-5 bg-gradient-to-br from-red-500 to-rose-600 text-slate-800">
                 <p className="text-red-100 text-sm">Total Expenses</p>
                 <h2 className="text-2xl font-bold mt-1">{formatCurrency(pnlData.expenses?.total)}</h2>
                 <ArrowDownRight className="h-5 w-5 mt-2 opacity-60" />
               </Card>
-              <Card className={`p-5 text-white ${pnlData.net_profit >= 0 ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-orange-500 to-red-600'}`}>
+              <Card className={`p-5 text-slate-800 ${pnlData.net_profit >= 0 ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-orange-500 to-red-600'}`}>
                 <p className="text-blue-100 text-sm">{pnlData.net_profit >= 0 ? 'Net Profit' : 'Net Loss'}</p>
                 <h2 className="text-2xl font-bold mt-1">{formatCurrency(Math.abs(pnlData.net_profit))}</h2>
                 <span className="text-sm mt-2 opacity-75">{pnlData.profit_margin}% margin</span>
               </Card>
-              <Card className="p-5 bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+              <Card className="p-5 bg-gradient-to-br from-amber-500 to-orange-600 text-slate-800">
                 <p className="text-amber-100 text-sm">PRC Net Liability</p>
                 <h2 className="text-2xl font-bold mt-1">{formatCurrency(pnlData.prc_metrics?.net_liability)}</h2>
                 <Coins className="h-5 w-5 mt-2 opacity-60" />
@@ -189,12 +189,12 @@ const AdminFinancialReports = ({ user }) => {
                   Income Breakdown
                 </h3>
                 {Object.keys(pnlData.income?.categories || {}).length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No income recorded this month</p>
+                  <p className="text-slate-500 text-center py-4">No income recorded this month</p>
                 ) : (
                   <div className="space-y-3">
                     {Object.entries(pnlData.income?.categories || {}).map(([category, amount]) => (
                       <div key={category} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
-                        <span className="text-sm font-medium text-gray-300 capitalize">
+                        <span className="text-sm font-medium text-slate-600 capitalize">
                           {category.replace('_', ' ')}
                         </span>
                         <span className="font-semibold text-green-600">{formatCurrency(amount)}</span>
@@ -210,12 +210,12 @@ const AdminFinancialReports = ({ user }) => {
                   Expense Breakdown
                 </h3>
                 {Object.keys(pnlData.expenses?.categories || {}).length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No expenses recorded this month</p>
+                  <p className="text-slate-500 text-center py-4">No expenses recorded this month</p>
                 ) : (
                   <div className="space-y-3">
                     {Object.entries(pnlData.expenses?.categories || {}).map(([category, amount]) => (
                       <div key={category} className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg">
-                        <span className="text-sm font-medium text-gray-300 capitalize">
+                        <span className="text-sm font-medium text-slate-600 capitalize">
                           {category.replace('_', ' ')}
                         </span>
                         <span className="font-semibold text-red-600">{formatCurrency(amount)}</span>
@@ -288,13 +288,13 @@ const AdminFinancialReports = ({ user }) => {
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-gray-500 mb-2">Current Assets</p>
+                    <p className="text-sm text-slate-500 mb-2">Current Assets</p>
                     <div className="space-y-2">
-                      <div className="flex justify-between p-2 bg-gray-800/50 rounded">
+                      <div className="flex justify-between p-2 bg-slate-50 rounded">
                         <span className="text-sm">Cash in Hand</span>
                         <span className="font-medium">{formatCurrency(balanceSheetData.assets?.current_assets?.cash_in_hand)}</span>
                       </div>
-                      <div className="flex justify-between p-2 bg-gray-800/50 rounded">
+                      <div className="flex justify-between p-2 bg-slate-50 rounded">
                         <span className="text-sm">Bank Balance</span>
                         <span className="font-medium">{formatCurrency(balanceSheetData.assets?.current_assets?.bank_balance)}</span>
                       </div>
@@ -317,9 +317,9 @@ const AdminFinancialReports = ({ user }) => {
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-gray-500 mb-2">Current Liabilities</p>
+                    <p className="text-sm text-slate-500 mb-2">Current Liabilities</p>
                     <div className="space-y-2">
-                      <div className="flex justify-between p-2 bg-gray-800/50 rounded">
+                      <div className="flex justify-between p-2 bg-slate-50 rounded">
                         <span className="text-sm">PRC Redemption Liability</span>
                         <span className="font-medium">{formatCurrency(balanceSheetData.liabilities?.current_liabilities?.prc_redemption_liability)}</span>
                       </div>
@@ -346,11 +346,11 @@ const AdminFinancialReports = ({ user }) => {
                 </h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <div className="flex justify-between p-2 bg-gray-800/50 rounded">
+                    <div className="flex justify-between p-2 bg-slate-50 rounded">
                       <span className="text-sm">Capital</span>
                       <span className="font-medium">{formatCurrency(balanceSheetData.equity?.capital)}</span>
                     </div>
-                    <div className="flex justify-between p-2 bg-gray-800/50 rounded">
+                    <div className="flex justify-between p-2 bg-slate-50 rounded">
                       <span className="text-sm">Retained Earnings</span>
                       <span className={`font-medium ${balanceSheetData.equity?.retained_earnings >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatCurrency(balanceSheetData.equity?.retained_earnings)}
@@ -380,17 +380,17 @@ const AdminFinancialReports = ({ user }) => {
           >
             {/* Flow Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+              <Card className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 text-slate-800">
                 <p className="text-green-100 text-sm">Total Inflow</p>
                 <h2 className="text-2xl font-bold mt-1">{formatPRC(prcFlowData.inflow?.total)} PRC</h2>
                 <p className="text-green-200 text-sm mt-1">≈ {formatCurrency(prcFlowData.inflow?.inr_value)}</p>
               </Card>
-              <Card className="p-5 bg-gradient-to-br from-red-500 to-rose-600 text-white">
+              <Card className="p-5 bg-gradient-to-br from-red-500 to-rose-600 text-slate-800">
                 <p className="text-red-100 text-sm">Total Outflow</p>
                 <h2 className="text-2xl font-bold mt-1">{formatPRC(prcFlowData.outflow?.total)} PRC</h2>
                 <p className="text-red-200 text-sm mt-1">≈ {formatCurrency(prcFlowData.outflow?.inr_value)}</p>
               </Card>
-              <Card className={`p-5 text-white ${prcFlowData.net_flow?.prc >= 0 ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-orange-500 to-red-600'}`}>
+              <Card className={`p-5 text-slate-800 ${prcFlowData.net_flow?.prc >= 0 ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-orange-500 to-red-600'}`}>
                 <p className="opacity-75 text-sm">Net Flow</p>
                 <h2 className="text-2xl font-bold mt-1">{prcFlowData.net_flow?.prc >= 0 ? '+' : ''}{formatPRC(prcFlowData.net_flow?.prc)} PRC</h2>
                 <p className="opacity-75 text-sm mt-1">≈ {formatCurrency(prcFlowData.net_flow?.inr_value)}</p>
@@ -408,7 +408,7 @@ const AdminFinancialReports = ({ user }) => {
                   {Object.entries(prcFlowData.inflow?.breakdown || {}).map(([type, amount]) => (
                     amount > 0 && (
                       <div key={type} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
-                        <span className="text-sm font-medium text-gray-300 capitalize">
+                        <span className="text-sm font-medium text-slate-600 capitalize">
                           {type.replace('_', ' ')}
                         </span>
                         <span className="font-semibold text-green-600">+{formatPRC(amount)} PRC</span>
@@ -427,7 +427,7 @@ const AdminFinancialReports = ({ user }) => {
                   {Object.entries(prcFlowData.outflow?.breakdown || {}).map(([type, amount]) => (
                     amount > 0 && (
                       <div key={type} className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg">
-                        <span className="text-sm font-medium text-gray-300 capitalize">
+                        <span className="text-sm font-medium text-slate-600 capitalize">
                           {type.replace('_', ' ')}
                         </span>
                         <span className="font-semibold text-red-600">-{formatPRC(amount)} PRC</span>
@@ -446,7 +446,7 @@ const AdminFinancialReports = ({ user }) => {
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-800/50">
+                  <thead className="bg-slate-50">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
                       <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Inflow</th>
@@ -456,7 +456,7 @@ const AdminFinancialReports = ({ user }) => {
                   </thead>
                   <tbody className="divide-y">
                     {prcFlowData.daily_breakdown?.slice(0, 10).map((day, idx) => (
-                      <tr key={idx} className="hover:bg-gray-800/50">
+                      <tr key={idx} className="hover:bg-slate-50">
                         <td className="px-4 py-2 text-sm">{day.date}</td>
                         <td className="px-4 py-2 text-right text-sm text-green-600">+{formatPRC(day.inflow)}</td>
                         <td className="px-4 py-2 text-right text-sm text-red-600">-{formatPRC(day.outflow)}</td>

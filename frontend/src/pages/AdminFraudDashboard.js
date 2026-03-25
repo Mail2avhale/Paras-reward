@@ -135,16 +135,16 @@ const AdminFraudDashboard = ({ user }) => {
         <div className="p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="text-gray-400 hover:text-white">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="text-slate-500 hover:text-slate-800">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+                <h1 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
                   <Shield className="w-6 h-6 text-red-400" />
                   Fraud Detection Dashboard
                 </h1>
-                <p className="text-gray-500 text-xs">
+                <p className="text-slate-500 text-xs">
                   Monitor and prevent fraudulent activities
                 </p>
               </div>
@@ -211,7 +211,7 @@ const AdminFraudDashboard = ({ user }) => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 bg-gray-900/50 border border-gray-800 p-1 rounded-xl">
+          <TabsList className="w-full grid grid-cols-4 bg-white border border-slate-200 p-1 rounded-xl">
             <TabsTrigger value="overview" className="data-[state=active]:bg-red-500/20 data-[state=active]:text-red-400">
               <BarChart3 className="w-4 h-4 mr-2" />
               Overview
@@ -234,8 +234,8 @@ const AdminFraudDashboard = ({ user }) => {
           <TabsContent value="overview" className="mt-4 space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               {/* Block Reasons Chart */}
-              <Card className="p-4 bg-gray-900/50 border-gray-800">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Card className="p-4 bg-white border-slate-200">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-red-400" />
                   Block Reasons (This Week)
                 </h3>
@@ -243,9 +243,9 @@ const AdminFraudDashboard = ({ user }) => {
                   <div className="space-y-3">
                     {Object.entries(stats.block_reasons).map(([reason, count]) => (
                       <div key={reason} className="flex items-center justify-between">
-                        <span className="text-gray-400 text-sm truncate flex-1">{reason || 'Unknown'}</span>
+                        <span className="text-slate-500 text-sm truncate flex-1">{reason || 'Unknown'}</span>
                         <div className="flex items-center gap-2">
-                          <div className="w-32 h-2 bg-gray-800 rounded-full overflow-hidden">
+                          <div className="w-32 h-2 bg-white rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-red-500 rounded-full"
                               style={{ width: `${Math.min((count / Math.max(...Object.values(stats.block_reasons))) * 100, 100)}%` }}
@@ -257,39 +257,39 @@ const AdminFraudDashboard = ({ user }) => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center py-8">No blocked attempts this week 🎉</p>
+                  <p className="text-slate-500 text-center py-8">No blocked attempts this week 🎉</p>
                 )}
               </Card>
 
               {/* Suspicious IPs */}
-              <Card className="p-4 bg-gray-900/50 border-gray-800">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Card className="p-4 bg-white border-slate-200">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                   <Globe className="w-5 h-5 text-purple-400" />
                   Suspicious IPs (3+ Attempts)
                 </h3>
                 {stats.suspicious_ips?.length > 0 ? (
                   <div className="space-y-2">
                     {stats.suspicious_ips.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                      <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="p-2 rounded-lg bg-purple-500/20">
                             <MapPin className="w-4 h-4 text-purple-400" />
                           </div>
-                          <span className="text-white font-mono text-sm">{item.ip}</span>
+                          <span className="text-slate-800 font-mono text-sm">{item.ip}</span>
                         </div>
                         <span className="text-red-400 font-bold">{item.attempts} attempts</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center py-8">No suspicious IPs detected</p>
+                  <p className="text-slate-500 text-center py-8">No suspicious IPs detected</p>
                 )}
               </Card>
             </div>
 
             {/* Protection Status */}
-            <Card className="p-4 bg-gray-900/50 border-gray-800">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Card className="p-4 bg-white border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-green-400" />
                 Active Protections
               </h3>
@@ -304,12 +304,12 @@ const AdminFraudDashboard = ({ user }) => {
                   { icon: Lock, label: 'New Account Limit', status: 'Active', desc: 'KYC for ₹5K+' },
                   { icon: AlertTriangle, label: 'Suspicious Time', status: 'Active', desc: '12AM-5AM flagged' },
                 ].map((item, idx) => (
-                  <div key={idx} className="p-3 bg-gray-800/50 rounded-lg border border-green-500/20">
+                  <div key={idx} className="p-3 bg-slate-50 rounded-lg border border-green-500/20">
                     <div className="flex items-center gap-2 mb-1">
                       <item.icon className="w-4 h-4 text-green-400" />
-                      <span className="text-white text-sm font-medium">{item.label}</span>
+                      <span className="text-slate-800 text-sm font-medium">{item.label}</span>
                     </div>
-                    <p className="text-gray-500 text-xs">{item.desc}</p>
+                    <p className="text-slate-500 text-xs">{item.desc}</p>
                     <span className="text-green-400 text-xs">● {item.status}</span>
                   </div>
                 ))}
@@ -319,8 +319,8 @@ const AdminFraudDashboard = ({ user }) => {
 
           {/* Blocked Attempts Tab */}
           <TabsContent value="attempts" className="mt-4">
-            <Card className="p-4 bg-gray-900/50 border-gray-800">
-              <h3 className="text-lg font-semibold text-white mb-4">Registration Attempts</h3>
+            <Card className="p-4 bg-white border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">Registration Attempts</h3>
               {registrationAttempts.length > 0 ? (
                 <div className="space-y-2 max-h-[500px] overflow-y-auto">
                   {registrationAttempts.map((attempt, idx) => (
@@ -340,8 +340,8 @@ const AdminFraudDashboard = ({ user }) => {
                             <XCircle className="w-5 h-5 text-red-400" />
                           )}
                           <div>
-                            <p className="text-white text-sm font-mono">{attempt.ip_address || 'Unknown IP'}</p>
-                            <p className="text-gray-500 text-xs">{formatDate(attempt.timestamp)}</p>
+                            <p className="text-slate-800 text-sm font-mono">{attempt.ip_address || 'Unknown IP'}</p>
+                            <p className="text-slate-500 text-xs">{formatDate(attempt.timestamp)}</p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -351,7 +351,7 @@ const AdminFraudDashboard = ({ user }) => {
                             {attempt.success ? 'Success' : 'Blocked'}
                           </span>
                           {attempt.reason && (
-                            <p className="text-gray-500 text-xs mt-1 max-w-[200px] truncate">{attempt.reason}</p>
+                            <p className="text-slate-500 text-xs mt-1 max-w-[200px] truncate">{attempt.reason}</p>
                           )}
                         </div>
                       </div>
@@ -359,32 +359,32 @@ const AdminFraudDashboard = ({ user }) => {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-8">No registration attempts logged</p>
+                <p className="text-slate-500 text-center py-8">No registration attempts logged</p>
               )}
             </Card>
           </TabsContent>
 
           {/* Fraud Logs Tab */}
           <TabsContent value="logs" className="mt-4">
-            <Card className="p-4 bg-gray-900/50 border-gray-800">
-              <h3 className="text-lg font-semibold text-white mb-4">Fraud Event Logs</h3>
+            <Card className="p-4 bg-white border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">Fraud Event Logs</h3>
               {fraudLogs.length > 0 ? (
                 <div className="space-y-2 max-h-[500px] overflow-y-auto">
                   {fraudLogs.map((log, idx) => (
-                    <div key={idx} className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div key={idx} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                          <span className="text-white font-medium">{log.event_type}</span>
+                          <span className="text-slate-800 font-medium">{log.event_type}</span>
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full border ${getRiskBadge(log.risk_level)}`}>
                           {log.risk_level}
                         </span>
                       </div>
-                      <p className="text-gray-400 text-sm">User: {log.user_id}</p>
-                      <p className="text-gray-500 text-xs">{formatDate(log.timestamp)}</p>
+                      <p className="text-slate-500 text-sm">User: {log.user_id}</p>
+                      <p className="text-slate-500 text-xs">{formatDate(log.timestamp)}</p>
                       {log.details && (
-                        <pre className="text-gray-600 text-xs mt-2 bg-gray-900 p-2 rounded overflow-x-auto">
+                        <pre className="text-gray-600 text-xs mt-2 bg-white p-2 rounded overflow-x-auto">
                           {JSON.stringify(log.details, null, 2)}
                         </pre>
                       )}
@@ -392,15 +392,15 @@ const AdminFraudDashboard = ({ user }) => {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-8">No fraud events logged</p>
+                <p className="text-slate-500 text-center py-8">No fraud events logged</p>
               )}
             </Card>
           </TabsContent>
 
           {/* User Lookup Tab */}
           <TabsContent value="lookup" className="mt-4 space-y-4">
-            <Card className="p-4 bg-gray-900/50 border-gray-800">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Card className="p-4 bg-white border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                 <Search className="w-5 h-5 text-purple-400" />
                 User Fraud Profile Lookup
               </h3>
@@ -409,7 +409,7 @@ const AdminFraudDashboard = ({ user }) => {
                   placeholder="Enter User ID (UID)"
                   value={searchUid}
                   onChange={(e) => setSearchUid(e.target.value)}
-                  className="flex-1 bg-gray-900 border-gray-700"
+                  className="flex-1 bg-white border-slate-200"
                   onKeyPress={(e) => e.key === 'Enter' && fetchUserProfile(searchUid)}
                 />
                 <Button 
@@ -425,38 +425,38 @@ const AdminFraudDashboard = ({ user }) => {
             {userProfile && (
               <div className="space-y-4">
                 {/* User Info */}
-                <Card className="p-4 bg-gray-900/50 border-gray-800">
-                  <h4 className="text-white font-semibold mb-3">User Information</h4>
+                <Card className="p-4 bg-white border-slate-200">
+                  <h4 className="text-slate-800 font-semibold mb-3">User Information</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-gray-500 text-xs">Name</p>
-                      <p className="text-white">{userProfile.user?.name || 'N/A'}</p>
+                      <p className="text-slate-500 text-xs">Name</p>
+                      <p className="text-slate-800">{userProfile.user?.name || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Email</p>
-                      <p className="text-white">{userProfile.user?.email || 'N/A'}</p>
+                      <p className="text-slate-500 text-xs">Email</p>
+                      <p className="text-slate-800">{userProfile.user?.email || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Risk Score</p>
-                      <p className="text-white font-mono">{userProfile.user?.risk_score || 0}/100</p>
+                      <p className="text-slate-500 text-xs">Risk Score</p>
+                      <p className="text-slate-800 font-mono">{userProfile.user?.risk_score || 0}/100</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Risk Level</p>
+                      <p className="text-slate-500 text-xs">Risk Level</p>
                       <span className={`text-xs px-2 py-1 rounded-full border ${getRiskBadge(userProfile.user?.risk_level)}`}>
                         {userProfile.user?.risk_level || 'low'}
                       </span>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Registration IP</p>
-                      <p className="text-white font-mono text-sm">{userProfile.user?.registration_ip || 'N/A'}</p>
+                      <p className="text-slate-500 text-xs">Registration IP</p>
+                      <p className="text-slate-800 font-mono text-sm">{userProfile.user?.registration_ip || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Device Fingerprint</p>
-                      <p className="text-white font-mono text-sm truncate">{userProfile.user?.device_fingerprint?.slice(0, 16) || 'N/A'}...</p>
+                      <p className="text-slate-500 text-xs">Device Fingerprint</p>
+                      <p className="text-slate-800 font-mono text-sm truncate">{userProfile.user?.device_fingerprint?.slice(0, 16) || 'N/A'}...</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Created At</p>
-                      <p className="text-white">{formatDate(userProfile.user?.created_at)}</p>
+                      <p className="text-slate-500 text-xs">Created At</p>
+                      <p className="text-slate-800">{formatDate(userProfile.user?.created_at)}</p>
                     </div>
                   </div>
                 </Card>
@@ -471,12 +471,12 @@ const AdminFraudDashboard = ({ user }) => {
                     
                     {userProfile.related_by_device?.length > 0 && (
                       <div className="mb-4">
-                        <p className="text-gray-400 text-sm mb-2">Same Device ({userProfile.related_by_device.length})</p>
+                        <p className="text-slate-500 text-sm mb-2">Same Device ({userProfile.related_by_device.length})</p>
                         <div className="space-y-1">
                           {userProfile.related_by_device.map((acc, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-2 bg-gray-900/50 rounded">
-                              <span className="text-white text-sm">{acc.email || acc.name}</span>
-                              <span className="text-gray-500 text-xs">{formatDate(acc.created_at)}</span>
+                            <div key={idx} className="flex items-center justify-between p-2 bg-white rounded">
+                              <span className="text-slate-800 text-sm">{acc.email || acc.name}</span>
+                              <span className="text-slate-500 text-xs">{formatDate(acc.created_at)}</span>
                             </div>
                           ))}
                         </div>
@@ -485,12 +485,12 @@ const AdminFraudDashboard = ({ user }) => {
                     
                     {userProfile.related_by_ip?.length > 0 && (
                       <div>
-                        <p className="text-gray-400 text-sm mb-2">Same IP ({userProfile.related_by_ip.length})</p>
+                        <p className="text-slate-500 text-sm mb-2">Same IP ({userProfile.related_by_ip.length})</p>
                         <div className="space-y-1">
                           {userProfile.related_by_ip.map((acc, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-2 bg-gray-900/50 rounded">
-                              <span className="text-white text-sm">{acc.email || acc.name}</span>
-                              <span className="text-gray-500 text-xs">{formatDate(acc.created_at)}</span>
+                            <div key={idx} className="flex items-center justify-between p-2 bg-white rounded">
+                              <span className="text-slate-800 text-sm">{acc.email || acc.name}</span>
+                              <span className="text-slate-500 text-xs">{formatDate(acc.created_at)}</span>
                             </div>
                           ))}
                         </div>
@@ -508,8 +508,8 @@ const AdminFraudDashboard = ({ user }) => {
                     </h4>
                     <div className="space-y-2">
                       {userProfile.referral_rings.map((ring, idx) => (
-                        <div key={idx} className="p-2 bg-gray-900/50 rounded">
-                          <p className="text-white text-sm font-mono">
+                        <div key={idx} className="p-2 bg-white rounded">
+                          <p className="text-slate-800 text-sm font-mono">
                             {ring.join(' → ')} → (loop)
                           </p>
                         </div>
@@ -520,14 +520,14 @@ const AdminFraudDashboard = ({ user }) => {
 
                 {/* Fraud Logs for User */}
                 {userProfile.fraud_logs?.length > 0 && (
-                  <Card className="p-4 bg-gray-900/50 border-gray-800">
-                    <h4 className="text-white font-semibold mb-3">User Fraud History</h4>
+                  <Card className="p-4 bg-white border-slate-200">
+                    <h4 className="text-slate-800 font-semibold mb-3">User Fraud History</h4>
                     <div className="space-y-2">
                       {userProfile.fraud_logs.map((log, idx) => (
-                        <div key={idx} className="p-2 bg-gray-800/50 rounded flex items-center justify-between">
+                        <div key={idx} className="p-2 bg-slate-50 rounded flex items-center justify-between">
                           <div>
                             <span className="text-yellow-400 text-sm">{log.event_type}</span>
-                            <p className="text-gray-500 text-xs">{formatDate(log.timestamp)}</p>
+                            <p className="text-slate-500 text-xs">{formatDate(log.timestamp)}</p>
                           </div>
                           <span className={`text-xs px-2 py-1 rounded-full border ${getRiskBadge(log.risk_level)}`}>
                             {log.risk_level}
