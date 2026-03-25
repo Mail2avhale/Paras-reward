@@ -572,7 +572,7 @@ const AdminRazorpaySubscriptions = ({ user }) => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
           <input
             type="text"
-            placeholder="Search by name, email, order ID..."
+            placeholder="Search: name, email, phone, UTR, UPI ID, order ID, amount..."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-gray-500"
@@ -716,7 +716,24 @@ const AdminRazorpaySubscriptions = ({ user }) => {
                   <p className="text-slate-500 text-xs">Payment ID</p>
                   <p className="text-emerald-400 font-mono text-xs">{order.payment_id}</p>
                   {order.paid_at && (
-                    <p className="text-slate-500 text-xs mt-1">Paid: {formatDate(order.paid_at)}</p>
+                    <p className="text-slate-500 text-xs mt-1">
+                      Paid: {formatDate(order.razorpay_payment_time || order.paid_at)}
+                    </p>
+                  )}
+                  {/* Show payment method details */}
+                  {order.payment_method && (
+                    <p className="text-slate-500 text-xs mt-1">
+                      Method: <span className="text-slate-700 font-medium uppercase">{order.payment_method}</span>
+                      {order.payment_vpa && <span> ({order.payment_vpa})</span>}
+                      {order.payment_bank && <span> - {order.payment_bank}</span>}
+                      {order.payment_wallet && <span> ({order.payment_wallet})</span>}
+                    </p>
+                  )}
+                  {/* Show UTR/RRN if available */}
+                  {order.utr_number && (
+                    <p className="text-slate-500 text-xs mt-1">
+                      UTR/RRN: <span className="text-amber-600 font-mono">{order.utr_number}</span>
+                    </p>
                   )}
                 </div>
               )}

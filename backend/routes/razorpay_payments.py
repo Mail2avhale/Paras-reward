@@ -569,6 +569,15 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         
         # ==================== STEP 12: MARK ORDER AS PAID (AFTER SUBSCRIPTION SUCCESS) ====================
         # IMPORTANT: Only mark as paid AFTER subscription is successfully activated
+        # Get actual payment timestamp from Razorpay (created_at is in Unix timestamp)
+        razorpay_payment_time = None
+        try:
+            if payment_details.get("created_at"):
+                razorpay_payment_time = datetime.fromtimestamp(payment_details["created_at"], tz=timezone.utc)
+        except Exception as e:
+            logging.warning(f"[RAZORPAY] Could not parse payment timestamp: {e}")
+            razorpay_payment_time = datetime.now(timezone.utc)
+        
         await db.razorpay_orders.update_one(
             {"order_id": request.razorpay_order_id},
             {
@@ -579,8 +588,17 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                     "payment_status": payment_status,
                     "payment_captured": payment_captured,
                     "verified_amount": payment_amount,
-                    "paid_at": datetime.now(timezone.utc),
-                    "subscription_activated": True
+                    "paid_at": razorpay_payment_time or datetime.now(timezone.utc),
+                    "razorpay_payment_time": razorpay_payment_time,  # Original Razorpay timestamp
+                    "verified_at": datetime.now(timezone.utc),  # When we verified
+                    "subscription_activated": True,
+                    # Store additional payment details for reference
+                    "payment_method": payment_details.get("method"),
+                    "payment_bank": payment_details.get("bank"),
+                    "payment_wallet": payment_details.get("wallet"),
+                    "payment_vpa": payment_details.get("vpa"),  # UPI ID
+                    "payment_card_last4": payment_details.get("card", {}).get("last4") if payment_details.get("card") else None,
+                    "acquirer_data": payment_details.get("acquirer_data", {})  # Contains UTR for bank transfers
                 }
             }
         )

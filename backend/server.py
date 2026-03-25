@@ -8697,16 +8697,17 @@ async def get_admin_razorpay_subscriptions(
     limit: int = 100,
     skip: int = 0
 ):
-    """Get all Razorpay subscription payments for admin dashboard with search"""
+    """Get all Razorpay subscription payments for admin dashboard with enhanced search"""
     
     query = {}
     if status:
         query["status"] = status
     
-    # If search is provided, we need to find matching user IDs first
+    # If search is provided, search across multiple fields
     matching_user_ids = []
     if search:
         search_term = search.strip()
+        
         # Search in users collection
         user_query = {"$or": [
             {"name": {"$regex": search_term, "$options": "i"}},
@@ -8717,19 +8718,38 @@ async def get_admin_razorpay_subscriptions(
         matching_users = await db.users.find(user_query, {"uid": 1}).to_list(100)
         matching_user_ids = [u["uid"] for u in matching_users]
         
-        # Also search by order_id or payment_id
+        # Build comprehensive search query for razorpay_orders
+        order_search_conditions = [
+            {"order_id": {"$regex": search_term, "$options": "i"}},
+            {"payment_id": {"$regex": search_term, "$options": "i"}},
+            {"user_id": {"$regex": search_term, "$options": "i"}},
+            # Search by user details stored in order
+            {"user_name": {"$regex": search_term, "$options": "i"}},
+            {"user_email": {"$regex": search_term, "$options": "i"}},
+            {"user_mobile": {"$regex": search_term, "$options": "i"}},
+            # Search by payment method details
+            {"payment_vpa": {"$regex": search_term, "$options": "i"}},  # UPI ID
+            {"payment_bank": {"$regex": search_term, "$options": "i"}},
+            {"payment_wallet": {"$regex": search_term, "$options": "i"}},
+            # Search by UTR in acquirer_data
+            {"acquirer_data.rrn": {"$regex": search_term, "$options": "i"}},  # UTR/RRN
+            {"acquirer_data.utr": {"$regex": search_term, "$options": "i"}},
+            {"acquirer_data.bank_transaction_id": {"$regex": search_term, "$options": "i"}},
+            # Search by amount (if numeric)
+        ]
+        
+        # If search term is numeric, also search by amount
+        try:
+            search_amount = float(search_term)
+            order_search_conditions.append({"amount": search_amount})
+        except ValueError:
+            pass
+        
+        # Add matching user IDs to search
         if matching_user_ids:
-            query["$or"] = [
-                {"user_id": {"$in": matching_user_ids}},
-                {"order_id": {"$regex": search_term, "$options": "i"}},
-                {"payment_id": {"$regex": search_term, "$options": "i"}}
-            ]
-        else:
-            query["$or"] = [
-                {"order_id": {"$regex": search_term, "$options": "i"}},
-                {"payment_id": {"$regex": search_term, "$options": "i"}},
-                {"user_id": {"$regex": search_term, "$options": "i"}}
-            ]
+            order_search_conditions.append({"user_id": {"$in": matching_user_ids}})
+        
+        query["$or"] = order_search_conditions
     
     orders = await db.razorpay_orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.razorpay_orders.count_documents(query)
@@ -8753,12 +8773,16 @@ async def get_admin_razorpay_subscriptions(
         current_plan = user.get("subscription_plan") if user else None
         current_expiry = user.get("subscription_expires") or user.get("subscription_expiry") if user else None
         
+        # Extract UTR/RRN from acquirer_data
+        acquirer_data = order.get("acquirer_data", {})
+        utr_number = acquirer_data.get("rrn") or acquirer_data.get("utr") or acquirer_data.get("bank_transaction_id")
+        
         result.append({
             "order_id": order.get("order_id"),
             "user_id": user_id,
-            "user_name": user.get("name") if user else "Unknown",
-            "user_email": user.get("email") if user else None,
-            "user_mobile": user.get("mobile") if user else None,
+            "user_name": order.get("user_name") or (user.get("name") if user else "Unknown"),
+            "user_email": order.get("user_email") or (user.get("email") if user else None),
+            "user_mobile": order.get("user_mobile") or (user.get("mobile") if user else None),
             "plan_name": order.get("plan_name", "").title(),
             "plan_type": order.get("plan_type", "monthly"),
             "amount": order.get("amount", 0),
@@ -8768,7 +8792,15 @@ async def get_admin_razorpay_subscriptions(
             "error_code": order.get("error_code"),
             "created_at": order.get("created_at"),
             "paid_at": order.get("paid_at"),
+            "razorpay_payment_time": order.get("razorpay_payment_time"),  # Actual Razorpay timestamp
+            "verified_at": order.get("verified_at"),
             "status_updated_at": order.get("status_updated_at"),
+            # Payment method details
+            "payment_method": order.get("payment_method"),
+            "payment_bank": order.get("payment_bank"),
+            "payment_wallet": order.get("payment_wallet"),
+            "payment_vpa": order.get("payment_vpa"),  # UPI ID
+            "utr_number": utr_number,  # UTR/RRN for bank transfers
             # User's current subscription info
             "user_current_plan": current_plan,
             "user_subscription_expiry": str(current_expiry) if current_expiry else None
