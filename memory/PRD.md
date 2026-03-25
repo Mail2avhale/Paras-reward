@@ -1,34 +1,36 @@
 # PARAS REWARD - Product Requirements Document
 
 ## ✅ DEPLOYED - 19 March 2026
-## 📝 LAST UPDATED - 21 March 2026 (Burning Session Feature)
+## 📝 LAST UPDATED - 25 March 2026 (Burn Module Completely Removed)
 
-## 🔥 NEW: Continuous Burning Session (21 March 2026)
+## ❌ REMOVED: PRC Burning Module (25 March 2026)
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║  BURNING SESSION - PRC DEFLATION MECHANISM                      ║
+║  PRC BURNING MODULE - COMPLETELY REMOVED                       ║
 ║                                                                 ║
-║  RULES:                                                         ║
-║  • Burns 1% of user's total PRC balance daily                   ║
-║  • Calculated per second (dynamic burn rate)                    ║
-║  • ALWAYS ACTIVE - No user action required                      ║
-║  • AUTO-STOPS when balance reaches 10,000 PRC minimum           ║
-║  • Burned PRC is permanently deleted (deflation)                ║
+║  As per user request on 25 March 2026, the entire PRC burning  ║
+║  system has been permanently removed from the application.     ║
 ║                                                                 ║
-║  CALCULATION:                                                   ║
-║  • burn_per_day = balance * 0.01                                ║
-║  • burn_per_hour = burn_per_day / 24                            ║
-║  • burn_per_second = burn_per_day / 86400                       ║
+║  WHAT WAS REMOVED (~1100 lines of code):                        ║
+║  • All burn functions (calculate_and_apply_burn, daily_burn)   ║
+║  • Burn scheduler jobs (hourly burn, inactive user burn)       ║
+║  • Burn API endpoints (now return {deprecated: true})          ║
+║  • AdminAccountingDashboard burn tab                           ║
+║  • Burn statistics and controls                                ║
 ║                                                                 ║
-║  API ENDPOINT: GET /api/burning-session/status/{uid}            ║
-║  - Returns: is_active, burn rates, total_burned_lifetime        ║
-║  - Applies burn on each call (time-delta based)                 ║
+║  NEW BEHAVIOR:                                                  ║
+║  • PRC has LIFETIME validity (no expiry, no burn)              ║
+║  • All burn endpoints return: {deprecated: true, message: ...} ║
+║  • No automatic PRC deduction for inactivity                   ║
 ║                                                                 ║
-║  UI: Mining page displays live burn counter                     ║
-║  - Fire emoji animation                                         ║
-║  - LIVE badge when active                                       ║
-║  - Per hour/day burn rates                                      ║
-║  - Days until 10,000 PRC minimum reached                        ║
+║  DEPRECATED ENDPOINTS (return deprecated response):            ║
+║  • GET/POST /api/admin/burn-statistics                         ║
+║  • GET/POST /api/admin/prc-burn-control/*                      ║
+║  • POST /api/admin/run-prc-burn                                ║
+║  • POST /api/admin/smart-burn                                  ║
+║  • POST /api/admin/run-explorer-burn                           ║
+║  • GET /api/admin/burn-settings                                ║
+║  • POST /api/admin/accounting/burn-inactive-prc                ║
 ╚════════════════════════════════════════════════════════════════╝
 ```
 
