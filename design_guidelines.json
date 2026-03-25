@@ -1,176 +1,90 @@
 {
-  "identity": {
-    "name": "E1",
-    "role": "Anti-AI Creative Designer",
-    "principles": [
-      "Fusion over Imitation",
-      "Emotion First",
-      "Content is King",
-      "Zoom in",
-      "Negative Space",
-      "Contrast"
-    ],
-    "anti_patterns": [
-      "No generic purple/teal gradients",
-      "No centered layouts without tension",
-      "No gradient overload (>20%)",
-      "No 'Inter' for headings"
-    ]
+  "theme_strategy": "Bulkpe-style Admin Dashboard Theme (Light/Cream base, Purple Primary, Soft Pastels)",
+  "typography": {
+    "headings": "Manrope or Work Sans. Do not use generic Inter or Space Grotesk. Font weights should be distinct (e.g., font-semibold to font-bold).",
+    "body": "Manrope or IBM Plex Sans. Keep line-height relaxed for data readability.",
+    "rules": "Use tight letter spacing (tracking-tight) for large headers. Use uppercase + wide spacing (tracking-widest) for tiny overlines/labels."
   },
-  "project_context": {
-    "app_name": "PRC Mining",
-    "type": "PWA / Mobile Web App",
-    "target_audience": "Indian users, mobile-first, crypto-earning",
-    "emotional_tone": "Premium, Trustworthy, Wealth-Building, Calm Efficiency",
-    "theme_strategy": "Dual Theme (Obsidian Dark / Ceramic Light)"
+  "colors": {
+    "primary": "#7C3AED (Tailwind purple-600) - Use for primary actions, active states, and focus rings.",
+    "background_main": "#FDFCF9 or Tailwind stone-50 (Light cream/off-white) - Use for the main admin content area.",
+    "background_sidebar": "#FFFFFF - Crisp white for the sidebar to separate it from the cream background.",
+    "text_primary": "#0F172A (Slate 900) - High contrast for readability.",
+    "text_secondary": "#64748B (Slate 500) - For descriptions and subtitles.",
+    "accent_peach": "#FFEDD5 (Tailwind orange-100) - For soft metric cards or badges.",
+    "accent_blue": "#DBEAFE (Tailwind blue-100) - For soft metric cards or badges.",
+    "accent_lavender": "#F3E8FF (Tailwind purple-100) - For soft metric cards, active sidebar links.",
+    "buttons": "Black (#000000) or Purple (#7C3AED) with white text. Hover states should lighten the hue.",
+    "forbidden_colors": "Teal green or teal blue (#1B93A4) are completely prohibited."
   },
-  "design_system": {
-    "typography": {
-      "headings": {
-        "family": "Space Grotesk, sans-serif",
-        "weights": ["600", "700"],
-        "tracking": "tracking-tight",
-        "usage": "Main headers, Metric labels"
-      },
-      "body": {
-        "family": "Inter, sans-serif",
-        "weights": ["400", "500"],
-        "usage": "Descriptions, Instructions"
-      },
-      "numbers": {
-        "family": "JetBrains Mono, monospace",
-        "weights": ["500"],
-        "classes": "tabular-nums tracking-wide",
-        "usage": "Counters, Timers, Balance"
-      }
-    },
-    "colors": {
-      "palette_name": "Digital Bullion",
-      "dark_mode": {
-        "background": "bg-zinc-950",
-        "surface": "bg-zinc-900/50",
-        "surface_highlight": "bg-zinc-800/50",
-        "border": "border-zinc-800",
-        "border_highlight": "border-amber-500/20",
-        "text_primary": "text-zinc-100",
-        "text_secondary": "text-zinc-400",
-        "accent_primary": "text-amber-400",
-        "accent_glow": "shadow-amber-500/10"
-      },
-      "light_mode": {
-        "background": "bg-slate-50",
-        "surface": "bg-white",
-        "surface_highlight": "bg-slate-100/80",
-        "border": "border-slate-200",
-        "border_highlight": "border-amber-500/30",
-        "text_primary": "text-slate-900",
-        "text_secondary": "text-slate-500",
-        "accent_primary": "text-amber-600",
-        "accent_glow": "shadow-amber-500/20"
-      },
-      "functional": {
-        "success": {
-          "text": "text-emerald-500",
-          "bg": "bg-emerald-500/10",
-          "border": "border-emerald-500/20",
-          "gradient": "from-emerald-500 to-emerald-600"
-        },
-        "warning": {
-          "text": "text-amber-500",
-          "bg": "bg-amber-500/10",
-          "border": "border-amber-500/20",
-          "gradient": "from-amber-400 to-amber-600"
-        },
-        "luxury_gold": {
-          "text": "text-[#D4AF37]",
-          "bg": "bg-[#D4AF37]/10",
-          "border": "border-[#D4AF37]/30",
-          "gradient_text": "bg-gradient-to-b from-[#FCD34D] to-[#D4AF37] bg-clip-text text-transparent"
-        }
-      }
-    },
-    "surfaces": {
-      "glass_card": {
-        "base": "backdrop-blur-xl border",
-        "dark": "bg-zinc-900/40 border-white/5 shadow-2xl shadow-black/40",
-        "light": "bg-white/60 border-slate-200/60 shadow-xl shadow-slate-200/50"
-      },
-      "active_card": {
-        "dark": "bg-zinc-900/80 border-amber-500/30 shadow-[0_0_30px_-10px_rgba(251,191,36,0.15)]",
-        "light": "bg-white border-amber-500/30 shadow-[0_20px_40px_-12px_rgba(251,191,36,0.2)]"
-      }
-    },
-    "layout": {
-      "spacing_scale": "p-6 md:p-8 lg:p-12",
-      "grid_strategy": "Bento Grid (Gap-4 or Gap-6)",
-      "container_max_width": "max-w-md mx-auto"
-    }
+  "visual enhancers": {
+    "borders": "1px solid #E2E8F0 (Slate 200) for cards and sidebar borders. Avoid heavy drop shadows.",
+    "border_radius": "Rounded corners heavily used. Buttons: rounded-full or rounded-xl. Cards: rounded-2xl.",
+    "surfaces": "Use flat solid colors for cards. Do not use glassmorphism or pure transparent backgrounds for any overlays, dropdowns, or modals. Always use solid white (bg-white) for dropdowns with a subtle border.",
+    "active_states": "Sidebar active items should have a soft purple background (bg-purple-50) with purple text (text-purple-600) and potentially a left border highlight."
   },
-  "components": {
-    "mining_card": {
-      "description": "The hero component. Needs to feel like a vault or a high-tech engine.",
-      "structure": [
-        "Header: Status Badge (Left) + Bonus Badge (Right)",
-        "Center: Timer (Massive, Monospace) + Counter (Live, Gold)",
-        "Footer: Progress Bar (Thin, Glowing) + Rate Info"
-      ],
-      "styling": {
-        "container": "relative overflow-hidden rounded-[2rem] border transition-all duration-500",
-        "inactive": "grayscale-[0.5] opacity-90 scale-95",
-        "active": "scale-100 ring-1 ring-amber-500/20"
-      }
-    },
-    "action_button": {
-      "description": "The 'Collect' or 'Start' trigger. Must be tactile.",
-      "classes": "relative w-full py-4 rounded-xl font-bold text-lg overflow-hidden transition-all active:scale-[0.98]",
-      "variants": {
-        "primary": "bg-gradient-to-r from-zinc-800 to-zinc-900 text-white border border-zinc-700 shadow-lg hover:shadow-zinc-800/50",
-        "gold": "bg-gradient-to-r from-amber-400 to-amber-600 text-black border border-amber-400/50 shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)]",
-        "disabled": "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600 cursor-not-allowed"
-      }
-    },
-    "stats_grid": {
-      "description": "2x1 or 2x2 grid for secondary metrics.",
-      "classes": "grid grid-cols-2 gap-3 mt-4",
-      "item_classes": "p-4 rounded-2xl bg-white/50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800/50 backdrop-blur-md"
-    },
-    "progress_bar": {
-      "description": "Subtle yet precise. No chunky bars.",
-      "container": "h-1.5 w-full bg-slate-200 dark:bg-zinc-800 rounded-full overflow-hidden",
-      "fill": "h-full bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-    }
+  "component name": [
+    "AdminLayout",
+    "AdminDashboard",
+    "AdminAccountingDashboard",
+    "AdminUser360New",
+    "AdminFailedTransactions",
+    "Button",
+    "Card",
+    "Table",
+    "Sidebar",
+    "Badge"
+  ],
+  "grids": {
+    "dashboard_stats": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6. Use the pastel accent colors for these stat cards.",
+    "dashboard_content": "grid-cols-1 lg:grid-cols-3 gap-6. Main content takes col-span-2, side feed/summary takes col-span-1."
   },
-  "animations": {
-    "micro_interactions": {
-      "hover": "hover:-translate-y-0.5 transition-transform duration-300",
-      "tap": "active:scale-95 transition-transform duration-100"
-    },
-    "mining_pulse": {
-      "css": "@keyframes miningPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } 50% { box-shadow: 0 0 20px 0 rgba(245, 158, 11, 0.15); } }",
-      "class": "animate-[miningPulse_3s_ease-in-out_infinite]"
-    },
-    "number_ticker": {
-      "description": "Use framer-motion for smooth number transitions instead of raw JS intervals if possible, or keep the optimized interval logic but style the numbers better."
-    }
+  "layouts": {
+    "admin_shell": "Flex layout with a fixed 250px-300px white sidebar (bg-white, border-r border-slate-200) and a flexible main content area taking up remaining space with a cream background (bg-stone-50).",
+    "spacing": "Generous spacing. Use p-6 to p-8 inside cards. Page wrappers should have p-8 or p-10.",
+    "alignment": "Left-align dense content, forms, and tables. Keep optical alignment in mind."
   },
-  "implementation_steps": {
-    "step_1": "Structure Update - Simplify the main container. Remove 'AuroraBackground' and 'FloatingBubbles' which cause visual noise. Replace with subtle 'NoiseTexture' or 'MeshGradient'.",
-    "step_2": "Color Overhaul - Replace all hardcoded hex values and 'emerald-50' gradients with the new Semantic Palette (Zinc/Slate/Amber).",
-    "step_3": "Typography - Apply Space Grotesk to Headings, JetBrains Mono to Numbers.",
-    "step_4": "Card Redesign - Implement the 'Glass Obsidian' card style. Add the 1px border interaction.",
-    "step_5": "Accessibility - Ensure text contrast ratios (Amber text on White needs checking, prefer Amber-600 on White, Amber-400 on Black)."
+  "motion": {
+    "micro_interactions": "Subtle -translate-y-[2px] on card hover, scale-95 on button click.",
+    "transitions": "Use specific properties: transition-colors duration-200 ease-in-out for buttons and links. DO NOT use 'transition-all'."
   },
-  "instructions_to_main_agent": "Your goal is to make this look like a 'Fintech Pro' app, not a 'Candy Crush' game. \n1. STRIP visual noise (confetti, bubbles, rainbows) unless it's a 'Big Win' moment.\n2. USE spacing. `p-6` inside cards is minimum.\n3. FOCUS on the numbers. They are the product. Make them big, monospaced, and legible.\n4. DARK MODE is the priority. Ensure `dark:` classes are robust.",
-  "universal_guidelines": {
-    "do_not_use": [
-      "Gradients on text that make it unreadable",
-      "Shadows that look dirty (use colored shadows with low opacity)",
-      "Default browser scrollbars"
-    ],
-    "must_use": [
-      "Backdrop blur for depth",
-      "Interactive states for everything",
-      "Lucide icons with stroke-width={1.5} for elegance"
-    ]
-  }
+  "accessibility": {
+    "contrast": "Ensure text over pastel backgrounds meets minimum 4.5:1 contrast. Use dark text (slate-800 or purple-900) on pastel cards.",
+    "focus": "All interactive elements must have focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2.",
+    "testing": "All interactive and key informational elements MUST include a data-testid attribute (e.g., data-testid='admin-sidebar-users-link')."
+  },
+  "media": {
+    "icons": "Use lucide-react (default) or @phosphor-icons/react for a clean, professional dashboard look. Icon sizes should be consistent (w-5 h-5 for sidebar)."
+  },
+  "3d libraries": {
+    "usage": "Not recommended for this administrative dashboard. Prioritize clarity and data density with Recharts or standard Shadcn UI charts."
+  },
+  "image_urls": [],
+  "component_path": "/app/frontend/src/components/ui/",
+  "instructions_to_main_agent": [
+    "CRITICAL CONSTRAINT: Apply these styling rules ONLY to pages and components within the admin flow (e.g., files starting with Admin, like AdminLayout.js, AdminDashboard.js). Do NOT modify global CSS files (index.css/App.css) in a way that alters user-facing pages.",
+    "Use scoped Tailwind utility classes directly in the Admin React components.",
+    "For the Shadcn components used in the Admin flow, override their default styles using className props rather than rewriting the base component, to avoid affecting the user flow.",
+    "Ensure the layout has a solid white sidebar, cream/off-white main content area, and uses the defined pastel colors for specific data cards or badges.",
+    "All components are JavaScript (.js) not TypeScript (.tsx). Follow this strictly when editing or creating files.",
+    "Ensure NO transparent backgrounds are used on dropdowns, modals, or headers. They must have solid background colors.",
+    "Implement data-testid attributes on all new or modified interactive elements.",
+    "For icons, use `lucide-react`. Ensure proper spacing between icon and text."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms.",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
+    "NEVER use AI assistant Emoji characters for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Prioritize using pre-existing components from src/components/ui when applicable.",
+    "Components MUST use named exports; Pages MUST use default exports.",
+    "Use 'sonner' for toasts if needed."
+  ]
 }
