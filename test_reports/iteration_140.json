@@ -52,7 +52,7 @@
   },
   "test_credentials": {
     "preview_admin": {
-      "url": "https://codebase-purge.preview.emergentagent.com",
+      "url": "https://bulkpe-consistency.preview.emergentagent.com",
       "email": "admin@test.com",
       "pin": "123456"
     },
@@ -88,7 +88,7 @@
   },
   "testing_environment_comparison": {
     "preview": {
-      "url": "https://codebase-purge.preview.emergentagent.com",
+      "url": "https://bulkpe-consistency.preview.emergentagent.com",
       "status": "WORKING",
       "api_response": "200 OK for all tested queries"
     },

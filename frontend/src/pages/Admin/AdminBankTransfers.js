@@ -26,26 +26,26 @@ const CopyField = ({ label, value, className = "" }) => (
   <div className={`flex items-center justify-between gap-2 ${className}`}>
     <div className="flex-1 min-w-0">
       <p className="text-slate-500 text-xs">{label}</p>
-      <p className="text-slate-800 font-mono text-sm truncate">{value || '-'}</p>
+      <p className="text-slate-900 font-mono text-sm truncate">{value || '-'}</p>
     </div>
     {value && (
       <button
         onClick={() => copyToClipboard(value, label)}
-        className="p-1.5 hover:bg-slate-600 rounded transition-colors"
+        className="p-1.5 hover:bg-slate-200 rounded transition-colors"
         title={`Copy ${label}`}
       >
-        <Copy className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-400" />
+        <Copy className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
       </button>
     )}
   </div>
 );
 
-// Status badge
+// Status badge - Light theme
 const StatusBadge = ({ status }) => {
   const config = {
-    pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', label: 'Pending' },
-    paid: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30', label: 'Paid' },
-    failed: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', label: 'Failed' }
+    pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-300', label: 'Pending' },
+    paid: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', label: 'Paid' },
+    failed: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', label: 'Failed' }
   };
   const c = config[status] || config.pending;
   return (
@@ -55,16 +55,16 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// Stats Card
+// Stats Card - Light Theme
 const StatCard = ({ title, value, subValue, icon: Icon, color }) => (
-  <Card className={`bg-slate-800/50 border-slate-700 p-4`}>
+  <Card className={`bg-white border-slate-200 p-4 shadow-sm`}>
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-slate-400 text-sm">{title}</p>
+        <p className="text-slate-600 text-sm font-medium">{title}</p>
         <p className={`text-2xl font-bold ${color}`}>{value}</p>
         {subValue && <p className="text-slate-500 text-xs mt-1">{subValue}</p>}
       </div>
-      <div className={`p-3 rounded-xl bg-slate-700/50`}>
+      <div className={`p-3 rounded-xl bg-slate-100`}>
         <Icon className={`w-6 h-6 ${color}`} />
       </div>
     </div>
@@ -281,22 +281,22 @@ const AdminBankTransfers = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-6">
+    <div className="min-h-screen bg-white p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-              <Banknote className="w-8 h-8 text-emerald-400" />
+            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+              <Banknote className="w-8 h-8 text-emerald-600" />
               Bank Transfer Requests
             </h1>
-            <p className="text-slate-400 mt-1">Manage PRC to Bank transfer requests</p>
+            <p className="text-slate-600 mt-1">Manage PRC to Bank transfer requests</p>
           </div>
           
           <Button
             onClick={loadRequests}
             variant="outline"
-            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            className="border-slate-300 text-slate-700 hover:bg-slate-100"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -305,11 +305,11 @@ const AdminBankTransfers = () => {
 
         {/* Bulk Actions */}
         {stats.pending?.count > 0 && statusFilter === 'pending' && (
-          <div className="mb-4 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+          <div className="mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="text-slate-800">
+              <div className="text-slate-900">
                 <p className="font-semibold">Bulk Actions</p>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-600">
                   {selectedIds.length > 0 
                     ? `${selectedIds.length} selected` 
                     : `${stats.pending?.count} pending requests`}
@@ -321,7 +321,7 @@ const AdminBankTransfers = () => {
                   <>
                     <Button
                       onClick={handleBulkPaid}
-                      className="bg-green-600 hover:bg-green-700 text-slate-800"
+                      className="bg-green-600 hover:bg-green-700 text-white"
                       disabled={loading}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
@@ -329,7 +329,7 @@ const AdminBankTransfers = () => {
                     </Button>
                     <Button
                       onClick={handleBulkFailed}
-                      className="bg-orange-600 hover:bg-orange-700 text-slate-800"
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
                       disabled={loading}
                     >
                       <XCircle className="w-4 h-4 mr-2" />
@@ -361,7 +361,7 @@ const AdminBankTransfers = () => {
                       setLoading(false);
                     }
                   }}
-                  className="bg-red-600 hover:bg-red-700 text-slate-800"
+                  className="bg-red-600 hover:bg-red-700 text-white"
                   disabled={loading}
                 >
                   <XCircle className="w-4 h-4 mr-2" />
@@ -398,18 +398,18 @@ const AdminBankTransfers = () => {
         </div>
 
         {/* Filters */}
-        <Card data-testid="filters-card" className="bg-slate-800/50 border-slate-700 p-4 mb-6">
+        <Card data-testid="filters-card" className="bg-white border-slate-200 p-4 mb-6 shadow-sm">
           <div className="flex flex-wrap gap-4">
             {/* Search */}
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <Input
                   data-testid="search-input"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by name, phone, account..."
-                  className="pl-10 bg-slate-900 border-slate-600 text-slate-800"
+                  className="pl-10 bg-white border-slate-300 text-slate-900"
                 />
               </div>
             </div>
@@ -419,7 +419,7 @@ const AdminBankTransfers = () => {
               data-testid="status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-800 min-w-[150px]"
+              className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 min-w-[150px]"
             >
               <option value="">All Status</option>
               <option value="pending">Pending</option>
@@ -429,26 +429,26 @@ const AdminBankTransfers = () => {
             
             {/* Date From */}
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-slate-400" />
+              <Calendar className="w-4 h-4 text-slate-500" />
               <Input
                 data-testid="date-from"
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="bg-slate-900 border-slate-600 text-slate-800 w-[150px]"
+                className="bg-white border-slate-300 text-slate-900 w-[150px]"
                 placeholder="From"
               />
             </div>
             
             {/* Date To */}
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">to</span>
+              <span className="text-slate-500">to</span>
               <Input
                 data-testid="date-to"
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="bg-slate-900 border-slate-600 text-slate-800 w-[150px]"
+                className="bg-white border-slate-300 text-slate-900 w-[150px]"
               />
             </div>
             
@@ -457,7 +457,7 @@ const AdminBankTransfers = () => {
               data-testid="sort-by-select"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-slate-900 border border-slate-600 text-slate-800 rounded-md px-3 py-2 text-sm"
+              className="bg-white border border-slate-300 text-slate-900 rounded-md px-3 py-2 text-sm"
             >
               <option value="created_at">Sort by: Date</option>
               <option value="amount">Sort by: Amount</option>
@@ -468,7 +468,7 @@ const AdminBankTransfers = () => {
             <Button
               variant="outline"
               onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-              className="border-slate-600 text-slate-300"
+              className="border-slate-300 text-slate-700"
               data-testid="sort-order-btn"
             >
               <ArrowUpDown className="w-4 h-4 mr-2" />
@@ -479,7 +479,7 @@ const AdminBankTransfers = () => {
             <Button
               variant="outline"
               onClick={resetFilters}
-              className="border-slate-600 text-slate-300"
+              className="border-slate-300 text-slate-700"
             >
               Reset
             </Button>
@@ -487,22 +487,22 @@ const AdminBankTransfers = () => {
         </Card>
 
         {/* Requests Table */}
-        <Card className="bg-slate-800/50 border-slate-700 overflow-hidden">
+        <Card className="bg-white border-slate-200 overflow-hidden shadow-sm">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
             </div>
           ) : requests.length === 0 ? (
             <div className="text-center py-12">
-              <Banknote className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400">No requests found</p>
+              <Banknote className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+              <p className="text-slate-500">No requests found</p>
             </div>
           ) : (
             <>
               {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-slate-900/50">
+                  <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
                       {statusFilter === 'pending' && (
                         <th className="p-4 w-12">
@@ -510,22 +510,22 @@ const AdminBankTransfers = () => {
                             type="checkbox"
                             checked={selectAll}
                             onChange={toggleSelectAll}
-                            className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-emerald-500 focus:ring-emerald-500"
+                            className="w-4 h-4 rounded border-slate-300 bg-white text-emerald-600 focus:ring-emerald-500"
                           />
                         </th>
                       )}
-                      <th className="text-left p-4 text-slate-400 font-medium text-sm">Request ID</th>
-                      <th className="text-left p-4 text-slate-400 font-medium text-sm">User</th>
-                      <th className="text-left p-4 text-slate-400 font-medium text-sm">Amount</th>
-                      <th className="text-left p-4 text-slate-400 font-medium text-sm">Bank Details</th>
-                      <th className="text-left p-4 text-slate-400 font-medium text-sm">Created / Processed</th>
-                      <th className="text-left p-4 text-slate-400 font-medium text-sm">Status</th>
-                      <th className="text-left p-4 text-slate-400 font-medium text-sm">Actions</th>
+                      <th className="text-left p-4 text-slate-600 font-semibold text-sm">Request ID</th>
+                      <th className="text-left p-4 text-slate-600 font-semibold text-sm">User</th>
+                      <th className="text-left p-4 text-slate-600 font-semibold text-sm">Amount</th>
+                      <th className="text-left p-4 text-slate-600 font-semibold text-sm">Bank Details</th>
+                      <th className="text-left p-4 text-slate-600 font-semibold text-sm">Created / Processed</th>
+                      <th className="text-left p-4 text-slate-600 font-semibold text-sm">Status</th>
+                      <th className="text-left p-4 text-slate-600 font-semibold text-sm">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-700">
+                  <tbody className="divide-y divide-slate-200">
                     {requests.map((req) => (
-                      <tr key={req.request_id} className={`hover:bg-slate-700/30 ${selectedIds.includes(req.request_id) ? 'bg-emerald-900/20' : ''}`}>
+                      <tr key={req.request_id} className={`hover:bg-slate-50 ${selectedIds.includes(req.request_id) ? 'bg-emerald-50' : ''}`}>
                         {statusFilter === 'pending' && (
                           <td className="p-4">
                             <input
@@ -533,88 +533,88 @@ const AdminBankTransfers = () => {
                               checked={selectedIds.includes(req.request_id)}
                               onChange={() => toggleSelect(req.request_id)}
                               disabled={req.status !== 'pending'}
-                              className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-emerald-500 focus:ring-emerald-500 disabled:opacity-50"
+                              className="w-4 h-4 rounded border-slate-300 bg-white text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
                             />
                           </td>
                         )}
                         <td className="p-4">
-                          <p className="text-slate-800 font-mono text-sm">{req.request_id}</p>
+                          <p className="text-slate-900 font-mono text-sm">{req.request_id}</p>
                         </td>
                         <td className="p-4">
-                          <p className="text-slate-800 font-medium">{req.user_name}</p>
-                          <p className="text-slate-400 text-sm">{req.user_phone}</p>
+                          <p className="text-slate-900 font-medium">{req.user_name}</p>
+                          <p className="text-slate-500 text-sm">{req.user_phone}</p>
                         </td>
                         <td className="p-4">
-                          <p className="text-emerald-400 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</p>
+                          <p className="text-emerald-600 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</p>
                           <p className="text-slate-500 text-xs">{req.prc_deducted?.toLocaleString()} PRC</p>
                         </td>
                         <td className="p-4">
                           <div className="space-y-2 min-w-[280px]">
                             {/* Name with Copy */}
-                            <div className="flex items-center justify-between gap-2 bg-slate-900/50 px-2 py-1 rounded">
+                            <div className="flex items-center justify-between gap-2 bg-slate-50 px-2 py-1 rounded">
                               <div>
                                 <span className="text-slate-500 text-xs">Name: </span>
-                                <span className="text-slate-800 text-sm font-medium">{req.account_holder_name || req.user_name}</span>
+                                <span className="text-slate-900 text-sm font-medium">{req.account_holder_name || req.user_name}</span>
                               </div>
                               <button
                                 onClick={() => copyToClipboard(req.account_holder_name || req.user_name, 'Name')}
-                                className="p-1 hover:bg-slate-700 rounded"
+                                className="p-1 hover:bg-slate-200 rounded"
                                 title="Copy Name"
                               >
-                                <Copy className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-400" />
+                                <Copy className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
                               </button>
                             </div>
                             {/* Account Number with Copy */}
-                            <div className="flex items-center justify-between gap-2 bg-slate-900/50 px-2 py-1 rounded">
+                            <div className="flex items-center justify-between gap-2 bg-slate-50 px-2 py-1 rounded">
                               <div>
                                 <span className="text-slate-500 text-xs">A/C: </span>
-                                <span className="text-slate-800 text-sm font-mono">{req.account_number}</span>
+                                <span className="text-slate-900 text-sm font-mono">{req.account_number}</span>
                               </div>
                               <button
                                 onClick={() => copyToClipboard(req.account_number, 'Account Number')}
-                                className="p-1 hover:bg-slate-700 rounded"
+                                className="p-1 hover:bg-slate-200 rounded"
                                 title="Copy Account Number"
                               >
-                                <Copy className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-400" />
+                                <Copy className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
                               </button>
                             </div>
                             {/* IFSC with Copy */}
-                            <div className="flex items-center justify-between gap-2 bg-slate-900/50 px-2 py-1 rounded">
+                            <div className="flex items-center justify-between gap-2 bg-slate-50 px-2 py-1 rounded">
                               <div>
                                 <span className="text-slate-500 text-xs">IFSC: </span>
-                                <span className="text-slate-800 text-sm font-mono">{req.ifsc_code}</span>
+                                <span className="text-slate-900 text-sm font-mono">{req.ifsc_code}</span>
                               </div>
                               <button
                                 onClick={() => copyToClipboard(req.ifsc_code, 'IFSC')}
-                                className="p-1 hover:bg-slate-700 rounded"
+                                className="p-1 hover:bg-slate-200 rounded"
                                 title="Copy IFSC"
                               >
-                                <Copy className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-400" />
+                                <Copy className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
                               </button>
                             </div>
                             {/* Amount with Copy */}
-                            <div className="flex items-center justify-between gap-2 bg-emerald-900/30 px-2 py-1 rounded border border-emerald-500/20">
+                            <div className="flex items-center justify-between gap-2 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
                               <div>
                                 <span className="text-slate-500 text-xs">Amount: </span>
-                                <span className="text-emerald-400 text-sm font-bold">₹{req.withdrawal_amount?.toLocaleString()}</span>
+                                <span className="text-emerald-600 text-sm font-bold">₹{req.withdrawal_amount?.toLocaleString()}</span>
                               </div>
                               <button
                                 onClick={() => copyToClipboard(req.withdrawal_amount?.toString(), 'Amount')}
-                                className="p-1 hover:bg-emerald-800/50 rounded"
+                                className="p-1 hover:bg-emerald-100 rounded"
                                 title="Copy Amount"
                               >
-                                <Copy className="w-3.5 h-3.5 text-emerald-400 hover:text-emerald-300" />
+                                <Copy className="w-3.5 h-3.5 text-emerald-600 hover:text-emerald-700" />
                               </button>
                             </div>
                             {/* Bank Name */}
-                            <p className="text-slate-400 text-xs">{req.bank_name}</p>
+                            <p className="text-slate-500 text-xs">{req.bank_name}</p>
                           </div>
                         </td>
                         <td className="p-4">
                           <div className="space-y-1">
                             <div>
                               <p className="text-slate-500 text-xs">Created:</p>
-                              <p className="text-slate-300 text-sm">
+                              <p className="text-slate-700 text-sm">
                                 {new Date(req.created_at).toLocaleDateString('en-IN')}
                               </p>
                               <p className="text-slate-500 text-xs">
@@ -622,11 +622,11 @@ const AdminBankTransfers = () => {
                               </p>
                             </div>
                             {req.processed_at && (
-                              <div className="mt-2 pt-2 border-t border-slate-700">
-                                <p className={`text-xs ${req.status === 'paid' ? 'text-green-500' : 'text-red-500'}`}>
+                              <div className="mt-2 pt-2 border-t border-slate-200">
+                                <p className={`text-xs ${req.status === 'paid' ? 'text-green-600' : 'text-red-600'}`}>
                                   {req.status === 'paid' ? 'Paid:' : 'Failed:'}
                                 </p>
-                                <p className="text-slate-300 text-sm">
+                                <p className="text-slate-700 text-sm">
                                   {new Date(req.processed_at).toLocaleDateString('en-IN')}
                                 </p>
                                 <p className="text-slate-500 text-xs">
@@ -646,7 +646,7 @@ const AdminBankTransfers = () => {
                                 data-testid={`mark-paid-${req.request_id}`}
                                 size="sm"
                                 onClick={() => openActionModal(req, 'paid')}
-                                className="bg-green-600 hover:bg-green-700 text-slate-800"
+                                className="bg-green-600 hover:bg-green-700 text-white"
                               >
                                 <CheckCircle className="w-4 h-4 mr-1" />
                                 Paid
@@ -656,7 +656,7 @@ const AdminBankTransfers = () => {
                                 size="sm"
                                 onClick={() => openActionModal(req, 'failed')}
                                 variant="outline"
-                                className="border-red-500 text-red-400 hover:bg-red-500/10"
+                                className="border-red-500 text-red-600 hover:bg-red-50"
                               >
                                 <XCircle className="w-4 h-4 mr-1" />
                                 Fail
@@ -665,10 +665,10 @@ const AdminBankTransfers = () => {
                           ) : (
                             <div className="text-sm">
                               {req.utr_number && (
-                                <p className="text-emerald-400 font-mono text-xs">UTR: {req.utr_number}</p>
+                                <p className="text-emerald-600 font-mono text-xs">UTR: {req.utr_number}</p>
                               )}
                               {req.admin_remark && (
-                                <p className="text-slate-400 text-xs mt-1">{req.admin_remark}</p>
+                                <p className="text-slate-500 text-xs mt-1">{req.admin_remark}</p>
                               )}
                             </div>
                           )}
@@ -680,69 +680,69 @@ const AdminBankTransfers = () => {
               </div>
 
               {/* Mobile Cards */}
-              <div className="md:hidden divide-y divide-slate-700">
+              <div className="md:hidden divide-y divide-slate-200">
                 {requests.map((req) => (
-                  <div key={req.request_id} className="p-4 space-y-3">
+                  <div key={req.request_id} className="p-4 space-y-3 bg-white">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-slate-800 font-medium">{req.user_name}</p>
-                        <p className="text-slate-400 text-sm">{req.user_phone}</p>
+                        <p className="text-slate-900 font-medium">{req.user_name}</p>
+                        <p className="text-slate-500 text-sm">{req.user_phone}</p>
                       </div>
                       <StatusBadge status={req.status} />
                     </div>
                     
                     {/* Bank Details with Copy Buttons */}
-                    <div className="bg-slate-900/50 rounded-lg p-3 space-y-2">
+                    <div className="bg-slate-50 rounded-lg p-3 space-y-2">
                       {/* Name */}
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="text-slate-500 text-xs">Account Holder: </span>
-                          <span className="text-slate-800 text-sm">{req.account_holder_name || req.user_name}</span>
+                          <span className="text-slate-900 text-sm">{req.account_holder_name || req.user_name}</span>
                         </div>
                         <button
                           onClick={() => copyToClipboard(req.account_holder_name || req.user_name, 'Name')}
-                          className="p-1.5 hover:bg-slate-700 rounded"
+                          className="p-1.5 hover:bg-slate-200 rounded"
                         >
-                          <Copy className="w-4 h-4 text-slate-400" />
+                          <Copy className="w-4 h-4 text-slate-500" />
                         </button>
                       </div>
                       {/* Account Number */}
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="text-slate-500 text-xs">Account No: </span>
-                          <span className="text-slate-800 text-sm font-mono">{req.account_number}</span>
+                          <span className="text-slate-900 text-sm font-mono">{req.account_number}</span>
                         </div>
                         <button
                           onClick={() => copyToClipboard(req.account_number, 'Account Number')}
-                          className="p-1.5 hover:bg-slate-700 rounded"
+                          className="p-1.5 hover:bg-slate-200 rounded"
                         >
-                          <Copy className="w-4 h-4 text-slate-400" />
+                          <Copy className="w-4 h-4 text-slate-500" />
                         </button>
                       </div>
                       {/* IFSC */}
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="text-slate-500 text-xs">IFSC: </span>
-                          <span className="text-slate-800 text-sm font-mono">{req.ifsc_code}</span>
+                          <span className="text-slate-900 text-sm font-mono">{req.ifsc_code}</span>
                         </div>
                         <button
                           onClick={() => copyToClipboard(req.ifsc_code, 'IFSC')}
-                          className="p-1.5 hover:bg-slate-700 rounded"
+                          className="p-1.5 hover:bg-slate-200 rounded"
                         >
-                          <Copy className="w-4 h-4 text-slate-400" />
+                          <Copy className="w-4 h-4 text-slate-500" />
                         </button>
                       </div>
                       {/* Amount */}
-                      <div className="flex items-center justify-between bg-emerald-900/30 -mx-3 px-3 py-2 rounded-b-lg border-t border-emerald-500/20">
+                      <div className="flex items-center justify-between bg-emerald-50 -mx-3 px-3 py-2 rounded-b-lg border-t border-emerald-200">
                         <div>
                           <span className="text-slate-500 text-xs">Amount: </span>
-                          <span className="text-emerald-400 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</span>
+                          <span className="text-emerald-600 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</span>
                         </div>
                         <button
                           onClick={() => copyToClipboard(req.withdrawal_amount?.toString(), 'Amount')}
-                          className="p-1.5 hover:bg-emerald-800/50 rounded"
+                          className="p-1.5 hover:bg-emerald-100 rounded"
                         >
-                          <Copy className="w-4 h-4 text-emerald-400" />
+                          <Copy className="w-4 h-4 text-emerald-600" />
                         </button>
                       </div>
                     </div>
@@ -750,15 +750,15 @@ const AdminBankTransfers = () => {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="text-slate-500 text-xs">Bank</p>
-                        <p className="text-slate-800 text-sm">{req.bank_name}</p>
+                        <p className="text-slate-900 text-sm">{req.bank_name}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-slate-500 text-xs">PRC Deducted</p>
-                        <p className="text-slate-300 text-sm">{req.prc_deducted?.toLocaleString()} PRC</p>
+                        <p className="text-slate-700 text-sm">{req.prc_deducted?.toLocaleString()} PRC</p>
                       </div>
                     </div>
                     
-                    <div className="flex justify-between items-center text-xs text-slate-400">
+                    <div className="flex justify-between items-center text-xs text-slate-500">
                       <span>{req.request_id}</span>
                       <span>{new Date(req.created_at).toLocaleString('en-IN')}</span>
                     </div>
@@ -768,7 +768,7 @@ const AdminBankTransfers = () => {
                         <Button
                           size="sm"
                           onClick={() => openActionModal(req, 'paid')}
-                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Mark Paid
@@ -777,7 +777,7 @@ const AdminBankTransfers = () => {
                           size="sm"
                           onClick={() => openActionModal(req, 'failed')}
                           variant="outline"
-                          className="flex-1 border-red-500 text-red-400"
+                          className="flex-1 border-red-500 text-red-600"
                         >
                           <XCircle className="w-4 h-4 mr-1" />
                           Mark Failed
@@ -789,8 +789,8 @@ const AdminBankTransfers = () => {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between p-4 border-t border-slate-700">
-                <p className="text-slate-400 text-sm">
+              <div className="flex items-center justify-between p-4 border-t border-slate-200 bg-slate-50">
+                <p className="text-slate-600 text-sm">
                   Showing {requests.length} of {totalItems} requests
                 </p>
                 <div className="flex gap-2">
@@ -799,11 +799,11 @@ const AdminBankTransfers = () => {
                     variant="outline"
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="border-slate-600 text-slate-300"
+                    className="border-slate-300 text-slate-700"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <span className="px-4 py-2 text-slate-300">
+                  <span className="px-4 py-2 text-slate-700">
                     Page {page} of {totalPages}
                   </span>
                   <Button
@@ -811,7 +811,7 @@ const AdminBankTransfers = () => {
                     variant="outline"
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="border-slate-600 text-slate-300"
+                    className="border-slate-300 text-slate-700"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
@@ -824,120 +824,120 @@ const AdminBankTransfers = () => {
 
       {/* Action Modal */}
       {showActionModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="bg-slate-800 border-slate-700 max-w-md w-full">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="bg-white border-slate-200 max-w-md w-full shadow-xl">
             <div className="p-6">
-              <h2 className="text-xl font-bold text-slate-800 mb-4">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">
                 {actionType === 'paid' ? 'Mark as Paid' : 'Mark as Failed'}
               </h2>
               
               {/* Request Details with Copy Buttons */}
-              <div className="bg-slate-900 rounded-lg p-4 mb-4 space-y-3">
+              <div className="bg-slate-50 rounded-lg p-4 mb-4 space-y-3">
                 {/* User Info */}
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-slate-500 text-xs">User</p>
-                    <p className="text-slate-800">{selectedRequest.user_name}</p>
+                    <p className="text-slate-900">{selectedRequest.user_name}</p>
                   </div>
                 </div>
                 
                 {/* Account Holder Name */}
-                <div className="flex items-center justify-between bg-slate-800 px-3 py-2 rounded">
+                <div className="flex items-center justify-between bg-white px-3 py-2 rounded border border-slate-200">
                   <div>
                     <p className="text-slate-500 text-xs">Account Holder Name</p>
-                    <p className="text-slate-800 font-medium">{selectedRequest.account_holder_name || selectedRequest.user_name}</p>
+                    <p className="text-slate-900 font-medium">{selectedRequest.account_holder_name || selectedRequest.user_name}</p>
                   </div>
                   <button
                     onClick={() => copyToClipboard(selectedRequest.account_holder_name || selectedRequest.user_name, 'Name')}
-                    className="p-2 hover:bg-slate-700 rounded"
+                    className="p-2 hover:bg-slate-100 rounded"
                     title="Copy Name"
                   >
-                    <Copy className="w-4 h-4 text-slate-400 hover:text-emerald-400" />
+                    <Copy className="w-4 h-4 text-slate-500 hover:text-emerald-600" />
                   </button>
                 </div>
                 
                 {/* Account Number */}
-                <div className="flex items-center justify-between bg-slate-800 px-3 py-2 rounded">
+                <div className="flex items-center justify-between bg-white px-3 py-2 rounded border border-slate-200">
                   <div>
                     <p className="text-slate-500 text-xs">Account Number</p>
-                    <p className="text-slate-800 font-mono text-lg">{selectedRequest.account_number}</p>
+                    <p className="text-slate-900 font-mono text-lg">{selectedRequest.account_number}</p>
                   </div>
                   <button
                     onClick={() => copyToClipboard(selectedRequest.account_number, 'Account Number')}
-                    className="p-2 hover:bg-slate-700 rounded"
+                    className="p-2 hover:bg-slate-100 rounded"
                     title="Copy Account Number"
                   >
-                    <Copy className="w-4 h-4 text-slate-400 hover:text-emerald-400" />
+                    <Copy className="w-4 h-4 text-slate-500 hover:text-emerald-600" />
                   </button>
                 </div>
                 
                 {/* IFSC Code */}
-                <div className="flex items-center justify-between bg-slate-800 px-3 py-2 rounded">
+                <div className="flex items-center justify-between bg-white px-3 py-2 rounded border border-slate-200">
                   <div>
                     <p className="text-slate-500 text-xs">IFSC Code</p>
-                    <p className="text-slate-800 font-mono text-lg">{selectedRequest.ifsc_code}</p>
+                    <p className="text-slate-900 font-mono text-lg">{selectedRequest.ifsc_code}</p>
                   </div>
                   <button
                     onClick={() => copyToClipboard(selectedRequest.ifsc_code, 'IFSC')}
-                    className="p-2 hover:bg-slate-700 rounded"
+                    className="p-2 hover:bg-slate-100 rounded"
                     title="Copy IFSC"
                   >
-                    <Copy className="w-4 h-4 text-slate-400 hover:text-emerald-400" />
+                    <Copy className="w-4 h-4 text-slate-500 hover:text-emerald-600" />
                   </button>
                 </div>
                 
                 {/* Amount */}
-                <div className="flex items-center justify-between bg-emerald-900/30 px-3 py-2 rounded border border-emerald-500/30">
+                <div className="flex items-center justify-between bg-emerald-50 px-3 py-2 rounded border border-emerald-200">
                   <div>
                     <p className="text-slate-500 text-xs">Amount to Transfer</p>
-                    <p className="text-emerald-400 font-bold text-xl">₹{selectedRequest.withdrawal_amount?.toLocaleString()}</p>
+                    <p className="text-emerald-600 font-bold text-xl">₹{selectedRequest.withdrawal_amount?.toLocaleString()}</p>
                   </div>
                   <button
                     onClick={() => copyToClipboard(selectedRequest.withdrawal_amount?.toString(), 'Amount')}
-                    className="p-2 hover:bg-emerald-800/50 rounded"
+                    className="p-2 hover:bg-emerald-100 rounded"
                     title="Copy Amount"
                   >
-                    <Copy className="w-4 h-4 text-emerald-400 hover:text-emerald-300" />
+                    <Copy className="w-4 h-4 text-emerald-600 hover:text-emerald-700" />
                   </button>
                 </div>
                 
                 {/* Bank Name */}
                 <div className="text-center pt-2">
-                  <p className="text-slate-400 text-sm">{selectedRequest.bank_name}</p>
+                  <p className="text-slate-500 text-sm">{selectedRequest.bank_name}</p>
                 </div>
                 
                 {/* Timestamps */}
-                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-700">
-                  <div className="bg-slate-800 px-3 py-2 rounded">
+                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-200">
+                  <div className="bg-white px-3 py-2 rounded border border-slate-200">
                     <p className="text-slate-500 text-xs flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> Created
                     </p>
-                    <p className="text-slate-800 text-sm">
+                    <p className="text-slate-900 text-sm">
                       {new Date(selectedRequest.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
-                    <p className="text-slate-400 text-xs">
+                    <p className="text-slate-500 text-xs">
                       {new Date(selectedRequest.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </p>
                   </div>
                   {selectedRequest.processed_at ? (
-                    <div className={`px-3 py-2 rounded ${selectedRequest.status === 'paid' ? 'bg-green-900/30' : 'bg-red-900/30'}`}>
-                      <p className={`text-xs flex items-center gap-1 ${selectedRequest.status === 'paid' ? 'text-green-500' : 'text-red-500'}`}>
+                    <div className={`px-3 py-2 rounded border ${selectedRequest.status === 'paid' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                      <p className={`text-xs flex items-center gap-1 ${selectedRequest.status === 'paid' ? 'text-green-600' : 'text-red-600'}`}>
                         <Calendar className="w-3 h-3" /> {selectedRequest.status === 'paid' ? 'Paid' : 'Failed'}
                       </p>
-                      <p className="text-slate-800 text-sm">
+                      <p className="text-slate-900 text-sm">
                         {new Date(selectedRequest.processed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
-                      <p className="text-slate-400 text-xs">
+                      <p className="text-slate-500 text-xs">
                         {new Date(selectedRequest.processed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                       </p>
                     </div>
                   ) : (
-                    <div className="bg-yellow-900/30 px-3 py-2 rounded">
-                      <p className="text-yellow-500 text-xs flex items-center gap-1">
+                    <div className="bg-yellow-50 border border-yellow-200 px-3 py-2 rounded">
+                      <p className="text-yellow-600 text-xs flex items-center gap-1">
                         <Clock className="w-3 h-3" /> Status
                       </p>
-                      <p className="text-yellow-400 text-sm font-medium">Pending</p>
-                      <p className="text-slate-400 text-xs">Awaiting action</p>
+                      <p className="text-yellow-700 text-sm font-medium">Pending</p>
+                      <p className="text-slate-500 text-xs">Awaiting action</p>
                     </div>
                   )}
                 </div>
@@ -946,44 +946,44 @@ const AdminBankTransfers = () => {
               {actionType === 'paid' ? (
                 <>
                   <div className="mb-4">
-                    <label className="block text-slate-300 text-sm mb-2">UTR Number *</label>
+                    <label className="block text-slate-700 text-sm mb-2 font-medium">UTR Number *</label>
                     <Input
                       value={utrNumber}
                       onChange={(e) => setUtrNumber(e.target.value)}
                       placeholder="Enter UTR/Transaction Reference"
-                      className="bg-slate-900 border-slate-600 text-slate-800"
+                      className="bg-white border-slate-300 text-slate-900"
                     />
                   </div>
                   <div className="mb-4">
-                    <label className="block text-slate-300 text-sm mb-2">Remark (Optional)</label>
+                    <label className="block text-slate-700 text-sm mb-2 font-medium">Remark (Optional)</label>
                     <Input
                       value={actionRemark}
                       onChange={(e) => setActionRemark(e.target.value)}
                       placeholder="Payment completed via NEFT/IMPS"
-                      className="bg-slate-900 border-slate-600 text-slate-800"
+                      className="bg-white border-slate-300 text-slate-900"
                     />
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                     <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-red-400 mt-0.5" />
+                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
                       <div>
-                        <p className="text-red-400 font-medium">PRC will be refunded</p>
-                        <p className="text-red-400/80 text-sm">
+                        <p className="text-red-700 font-medium">PRC will be refunded</p>
+                        <p className="text-red-600 text-sm">
                           {selectedRequest.prc_deducted?.toLocaleString()} PRC will be credited back to user's account.
                         </p>
                       </div>
                     </div>
                   </div>
                   <div className="mb-4">
-                    <label className="block text-slate-300 text-sm mb-2">Reason for Failure *</label>
+                    <label className="block text-slate-700 text-sm mb-2 font-medium">Reason for Failure *</label>
                     <Input
                       value={actionRemark}
                       onChange={(e) => setActionRemark(e.target.value)}
                       placeholder="e.g., Invalid account number, Bank rejected"
-                      className="bg-slate-900 border-slate-600 text-slate-800"
+                      className="bg-white border-slate-300 text-slate-900"
                     />
                   </div>
                 </>
@@ -993,7 +993,7 @@ const AdminBankTransfers = () => {
                 <Button
                   onClick={() => setShowActionModal(false)}
                   variant="outline"
-                  className="flex-1 border-slate-600 text-slate-300"
+                  className="flex-1 border-slate-300 text-slate-700"
                   disabled={processing}
                 >
                   Cancel
@@ -1001,7 +1001,7 @@ const AdminBankTransfers = () => {
                 <Button
                   onClick={handleAction}
                   disabled={processing || (actionType === 'paid' && !utrNumber.trim())}
-                  className={`flex-1 ${
+                  className={`flex-1 text-white ${
                     actionType === 'paid'
                       ? 'bg-green-600 hover:bg-green-700'
                       : 'bg-red-600 hover:bg-red-700'

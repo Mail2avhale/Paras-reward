@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://codebase-purge.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://bulkpe-consistency.preview.emergentagent.com';
 
 // Test credentials
 const USER_MOBILE = '9421331342';

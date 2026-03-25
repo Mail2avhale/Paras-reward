@@ -16,7 +16,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://codebase-purge.preview.emergentagent.com';
+const BASE_URL = 'https://bulkpe-consistency.preview.emergentagent.com';
 
 // Test data
 const TEST_CREDENTIALS = {

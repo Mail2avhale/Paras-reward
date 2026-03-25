@@ -285,7 +285,7 @@ const AdminGiftVouchers = ({ user }) => {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-900 to-gray-950 border-b border-slate-200 sticky top-0 z-10">
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">

@@ -91,15 +91,15 @@ const ErrorMonitor = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-slate-800 p-6">
+    <div className="min-h-screen bg-white text-slate-900 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold text-slate-900">
               System Monitor
             </h1>
-            <p className="text-slate-500 mt-1">Real-time error & payment monitoring</p>
+            <p className="text-slate-600 mt-1">Real-time error & payment monitoring</p>
           </div>
           <div className="flex items-center gap-4">
             <select

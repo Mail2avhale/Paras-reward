@@ -125,7 +125,7 @@ const UserProfileCard = ({ user, onEditClick }) => {
   const roleColor = roleColors[user.role] || 'gray';
   
   return (
-    <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-slate-200 p-6">
+    <Card className="bg-white border-slate-200 p-6 shadow-sm">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">

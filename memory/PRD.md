@@ -1,7 +1,36 @@
 # PARAS REWARD - Product Requirements Document
 
 ## ✅ DEPLOYED - 19 March 2026
-## 📝 LAST UPDATED - 25 March 2026 (Burn Module Completely Removed)
+## 📝 LAST UPDATED - 25 March 2026 (Admin Light Theme Complete)
+
+## ✅ COMPLETED: Admin Light Theme (Bulkpe Style) - 25 March 2026
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ADMIN LIGHT THEME - COMPLETELY IMPLEMENTED                    ║
+║                                                                 ║
+║  As per user request, all admin pages now have a clean,        ║
+║  light (white) theme matching the Bulkpe design style.         ║
+║                                                                 ║
+║  FILES UPDATED:                                                 ║
+║  • AdminBankTransfers.js - Full light theme conversion         ║
+║  • AdminGiftVouchers.js - Header fixed to white                ║
+║  • AdminPendingRequests.js - Background fixed to white         ║
+║  • AdminUser360New.js - Cards fixed to white                   ║
+║  • ErrorMonitor.js - Background fixed to white                 ║
+║  • admin-theme.css - Light theme CSS variables                 ║
+║  • AdminLayout.js - Master layout with light theme             ║
+║  • AdminDashboard.js - Main dashboard light theme              ║
+║  • AdminMembers.js - Members page light theme                  ║
+║  • public/index.html - Removed hardcoded dark background       ║
+║                                                                 ║
+║  THEME CLASSES USED:                                            ║
+║  • Background: bg-white, bg-slate-50                           ║
+║  • Borders: border-slate-200, border-slate-300                 ║
+║  • Text: text-slate-900, text-slate-700, text-slate-500        ║
+║  • Cards: bg-white border-slate-200 shadow-sm                  ║
+║  • Status badges: Pastel colors (green-100, yellow-100, etc.)  ║
+╚════════════════════════════════════════════════════════════════╝
+```
 
 ## ❌ REMOVED: PRC Burning Module (25 March 2026)
 ```
@@ -456,7 +485,7 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 
 1. **CORS Restriction** ✅
    - Changed `CORS_ORIGINS="*"` to specific origins
-   - Now: `https://codebase-purge.preview.emergentagent.com,http://localhost:3000`
+   - Now: `https://bulkpe-consistency.preview.emergentagent.com,http://localhost:3000`
    - File: `/app/backend/.env`
 
 2. **Frontend Admin Validation via API** ✅

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://codebase-purge.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://bulkpe-consistency.preview.emergentagent.com';
 
 test.describe('Admin Members List - Sorting Bug Fix Verification', () => {
   /**

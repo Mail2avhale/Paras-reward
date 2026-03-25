@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://codebase-purge.preview.emergentagent.com",
+    "url": "https://bulkpe-consistency.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

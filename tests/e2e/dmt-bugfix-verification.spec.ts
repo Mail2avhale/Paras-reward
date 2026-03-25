@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://codebase-purge.preview.emergentagent.com';
+const BASE_URL = 'https://bulkpe-consistency.preview.emergentagent.com';
 
 const TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',
