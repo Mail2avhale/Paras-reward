@@ -50,6 +50,10 @@ class CreateOrderRequest(BaseModel):
     plan_type: str  # monthly, quarterly, half_yearly, yearly
     plan_name: str  # startup, growth, elite
     amount: float  # Amount in INR
+    # Additional user details for better payment verification
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    user_mobile: Optional[str] = None
 
 
 class VerifyPaymentRequest(BaseModel):
@@ -133,10 +137,20 @@ async def create_razorpay_order(request: CreateOrderRequest):
             raise HTTPException(status_code=403, detail="Online payment is currently disabled. Please use manual payment.")
     
     try:
+        # Fetch user details from database for better payment verification
+        user_data = None
+        if db is not None:
+            user_data = await db.users.find_one({"uid": request.user_id}, {"_id": 0, "name": 1, "email": 1, "mobile": 1, "full_name": 1})
+        
+        # Use provided details or fallback to database
+        customer_name = request.user_name or (user_data.get("full_name") if user_data else None) or (user_data.get("name") if user_data else None) or "Customer"
+        customer_email = request.user_email or (user_data.get("email") if user_data else None) or ""
+        customer_mobile = request.user_mobile or (user_data.get("mobile") if user_data else None) or ""
+        
         # Convert amount to paise (Razorpay uses smallest currency unit)
         amount_paise = int(request.amount * 100)
         
-        # Create Razorpay order
+        # Create Razorpay order with enhanced notes for better verification
         # Receipt must be <= 40 chars
         receipt_id = f"sub_{request.user_id[-8:]}_{datetime.now().strftime('%m%d%H%M%S')}"
         order_data = {
@@ -146,17 +160,25 @@ async def create_razorpay_order(request: CreateOrderRequest):
             "notes": {
                 "user_id": request.user_id,
                 "plan_type": request.plan_type,
-                "plan_name": request.plan_name
+                "plan_name": request.plan_name,
+                "customer_name": customer_name,
+                "customer_email": customer_email,
+                "customer_mobile": customer_mobile,
+                "product": f"Elite {request.plan_type} Subscription",
+                "merchant": "PARAS REWARD"
             }
         }
         
         order = razorpay_client.order.create(data=order_data)
         
-        # Save order to database
+        # Save order to database with user details
         if db is not None:
             await db.razorpay_orders.insert_one({
                 "order_id": order["id"],
                 "user_id": request.user_id,
+                "user_name": customer_name,
+                "user_email": customer_email,
+                "user_mobile": customer_mobile,
                 "plan_type": request.plan_type,
                 "plan_name": request.plan_name,
                 "amount": request.amount,

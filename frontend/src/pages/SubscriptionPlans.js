@@ -225,12 +225,15 @@ const SubscriptionPlans = ({ user }) => {
         return;
       }
       
-      // Create order
+      // Create order with user details for better payment verification
       const orderRes = await axios.post(`${API}/razorpay/create-order`, {
         user_id: user.uid,
         plan_type: selectedDuration,
         plan_name: selectedPlan.id,
-        amount: getPrice()
+        amount: getPrice(),
+        user_name: userData?.full_name || userData?.name || '',
+        user_email: userData?.email || '',
+        user_mobile: userData?.mobile || ''
       });
       
       const { order_id, amount, currency } = orderRes.data;
