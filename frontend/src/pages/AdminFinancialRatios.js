@@ -52,7 +52,7 @@ const AdminFinancialRatios = ({ user }) => {
       case 'good': return 'text-green-600 bg-green-500/20';
       case 'fair': return 'text-amber-600 bg-amber-500/20';
       case 'poor': return 'text-red-600 bg-red-500/20';
-      default: return 'text-gray-600 bg-gray-700';
+      default: return 'text-gray-600 bg-slate-100';
     }
   };
 

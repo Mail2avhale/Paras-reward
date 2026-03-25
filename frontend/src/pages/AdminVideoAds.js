@@ -284,7 +284,7 @@ const AdminVideoAds = ({ user, onLogout }) => {
                       type="text"
                       value={formData.title}
                       onChange={(e) => setFormData({...formData, title: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -297,7 +297,7 @@ const AdminVideoAds = ({ user, onLogout }) => {
                     <select
                       value={formData.video_type}
                       onChange={(e) => setFormData({...formData, video_type: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     >
                       <option value="youtube">YouTube</option>
                       <option value="vimeo">Vimeo</option>
@@ -319,7 +319,7 @@ const AdminVideoAds = ({ user, onLogout }) => {
                         formData.video_type === 'vimeo' ? 'https://vimeo.com/...' :
                         'https://example.com/video.mp4'
                       }
-                      className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                       required
                     />
                   </div>
@@ -333,7 +333,7 @@ const AdminVideoAds = ({ user, onLogout }) => {
                       type="url"
                       value={formData.thumbnail_url}
                       onChange={(e) => setFormData({...formData, thumbnail_url: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
 
@@ -346,7 +346,7 @@ const AdminVideoAds = ({ user, onLogout }) => {
                       value={formData.description}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
                       rows={3}
-                      className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
 
@@ -358,7 +358,7 @@ const AdminVideoAds = ({ user, onLogout }) => {
                     <select
                       value={formData.placement}
                       onChange={(e) => setFormData({...formData, placement: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     >
                       <option value="homepage">Homepage</option>
                       <option value="marketplace">Marketplace</option>
@@ -379,7 +379,7 @@ const AdminVideoAds = ({ user, onLogout }) => {
                         onChange={(e) => setFormData({...formData, skip_after: parseInt(e.target.value)})}
                         min={3}
                         max={30}
-                        className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
 

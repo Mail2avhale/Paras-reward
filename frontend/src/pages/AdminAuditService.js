@@ -109,7 +109,7 @@ const AdminAuditService = ({ user }) => {
       critical: 'bg-red-500/20 text-red-400 border-red-500/30',
       high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
       normal: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      low: 'bg-gray-700 text-slate-600 border-slate-200'
+      low: 'bg-slate-100 text-slate-600 border-slate-200'
     };
     return badges[severity] || badges.normal;
   };

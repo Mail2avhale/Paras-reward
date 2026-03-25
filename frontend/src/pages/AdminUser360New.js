@@ -168,7 +168,7 @@ const UserProfileCard = ({ user, onEditClick }) => {
             <Wallet className="h-4 w-4 text-amber-500" />
             <span className="text-amber-400 font-bold">{formatNumber((user.prc_balance || 0).toFixed(2))} PRC</span>
           </div>
-          <Button size="sm" variant="outline" onClick={onEditClick} className="border-gray-600 text-slate-600">
+          <Button size="sm" variant="outline" onClick={onEditClick} className="border-slate-300 text-slate-600">
             <Edit className="h-3 w-3 mr-1" /> Edit Profile
           </Button>
         </div>
@@ -643,7 +643,7 @@ const AdminUser360New = ({ user: adminUser }) => {
 
   // ========== RENDER ==========
   return (
-    <div className="min-h-screen bg-gray-950 p-4 md:p-6">
+    <div className="min-h-screen bg-white p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
@@ -953,7 +953,7 @@ const AdminUser360New = ({ user: adminUser }) => {
                     >
                       <tab.icon className="h-4 w-4" />
                       {tab.label}
-                      {tab.count !== undefined && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-700">{tab.count}</span>}
+                      {tab.count !== undefined && <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100">{tab.count}</span>}
                     </button>
                   ))}
                 </div>
@@ -1160,7 +1160,7 @@ const AdminUser360New = ({ user: adminUser }) => {
           )}
           {!newPin && (
             <div className="flex gap-3">
-              <Button onClick={() => setShowPinReset(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
+              <Button onClick={() => setShowPinReset(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
               <Button onClick={handlePinReset} disabled={actionLoading} className="flex-1 bg-amber-600 hover:bg-amber-700">
                 {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Generate New PIN'}
               </Button>
@@ -1192,7 +1192,7 @@ const AdminUser360New = ({ user: adminUser }) => {
             </div>
           )}
           <div className="flex gap-3">
-            <Button onClick={() => setShowRoleChange(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
+            <Button onClick={() => setShowRoleChange(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
             <Button onClick={handleRoleChange} disabled={actionLoading} className="flex-1 bg-purple-600 hover:bg-purple-700">
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Role'}
             </Button>
@@ -1224,7 +1224,7 @@ const AdminUser360New = ({ user: adminUser }) => {
             <Input value={balanceReason} onChange={(e) => setBalanceReason(e.target.value)} placeholder="Reason for adjustment" className="bg-white border-slate-200 mt-1" />
           </div>
           <div className="flex gap-3">
-            <Button onClick={() => setShowBalanceAdjust(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
+            <Button onClick={() => setShowBalanceAdjust(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
             <Button onClick={handleBalanceAdjust} disabled={actionLoading} className={`flex-1 ${balanceOperation === 'add' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : `${balanceOperation === 'add' ? 'Add' : 'Deduct'} PRC`}
             </Button>
@@ -1247,7 +1247,7 @@ const AdminUser360New = ({ user: adminUser }) => {
             <p className="text-xs text-slate-500 mt-1">Type "remove" to clear referral</p>
           </div>
           <div className="flex gap-3">
-            <Button onClick={() => setShowReferralChange(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
+            <Button onClick={() => setShowReferralChange(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
             <Button onClick={handleReferralChange} disabled={actionLoading} className="flex-1 bg-cyan-600 hover:bg-cyan-700">
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Referral'}
             </Button>
@@ -1266,7 +1266,7 @@ const AdminUser360New = ({ user: adminUser }) => {
             <p className="text-slate-500 text-sm">This will permanently delete the user and all their data.</p>
           </div>
           <div className="flex gap-3">
-            <Button onClick={() => setShowDeleteConfirm(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
+            <Button onClick={() => setShowDeleteConfirm(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
             <Button onClick={handleDeleteUser} disabled={actionLoading} className="flex-1 bg-red-600 hover:bg-red-700">
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete Permanently'}
             </Button>
@@ -1347,7 +1347,7 @@ const AdminUser360New = ({ user: adminUser }) => {
           </div>
           
           <div className="flex gap-3 pt-4 border-t border-slate-200">
-            <Button onClick={() => setShowEditProfile(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
+            <Button onClick={() => setShowEditProfile(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
             <Button onClick={handleSaveProfile} disabled={actionLoading} className="flex-1 bg-indigo-600 hover:bg-indigo-700">
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
             </Button>
@@ -1398,7 +1398,7 @@ const AdminUser360New = ({ user: adminUser }) => {
               <p className="text-slate-500 text-sm">Grant without payment</p>
             </div>
             <button onClick={() => setSubscriptionForm({...subscriptionForm, isFree: !subscriptionForm.isFree})}
-              className={`w-12 h-6 rounded-full ${subscriptionForm.isFree ? 'bg-green-500' : 'bg-gray-700'}`}>
+              className={`w-12 h-6 rounded-full ${subscriptionForm.isFree ? 'bg-green-500' : 'bg-slate-100'}`}>
               <div className={`w-5 h-5 bg-white rounded-full transform transition-transform ${subscriptionForm.isFree ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
@@ -1410,7 +1410,7 @@ const AdminUser360New = ({ user: adminUser }) => {
           </div>
           
           <div className="flex gap-3">
-            <Button onClick={() => setShowSubscription(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
+            <Button onClick={() => setShowSubscription(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
             <Button onClick={handleSubscriptionUpdate} disabled={actionLoading} className="flex-1 bg-purple-600 hover:bg-purple-700">
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Subscription'}
             </Button>
@@ -1507,7 +1507,7 @@ const AdminUser360New = ({ user: adminUser }) => {
             </div>
           )}
           <div className="flex gap-3">
-            <Button onClick={() => setShowKYCAction(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
+            <Button onClick={() => setShowKYCAction(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
             <Button onClick={handleKYCAction} disabled={actionLoading || (kycAction === 'reject' && !kycReason.trim())}
               className={`flex-1 ${kycAction === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : kycAction === 'approve' ? 'Approve KYC' : 'Reject KYC'}

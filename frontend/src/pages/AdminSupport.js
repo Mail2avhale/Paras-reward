@@ -177,7 +177,7 @@ const AdminSupport = ({ user }) => {
         </span>
       ),
       'closed': (
-        <span className="px-3 py-1 bg-gray-700 text-slate-600 text-xs rounded-full flex items-center gap-1.5 font-medium">
+        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full flex items-center gap-1.5 font-medium">
           <Archive className="h-3 w-3" /> Closed
         </span>
       )
@@ -198,7 +198,7 @@ const AdminSupport = ({ user }) => {
         </span>
       ),
       'low': (
-        <span className="px-3 py-1 bg-gray-700 text-slate-600 text-xs rounded-full flex items-center gap-1.5 font-medium">
+        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full flex items-center gap-1.5 font-medium">
           <Clock className="h-3 w-3" /> Low
         </span>
       )
@@ -227,7 +227,7 @@ const AdminSupport = ({ user }) => {
   };
 
   return (
-    <div className="p-4 lg:p-6 min-h-screen bg-gray-950">
+    <div className="p-4 lg:p-6 min-h-screen bg-white">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
@@ -501,7 +501,7 @@ const AdminSupport = ({ user }) => {
                 <select
                   value={selectedTicket.status}
                   onChange={(e) => handleStatusChange(selectedTicket.ticket_id, e.target.value)}
-                  className="text-xs bg-gray-700 border-0 rounded px-2 py-1 text-slate-800"
+                  className="text-xs bg-slate-100 border-0 rounded px-2 py-1 text-slate-800"
                   disabled={processing}
                 >
                   <option value="open">Open</option>
@@ -515,7 +515,7 @@ const AdminSupport = ({ user }) => {
                 <select
                   value={selectedTicket.priority}
                   onChange={(e) => handlePriorityChange(selectedTicket.ticket_id, e.target.value)}
-                  className="text-xs bg-gray-700 border-0 rounded px-2 py-1 text-slate-800"
+                  className="text-xs bg-slate-100 border-0 rounded px-2 py-1 text-slate-800"
                   disabled={processing}
                 >
                   <option value="low">Low</option>
@@ -622,7 +622,7 @@ const AdminSupport = ({ user }) => {
                     variant="outline"
                     onClick={() => handleStatusChange(selectedTicket.ticket_id, 'closed')}
                     disabled={processing}
-                    className="border-gray-600 text-slate-600 hover:bg-white"
+                    className="border-slate-300 text-slate-600 hover:bg-white"
                   >
                     <Archive className="h-4 w-4 mr-1" /> Close Ticket
                   </Button>

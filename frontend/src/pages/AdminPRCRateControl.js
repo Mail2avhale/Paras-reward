@@ -131,7 +131,7 @@ const AdminPRCRateControl = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -342,7 +342,7 @@ const AdminPRCRateControl = ({ user }) => {
                       ? 'bg-amber-500/20 text-amber-400' 
                       : userResult.basic_info?.subscription_plan === 'startup'
                         ? 'bg-blue-500/20 text-blue-400'
-                        : 'bg-gray-700 text-slate-500'
+                        : 'bg-slate-100 text-slate-500'
                   }`}>
                     {userResult.basic_info?.subscription_plan?.toUpperCase() || 'EXPLORER'}
                   </span>

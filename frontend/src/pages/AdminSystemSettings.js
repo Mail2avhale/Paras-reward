@@ -101,14 +101,14 @@ const AdminSystemSettings = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <RefreshCw className="w-8 h-8 text-purple-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 p-4 md:p-6">
+    <div className="min-h-screen bg-white p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -151,7 +151,7 @@ const AdminSystemSettings = () => {
                 <button
                   onClick={() => setPrcRateSettings(prev => ({ ...prev, manual_override: !prev.manual_override }))}
                   className={`w-12 h-6 rounded-full transition-colors ${
-                    prcRateSettings.manual_override ? 'bg-purple-600' : 'bg-gray-700'
+                    prcRateSettings.manual_override ? 'bg-purple-600' : 'bg-slate-100'
                   }`}
                 >
                   <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
@@ -199,7 +199,7 @@ const AdminSystemSettings = () => {
                 <button
                   onClick={() => setRedeemSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
                   className={`w-12 h-6 rounded-full transition-colors ${
-                    redeemSettings.enabled ? 'bg-green-600' : 'bg-gray-700'
+                    redeemSettings.enabled ? 'bg-green-600' : 'bg-slate-100'
                   }`}
                 >
                   <div className={`w-5 h-5 bg-white rounded-full transition-transform ${

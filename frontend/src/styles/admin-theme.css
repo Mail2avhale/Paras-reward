@@ -1,38 +1,40 @@
 /* ============================================
-   PARAS REWARD - ADMIN DARK THEME
+   PARAS REWARD - ADMIN LIGHT THEME (BULKPE STYLE)
+   Updated: March 2026
    ============================================
-   Apply consistent dark theme across all admin pages
+   Clean, modern light theme for admin pages
 */
 
 /* ============================================
-   BASE VARIABLES
+   BASE VARIABLES - LIGHT THEME
    ============================================ */
 :root {
-  /* Admin Dark Theme Colors */
-  --admin-bg-primary: #030712;      /* gray-950 */
-  --admin-bg-secondary: #111827;    /* gray-900 */
-  --admin-bg-tertiary: #1f2937;     /* gray-800 */
-  --admin-bg-card: #111827;         /* gray-900 */
+  /* Admin Light Theme Colors - Bulkpe Style */
+  --admin-bg-primary: #ffffff;        /* white */
+  --admin-bg-secondary: #f8fafc;      /* slate-50 */
+  --admin-bg-tertiary: #f1f5f9;       /* slate-100 */
+  --admin-bg-card: #ffffff;           /* white */
   
-  --admin-border: #374151;          /* gray-700 */
-  --admin-border-light: #4b5563;    /* gray-600 */
+  --admin-border: #e2e8f0;            /* slate-200 */
+  --admin-border-light: #f1f5f9;      /* slate-100 */
   
-  --admin-text-primary: #ffffff;    /* white */
-  --admin-text-secondary: #e5e7eb;  /* gray-200 */
-  --admin-text-muted: #9ca3af;      /* gray-400 */
-  --admin-text-disabled: #6b7280;   /* gray-500 */
+  --admin-text-primary: #1e293b;      /* slate-800 */
+  --admin-text-secondary: #475569;    /* slate-600 */
+  --admin-text-muted: #64748b;        /* slate-500 */
+  --admin-text-disabled: #94a3b8;     /* slate-400 */
   
-  --admin-accent-primary: #8b5cf6;  /* purple-500 */
-  --admin-accent-hover: #7c3aed;    /* purple-600 */
+  --admin-accent-primary: #7c3aed;    /* purple-600 */
+  --admin-accent-hover: #6d28d9;      /* purple-700 */
+  --admin-accent-light: #ede9fe;      /* purple-100 */
   
-  --admin-success: #22c55e;         /* green-500 */
-  --admin-warning: #f59e0b;         /* amber-500 */
-  --admin-error: #ef4444;           /* red-500 */
-  --admin-info: #3b82f6;            /* blue-500 */
+  --admin-success: #10b981;           /* emerald-500 */
+  --admin-warning: #f59e0b;           /* amber-500 */
+  --admin-error: #ef4444;             /* red-500 */
+  --admin-info: #3b82f6;              /* blue-500 */
 }
 
 /* ============================================
-   ADMIN PAGE WRAPPER
+   ADMIN PAGE WRAPPER - LIGHT
    ============================================ */
 .admin-page {
   background-color: var(--admin-bg-primary);
@@ -41,13 +43,14 @@
 }
 
 /* ============================================
-   CARDS
+   CARDS - LIGHT THEME
    ============================================ */
 .admin-card {
   background-color: var(--admin-bg-card);
   border: 1px solid var(--admin-border);
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .admin-card-header {
@@ -62,7 +65,7 @@
 }
 
 /* ============================================
-   TEXT UTILITIES
+   TEXT UTILITIES - LIGHT
    ============================================ */
 .admin-text-primary {
   color: var(--admin-text-primary) !important;
@@ -91,13 +94,13 @@
 }
 
 /* ============================================
-   FORM ELEMENTS
+   FORM ELEMENTS - LIGHT
    ============================================ */
 .admin-input {
-  background-color: var(--admin-bg-tertiary) !important;
+  background-color: var(--admin-bg-primary) !important;
   border: 1px solid var(--admin-border) !important;
   color: var(--admin-text-primary) !important;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   padding: 0.625rem 0.875rem;
 }
 
@@ -108,34 +111,34 @@
 .admin-input:focus {
   border-color: var(--admin-accent-primary) !important;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
 .admin-select {
-  background-color: var(--admin-bg-tertiary) !important;
+  background-color: var(--admin-bg-primary) !important;
   border: 1px solid var(--admin-border) !important;
   color: var(--admin-text-primary) !important;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   padding: 0.625rem 0.875rem;
 }
 
 .admin-textarea {
-  background-color: var(--admin-bg-tertiary) !important;
+  background-color: var(--admin-bg-primary) !important;
   border: 1px solid var(--admin-border) !important;
   color: var(--admin-text-primary) !important;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   padding: 0.625rem 0.875rem;
   resize: vertical;
 }
 
 /* ============================================
-   BUTTONS
+   BUTTONS - BULKPE STYLE
    ============================================ */
 .admin-btn {
   font-weight: 500;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   padding: 0.625rem 1rem;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .admin-btn-primary {
@@ -146,16 +149,17 @@
 
 .admin-btn-primary:hover {
   background-color: var(--admin-accent-hover);
+  transform: translateY(-1px);
 }
 
 .admin-btn-secondary {
-  background-color: var(--admin-bg-tertiary);
+  background-color: var(--admin-bg-secondary);
   color: var(--admin-text-primary);
   border: 1px solid var(--admin-border);
 }
 
 .admin-btn-secondary:hover {
-  background-color: var(--admin-border);
+  background-color: var(--admin-bg-tertiary);
 }
 
 .admin-btn-success {
@@ -165,7 +169,7 @@
 }
 
 .admin-btn-success:hover {
-  background-color: #16a34a;
+  background-color: #059669;
 }
 
 .admin-btn-danger {
@@ -180,16 +184,16 @@
 
 .admin-btn-outline {
   background-color: transparent;
-  color: var(--admin-text-primary);
-  border: 1px solid var(--admin-border);
+  color: var(--admin-accent-primary);
+  border: 1px solid var(--admin-accent-primary);
 }
 
 .admin-btn-outline:hover {
-  background-color: var(--admin-bg-tertiary);
+  background-color: var(--admin-accent-light);
 }
 
 /* ============================================
-   TABLES
+   TABLES - LIGHT THEME
    ============================================ */
 .admin-table {
   width: 100%;
@@ -197,7 +201,7 @@
 }
 
 .admin-table th {
-  background-color: var(--admin-bg-tertiary);
+  background-color: var(--admin-bg-secondary);
   color: var(--admin-text-muted);
   font-size: 0.75rem;
   font-weight: 600;
@@ -215,16 +219,16 @@
 }
 
 .admin-table tr:hover td {
-  background-color: var(--admin-bg-tertiary);
+  background-color: var(--admin-bg-secondary);
 }
 
 /* ============================================
-   MODALS
+   MODALS - LIGHT
    ============================================ */
 .admin-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -235,11 +239,12 @@
 .admin-modal {
   background-color: var(--admin-bg-card);
   border: 1px solid var(--admin-border);
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   max-width: 32rem;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 .admin-modal-header {
@@ -281,49 +286,49 @@
 }
 
 /* ============================================
-   BADGES & STATUS
+   BADGES & STATUS - SOFT COLORS
    ============================================ */
 .admin-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.625rem;
+  padding: 0.25rem 0.75rem;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
 }
 
 .admin-badge-success {
-  background-color: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
+  background-color: #d1fae5;
+  color: #059669;
 }
 
 .admin-badge-warning {
-  background-color: rgba(245, 158, 11, 0.2);
-  color: #f59e0b;
+  background-color: #fef3c7;
+  color: #d97706;
 }
 
 .admin-badge-error {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  background-color: #fee2e2;
+  color: #dc2626;
 }
 
 .admin-badge-info {
-  background-color: rgba(59, 130, 246, 0.2);
-  color: #3b82f6;
+  background-color: #dbeafe;
+  color: #2563eb;
 }
 
 .admin-badge-purple {
-  background-color: rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
+  background-color: #ede9fe;
+  color: #7c3aed;
 }
 
 /* ============================================
-   STAT CARDS
+   STAT CARDS - SOFT PASTEL
    ============================================ */
 .admin-stat-card {
   background-color: var(--admin-bg-card);
   border: 1px solid var(--admin-border);
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   padding: 1.25rem;
 }
 
@@ -375,46 +380,46 @@
 }
 
 /* ============================================
-   INFO BOXES
+   INFO BOXES - SOFT PASTEL
    ============================================ */
 .admin-info-box {
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   padding: 1rem;
 }
 
 .admin-info-box.purple {
-  background-color: rgba(139, 92, 246, 0.15);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  background-color: #ede9fe;
+  border: 1px solid #c4b5fd;
 }
 
 .admin-info-box.blue {
-  background-color: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background-color: #dbeafe;
+  border: 1px solid #93c5fd;
 }
 
 .admin-info-box.amber {
-  background-color: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background-color: #fef3c7;
+  border: 1px solid #fcd34d;
 }
 
 .admin-info-box.green {
-  background-color: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background-color: #d1fae5;
+  border: 1px solid #6ee7b7;
 }
 
 .admin-info-box.red {
-  background-color: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background-color: #fee2e2;
+  border: 1px solid #fca5a5;
 }
 
 /* ============================================
-   LOADING STATES
+   LOADING STATES - LIGHT
    ============================================ */
 .admin-skeleton {
-  background: linear-gradient(90deg, var(--admin-bg-tertiary) 25%, var(--admin-border) 50%, var(--admin-bg-tertiary) 75%);
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
   background-size: 200% 100%;
   animation: admin-skeleton-loading 1.5s infinite;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
 }
 
 @keyframes admin-skeleton-loading {
@@ -452,61 +457,6 @@
 }
 
 /* ============================================
-   OVERRIDE SHADCN/UI FOR ADMIN
+   NO OVERRIDES NEEDED - LIGHT THEME IS DEFAULT
    ============================================ */
-
-/* Card component dark theme */
-[data-admin="true"] .bg-card,
-.admin-page .bg-card {
-  background-color: var(--admin-bg-card) !important;
-}
-
-/* Input components */
-[data-admin="true"] input,
-[data-admin="true"] select,
-[data-admin="true"] textarea,
-.admin-page input:not([type="checkbox"]):not([type="radio"]),
-.admin-page select,
-.admin-page textarea {
-  background-color: var(--admin-bg-tertiary) !important;
-  border-color: var(--admin-border) !important;
-  color: var(--admin-text-primary) !important;
-}
-
-/* Fix white backgrounds */
-[data-admin="true"] .bg-white,
-.admin-page .bg-white {
-  background-color: var(--admin-bg-card) !important;
-}
-
-/* Fix text colors */
-[data-admin="true"] .text-gray-900,
-.admin-page .text-gray-900 {
-  color: var(--admin-text-primary) !important;
-}
-
-[data-admin="true"] .text-gray-700,
-.admin-page .text-gray-700 {
-  color: var(--admin-text-secondary) !important;
-}
-
-[data-admin="true"] .text-gray-600,
-.admin-page .text-gray-600 {
-  color: var(--admin-text-muted) !important;
-}
-
-/* Fix border colors */
-[data-admin="true"] .border-gray-200,
-[data-admin="true"] .border-gray-300,
-.admin-page .border-gray-200,
-.admin-page .border-gray-300 {
-  border-color: var(--admin-border) !important;
-}
-
-/* Fix backgrounds */
-[data-admin="true"] .bg-gray-50,
-[data-admin="true"] .bg-gray-100,
-.admin-page .bg-gray-50,
-.admin-page .bg-gray-100 {
-  background-color: var(--admin-bg-tertiary) !important;
-}
+/* Removed all dark theme overrides - Bulkpe light theme uses standard Tailwind classes */

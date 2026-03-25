@@ -129,7 +129,7 @@ const AdminContactSubmissions = ({ user }) => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-950 text-slate-800 p-6">
+    <div className="min-h-screen bg-white text-slate-800 p-6">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -365,7 +365,7 @@ const AdminContactSubmissions = ({ user }) => {
                 </button>
                 <button
                   onClick={() => handleUpdateStatus(selectedSubmission.submission_id, 'closed')}
-                  className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 text-slate-800 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-slate-100 hover:bg-gray-600 text-slate-800 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   <X className="w-5 h-5" />
                   Close

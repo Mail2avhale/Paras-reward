@@ -102,14 +102,14 @@ const AdminDataBackup = ({ user }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 pb-24">
+    <div className="min-h-screen bg-white pb-24">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-5 py-4">
         <div className="flex items-center gap-4">

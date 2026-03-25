@@ -158,15 +158,15 @@ const AdminBBPSDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-6">
+    <div className="min-h-screen bg-white text-slate-800 p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Activity className="h-7 w-7 text-amber-400" />
             BBPS Instant Dashboard
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Monitor all instant BBPS transactions</p>
+          <p className="text-slate-500 text-sm mt-1">Monitor all instant BBPS transactions</p>
         </div>
         <Button
           onClick={fetchRequests}
@@ -187,8 +187,8 @@ const AdminBBPSDashboard = () => {
               <Activity className="h-5 w-5 text-blue-400" />
             </div>
             <div>
-              <p className="text-gray-400 text-xs">Total</p>
-              <p className="text-xl font-bold text-white">{pagination.total}</p>
+              <p className="text-slate-500 text-xs">Total</p>
+              <p className="text-xl font-bold text-slate-800">{pagination.total}</p>
             </div>
           </div>
         </Card>
@@ -200,7 +200,7 @@ const AdminBBPSDashboard = () => {
               <CheckCircle className="h-5 w-5 text-green-400" />
             </div>
             <div>
-              <p className="text-gray-400 text-xs">Success</p>
+              <p className="text-slate-500 text-xs">Success</p>
               <p className="text-xl font-bold text-green-400">
                 {stats.by_status?.completed?.count || 0}
               </p>
@@ -215,7 +215,7 @@ const AdminBBPSDashboard = () => {
               <XCircle className="h-5 w-5 text-red-400" />
             </div>
             <div>
-              <p className="text-gray-400 text-xs">Failed</p>
+              <p className="text-slate-500 text-xs">Failed</p>
               <p className="text-xl font-bold text-red-400">
                 {stats.by_status?.failed?.count || 0}
               </p>
@@ -230,7 +230,7 @@ const AdminBBPSDashboard = () => {
               <Clock className="h-5 w-5 text-yellow-400" />
             </div>
             <div>
-              <p className="text-gray-400 text-xs">Pending</p>
+              <p className="text-slate-500 text-xs">Pending</p>
               <p className="text-xl font-bold text-yellow-400">
                 {stats.by_status?.pending?.count || 0}
               </p>
@@ -245,7 +245,7 @@ const AdminBBPSDashboard = () => {
               <TrendingUp className="h-5 w-5 text-purple-400" />
             </div>
             <div>
-              <p className="text-gray-400 text-xs">Total Amount</p>
+              <p className="text-slate-500 text-xs">Total Amount</p>
               <p className="text-lg font-bold text-purple-400">
                 ₹{(stats.total_amount || 0).toLocaleString()}
               </p>
@@ -255,13 +255,13 @@ const AdminBBPSDashboard = () => {
       </div>
 
       {/* Filters */}
-      <Card className="bg-gray-900/50 border-gray-800 p-4 mb-6">
+      <Card className="bg-white/50 border-slate-200 p-4 mb-6">
         <div className="flex flex-wrap gap-3">
           {/* Status Filter */}
           <select
             value={filters.status}
             onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-            className="h-10 px-3 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm"
+            className="h-10 px-3 bg-white border border-slate-200 text-slate-800 rounded-lg text-sm"
           >
             <option value="">All Status</option>
             <option value="pending">Pending</option>
@@ -275,7 +275,7 @@ const AdminBBPSDashboard = () => {
           <select
             value={filters.service_type}
             onChange={(e) => setFilters(prev => ({ ...prev, service_type: e.target.value }))}
-            className="h-10 px-3 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm"
+            className="h-10 px-3 bg-white border border-slate-200 text-slate-800 rounded-lg text-sm"
           >
             <option value="">All Services</option>
             <option value="mobile_recharge">Mobile Recharge</option>
@@ -297,14 +297,14 @@ const AdminBBPSDashboard = () => {
             type="date"
             value={filters.from_date}
             onChange={(e) => setFilters(prev => ({ ...prev, from_date: e.target.value }))}
-            className="h-10 w-40 bg-gray-800 border-gray-700 text-white"
+            className="h-10 w-40 bg-white border-slate-200 text-slate-800"
             placeholder="From Date"
           />
           <Input
             type="date"
             value={filters.to_date}
             onChange={(e) => setFilters(prev => ({ ...prev, to_date: e.target.value }))}
-            className="h-10 w-40 bg-gray-800 border-gray-700 text-white"
+            className="h-10 w-40 bg-white border-slate-200 text-slate-800"
             placeholder="To Date"
           />
           
@@ -325,7 +325,7 @@ const AdminBBPSDashboard = () => {
               setPagination(prev => ({ ...prev, page: 1 }));
             }}
             variant="outline"
-            className="h-10 border-gray-700 text-gray-400 hover:text-white"
+            className="h-10 border-slate-200 text-slate-500 hover:text-slate-800"
           >
             Clear
           </Button>
@@ -333,8 +333,8 @@ const AdminBBPSDashboard = () => {
       </Card>
 
       {/* Service-wise Stats */}
-      <Card className="bg-gray-900/50 border-gray-800 p-4 mb-6">
-        <h3 className="text-sm font-semibold text-gray-400 mb-3">Service-wise Performance</h3>
+      <Card className="bg-white/50 border-slate-200 p-4 mb-6">
+        <h3 className="text-sm font-semibold text-slate-500 mb-3">Service-wise Performance</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
           {Object.entries(stats.by_service || {}).map(([service, serviceStats]) => {
             const Icon = SERVICE_ICONS[service] || Activity;
@@ -350,13 +350,13 @@ const AdminBBPSDashboard = () => {
                 }`}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Icon className="h-4 w-4 text-gray-400" />
-                  <span className="text-xs font-medium text-white truncate">
+                  <Icon className="h-4 w-4 text-slate-500" />
+                  <span className="text-xs font-medium text-slate-800 truncate">
                     {formatServiceName(service)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-white">{serviceStats.total}</span>
+                  <span className="text-lg font-bold text-slate-800">{serviceStats.total}</span>
                   <span className={`text-xs font-medium ${
                     successRate > 50 ? 'text-green-400' :
                     successRate > 0 ? 'text-yellow-400' :
@@ -372,19 +372,19 @@ const AdminBBPSDashboard = () => {
       </Card>
 
       {/* Requests Table */}
-      <Card className="bg-gray-900/50 border-gray-800 overflow-hidden">
+      <Card className="bg-white/50 border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-800 bg-gray-900/50">
-                <th className="text-left p-3 text-xs font-semibold text-gray-400">Request ID</th>
-                <th className="text-left p-3 text-xs font-semibold text-gray-400">Service</th>
-                <th className="text-left p-3 text-xs font-semibold text-gray-400">User</th>
-                <th className="text-left p-3 text-xs font-semibold text-gray-400">Amount</th>
-                <th className="text-left p-3 text-xs font-semibold text-gray-400">Status</th>
-                <th className="text-left p-3 text-xs font-semibold text-gray-400">Eko TID</th>
-                <th className="text-left p-3 text-xs font-semibold text-gray-400">Date</th>
-                <th className="text-left p-3 text-xs font-semibold text-gray-400">Actions</th>
+              <tr className="border-b border-slate-200 bg-white/50">
+                <th className="text-left p-3 text-xs font-semibold text-slate-500">Request ID</th>
+                <th className="text-left p-3 text-xs font-semibold text-slate-500">Service</th>
+                <th className="text-left p-3 text-xs font-semibold text-slate-500">User</th>
+                <th className="text-left p-3 text-xs font-semibold text-slate-500">Amount</th>
+                <th className="text-left p-3 text-xs font-semibold text-slate-500">Status</th>
+                <th className="text-left p-3 text-xs font-semibold text-slate-500">Eko TID</th>
+                <th className="text-left p-3 text-xs font-semibold text-slate-500">Date</th>
+                <th className="text-left p-3 text-xs font-semibold text-slate-500">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -392,12 +392,12 @@ const AdminBBPSDashboard = () => {
                 <tr>
                   <td colSpan="8" className="p-8 text-center">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto text-amber-400" />
-                    <p className="text-gray-400 mt-2">Loading...</p>
+                    <p className="text-slate-500 mt-2">Loading...</p>
                   </td>
                 </tr>
               ) : requests.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-gray-400">
+                  <td colSpan="8" className="p-8 text-center text-slate-500">
                     No requests found
                   </td>
                 </tr>
@@ -408,15 +408,15 @@ const AdminBBPSDashboard = () => {
                   const ServiceIcon = SERVICE_ICONS[req.service_type] || Activity;
                   
                   return (
-                    <tr key={req.request_id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                    <tr key={req.request_id} className="border-b border-slate-200/50 hover:bg-slate-50">
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-mono text-white">
+                          <span className="text-sm font-mono text-slate-800">
                             {req.request_id?.slice(0, 12)}...
                           </span>
                           <button
                             onClick={() => copyToClipboard(req.request_id)}
-                            className="text-gray-500 hover:text-white"
+                            className="text-slate-500 hover:text-slate-800"
                           >
                             <Copy className="h-3 w-3" />
                           </button>
@@ -424,16 +424,16 @@ const AdminBBPSDashboard = () => {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <ServiceIcon className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-white">
+                          <ServiceIcon className="h-4 w-4 text-slate-500" />
+                          <span className="text-sm text-slate-800">
                             {formatServiceName(req.service_type)}
                           </span>
                         </div>
                       </td>
                       <td className="p-3">
                         <div>
-                          <span className="text-sm text-white block">{req.user_name || 'N/A'}</span>
-                          <span className="text-xs text-gray-400">({req.user_mobile || req.user_email || req.user_id})</span>
+                          <span className="text-sm text-slate-800 block">{req.user_name || 'N/A'}</span>
+                          <span className="text-xs text-slate-500">({req.user_mobile || req.user_email || req.user_id})</span>
                         </div>
                       </td>
                       <td className="p-3">
@@ -447,7 +447,7 @@ const AdminBBPSDashboard = () => {
                           req.status === 'failed' ? 'bg-red-500/20 text-red-400' :
                           req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
                           req.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-gray-500/20 text-gray-400'
+                          'bg-gray-500/20 text-slate-500'
                         }`}>
                           <StatusIcon className={`h-3 w-3 ${req.status === 'processing' ? 'animate-spin' : ''}`} />
                           {statusConfig.label}
@@ -459,17 +459,17 @@ const AdminBBPSDashboard = () => {
                             <span className="text-sm font-mono text-green-400">{req.eko_tid}</span>
                             <button
                               onClick={() => copyToClipboard(req.eko_tid)}
-                              className="text-gray-500 hover:text-white"
+                              className="text-slate-500 hover:text-slate-800"
                             >
                               <Copy className="h-3 w-3" />
                             </button>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-500">-</span>
+                          <span className="text-sm text-slate-500">-</span>
                         )}
                       </td>
                       <td className="p-3">
-                        <span className="text-xs text-gray-400">{formatDate(req.created_at)}</span>
+                        <span className="text-xs text-slate-500">{formatDate(req.created_at)}</span>
                       </td>
                       <td className="p-3">
                         <Button
@@ -490,8 +490,8 @@ const AdminBBPSDashboard = () => {
         </div>
         
         {/* Pagination */}
-        <div className="flex items-center justify-between p-4 border-t border-gray-800">
-          <span className="text-sm text-gray-400">
+        <div className="flex items-center justify-between p-4 border-t border-slate-200">
+          <span className="text-sm text-slate-500">
             Showing {requests.length} of {pagination.total} requests
           </span>
           <div className="flex items-center gap-2">
@@ -500,11 +500,11 @@ const AdminBBPSDashboard = () => {
               variant="outline"
               onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
               disabled={pagination.page <= 1}
-              className="border-gray-700"
+              className="border-slate-200"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-slate-500">
               Page {pagination.page} of {pagination.pages || 1}
             </span>
             <Button
@@ -512,7 +512,7 @@ const AdminBBPSDashboard = () => {
               variant="outline"
               onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
               disabled={pagination.page >= pagination.pages}
-              className="border-gray-700"
+              className="border-slate-200"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -523,14 +523,14 @@ const AdminBBPSDashboard = () => {
       {/* Detail Modal */}
       {showDetailModal && selectedRequest && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-2xl border border-gray-800 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Request Details</h2>
+                <h2 className="text-xl font-bold text-slate-800">Request Details</h2>
                 <Button
                   variant="ghost"
                   onClick={() => setShowDetailModal(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-slate-500 hover:text-slate-800"
                 >
                   ✕
                 </Button>
@@ -539,20 +539,20 @@ const AdminBBPSDashboard = () => {
               {/* Request Info */}
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-800/50 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-1">Request ID</p>
-                    <p className="text-sm font-mono text-white">{selectedRequest.request?.request_id}</p>
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 mb-1">Request ID</p>
+                    <p className="text-sm font-mono text-slate-800">{selectedRequest.request?.request_id}</p>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-1">Service</p>
-                    <p className="text-sm text-white">{formatServiceName(selectedRequest.request?.service_type)}</p>
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 mb-1">Service</p>
+                    <p className="text-sm text-slate-800">{formatServiceName(selectedRequest.request?.service_type)}</p>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-1">Amount</p>
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 mb-1">Amount</p>
                     <p className="text-lg font-bold text-amber-400">₹{selectedRequest.request?.amount?.toLocaleString()}</p>
                   </div>
-                  <div className="bg-gray-800/50 rounded-xl p-4">
-                    <p className="text-xs text-gray-400 mb-1">Status</p>
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <p className="text-xs text-slate-500 mb-1">Status</p>
                     <p className={`text-sm font-medium ${
                       selectedRequest.request?.status === 'completed' ? 'text-green-400' :
                       selectedRequest.request?.status === 'failed' ? 'text-red-400' :
@@ -562,35 +562,35 @@ const AdminBBPSDashboard = () => {
                 </div>
                 
                 {/* User Info */}
-                <div className="bg-gray-800/50 rounded-xl p-4">
-                  <p className="text-xs text-gray-400 mb-2">User</p>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 mb-2">User</p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="text-gray-400">Name:</span> <span className="text-white">{selectedRequest.user?.name || 'N/A'}</span></div>
-                    <div><span className="text-gray-400">Email:</span> <span className="text-white">{selectedRequest.user?.email || 'N/A'}</span></div>
-                    <div><span className="text-gray-400">Mobile:</span> <span className="text-white">{selectedRequest.user?.mobile || 'N/A'}</span></div>
-                    <div><span className="text-gray-400">Plan:</span> <span className="text-white">{selectedRequest.user?.subscription_plan || 'N/A'}</span></div>
+                    <div><span className="text-slate-500">Name:</span> <span className="text-slate-800">{selectedRequest.user?.name || 'N/A'}</span></div>
+                    <div><span className="text-slate-500">Email:</span> <span className="text-slate-800">{selectedRequest.user?.email || 'N/A'}</span></div>
+                    <div><span className="text-slate-500">Mobile:</span> <span className="text-slate-800">{selectedRequest.user?.mobile || 'N/A'}</span></div>
+                    <div><span className="text-slate-500">Plan:</span> <span className="text-slate-800">{selectedRequest.user?.subscription_plan || 'N/A'}</span></div>
                   </div>
                 </div>
                 
                 {/* Eko Details */}
-                <div className="bg-gray-800/50 rounded-xl p-4">
-                  <p className="text-xs text-gray-400 mb-2">Eko Transaction Details</p>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 mb-2">Eko Transaction Details</p>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-400">TID:</span>
+                      <span className="text-slate-500">TID:</span>
                       <span className="text-green-400 font-mono">{selectedRequest.eko_details?.tid || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">UTR:</span>
-                      <span className="text-white font-mono">{selectedRequest.eko_details?.utr || 'N/A'}</span>
+                      <span className="text-slate-500">UTR:</span>
+                      <span className="text-slate-800 font-mono">{selectedRequest.eko_details?.utr || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Status:</span>
-                      <span className="text-white">{selectedRequest.eko_details?.status || 'N/A'}</span>
+                      <span className="text-slate-500">Status:</span>
+                      <span className="text-slate-800">{selectedRequest.eko_details?.status || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Message:</span>
-                      <span className="text-white">{selectedRequest.eko_details?.message || 'N/A'}</span>
+                      <span className="text-slate-500">Message:</span>
+                      <span className="text-slate-800">{selectedRequest.eko_details?.message || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -614,9 +614,9 @@ const AdminBBPSDashboard = () => {
                 )}
                 
                 {/* Request Details */}
-                <div className="bg-gray-800/50 rounded-xl p-4">
-                  <p className="text-xs text-gray-400 mb-2">Service Details</p>
-                  <pre className="text-xs text-gray-300 overflow-x-auto">
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 mb-2">Service Details</p>
+                  <pre className="text-xs text-slate-600 overflow-x-auto">
                     {JSON.stringify(selectedRequest.request?.details, null, 2)}
                   </pre>
                 </div>

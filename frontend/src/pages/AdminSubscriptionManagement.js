@@ -246,14 +246,14 @@ const AdminSubscriptionManagement = () => {
 
   if (loading && payments.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <RefreshCw className="w-8 h-8 text-purple-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 p-4 md:p-6">
+    <div className="min-h-screen bg-white p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -393,7 +393,7 @@ const AdminSubscriptionManagement = () => {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full h-9 px-3 bg-white border border-gray-600 text-slate-800 rounded-lg text-sm"
+                  className="w-full h-9 px-3 bg-white border border-slate-300 text-slate-800 rounded-lg text-sm"
                 >
                   <option value="created_at">Submit Date</option>
                   <option value="processed_at">Process Date</option>
@@ -406,7 +406,7 @@ const AdminSubscriptionManagement = () => {
                 <select
                   value={planFilter}
                   onChange={(e) => setPlanFilter(e.target.value)}
-                  className="w-full h-9 px-3 bg-white border border-gray-600 text-slate-800 rounded-lg text-sm"
+                  className="w-full h-9 px-3 bg-white border border-slate-300 text-slate-800 rounded-lg text-sm"
                 >
                   <option value="all">All Plans</option>
                   <option value="startup">Startup</option>
@@ -420,7 +420,7 @@ const AdminSubscriptionManagement = () => {
                 <select
                   value={subscriptionTypeFilter}
                   onChange={(e) => setSubscriptionTypeFilter(e.target.value)}
-                  className="w-full h-9 px-3 bg-white border border-gray-600 text-slate-800 rounded-lg text-sm"
+                  className="w-full h-9 px-3 bg-white border border-slate-300 text-slate-800 rounded-lg text-sm"
                 >
                   <option value="all">All Types</option>
                   <option value="new">🆕 New</option>
@@ -440,7 +440,7 @@ const AdminSubscriptionManagement = () => {
                   placeholder="0"
                   value={amountMin}
                   onChange={(e) => setAmountMin(e.target.value)}
-                  className="bg-white border-gray-600 text-slate-800 h-9"
+                  className="bg-white border-slate-300 text-slate-800 h-9"
                 />
               </div>
               <div className="flex-1 min-w-[120px]">
@@ -450,7 +450,7 @@ const AdminSubscriptionManagement = () => {
                   placeholder="10000"
                   value={amountMax}
                   onChange={(e) => setAmountMax(e.target.value)}
-                  className="bg-white border-gray-600 text-slate-800 h-9"
+                  className="bg-white border-slate-300 text-slate-800 h-9"
                 />
               </div>
               
@@ -476,7 +476,7 @@ const AdminSubscriptionManagement = () => {
                     placeholder="Search by admin name..."
                     value={processedByFilter}
                     onChange={(e) => setProcessedByFilter(e.target.value)}
-                    className="bg-white border-gray-600 text-slate-800 h-9"
+                    className="bg-white border-slate-300 text-slate-800 h-9"
                   />
                 </div>
               </div>
@@ -712,7 +712,7 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
               <p className="text-slate-500 text-sm">{payment.user_email}</p>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className={`px-2 py-1 rounded-lg text-xs font-medium ${planColors[plan] || 'bg-gray-700 text-slate-500'}`}>
+              <span className={`px-2 py-1 rounded-lg text-xs font-medium ${planColors[plan] || 'bg-slate-100 text-slate-500'}`}>
                 {plan?.toUpperCase() || 'N/A'}
               </span>
               {/* NEW vs RENEWAL Badge */}
@@ -836,7 +836,7 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
             )}
             {tab === 'approved' && (
               <>
-                <Button onClick={onView} size="sm" variant="outline" className="border-gray-600 h-9">
+                <Button onClick={onView} size="sm" variant="outline" className="border-slate-300 h-9">
                   <Eye className="w-4 h-4 mr-1" /> View
                 </Button>
                 <Button onClick={onEdit} size="sm" variant="outline" className="border-blue-500/50 text-blue-400 h-9">
@@ -852,7 +852,7 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
                 <Button onClick={onApprove} disabled={processing} className="bg-green-600 hover:bg-green-700 h-9">
                   {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-1" /> Re-approve</>}
                 </Button>
-                <Button onClick={onView} size="sm" variant="outline" className="border-gray-600 h-9">
+                <Button onClick={onView} size="sm" variant="outline" className="border-slate-300 h-9">
                   <Eye className="w-4 h-4 mr-1" /> View
                 </Button>
                 <Button onClick={onDelete} disabled={processing} size="sm" variant="outline" className="border-red-500/50 text-red-400 h-9">

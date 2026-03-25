@@ -331,9 +331,9 @@ const AdminRazorpaySubscriptions = ({ user }) => {
   const paginatedOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="min-h-screen bg-gray-950 pb-24">
+    <div className="min-h-screen bg-white pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-gray-950/95 backdrop-blur-lg border-b border-slate-200 px-5 py-4">
+      <div className="sticky top-0 z-10 bg-white/95 border-b border-slate-200 px-5 py-4">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate(-1)} className="text-slate-500">
             <ArrowLeft className="w-6 h-6" />
@@ -528,13 +528,13 @@ const AdminRazorpaySubscriptions = ({ user }) => {
                             placeholder="user@email.com"
                             value={manualUserEmail}
                             onChange={(e) => setManualUserEmail(e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-slate-800 text-sm mb-2"
+                            className="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm mb-2"
                           />
                           <div className="flex gap-2 mb-2">
                             <select
                               value={manualPlan}
                               onChange={(e) => setManualPlan(e.target.value)}
-                              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-slate-800 text-sm"
+                              className="flex-1 px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-800 text-sm"
                             >
                               <option value="startup">Startup</option>
                               <option value="elite">Elite</option>
@@ -665,7 +665,7 @@ const AdminRazorpaySubscriptions = ({ user }) => {
                 <span className={`px-3 py-1 rounded-lg text-xs font-medium ${
                   order.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' :
                   order.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                  order.status === 'cancelled' ? 'bg-gray-700 text-slate-500' :
+                  order.status === 'cancelled' ? 'bg-slate-100 text-slate-500' :
                   order.status === 'error' ? 'bg-orange-500/20 text-orange-400' :
                   order.status === 'fraudulent' ? 'bg-purple-500/20 text-purple-400' :
                   'bg-amber-500/20 text-amber-400'

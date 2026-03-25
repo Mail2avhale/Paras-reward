@@ -283,7 +283,7 @@ const AdminFixedExpenses = ({ user }) => {
                 const Icon = cat.icon;
                 return (
                   <div key={cat.id} className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-700 rounded-lg">
+                    <div className="p-2 bg-slate-100 rounded-lg">
                       <Icon className="h-4 w-4 text-gray-600" />
                     </div>
                     <div className="flex-1">
@@ -329,7 +329,7 @@ const AdminFixedExpenses = ({ user }) => {
                   <tr key={expense.expense_id} className="border-b hover:bg-slate-50">
                     <td className="py-3">{expense.month}</td>
                     <td className="py-3">
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-700">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100">
                         {cat?.label || expense.expense_category}
                       </span>
                     </td>

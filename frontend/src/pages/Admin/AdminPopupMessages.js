@@ -201,11 +201,11 @@ const AdminPopupMessages = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
             <MessageSquare className="w-7 h-7 text-amber-500" />
             Popup Messages
           </h1>
-          <p className="text-gray-400 mt-1">Broadcast messages to all users on app open</p>
+          <p className="text-slate-500 mt-1">Broadcast messages to all users on app open</p>
         </div>
         <Button
           onClick={() => { resetForm(); setShowForm(true); }}
@@ -217,9 +217,9 @@ const AdminPopupMessages = ({ user }) => {
 
       {/* Create/Edit Form */}
       {showForm && (
-        <Card className="bg-gray-800/50 border-gray-700">
+        <Card className="bg-slate-50 border-slate-200">
           <CardHeader>
-            <CardTitle className="text-white">
+            <CardTitle className="text-slate-800">
               {editingPopup ? 'Edit Popup Message' : 'Create New Popup Message'}
             </CardTitle>
             <CardDescription>
@@ -229,24 +229,24 @@ const AdminPopupMessages = ({ user }) => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-gray-300">Title *</Label>
+                <Label className="text-slate-600">Title *</Label>
                 <Input
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
                   placeholder="e.g., Important Update"
-                  className="bg-gray-900/50 border-gray-700 text-white mt-1"
+                  className="bg-white/50 border-slate-200 text-slate-800 mt-1"
                 />
               </div>
               <div>
-                <Label className="text-gray-300">Message Type</Label>
+                <Label className="text-slate-600">Message Type</Label>
                 <Select 
                   value={formData.message_type} 
                   onValueChange={(v) => setFormData({...formData, message_type: v})}
                 >
-                  <SelectTrigger className="bg-gray-900/50 border-gray-700 text-white mt-1">
+                  <SelectTrigger className="bg-white/50 border-slate-200 text-slate-800 mt-1">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectContent className="bg-white border-slate-200">
                     <SelectItem value="info">Info (Blue)</SelectItem>
                     <SelectItem value="success">Success (Green)</SelectItem>
                     <SelectItem value="warning">Warning (Yellow)</SelectItem>
@@ -257,33 +257,33 @@ const AdminPopupMessages = ({ user }) => {
             </div>
 
             <div>
-              <Label className="text-gray-300">Message *</Label>
+              <Label className="text-slate-600">Message *</Label>
               <Textarea
                 value={formData.message}
                 onChange={(e) => setFormData({...formData, message: e.target.value})}
                 placeholder="Enter your message here..."
                 rows={4}
-                className="bg-gray-900/50 border-gray-700 text-white mt-1"
+                className="bg-white/50 border-slate-200 text-slate-800 mt-1"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-gray-300">Button Text</Label>
+                <Label className="text-slate-600">Button Text</Label>
                 <Input
                   value={formData.button_text}
                   onChange={(e) => setFormData({...formData, button_text: e.target.value})}
                   placeholder="Close"
-                  className="bg-gray-900/50 border-gray-700 text-white mt-1"
+                  className="bg-white/50 border-slate-200 text-slate-800 mt-1"
                 />
               </div>
               <div>
-                <Label className="text-gray-300">Button Link (Optional)</Label>
+                <Label className="text-slate-600">Button Link (Optional)</Label>
                 <Input
                   value={formData.button_link}
                   onChange={(e) => setFormData({...formData, button_link: e.target.value})}
                   placeholder="https://..."
-                  className="bg-gray-900/50 border-gray-700 text-white mt-1"
+                  className="bg-white/50 border-slate-200 text-slate-800 mt-1"
                 />
               </div>
             </div>
@@ -293,7 +293,7 @@ const AdminPopupMessages = ({ user }) => {
                 checked={formData.enabled}
                 onCheckedChange={(v) => setFormData({...formData, enabled: v})}
               />
-              <Label className="text-gray-300">Enable immediately</Label>
+              <Label className="text-slate-600">Enable immediately</Label>
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -308,14 +308,14 @@ const AdminPopupMessages = ({ user }) => {
               <Button
                 variant="outline"
                 onClick={() => setPreviewVisible(true)}
-                className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                className="border-gray-600 text-slate-600 hover:bg-slate-100"
               >
                 <Eye className="w-4 h-4 mr-2" /> Preview
               </Button>
               <Button
                 variant="ghost"
                 onClick={() => { setShowForm(false); resetForm(); }}
-                className="text-gray-400 hover:text-white"
+                className="text-slate-500 hover:text-slate-800"
               >
                 <X className="w-4 h-4 mr-2" /> Cancel
               </Button>
@@ -335,18 +335,18 @@ const AdminPopupMessages = ({ user }) => {
           } border rounded-2xl shadow-2xl`}>
             <button
               onClick={() => setPreviewVisible(false)}
-              className="absolute top-3 right-3 p-2 rounded-full bg-gray-800/50 text-gray-400 hover:text-white"
+              className="absolute top-3 right-3 p-2 rounded-full bg-slate-50 text-slate-500 hover:text-slate-800"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="p-6 pt-8">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-xl bg-gray-900/50">
+                <div className="p-2 rounded-xl bg-white/50">
                   {getTypeIcon(formData.message_type)}
                 </div>
-                <h2 className="text-xl font-bold text-white">{formData.title || 'Title'}</h2>
+                <h2 className="text-xl font-bold text-slate-800">{formData.title || 'Title'}</h2>
               </div>
-              <p className="text-gray-300 text-sm mb-6 whitespace-pre-wrap">
+              <p className="text-slate-600 text-sm mb-6 whitespace-pre-wrap">
                 {formData.message || 'Your message here...'}
               </p>
               <button className="w-full py-3 px-4 rounded-xl bg-amber-500 text-black font-semibold">
@@ -358,9 +358,9 @@ const AdminPopupMessages = ({ user }) => {
       )}
 
       {/* Popups List */}
-      <Card className="bg-gray-800/50 border-gray-700">
+      <Card className="bg-slate-50 border-slate-200">
         <CardHeader>
-          <CardTitle className="text-white">All Popup Messages</CardTitle>
+          <CardTitle className="text-slate-800">All Popup Messages</CardTitle>
           <CardDescription>Only one popup can be active at a time</CardDescription>
         </CardHeader>
         <CardContent>
@@ -371,8 +371,8 @@ const AdminPopupMessages = ({ user }) => {
           ) : popups.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400">No popup messages yet</p>
-              <p className="text-gray-500 text-sm">Create one to broadcast to all users</p>
+              <p className="text-slate-500">No popup messages yet</p>
+              <p className="text-slate-500 text-sm">Create one to broadcast to all users</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -382,7 +382,7 @@ const AdminPopupMessages = ({ user }) => {
                   className={`p-4 rounded-xl border ${
                     popup.enabled 
                       ? 'bg-green-500/10 border-green-500/30' 
-                      : 'bg-gray-900/50 border-gray-700'
+                      : 'bg-white/50 border-slate-200'
                   }`}
                 >
                   <div className="flex flex-col md:flex-row justify-between gap-4">
@@ -399,9 +399,9 @@ const AdminPopupMessages = ({ user }) => {
                           </span>
                         )}
                       </div>
-                      <h3 className="text-white font-semibold">{popup.title}</h3>
-                      <p className="text-gray-400 text-sm mt-1 line-clamp-2">{popup.message}</p>
-                      <p className="text-gray-500 text-xs mt-2">
+                      <h3 className="text-slate-800 font-semibold">{popup.title}</h3>
+                      <p className="text-slate-500 text-sm mt-1 line-clamp-2">{popup.message}</p>
+                      <p className="text-slate-500 text-xs mt-2">
                         Updated: {new Date(popup.updated_at).toLocaleString()}
                       </p>
                     </div>
@@ -410,7 +410,7 @@ const AdminPopupMessages = ({ user }) => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleToggle(popup.popup_id)}
-                        className={popup.enabled ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-white'}
+                        className={popup.enabled ? 'text-green-400 hover:text-green-300' : 'text-slate-500 hover:text-slate-800'}
                       >
                         {popup.enabled ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
                       </Button>

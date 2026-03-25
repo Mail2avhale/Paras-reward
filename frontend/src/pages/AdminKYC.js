@@ -531,7 +531,7 @@ const AdminKYC = ({ user }) => {
   const pendingInSelection = filteredDocs.filter(d => selectedIds.has(d.kyc_id) && d.status === 'pending').length;
 
   return (
-    <div className="p-4 md:p-6 bg-gray-950 min-h-screen">
+    <div className="p-4 md:p-6 bg-white min-h-screen">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
@@ -560,7 +560,7 @@ const AdminKYC = ({ user }) => {
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="rounded border-gray-600"
+              className="rounded border-slate-300"
             />
             Auto-refresh
           </label>
@@ -1002,7 +1002,7 @@ const AdminKYC = ({ user }) => {
                     {orphanedUsers.map((u) => (
                       <div key={u.uid} className="flex items-center justify-between p-3 bg-white rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
                             <User className="w-5 h-5 text-slate-500" />
                           </div>
                           <div>
@@ -1040,7 +1040,7 @@ const AdminKYC = ({ user }) => {
                     <Button
                       variant="outline"
                       onClick={() => setShowOrphanedModal(false)}
-                      className="border-gray-600"
+                      className="border-slate-300"
                     >
                       Close
                     </Button>
@@ -1108,7 +1108,7 @@ const AdminKYC = ({ user }) => {
                   <Button
                     variant="outline"
                     onClick={() => setShowSyncModal(false)}
-                    className="border-gray-600"
+                    className="border-slate-300"
                   >
                     Cancel
                   </Button>

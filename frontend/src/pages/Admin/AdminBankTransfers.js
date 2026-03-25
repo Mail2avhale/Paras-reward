@@ -26,7 +26,7 @@ const CopyField = ({ label, value, className = "" }) => (
   <div className={`flex items-center justify-between gap-2 ${className}`}>
     <div className="flex-1 min-w-0">
       <p className="text-slate-500 text-xs">{label}</p>
-      <p className="text-white font-mono text-sm truncate">{value || '-'}</p>
+      <p className="text-slate-800 font-mono text-sm truncate">{value || '-'}</p>
     </div>
     {value && (
       <button
@@ -286,7 +286,7 @@ const AdminBankTransfers = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
               <Banknote className="w-8 h-8 text-emerald-400" />
               Bank Transfer Requests
             </h1>
@@ -307,7 +307,7 @@ const AdminBankTransfers = () => {
         {stats.pending?.count > 0 && statusFilter === 'pending' && (
           <div className="mb-4 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="text-white">
+              <div className="text-slate-800">
                 <p className="font-semibold">Bulk Actions</p>
                 <p className="text-sm text-slate-400">
                   {selectedIds.length > 0 
@@ -321,7 +321,7 @@ const AdminBankTransfers = () => {
                   <>
                     <Button
                       onClick={handleBulkPaid}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className="bg-green-600 hover:bg-green-700 text-slate-800"
                       disabled={loading}
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
@@ -329,7 +329,7 @@ const AdminBankTransfers = () => {
                     </Button>
                     <Button
                       onClick={handleBulkFailed}
-                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                      className="bg-orange-600 hover:bg-orange-700 text-slate-800"
                       disabled={loading}
                     >
                       <XCircle className="w-4 h-4 mr-2" />
@@ -361,7 +361,7 @@ const AdminBankTransfers = () => {
                       setLoading(false);
                     }
                   }}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-red-600 hover:bg-red-700 text-slate-800"
                   disabled={loading}
                 >
                   <XCircle className="w-4 h-4 mr-2" />
@@ -409,7 +409,7 @@ const AdminBankTransfers = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by name, phone, account..."
-                  className="pl-10 bg-slate-900 border-slate-600 text-white"
+                  className="pl-10 bg-slate-900 border-slate-600 text-slate-800"
                 />
               </div>
             </div>
@@ -419,7 +419,7 @@ const AdminBankTransfers = () => {
               data-testid="status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white min-w-[150px]"
+              className="px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-800 min-w-[150px]"
             >
               <option value="">All Status</option>
               <option value="pending">Pending</option>
@@ -435,7 +435,7 @@ const AdminBankTransfers = () => {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="bg-slate-900 border-slate-600 text-white w-[150px]"
+                className="bg-slate-900 border-slate-600 text-slate-800 w-[150px]"
                 placeholder="From"
               />
             </div>
@@ -448,7 +448,7 @@ const AdminBankTransfers = () => {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="bg-slate-900 border-slate-600 text-white w-[150px]"
+                className="bg-slate-900 border-slate-600 text-slate-800 w-[150px]"
               />
             </div>
             
@@ -457,7 +457,7 @@ const AdminBankTransfers = () => {
               data-testid="sort-by-select"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-slate-900 border border-slate-600 text-white rounded-md px-3 py-2 text-sm"
+              className="bg-slate-900 border border-slate-600 text-slate-800 rounded-md px-3 py-2 text-sm"
             >
               <option value="created_at">Sort by: Date</option>
               <option value="amount">Sort by: Amount</option>
@@ -538,10 +538,10 @@ const AdminBankTransfers = () => {
                           </td>
                         )}
                         <td className="p-4">
-                          <p className="text-white font-mono text-sm">{req.request_id}</p>
+                          <p className="text-slate-800 font-mono text-sm">{req.request_id}</p>
                         </td>
                         <td className="p-4">
-                          <p className="text-white font-medium">{req.user_name}</p>
+                          <p className="text-slate-800 font-medium">{req.user_name}</p>
                           <p className="text-slate-400 text-sm">{req.user_phone}</p>
                         </td>
                         <td className="p-4">
@@ -554,7 +554,7 @@ const AdminBankTransfers = () => {
                             <div className="flex items-center justify-between gap-2 bg-slate-900/50 px-2 py-1 rounded">
                               <div>
                                 <span className="text-slate-500 text-xs">Name: </span>
-                                <span className="text-white text-sm font-medium">{req.account_holder_name || req.user_name}</span>
+                                <span className="text-slate-800 text-sm font-medium">{req.account_holder_name || req.user_name}</span>
                               </div>
                               <button
                                 onClick={() => copyToClipboard(req.account_holder_name || req.user_name, 'Name')}
@@ -568,7 +568,7 @@ const AdminBankTransfers = () => {
                             <div className="flex items-center justify-between gap-2 bg-slate-900/50 px-2 py-1 rounded">
                               <div>
                                 <span className="text-slate-500 text-xs">A/C: </span>
-                                <span className="text-white text-sm font-mono">{req.account_number}</span>
+                                <span className="text-slate-800 text-sm font-mono">{req.account_number}</span>
                               </div>
                               <button
                                 onClick={() => copyToClipboard(req.account_number, 'Account Number')}
@@ -582,7 +582,7 @@ const AdminBankTransfers = () => {
                             <div className="flex items-center justify-between gap-2 bg-slate-900/50 px-2 py-1 rounded">
                               <div>
                                 <span className="text-slate-500 text-xs">IFSC: </span>
-                                <span className="text-white text-sm font-mono">{req.ifsc_code}</span>
+                                <span className="text-slate-800 text-sm font-mono">{req.ifsc_code}</span>
                               </div>
                               <button
                                 onClick={() => copyToClipboard(req.ifsc_code, 'IFSC')}
@@ -646,7 +646,7 @@ const AdminBankTransfers = () => {
                                 data-testid={`mark-paid-${req.request_id}`}
                                 size="sm"
                                 onClick={() => openActionModal(req, 'paid')}
-                                className="bg-green-600 hover:bg-green-700 text-white"
+                                className="bg-green-600 hover:bg-green-700 text-slate-800"
                               >
                                 <CheckCircle className="w-4 h-4 mr-1" />
                                 Paid
@@ -685,7 +685,7 @@ const AdminBankTransfers = () => {
                   <div key={req.request_id} className="p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-white font-medium">{req.user_name}</p>
+                        <p className="text-slate-800 font-medium">{req.user_name}</p>
                         <p className="text-slate-400 text-sm">{req.user_phone}</p>
                       </div>
                       <StatusBadge status={req.status} />
@@ -697,7 +697,7 @@ const AdminBankTransfers = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="text-slate-500 text-xs">Account Holder: </span>
-                          <span className="text-white text-sm">{req.account_holder_name || req.user_name}</span>
+                          <span className="text-slate-800 text-sm">{req.account_holder_name || req.user_name}</span>
                         </div>
                         <button
                           onClick={() => copyToClipboard(req.account_holder_name || req.user_name, 'Name')}
@@ -710,7 +710,7 @@ const AdminBankTransfers = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="text-slate-500 text-xs">Account No: </span>
-                          <span className="text-white text-sm font-mono">{req.account_number}</span>
+                          <span className="text-slate-800 text-sm font-mono">{req.account_number}</span>
                         </div>
                         <button
                           onClick={() => copyToClipboard(req.account_number, 'Account Number')}
@@ -723,7 +723,7 @@ const AdminBankTransfers = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="text-slate-500 text-xs">IFSC: </span>
-                          <span className="text-white text-sm font-mono">{req.ifsc_code}</span>
+                          <span className="text-slate-800 text-sm font-mono">{req.ifsc_code}</span>
                         </div>
                         <button
                           onClick={() => copyToClipboard(req.ifsc_code, 'IFSC')}
@@ -750,7 +750,7 @@ const AdminBankTransfers = () => {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="text-slate-500 text-xs">Bank</p>
-                        <p className="text-white text-sm">{req.bank_name}</p>
+                        <p className="text-slate-800 text-sm">{req.bank_name}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-slate-500 text-xs">PRC Deducted</p>
@@ -827,7 +827,7 @@ const AdminBankTransfers = () => {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <Card className="bg-slate-800 border-slate-700 max-w-md w-full">
             <div className="p-6">
-              <h2 className="text-xl font-bold text-white mb-4">
+              <h2 className="text-xl font-bold text-slate-800 mb-4">
                 {actionType === 'paid' ? 'Mark as Paid' : 'Mark as Failed'}
               </h2>
               
@@ -837,7 +837,7 @@ const AdminBankTransfers = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-slate-500 text-xs">User</p>
-                    <p className="text-white">{selectedRequest.user_name}</p>
+                    <p className="text-slate-800">{selectedRequest.user_name}</p>
                   </div>
                 </div>
                 
@@ -845,7 +845,7 @@ const AdminBankTransfers = () => {
                 <div className="flex items-center justify-between bg-slate-800 px-3 py-2 rounded">
                   <div>
                     <p className="text-slate-500 text-xs">Account Holder Name</p>
-                    <p className="text-white font-medium">{selectedRequest.account_holder_name || selectedRequest.user_name}</p>
+                    <p className="text-slate-800 font-medium">{selectedRequest.account_holder_name || selectedRequest.user_name}</p>
                   </div>
                   <button
                     onClick={() => copyToClipboard(selectedRequest.account_holder_name || selectedRequest.user_name, 'Name')}
@@ -860,7 +860,7 @@ const AdminBankTransfers = () => {
                 <div className="flex items-center justify-between bg-slate-800 px-3 py-2 rounded">
                   <div>
                     <p className="text-slate-500 text-xs">Account Number</p>
-                    <p className="text-white font-mono text-lg">{selectedRequest.account_number}</p>
+                    <p className="text-slate-800 font-mono text-lg">{selectedRequest.account_number}</p>
                   </div>
                   <button
                     onClick={() => copyToClipboard(selectedRequest.account_number, 'Account Number')}
@@ -875,7 +875,7 @@ const AdminBankTransfers = () => {
                 <div className="flex items-center justify-between bg-slate-800 px-3 py-2 rounded">
                   <div>
                     <p className="text-slate-500 text-xs">IFSC Code</p>
-                    <p className="text-white font-mono text-lg">{selectedRequest.ifsc_code}</p>
+                    <p className="text-slate-800 font-mono text-lg">{selectedRequest.ifsc_code}</p>
                   </div>
                   <button
                     onClick={() => copyToClipboard(selectedRequest.ifsc_code, 'IFSC')}
@@ -912,7 +912,7 @@ const AdminBankTransfers = () => {
                     <p className="text-slate-500 text-xs flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> Created
                     </p>
-                    <p className="text-white text-sm">
+                    <p className="text-slate-800 text-sm">
                       {new Date(selectedRequest.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                     <p className="text-slate-400 text-xs">
@@ -924,7 +924,7 @@ const AdminBankTransfers = () => {
                       <p className={`text-xs flex items-center gap-1 ${selectedRequest.status === 'paid' ? 'text-green-500' : 'text-red-500'}`}>
                         <Calendar className="w-3 h-3" /> {selectedRequest.status === 'paid' ? 'Paid' : 'Failed'}
                       </p>
-                      <p className="text-white text-sm">
+                      <p className="text-slate-800 text-sm">
                         {new Date(selectedRequest.processed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
                       <p className="text-slate-400 text-xs">
@@ -951,7 +951,7 @@ const AdminBankTransfers = () => {
                       value={utrNumber}
                       onChange={(e) => setUtrNumber(e.target.value)}
                       placeholder="Enter UTR/Transaction Reference"
-                      className="bg-slate-900 border-slate-600 text-white"
+                      className="bg-slate-900 border-slate-600 text-slate-800"
                     />
                   </div>
                   <div className="mb-4">
@@ -960,7 +960,7 @@ const AdminBankTransfers = () => {
                       value={actionRemark}
                       onChange={(e) => setActionRemark(e.target.value)}
                       placeholder="Payment completed via NEFT/IMPS"
-                      className="bg-slate-900 border-slate-600 text-white"
+                      className="bg-slate-900 border-slate-600 text-slate-800"
                     />
                   </div>
                 </>
@@ -983,7 +983,7 @@ const AdminBankTransfers = () => {
                       value={actionRemark}
                       onChange={(e) => setActionRemark(e.target.value)}
                       placeholder="e.g., Invalid account number, Bank rejected"
-                      className="bg-slate-900 border-slate-600 text-white"
+                      className="bg-slate-900 border-slate-600 text-slate-800"
                     />
                   </div>
                 </>

@@ -91,7 +91,7 @@ const ErrorMonitor = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-slate-800 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -99,13 +99,13 @@ const ErrorMonitor = () => {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
               System Monitor
             </h1>
-            <p className="text-gray-400 mt-1">Real-time error & payment monitoring</p>
+            <p className="text-slate-500 mt-1">Real-time error & payment monitoring</p>
           </div>
           <div className="flex items-center gap-4">
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(Number(e.target.value))}
-              className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+              className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-slate-800"
             >
               <option value={1}>Last 1 hour</option>
               <option value={6}>Last 6 hours</option>
@@ -132,8 +132,8 @@ const ErrorMonitor = () => {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-lg font-medium transition-all ${
                 activeTab === tab
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:text-white'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-800'
+                  : 'bg-white text-slate-500 hover:text-slate-800'
               }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -149,12 +149,12 @@ const ErrorMonitor = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-gray-400 text-sm">System Health</p>
+                    <p className="text-slate-500 text-sm">System Health</p>
                     <div className="flex items-center gap-4 mt-2">
                       <span className={`text-5xl font-bold ${getHealthColor(dashboard.health_score)}`}>
                         {dashboard.health_score}
                       </span>
-                      <span className="text-2xl text-gray-400">/100</span>
+                      <span className="text-2xl text-slate-500">/100</span>
                     </div>
                     <p className={`mt-2 font-medium ${getHealthColor(dashboard.health_score)}`}>
                       Status: {dashboard.health_status?.toUpperCase()}
@@ -168,9 +168,9 @@ const ErrorMonitor = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Errors */}
-              <Card className="bg-gray-800/50 border border-gray-700">
+              <Card className="bg-slate-50 border border-slate-200">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-gray-300 flex items-center gap-2">
+                  <CardTitle className="text-lg text-slate-600 flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-red-400" />
                     Errors
                   </CardTitle>
@@ -178,15 +178,15 @@ const ErrorMonitor = () => {
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Last 24h:</span>
-                      <span className="font-bold text-white">{dashboard.errors?.last_24h || 0}</span>
+                      <span className="text-slate-500">Last 24h:</span>
+                      <span className="font-bold text-slate-800">{dashboard.errors?.last_24h || 0}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Last 1h:</span>
+                      <span className="text-slate-500">Last 1h:</span>
                       <span className="font-bold text-yellow-400">{dashboard.errors?.last_1h || 0}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Critical:</span>
+                      <span className="text-slate-500">Critical:</span>
                       <span className="font-bold text-red-400">{dashboard.errors?.critical_unresolved || 0}</span>
                     </div>
                   </div>
@@ -194,9 +194,9 @@ const ErrorMonitor = () => {
               </Card>
 
               {/* Payments */}
-              <Card className="bg-gray-800/50 border border-gray-700">
+              <Card className="bg-slate-50 border border-slate-200">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-gray-300 flex items-center gap-2">
+                  <CardTitle className="text-lg text-slate-600 flex items-center gap-2">
                     <Zap className="h-5 w-5 text-green-400" />
                     Payments
                   </CardTitle>
@@ -204,15 +204,15 @@ const ErrorMonitor = () => {
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Total 24h:</span>
-                      <span className="font-bold text-white">{dashboard.payments?.total_24h || 0}</span>
+                      <span className="text-slate-500">Total 24h:</span>
+                      <span className="font-bold text-slate-800">{dashboard.payments?.total_24h || 0}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Failed:</span>
+                      <span className="text-slate-500">Failed:</span>
                       <span className="font-bold text-red-400">{dashboard.payments?.failed_24h || 0}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Success Rate:</span>
+                      <span className="text-slate-500">Success Rate:</span>
                       <span className={`font-bold ${dashboard.payments?.success_rate >= 90 ? 'text-green-400' : 'text-yellow-400'}`}>
                         {dashboard.payments?.success_rate || 0}%
                       </span>
@@ -222,9 +222,9 @@ const ErrorMonitor = () => {
               </Card>
 
               {/* API */}
-              <Card className="bg-gray-800/50 border border-gray-700">
+              <Card className="bg-slate-50 border border-slate-200">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-gray-300 flex items-center gap-2">
+                  <CardTitle className="text-lg text-slate-600 flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-blue-400" />
                     API Calls
                   </CardTitle>
@@ -232,15 +232,15 @@ const ErrorMonitor = () => {
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Total 24h:</span>
-                      <span className="font-bold text-white">{dashboard.api?.calls_24h || 0}</span>
+                      <span className="text-slate-500">Total 24h:</span>
+                      <span className="font-bold text-slate-800">{dashboard.api?.calls_24h || 0}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Errors:</span>
+                      <span className="text-slate-500">Errors:</span>
                       <span className="font-bold text-red-400">{dashboard.api?.errors_24h || 0}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Error Rate:</span>
+                      <span className="text-slate-500">Error Rate:</span>
                       <span className={`font-bold ${dashboard.api?.error_rate <= 5 ? 'text-green-400' : 'text-yellow-400'}`}>
                         {dashboard.api?.error_rate || 0}%
                       </span>
@@ -262,11 +262,11 @@ const ErrorMonitor = () => {
                 <CardContent>
                   <div className="space-y-3">
                     {dashboard.recent_critical_errors.map((error, idx) => (
-                      <div key={idx} className="bg-gray-800/50 rounded-lg p-4 flex justify-between items-center">
+                      <div key={idx} className="bg-slate-50 rounded-lg p-4 flex justify-between items-center">
                         <div>
-                          <p className="text-white font-medium">{error.error_type}</p>
-                          <p className="text-gray-400 text-sm mt-1">{error.error_message?.substring(0, 100)}</p>
-                          <p className="text-gray-500 text-xs mt-1">
+                          <p className="text-slate-800 font-medium">{error.error_type}</p>
+                          <p className="text-slate-500 text-sm mt-1">{error.error_message?.substring(0, 100)}</p>
+                          <p className="text-slate-500 text-xs mt-1">
                             <Clock className="inline h-3 w-3 mr-1" />
                             {new Date(error.timestamp).toLocaleString()}
                           </p>
@@ -290,13 +290,13 @@ const ErrorMonitor = () => {
 
         {/* Errors Tab */}
         {activeTab === 'errors' && (
-          <Card className="bg-gray-800/50 border border-gray-700">
+          <Card className="bg-slate-50 border border-slate-200">
             <CardHeader>
-              <CardTitle className="text-lg text-gray-300">Recent Errors ({errors.length})</CardTitle>
+              <CardTitle className="text-lg text-slate-600">Recent Errors ({errors.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {errors.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-slate-500">
                   <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-400" />
                   <p>No errors in the selected time range</p>
                 </div>
@@ -308,21 +308,21 @@ const ErrorMonitor = () => {
                       className={`rounded-lg p-4 border ${
                         error.severity === 'critical' ? 'bg-red-500/10 border-red-500/30' :
                         error.severity === 'error' ? 'bg-orange-500/10 border-orange-500/30' :
-                        'bg-gray-700/50 border-gray-600'
+                        'bg-slate-100/50 border-gray-600'
                       }`}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              error.severity === 'critical' ? 'bg-red-500 text-white' :
-                              error.severity === 'error' ? 'bg-orange-500 text-white' :
+                              error.severity === 'critical' ? 'bg-red-500 text-slate-800' :
+                              error.severity === 'error' ? 'bg-orange-500 text-slate-800' :
                               error.severity === 'warning' ? 'bg-yellow-500 text-black' :
-                              'bg-gray-600 text-white'
+                              'bg-gray-600 text-slate-800'
                             }`}>
                               {error.severity?.toUpperCase()}
                             </span>
-                            <span className="px-2 py-0.5 rounded bg-gray-600 text-xs text-gray-300">
+                            <span className="px-2 py-0.5 rounded bg-gray-600 text-xs text-slate-600">
                               {error.category}
                             </span>
                             {error.resolved && (
@@ -331,9 +331,9 @@ const ErrorMonitor = () => {
                               </span>
                             )}
                           </div>
-                          <p className="text-white font-medium mt-2">{error.error_type}</p>
-                          <p className="text-gray-400 text-sm mt-1">{error.error_message}</p>
-                          <p className="text-gray-500 text-xs mt-2">
+                          <p className="text-slate-800 font-medium mt-2">{error.error_type}</p>
+                          <p className="text-slate-500 text-sm mt-1">{error.error_message}</p>
+                          <p className="text-slate-500 text-xs mt-2">
                             Source: {error.source} | {new Date(error.timestamp).toLocaleString()}
                           </p>
                         </div>
@@ -360,15 +360,15 @@ const ErrorMonitor = () => {
         {activeTab === 'payments' && paymentSummary && (
           <div className="space-y-6">
             {/* Service Summary */}
-            <Card className="bg-gray-800/50 border border-gray-700">
+            <Card className="bg-slate-50 border border-slate-200">
               <CardHeader>
-                <CardTitle className="text-lg text-gray-300">Payment Summary by Service</CardTitle>
+                <CardTitle className="text-lg text-slate-600">Payment Summary by Service</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="text-left text-gray-400 border-b border-gray-700">
+                      <tr className="text-left text-slate-500 border-b border-slate-200">
                         <th className="pb-3">Service</th>
                         <th className="pb-3">Success</th>
                         <th className="pb-3">Failed</th>
@@ -378,11 +378,11 @@ const ErrorMonitor = () => {
                     </thead>
                     <tbody>
                       {Object.entries(paymentSummary.by_service || {}).map(([service, data]) => (
-                        <tr key={service} className="border-b border-gray-700/50">
-                          <td className="py-3 text-white font-medium">{service}</td>
+                        <tr key={service} className="border-b border-slate-200/50">
+                          <td className="py-3 text-slate-800 font-medium">{service}</td>
                           <td className="py-3 text-green-400">{data.success || 0}</td>
                           <td className="py-3 text-red-400">{data.failed || 0}</td>
-                          <td className="py-3 text-white">₹{(data.total_amount || 0).toLocaleString()}</td>
+                          <td className="py-3 text-slate-800">₹{(data.total_amount || 0).toLocaleString()}</td>
                           <td className="py-3">
                             <span className={`px-2 py-1 rounded text-sm ${
                               data.success_rate >= 90 ? 'bg-green-500/20 text-green-400' :
@@ -402,9 +402,9 @@ const ErrorMonitor = () => {
 
             {/* Top Failures */}
             {paymentSummary.top_failures?.length > 0 && (
-              <Card className="bg-gray-800/50 border border-gray-700">
+              <Card className="bg-slate-50 border border-slate-200">
                 <CardHeader>
-                  <CardTitle className="text-lg text-gray-300 flex items-center gap-2">
+                  <CardTitle className="text-lg text-slate-600 flex items-center gap-2">
                     <TrendingDown className="h-5 w-5 text-red-400" />
                     Top Failing Operators
                   </CardTitle>
@@ -412,12 +412,12 @@ const ErrorMonitor = () => {
                 <CardContent>
                   <div className="space-y-3">
                     {paymentSummary.top_failures.map((failure, idx) => (
-                      <div key={idx} className="bg-gray-700/50 rounded-lg p-4 flex justify-between items-center">
+                      <div key={idx} className="bg-slate-100/50 rounded-lg p-4 flex justify-between items-center">
                         <div>
-                          <p className="text-white font-medium">
+                          <p className="text-slate-800 font-medium">
                             {failure._id?.service} - Operator: {failure._id?.operator}
                           </p>
-                          <p className="text-gray-400 text-sm mt-1">{failure.last_error}</p>
+                          <p className="text-slate-500 text-sm mt-1">{failure.last_error}</p>
                         </div>
                         <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-bold">
                           {failure.count} failures

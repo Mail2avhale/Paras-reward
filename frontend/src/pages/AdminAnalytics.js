@@ -109,7 +109,7 @@ const AdminAnalytics = ({ user }) => {
 
   if (loading && !data) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <RefreshCw className="w-10 h-10 text-purple-500 animate-spin mx-auto mb-4" />
           <p className="text-slate-500">Loading Analytics...</p>
@@ -584,7 +584,7 @@ const AdminAnalytics = ({ user }) => {
                         index === 0 ? 'bg-amber-500 text-black' :
                         index === 1 ? 'bg-gray-400 text-black' :
                         index === 2 ? 'bg-amber-700 text-slate-800' :
-                        'bg-gray-700 text-slate-600'
+                        'bg-slate-100 text-slate-600'
                       }`}>
                         {index + 1}
                       </span>

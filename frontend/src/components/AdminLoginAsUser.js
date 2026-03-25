@@ -119,23 +119,23 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
 
   const getPlanColor = (plan) => {
     const colors = {
-      explorer: 'text-gray-400',
+      explorer: 'text-slate-500',
       startup: 'text-blue-400',
       growth: 'text-purple-400',
       elite: 'text-yellow-400'
     };
-    return colors[plan] || 'text-gray-400';
+    return colors[plan] || 'text-slate-500';
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={resetAndClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+      <DialogContent className="bg-white border-slate-200 text-slate-800 max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <UserCog className="w-6 h-6 text-orange-500" />
             Login As User
           </DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription className="text-slate-500">
             Login as any user (For Admin Support)
           </DialogDescription>
         </DialogHeader>
@@ -149,7 +149,7 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && searchUsers()}
-                className="bg-gray-800 border-gray-700 text-white"
+                className="bg-slate-50 border-slate-200 text-slate-800"
               />
               <Button 
                 onClick={searchUsers} 
@@ -167,16 +167,16 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
                   <div
                     key={user.uid}
                     onClick={() => selectUser(user)}
-                    className="p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors border border-gray-700 hover:border-orange-500"
+                    className="p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors border border-slate-200 hover:border-purple-500"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
-                          <User className="w-5 h-5 text-gray-400" />
+                          <User className="w-5 h-5 text-slate-500" />
                         </div>
                         <div>
-                          <p className="font-medium text-white">{user.name}</p>
-                          <p className="text-sm text-gray-400">{user.mobile}</p>
+                          <p className="font-medium text-slate-800">{user.name}</p>
+                          <p className="text-sm text-slate-500">{user.mobile}</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -198,25 +198,25 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
         {/* Step 2: Confirm */}
         {step === 'confirm' && selectedUser && (
           <div className="space-y-4">
-            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-14 h-14 bg-orange-500/20 rounded-full flex items-center justify-center">
                   <User className="w-7 h-7 text-orange-500" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{selectedUser.name}</h3>
-                  <p className="text-gray-400">{selectedUser.mobile}</p>
+                  <h3 className="text-lg font-semibold text-slate-800">{selectedUser.name}</h3>
+                  <p className="text-slate-500">{selectedUser.mobile}</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-400">{selectedUser.mobile}</span>
+                  <span className="text-slate-500">{selectedUser.mobile}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-400">{selectedUser.email || 'N/A'}</span>
+                  <span className="text-slate-500">{selectedUser.email || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Crown className={`w-4 h-4 ${getPlanColor(selectedUser.subscription_plan)}`} />
@@ -247,13 +247,13 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
 
             {/* Admin PIN (Optional) */}
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">Admin PIN (Optional)</label>
+              <label className="text-sm text-slate-500 mb-1 block">Admin PIN (Optional)</label>
               <Input
                 type="password"
                 placeholder="Enter your PIN..."
                 value={adminPin}
                 onChange={(e) => setAdminPin(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white"
+                className="bg-slate-50 border-slate-200 text-slate-800"
               />
             </div>
 
@@ -261,7 +261,7 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
               <Button 
                 variant="outline" 
                 onClick={() => setStep('search')}
-                className="border-gray-700 text-gray-400 hover:bg-gray-800"
+                className="border-slate-200 text-slate-500 hover:bg-slate-50"
               >
                 Back
               </Button>
@@ -287,8 +287,8 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
             <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <Shield className="w-8 h-8 text-green-500" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">Success!</h3>
-            <p className="text-gray-400">
+            <h3 className="text-xl font-semibold text-slate-800 mb-2">Success!</h3>
+            <p className="text-slate-500">
               Logged in as {selectedUser?.name} in new window.
             </p>
             <p className="text-yellow-400 text-sm mt-2">

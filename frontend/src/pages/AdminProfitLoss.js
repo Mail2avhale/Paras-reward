@@ -197,7 +197,7 @@ const AdminProfitLoss = ({ user }) => {
     }));
 
   return (
-    <div className="p-4 lg:p-6 space-y-6 bg-gray-950 min-h-screen">
+    <div className="p-4 lg:p-6 space-y-6 bg-white min-h-screen">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

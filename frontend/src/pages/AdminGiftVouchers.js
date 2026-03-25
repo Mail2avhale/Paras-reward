@@ -283,7 +283,7 @@ const AdminGiftVouchers = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-900 to-gray-950 border-b border-slate-200 sticky top-0 z-10">
         <div className="p-4 md:p-6">
@@ -313,7 +313,7 @@ const AdminGiftVouchers = ({ user }) => {
                   type="checkbox"
                   checked={autoRefresh}
                   onChange={(e) => setAutoRefresh(e.target.checked)}
-                  className="rounded border-gray-600 w-3 h-3"
+                  className="rounded border-slate-300 w-3 h-3"
                 />
                 Auto
               </label>

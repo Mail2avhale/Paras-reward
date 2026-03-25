@@ -122,14 +122,14 @@ const AdminFraudDashboard = ({ user }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-red-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="bg-gradient-to-r from-red-900/20 to-gray-950 border-b border-red-900/30 sticky top-0 z-10">
         <div className="p-4 md:p-6">

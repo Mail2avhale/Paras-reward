@@ -111,7 +111,7 @@ const AdminCapitalManagement = ({ user }) => {
       case 'opening_capital': return 'bg-green-500/20 text-green-400';
       case 'additional_capital': return 'bg-blue-500/20 text-blue-400';
       case 'drawings': return 'bg-red-500/20 text-red-400';
-      default: return 'bg-gray-700 text-slate-600';
+      default: return 'bg-slate-100 text-slate-600';
     }
   };
 
@@ -256,7 +256,7 @@ const AdminCapitalManagement = ({ user }) => {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-700">
+            <thead className="bg-slate-100">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Date</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Type</th>

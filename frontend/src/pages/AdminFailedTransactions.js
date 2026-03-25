@@ -245,7 +245,7 @@ const AdminFailedTransactions = ({ user }) => {
     : transactions;
 
   return (
-    <div className="min-h-screen bg-gray-950 p-4 md:p-6">
+    <div className="min-h-screen bg-white p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
@@ -354,7 +354,7 @@ const AdminFailedTransactions = ({ user }) => {
             <Button onClick={handleBulkRefund} disabled={actionLoading} className="bg-green-600 hover:bg-green-700">
               <Wallet className="h-4 w-4 mr-2" /> Bulk Refund
             </Button>
-            <Button onClick={() => setSelectedIds([])} variant="outline" className="border-gray-600">
+            <Button onClick={() => setSelectedIds([])} variant="outline" className="border-slate-300">
               Clear Selection
             </Button>
           </div>
@@ -376,7 +376,7 @@ const AdminFailedTransactions = ({ user }) => {
           <>
             <div className="p-4 border-b border-slate-200 flex justify-between items-center">
               <span className="text-sm text-slate-500">Showing {filteredTransactions.length} of {total}</span>
-              <Button onClick={selectAllNotRefunded} size="sm" variant="outline" className="border-gray-600 text-xs">
+              <Button onClick={selectAllNotRefunded} size="sm" variant="outline" className="border-slate-300 text-xs">
                 Select All Not Refunded
               </Button>
             </div>
@@ -389,7 +389,7 @@ const AdminFailedTransactions = ({ user }) => {
                       <input type="checkbox" 
                         checked={selectedIds.length === filteredTransactions.filter(t => !t.prc_refunded).length && selectedIds.length > 0}
                         onChange={(e) => e.target.checked ? selectAllNotRefunded() : setSelectedIds([])}
-                        className="rounded bg-gray-700 border-gray-600"
+                        className="rounded bg-slate-100 border-slate-300"
                       />
                     </th>
                     <th className="p-3">User</th>
@@ -410,7 +410,7 @@ const AdminFailedTransactions = ({ user }) => {
                             <input type="checkbox"
                               checked={selectedIds.includes(txn.request_id)}
                               onChange={() => toggleSelection(txn.request_id)}
-                              className="rounded bg-gray-700 border-gray-600"
+                              className="rounded bg-slate-100 border-slate-300"
                             />
                           )}
                         </td>
@@ -462,7 +462,7 @@ const AdminFailedTransactions = ({ user }) => {
                             )}
                             {!txn.prc_refunded && txn.status !== 'resolved' && (
                               <Button size="sm" onClick={() => handleMarkResolved(txn)} variant="outline"
-                                className="border-gray-600 text-xs px-2 py-1 h-7">
+                                className="border-slate-300 text-xs px-2 py-1 h-7">
                                 <Check className="h-3 w-3" />
                               </Button>
                             )}
@@ -535,7 +535,7 @@ const AdminFailedTransactions = ({ user }) => {
             </div>
             
             <div className="flex gap-3">
-              <Button onClick={() => setShowRefundModal(false)} variant="outline" className="flex-1 border-gray-600">
+              <Button onClick={() => setShowRefundModal(false)} variant="outline" className="flex-1 border-slate-300">
                 Cancel
               </Button>
               <Button onClick={handleRefund} disabled={actionLoading} className="flex-1 bg-green-600 hover:bg-green-700">

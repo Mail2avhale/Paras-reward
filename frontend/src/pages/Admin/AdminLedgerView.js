@@ -98,7 +98,7 @@ const AdminLedgerView = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ledger View</h1>
-          <p className="text-gray-500">Double-entry accounting ledger</p>
+          <p className="text-slate-500">Double-entry accounting ledger</p>
         </div>
         <Button 
           onClick={() => { fetchSummary(); fetchRecentEntries(); }} 
@@ -117,7 +117,7 @@ const AdminLedgerView = () => {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Total Credits</p>
+                  <p className="text-sm text-slate-500">Total Credits</p>
                   <p className="text-2xl font-bold text-green-600">
                     {summary.summary?.total_credits?.toLocaleString('en-IN')}
                   </p>
@@ -131,7 +131,7 @@ const AdminLedgerView = () => {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Total Debits</p>
+                  <p className="text-sm text-slate-500">Total Debits</p>
                   <p className="text-2xl font-bold text-red-600">
                     {summary.summary?.total_debits?.toLocaleString('en-IN')}
                   </p>
@@ -145,7 +145,7 @@ const AdminLedgerView = () => {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Net Flow</p>
+                  <p className="text-sm text-slate-500">Net Flow</p>
                   <p className={`text-2xl font-bold ${summary.summary?.net_flow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {summary.summary?.net_flow >= 0 ? '+' : ''}{summary.summary?.net_flow?.toLocaleString('en-IN')}
                   </p>
@@ -159,12 +159,12 @@ const AdminLedgerView = () => {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Total Entries</p>
+                  <p className="text-sm text-slate-500">Total Entries</p>
                   <p className="text-2xl font-bold text-gray-900">
                     {summary.summary?.total_entries?.toLocaleString('en-IN')}
                   </p>
                 </div>
-                <Calendar className="w-8 h-8 text-gray-500 opacity-50" />
+                <Calendar className="w-8 h-8 text-slate-500 opacity-50" />
               </div>
             </CardContent>
           </Card>
@@ -258,7 +258,7 @@ const AdminLedgerView = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-gray-400" />
+                        <User className="w-4 h-4 text-slate-500" />
                         <span className="font-medium">{entry.user_name || entry.user_id?.slice(0, 8) || '-'}</span>
                       </div>
                     </td>
@@ -282,14 +282,14 @@ const AdminLedgerView = () => {
                     <td className="px-4 py-3 text-gray-600 max-w-xs truncate">
                       {entry.description}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                    <td className="px-4 py-3 text-slate-500 font-mono text-xs">
                       {entry.reference || entry.txn_id?.slice(0, 12) || '-'}
                     </td>
                   </tr>
                 ))}
                 {entries.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                       No ledger entries found
                     </td>
                   </tr>
@@ -314,7 +314,7 @@ const AdminLedgerView = () => {
                   <div className="mt-2 space-y-1">
                     <p className="text-green-600">+{data.credits?.toLocaleString('en-IN') || 0}</p>
                     <p className="text-red-600">-{data.debits?.toLocaleString('en-IN') || 0}</p>
-                    <p className="text-xs text-gray-500">{data.count} entries</p>
+                    <p className="text-xs text-slate-500">{data.count} entries</p>
                   </div>
                 </div>
               ))}

@@ -333,7 +333,7 @@ const AdminSettings = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -369,7 +369,7 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://facebook.com/yourpage"
                 value={socialMedia.facebook}
                 onChange={(e) => handleChange('facebook', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
@@ -384,7 +384,7 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://twitter.com/yourhandle"
                 value={socialMedia.twitter}
                 onChange={(e) => handleChange('twitter', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
@@ -399,7 +399,7 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://instagram.com/yourprofile"
                 value={socialMedia.instagram}
                 onChange={(e) => handleChange('instagram', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
@@ -414,7 +414,7 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://linkedin.com/company/yourcompany"
                 value={socialMedia.linkedin}
                 onChange={(e) => handleChange('linkedin', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
@@ -429,7 +429,7 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://youtube.com/@yourchannel"
                 value={socialMedia.youtube}
                 onChange={(e) => handleChange('youtube', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
@@ -444,7 +444,7 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://t.me/yourchannel"
                 value={socialMedia.telegram}
                 onChange={(e) => handleChange('telegram', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
@@ -459,7 +459,7 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://wa.me/919876543210"
                 value={socialMedia.whatsapp}
                 onChange={(e) => handleChange('whatsapp', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -562,7 +562,7 @@ const AdminSettings = ({ user }) => {
               placeholder="Enter message to display when registration is closed..."
               rows={4}
               maxLength={300}
-              className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
             />
             <div className="flex items-center justify-between mt-2">
               <p className="text-xs text-slate-500">
@@ -729,7 +729,7 @@ const AdminSettings = ({ user }) => {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    prcPaymentEnabled ? 'bg-purple-500/20' : 'bg-gray-700'
+                    prcPaymentEnabled ? 'bg-purple-500/20' : 'bg-slate-100'
                   }`}>
                     <Coins className={`w-6 h-6 ${prcPaymentEnabled ? 'text-purple-400' : 'text-slate-500'}`} />
                   </div>
@@ -816,7 +816,7 @@ const AdminSettings = ({ user }) => {
                   placeholder="yourname@upi"
                   value={paymentConfig.upi_id}
                   onChange={(e) => handlePaymentConfigChange('upi_id', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
@@ -878,7 +878,7 @@ const AdminSettings = ({ user }) => {
                   placeholder="PARAS REWARD PVT LTD"
                   value={paymentConfig.account_holder}
                   onChange={(e) => handlePaymentConfigChange('account_holder', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
@@ -889,7 +889,7 @@ const AdminSettings = ({ user }) => {
                   placeholder="State Bank of India"
                   value={paymentConfig.bank_name}
                   onChange={(e) => handlePaymentConfigChange('bank_name', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
@@ -900,7 +900,7 @@ const AdminSettings = ({ user }) => {
                   placeholder="1234567890"
                   value={paymentConfig.account_number}
                   onChange={(e) => handlePaymentConfigChange('account_number', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
@@ -911,7 +911,7 @@ const AdminSettings = ({ user }) => {
                   placeholder="SBIN0001234"
                   value={paymentConfig.ifsc_code}
                   onChange={(e) => handlePaymentConfigChange('ifsc_code', e.target.value.toUpperCase())}
-                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -925,7 +925,7 @@ const AdminSettings = ({ user }) => {
               placeholder="Enter instructions for users making VIP payment..."
               value={paymentConfig.instructions}
               onChange={(e) => handlePaymentConfigChange('instructions', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
             />
           </div>
 

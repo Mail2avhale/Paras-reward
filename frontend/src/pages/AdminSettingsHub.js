@@ -138,7 +138,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   // If redirecting to external page, show loading
   if (activeTab && externalRoutes[activeTab]) {
     return (
-      <div className="min-h-screen bg-gray-950 text-slate-800 p-6 flex items-center justify-center">
+      <div className="min-h-screen bg-white text-slate-800 p-6 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
       </div>
     );
@@ -148,7 +148,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   if (activeTab === systemTab) {
     return (
       <Suspense fallback={
-        <div className="min-h-screen bg-gray-950 text-slate-800 p-6 flex items-center justify-center">
+        <div className="min-h-screen bg-white text-slate-800 p-6 flex items-center justify-center">
           <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
         </div>
       }>
@@ -161,7 +161,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   if (activeTab && adminSettingsTabs.includes(activeTab)) {
     return (
       <Suspense fallback={
-        <div className="min-h-screen bg-gray-950 text-slate-800 p-6 flex items-center justify-center">
+        <div className="min-h-screen bg-white text-slate-800 p-6 flex items-center justify-center">
           <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
         </div>
       }>
@@ -173,7 +173,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   // If unknown tab, show message
   if (activeTab) {
     return (
-      <div className="min-h-screen bg-gray-950 text-slate-800 p-6">
+      <div className="min-h-screen bg-white text-slate-800 p-6">
         <button 
           onClick={() => navigate('/admin/settings-hub')}
           className="flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-6"
@@ -199,7 +199,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
 
   // Main Settings Hub View (no tab selected)
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="px-4 py-6 border-b border-slate-200">
         <div className="flex items-center gap-4">
@@ -376,7 +376,7 @@ const SystemTasksSection = () => {
                 disabled={isLoading}
                 className={`mt-4 w-full py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                   isLoading 
-                    ? 'bg-gray-700 text-slate-500 cursor-not-allowed' 
+                    ? 'bg-slate-100 text-slate-500 cursor-not-allowed' 
                     : `bg-${task.color}-500 hover:bg-${task.color}-600 text-slate-800`
                 }`}
                 data-testid={`run-${task.id}`}

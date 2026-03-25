@@ -309,7 +309,7 @@ const AdminPRCEconomyDashboard = () => {
           
           <div className="space-y-4">
             {/* Pressure Gauge */}
-            <div className="relative h-4 bg-gray-700 rounded-full overflow-hidden">
+            <div className="relative h-4 bg-slate-100 rounded-full overflow-hidden">
               <div 
                 className={`h-full transition-all duration-500 ${
                   (redeem_pressure?.redeem_pressure || 0) > 0.15 

@@ -281,14 +281,14 @@ const AdminMembers = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <RefreshCw className="w-8 h-8 text-purple-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 p-3 md:p-6" data-testid="admin-members-page">
+    <div className="min-h-screen bg-white p-3 md:p-6" data-testid="admin-members-page">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 md:mb-6">
@@ -388,7 +388,7 @@ const AdminMembers = () => {
                       idx === 0 ? 'bg-amber-500 text-black' :
                       idx === 1 ? 'bg-gray-400 text-black' :
                       idx === 2 ? 'bg-orange-600 text-slate-800' :
-                      'bg-gray-700 text-slate-600'
+                      'bg-slate-100 text-slate-600'
                     }`}>
                       {idx + 1}
                     </span>
@@ -754,3 +754,4 @@ const AdminMembers = () => {
 };
 
 export default AdminMembers;
+// BUILD: 1774411326
