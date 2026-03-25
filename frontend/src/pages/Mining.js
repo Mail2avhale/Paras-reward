@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { InfoTooltip } from '@/components/InfoTooltip';
-// PRCBurnAlert removed - free users no longer collect PRC
+// Mining page imports and component
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -189,12 +189,7 @@ const DailyRewards = ({ user }) => {
   const [lastCollectedAmount, setLastCollectedAmount] = useState(0);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   
-  // Burning Session state
-  const [burningSession, setBurningSession] = useState(null);
-  const [liveBurnAmount, setLiveBurnAmount] = useState(0);
-  
   const timerRef = useRef(null);
-  const burnCounterRef = useRef(null);
   const liveCounterRef = useRef(null);
   const progressRef = useRef(null);
   const sessionEndNotifiedRef = useRef(false);
@@ -321,60 +316,27 @@ const DailyRewards = ({ user }) => {
     }
   }, [user, isMining]);
 
-  // Fetch Burning Session status
-  const fetchBurningSession = useCallback(async () => {
-    if (!user?.uid) return;
-    
-    try {
-      const response = await axios.get(`${API}/burning-session/status/${user.uid}`, { timeout: 5000 });
-      const data = response.data;
-      
-      if (data?.burning_session) {
-        setBurningSession(data.burning_session);
-        // Store server's total burned value and current timestamp
-        // Live counter will animate from this point
-        setLiveBurnAmount(data.burning_session.total_burned_lifetime || 0);
-      }
-    } catch (error) {
-      console.error('Error fetching burning session:', error);
-    }
-  }, [user]);
-
   useEffect(() => {
     if (user?.uid) {
-      fetchUserData(true); // Initial load
-      fetchBurningSession(); // Load burning session
+      fetchUserData(true);
     }
     
-    // Auto-refresh mining status every 30 seconds
     const refreshInterval = setInterval(() => {
       if (user?.uid) {
-        fetchUserData(false); // Background refresh
-      }
-    }, 30000);
-    
-    // Refresh burning session every 30 seconds (sync with server)
-    // Between refreshes, the live counter animates locally
-    const burnRefreshInterval = setInterval(() => {
-      if (user?.uid) {
-        fetchBurningSession();
+        fetchUserData(false);
       }
     }, 30000);
     
     return () => {
       clearInterval(refreshInterval);
-      clearInterval(burnRefreshInterval);
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
       if (liveCounterRef.current) {
         clearInterval(liveCounterRef.current);
       }
-      if (burnCounterRef.current) {
-        clearInterval(burnCounterRef.current);
-      }
     };
-  }, [user, fetchUserData, fetchBurningSession]);
+  }, [user, fetchUserData]);
 
   // Timer effect - separate from data fetch
   // OPTIMIZED: Main timer every 5s, live counter every 100ms for smooth animation
@@ -467,28 +429,63 @@ const DailyRewards = ({ user }) => {
     };
   }, [isMining, miningRate, sessionStartTime]);
 
-  // Burning Session Live Counter - ANIMATED DISPLAY
-  // This creates the visual effect of live burning
-  // Actual burn happens via hourly scheduled job on backend
-  // This counter is reset to server value every 30 seconds
+  // Timer effect - separate from data fetch
+  // OPTIMIZED: Main timer every 5s, live counter every 100ms for smooth animation
   useEffect(() => {
-    // Clear any existing interval
-    if (burnCounterRef.current) {
-      clearInterval(burnCounterRef.current);
-      burnCounterRef.current = null;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    if (liveCounterRef.current) {
+      clearInterval(liveCounterRef.current);
+    }
+    if (progressRef.current) {
+      clearInterval(progressRef.current);
     }
     
-    // DISABLED: Live counter causes double counting
-    // Backend applies burn hourly via scheduled job
-    // Frontend just shows server value (updated every 30 seconds)
-    // The burn_per_second is for DISPLAY of rate only, not for incrementing
+    if (isMining && sessionTimeRemaining > 0) {
+      // Main countdown timer - updates every 5 seconds
+      timerRef.current = setInterval(() => {
+        setSessionTimeRemaining(prev => Math.max(0, prev - 5));
+      }, 5000);
+      
+      // Live PRC counter - smooth animation every 100ms
+      liveCounterRef.current = setInterval(() => {
+        if (sessionStartTime && miningRate > 0) {
+          const elapsedSeconds = (Date.now() - sessionStartTime) / 1000;
+          const calculatedPRC = elapsedSeconds * (miningRate / 3600);
+          setSessionPRC(calculatedPRC);
+        }
+      }, 100);
+      
+      // Progress bar - updates every second
+      progressRef.current = setInterval(() => {
+        const totalSessionTime = 24 * 60 * 60; // 24 hours
+        const elapsed = totalSessionTime - sessionTimeRemaining;
+        const progress = Math.min(100, (elapsed / totalSessionTime) * 100);
+        setSessionProgress(progress);
+      }, 1000);
+    } else {
+      // Session ended
+      if (!sessionEndNotifiedRef.current && sessionTimeRemaining <= 0 && sessionPRC > 0) {
+        sessionEndNotifiedRef.current = true;
+        if (notificationEnabled) {
+          toast.info('Mining session complete! Collect your PRC.');
+        }
+      }
+    }
     
     return () => {
-      if (burnCounterRef.current) {
-        clearInterval(burnCounterRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      if (liveCounterRef.current) {
+        clearInterval(liveCounterRef.current);
+      }
+      if (progressRef.current) {
+        clearInterval(progressRef.current);
       }
     };
-  }, [burningSession]);
+  }, [isMining, sessionTimeRemaining, miningRate, sessionStartTime, sessionPRC, notificationEnabled]);
 
   const startSession = async () => {
     // Haptic feedback on button press
@@ -726,8 +723,6 @@ const DailyRewards = ({ user }) => {
           </button>
         </div>
       </div>
-
-      {/* PRC Burn Alert removed - free users no longer collect PRC */}
 
       {/* Main Mining Card - Glass Obsidian Design */}
       <div className="px-5 mb-6">
@@ -979,140 +974,6 @@ const DailyRewards = ({ user }) => {
           </div>
         </motion.div>
       </div>
-
-      {/* 🔥 BURNING SESSION - Always Active */}
-      {burningSession && (
-        <div className="px-5 mb-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`relative overflow-hidden rounded-2xl p-5 backdrop-blur-xl border transition-all duration-500 ${
-              burningSession.is_active
-                ? 'bg-gradient-to-br from-red-950/80 via-orange-950/60 to-zinc-900 border-red-500/40 shadow-[0_0_30px_-10px_rgba(239,68,68,0.3)]'
-                : 'bg-zinc-900/40 border-zinc-700'
-            }`}
-          >
-            {/* Fire animation background */}
-            {burningSession.is_active && (
-              <div className="absolute inset-0 opacity-20 pointer-events-none overflow-hidden">
-                <motion.div 
-                  className="absolute bottom-0 left-1/4 w-32 h-48 bg-gradient-to-t from-red-500 to-transparent rounded-full blur-2xl"
-                  animate={{ y: [0, -20, 0], opacity: [0.3, 0.6, 0.3] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-                <motion.div 
-                  className="absolute bottom-0 right-1/4 w-24 h-40 bg-gradient-to-t from-orange-500 to-transparent rounded-full blur-2xl"
-                  animate={{ y: [0, -15, 0], opacity: [0.4, 0.7, 0.4] }}
-                  transition={{ duration: 1.8, repeat: Infinity, delay: 0.3 }}
-                />
-              </div>
-            )}
-            
-            <div className="relative z-10">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    burningSession.is_active ? 'bg-red-500/20' : 'bg-zinc-800'
-                  }`}>
-                    <motion.span 
-                      className="text-2xl"
-                      animate={burningSession.is_active ? { scale: [1, 1.2, 1] } : {}}
-                      transition={{ duration: 0.8, repeat: Infinity }}
-                    >
-                      🔥
-                    </motion.span>
-                  </div>
-                  <div>
-                    <h3 className={`font-semibold ${burningSession.is_active ? 'text-red-400' : 'text-zinc-400'}`}>
-                      Burning Session
-                    </h3>
-                  </div>
-                </div>
-                
-                <div className={`px-3 py-1.5 rounded-full border ${
-                  burningSession.is_active 
-                    ? 'bg-red-500/10 border-red-500/30' 
-                    : 'bg-zinc-800/50 border-zinc-700'
-                }`}>
-                  <span className={`text-xs font-medium flex items-center gap-1.5 ${
-                    burningSession.is_active ? 'text-red-400' : 'text-zinc-500'
-                  }`}>
-                    {burningSession.is_active ? (
-                      <>
-                        <motion.div 
-                          className="w-2 h-2 rounded-full bg-red-500"
-                          animate={{ opacity: [1, 0.4, 1] }}
-                          transition={{ duration: 1, repeat: Infinity }}
-                        />
-                        LIVE
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-2 h-2 rounded-full bg-zinc-500" />
-                        STOPPED
-                      </>
-                    )}
-                  </span>
-                </div>
-              </div>
-              
-              {/* Burn Stats */}
-              {burningSession.is_active ? (
-                <>
-                  {/* Live Burn Counter */}
-                  <div className="bg-black/30 rounded-xl p-4 mb-4 border border-red-500/20">
-                    <p className="text-zinc-500 text-xs mb-2 text-center">Total PRC Burned (Lifetime)</p>
-                    <div className="flex items-center justify-center gap-2">
-                      <motion.span 
-                        className="text-2xl"
-                        animate={{ rotate: [0, 10, -10, 0] }}
-                        transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
-                      >
-                        🔥
-                      </motion.span>
-                      <span className="text-3xl font-bold font-mono text-red-400 tabular-nums">
-                        {liveBurnAmount.toFixed(4)}
-                      </span>
-                      <span className="text-red-400/70 font-semibold">PRC</span>
-                    </div>
-                    <div className="flex items-center justify-center gap-2 mt-2">
-                      <span className="text-xs text-orange-400 font-mono">
-                        -{burningSession.burn_per_second?.toFixed(8)} PRC/sec
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Burn Rates Grid */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
-                      <p className="text-zinc-500 text-xs mb-1">Per Hour</p>
-                      <p className="text-orange-400 font-mono font-semibold">
-                        -{burningSession.burn_per_hour?.toFixed(4)}
-                      </p>
-                    </div>
-                    <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
-                      <p className="text-zinc-500 text-xs mb-1">Per Day</p>
-                      <p className="text-red-400 font-mono font-semibold">
-                        -{burningSession.burn_per_day?.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-zinc-500 text-sm">
-                    Burning session will activate when your balance exceeds 10,000 PRC
-                  </p>
-                  <p className="text-zinc-600 text-xs mt-2">
-                    Current Balance: {burningSession.current_balance?.toFixed(2)} PRC
-                  </p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      )}
 
       {/* Free User Warning - Dark Theme */}
       {!hasPaidPlan && (

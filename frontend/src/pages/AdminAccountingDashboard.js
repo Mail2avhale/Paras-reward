@@ -23,7 +23,6 @@ const AdminAccountingDashboard = ({ user }) => {
   
   const [dashboardData, setDashboardData] = useState(null);
   const [mintLedger, setMintLedger] = useState(null);
-  const [burnLedger, setBurnLedger] = useState(null);
   const [liabilityLedger, setLiabilityLedger] = useState(null);
   const [reserveFund, setReserveFund] = useState(null);
   const [dailySummaries, setDailySummaries] = useState(null);
@@ -86,10 +85,6 @@ const AdminAccountingDashboard = ({ user }) => {
         case 'mint':
           const mintRes = await axios.get(`${API}/admin/accounting/prc-mint-ledger?limit=50`);
           setMintLedger(mintRes.data);
-          break;
-        case 'burn':
-          const burnRes = await axios.get(`${API}/admin/accounting/prc-burn-ledger?limit=50`);
-          setBurnLedger(burnRes.data);
           break;
         case 'liability':
           const liabilityRes = await axios.get(`${API}/admin/accounting/liability-ledger?limit=50`);
@@ -160,18 +155,6 @@ const AdminAccountingDashboard = ({ user }) => {
     }
   };
 
-  const handleBurnInactivePRC = async () => {
-    if (window.confirm('This will burn PRC for all users inactive for 180+ days. Continue?')) {
-      try {
-        const res = await axios.post(`${API}/admin/accounting/burn-inactive-prc`);
-        toast.success(`Burned PRC for ${res.data.result.users_affected} users (${res.data.result.total_burned} PRC)`);
-        fetchAllData();
-      } catch (error) {
-        toast.error('Failed to burn inactive PRC');
-      }
-    }
-  };
-
   const formatCurrency = (value) => {
     return `₹${(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
@@ -192,7 +175,6 @@ const AdminAccountingDashboard = ({ user }) => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: PieChart },
     { id: 'mint', label: 'PRC Mint', icon: TrendingUp },
-    { id: 'burn', label: 'PRC Burn', icon: TrendingDown },
     { id: 'liability', label: 'Liability', icon: Receipt },
     { id: 'reserve', label: 'Reserve Fund', icon: Shield },
     { id: 'daily', label: 'Daily Summary', icon: Calendar },
@@ -744,63 +726,6 @@ const AdminAccountingDashboard = ({ user }) => {
           </Card>
         )}
 
-        {/* PRC Burn Ledger Tab */}
-        {activeTab === 'burn' && (
-          <Card className="p-6">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-red-600" />
-              PRC Burn Ledger (Outflows)
-            </h3>
-            {burnLedger ? (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-red-500/10 p-4 rounded-lg">
-                    <div className="text-sm text-red-600">Total Burned</div>
-                    <div className="text-2xl font-bold text-red-400">{formatPRC(burnLedger.summary.total_burned)}</div>
-                  </div>
-                  {Object.entries(burnLedger.summary.by_use_type || {}).slice(0, 3).map(([type, data]) => (
-                    <div key={type} className="bg-gray-800/50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-500 capitalize">{type.replace('_', ' ')}</div>
-                      <div className="text-lg font-bold">{formatPRC(data.prc)}</div>
-                      <div className="text-xs text-gray-400">{data.count} transactions</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-gray-800">
-                      <tr>
-                        <th className="px-4 py-2 text-left">Date</th>
-                        <th className="px-4 py-2 text-left">User</th>
-                        <th className="px-4 py-2 text-left">Use Type</th>
-                        <th className="px-4 py-2 text-right">PRC Amount</th>
-                        <th className="px-4 py-2 text-left">Description</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {burnLedger.entries.map((entry, idx) => (
-                        <tr key={idx} className="border-b hover:bg-gray-800/50">
-                          <td className="px-4 py-2">{new Date(entry.created_at).toLocaleDateString()}</td>
-                          <td className="px-4 py-2 text-xs">{entry.user_id?.slice(0, 8)}...</td>
-                          <td className="px-4 py-2">
-                            <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs capitalize">
-                              {entry.type?.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 text-right font-semibold text-red-600">-{Math.abs(entry.amount)?.toFixed(2)}</td>
-                          <td className="px-4 py-2 text-xs text-gray-500">{entry.description?.slice(0, 50)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-8 text-gray-500">Loading burn ledger...</div>
-            )}
-          </Card>
-        )}
-
         {/* Liability Ledger Tab */}
         {activeTab === 'liability' && (
           <Card className="p-6">
@@ -1016,9 +941,6 @@ const AdminAccountingDashboard = ({ user }) => {
                 <Users className="h-5 w-5 text-purple-600" />
                 User Cost Analysis
               </h3>
-              <Button variant="destructive" onClick={handleBurnInactivePRC}>
-                Burn Inactive User PRC (180+ days)
-              </Button>
             </div>
             {userCostAnalysis ? (
               <>

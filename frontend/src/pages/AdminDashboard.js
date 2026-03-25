@@ -29,17 +29,13 @@ const AdminDashboard = ({ user }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [deliveryStats, setDeliveryStats] = useState(null);
-  // Orders removed - Marketplace deprecated
   const [pendingKYC, setPendingKYC] = useState([]);
-  const [burningStats, setBurningStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showLoginAsUser, setShowLoginAsUser] = useState(false);
   const [bulkFixing, setBulkFixing] = useState(false);
   const [bulkFixResult, setBulkFixResult] = useState(null);
   const [bulkFixJob, setBulkFixJob] = useState(null);
-  const [burnFixing, setBurnFixing] = useState(false);
-  const [burnFixResult, setBurnFixResult] = useState(null);
 
   // Check for running bulk fix job on load
   useEffect(() => {
@@ -126,74 +122,20 @@ const AdminDashboard = ({ user }) => {
     }
   };
 
-  // Fix Burn Bug - Restore over-burned PRC
-  const fixBurnBug = async () => {
-    if (!window.confirm('Are you sure? This will restore PRC to users affected by the burn bug.')) {
-      return;
-    }
-    
-    setBurnFixing(true);
-    try {
-      // First do dry run to show what will be fixed
-      const dryResponse = await axios.post(`${API}/admin/fix-burn-overcorrection`, {
-        hours_since_burn_start: 24,
-        dry_run: true
-      });
-      
-      if (dryResponse.data.users_affected === 0) {
-        toast.info('No users affected by burn bug');
-        setBurnFixing(false);
-        return;
-      }
-      
-      // Show confirmation with details
-      const confirmed = window.confirm(
-        `Found ${dryResponse.data.users_affected} affected users.\n` +
-        `Total to restore: ${dryResponse.data.total_restored.toLocaleString()} PRC\n\n` +
-        `Click OK to fix now.`
-      );
-      
-      if (!confirmed) {
-        setBurnFixing(false);
-        return;
-      }
-      
-      // Actually fix
-      const response = await axios.post(`${API}/admin/fix-burn-overcorrection`, {
-        hours_since_burn_start: 24,
-        dry_run: false
-      });
-      
-      setBurnFixResult(response.data);
-      toast.success(`Fixed! Restored ${response.data.total_restored.toLocaleString()} PRC to ${response.data.users_affected} users`);
-      fetchDashboardData(true);
-      
-    } catch (error) {
-      console.error('Burn fix error:', error);
-      toast.error(error.response?.data?.detail || 'Burn fix failed');
-    } finally {
-      setBurnFixing(false);
-    }
-  };
-
   const fetchDashboardData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     
     try {
       // Single combined API call + parallel secondary calls
-      const [statsRes, deliveryRes, kycRes, burningRes] = await Promise.all([
+      const [statsRes, deliveryRes, kycRes] = await Promise.all([
         axios.get(`${API}/admin/stats`).catch(() => ({ data: {} })),
         axios.get(`${API}/admin/delivery-partners/stats`).catch(() => ({ data: {} })),
-        // Orders API removed - Marketplace deprecated
-        axios.get(`${API}/kyc/list?limit=10&status=pending`).catch(() => ({ data: [] })),
-        axios.get(`${API}/admin/burn-statistics`).catch(() => ({ data: null }))
+        axios.get(`${API}/kyc/list?limit=10&status=pending`).catch(() => ({ data: [] }))
       ]);
       
       setStats(statsRes.data);
       setDeliveryStats(deliveryRes.data);
-      setBurningStats(burningRes.data);
-      // Orders removed - Marketplace deprecated
       const allKyc = Array.isArray(kycRes.data) ? kycRes.data : (kycRes.data?.users || []);
       setPendingKYC(allKyc.filter(k => k.status === 'pending').slice(0, 5));
     } catch (error) {
@@ -491,99 +433,7 @@ const AdminDashboard = ({ user }) => {
           color="emerald"
           onClick={() => navigate('/admin/prc-analytics')}
         />
-        {/* Orders card removed - Marketplace deprecated */}
       </div>
-
-      {/* 🔥 Burning Session Statistics Card */}
-      {burningStats && (
-        <Card className="p-5 bg-gradient-to-br from-red-950/30 via-orange-950/20 to-gray-950 border-red-500/30">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <span className="text-2xl">🔥</span>
-              Burning Session Statistics
-            </h3>
-            <div className="px-3 py-1.5 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-2">
-              <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
-              1% Daily Auto-Burn
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="bg-black/30 rounded-xl p-4 text-center border border-red-500/20">
-              <p className="text-zinc-500 text-xs mb-1">Total Burned (Lifetime)</p>
-              <p className="text-2xl font-bold text-red-400 font-mono">
-                {(burningStats.statistics?.total_prc_burned_lifetime || 0).toLocaleString()}
-              </p>
-              <p className="text-xs text-zinc-600">PRC</p>
-            </div>
-            <div className="bg-black/30 rounded-xl p-4 text-center border border-orange-500/20">
-              <p className="text-zinc-500 text-xs mb-1">Active Burners</p>
-              <p className="text-2xl font-bold text-orange-400 font-mono">
-                {burningStats.statistics?.active_burning_users || 0}
-              </p>
-              <p className="text-xs text-zinc-600">Users &gt; 10K PRC</p>
-            </div>
-            <div className="bg-black/30 rounded-xl p-4 text-center border border-amber-500/20">
-              <p className="text-zinc-500 text-xs mb-1">Burn Rate / Day</p>
-              <p className="text-2xl font-bold text-amber-400 font-mono">
-                -{(burningStats.statistics?.total_burn_rate_per_day || 0).toLocaleString()}
-              </p>
-              <p className="text-xs text-zinc-600">PRC/day</p>
-            </div>
-            <div className="bg-black/30 rounded-xl p-4 text-center border border-yellow-500/20">
-              <p className="text-zinc-500 text-xs mb-1">Est. Monthly Burn</p>
-              <p className="text-2xl font-bold text-yellow-400 font-mono">
-                -{(burningStats.statistics?.estimated_monthly_burn || 0).toLocaleString()}
-              </p>
-              <p className="text-xs text-zinc-600">PRC/month</p>
-            </div>
-          </div>
-          
-          {/* Top Burners */}
-          {burningStats.top_burners?.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-red-500/20">
-              <p className="text-zinc-400 text-xs mb-3 flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-amber-400" />
-                Top 5 Burners (Most PRC Burned)
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-                {burningStats.top_burners.slice(0, 5).map((burner, i) => (
-                  <div key={burner.uid} className="bg-zinc-800/50 rounded-lg p-2 text-center">
-                    <p className="text-xs text-zinc-400 truncate">{burner.name}</p>
-                    <p className="text-sm font-bold text-red-400">-{burner.total_burned}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Fix Burn Bug Button */}
-          <div className="mt-4 pt-4 border-t border-red-500/20">
-            <Button
-              onClick={fixBurnBug}
-              disabled={burnFixing}
-              className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white"
-            >
-              {burnFixing ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Fixing...
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  🔧 Fix Burn Bug (Restore Over-Burned PRC)
-                </>
-              )}
-            </Button>
-            {burnFixResult && (
-              <p className="text-xs text-green-400 mt-2 text-center">
-                ✅ Restored {burnFixResult.total_restored?.toLocaleString()} PRC to {burnFixResult.users_affected} users
-              </p>
-            )}
-          </div>
-        </Card>
-      )}
 
       {/* Subscription Breakdown - Beautiful Progress Bars */}
       <Card className="p-5 bg-gradient-to-br from-gray-900/80 to-gray-950 border-gray-800">

@@ -5169,797 +5169,10 @@ async def check_vip_marketplace_access(uid: str) -> Dict:
     """Backward compatible wrapper"""
     return await check_vip_service_access(uid, "marketplace")
 
-# ==================== PRC BURNING SESSION - MARCH 2026 ====================
-# NEW BURNING MECHANISM:
-# - Burning is ALWAYS ACTIVE (automatic)
-# - Burns 1% of PRC balance per day
-# - Burn happens HOURLY (1%/24 = 0.0417% per hour)
-# - Minimum balance for burning: 10,000 PRC (stops below this)
-# - Burned PRC is permanently deleted
-# =============================================================================
-
-BURNING_SESSION_SETTINGS = {
-    "daily_burn_percentage": 1.0,           # 1% daily
-    "hourly_burn_percentage": 1.0 / 24,     # 0.0417% per hour
-    "minimum_balance_for_burn": 10000,      # Stop burning below 10,000 PRC
-    "burn_rate_per_second": 1.0 / 86400,    # For display only (rate calculation)
-}
-
-
-async def calculate_and_apply_burn(user: dict) -> dict:
-    """
-    Calculate and apply PRC burn for a user based on time elapsed since last burn.
-    Called whenever user balance is accessed.
-    
-    Returns:
-    - burn_applied: amount of PRC burned
-    - new_balance: updated balance after burn
-    - burn_session_active: whether burning is currently active
-    """
-    uid = user.get("uid")
-    current_balance = float(user.get("prc_balance", 0) or 0)
-    minimum_balance = BURNING_SESSION_SETTINGS["minimum_balance_for_burn"]
-    
-    result = {
-        "uid": uid,
-        "burn_applied": 0,
-        "old_balance": round(current_balance, 2),
-        "new_balance": round(current_balance, 2),
-        "burn_session_active": current_balance > minimum_balance,
-        "minimum_balance": minimum_balance,
-        "daily_burn_rate": BURNING_SESSION_SETTINGS["daily_burn_percentage"]
-    }
-    
-    # If balance is at or below minimum, no burning
-    if current_balance <= minimum_balance:
-        result["burn_session_active"] = False
-        result["reason"] = f"Balance at or below minimum ({minimum_balance} PRC)"
-        return result
-    
-    # Get last burn timestamp
-    last_burn_at = user.get("last_burn_at")
-    now = datetime.now(timezone.utc)
-    
-    if not last_burn_at:
-        # First time - set timestamp and don't burn yet
-        await db.users.update_one(
-            {"uid": uid},
-            {"$set": {"last_burn_at": now.isoformat(), "burning_session_started": now.isoformat()}}
-        )
-        result["reason"] = "Burning session initialized"
-        return result
-    
-    # Calculate time elapsed since last burn
-    try:
-        if isinstance(last_burn_at, str):
-            last_burn_time = datetime.fromisoformat(last_burn_at.replace('Z', '+00:00'))
-        else:
-            last_burn_time = last_burn_at
-        
-        if last_burn_time.tzinfo is None:
-            last_burn_time = last_burn_time.replace(tzinfo=timezone.utc)
-        
-        elapsed_seconds = (now - last_burn_time).total_seconds()
-        
-        # Don't burn if less than 1 second elapsed
-        if elapsed_seconds < 1:
-            result["reason"] = "Less than 1 second elapsed"
-            return result
-        
-        # Calculate burn amount
-        # Daily rate = 1%, so per second = balance * 0.01 / 86400
-        burn_rate_per_second = current_balance * BURNING_SESSION_SETTINGS["burn_rate_per_second"]
-        burn_amount = burn_rate_per_second * elapsed_seconds
-        
-        # Make sure we don't burn below minimum
-        max_burnable = current_balance - minimum_balance
-        burn_amount = min(burn_amount, max_burnable)
-        
-        if burn_amount <= 0:
-            result["burn_session_active"] = False
-            result["reason"] = "Would burn below minimum"
-            return result
-        
-        burn_amount = round(burn_amount, 4)  # 4 decimal places for precision
-        new_balance = round(current_balance - burn_amount, 2)
-        
-        # Apply burn
-        await db.users.update_one(
-            {"uid": uid},
-            {
-                "$set": {
-                    "prc_balance": new_balance,
-                    "last_burn_at": now.isoformat()
-                },
-                "$inc": {
-                    "total_prc_burned": burn_amount
-                }
-            }
-        )
-        
-        # Log burn transaction
-        await db.transactions.insert_one({
-            "transaction_id": f"BURN-{uid[:8]}-{int(now.timestamp())}",
-            "user_id": uid,
-            "type": "prc_burn",
-            "amount": -burn_amount,
-            "balance_before": current_balance,
-            "balance_after": new_balance,
-            "description": f"Auto-burn: {elapsed_seconds:.0f}s @ {BURNING_SESSION_SETTINGS['daily_burn_percentage']}%/day",
-            "created_at": now.isoformat(),
-            "timestamp": now.isoformat()
-        })
-        
-        result["burn_applied"] = round(burn_amount, 4)
-        result["new_balance"] = new_balance
-        result["elapsed_seconds"] = round(elapsed_seconds, 0)
-        result["reason"] = "Burn applied successfully"
-        
-    except Exception as e:
-        logging.error(f"[BURN] Error calculating burn for {uid}: {e}")
-        result["error"] = str(e)
-    
-    return result
-
-
-async def get_burning_session_status(user: dict) -> dict:
-    """
-    Get current burning session status for display on Mining page.
-    Does NOT apply burn - just calculates current status.
-    """
-    uid = user.get("uid")
-    current_balance = float(user.get("prc_balance", 0) or 0)
-    minimum_balance = BURNING_SESSION_SETTINGS["minimum_balance_for_burn"]
-    daily_rate = BURNING_SESSION_SETTINGS["daily_burn_percentage"]
-    
-    is_active = current_balance > minimum_balance
-    total_burned = float(user.get("total_prc_burned", 0) or 0)
-    
-    # Calculate burn rates
-    if is_active:
-        burn_per_day = current_balance * (daily_rate / 100)
-        burn_per_hour = burn_per_day / 24
-        burn_per_minute = burn_per_day / 1440
-        burn_per_second = burn_per_day / 86400
-    else:
-        burn_per_day = burn_per_hour = burn_per_minute = burn_per_second = 0
-    
-    # Calculate time until minimum balance reached
-    if is_active and burn_per_day > 0:
-        burnable_amount = current_balance - minimum_balance
-        days_until_minimum = burnable_amount / burn_per_day
-    else:
-        days_until_minimum = 0
-    
-    return {
-        "is_active": is_active,
-        "current_balance": round(current_balance, 2),
-        "minimum_balance": minimum_balance,
-        "daily_burn_rate_percent": daily_rate,
-        "burn_per_day": round(burn_per_day, 4),
-        "burn_per_hour": round(burn_per_hour, 4),
-        "burn_per_minute": round(burn_per_minute, 6),
-        "burn_per_second": round(burn_per_second, 8),
-        "total_burned_lifetime": round(total_burned, 2),
-        "days_until_minimum": round(days_until_minimum, 1),
-        "burning_since": user.get("burning_session_started"),
-        "last_burn_at": user.get("last_burn_at")
-    }
-
-
-# ==================== BURNING SESSION API ENDPOINT ====================
-@api_router.get("/burning-session/status/{uid}")
-async def get_user_burning_session_status(uid: str):
-    """
-    Get the continuous burning session status for a user.
-    Shows burn RATE only - does NOT apply burn.
-    Actual burn happens in scheduled 11 AM job.
-    """
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0, "pin_hash": 0})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # DO NOT apply burn here - just show status
-    # Burn is applied once daily in the 11 AM scheduled job
-    burn_status = await get_burning_session_status(user)
-    
-    return {
-        "uid": uid,
-        "burning_session": burn_status
-    }
-
-
-# ==================== OLD BURN SYSTEM DISABLED ====================
-# The following functions are kept for backward compatibility but disabled
-
-async def burn_expired_prc_for_explorer_users():
-    """
-    Burn PRC for Explorer (Free) users after 4 hours validity
-    OPTIMIZED: Batch fetch all last earnings instead of N+1 queries
-    """
-    now = datetime.now(timezone.utc)
-    cutoff_time = now - timedelta(hours=BURN_SETTINGS["explorer_validity_hours"])
-    cutoff_str = cutoff_time.isoformat()
-    
-    users_affected = 0
-    total_burned = 0
-    burned_details = []
-    
-    # Find explorer users with PRC balance
-    explorer_users = await db.users.find({
-        "subscription_plan": {"$in": ["explorer", "free", None, ""]},
-        "prc_balance": {"$gt": 0}
-    }).limit(1000).to_list(1000)
-    
-    if not explorer_users:
-        return {"users_affected": 0, "total_burned": 0, "details": []}
-    
-    # OPTIMIZED: Batch fetch last earnings for all users in ONE query using aggregation
-    user_ids = [u.get("uid") for u in explorer_users if u.get("uid")]
-    
-    # Get last earning time for all users at once
-    last_earnings_pipeline = [
-        {"$match": {
-            "user_id": {"$in": user_ids},
-            "transaction_type": {"$in": ["mining", "tap_game", "mining_reward", "referral_bonus"]},
-            "amount": {"$gt": 0}
-        }},
-        {"$sort": {"created_at": -1}},
-        {"$group": {
-            "_id": "$user_id",
-            "last_earning_time": {"$first": "$created_at"}
-        }}
-    ]
-    last_earnings_results = await db.transactions.aggregate(last_earnings_pipeline).to_list(len(user_ids))
-    last_earnings_map = {r["_id"]: r["last_earning_time"] for r in last_earnings_results}
-    
-    # Prepare bulk operations
-    bulk_operations = []
-    
-    for user in explorer_users:
-        uid = user.get("uid")
-        current_balance = user.get("prc_balance", 0)
-        
-        if current_balance <= 0:
-            continue
-        
-        # Check last PRC earning time from pre-fetched data
-        should_burn = False
-        last_earning_time = last_earnings_map.get(uid)
-        
-        if last_earning_time:
-            if isinstance(last_earning_time, str):
-                try:
-                    last_earning_time = datetime.fromisoformat(last_earning_time.replace('Z', '+00:00'))
-                except:
-                    last_earning_time = None
-            if last_earning_time and last_earning_time.tzinfo is None:
-                last_earning_time = last_earning_time.replace(tzinfo=timezone.utc)
-            if last_earning_time and last_earning_time < cutoff_time:
-                should_burn = True
-        else:
-            # No earnings found, check account creation
-            created_at = user.get("created_at")
-            if created_at:
-                if isinstance(created_at, str):
-                    try:
-                        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                    except:
-                        created_at = None
-                if created_at and created_at.tzinfo is None:
-                    created_at = created_at.replace(tzinfo=timezone.utc)
-                if created_at and created_at < cutoff_time:
-                    should_burn = True
-        
-        if should_burn and current_balance > 0:
-            # Add to bulk operations instead of individual updates
-            bulk_operations.append(UpdateOne(
-                {"uid": uid},
-                {
-                    "$set": {"prc_balance": 0},
-                    "$push": {
-                        "prc_transactions": {
-                            "type": "debit",
-                            "amount": current_balance,
-                            "description": "PRC Expired (4hr validity for free users)",
-                            "reference_id": f"BURN-{now.strftime('%Y%m%d%H%M%S')}",
-                            "balance_after": 0,
-                            "timestamp": now.isoformat()
-                        }
-                    }
-                }
-            ))
-            
-            users_affected += 1
-            total_burned += current_balance
-            burned_details.append({
-                "uid": uid,
-                "burned": current_balance
-            })
-    
-    # Execute bulk operations
-    if bulk_operations:
-        await db.users.bulk_write(bulk_operations, ordered=False)
-    
-    return {
-        "users_affected": users_affected,
-        "total_burned": round(total_burned, 4),
-        "details": burned_details[:20],  # Limit details for response size
-        "cutoff_time": cutoff_time.isoformat()
-    }
-
-async def burn_expired_prc_for_expired_vip():
-    """
-    Burn PRC for Expired VIP users after 2 days
-    """
-    now = datetime.now(timezone.utc)
-    cutoff_time = now - timedelta(days=BURN_SETTINGS["expired_vip_validity_days"])
-    
-    users_affected = 0
-    total_burned = 0
-    burned_details = []
-    
-    # Find users with expired VIP subscriptions
-    expired_vip_users = await db.users.find({
-        "subscription_plan": {"$in": ["startup", "growth", "elite"]},
-        "prc_balance": {"$gt": 0},
-        "$or": [
-            {"subscription_expiry": {"$lt": cutoff_time.isoformat()}},
-            {"membership_expiry": {"$lt": cutoff_time.isoformat()}}
-        ]
-    }).to_list(1000)
-    
-    for user in expired_vip_users:
-        uid = user.get("uid")
-        current_balance = user.get("prc_balance", 0)
-        
-        if current_balance <= 0:
-            continue
-        
-        # Verify subscription is actually expired
-        expiry = user.get("subscription_expiry") or user.get("membership_expiry")
-        if expiry:
-            try:
-                expiry_date = datetime.fromisoformat(str(expiry).replace('Z', '+00:00'))
-                if expiry_date.tzinfo is None:
-                    expiry_date = expiry_date.replace(tzinfo=timezone.utc)
-                
-                days_expired = (now - expiry_date).days
-                
-                if days_expired >= BURN_SETTINGS["expired_vip_validity_days"]:
-                    # Burn all PRC
-                    await db.users.update_one(
-                        {"uid": uid},
-                        {
-                            "$set": {"prc_balance": 0},
-                            "$push": {
-                                "prc_transactions": {
-                                    "type": "debit",
-                                    "amount": current_balance,
-                                    "description": f"PRC Expired (VIP expired {days_expired} days ago)",
-                                    "reference_id": f"BURN-{now.strftime('%Y%m%d%H%M%S')}",
-                                    "balance_after": 0,
-                                    "timestamp": now.isoformat()
-                                }
-                            }
-                        }
-                    )
-                    
-                    users_affected += 1
-                    total_burned += current_balance
-                    burned_details.append({
-                        "uid": uid,
-                        "burned": current_balance,
-                        "days_expired": days_expired,
-                        "reason": "vip_expired_2days"
-                    })
-            except Exception as e:
-                logging.error(f"[PRC BURN] Error processing user {uid}: {e}")
-    
-    logging.info(f"[PRC BURN] Expired VIP: {users_affected} users, {total_burned:.2f} PRC burned")
-    return {
-        "users_affected": users_affected,
-        "total_burned": round(total_burned, 2),
-        "status": "completed",
-        "details": burned_details[:50]
-    }
-
-async def daily_percentage_burn():
-    """
-    Daily 0.5% burn from ALL users' available PRC balance
-    Runs at 11 AM and 11 PM (0.5% each = 1% daily)
-    
-    OPTIMIZED: Uses bulk_write for fast execution (handles 5000+ users in seconds)
-    """
-    from pymongo import UpdateOne
-    
-    now = datetime.now(timezone.utc)
-    burn_pct = BURN_SETTINGS["per_session_burn_percentage"]  # 0.5%
-    reference_id = f"DAILY-{now.strftime('%Y%m%d%H%M%S')}"
-    
-    users_affected = 0
-    total_burned = 0
-    burned_details = []
-    
-    # Find ALL users with PRC balance > minimum threshold
-    # Using projection for faster query
-    min_balance_for_burn = 2  # 0.5% of 2 = 0.01 (minimum burn)
-    users_cursor = db.users.find(
-        {"prc_balance": {"$gte": min_balance_for_burn}},
-        {"uid": 1, "prc_balance": 1, "_id": 0}
-    )
-    
-    # Process in batches for memory efficiency
-    BATCH_SIZE = 500
-    batch_operations = []
-    transaction_records = []
-    
-    # FIX: Use to_list() instead of async for to prevent cursor leak
-    all_users = await users_cursor.to_list(length=10000)
-    for user in all_users:
-        uid = user.get("uid")
-        current_balance = user.get("prc_balance", 0)
-        
-        if current_balance < min_balance_for_burn:
-            continue
-        
-        # WHALE PROTECTION (Section 17): 2% burn for wallets > 500,000 PRC
-        WHALE_THRESHOLD = 500000
-        if current_balance > WHALE_THRESHOLD:
-            effective_burn_pct = 1.0  # 2% daily = 1% per session for whales
-        else:
-            effective_burn_pct = burn_pct  # 0.5% per session for normal users
-        
-        # Calculate burn amount
-        burn_amount = round(current_balance * (effective_burn_pct / 100), 4)
-        
-        if burn_amount < 0.01:
-            continue
-        
-        new_balance = round(current_balance - burn_amount, 4)
-        if new_balance < 0:
-            new_balance = 0
-            burn_amount = current_balance
-        
-        # Prepare bulk update operation (balance only - much faster)
-        batch_operations.append(
-            UpdateOne(
-                {"uid": uid},
-                {"$set": {"prc_balance": new_balance}}
-            )
-        )
-        
-        # Prepare transaction record for separate insert
-        transaction_records.append({
-            "uid": uid,
-            "type": "prc_burn",
-            "amount": burn_amount,
-            "description": f"Daily PRC Maintenance ({burn_pct}%)",
-            "reference_id": reference_id,
-            "balance_before": current_balance,
-            "balance_after": new_balance,
-            "timestamp": now
-        })
-        
-        users_affected += 1
-        total_burned += burn_amount
-        
-        if len(burned_details) < 100:
-            burned_details.append({
-                "uid": uid,
-                "before": current_balance,
-                "burned": burn_amount,
-                "after": new_balance
-            })
-        
-        # Execute batch when full
-        if len(batch_operations) >= BATCH_SIZE:
-            try:
-                await db.users.bulk_write(batch_operations, ordered=False)
-                await db.transactions.insert_many(transaction_records, ordered=False)
-            except Exception as e:
-                logging.error(f"[BURN] Batch error: {e}")
-            batch_operations = []
-            transaction_records = []
-    
-    # Execute remaining operations
-    if batch_operations:
-        try:
-            await db.users.bulk_write(batch_operations, ordered=False)
-            await db.transactions.insert_many(transaction_records, ordered=False)
-        except Exception as e:
-            logging.error(f"[BURN] Final batch error: {e}")
-    
-    # Log the burn operation
-    from routes.user_logs import log_burn_operation
-    try:
-        await log_burn_operation(
-            operation_type="daily_percentage_burn",
-            total_users_checked=users_affected,
-            users_burned=users_affected,
-            users_skipped=0,
-            total_prc_burned=total_burned,
-            skipped_users_details=[],
-            burned_users_details=burned_details[:50],
-            settings_used={**BURN_SETTINGS, "notes": f"Daily {burn_pct}% burn - OPTIMIZED bulk_write"}
-        )
-    except Exception as e:
-        logging.error(f"[BURN LOG] Failed to log: {e}")
-    
-    logging.info(f"[PRC BURN] Daily {burn_pct}%: {users_affected} users, {total_burned:.2f} PRC burned (OPTIMIZED)")
-    return {
-        "users_affected": users_affected,
-        "total_burned": round(total_burned, 2),
-        "burn_percentage": burn_pct,
-        "timestamp": now.isoformat(),
-        "status": "completed"
-    }
-
-async def run_prc_burn_job():
-    """
-    DEPRECATED - Use run_hourly_burn_job instead
-    Kept for backward compatibility
-    """
-    return await run_hourly_burn_job()
-
-
-async def run_hourly_burn_job():
-    """
-    Hourly PRC burn job - burns 0.0417% per hour (1% daily / 24 hours)
-    Runs every hour at :00 minutes
-    
-    Only burns from users with balance > 10,000 PRC (minimum threshold)
-    """
-    from pymongo import UpdateOne
-    
-    now = datetime.now(timezone.utc)
-    hour_ist = (now.hour + 5) % 24 + (1 if now.minute >= 30 else 0)  # Rough IST hour
-    
-    logging.info(f"[HOURLY BURN] Starting burn job at {now.isoformat()}")
-    
-    # Hourly burn rate = 1% / 24 = 0.041667%
-    HOURLY_BURN_PERCENT = 1.0 / 24  # 0.041667%
-    MINIMUM_BALANCE = 10000  # Don't burn if balance <= 10,000
-    
-    reference_id = f"HOURLY-{now.strftime('%Y%m%d-%H')}"
-    
-    # Check if already ran this hour
-    existing_log = await db.burn_job_logs.find_one({
-        "job_type": "hourly_burn",
-        "reference_id": reference_id
-    })
-    
-    if existing_log:
-        logging.info(f"[HOURLY BURN] Already ran this hour: {reference_id}")
-        return {"status": "already_ran", "reference_id": reference_id}
-    
-    users_affected = 0
-    total_burned = 0
-    
-    # Find users with balance > minimum
-    users = await db.users.find(
-        {"prc_balance": {"$gt": MINIMUM_BALANCE}},
-        {"uid": 1, "prc_balance": 1, "total_prc_burned": 1, "_id": 0}
-    ).to_list(10000)
-    
-    if not users:
-        logging.info("[HOURLY BURN] No eligible users found")
-        return {"status": "no_users", "users_affected": 0, "total_burned": 0}
-    
-    batch_operations = []
-    transaction_records = []
-    
-    for user in users:
-        uid = user.get("uid")
-        current_balance = float(user.get("prc_balance", 0) or 0)
-        
-        if current_balance <= MINIMUM_BALANCE:
-            continue
-        
-        # Calculate burn amount (0.0417% of balance)
-        burn_amount = round(current_balance * (HOURLY_BURN_PERCENT / 100), 4)
-        
-        if burn_amount < 0.0001:
-            continue
-        
-        # Don't burn below minimum
-        max_burnable = current_balance - MINIMUM_BALANCE
-        burn_amount = min(burn_amount, max_burnable)
-        
-        if burn_amount <= 0:
-            continue
-        
-        new_balance = round(current_balance - burn_amount, 4)
-        current_total_burned = float(user.get("total_prc_burned", 0) or 0)
-        new_total_burned = round(current_total_burned + burn_amount, 4)
-        
-        # Prepare bulk update
-        batch_operations.append(
-            UpdateOne(
-                {"uid": uid},
-                {
-                    "$set": {
-                        "prc_balance": new_balance,
-                        "last_burn_at": now.isoformat(),
-                        "total_prc_burned": new_total_burned
-                    }
-                }
-            )
-        )
-        
-        # Prepare transaction record
-        transaction_records.append({
-            "transaction_id": f"BURN-{uid[:8]}-{int(now.timestamp())}",
-            "user_id": uid,
-            "type": "prc_burn",
-            "amount": -burn_amount,
-            "balance_before": current_balance,
-            "balance_after": new_balance,
-            "description": f"Hourly burn: {HOURLY_BURN_PERCENT:.4f}%",
-            "reference_id": reference_id,
-            "created_at": now.isoformat(),
-            "timestamp": now.isoformat()
-        })
-        
-        users_affected += 1
-        total_burned += burn_amount
-    
-    # Execute bulk operations
-    if batch_operations:
-        try:
-            await db.users.bulk_write(batch_operations, ordered=False)
-            logging.info(f"[HOURLY BURN] Updated {len(batch_operations)} users")
-        except Exception as e:
-            logging.error(f"[HOURLY BURN] Bulk update error: {e}")
-    
-    # Insert transactions
-    if transaction_records:
-        try:
-            await db.transactions.insert_many(transaction_records, ordered=False)
-        except Exception as e:
-            logging.error(f"[HOURLY BURN] Transaction insert error: {e}")
-    
-    # Log this burn run
-    await db.burn_job_logs.insert_one({
-        "job_type": "hourly_burn",
-        "reference_id": reference_id,
-        "executed_at": now.isoformat(),
-        "hour_utc": now.hour,
-        "users_affected": users_affected,
-        "total_burned": round(total_burned, 4),
-        "burn_percent": HOURLY_BURN_PERCENT,
-        "minimum_balance": MINIMUM_BALANCE
-    })
-    
-    logging.info(f"[HOURLY BURN] Completed: {users_affected} users, {total_burned:.4f} PRC burned")
-    
-    return {
-        "status": "completed",
-        "reference_id": reference_id,
-        "users_affected": users_affected,
-        "total_burned": round(total_burned, 4),
-        "burn_percent": HOURLY_BURN_PERCENT,
-        "timestamp": now.isoformat()
-    }
-
-
-async def check_and_run_missed_burn_job():
-    """
-    Auto-recovery: Check if burn job ran today, if not - run it.
-    Called every hour as fallback for missed cron jobs.
-    """
-    try:
-        now = datetime.now(timezone.utc)
-        today = now.strftime("%Y-%m-%d")
-        
-        # Check if burn job already ran today
-        existing_log = await db.burn_job_logs.find_one({
-            "job_type": "prc_burn",
-            "date": today
-        })
-        
-        if existing_log:
-            logging.debug(f"[BURN FALLBACK] Burn job already ran today at {existing_log.get('executed_at')}")
-            return {"status": "already_ran", "executed_at": existing_log.get("executed_at")}
-        
-        # Check current hour (IST = UTC + 5:30)
-        ist_hour = (now.hour + 5) % 24 + (30 / 60)
-        
-        # Only run if it's after 11 AM IST and burn hasn't run
-        if ist_hour >= 11:
-            logging.info(f"[BURN FALLBACK] Burn job missed today! Running now...")
-            result = await run_prc_burn_job()
-            return {"status": "executed_fallback", "result": result}
-        else:
-            return {"status": "waiting", "message": "Too early for burn job (before 11 AM IST)"}
-            
-    except Exception as e:
-        logging.error(f"[BURN FALLBACK] Error: {e}")
-        return {"status": "error", "error": str(e)}
-
-
-# ==================== WEBHOOK AUTO-BURN SYSTEM (UNIQUE SOLUTION) ====================
-# This solves the problem of APScheduler not working reliably in Kubernetes/Cloud environments
-# External services like Cron-job.org, UptimeRobot, or EasyCron can trigger this webhook
-
-async def execute_auto_burn_with_logging():
-    """
-    Execute burn and log comprehensive results.
-    Used by both webhook and internal scheduler.
-    """
-    try:
-        now = datetime.now(timezone.utc)
-        today = now.strftime("%Y-%m-%d")
-        ist_time = (now + timedelta(hours=5, minutes=30)).strftime("%I:%M %p IST")
-        
-        # Check if already burned today (prevent duplicate burns)
-        existing_burn = await db.burn_job_logs.find_one({
-            "job_type": "prc_burn",
-            "date": today,
-            "status": "completed"
-        })
-        
-        if existing_burn:
-            return {
-                "status": "skipped",
-                "reason": "Already burned today",
-                "burned_at": existing_burn.get("executed_at"),
-                "total_burned": existing_burn.get("total_burned", 0)
-            }
-        
-        # Execute burn
-        result = await run_prc_burn_job()
-        
-        # Log to burn_job_logs
-        daily_burn = result.get("daily_percentage_burn", {})
-        total_burned = daily_burn.get("total_burned", 0)
-        users_affected = daily_burn.get("users_affected", 0)
-        
-        await db.burn_job_logs.insert_one({
-            "job_type": "prc_burn",
-            "date": today,
-            "executed_at": now.isoformat(),
-            "executed_at_ist": ist_time,
-            "status": "completed",
-            "total_burned": total_burned,
-            "users_affected": users_affected,
-            "burn_percentage": 0.5,
-            "trigger_source": "auto_burn_system",
-            "details": result
-        })
-        
-        # Update burn statistics
-        await db.app_settings.update_one(
-            {"key": "burn_statistics"},
-            {
-                "$set": {
-                    "last_burn_date": today,
-                    "last_burn_time": now.isoformat(),
-                    "last_burn_total": total_burned
-                },
-                "$inc": {
-                    "total_burned_all_time": total_burned,
-                    "total_burn_operations": 1
-                }
-            },
-            upsert=True
-        )
-        
-        return {
-            "status": "completed",
-            "date": today,
-            "time_ist": ist_time,
-            "total_burned": total_burned,
-            "users_affected": users_affected,
-            "details": result
-        }
-        
-    except Exception as e:
-        logging.error(f"[AUTO BURN] Error: {e}")
-        return {"status": "error", "error": str(e)}
-
-
-# ==================== END PRC BURN SYSTEM ====================
+# ==================== PRC BURNING MODULE REMOVED - MARCH 2026 ====================
+# Burning functionality has been completely removed from the application.
+# All related functions return empty/disabled responses for backward compatibility.
+# =================================================================================
 
 # ==================== BILL PAYMENT & RECHARGE SYSTEM ====================
 
@@ -22595,116 +21808,12 @@ async def restore_user_prc(uid: str):
 
 @api_router.post("/admin/fix-burn-overcorrection")
 async def fix_burn_overcorrection(request: Request):
-    """
-    Fix PRC for users affected by the burn bug (double counting).
-    This endpoint:
-    1. Finds users with total_prc_burned > expected
-    2. Calculates correct burn based on 1% daily rate
-    3. Restores over-burned PRC to their balance
-    4. Resets total_prc_burned to correct value
-    """
-    try:
-        data = await request.json()
-        hours_since_burn_start = data.get("hours_since_burn_start", 24)  # Default 24 hours
-        dry_run = data.get("dry_run", True)  # Default to dry run
-        specific_uids = data.get("uids", None)  # Optional: specific users only
-        
-        now = datetime.now(timezone.utc)
-        
-        # Find affected users
-        query = {"total_prc_burned": {"$gt": 0}}
-        if specific_uids:
-            query["uid"] = {"$in": specific_uids}
-        
-        users = await db.users.find(
-            query,
-            {"uid": 1, "name": 1, "email": 1, "prc_balance": 1, "total_prc_burned": 1}
-        ).to_list(10000)
-        
-        results = []
-        total_restored = 0
-        
-        for user in users:
-            uid = user.get("uid")
-            name = user.get("name", "Unknown")
-            current_balance = float(user.get("prc_balance", 0) or 0)
-            total_burned = float(user.get("total_prc_burned", 0) or 0)
-            
-            # Calculate expected burn
-            # Original balance = current + burned
-            original_balance = current_balance + total_burned
-            
-            # Expected burn: 1% per day = 0.0417% per hour
-            expected_burn_percent = (1.0 / 24) * hours_since_burn_start
-            expected_burn = original_balance * (expected_burn_percent / 100)
-            
-            # Over-burned amount
-            over_burned = total_burned - expected_burn
-            
-            if over_burned > 1:  # More than 1 PRC over-burned
-                restore_amount = round(over_burned, 2)
-                new_balance = round(current_balance + restore_amount, 2)
-                correct_burned = round(expected_burn, 2)
-                
-                result = {
-                    "uid": uid,
-                    "name": name,
-                    "email": user.get("email"),
-                    "current_balance": current_balance,
-                    "total_burned_before": total_burned,
-                    "expected_burn": round(expected_burn, 2),
-                    "over_burned": restore_amount,
-                    "new_balance": new_balance,
-                    "correct_burned": correct_burned
-                }
-                
-                if not dry_run:
-                    # Apply the fix
-                    await db.users.update_one(
-                        {"uid": uid},
-                        {
-                            "$set": {
-                                "prc_balance": new_balance,
-                                "total_prc_burned": correct_burned
-                            }
-                        }
-                    )
-                    
-                    # Log the restoration
-                    await db.transactions.insert_one({
-                        "transaction_id": f"BURN-FIX-{uid[:8]}-{int(now.timestamp())}",
-                        "user_id": uid,
-                        "type": "burn_overcorrection_fix",
-                        "amount": restore_amount,
-                        "balance_before": current_balance,
-                        "balance_after": new_balance,
-                        "description": f"Burn bug fix: restored {restore_amount:.2f} PRC (over-burned due to frontend bug)",
-                        "burned_before": total_burned,
-                        "burned_after": correct_burned,
-                        "created_at": now.isoformat(),
-                        "timestamp": now.isoformat()
-                    })
-                    
-                    result["status"] = "FIXED"
-                else:
-                    result["status"] = "DRY_RUN"
-                
-                results.append(result)
-                total_restored += restore_amount
-        
-        return {
-            "success": True,
-            "dry_run": dry_run,
-            "hours_calculated": hours_since_burn_start,
-            "users_affected": len(results),
-            "total_restored": round(total_restored, 2),
-            "details": results,
-            "message": f"{'Would restore' if dry_run else 'Restored'} {total_restored:.2f} PRC to {len(results)} users"
-        }
-        
-    except Exception as e:
-        logging.error(f"Error fixing burn overcorrection: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    """DEPRECATED - Burn module removed March 2026"""
+    return {
+        "success": False,
+        "deprecated": True,
+        "message": "Burn module removed March 2026. No overcorrection needed."
+    }
 
 
 @api_router.post("/admin/bulk-restore-prc")
@@ -29712,279 +28821,60 @@ async def toggle_registration(request: Request):
     status = "enabled" if enabled else "disabled"
     return {"message": f"Registration {status} successfully", "registration_enabled": enabled}
 
-# PRC Burn Admin Endpoints
+# PRC Burn Admin Endpoints - DEPRECATED
 @api_router.get("/admin/burn-prc-preview")
 async def preview_prc_burn():
-    """
-    Preview PRC burn - shows which users WOULD be affected without actually burning.
-    Use this to verify the logic is correct before running actual burn.
-    """
-    now = datetime.now(timezone.utc)
-    now_iso = now.isoformat()
-    burn_threshold_2days = now - timedelta(days=2)
-    
-    # Count Explorer users that would be affected
-    # MUST exclude users who ever had VIP/paid subscription
-    explorer_query = {
-        "$and": [
-            {"$or": [
-                {"subscription_plan": "explorer"},
-                {"subscription_plan": "free"},
-                {"subscription_plan": None},
-                {"subscription_plan": ""},
-                {"subscription_plan": {"$exists": False}}
-            ]},
-            {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
-            {"$or": [
-                {"subscription_expiry": {"$exists": False}},
-                {"subscription_expiry": None},
-                {"subscription_expiry": ""}
-            ]},
-            {"$or": [
-                {"subscription_start": {"$exists": False}},
-                {"subscription_start": None}
-            ]},
-            # NEW: Exclude users who ever had VIP
-            {"$or": [
-                {"vip_activated_at": {"$exists": False}},
-                {"vip_activated_at": None}
-            ]},
-            {"$or": [
-                {"vip_expiry": {"$exists": False}},
-                {"vip_expiry": None}
-            ]},
-            {"prc_balance": {"$gt": 0}}
-        ]
-    }
-    explorer_count = await db.users.count_documents(explorer_query)
-    
-    # Count Free users that would be affected
-    free_query = {
-        "$and": [
-            {"$or": [
-                {"subscription_plan": {"$exists": False}},
-                {"subscription_plan": None},
-                {"subscription_plan": ""},
-                {"subscription_plan": "explorer"},
-                {"subscription_plan": "free"}
-            ]},
-            {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
-            {"$or": [
-                {"subscription_expiry": {"$exists": False}},
-                {"subscription_expiry": None},
-                {"subscription_expiry": {"$lt": now_iso}}
-            ]},
-            # NEW: Exclude users who ever had VIP
-            {"$or": [
-                {"vip_activated_at": {"$exists": False}},
-                {"vip_activated_at": None}
-            ]},
-            {"mining_history": {"$exists": True, "$ne": []}}
-        ]
-    }
-    free_count = await db.users.count_documents(free_query)
-    
-    # Count Expired subscription users that would be affected
-    expired_query = {
-        "$and": [
-            {"subscription_plan": {"$in": ["startup", "growth", "elite"]}},
-            {"subscription_expiry": {"$exists": True, "$ne": None, "$lt": now_iso}},
-            {"mining_history": {"$exists": True, "$ne": []}}
-        ]
-    }
-    expired_count = await db.users.count_documents(expired_query)
-    
-    # Get sample users for each category (first 5)
-    explorer_samples = await db.users.find(explorer_query, {"uid": 1, "email": 1, "prc_balance": 1, "subscription_plan": 1}).limit(5).to_list(5)
-    free_samples = await db.users.find(free_query, {"uid": 1, "email": 1, "prc_balance": 1, "subscription_plan": 1}).limit(5).to_list(5)
-    expired_samples = await db.users.find(expired_query, {"uid": 1, "email": 1, "prc_balance": 1, "subscription_plan": 1, "subscription_expiry": 1}).limit(5).to_list(5)
-    
-    # Clean _id from samples
-    for samples in [explorer_samples, free_samples, expired_samples]:
-        for s in samples:
-            s.pop("_id", None)
-    
+    """DEPRECATED - Burning module removed March 2026"""
     return {
         "preview_only": True,
-        "note": "No PRC was burned. This is a preview of what WOULD happen.",
-        "timestamp": now_iso,
-        "potential_burns": {
-            "explorer_users": {
-                "count": explorer_count,
-                "rule": "2 days inactive, never had paid subscription",
-                "sample_users": explorer_samples
-            },
-            "free_users": {
-                "count": free_count,
-                "rule": "PRC older than 48 hours (FIFO)",
-                "sample_users": free_samples
-            },
-            "expired_subscriptions": {
-                "count": expired_count,
-                "rule": "PRC mined after subscription expiry, 5+ days old",
-                "sample_users": expired_samples
-            }
-        },
-        "safety_checks": {
-            "paid_users_excluded": True,
-            "active_subscriptions_excluded": True
-        }
+        "note": "Burning module has been discontinued (March 2026)",
+        "deprecated": True,
+        "potential_burns": {},
+        "message": "No burning will occur - module removed"
     }
 
 @api_router.post("/admin/burn-prc-now")
 async def trigger_prc_burn():
-    """Manually trigger PRC burn job (Admin only)"""
-    result = await run_prc_burn_job()
+    """DEPRECATED - Burning module removed March 2026"""
     return {
-        "message": "PRC burn job completed",
-        "results": result
+        "success": False,
+        "message": "Burning module has been discontinued (March 2026)",
+        "disabled": True
     }
 
 
 # ==================== WEBHOOK AUTO-BURN ENDPOINTS ====================
-# These endpoints can be triggered by external cron services like:
-# - Cron-job.org (FREE)
-# - EasyCron.com
-# - UptimeRobot
-# - Google Cloud Scheduler
-# - AWS EventBridge
+# DEPRECATED - Burning module removed March 2026
 
 @api_router.get("/webhook/auto-burn")
 @api_router.post("/webhook/auto-burn")
 async def webhook_auto_burn(secret: str = None):
-    """
-    🔥 WEBHOOK AUTO-BURN ENDPOINT
-    
-    External cron services can call this endpoint to trigger daily PRC burn.
-    This solves the problem of APScheduler not working in Kubernetes.
-    
-    Setup Instructions:
-    1. Go to https://cron-job.org (FREE service)
-    2. Create account and add new cron job
-    3. URL: https://www.parasreward.com/api/webhook/auto-burn?secret=YOUR_SECRET
-    4. Schedule: 0 5 * * * (5:30 AM UTC = 11 AM IST)
-    5. Method: GET or POST
-    
-    Features:
-    - Prevents duplicate burns (checks if already burned today)
-    - Logs all burn operations
-    - Returns detailed results
-    
-    Query Params:
-    - secret: Optional security token (set in app_settings)
-    """
-    try:
-        # Optional: Verify secret token for security
-        # You can set a webhook_secret in app_settings
-        settings = await db.app_settings.find_one({"key": "webhook_settings"})
-        expected_secret = settings.get("value", {}).get("burn_webhook_secret") if settings else None
-        
-        if expected_secret and secret != expected_secret:
-            # Log unauthorized attempt
-            await db.webhook_logs.insert_one({
-                "endpoint": "auto-burn",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "status": "unauthorized",
-                "provided_secret": secret[:4] + "..." if secret else None
-            })
-            return {"error": "Unauthorized", "message": "Invalid or missing secret"}
-        
-        # Execute auto burn
-        result = await execute_auto_burn_with_logging()
-        
-        # Log successful webhook call
-        await db.webhook_logs.insert_one({
-            "endpoint": "auto-burn",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "status": result.get("status"),
-            "total_burned": result.get("total_burned", 0)
-        })
-        
-        return {
-            "success": True,
-            "webhook": "auto-burn",
-            "result": result
-        }
-        
-    except Exception as e:
-        logging.error(f"[WEBHOOK AUTO-BURN] Error: {e}")
-        return {"success": False, "error": str(e)}
+    """DEPRECATED - Burning module removed March 2026"""
+    return {
+        "success": False,
+        "message": "Burning module has been discontinued (March 2026)",
+        "disabled": True
+    }
 
 
 @api_router.get("/webhook/burn-status")
 async def webhook_burn_status():
-    """
-    Check today's burn status.
-    Useful for monitoring if auto-burn is working.
-    """
-    try:
-        now = datetime.now(timezone.utc)
-        today = now.strftime("%Y-%m-%d")
-        
-        # Get today's burn log
-        today_burn = await db.burn_job_logs.find_one({
-            "job_type": "prc_burn",
-            "date": today
-        })
-        
-        # Get last 7 days burn history
-        seven_days_ago = (now - timedelta(days=7)).strftime("%Y-%m-%d")
-        recent_burns = await db.burn_job_logs.find({
-            "job_type": "prc_burn",
-            "date": {"$gte": seven_days_ago}
-        }).sort("date", -1).to_list(7)
-        
-        # Calculate burn health
-        burns_last_7_days = len(recent_burns)
-        health_status = "healthy" if burns_last_7_days >= 5 else "warning" if burns_last_7_days >= 3 else "critical"
-        
-        return {
-            "success": True,
-            "today": {
-                "date": today,
-                "burned": today_burn is not None,
-                "total_burned": today_burn.get("total_burned", 0) if today_burn else 0,
-                "burned_at": today_burn.get("executed_at_ist") if today_burn else None
-            },
-            "last_7_days": {
-                "burns_executed": burns_last_7_days,
-                "expected": 7,
-                "health": health_status,
-                "history": [
-                    {
-                        "date": b.get("date"),
-                        "burned": b.get("total_burned", 0),
-                        "users": b.get("users_affected", 0)
-                    } for b in recent_burns
-                ]
-            },
-            "recommendation": "All good! Auto-burn is working." if health_status == "healthy" else 
-                           "Warning: Some burns may have been missed. Check cron-job.org setup." if health_status == "warning" else
-                           "Critical: Auto-burn is not working! Please set up external cron immediately."
-        }
-        
-    except Exception as e:
-        logging.error(f"[BURN STATUS] Error: {e}")
-        return {"success": False, "error": str(e)}
+    """DEPRECATED - Burning module removed March 2026"""
+    return {
+        "success": False,
+        "message": "Burning module has been discontinued (March 2026)",
+        "disabled": True
+    }
 
 
 @api_router.post("/admin/webhook/set-secret")
 async def set_webhook_secret(secret: str):
-    """Set a secret token for webhook security (Admin only)"""
-    try:
-        await db.app_settings.update_one(
-            {"key": "webhook_settings"},
-            {
-                "$set": {
-                    "value.burn_webhook_secret": secret,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }
-            },
-            upsert=True
-        )
-        return {"success": True, "message": f"Webhook secret set. Use ?secret={secret} in your cron URL."}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    """DEPRECATED - Burning module removed March 2026"""
+    return {
+        "success": False,
+        "message": "Burning module has been discontinued (March 2026)",
+        "disabled": True
+    }
 
 
 # ==================== SUBSCRIPTION EXPIRY CORRECTION API ====================
@@ -31964,70 +30854,11 @@ async def clear_all_free_users_prc():
 
 @api_router.get("/admin/burn-statistics")
 async def get_burn_statistics():
-    """Get PRC burn statistics for the new Continuous Burning Session (Admin only)"""
-    
-    # Get all users with burning session data
-    burning_users = await db.users.find(
-        {"prc_balance": {"$gt": 0}},
-        {"_id": 0, "uid": 1, "name": 1, "prc_balance": 1, "total_prc_burned": 1, "last_burn_at": 1, "burning_session_started": 1}
-    ).to_list(10000)
-    
-    minimum_balance = BURNING_SESSION_SETTINGS["minimum_balance_for_burn"]  # 10,000
-    daily_rate = BURNING_SESSION_SETTINGS["daily_burn_percentage"]  # 1%
-    
-    # Calculate statistics
-    total_burned_lifetime = 0
-    active_burning_users = 0
-    inactive_burning_users = 0
-    total_burn_rate_per_day = 0
-    top_burners = []
-    
-    for user in burning_users:
-        balance = float(user.get("prc_balance", 0) or 0)
-        burned = float(user.get("total_prc_burned", 0) or 0)
-        total_burned_lifetime += burned
-        
-        if balance > minimum_balance:
-            active_burning_users += 1
-            daily_burn = balance * (daily_rate / 100)
-            total_burn_rate_per_day += daily_burn
-            
-            if burned > 0:
-                top_burners.append({
-                    "uid": user.get("uid"),
-                    "name": user.get("name", "Unknown"),
-                    "balance": round(balance, 2),
-                    "total_burned": round(burned, 2),
-                    "burn_per_day": round(daily_burn, 2)
-                })
-        else:
-            inactive_burning_users += 1
-    
-    # Sort top burners by total burned
-    top_burners.sort(key=lambda x: x["total_burned"], reverse=True)
-    
-    # Get recent burn transactions
-    recent_burns = await db.transactions.find(
-        {"type": "prc_burn"},
-        {"_id": 0}
-    ).sort("created_at", -1).limit(20).to_list(20)
-    
+    """DEPRECATED - Burn module removed March 2026"""
     return {
-        "burning_session_settings": {
-            "daily_burn_rate_percent": daily_rate,
-            "minimum_balance_threshold": minimum_balance,
-            "burn_per_second_formula": "balance * 0.01 / 86400"
-        },
-        "statistics": {
-            "total_prc_burned_lifetime": round(total_burned_lifetime, 2),
-            "active_burning_users": active_burning_users,
-            "inactive_users": inactive_burning_users,
-            "total_burn_rate_per_day": round(total_burn_rate_per_day, 2),
-            "total_burn_rate_per_hour": round(total_burn_rate_per_day / 24, 2),
-            "estimated_monthly_burn": round(total_burn_rate_per_day * 30, 2)
-        },
-        "top_burners": top_burners[:10],
-        "recent_burn_transactions": recent_burns
+        "message": "PRC Burning module has been removed",
+        "deprecated": True,
+        "removed_date": "March 2026"
     }
 
 # VIP Plans Management Endpoints
@@ -40120,76 +38951,18 @@ async def get_user_cost_analysis(page: int = 1, limit: int = 50, filter_type: st
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
-# ========== 180-DAY PRC EXPIRY FOR INACTIVE USERS ==========
+# ========== 180-DAY PRC EXPIRY - DEPRECATED MARCH 2026 ==========
 
 async def burn_inactive_user_prc():
-    """
-    Burn PRC for users inactive for 180+ days
-    IMPORTANT: Skip all paid/VIP users
-    """
-    try:
-        now = datetime.now(timezone.utc)
-        inactive_threshold = now - timedelta(days=180)
-        
-        # Find inactive users with positive PRC balance
-        # EXCLUDE all paid users
-        inactive_users = db.users.find({
-            "last_login": {"$lt": inactive_threshold.isoformat()},
-            "prc_balance": {"$gt": 0},
-            # Exclude paid users
-            "subscription_plan": {"$in": ["explorer", None, ""]},
-            "subscription_expiry": {"$exists": False},
-            "vip_activated_at": {"$exists": False}
-        })
-        
-        burn_count = 0
-        total_burned = 0.0
-        
-        # FIX: Use to_list() instead of async for to prevent cursor leak
-        inactive_users_list = await inactive_users.to_list(length=10000)
-        for user in inactive_users_list:
-            uid = user.get("uid")
-            prc_balance = user.get("prc_balance", 0)
-            
-            # DOUBLE CHECK: Skip if user has ANY paid subscription indicators
-            subscription_plan = user.get("subscription_plan", "explorer")
-            if subscription_plan and subscription_plan.lower() not in ["explorer", "free", "", "none"]:
-                logging.info(f"[180-DAY BURN SKIP] User {uid} has paid plan: {subscription_plan}")
-                continue
-            
-            if user.get("vip_activated_at") or user.get("subscription_expiry") or user.get("subscription_start"):
-                logging.info(f"[180-DAY BURN SKIP] User {uid} has subscription history")
-                continue
-            
-            if prc_balance > 0:
-                # Burn all PRC
-                await log_transaction(
-                    user_id=uid,
-                    wallet_type="prc",
-                    transaction_type="prc_burn",
-                    amount=prc_balance,
-                    description=f"Burned {prc_balance:.2f} PRC (inactive for 180+ days)",
-                    metadata={"burn_reason": "inactive_180_days", "last_login": user.get("last_login")}
-                )
-                
-                burn_count += 1
-                total_burned += prc_balance
-        
-        logging.info(f"Inactive user PRC burn: {burn_count} users, {total_burned:.2f} PRC burned")
-        return {"users_affected": burn_count, "total_burned": total_burned}
-    except Exception as e:
-        logging.error(f"Error burning inactive user PRC: {e}")
-        return {"users_affected": 0, "total_burned": 0.0}
+    """DEPRECATED - Burn module removed March 2026"""
+    logging.info("[180-DAY BURN] Feature disabled - burn module removed")
+    return {"users_affected": 0, "total_burned": 0.0, "deprecated": True}
 
 
 @api_router.post("/admin/accounting/burn-inactive-prc")
 async def trigger_inactive_prc_burn():
-    """Manually trigger inactive user PRC burn (180 days)"""
-    try:
-        result = await burn_inactive_user_prc()
-        return {"success": True, "result": result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+    """DEPRECATED - Manually trigger inactive user PRC burn (180 days)"""
+    return {"success": True, "result": {"deprecated": True, "message": "Burn module removed March 2026"}}
 
 
 # ========== ACCOUNT HARD DELETE SCHEDULED TASK ==========
@@ -44754,38 +43527,37 @@ async def view_archived_data(collection: str, page: int = 1, limit: int = 50):
 
 
 # ========== OLD PRC BURN CONTROL - DEPRECATED ==========
-# Old manual burn system removed. New "Burning Session" (1% daily auto-burn) is on Mining page.
-# These endpoints return 410 Gone to inform clients this feature is deprecated.
+# Burn module completely removed March 2026
 
 @api_router.get("/admin/prc-burn-control/settings")
 async def get_prc_burn_control_settings_deprecated():
-    """DEPRECATED - Old burn control removed. Use new Burning Session on Mining page."""
-    raise HTTPException(status_code=410, detail="PRC Burn Control deprecated. New Burning Session (1% daily auto-burn) is automatic on Mining page.")
+    """DEPRECATED - Burn module removed March 2026"""
+    return {"deprecated": True, "message": "Burn module removed March 2026"}
 
 @api_router.post("/admin/prc-burn-control/settings")
 async def save_prc_burn_control_settings_deprecated(request: Request):
-    """DEPRECATED - Old burn control removed."""
-    raise HTTPException(status_code=410, detail="PRC Burn Control deprecated. New Burning Session is automatic.")
+    """DEPRECATED - Burn module removed March 2026"""
+    return {"deprecated": True, "message": "Burn module removed March 2026"}
 
 @api_router.get("/admin/prc-burn-control/stats")
 async def get_prc_burn_control_stats_deprecated():
-    """DEPRECATED - Use /admin/burn-statistics for new burning session stats."""
-    raise HTTPException(status_code=410, detail="Use /api/admin/burn-statistics for new Burning Session stats.")
+    """DEPRECATED - Burn module removed March 2026"""
+    return {"deprecated": True, "message": "Burn module removed March 2026"}
 
 @api_router.post("/admin/prc-burn-control/execute")
 async def execute_prc_burn_control_deprecated(request: Request):
-    """DEPRECATED - Old manual burn removed. Burning is now automatic."""
-    raise HTTPException(status_code=410, detail="Manual burn deprecated. Burning Session is automatic (1% daily).")
+    """DEPRECATED - Burn module removed March 2026"""
+    return {"deprecated": True, "message": "Burn module removed March 2026"}
 
 @api_router.get("/admin/prc-burn-control/history")
 async def get_prc_burn_control_history_deprecated():
-    """DEPRECATED - Old burn history."""
-    raise HTTPException(status_code=410, detail="Old burn history deprecated. Check user transactions for burn records.")
+    """DEPRECATED - Burn module removed March 2026"""
+    return {"deprecated": True, "message": "Burn module removed March 2026"}
 
 @api_router.post("/admin/prc-burn-control/retry")
 async def retry_prc_burn_control_deprecated(request: Request):
-    """DEPRECATED - Retry not needed for automatic burning session."""
-    raise HTTPException(status_code=410, detail="Retry deprecated. Burning Session is automatic.")
+    """DEPRECATED - Burn module removed March 2026"""
+    return {"deprecated": True, "message": "Burn module removed March 2026"}
 
 
 # ========== Below is the old code - kept for reference but not executed ==========
@@ -46095,20 +44867,8 @@ async def startup_db():
     print("⏰ Starting scheduled tasks...")
     
     try:
-        # ========== PRC BURN JOBS - UPDATED MARCH 2026 ==========
-        # New burning rules:
-        # - 1% daily burn distributed across 24 hours
-        # - 0.0417% per hour (1% / 24 = 0.0417%)
-        # - Runs every hour at :00 minutes
-        
-        # PRC Burn Job - HOURLY (every hour at :00)
-        scheduler.add_job(
-            run_hourly_burn_job,
-            CronTrigger(minute=0),  # Every hour at :00
-            id='prc_burn_hourly',
-            name='PRC Burn Job - Hourly (1%/24 = 0.0417%/hr)',
-            replace_existing=True
-        )
+        # ========== PRC BURN JOBS REMOVED - MARCH 2026 ==========
+        # Burning functionality has been completely removed
         
         # Schedule daily wallet reconciliation - runs at 3 AM
         scheduler.add_job(
@@ -46119,32 +44879,12 @@ async def startup_db():
             replace_existing=True
         )
         
-        # FALLBACK: Check and run missed burn job every hour
-        # This ensures burn job runs even if cron trigger was missed
-        scheduler.add_job(
-            check_and_run_missed_burn_job,
-            'interval',
-            hours=1,
-            id='burn_job_fallback',
-            name='Fallback check for missed PRC burn job',
-            replace_existing=True
-        )
-        
         # Schedule daily system summary generation - runs at 12:05 AM
         scheduler.add_job(
             generate_daily_summary,
             CronTrigger(hour=0, minute=5),  # Daily at 12:05 AM
             id='daily_system_summary',
             name='Generate daily accounting summary',
-            replace_existing=True
-        )
-        
-        # Schedule inactive user PRC burn - runs weekly on Sunday at 4 AM
-        scheduler.add_job(
-            burn_inactive_user_prc,
-            CronTrigger(day_of_week='sun', hour=4, minute=0),  # Weekly on Sunday at 4 AM
-            id='inactive_user_prc_burn',
-            name='Burn PRC for 180+ day inactive users',
             replace_existing=True
         )
         

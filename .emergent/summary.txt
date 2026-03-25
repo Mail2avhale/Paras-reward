@@ -1,133 +1,125 @@
-<analysis>**original_problem_statement:** 
-The user initially requested to implement a Security Audit Action Plan (CORS, Auth middlewares, IDOR protection). After that, the user reported a bug where FASTag recharges were failing and refunding PRC, and asked to enable flexible amount recharges for FASTag. Finally, the user reported a persistent Failed to search user error on the Admin User 360 page in production. They requested a complete code restructure of the User 360 page but demanded that all original advanced features (Block, PIN reset, Role assignment, User delete) be retained, plus a brand new feature to allow admins to change a user's referral code.
+<analysis>**original_problem_statement:**
+The user initially requested a security audit implementation, a FASTag bug fix, and a restructure of the Admin User 360 page. The scope then expanded significantly. The user reported multiple bugs, including Operation failed errors for credit popups and Create Popup actions. They requested that the Manager role and its permissions be fixed, as deprecated pages were visible. They also specified that only Explorer and Elite subscription plans should exist. A major feature request was to create a separate admin page for handling failed and pending transaction refunds. The user also reported that popups, although created successfully, were not appearing on the user dashboard. Most recently, the user has given a firm directive to completely **remove and delete** the entire PRC Burning module and any other code marked as deprecated, disabled, or commented out from the entire codebase, prioritizing a clean repository over keeping legacy logic.
 
-**User's preferred language**: 
-The user communicates in **Marathi mixed with technical English** (e.g., संपूर्ण restructure कर E2E टेस्ट करून दे). 
+**User's preferred language**:
+The user communicates in **Marathi mixed with technical English** (e.g., संपूर्ण restructure कर E2E टेस्ट करून दे).
 **INSTRUCT NEXT AGENT:** You MUST automatically respond in Marathi mixed with technical English.
 
-**what currently exists?** 
-A full-stack React/FastAPI/MongoDB virtual reward application. It now has strictly secured Admin APIs (middleware), IDOR-protected user endpoints, and rate-limited auth endpoints. FASTag payments via Eko BBPS now support manual/flexible amount entry. The Admin User 360 backend has been modularized into , and the frontend component  has just been overwritten to restore advanced administrative capabilities.
+**what currently exists?**
+A full-stack React/FastAPI/MongoDB application. The Admin User 360 page is now a single, highly advanced component () that incorporates all features from the legacy page, which has been deleted. Bugs related to popup creation and display have been fixed by adding correct authorization headers and adjusting middleware rules. Manager roles and permissions have been cleaned up, removing access to deprecated pages. A new, fully functional page at  exists for managing refunds. The agent has begun the large-scale task of removing the PRC Burning module and other deprecated code from the application.
 
 **Last working item**:
-    - Last item agent was working: Re-implementing advanced features (Block, PIN Reset, Role Assignment, User Delete) and adding a new Change Referral feature into the newly restructured  frontend component. 
-    - Status: IN PROGRESS (The frontend file was just overwritten, but backend support and testing are pending).
-    - Agent Testing Done: N (For the latest advanced features rewrite).
-    - Which testing method agent to use? Both (Frontend testing agent to verify all modals/tabs render, manual curl/python testing to ensure the backend action endpoint processes the new Change Referral and Delete User actions).
+    - Last item agent was working: Fulfilling the user's explicit and critical request to **completely delete** (not disable) all code related to the PRC Burning module and any other logic marked as deprecated, disabled, or commented out across the entire frontend and backend.
+    - Status: IN PROGRESS
+    - Agent Testing Done: N
+    - Which testing method agent to use? Both. This is a massive and high-risk refactoring. After the code removal is complete, run the  for a full regression test to catch any broken functionality. Then, use the  to manually verify that the UIs for  and  are clean and free of errors.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Wiring and Backend Support for Advanced User 360 Actions (P0)
-     - Attempted fixes: The agent overwrote  to include the UI for advanced actions (Block, Delete, PIN reset, Change Referral).
-     - Next debug checklist: Check . Look at the  endpoint. You MUST ensure that the backend actually supports the actions triggered by the frontend (especially the new  and  actions).
-     - Why fix this issue and what will be achieved with the fix? The user explicitly demanded these features not be lost during the restructure. 
+  Issue 1: Complete Removal of All Deprecated/Disabled/Burn Code (P0)
+     - Attempted fixes: The agent has already removed the burning module's UI and state from  and . Work has begun on the much larger task of removing the 590+ lines of burning logic from  and other backend files. The initial disable approach was rejected by the user in favor of complete deletion.
+     - Next debug checklist:
+        1. Continue the systematic deletion of code from . Use  to find all functions related to burning (, , etc.) and associated routes (, , etc.) and remove them entirely.
+        2. Systematically go through the list of files found in message  of the previous session (e.g., , , ) and delete all related dead code.
+        3. After removing the code, attempt to restart the services and resolve any resulting import or reference errors. This will be an iterative process.
+     - Why fix this issue and what will be achieved with the fix? This is a direct, high-priority command from the user to clean the codebase and remove all legacy functionality.
      - Status: IN PROGRESS
      - Is recurring issue? N
      - Should Test frontend/backend/both after fix? Both
      - Blocked on other issue: None
 
-  Issue 2: User 360 Failed to search user in Production (P1)
-     - Attempted fixes: Agent added detailed error logging and a  endpoint to catch production-specific data corruption (as the endpoint works perfectly in the preview DB).
-     - Next debug checklist: Check if the newly restructured  endpoints correctly handle missing fields,  serialization, or malformed data that might exist in the production  DB.
-     - Why fix this issue and what will be achieved with the fix? Resolves the core bug the user has been complaining about across multiple sessions.
-     - Status: TESTING PENDING (Needs verification with edge-case data).
-     - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? Backend
-     - Blocked on other issue: Issue 1
-
 **In progress Task List**:
-  Task 1: Complete User 360 Page Restructure + Referral Change Feature (P0)
-     - Where to resume: Review the recently created  and verify it integrates flawlessly with . Add the Referral Change logic to the backend action endpoint.
-     - What will be achieved with this? Gives the admin a clean, modular, and fully featured 360 view of users.
-     - Status: IN PROGRESS
-     - Should Test frontend/backend/both after fix? Both
-     - Blocked on something: None
+The code removal task is the only in-progress item and is captured in the issue list above.
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
     - Admin UI to override category percentages for individual users. (P2)
     - Implement backend logic to carry forward unused category limits to the next month. (P2)
     - Implement UI for the Shopping category redemption. (P2)
+    
     Future Tasks:
-    - Refactor  (~46k lines) into smaller, manageable route modules. (P3)
+    - Continue refactoring  into smaller modules after the burn code removal is complete. (P3)
     - Migrate MongoDB to PostgreSQL. (P4)
 
 **Completed work in this session**
-- Security Phase 1 (DONE): Applied  to protect all  routes in  and .
-- Security Phase 2 & Enhancements (DONE): Restricted CORS, created  for frontend role validation, added IDOR protection to 10+ user endpoints, implemented Rate Limiting for OTPs, and added Audit Logging.
-- FASTag Bug Fix (DONE): Fixed Eko API refund loop by properly exposing Eko's actual error messages and fixing operator mappings in .
-- FASTag Flexible Amount (DONE): Removed auto-fill locking in  and added backend validation to allow users to manually enter flexible FASTag recharge amounts (minimum ₹100).
-- Modularized User 360 (DONE): Extracted User 360 backend logic from  into a clean .
+- **Admin User 360 Full Rewrite:** Successfully ported all advanced features from the old 3740-line component into a new, streamlined , and deleted the old file and routes.
+- **Bug Fix: PRC Credit/Deduct:** Fixed a frontend toast message issue to correctly show success/failure.
+- **Bug Fix: Popup Creation:** Resolved Operation Failed error by adding missing Authorization headers to API calls in .
+- **Bug Fix: Popup Display:** Fixed an issue where popups didn't show on the user dashboard by adding an exclusion for  to the .
+- **Manager Permissions & Roles:** Cleaned up the list of available permissions in the backend and frontend, removing deprecated pages. Enabled the Manager role and added a UI to manage their permissions.
+- **New Feature: Failed Transaction Refund Page:** Built a complete, separate page () with backend support for admins to view, filter, and refund failed/pending transactions individually or in bulk.
 
 **Earlier issues found/mentioned but not fixed**
-None newly discovered.
+None.
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: Admin User Search failing (500 Error / Failed to search user).
-  - Recurrence count: 2 (in this session).
-  - Status: IN PROGRESS (Suspected production data corruption; debug endpoints added, rewrite in progress).
+  - Issue recurrence in previous fork: None in this session.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **FastAPI Middleware/Depends:** Extensive use of  and  to ensure strict IDOR and authorization checks.
-- **Eko BBPS Integration:** FASTag requires  to be passed, but also strictly allows flexible manual amount inputs (overriding the fetched bill amount).
+- **Large-Scale Code Deletion:** The current task is not a typical feature or bug fix but a high-risk refactoring focused on permanent code removal. This requires careful dependency tracing to avoid breaking the application.
+- **FastAPI Middleware Security:** The session highlighted the importance of managing middleware exclusion lists to allow specific public endpoints () while securing a general route prefix ().
 
 **key DB schema**
-  - : {uid, prc_balance, referral_code, is_banned, role}
-  - : {type, target, success, error, ip_address} (New)
+  - No new schemas introduced. The focus was on feature implementation and code removal.
 
 **changes in tech stack**
-  - None
+  - None.
 
-**All files of reference** 
-- : The file currently being overwritten to restore advanced features.
-- : The newly created backend file that needs to process advanced UI actions.
-- : Handles the FASTag flexible amount logic.
-- : Handles validation for FASTag minimum amounts.
+**All files of reference**
+- : The main file undergoing the large-scale deletion of the burn module.
+- : Frontend page where the burn UI has been removed.
+- : Frontend page where burn statistics have been removed.
+- The full list of files containing DEPRECATED can be found by re-running the  command from message .
 
-**Areas that need refactoring**: 
--  is still heavily bloated (~46,000 lines), though removing the User 360 logic helped slightly.
+**Areas that need refactoring**:
+The entire application is currently being refactored to remove dead code, as per the user's request. The primary focus is .
 
 **key api endpoints**
--  (Crucial endpoint to check for the new advanced actions: block, delete, change_referral)
--  (Use this if you need to simulate the production error)
+- : New endpoint to process manual refunds.
+- : New endpoint to list failed/pending transactions.
+- : Now correctly configured as a public endpoint.
+- : **(TO BE DELETED)**
+- : **(TO BE DELETED)**
 
-**Critical Info for New Agent** 
-- **Admin Test Credentials Changed:** The agent switched to testing against . The correct admin credentials to use for testing are now **Email: , PIN: **.
-- **User Demands:** The user was very unhappy that the initial restructure of User 360 removed advanced features like blocking, PIN resetting, and deleting users. The agent just rewrote the React component to put them back. **Do not finish the task until you ensure the backend  can actually process these specific actions (especially the newly requested Referral Change feature).**
+**Critical Info for New Agent**
+- **The user's top priority is the complete and permanent deletion of the PRC Burning module and all other deprecated/disabled code.** Do not simply comment out or disable this code. You must physically remove it from , frontend components, and any other file where it exists.
+- The application is likely in a broken state due to the ongoing refactoring. Your first task is to continue and complete this cleanup, then fix any resulting errors to get the app running again.
+- After the cleanup, perform extensive regression testing. A large-scale deletion like this has a high risk of causing unintended side effects.
 
-**documents and test reports created in this job** 
-  -  (Testing report for the initial User 360 restructure)
+**documents and test reports created in this job**
+  - 
+  - 
 
-**Last 10 User Messages and any pending HUMAN messages** 
-1. User: Asked if FASTag flexible amount is possible.
-2. Agent: Updated frontend/backend to allow manual FASTag amount entries.
-3. User: User 360 Failed to search user. Issue deploy केल्यावर solve nahi zala (Issue persists in production).
-4. Agent: Added a detailed debug endpoint and wrapper.
-5. User: User 360 He Page, coding संपूर्ण restructure कर E2E टेस्ट करून दे (Restructure whole page).
-6. Agent: Created modular  and . Ran testing agent.
-7. User: Call Deployer Agent and Run Health Check...
-8. Agent: Ran health check, marked Ready.
-9. User: Complained the new page only has basic features, demanded all original advanced features back.
-10. User: महत्वाचे BLOCK PIN RESET Role assignment User delete... अजून एक ॲड करून दे रेफरल change करता येईल का? (PENDING: Agent overwrote the React file to add these, but the session ended before backend wiring and testing).
+**Last 10 User Messages and any pending HUMAN messages**
+1. **User:** Requests a separate admin page for failed/pending transaction refunds. (COMPLETED)
+2. **Agent:** Implements the new page (). (COMPLETED)
+3. **User:** Reports popup message is created but not displayed on the user dashboard and demands an explanation for why a working feature broke. (COMPLETED)
+4. **Agent:** Investigates, finds the  issue, fixes it, and provides a root cause analysis. (COMPLETED)
+5. **User:** Asks to remove the entire Burning module from the frontend and backend. (IN PROGRESS)
+6. **Agent:** Starts removing the burning module, initially disabling some backend code. (IN PROGRESS)
+7. **User:** Backend fails to start due to an  from the partial removal. (COMPLETED)
+8. **Agent:** Fixes the indentation error and restarts the backend. (COMPLETED)
+9. **User:** Issues a very clear and firm instruction: **Dont disable, remove it. Also find and delete other disabled code. Remove and delete all disable/comment/deprecation. Its okay if it takes time.** (IN PROGRESS)
+10. **Agent:** Acknowledges the explicit command and begins the large-scale, aggressive cleanup, starting with  and . (IN PROGRESS)
 
 **Project Health Check:**
-- Broken: Advanced Actions in Admin User 360 (Mid-implementation, backend wiring likely missing).
-- Mocked: None
+- Broken: The application is in a non-functional state due to the mid-flight refactoring to remove the burning module. Services may fail to start, and frontend components may have errors until the cleanup is completed and tested.
 
-**3rd Party Integrations** 
+**3rd Party Integrations**
 - Eko BBPS API (Bill Payments/FASTag) — requires User API Key
 
 **Testing status**
-  - Testing agent used after significant changes: YES (iteration 142)
+  - Testing agent used after significant changes: YES (For User 360 rewrite)
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: , 
-  - Known regressions: The agent just overwrote  with new features without testing the new implementation.
+  - Test files created: None new in the last phase.
+  - Known regressions: The entire application is in a temporarily regressed state due to the ongoing code removal.
 
 **Credentials to test flow:**
 - Admin: email: , pin: 
-- User: email: , pin: 
+- User: email: , pin:  (Note: Agent had trouble logging in with this PIN in the last session, may need to be reset via admin panel if issues persist).
 
 **What agent forgot to execute**
-The agent overwrote  to add UI for Block, Delete, PIN Reset, Role Assignment, and the new Referral Change features. However, they did not update the backend () to actually handle these specific action payloads. The new features will fail until the backend is updated and tested.</analysis>
+The agent was correctly executing the user's latest and most critical command. Nothing was forgotten, but the task is large and was interrupted mid-process. The next agent must resume this task immediately.</analysis>

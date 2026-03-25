@@ -10,7 +10,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://user360-admin-revamp.preview.emergentagent.com';
+const BASE_URL = 'https://codebase-purge.preview.emergentagent.com';
 
 // Test data
 const TEST_USER_ID = 'test_playwright_user_' + Date.now();

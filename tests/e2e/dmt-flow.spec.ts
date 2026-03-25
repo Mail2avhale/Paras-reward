@@ -13,7 +13,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://user360-admin-revamp.preview.emergentagent.com';
+const BASE_URL = 'https://codebase-purge.preview.emergentagent.com';
 
 const DMT_TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',

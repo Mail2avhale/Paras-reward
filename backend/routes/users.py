@@ -789,17 +789,13 @@ async def get_user_dashboard_combined(uid: str):
 
 
 
-# ========== PRC EXPIRY (BURNING CONCEPT) ==========
+# ========== PRC EXPIRY - DEPRECATED MARCH 2026 ==========
 
 @router.get("/user/{uid}/prc-expiry")
 async def get_prc_expiry_info(uid: str):
     """
-    Get PRC expiry information - UPDATED: Lifetime validity for all users
-    
-    NEW RULES (March 10, 2026):
-    - ALL users have LIFETIME PRC validity
-    - No more 48h expiry for free users
-    - Daily 1% auto-burn (0.5% at 11 AM + 0.5% at 11 PM) applies to everyone
+    DEPRECATED - Burn module removed March 2026
+    PRC now has lifetime validity with no burning
     """
     user = await db.users.find_one({"uid": uid})
     if not user:
@@ -808,23 +804,20 @@ async def get_prc_expiry_info(uid: str):
     prc_balance = user.get("prc_balance", 0)
     subscription_plan = user.get("subscription_plan", "explorer")
     
-    # Calculate daily burn amount (1% per day, 0.5% per session)
-    daily_burn_amount = round(prc_balance * 0.01, 2)  # 1% daily
-    per_session_burn = round(prc_balance * 0.005, 2)  # 0.5% per session
-    
     return {
-        "is_lifetime": True,  # NEW: All users have lifetime validity
-        "expiring_batches": [],  # No batches expire anymore
+        "is_lifetime": True,
+        "expiring_batches": [],
         "total_expiring": 0,
-        "message": "PRC has LIFETIME validity! Daily 1% maintenance burn applies.",
+        "message": "PRC has LIFETIME validity! No burning applies.",
         "protected": True,
         "prc_balance": prc_balance,
         "subscription_plan": subscription_plan,
         "daily_burn_info": {
-            "enabled": True,
-            "percentage": 1.0,
-            "estimated_daily_burn": daily_burn_amount,
-            "per_session_burn": per_session_burn,
-            "schedule": "11 AM & 11 PM IST"
-        }
+            "enabled": False,
+            "percentage": 0,
+            "estimated_daily_burn": 0,
+            "per_session_burn": 0,
+            "schedule": "Disabled - Burn module removed March 2026"
+        },
+        "deprecated": True
     }

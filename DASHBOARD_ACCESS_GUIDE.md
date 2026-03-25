@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://user360-admin-revamp.preview.emergentagent.com/setup
+   https://codebase-purge.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
