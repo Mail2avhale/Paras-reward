@@ -10597,6 +10597,119 @@ async def toggle_prc_subscription(request: Request):
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
+@api_router.get("/admin/prc-subscription-stats")
+async def get_prc_subscription_stats():
+    """
+    Get statistics of subscriptions activated via PRC vs Razorpay
+    Shows how many users paid with PRC balance
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - timedelta(days=now.weekday())
+        month_start = today_start.replace(day=1)
+        
+        # Count PRC subscriptions
+        prc_total = await db.subscription_payments.count_documents({"payment_method": "prc"})
+        prc_today = await db.subscription_payments.count_documents({
+            "payment_method": "prc",
+            "created_at": {"$gte": today_start.isoformat()}
+        })
+        prc_week = await db.subscription_payments.count_documents({
+            "payment_method": "prc",
+            "created_at": {"$gte": week_start.isoformat()}
+        })
+        prc_month = await db.subscription_payments.count_documents({
+            "payment_method": "prc",
+            "created_at": {"$gte": month_start.isoformat()}
+        })
+        
+        # Total PRC amount used for subscriptions
+        prc_amount_pipeline = [
+            {"$match": {"payment_method": "prc"}},
+            {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
+        ]
+        prc_amount_result = await db.subscription_payments.aggregate(prc_amount_pipeline).to_list(1)
+        total_prc_used = prc_amount_result[0]["total"] if prc_amount_result else 0
+        
+        # Count Razorpay subscriptions
+        razorpay_total = await db.razorpay_orders.count_documents({"status": "paid"})
+        razorpay_today = await db.razorpay_orders.count_documents({
+            "status": "paid",
+            "paid_at": {"$gte": today_start}
+        })
+        razorpay_week = await db.razorpay_orders.count_documents({
+            "status": "paid",
+            "paid_at": {"$gte": week_start}
+        })
+        razorpay_month = await db.razorpay_orders.count_documents({
+            "status": "paid",
+            "paid_at": {"$gte": month_start}
+        })
+        
+        # Total Razorpay revenue
+        razorpay_amount_pipeline = [
+            {"$match": {"status": "paid"}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]
+        razorpay_amount_result = await db.razorpay_orders.aggregate(razorpay_amount_pipeline).to_list(1)
+        total_razorpay_revenue = razorpay_amount_result[0]["total"] if razorpay_amount_result else 0
+        
+        # Plan-wise breakdown for PRC
+        prc_plan_pipeline = [
+            {"$match": {"payment_method": "prc"}},
+            {"$group": {
+                "_id": "$plan_name",
+                "count": {"$sum": 1},
+                "total_prc": {"$sum": "$prc_amount"}
+            }}
+        ]
+        prc_by_plan = await db.subscription_payments.aggregate(prc_plan_pipeline).to_list(10)
+        
+        # Recent PRC subscriptions (last 10)
+        recent_prc = await db.subscription_payments.find(
+            {"payment_method": "prc"},
+            {"_id": 0, "user_id": 1, "user_name": 1, "plan_name": 1, "prc_amount": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(10).to_list(10)
+        
+        # Users currently active with PRC subscription
+        active_prc_users = await db.users.count_documents({
+            "subscription_plan": {"$in": ["elite", "growth", "startup"]},
+            "subscription_expiry": {"$gt": now.isoformat()},
+            "last_prc_subscription": {"$exists": True}
+        })
+        
+        return {
+            "success": True,
+            "prc_subscriptions": {
+                "total": prc_total,
+                "today": prc_today,
+                "this_week": prc_week,
+                "this_month": prc_month,
+                "total_prc_used": total_prc_used,
+                "active_users": active_prc_users
+            },
+            "razorpay_subscriptions": {
+                "total": razorpay_total,
+                "today": razorpay_today,
+                "this_week": razorpay_week,
+                "this_month": razorpay_month,
+                "total_revenue": total_razorpay_revenue
+            },
+            "comparison": {
+                "prc_percentage": round((prc_total / (prc_total + razorpay_total) * 100), 1) if (prc_total + razorpay_total) > 0 else 0,
+                "razorpay_percentage": round((razorpay_total / (prc_total + razorpay_total) * 100), 1) if (prc_total + razorpay_total) > 0 else 0,
+                "total_subscriptions": prc_total + razorpay_total
+            },
+            "prc_by_plan": {item["_id"]: {"count": item["count"], "total_prc": item["total_prc"]} for item in prc_by_plan},
+            "recent_prc_subscriptions": recent_prc
+        }
+        
+    except Exception as e:
+        logging.error(f"Error getting PRC subscription stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/admin/update-prc-rate")
 async def update_prc_rate(request: Request):
     """Admin: Update PRC to INR conversion rate"""

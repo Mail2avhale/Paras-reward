@@ -61,6 +61,11 @@ const AdminRazorpaySubscriptions = ({ user }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchAmount, setSearchAmount] = useState('');
   const [searchDate, setSearchDate] = useState('');
+  
+  // PRC Subscription Stats
+  const [prcStats, setPrcStats] = useState(null);
+  const [prcStatsLoading, setPrcStatsLoading] = useState(false);
+  const [showPrcStatsModal, setShowPrcStatsModal] = useState(false);
 
   useEffect(() => {
     fetchRazorpayConfig();
@@ -72,6 +77,21 @@ const AdminRazorpaySubscriptions = ({ user }) => {
       setRazorpayEnabled(res.data.enabled !== false);
     } catch (error) {
       console.error('Error fetching config:', error);
+    }
+  };
+  
+  // Fetch PRC Subscription Stats
+  const fetchPrcStats = async () => {
+    try {
+      setPrcStatsLoading(true);
+      const res = await axios.get(`${API}/admin/prc-subscription-stats`);
+      setPrcStats(res.data);
+      setShowPrcStatsModal(true);
+    } catch (error) {
+      console.error('Error fetching PRC stats:', error);
+      toast.error('Failed to load PRC subscription stats');
+    } finally {
+      setPrcStatsLoading(false);
     }
   };
 
@@ -623,6 +643,16 @@ const AdminRazorpaySubscriptions = ({ user }) => {
         >
           <BarChart3 className={`w-5 h-5 ${revenueLoading ? 'animate-pulse' : ''}`} />
           <span>{revenueLoading ? 'Loading...' : '📊 Revenue Dashboard & Analytics'}</span>
+        </button>
+        
+        {/* PRC Subscription Stats Button */}
+        <button
+          onClick={fetchPrcStats}
+          disabled={prcStatsLoading}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg mt-2"
+        >
+          <CreditCard className={`w-5 h-5 ${prcStatsLoading ? 'animate-pulse' : ''}`} />
+          <span>{prcStatsLoading ? 'Loading...' : '💰 PRC vs Razorpay Subscriptions'}</span>
         </button>
       </div>
       
@@ -1474,6 +1504,144 @@ const AdminRazorpaySubscriptions = ({ user }) => {
                   {refundLoading ? 'Processing...' : 'Initiate Refund'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* PRC Subscription Stats Modal */}
+      {showPrcStatsModal && prcStats && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <CreditCard className="w-6 h-6 text-amber-500" />
+                PRC vs Razorpay Subscriptions
+              </h2>
+              <button
+                onClick={() => setShowPrcStatsModal(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg"
+              >
+                <XCircle className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-6">
+              {/* Comparison Overview */}
+              <div className="bg-gradient-to-r from-amber-50 to-emerald-50 rounded-xl p-4 border border-slate-200">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center">Payment Method Distribution</h3>
+                <div className="flex justify-center items-center gap-4">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-amber-600">{prcStats.comparison?.prc_percentage || 0}%</div>
+                    <p className="text-sm text-slate-600">PRC Payment</p>
+                  </div>
+                  <div className="text-2xl text-slate-400">vs</div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-emerald-600">{prcStats.comparison?.razorpay_percentage || 0}%</div>
+                    <p className="text-sm text-slate-600">Razorpay</p>
+                  </div>
+                </div>
+                <p className="text-center text-xs text-slate-500 mt-2">
+                  Total Subscriptions: {prcStats.comparison?.total_subscriptions || 0}
+                </p>
+              </div>
+              
+              {/* Side by Side Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* PRC Stats */}
+                <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                  <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                    💰 PRC Subscriptions
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Today</span>
+                      <span className="font-bold text-amber-700">{prcStats.prc_subscriptions?.today || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">This Week</span>
+                      <span className="font-bold text-amber-700">{prcStats.prc_subscriptions?.this_week || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">This Month</span>
+                      <span className="font-bold text-amber-700">{prcStats.prc_subscriptions?.this_month || 0}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-amber-300">
+                      <span className="text-slate-600">All Time</span>
+                      <span className="font-bold text-amber-800 text-lg">{prcStats.prc_subscriptions?.total || 0}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-amber-300">
+                      <span className="text-slate-600">Total PRC Used</span>
+                      <span className="font-bold text-amber-800">{prcStats.prc_subscriptions?.total_prc_used?.toLocaleString() || 0} PRC</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Razorpay Stats */}
+                <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+                  <h3 className="font-semibold text-emerald-800 mb-3 flex items-center gap-2">
+                    💳 Razorpay
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Today</span>
+                      <span className="font-bold text-emerald-700">{prcStats.razorpay_subscriptions?.today || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">This Week</span>
+                      <span className="font-bold text-emerald-700">{prcStats.razorpay_subscriptions?.this_week || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">This Month</span>
+                      <span className="font-bold text-emerald-700">{prcStats.razorpay_subscriptions?.this_month || 0}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-emerald-300">
+                      <span className="text-slate-600">All Time</span>
+                      <span className="font-bold text-emerald-800 text-lg">{prcStats.razorpay_subscriptions?.total || 0}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-emerald-300">
+                      <span className="text-slate-600">Total Revenue</span>
+                      <span className="font-bold text-emerald-800">₹{prcStats.razorpay_subscriptions?.total_revenue?.toLocaleString() || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* PRC by Plan */}
+              {prcStats.prc_by_plan && Object.keys(prcStats.prc_by_plan).length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">PRC Subscriptions by Plan</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {Object.entries(prcStats.prc_by_plan).map(([plan, data]) => (
+                      <div key={plan} className="bg-slate-50 rounded-lg p-3 text-center border border-slate-200">
+                        <p className="text-xs text-slate-500 uppercase">{plan || 'Unknown'}</p>
+                        <p className="text-lg font-bold text-slate-800">{data.count}</p>
+                        <p className="text-xs text-amber-600">{data.total_prc?.toLocaleString()} PRC</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Recent PRC Subscriptions */}
+              {prcStats.recent_prc_subscriptions && prcStats.recent_prc_subscriptions.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">Recent PRC Subscriptions</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {prcStats.recent_prc_subscriptions.map((sub, i) => (
+                      <div key={i} className="bg-slate-50 rounded-lg p-3 flex justify-between items-center border border-slate-200">
+                        <div>
+                          <p className="font-medium text-slate-800">{sub.user_name || 'Unknown'}</p>
+                          <p className="text-xs text-slate-500">{sub.plan_name} • {new Date(sub.created_at).toLocaleDateString('en-IN')}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-amber-600">{sub.prc_amount?.toLocaleString()} PRC</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
