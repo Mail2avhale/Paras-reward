@@ -1,7 +1,46 @@
 # PARAS REWARD - Product Requirements Document
 
 ## ✅ DEPLOYED - 19 March 2026
-## 📝 LAST UPDATED - 25 March 2026 (Major Features Removed for Fresh Implementation)
+## 📝 LAST UPDATED - 26 March 2026 (Manual Subscription Pricing Update)
+
+## ✅ COMPLETED: Manual Subscription Pricing Update - 26 March 2026
+```
+╔════════════════════════════════════════════════════════════════╗
+║  MANUAL SUBSCRIPTION PRICING - IMPLEMENTED                     ║
+║                                                                 ║
+║  NEW FORMULA: ₹999 + 18% GST = ₹1178.82                        ║
+║                                                                 ║
+║  APPLIES TO:                                                    ║
+║  • Manual (Bank Transfer/UPI) payments                         ║
+║  • Razorpay payments (from April 1, 2026)                      ║
+║                                                                 ║
+║  PRICING BREAKDOWN:                                             ║
+║  • Monthly:     ₹999 + ₹179.82 GST  = ₹1,178.82                ║
+║  • Quarterly:   ₹2,997 + ₹539.46 GST = ₹3,536.46               ║
+║  • Half-Yearly: ₹5,994 + ₹1,078.92 GST = ₹7,072.92             ║
+║  • Yearly:      ₹11,988 + ₹2,157.84 GST = ₹14,145.84           ║
+║                                                                 ║
+║  GST ROUTING:                                                   ║
+║  • When admin approves manual payment:                          ║
+║    - GST Amount → gst_collection wallet                         ║
+║    - Base Amount → subscription wallet                          ║
+║                                                                 ║
+║  PRC SUBSCRIPTION (Different Formula):                          ║
+║  • ₹999 + 18% GST + ₹10 Processing + 20% Admin Charges          ║
+║  • Already implemented in previous session                      ║
+║                                                                 ║
+║  NEW APIs:                                                       ║
+║  • GET /api/vip/plans - All VIP plans with GST breakdown        ║
+║  • GET /api/subscription/manual-pricing - Manual pricing info   ║
+║  • GET /api/subscription/plans - Updated with new pricing       ║
+║                                                                 ║
+║  NEW FUNCTIONS:                                                  ║
+║  • calculate_manual_subscription_price() - Pricing calculator   ║
+║  • get_vip_plan_pricing() - Single plan pricing                 ║
+║  • get_all_vip_plans() - All plans with pricing                 ║
+║  • credit_company_wallets_for_manual_subscription() - GST route ║
+╚════════════════════════════════════════════════════════════════╝
+```
 
 ## ❌ REMOVED FEATURES - 25 March 2026
 ```
