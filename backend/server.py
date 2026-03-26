@@ -27843,6 +27843,137 @@ async def adjust_company_wallet(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
+# ==================== GST COLLECTION SUMMARY ====================
+
+@api_router.get("/admin/gst-summary")
+async def get_gst_collection_summary():
+    """
+    Get GST Collection Summary for Admin Dashboard
+    Shows total GST collected, trends, and source breakdown
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Get GST wallet balance
+        gst_wallet = await db.company_wallets.find_one(
+            {"wallet_type": "gst_collection"}, 
+            {"_id": 0}
+        )
+        
+        total_gst = gst_wallet.get("balance", 0) if gst_wallet else 0
+        total_credited = gst_wallet.get("total_credit", 0) if gst_wallet else 0
+        
+        # Get GST transactions for trends
+        # Today
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_txns = await db.company_wallet_transactions.find({
+            "wallet_type": "gst_collection",
+            "type": "credit",
+            "timestamp": {"$gte": today_start.isoformat()}
+        }).to_list(1000)
+        today_gst = sum(t.get("amount", 0) for t in today_txns)
+        
+        # This Week
+        week_start = today_start - timedelta(days=today_start.weekday())
+        week_txns = await db.company_wallet_transactions.find({
+            "wallet_type": "gst_collection",
+            "type": "credit",
+            "timestamp": {"$gte": week_start.isoformat()}
+        }).to_list(1000)
+        week_gst = sum(t.get("amount", 0) for t in week_txns)
+        
+        # This Month
+        month_start = today_start.replace(day=1)
+        month_txns = await db.company_wallet_transactions.find({
+            "wallet_type": "gst_collection",
+            "type": "credit",
+            "timestamp": {"$gte": month_start.isoformat()}
+        }).to_list(1000)
+        month_gst = sum(t.get("amount", 0) for t in month_txns)
+        
+        # Last 30 days trend (daily breakdown)
+        thirty_days_ago = today_start - timedelta(days=30)
+        trend_pipeline = [
+            {
+                "$match": {
+                    "wallet_type": "gst_collection",
+                    "type": "credit",
+                    "timestamp": {"$gte": thirty_days_ago.isoformat()}
+                }
+            },
+            {
+                "$addFields": {
+                    "date": {"$substr": ["$timestamp", 0, 10]}
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$date",
+                    "amount": {"$sum": "$amount"},
+                    "count": {"$sum": 1}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]
+        daily_trend = await db.company_wallet_transactions.aggregate(trend_pipeline).to_list(31)
+        
+        # Source breakdown (PRC vs Manual subscriptions)
+        source_pipeline = [
+            {
+                "$match": {
+                    "wallet_type": "gst_collection",
+                    "type": "credit"
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$source",
+                    "total": {"$sum": "$amount"},
+                    "count": {"$sum": 1}
+                }
+            }
+        ]
+        source_breakdown = await db.company_wallet_transactions.aggregate(source_pipeline).to_list(10)
+        
+        # Format source breakdown
+        sources = {}
+        for s in source_breakdown:
+            source_name = s.get("_id", "unknown")
+            if source_name == "prc_subscription":
+                sources["PRC Subscriptions"] = {"amount": round(s["total"], 2), "count": s["count"]}
+            elif source_name == "manual_subscription":
+                sources["Manual Subscriptions"] = {"amount": round(s["total"], 2), "count": s["count"]}
+            else:
+                sources[source_name or "Other"] = {"amount": round(s["total"], 2), "count": s["count"]}
+        
+        # Recent GST transactions
+        recent_txns = await db.company_wallet_transactions.find(
+            {"wallet_type": "gst_collection", "type": "credit"},
+            {"_id": 0}
+        ).sort("timestamp", -1).limit(10).to_list(10)
+        
+        return {
+            "success": True,
+            "summary": {
+                "total_gst_collected": round(total_credited, 2),
+                "current_balance": round(total_gst, 2),
+                "today": round(today_gst, 2),
+                "this_week": round(week_gst, 2),
+                "this_month": round(month_gst, 2)
+            },
+            "trend": {
+                "daily": [{"date": d["_id"], "amount": round(d["amount"], 2), "count": d["count"]} for d in daily_trend]
+            },
+            "source_breakdown": sources,
+            "recent_transactions": recent_txns,
+            "gst_rate": "18%",
+            "formula": "GST = Base Price × 18%"
+        }
+    except Exception as e:
+        logging.error(f"GST Summary Error: {e}")
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+
+
 # ==================== ADS INCOME MODULE ====================
 
 async def get_ads_income(page: int = 1, limit: int = 20):

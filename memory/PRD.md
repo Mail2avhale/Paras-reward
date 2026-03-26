@@ -1,7 +1,28 @@
 # PARAS REWARD - Product Requirements Document
 
 ## ✅ DEPLOYED - 19 March 2026
-## 📝 LAST UPDATED - 26 March 2026 (Manual Subscription Pricing Update)
+## 📝 LAST UPDATED - 26 March 2026 (GST Summary Widget Added)
+
+## ✅ COMPLETED: GST Collection Summary Widget - 26 March 2026
+```
+╔════════════════════════════════════════════════════════════════╗
+║  GST COLLECTION SUMMARY WIDGET - IMPLEMENTED                   ║
+║                                                                 ║
+║  FEATURES:                                                      ║
+║  • Total GST Collected display                                  ║
+║  • Today / This Week / This Month breakdown                     ║
+║  • 30-Day Trend Bar Chart                                       ║
+║  • Source Breakdown (PRC vs Manual Subscriptions)               ║
+║  • Recent GST Transactions list                                 ║
+║                                                                 ║
+║  NEW API:                                                        ║
+║  • GET /api/admin/gst-summary                                   ║
+║                                                                 ║
+║  NEW FILES:                                                      ║
+║  • /app/frontend/src/components/GSTSummaryWidget.js             ║
+║  • Added to AdminDashboard.js                                   ║
+╚════════════════════════════════════════════════════════════════╝
+```
 
 ## ✅ COMPLETED: Manual Subscription Pricing Update - 26 March 2026
 ```

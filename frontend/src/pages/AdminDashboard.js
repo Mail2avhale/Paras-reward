@@ -13,6 +13,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import AdminLoginAsUser from '@/components/AdminLoginAsUser';
 import PaymentRetryQueueWidget from '@/components/admin/PaymentRetryQueueWidget';
+import GSTSummaryWidget from '@/components/GSTSummaryWidget';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -633,6 +634,11 @@ const AdminDashboard = ({ user }) => {
       {/* Payment Retry Queue Widget */}
       <div className="mt-6">
         <PaymentRetryQueueWidget />
+      </div>
+
+      {/* GST Collection Summary Widget */}
+      <div className="mt-6">
+        <GSTSummaryWidget token={localStorage.getItem('token')} />
       </div>
 
       {/* Login As User Dialog */}
