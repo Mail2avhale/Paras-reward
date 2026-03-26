@@ -1,7 +1,47 @@
 # PARAS REWARD - Product Requirements Document
 
 ## ✅ DEPLOYED - 19 March 2026
-## 📝 LAST UPDATED - 25 March 2026 (Razorpay Features Enhanced)
+## 📝 LAST UPDATED - 25 March 2026 (Major Features Removed for Fresh Implementation)
+
+## ❌ REMOVED FEATURES - 25 March 2026
+```
+╔════════════════════════════════════════════════════════════════╗
+║  FEATURES REMOVED (User Requested - Fresh Implementation)      ║
+║                                                                 ║
+║  1. MINING FORMULA - Completely removed                         ║
+║     • mining.py deprecated                                      ║
+║     • mining_economy.py deprecated                              ║
+║     • calculate_mining_rate() returns 0                         ║
+║     • Mining.js shows "Feature Removed" notice                  ║
+║                                                                 ║
+║  2. REFERRAL BONUS - Completely removed                         ║
+║     • referral.py deprecated                                    ║
+║     • Bonus calculations disabled                               ║
+║     • Referral code kept for sharing only                       ║
+║                                                                 ║
+║  3. SINGLE LEG BONUS - Removed                                  ║
+║     • Single leg calculations removed from mining               ║
+║                                                                 ║
+║  4. LEVEL BONUS (L1, L2, L3) - Removed                          ║
+║     • get_multi_level_referrals() returns empty                 ║
+║     • count_active_referrals_by_level() returns zeros           ║
+║     • Level bonus percentages disabled                          ║
+║                                                                 ║
+║  5. REDEEM LIMIT - Removed                                      ║
+║     • redeem_categories.py deprecated                           ║
+║     • calculate_user_redeem_limit() returns unlimited           ║
+║     • All redemptions now unlimited (subject to PRC balance)    ║
+║                                                                 ║
+║  Note: Database data preserved for rollback if needed           ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
+## ⏳ AWAITING: Fresh Requirements from User
+- Mining Formula
+- Referral Bonus
+- Single Leg
+- Level Bonus (L1, L2, L3)
+- Redeem Limit
 
 ## ✅ COMPLETED: Razorpay Admin Enhancements - 25 March 2026
 ```

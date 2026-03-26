@@ -4406,38 +4406,18 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
 
 async def get_base_rate():
     """
-    Get mining base rate for NEW ECONOMY SYSTEM
-    
-    NEW FORMULA (March 2026):
-    Base Rate = 20.83 PRC/hour (500 PRC/day ÷ 24)
-    
-    This is FIXED - no longer decreases with user count
+    DEPRECATED: Mining feature removed
+    Returns 0 for backwards compatibility
     """
-    from routes.mining_economy import HOURLY_BASE_RATE
-    return HOURLY_BASE_RATE  # 20.83 PRC/hour
+    return 0
 
 
 async def check_user_active_status(user_uid: str, user_data: dict = None) -> tuple:
     """
-    Check if a user is ACTIVE for referral counting.
-    
-    STRICT CRITERIA - ALL must be TRUE:
-    1. Elite Subscription (subscription_plan = "elite")
-    2. Subscription NOT Expired (subscription_expiry > now)
-    3. Real-time Mining Active (mining_active = True AND session_end > now)
-    
-    Returns: (is_active: bool, active_reason: str)
+    DEPRECATED: Referral/Level bonus feature removed
+    Always returns (False, "feature_removed") for backwards compatibility
     """
-    now = datetime.now(timezone.utc)
-    
-    # Get user data if not provided
-    if user_data is None:
-        user_data = await db.users.find_one({"uid": user_uid}, {"_id": 0})
-        if not user_data:
-            return False, "user_not_found"
-    
-    # ========== CONDITION 1: Elite Subscription ==========
-    subscription_plan = (user_data.get("subscription_plan") or "").lower().strip()
+    return False, "feature_removed"
     is_elite = subscription_plan == "elite"
     
     if not is_elite:
@@ -4506,358 +4486,43 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
 
 async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
     """
-    Get multi-level referrals (up to 5 levels deep) - OPTIMIZED with $graphLookup
-    Uses MongoDB aggregation instead of recursive queries for better performance.
-    
-    Returns: {
-        'level_1': [list of direct referrals],
-        'level_2': [list of level 2 referrals],
-        ...
-        'level_5': [list of level 5 referrals]
-    }
+    DEPRECATED: Level bonus (L1, L2, L3) feature removed
+    Returns empty structure for backwards compatibility
     """
-    # OPTIMIZATION: Check cache first
-    cache_key = f"referrals:{user_id}:levels:v2"
-    if cache:
-        cached = await cache.get(cache_key)
-        if cached:
-            return cached
-    
-    referrals_by_level = {}
-    MAX_PER_LEVEL = 100  # Limit referrals per level
-    
-    # Get root user info
-    root_user = await db.users.find_one(
-        {"uid": user_id}, 
-        {"_id": 0, "uid": 1, "referral_code": 1, "email": 1}
-    )
-    if not root_user:
-        return referrals_by_level
-    
-    # Build search values for root user
-    root_search_values = []
-    if root_user.get("uid"):
-        root_search_values.append(root_user["uid"])
-    if root_user.get("referral_code"):
-        root_search_values.append(root_user["referral_code"])
-    if root_user.get("email"):
-        root_search_values.append(root_user["email"])
-    
-    if not root_search_values:
-        return referrals_by_level
-    
-    try:
-        # OPTIMIZED: Use $graphLookup for efficient tree traversal in a SINGLE query
-        pipeline = [
-            # Start with users directly referred by root user
-            {"$match": {"referred_by": {"$in": root_search_values}}},
-            
-            # Use $graphLookup to traverse the referral tree
-            {"$graphLookup": {
-                "from": "users",
-                "startWith": "$uid",  # Start from each user's UID
-                "connectFromField": "uid",  # Connect using UID
-                "connectToField": "referred_by",  # To referred_by field
-                "as": "downstream",  # Store results in downstream array
-                "maxDepth": max_levels - 1,  # Levels beyond the first
-                "depthField": "depth",  # Track depth for level assignment
-                "restrictSearchWithMatch": {}  # No additional filters
-            }},
-            
-            # Project only needed fields
-            {"$project": {
-                "_id": 0,
-                "uid": 1,
-                "referral_code": 1,
-                "email": 1,
-                "name": 1,
-                "subscription_plan": 1,
-                "last_login": 1,
-                "is_active": 1,
-                "profile_picture": 1,
-                "depth": {"$literal": 0},  # Level 1 users have depth 0
-                "downstream": {
-                    "$slice": ["$downstream", MAX_PER_LEVEL * max_levels]  # Limit total
-                }
-            }},
-            
-            # Limit level 1 results
-            {"$limit": MAX_PER_LEVEL}
-        ]
-        
-        level_1_users = await db.users.aggregate(pipeline).to_list(MAX_PER_LEVEL)
-        
-        # Process results into levels
-        if level_1_users:
-            # Level 1: Direct referrals
-            referrals_by_level['level_1'] = [
-                {k: v for k, v in user.items() if k != 'downstream'} 
-                for user in level_1_users
-            ][:MAX_PER_LEVEL]
-            
-            # Process downstream users into levels 2-5
-            all_downstream = []
-            for user in level_1_users:
-                for downstream_user in user.get('downstream', []):
-                    # depth field from graphLookup: 0 = level 2, 1 = level 3, etc.
-                    level = downstream_user.get('depth', 0) + 2
-                    if level <= max_levels:
-                        downstream_user['_level'] = level
-                        all_downstream.append(downstream_user)
-            
-            # Group by level
-            for level in range(2, max_levels + 1):
-                level_users = [
-                    {k: v for k, v in u.items() if k not in ['downstream', '_level', 'depth']}
-                    for u in all_downstream if u.get('_level') == level
-                ][:MAX_PER_LEVEL]
-                
-                if level_users:
-                    referrals_by_level[f'level_{level}'] = level_users
-    
-    except Exception as e:
-        logging.error(f"Error in get_multi_level_referrals $graphLookup: {e}")
-        # Fallback to simple level 1 query if $graphLookup fails
-        try:
-            level_1 = await db.users.find(
-                {"referred_by": {"$in": root_search_values}},
-                {"_id": 0, "uid": 1, "referral_code": 1, "email": 1, "name": 1,
-                 "subscription_plan": 1, "last_login": 1, "is_active": 1}
-            ).limit(MAX_PER_LEVEL).to_list(MAX_PER_LEVEL)
-            if level_1:
-                referrals_by_level['level_1'] = level_1
-        except Exception as e2:
-            logging.error(f"Fallback query also failed: {e2}")
-    
-    # Cache for 2 minutes
-    if cache and referrals_by_level:
-        await cache.set(cache_key, referrals_by_level, ttl=120)
-    
-    return referrals_by_level
+    return {
+        "level_1": [],
+        "level_2": [],
+        "level_3": [],
+        "level_4": [],
+        "level_5": [],
+        "deprecated": True,
+        "message": "Level bonus feature has been removed"
+    }
 
 async def count_active_referrals_by_level(user_id: str):
     """
-    Count active referrals at each level (up to 5 levels)
-    
-    ⚠️ STRICT CRITERIA - User counts as active referral ONLY IF ALL TRUE:
-    1. Elite Subscription (subscription_plan = "elite")
-    2. Subscription NOT Expired (subscription_expiry > now)
-    3. Real-time Mining Active (mining_active = True AND session_end > now)
-    
-    Explorer/FREE users NEVER count.
+    DEPRECATED: Level bonus feature removed
+    Returns zeros for backwards compatibility
     """
-    referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
-    active_counts = {
-        'level_1': 0,
-        'level_2': 0,
-        'level_3': 0,
-        'level_4': 0,
-        'level_5': 0
+    return {
+        "level_1": 0,
+        "level_2": 0,
+        "level_3": 0,
+        "total_active": 0,
+        "deprecated": True
     }
-    
-    print(f"🔍 Checking active referrals for user {user_id}")
-    print(f"   STRICT CRITERIA: Elite + Active Subscription + Real-time Mining")
-    
-    for level, users in referrals_by_level.items():
-        print(f"  Level {level}: {len(users)} total referrals")
-        for user in users:
-            user_uid = user.get("uid")
-            user_email = user.get("email", "N/A")
-            
-            # Use the strict check function
-            is_active, active_reason = await check_user_active_status(user_uid, user)
-            
-            if is_active:
-                active_counts[level] += 1
-                print(f"    ✅ ACTIVE: {user_email} - {active_reason}")
-            else:
-                print(f"    ❌ INACTIVE: {user_email} - {active_reason}")
-    
-    print(f"✅ Final active referrals count: {active_counts}")
-    return active_counts
+
 
 async def count_active_referrals_by_level_with_weights(user_id: str):
     """
-    Count active referrals at each level with subscription weights
-    
-    ⚠️ ANTI-FRAUD: Only PAID subscribers count for referral bonuses!
-    Explorer (FREE) users do NOT contribute to referral mining bonus.
-    This prevents fake account creation for boosting mining rates.
-    
-    Active = ANY of:
-      1. Active mining session
-      2. Bonus collected in last 24h
-      3. Tap Game or Rain Drop played in last 24h
-    
-    PAID = subscription_plan NOT in ['explorer', 'free', None, '']
-    
-    OPTIMIZED: Uses batch queries instead of N+1 individual queries
+    DEPRECATED: Level bonus feature removed
+    Returns zeros for backwards compatibility
     """
-    referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
-    level_data = {
-        'level_1': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0, 'active_count': 0, 'total_count': 0},
-        'level_2': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0, 'active_count': 0, 'total_count': 0},
-        'level_3': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0, 'active_count': 0, 'total_count': 0},
-        'level_4': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0, 'active_count': 0, 'total_count': 0},
-        'level_5': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0, 'active_count': 0, 'total_count': 0}
+    return {
+        "active_counts": {"level_1": 0, "level_2": 0, "level_3": 0},
+        "weighted_counts": {"level_1": 0, "level_2": 0, "level_3": 0},
+        "deprecated": True
     }
-    
-    # Free/Explorer plan identifiers (case-insensitive)
-    FREE_PLANS = ['explorer', 'free', '', None]
-    
-    # Collect all user UIDs for batch activity check
-    now = datetime.now(timezone.utc)
-    twenty_four_hours_ago = now - timedelta(hours=24)
-    
-    paid_users_by_level = {}  # level -> {uid: user_data}
-    all_users_by_level = {}   # level -> {uid: user_data} (for total active count)
-    
-    for level, users in referrals_by_level.items():
-        paid_users_by_level[level] = {}
-        all_users_by_level[level] = {}
-        level_data[level]['total_count'] = len(users)
-        
-        for user in users:
-            user_uid = user.get("uid")
-            user_plan = (user.get("subscription_plan") or "").lower().strip()
-            
-            # Track all users for total active count
-            all_users_by_level[level][user_uid] = user
-            
-            # Check if user is on FREE plan
-            is_free_user = user_plan in FREE_PLANS or user_plan == ""
-            
-            if is_free_user:
-                # Track free users but DON'T count them for bonus
-                level_data[level]['free_count'] += 1
-            else:
-                # Paid user - add to batch check list AND count total paid
-                paid_users_by_level[level][user_uid] = user
-                level_data[level]['paid_count'] += 1  # Total paid users at this level
-    
-    # Get all user UIDs for activity check (both paid and free for display)
-    all_uids = []
-    for level_users in all_users_by_level.values():
-        all_uids.extend(level_users.keys())
-    
-    # Get all paid user UIDs across all levels
-    all_paid_uids = []
-    for level_users in paid_users_by_level.values():
-        all_paid_uids.extend(level_users.keys())
-    
-    if not all_uids:
-        return level_data
-    
-    # BATCH QUERY 1: Get ALL active users (paid + free) for display - same logic as Invite page
-    all_active_uids = set()
-    try:
-        # FIX: Use to_list() instead of async for to prevent cursor leak
-        active_users = await db.users.find(
-            {
-                "uid": {"$in": all_uids},
-                "$or": [
-                    {"mining_active": True},
-                    {"mining_session_end": {"$gt": now.isoformat()}}
-                ]
-            },
-            {"_id": 0, "uid": 1}
-        ).to_list(length=1000)  # Limit to prevent memory issues
-        
-        for user in active_users:
-            all_active_uids.add(user["uid"])
-    except Exception as e:
-        print(f"Batch all-user mining check error: {e}")
-    
-    # Also check transactions for all users (same as Invite page)
-    remaining_all_uids = [uid for uid in all_uids if uid not in all_active_uids]
-    if remaining_all_uids:
-        try:
-            # FIX: Use to_list() instead of async for to prevent cursor leak
-            active_txs = await db.transactions.find(
-                {
-                    "user_id": {"$in": remaining_all_uids},
-                    "created_at": {"$gte": twenty_four_hours_ago.isoformat()},
-                    "type": {"$in": ["mining", "tap_game", "rain_drop", "bonus"]}
-                },
-                {"_id": 0, "user_id": 1}
-            ).to_list(length=1000)  # Limit to prevent memory issues
-            
-            for tx in active_txs:
-                all_active_uids.add(tx["user_id"])
-        except Exception as e:
-            print(f"All user transaction check error: {e}")
-    
-    # Calculate total active count per level (for display, same as Invite page)
-    for level, users_dict in all_users_by_level.items():
-        for uid in users_dict.keys():
-            if uid in all_active_uids:
-                level_data[level]['active_count'] += 1
-    
-    # BATCH QUERY 2: Get active PAID users only (for bonus calculation)
-    active_by_mining = set()
-    try:
-        # FIX: Use to_list() instead of async for to prevent cursor leak
-        paid_active_users = await db.users.find(
-            {
-                "uid": {"$in": all_paid_uids},
-                "$or": [
-                    {"mining_active": True},
-                    {"mining_session_end": {"$gt": now.isoformat()}}
-                ]
-            },
-            {"_id": 0, "uid": 1}
-        ).to_list(length=500)
-        
-        for user in paid_active_users:
-            active_by_mining.add(user["uid"])
-    except Exception as e:
-        print(f"Batch mining check error: {e}")
-    
-    # BATCH QUERY: Check recent transactions for remaining users
-    remaining_uids = [uid for uid in all_paid_uids if uid not in active_by_mining]
-    active_by_transactions = set()
-    
-    if remaining_uids:
-        try:
-            # Single aggregation query for all remaining users
-            pipeline = [
-                {
-                    "$match": {
-                        "user_id": {"$in": remaining_uids},
-                        "type": {"$in": ["mining", "tap_game", "prc_rain_gain", "prc_rain_loss"]},
-                        "$or": [
-                            {"created_at": {"$gte": twenty_four_hours_ago.isoformat()}},
-                            {"timestamp": {"$gte": twenty_four_hours_ago.isoformat()}}
-                        ]
-                    }
-                },
-                {"$group": {"_id": "$user_id"}}
-            ]
-            # FIX: Use to_list() instead of async for to prevent cursor leak
-            active_tx_docs = await db.transactions.aggregate(pipeline).to_list(length=500)
-            for doc in active_tx_docs:
-                active_by_transactions.add(doc["_id"])
-        except Exception as e:
-            print(f"Batch transaction check error: {e}")
-    
-    # Combine all active users
-    all_active_uids = active_by_mining | active_by_transactions
-    
-    # Calculate level data - use subscription_plan from already fetched user data
-    # OPTIMIZED: No additional DB calls needed, subscription_plan is in paid_users_by_level
-    for level, users_dict in paid_users_by_level.items():
-        for user_uid, user in users_dict.items():
-            if user_uid in all_active_uids:
-                # Get referral's subscription weight from SUBSCRIPTION_PLANS constant
-                # No DB call needed - subscription_plan is already in user data
-                sub_plan = (user.get("subscription_plan") or "explorer").lower()
-                plan_config = SUBSCRIPTION_PLANS.get(sub_plan, SUBSCRIPTION_PLANS["explorer"])
-                referral_weight = plan_config.get("referral_weight", 1.0)
-                
-                level_data[level]['count'] += 1
-                level_data[level]['weighted_count'] += referral_weight
-    
-    return level_data
 
 async def calculate_profile_completion(user: Dict) -> float:
     """Calculate profile completion percentage"""
@@ -5654,65 +5319,14 @@ async def get_delivery_charge(user, total_prc: float):
 
 async def calculate_mining_rate(uid: str):
     """
-    Calculate mining rate using NEW MINING ECONOMY SYSTEM
-    
-    NEW FORMULA (March 2026 - UPDATED):
-    ===================================
-    DailyMiningPRC = (500 + ActiveDownlineUsers × 5) × BoostMultiplier
-    
-    Where:
-    - 500 = Daily base bonus (20.83 PRC/hr)
-    - ActiveDownlineUsers = Active users joined AFTER this user (max 800)
-    - 5 PRC/day per downline user (0.208 PRC/hr)
-    - Max Single Leg = 800 × 5 = 4000 PRC/day
-    
-    BoostMultiplier = 1 + (L1 × 0.10) + (L2 × 0.05) + (L3 × 0.03)
-    
-    Active User = Subscription active + KYC verified + Account valid
-    
-    Returns: (per_minute_rate, base_rate, total_active_referrals, referral_breakdown)
+    DEPRECATED: Mining feature removed
+    Returns zeros for backwards compatibility
     """
-    from routes.mining_economy import calculate_new_mining_rate, HOURLY_BASE_RATE
-    
-    # Use new mining economy calculation
-    hourly_rate, per_minute_rate, breakdown = await calculate_new_mining_rate(db, uid, cache)
-    
-    # Get the ACTUAL base rate (20.83 + single_leg bonus) - NOT the final rate!
-    actual_base_rate = breakdown.get('base_with_single_leg', HOURLY_BASE_RATE)
-    
-    # Convert breakdown to old format for backward compatibility
-    referral_breakdown = {}
-    if breakdown.get('boost_breakdown'):
-        for level_key, level_data in breakdown['boost_breakdown'].items():
-            referral_breakdown[level_key] = {
-                'count': level_data.get('active', 0),
-                'active_count': level_data.get('active', 0),
-                'total_count': level_data.get('count', 0),
-                'percentage': {
-                    'level_1': 10,  # UPDATED: 10%
-                    'level_2': 5,   # UPDATED: 5%
-                    'level_3': 3    # UPDATED: 3%
-                }.get(level_key, 0),
-                'bonus': level_data.get('bonus_prc', level_data.get('boost', 0) * actual_base_rate)
-            }
-    
-    # Note: single_leg info stored separately, not in referral_breakdown to avoid claim_mining errors
-    
-    total_active = sum(
-        d.get('active', 0) for d in breakdown.get('boost_breakdown', {}).values()
-    )
-    
-    # Return: per_minute_rate, ACTUAL base_rate (not final!), total_active, referral_breakdown
-    return per_minute_rate, actual_base_rate, total_active, referral_breakdown
+    return 0, 0, 0, {}
 
 async def update_mined_coins(uid: str):
-    """Update user's mined coins based on time elapsed"""
-    user = await db.users.find_one({"uid": uid})
-    if not user or not user.get("mining_start_time"):
-        return 0
-    
-    mining_start = datetime.fromisoformat(user["mining_start_time"])
-    current_time = datetime.now(timezone.utc)
+    """DEPRECATED: Mining feature removed"""
+    return 0
     elapsed_minutes = (current_time - mining_start).total_seconds() / 60
     
     if elapsed_minutes > 0:
@@ -15675,24 +15289,24 @@ async def update_redeem_settings(
 
 async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
-    Calculate total redeem limit for a user based on:
-    
-    FORMULA: Plan × 5 × 10 + 20% increase per active direct referral
-    
-    From JOINING DATE, limit accumulates monthly:
-    - Elite (799): 799 × 5 × 10 = 39,950 PRC base/month
-    - Growth (499): 499 × 5 × 10 = 24,950 PRC base/month  
-    - Startup (299): 299 × 5 × 10 = 14,950 PRC base/month
-    - Explorer (free): 0 PRC (no redeem allowed)
-    
-    + 20% bonus per active direct referral
-    
-    Example:
-    - Elite user, 3 months active, 2 active referrals
-    - Base monthly = 39,950
-    - With referrals = 39,950 × (1 + 0.4) = 55,930
-    - Total = 55,930 × 3 = 1,67,790 PRC
+    DEPRECATED: Redeem limits have been removed.
+    Returns unlimited for backwards compatibility.
     """
+    return {
+        "deprecated": True,
+        "message": "Redeem limits have been removed. Redemption is now unlimited.",
+        "plan": "unlimited",
+        "plan_price": 0,
+        "base_limit": 999999999,
+        "monthly_limit": 999999999,
+        "months_active": 999,
+        "active_referrals": 0,
+        "referral_percentage_increase": 0,
+        "total_limit": 999999999,
+        "carry_forward_enabled": False,
+        "unlimited": True,
+        "feature_removed": True
+    }
     try:
         # Plan prices for formula: Plan × 5 × 10
         PLAN_PRICES = {
