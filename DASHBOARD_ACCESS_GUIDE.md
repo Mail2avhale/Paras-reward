@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://bulkpe-consistency.preview.emergentagent.com/setup
+   https://vip-manual-fees.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

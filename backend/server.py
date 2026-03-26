@@ -3038,7 +3038,7 @@ class GiftVoucherProcess(BaseModel):
 # ║  ⚠️  IMPORTANT: ONLY 2 PLANS ACTIVE (March 2026)  ⚠️           ║
 # ║                                                                 ║
 # ║  ✅ EXPLORER (Free) - Basic mining, no redemption              ║
-# ║  ✅ ELITE (₹799/month) - Full features, unlimited redemption   ║
+# ║  ✅ ELITE (₹999 + GST = ₹1178.82) - Full features              ║
 # ║                                                                 ║
 # ║  ❌ NO NEW SIGNUPS for: VIP, Startup, Growth, Pro              ║
 # ║  ℹ️  Legacy users are treated as Elite automatically           ║
@@ -3065,7 +3065,7 @@ SUBSCRIPTION_PLANS = {
     },
     "elite": {
         "name": "Elite",
-        "description": "Premium plan - collect & redeem PRC - ₹799/month",
+        "description": "Premium plan - collect & redeem PRC - ₹999 + GST",
         "mining_rate": 90,
         "multiplier": 1.0,
         "referral_weight": 1.0,  # Full referral bonus
@@ -3075,7 +3075,7 @@ SUBSCRIPTION_PLANS = {
         "can_collect": True,     # ✅ CAN collect mined PRC
         "can_redeem": True,      # ✅ CAN redeem PRC
         "is_free": False,
-        "default_price": 799
+        "default_price": 1178.82  # ₹999 + 18% GST
     },
     # ===== LEGACY PLANS (DO NOT USE FOR NEW SIGNUPS) =====
     # Existing users on these plans are treated as Elite
@@ -3257,6 +3257,137 @@ async def credit_company_wallets_for_subscription(user_id: str, pricing: dict, u
             })
     
     logging.info(f"[COMPANY-WALLET] Credited wallets for {user_name}: GST={breakdown.get('gst_collection')}, Processing={breakdown.get('processing_fees')}, Admin={breakdown.get('admin_charges')}, Sub={breakdown.get('subscription_revenue')}")
+
+
+# ==================== MANUAL/VIP SUBSCRIPTION PRICING (March 2026) ====================
+# Formula: ₹999 + 18% GST = ₹1178.82 (for Manual and Razorpay payments)
+# Note: PRC has additional charges (Processing + Admin) handled in calculate_elite_prc_price()
+
+MANUAL_SUBSCRIPTION_BASE = 999  # Base price in INR
+MANUAL_GST_RATE = 0.18  # 18% GST
+
+def calculate_manual_subscription_price(base_price: float = MANUAL_SUBSCRIPTION_BASE) -> dict:
+    """
+    Calculate Manual/Razorpay subscription price with GST
+    
+    Formula: ₹999 + 18% GST = ₹1178.82
+    
+    Returns breakdown for display and company wallet routing
+    """
+    gst_amount = round(base_price * MANUAL_GST_RATE, 2)
+    total_price = round(base_price + gst_amount, 2)
+    
+    return {
+        "base_price": base_price,
+        "gst_rate": MANUAL_GST_RATE * 100,
+        "gst_amount": gst_amount,
+        "total_price": total_price,
+        "formula": f"₹{base_price} + 18% GST = ₹{total_price}",
+        # For company wallet routing
+        "company_wallet_breakdown": {
+            "gst_collection": gst_amount,
+            "subscription_revenue": base_price
+        }
+    }
+
+
+async def get_vip_plan_pricing(plan_type: str) -> dict:
+    """
+    Get pricing for a specific VIP/Manual subscription plan
+    All plans now use ₹999 + 18% GST formula
+    """
+    pricing = calculate_manual_subscription_price()
+    
+    # Duration mapping (28 days per month)
+    duration_mapping = {
+        "monthly": {"days": 28, "label": "Monthly Plan", "multiplier": 1},
+        "quarterly": {"days": 84, "label": "Quarterly Plan", "multiplier": 3},
+        "half_yearly": {"days": 168, "label": "Half-Yearly Plan", "multiplier": 6},
+        "yearly": {"days": 336, "label": "Yearly Plan", "multiplier": 12}
+    }
+    
+    plan_info = duration_mapping.get(plan_type, duration_mapping["monthly"])
+    multiplier = plan_info["multiplier"]
+    
+    return {
+        "plan_type": plan_type,
+        "label": plan_info["label"],
+        "duration_days": plan_info["days"],
+        "base_price": round(pricing["base_price"] * multiplier, 2),
+        "gst_rate": pricing["gst_rate"],
+        "gst_amount": round(pricing["gst_amount"] * multiplier, 2),
+        "total_price": round(pricing["total_price"] * multiplier, 2),
+        "formula": f"₹{round(pricing['base_price'] * multiplier, 2)} + 18% GST = ₹{round(pricing['total_price'] * multiplier, 2)}"
+    }
+
+
+async def get_all_vip_plans() -> list:
+    """
+    Get all VIP/Manual subscription plans with new pricing
+    Formula: ₹999 + 18% GST = ₹1178.82 per month
+    """
+    plans = []
+    plan_types = ["monthly", "quarterly", "half_yearly", "yearly"]
+    
+    for plan_type in plan_types:
+        plan = await get_vip_plan_pricing(plan_type)
+        plans.append(plan)
+    
+    return plans
+
+
+async def credit_company_wallets_for_manual_subscription(user_id: str, amount_paid: float, user_name: str = "User"):
+    """
+    Credit company wallets when a manual subscription is approved
+    Splits payment into: GST Collection + Subscription Revenue
+    
+    Formula: Total = Base + GST
+    ₹1178.82 = ₹999 (subscription_revenue) + ₹179.82 (gst_collection)
+    """
+    now = datetime.now(timezone.utc)
+    
+    # Calculate breakdown from total paid amount
+    # Total = Base + 18% GST = Base × 1.18
+    # Base = Total / 1.18
+    base_amount = round(amount_paid / 1.18, 2)
+    gst_amount = round(amount_paid - base_amount, 2)
+    
+    wallet_credits = [
+        ("gst_collection", gst_amount, "GST (18%)"),
+        ("subscription", base_amount, "Subscription Revenue")
+    ]
+    
+    for wallet_type, amount, description in wallet_credits:
+        if amount > 0:
+            # Update wallet balance
+            await db.company_wallets.update_one(
+                {"wallet_type": wallet_type},
+                {
+                    "$inc": {"balance": amount, "total_credit": amount},
+                    "$set": {"last_updated": now.isoformat()}
+                },
+                upsert=True
+            )
+            
+            # Record transaction
+            await db.company_wallet_transactions.insert_one({
+                "txn_id": str(uuid.uuid4()),
+                "wallet_type": wallet_type,
+                "type": "credit",
+                "amount": amount,
+                "description": f"{description} from {user_name} Manual subscription",
+                "source": "manual_subscription",
+                "user_id": user_id,
+                "timestamp": now.isoformat()
+            })
+    
+    logging.info(f"[COMPANY-WALLET] Manual Sub credited for {user_name}: GST={gst_amount}, Subscription={base_amount}")
+    
+    return {
+        "gst_credited": gst_amount,
+        "subscription_credited": base_amount,
+        "total": amount_paid
+    }
 
 
 def get_effective_plan(user: dict) -> str:
@@ -8214,10 +8345,13 @@ async def get_subscription_plans():
     
     pricing = await get_subscription_pricing()
     
-    # Special Offer Price for Elite
-    special_offers = {
-        "elite": {"original": 2000, "offer": 799, "discount": 60}
-    }
+    # ========== NEW PRICING (March 2026) ==========
+    # Formula: ₹999 + 18% GST = ₹1178.82
+    manual_pricing = calculate_manual_subscription_price()
+    elite_total_price = manual_pricing["total_price"]  # ₹1178.82
+    
+    # No more special offers - standard GST pricing
+    special_offers = None
     
     plans = []
     for plan_id, config in SUBSCRIPTION_PLANS.items():
@@ -8248,11 +8382,8 @@ async def get_subscription_plans():
                 "offer": None
             })
         else:
-            plan_pricing = pricing.get(plan_id, {})
-            offer = special_offers.get(plan_id)
-            
-            # Use offer price if available
-            monthly_price = offer["offer"] if offer else plan_pricing.get("monthly", config["default_price"])
+            # Use new pricing: ₹999 + 18% GST = ₹1178.82
+            monthly_price = elite_total_price
             
             plans.append({
                 "id": plan_id,
@@ -8265,16 +8396,26 @@ async def get_subscription_plans():
                 "can_redeem": config.get("can_redeem", True),
                 "is_free": False,
                 "pricing": {
-                    "monthly": monthly_price
+                    "monthly": monthly_price,
+                    "base_price": manual_pricing["base_price"],
+                    "gst_amount": manual_pricing["gst_amount"],
+                    "gst_rate": manual_pricing["gst_rate"]
                 },
-                "offer": offer
+                "offer": special_offers,
+                "pricing_formula": manual_pricing["formula"]
             })
     
     result = {
         "plans": plans, 
         "durations": SUBSCRIPTION_DURATIONS,
-        "has_active_offer": True,
-        "offer_name": "Limited Time Offer - 60% OFF on Elite!"
+        "has_active_offer": False,
+        "pricing_info": {
+            "formula": "₹999 + 18% GST",
+            "base_price": manual_pricing["base_price"],
+            "gst_rate": f"{manual_pricing['gst_rate']}%",
+            "gst_amount": manual_pricing["gst_amount"],
+            "total_price": manual_pricing["total_price"]
+        }
     }
     
     # Cache for 10 minutes (plans don't change frequently)
@@ -12285,21 +12426,22 @@ async def approve_vip_payment(payment_id: str, request: Request):
             # User already updated, payment update failed - log and continue
             print(f"Timeout updating payment status for {payment_id}, but user subscription activated")
         
-        # Credit to subscription wallet (non-critical, don't fail if timeout)
+        # ========== GST ROUTING FOR MANUAL SUBSCRIPTION (March 2026) ==========
+        # Credit company wallets with GST split: Total = Base + 18% GST
+        # Example: ₹1178.82 = ₹999 (subscription) + ₹179.82 (gst_collection)
         try:
-            await asyncio.wait_for(
-                db.company_wallets.update_one(
-                    {"wallet_type": "subscription"},
-                    {
-                        "$inc": {"balance": payment.get("amount", 0), "total_credit": payment.get("amount", 0)},
-                        "$set": {"last_updated": now.isoformat()}
-                    },
-                    upsert=True
-                ),
-                timeout=5.0
-            )
-        except:
-            pass  # Non-critical
+            payment_amount = payment.get("amount", 0)
+            if payment_amount > 0:
+                user_name_for_wallet = user.get("name", user.get("email", "User")) if user else "User"
+                wallet_result = await credit_company_wallets_for_manual_subscription(
+                    user_id=user_id,
+                    amount_paid=payment_amount,
+                    user_name=user_name_for_wallet
+                )
+                print(f"[GST-ROUTING] Manual subscription GST credited: {wallet_result}")
+        except Exception as wallet_error:
+            # Non-critical - don't fail subscription activation
+            print(f"[GST-ROUTING] Warning: Could not credit company wallets: {wallet_error}")
         
         # Log activity (non-critical)
         try:
@@ -30750,6 +30892,35 @@ async def get_vip_plans_public():
     """Get all VIP plans with pricing (public endpoint)"""
     plans = await get_all_vip_plans()
     return {"plans": plans}
+
+
+@api_router.get("/subscription/manual-pricing")
+async def get_manual_subscription_pricing():
+    """
+    Get Manual/VIP subscription pricing (March 2026)
+    
+    Formula: ₹999 + 18% GST = ₹1178.82
+    
+    This is for Manual (bank transfer/UPI) and Razorpay payments.
+    PRC payments have additional charges (Processing + Admin).
+    """
+    pricing = calculate_manual_subscription_price()
+    plans = await get_all_vip_plans()
+    
+    return {
+        "success": True,
+        "payment_methods": ["Manual (Bank Transfer/UPI)", "Razorpay"],
+        "formula": "₹999 + 18% GST",
+        "monthly_breakdown": {
+            "base_price": pricing["base_price"],
+            "gst_rate": f"{pricing['gst_rate']}%",
+            "gst_amount": pricing["gst_amount"],
+            "total_price": pricing["total_price"]
+        },
+        "plans": plans,
+        "note": "GST will be routed to company GST collection wallet",
+        "effective_date": "March 2026"
+    }
 
 @api_router.post("/admin/vip/update-plan")
 async def update_vip_plan(request: Request):

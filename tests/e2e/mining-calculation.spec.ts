@@ -20,7 +20,7 @@ const TEST_USER = {
   uid: 'root_cb83'
 };
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://bulkpe-consistency.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://vip-manual-fees.preview.emergentagent.com';
 
 test.describe('Mining Speed Calculation - API Tests', () => {
 

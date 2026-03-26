@@ -561,7 +561,7 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 
 1. **CORS Restriction** ✅
    - Changed `CORS_ORIGINS="*"` to specific origins
-   - Now: `https://bulkpe-consistency.preview.emergentagent.com,http://localhost:3000`
+   - Now: `https://vip-manual-fees.preview.emergentagent.com,http://localhost:3000`
    - File: `/app/backend/.env`
 
 2. **Frontend Admin Validation via API** ✅

@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://bulkpe-consistency.preview.emergentagent.com",
+    "url": "https://vip-manual-fees.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

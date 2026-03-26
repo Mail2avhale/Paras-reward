@@ -74,12 +74,9 @@ const SubscriptionPlans = ({ user }) => {
   const [prcRate, setPrcRate] = useState(10);
   const PRC_MULTIPLIER = 2;
 
-  // Special Offer Prices - Startup discontinued
-  const specialOffers = {
-    // startup discontinued
-    // growth discontinued
-    elite: { original: 2000, offer: 799, discount: 60 }
-  };
+  // New Pricing (March 2026) - ₹999 + 18% GST = ₹1178.82
+  // No more special offers - standard GST pricing
+  const specialOffers = null;
 
   const planIcons = {
     explorer: Users,
@@ -1073,10 +1070,30 @@ const SubscriptionPlans = ({ user }) => {
               <span>{t('duration')}:</span>
               <span className="text-white">{durationLabels[selectedDuration]?.label}</span>
             </div>
+            
+            {/* GST Breakdown - Only for Manual/Razorpay */}
+            {paymentMethod !== 'prc' && selectedPlan?.pricing?.base_price && (
+              <div className="mt-3 pt-3 border-t border-gray-800 space-y-1">
+                <div className="flex justify-between text-gray-400 text-sm">
+                  <span>Base Price:</span>
+                  <span className="text-white">₹{selectedPlan.pricing.base_price}</span>
+                </div>
+                <div className="flex justify-between text-gray-400 text-sm">
+                  <span>GST ({selectedPlan.pricing.gst_rate}%):</span>
+                  <span className="text-white">₹{selectedPlan.pricing.gst_amount}</span>
+                </div>
+              </div>
+            )}
+            
             <div className="flex justify-between text-amber-400 font-bold mt-2 pt-2 border-t border-gray-800">
               <span>{t('amount')}:</span>
-              <span>₹{getPrice()}</span>
+              <span>₹{getPrice().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
+            
+            {/* Pricing Formula */}
+            {paymentMethod !== 'prc' && selectedPlan?.pricing_formula && (
+              <p className="text-xs text-gray-500 mt-1 text-right">{selectedPlan.pricing_formula}</p>
+            )}
           </div>
 
           {/* Payment Method Selection */}

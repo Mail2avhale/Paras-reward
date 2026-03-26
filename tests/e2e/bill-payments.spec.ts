@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
  * Test user: testmember@paras.com / PIN: 123456 (Elite, 50000 PRC)
  */
 
-const BASE_URL = 'https://bulkpe-consistency.preview.emergentagent.com';
+const BASE_URL = 'https://vip-manual-fees.preview.emergentagent.com';
 
 // Reusable login helper
 async function loginTestUser(page: any) {

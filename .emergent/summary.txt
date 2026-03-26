@@ -1,126 +1,119 @@
 <analysis>**original_problem_statement:**
-The user initially requested the complete removal of a PRC Burning module from the application. After this was successfully completed, the user requested a major UI overhaul for all admin pages to match the light, clean Bulkpe theme, providing reference images. During this process, the user provided iterative feedback: requesting a pure white background instead of cream, and then asking for enhanced font size and clarity. The most recent feedback is a bug report showing that some admin pages, specifically the Bank Transfer Requests page (), were missed and are still displaying the old dark theme.
+The user requested massive changes to the platform's core mechanics. First, they ordered the complete removal/deprecation of 5 major systems: Mining Formula, Referral Bonus, Single Leg, Level Bonus (L1, L2, L3), and Redeem Limits. Second, they requested an Admin feature to view Subscription activations broken down by PRC vs. Razorpay. Finally, they requested a major update to the Elite Subscription Pricing formula (₹999 + 18% GST + ₹10 Processing Fee + 20% Admin Charges) where all fees must be dynamically routed to respective Company Wallets.
 
-**User's preferred language**: Marathi mixed with technical English (e.g., Font size आणि clarity enhanced करून दे).
-**INSTRUCT NEXT AGENT:** You MUST automatically respond in Marathi mixed with technical English.
+**User's preferred language**: Marathi mixed with technical English. (INSTRUCT NEXT AGENT: You MUST respond in Marathi mixed with technical English).
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application. The high-risk removal of the PRC Burning module is complete and tested. A new Bulkpe-style light theme has been implemented, but inconsistently. Core pages like  and , along with the main , have been successfully updated to a pure white theme with enhanced fonts. However, other admin pages remain in the old dark theme, creating a jarring user experience. The root cause of the original widespread dark theme (a hardcoded background in  and an overriding CSS file) has been fixed, but component-level classes on un-updated pages persist.
+A React/FastAPI/MongoDB full-stack application. The admin panel's light theme is now fully consistent. 5 major legacy features (Mining, Referrals, Level Bonuses, Single Leg, Redeem Limits) have been successfully deprecated across the backend and frontend. The Razorpay admin dashboard has been heavily upgraded with analytics, UTR search, and a PRC vs Razorpay stats modal. The new Elite Subscription formula has been successfully implemented for PRC-based subscriptions, correctly routing GST, processing, and admin fees into company master wallets. 
 
 **Last working item**:
-    - Last item agent was working: Addressing the user's report that the  page still has the old dark theme. The agent had just begun investigating by viewing the contents of .
-    - Status: IN PROGRESS
-    - Agent Testing Done: N
-    - Which testing method agent to use? Frontend testing agent. After fixing all remaining dark-themed pages, run the testing agent to perform a comprehensive visual and functional regression test across the entire admin section. A manual screenshot of the  page is also required to confirm the immediate fix.
-    - User Testing Done: N
+- **Last item agent was working**: Updating the Manual Subscription (VIP/UTR payment) pricing formula to match the newly implemented Elite pricing formula (₹999 + GST + Processing + Admin). The agent had successfully applied this to the PRC flow but was interrupted while searching for  in  to apply the same logic to manual/VIP payments.
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: Backend testing via  or  to verify the manual/VIP pricing endpoint returns the correct new breakdown.
+- **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Inconsistent Admin Theme Application (P0)
-     - Attempted fixes: The agent successfully refactored , , , , and . Multiple  commands were run to replace dark theme classes (, , etc.) across files, but this was not exhaustive and missed several pages.
-     - Next debug checklist:
-        1.  Analyze  to identify all remaining dark theme classes (e.g., , , , card backgrounds).
-        2.  Replace these with the correct light theme classes from  (e.g., , , , ).
-        3.  Run a global  across  and  for any remaining dark theme classes to find all other affected files.
-        4.  Systematically refactor every file found in the  search to apply the new light theme.
-        5.  Restart the frontend service and take a screenshot of the  page to confirm it is now white.
-     - Why fix this issue and what will be achieved with the fix? To fulfill the user's explicit request for a consistent, professional, and light theme across all admin-facing pages.
-     - Status: IN PROGRESS
-     - Is recurring issue? Y (The agent previously believed the theme update was complete, but the user found more issues).
-     - Should Test frontend/backend/both after fix? Frontend
-     - Blocked on other issue: None
+- **Issue 1: Apply New Elite Pricing to Manual/VIP Subscriptions (P0)**
+  - **Attempted fixes**: The agent identified that manual subscriptions are handled via VIP Payment routes. Attempted to search for  in  but failed with an exit code 1 just before the context window ended.
+  - **Next debug checklist**: 
+    1. Locate  and related VIP pricing endpoints in .
+    2. Update the manual pricing logic to reflect: Base(₹999) + GST(18%) + Processing(₹10).
+    3. Ensure that when a manual VIP payment is approved, the required PRC equivalents for GST, processing, and admin charges are properly routed to the  (just like the PRC flow).
+  - **Why fix this issue and what will be achieved with the fix?**: User specifically requested the new pricing formula to be applied to *both* PRC and Manual subscriptions immediately (leaving Razorpay for April 1st). 
+  - **Status**: IN PROGRESS
+  - **Is recurring issue?**: N
+  - **Should Test frontend/backend/both after fix?**: Both (Backend logic, Frontend VIP manual page display).
+  - **Blocked on other issue**: None
 
 **In progress Task List**:
-  - None.
+- None currently, aside from Issue 1.
 
-**Upcoming and Future Tasks**
-    Upcoming Tasks:
-    - Admin UI to override category percentages for individual users. (P2)
-    - Implement backend logic to carry forward unused category limits to the next month. (P2)
-    - Implement UI for the Shopping category redemption. (P2)
-    
-    Future Tasks:
-    - Continue refactoring  into smaller modules. (P3)
-    - Migrate MongoDB to PostgreSQL. (P4)
+**Upcoming and Future Tasks**:
+- **Implement NEW core logic for the 5 deleted features (P0)**: The user explicitly stated they will provide the *new* rules for Mining, Referral, Single Leg, Level Bonus, and Redeem Limits *after* the old ones were deleted. Await user instructions.
+- **Razorpay Elite Pricing Update (P1)**: The user noted the Razorpay gateway pricing should be updated to the new formula on April 1, 2026. Keep this in the backlog.
+- **Refactor  (P3)**: Break down the monolithic server file into smaller domain-specific modules.
+- **MongoDB → PostgreSQL migration (P4)**
 
-**Completed work in this session**
-- **P0 Task: PRC Burning Module Removal:**
-  - Excised over 1100 lines of burn logic and related scheduler jobs from .
-  - All burn-related API endpoints were correctly deprecated to return an appropriate notice.
-  - Removed the Burn tab and UI from .
-  - The removal was validated by the testing agent.
-- **Admin Theme Redesign & Enhancement (Partial):**
-  - Implemented a Bulkpe-style light theme for admin pages.
-  - Successfully redesigned , , and  with a pure white background and improved fonts.
-  - Fixed the root cause of the persistent dark theme by removing a hardcoded background color from  and rewriting .
-  - Enhanced typography across the updated pages for better clarity and readability.
+**Completed work in this session**:
+- **Admin Theme UI Consistency (DONE)**: Fixed remaining dark theme classes in , , etc.
+- **PhonePe Block Mitigation (DONE)**: Added , , and  to Razorpay payload in  and  to boost merchant trust.
+- **Razorpay Admin Enhancements (DONE)**: Added actual Razorpay timestamps, UTR/UPI ID search, Revenue Dashboard, Date Filters, and Invoice/Refund UI in .
+- **Mass Deprecation of 5 Features (DONE)**: Fully removed logic for Mining, Referrals, Level Bonus, Single Leg, and Redeem limits in , , ,  and frontend pages.
+- **PRC vs Razorpay Stats (DONE)**: Added an API and Admin UI modal to compare subscription activation sources.
+- **New Elite PRC Pricing Formula (DONE)**: Implemented  calculating ₹999 base + 18% GST + ₹10 Processing + 20% Admin. Successfully routed these to .
 
-**Earlier issues found/mentioned but not fixed**
-   - None.
+**Earlier issues found/mentioned but not fixed**:
+- None.
 
-**Known issue recurrence from previous fork**
-  - None.
+**Known issue recurrence from previous fork**:
+- None.
 
-**Code Architecture**
+**Code Architecture**:
 
 
-**Key Technical Concepts**
-- **CSS Specificity and Overrides:** The main challenge was identifying and fixing styles from multiple sources ( critical CSS, a dedicated  file, and component-level Tailwind classes) that were enforcing a dark theme.
-- **Build & Development Server Caching:** The agent encountered significant caching issues where UI changes were not reflected. This was mitigated by restarting the dev server, hard-rebuilding the project, and finally identifying the true source of the overriding styles in core CSS files rather than a cache problem.
+**Key Technical Concepts**:
+- **Company Wallets Routing**: The system now utilizes master company wallets (, , , ). When a user subscribes via PRC, portions of their PRC balance are calculated and transferred directly to these company wallets.
+- **Deprecation Pattern**: Removed features were not strictly deleted but replaced with mock responses returning  to prevent frontend crashes while the UI is replaced.
 
-**key DB schema**
-  - No changes.
+**key DB schema**:
+- : { wallet_type, balance, updated_at }
+- : Tracks users who activated via PRC.
+- : Tracks users who activated via INR/Gateway.
+- : Tracks manual bank transfer/UTR subscriptions.
 
-**changes in tech stack**
-  - None.
+**changes in tech stack**:
+- None
 
-**All files of reference**
-- : The immediate file to be fixed.
-- : The source of truth for the new light theme's CSS variables.
-- : The master layout for admin pages.
--  results for dark theme classes (, , , etc.) in .
+**All files of reference**:
+- : Contains  (reference for the new formula) and the pending  that needs updating.
+- : Contains updated Razorpay creation and webhook handling.
+- : Newly upgraded with heavy analytics.
 
 **Areas that need refactoring**:
-- Any admin page file under  and its subdirectories that still contains legacy dark theme classes needs to be refactored immediately.
+-  is over 45,000 lines long. Extensive caution is needed with . Use precise line numbers or unique strings.
 
-**key api endpoints**
-- All PRC burn-related endpoints were successfully deprecated. No new endpoints were added.
+**key api endpoints**:
+- : Returns the new dynamic pricing breakdown.
+- : Activates plan using PRC balance and distributes to company wallets.
+- Pending update: VIP/Manual endpoints inside .
 
-**Critical Info for New Agent**
-- **Your immediate and highest priority is to fix the inconsistent admin theme.** The user is frustrated that some pages are still dark. Start by fixing .
-- After fixing that specific page, you MUST perform a comprehensive search across all admin-related directories (, ) to find and fix all other instances of the old dark theme. Do not assume the task is complete after fixing just one page.
-- The root of the problem was a hardcoded dark background in  and an aggressive . While these have been addressed, many individual components still have old Tailwind classes that need to be updated.
+**Critical Info for New Agent**:
+- **The user's immediate request was to update the Manual Subscription pricing to match the new Elite formula.** Start your session by fixing this in  for the VIP payment flow.
+- Ensure that the manual subscription flow also accounts for routing the mathematical equivalent to the  upon admin approval.
+- Wait for the user to provide the *new* rules for the 5 deleted features (Mining, Referrals, etc.). Do not invent new rules; ask the user for them if they don't provide them proactively.
+- Respond in Marathi mixed with technical English.
 
-**documents and test reports created in this job**
-  - 
-  - 
-  - 
+**documents and test reports created in this job**:
+-  (Updated with deprecated features and new Elite formula)
 
-**Last 10 User Messages and any pending HUMAN messages**
-1. **User:** Reports that the  page is still dark, providing a screenshot. (UNRESOLVED - P0)
-2. **Agent:** Finishes the font enhancement task, incorrectly believing it to be complete.
-3. **User:** Asks for enhanced font size and clarity. (Completed)
-4. **Agent:** Finishes fixing the background to be pure white.
-5. **User:** Reports that the background is cream, not white. (Completed)
-6. **Agent:** Finishes the initial Bulkpe theme implementation.
-7. **User:** Confirms the agent should apply the theme to all admin pages. (Completed)
-8. **Agent:** Asks for confirmation of the theme change plan. (Completed)
-9. **User:** Requests a new Bulkpe-style theme for all admin pages. (In Progress)
-10. **Agent:** Finishes the complete removal of the PRC Burning module. (Completed)
+**Last 10 User Messages and any pending HUMAN messages**:
+1. **User**: Manual subcription fees update झाली आहे का (Has the manual subscription fee been updated?) -> **PENDING P0**.
+2. **Agent**: Explained the new Elite pricing formula, verified company wallet routing, asked if anything else was needed.
+3. **User**: Requested the Elite plan price change to ₹999 + 18% GST + ₹10 Processing + 20% Admin charges, requested it be applied to PRC and Manual flows immediately, and asked if company wallets are provisioned for this.
+4. **Agent**: Implemented the PRC vs Razorpay stats feature and showed screenshots.
+5. **User**: Asked how the Admin can know how many users activated subscriptions via PRC vs Razorpay.
+6. **Agent**: Finished deprecating the 5 features, updated PRD, and asked the user for the fresh requirements.
+7. **User**: Confirmed with a to proceed with deletion.
+8. **Agent**: Asked for confirmation before executing the massive deletion of 5 core features.
+9. **User**: Instructed to DELETE/REMOVE 5 core features (Mining formula, Referral bonus, Single leg, Level bonus, Redeem limit) completely, stating they will provide fresh instructions later.
+10. **Agent**: Implemented and verified the 4 new Razorpay admin features.
 
-**Project Health Check:**
-- Broken: The admin section's UI is in an inconsistent state, with a mix of new light-themed pages and old dark-themed pages. This is a high-priority visual bug. The backend is stable.
+**Project Health Check**:
+- **Broken**: None
+- **Mocked**: Mining, Referral, and Level Bonus endpoints currently return static deprecated messages intentionally. 
 
-**3rd Party Integrations**
-- Eko BBPS API — requires User API Key
+**3rd Party Integrations**:
+- Razorpay (Payments) — requires User API Key
 
-**Testing status**
-  - Testing agent used after significant changes: YES
-  - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: None
-  - Known regressions: The admin UI theme is not applied consistently.
+**Testing status**:
+- Testing agent used after significant changes: YES (earlier in session)
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: None
+- Known regressions: None
 
-**Credentials to test flow:**
-- Admin: email: , pin: 
+**Credentials to test flow**:
+- Standard testing credentials apply.
 
-**What agent forgot to execute**
-- The agent failed to apply the theme and font changes comprehensively to all admin pages. It updated the most prominent pages (, ) but did not systematically search for and update all other admin-facing files, leading to an inconsistent UI.</analysis>
+**What agent forgot to execute**:
+- The agent was interrupted by the context window limit while trying to locate and update the manual/VIP subscription pricing logic. This is the immediate pending task.</analysis>

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts } from '../fixtures/helpers';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL || 'https://bulkpe-consistency.preview.emergentagent.com';
+const API_BASE = process.env.REACT_APP_BACKEND_URL || 'https://vip-manual-fees.preview.emergentagent.com';
 
 test.describe('Razorpay Integration & Subscription Plans', () => {
   
