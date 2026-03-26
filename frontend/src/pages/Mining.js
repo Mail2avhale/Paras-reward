@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Sparkles, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Mining = ({ user }) => {
@@ -22,26 +22,38 @@ const Mining = ({ user }) => {
 
       {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-12">
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-8 h-8 text-amber-600" />
+        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-8 text-center">
+          <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-200">
+            <Rocket className="w-10 h-10 text-white" />
           </div>
           
-          <h2 className="text-xl font-bold text-slate-800 mb-2">
-            Mining Feature Removed
-          </h2>
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Sparkles className="w-5 h-5 text-purple-500" />
+            <h2 className="text-xl font-bold text-slate-800">
+              Coming Soon!
+            </h2>
+            <Sparkles className="w-5 h-5 text-purple-500" />
+          </div>
+          
+          <p className="text-lg font-medium text-purple-700 mb-2">
+            New & Improved Mining Engine
+          </p>
           
           <p className="text-slate-600 mb-6">
-            Mining feature has been discontinued. We are working on exciting new features for you.
+            We're building something amazing! Our new mining system will bring better rewards and an enhanced experience for you.
           </p>
           
-          <p className="text-sm text-amber-700 bg-amber-100 rounded-lg p-3 mb-6">
-            Your existing PRC balance is safe and can still be used for redemptions.
-          </p>
+          <div className="bg-white/80 rounded-xl p-4 mb-6 border border-purple-100">
+            <p className="text-sm text-slate-700">
+              <span className="font-semibold text-purple-600">Please wait and have patience.</span>
+              <br />
+              Your existing PRC balance is safe and can still be used for redemptions.
+            </p>
+          </div>
           
           <Button
             onClick={() => navigate('/rewards')}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white px-8"
+            className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-8 shadow-lg shadow-purple-200"
           >
             Go to Rewards
           </Button>
