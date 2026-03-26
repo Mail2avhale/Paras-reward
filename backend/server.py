@@ -3118,12 +3118,146 @@ async def get_subscription_pricing():
     
     # Only Elite pricing for new subscriptions
     default_pricing = {
-        "elite": {"monthly": 799}
+        "elite": {"monthly": 999}  # Updated from ₹799 to ₹999 (1 April 2026)
     }
     
     if settings and "subscription_pricing" in settings:
         return settings["subscription_pricing"]
     return default_pricing
+
+
+@api_router.get("/subscription/elite-pricing")
+async def get_elite_pricing():
+    """
+    Get current Elite subscription pricing breakdown (1 April 2026)
+    Shows full formula: ₹999 + 18% GST + ₹10 Processing + 20% Admin
+    """
+    try:
+        pricing = await calculate_elite_prc_price()
+        return {
+            "success": True,
+            "plan": "elite",
+            "formula": "₹999 + 18% GST + ₹10 Processing Fee + 20% Admin Charges",
+            "base_price_inr": ELITE_BASE_PRICE,
+            "gst_rate": f"{GST_RATE * 100}%",
+            "processing_fee": f"₹{PROCESSING_FEE_INR}",
+            "admin_charge_rate": f"{ADMIN_CHARGE_RATE * 100}%",
+            "duration_days": 28,
+            "pricing": pricing,
+            "total_prc_required": pricing["total_prc"],
+            "message": f"Pay {pricing['total_prc']:,.0f} PRC for 28 days Elite subscription"
+        }
+    except Exception as e:
+        logging.error(f"Pricing calc error: {e}")
+        raise HTTPException(status_code=500, detail="Could not calculate pricing")
+
+
+# ==================== NEW ELITE PRICING (1 April 2026) ====================
+# Formula: (₹999 + 18% GST) × PRC Rate + ₹10 Processing + 20% Admin Charges
+
+ELITE_BASE_PRICE = 999  # Base price in INR
+GST_RATE = 0.18  # 18% GST
+PROCESSING_FEE_INR = 10  # ₹10 flat processing fee
+ADMIN_CHARGE_RATE = 0.20  # 20% admin charges
+
+async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
+    """
+    Calculate Elite subscription PRC price with new formula (1 April 2026)
+    
+    Formula:
+    1. Base + GST = ₹999 + 18% = ₹1178.82
+    2. Convert to PRC = ₹1178.82 × PRC_RATE
+    3. Processing Fee = ₹10 × PRC_RATE  (goes to Company Wallet)
+    4. Admin Charges = 20% of (Base PRC + Processing)  (goes to Company Wallet)
+    
+    Total PRC = Base PRC + Processing PRC + Admin PRC
+    """
+    if prc_rate is None:
+        prc_rate = await get_dynamic_prc_rate()
+    
+    # Step 1: Base + GST
+    base_inr = ELITE_BASE_PRICE
+    gst_inr = base_inr * GST_RATE
+    base_with_gst_inr = base_inr + gst_inr  # ₹1178.82
+    
+    # Step 2: Convert to PRC
+    base_prc = base_with_gst_inr * prc_rate
+    
+    # Step 3: Processing Fee (₹10)
+    processing_fee_prc = PROCESSING_FEE_INR * prc_rate
+    
+    # Step 4: Admin Charges (20% of base + processing)
+    subtotal_prc = base_prc + processing_fee_prc
+    admin_charges_prc = subtotal_prc * ADMIN_CHARGE_RATE
+    
+    # Total
+    total_prc = base_prc + processing_fee_prc + admin_charges_prc
+    
+    return {
+        "base_inr": base_inr,
+        "gst_inr": round(gst_inr, 2),
+        "gst_rate": GST_RATE * 100,
+        "base_with_gst_inr": round(base_with_gst_inr, 2),
+        "processing_fee_inr": PROCESSING_FEE_INR,
+        "admin_charge_rate": ADMIN_CHARGE_RATE * 100,
+        "prc_rate": prc_rate,
+        # PRC Breakdown
+        "base_prc": round(base_prc, 2),
+        "gst_prc": round(gst_inr * prc_rate, 2),
+        "processing_fee_prc": round(processing_fee_prc, 2),
+        "admin_charges_prc": round(admin_charges_prc, 2),
+        "total_prc": round(total_prc, 2),
+        # For Company Wallet
+        "company_wallet_breakdown": {
+            "gst_collection": round(gst_inr * prc_rate, 2),
+            "processing_fees": round(processing_fee_prc, 2),
+            "admin_charges": round(admin_charges_prc, 2),
+            "subscription_revenue": round(base_inr * prc_rate, 2)  # Base goes to subscription wallet
+        }
+    }
+
+
+async def credit_company_wallets_for_subscription(user_id: str, pricing: dict, user_name: str = "User"):
+    """
+    Credit company wallets with subscription fees breakdown
+    Called after successful PRC subscription payment
+    """
+    now = datetime.now(timezone.utc)
+    breakdown = pricing.get("company_wallet_breakdown", {})
+    
+    wallet_credits = [
+        ("gst_collection", breakdown.get("gst_collection", 0), "GST (18%)"),
+        ("processing_fees", breakdown.get("processing_fees", 0), "Processing Fee (₹10)"),
+        ("admin_charges", breakdown.get("admin_charges", 0), "Admin Charges (20%)"),
+        ("subscription", breakdown.get("subscription_revenue", 0), "Subscription Revenue")
+    ]
+    
+    for wallet_type, amount, description in wallet_credits:
+        if amount > 0:
+            # Update wallet balance
+            await db.company_wallets.update_one(
+                {"wallet_type": wallet_type},
+                {
+                    "$inc": {"balance": amount, "total_credit": amount},
+                    "$set": {"last_updated": now.isoformat()}
+                },
+                upsert=True
+            )
+            
+            # Record transaction
+            await db.company_wallet_transactions.insert_one({
+                "txn_id": str(uuid.uuid4()),
+                "wallet_type": wallet_type,
+                "type": "credit",
+                "amount": amount,
+                "description": f"{description} from {user_name} Elite subscription",
+                "source": "prc_subscription",
+                "user_id": user_id,
+                "timestamp": now.isoformat()
+            })
+    
+    logging.info(f"[COMPANY-WALLET] Credited wallets for {user_name}: GST={breakdown.get('gst_collection')}, Processing={breakdown.get('processing_fees')}, Admin={breakdown.get('admin_charges')}, Sub={breakdown.get('subscription_revenue')}")
+
 
 def get_effective_plan(user: dict) -> str:
     """
@@ -11127,26 +11261,39 @@ async def upgrade_subscription(uid: str, request: Request):
 @api_router.post("/subscription/pay-with-prc")
 async def subscription_pay_with_prc(request: Request):
     """
-    Pay for subscription using PRC from Available Redeem Limit.
-    Formula: INR Price × 2 × Dynamic PRC Rate
-    Cooldown: 15 days between subscriptions
+    Pay for Elite subscription using PRC.
+    
+    NEW FORMULA (1 April 2026):
+    ===========================
+    Base: ₹999 + 18% GST = ₹1178.82
+    + ₹10 Processing Fee (→ Company Wallet)
+    + 20% Admin Charges (→ Company Wallet)
+    
+    Total PRC = (₹1178.82 + ₹10 + 20% Admin) × PRC Rate
+    
+    Breakdown goes to Company Wallets:
+    - GST → gst_collection wallet
+    - Processing Fee → processing_fees wallet
+    - Admin Charges → admin_charges wallet
+    - Base Revenue → subscription wallet
     """
     try:
         data = await request.json()
         user_id = data.get("user_id")
-        plan_name = data.get("plan_name")
+        plan_name = data.get("plan_name", "elite")  # Only Elite available now
         plan_type = data.get("plan_type", "monthly")
         prc_amount = data.get("prc_amount")
         
         # VALIDATION: Check required fields
         if not user_id:
             raise HTTPException(status_code=400, detail="User ID is required. Please login again.")
-        if not plan_name:
-            raise HTTPException(status_code=400, detail="Plan name is required. Please select a plan.")
         if not prc_amount or prc_amount <= 0:
             raise HTTPException(status_code=400, detail="Invalid PRC amount. Please refresh the page.")
         
-        # Get user first to show better error messages
+        # Only Elite plan available
+        plan_name = "elite"
+        
+        # Get user first
         user = await db.users.find_one({"uid": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User account not found. Please login again.")
@@ -11170,105 +11317,74 @@ async def subscription_pay_with_prc(request: Request):
             raise
         except Exception as cooldown_err:
             logging.warning(f"[PRC-SUB] Cooldown check error for {user_id}: {cooldown_err}")
-            # Don't block on cooldown check failure
         
-        # Get dynamic PRC rate
+        # Calculate Elite pricing with new formula
         try:
-            prc_rate = await get_dynamic_prc_rate()
+            pricing = await calculate_elite_prc_price()
+            expected_prc = pricing["total_prc"]
+            prc_rate = pricing["prc_rate"]
         except Exception as rate_err:
-            logging.error(f"[PRC-SUB] Rate fetch error: {rate_err}")
-            raise HTTPException(status_code=500, detail="Could not fetch current PRC rate. Please try again.")
+            logging.error(f"[PRC-SUB] Pricing calc error: {rate_err}")
+            raise HTTPException(status_code=500, detail="Could not calculate subscription price. Please try again.")
         
-        # Validate plan
-        valid_plans = ["startup", "growth", "elite"]
-        if plan_name.lower() not in valid_plans:
-            raise HTTPException(status_code=400, detail=f"Invalid plan '{plan_name}'. Available plans: Startup, Growth, Elite.")
-        plan_name = plan_name.lower()
-        
-        # Get plan price and verify PRC amount
-        plan_prices = {"startup": 299, "growth": 499, "elite": 799}
-        plan_price = plan_prices.get(plan_name, 799)
-        expected_prc = plan_price * 2 * prc_rate
-        
-        # Allow 15% variance for rounding and rate fluctuation
-        variance_allowed = expected_prc * 0.15
+        # Allow 10% variance for rounding
+        variance_allowed = expected_prc * 0.10
         if abs(prc_amount - expected_prc) > variance_allowed:
-            logging.warning(f"[PRC-SUB] Amount mismatch: expected={expected_prc:.0f}, got={prc_amount:.0f}, rate={prc_rate}")
+            logging.warning(f"[PRC-SUB] Amount mismatch: expected={expected_prc:.0f}, got={prc_amount:.0f}")
             raise HTTPException(
                 status_code=400, 
-                detail=f"PRC amount mismatch. Expected {expected_prc:.0f} PRC (at rate {prc_rate} PRC/₹1). Please refresh the page and try again."
+                detail=f"PRC amount mismatch. Expected {expected_prc:.0f} PRC. Please refresh the page."
             )
         
-        # Check redeem limit
-        try:
-            redeem_limit_data = await calculate_user_redeem_limit(user_id)
-            total_limit = redeem_limit_data.get("total_limit", 0)
-            total_redeemed = await get_user_total_redeemed(user_id)
-            available_limit = max(0, total_limit - total_redeemed)
-        except Exception as limit_err:
-            logging.error(f"[PRC-SUB] Redeem limit calc error for {user_id}: {limit_err}")
-            raise HTTPException(status_code=500, detail=f"Could not calculate redeem limit. Error: {str(limit_err)}")
+        # Use expected amount for accuracy
+        prc_amount = expected_prc
         
-        if available_limit < prc_amount:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Insufficient Redeem Limit. You have {available_limit:,.0f} PRC available, but {prc_amount:,.0f} PRC is required."
-            )
-        
-        # Check PRC balance (additional safety check)
+        # Check PRC balance
         if current_balance < prc_amount:
             raise HTTPException(
                 status_code=400, 
                 detail=f"Insufficient PRC Balance. You have {current_balance:,.0f} PRC, but {prc_amount:,.0f} PRC is required."
             )
         
-        # Calculate subscription duration - Always 28 days
+        # Calculate subscription duration - 28 days
         duration_days = 28
         now = datetime.now(timezone.utc)
         
         # Check current subscription expiry and extend if active
         current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
         remaining_days = 0
+        
         if current_expiry:
             try:
                 if isinstance(current_expiry, str):
                     expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
                 else:
                     expiry_dt = current_expiry
+                
                 if expiry_dt.tzinfo is None:
                     expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                
                 if expiry_dt > now:
                     remaining_days = (expiry_dt - now).days
-                    new_expiry = (expiry_dt + timedelta(days=duration_days)).isoformat()
-                else:
-                    new_expiry = (now + timedelta(days=duration_days)).isoformat()
-            except Exception as exp_err:
-                logging.warning(f"[PRC-SUB] Expiry parsing error: {exp_err}")
-                new_expiry = (now + timedelta(days=duration_days)).isoformat()
-        else:
-            new_expiry = (now + timedelta(days=duration_days)).isoformat()
+            except:
+                pass
         
         total_days = duration_days + remaining_days
+        new_expiry = (now + timedelta(days=total_days)).isoformat()
         
-        # DEDUCT PRC FROM BALANCE
+        # DEDUCT PRC
         try:
             result = await db.users.update_one(
                 {"uid": user_id, "prc_balance": {"$gte": prc_amount}},
                 {"$inc": {"prc_balance": -prc_amount}}
             )
             if result.modified_count == 0:
-                # Re-check balance
-                fresh_user = await db.users.find_one({"uid": user_id})
-                fresh_balance = float(fresh_user.get("prc_balance", 0) or 0) if fresh_user else 0
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Could not deduct PRC. Current balance: {fresh_balance:,.0f} PRC. Please try again."
-                )
+                raise HTTPException(status_code=400, detail="Could not deduct PRC. Please try again.")
         except HTTPException:
             raise
         except Exception as deduct_err:
-            logging.error(f"[PRC-SUB] Deduction error: {deduct_err}")
-            raise HTTPException(status_code=500, detail=f"Payment failed. Could not deduct PRC: {str(deduct_err)}")
+            logging.error(f"[PRC-SUB] PRC deduction failed: {deduct_err}")
+            raise HTTPException(status_code=500, detail="Payment processing failed. Please try again.")
         
         # UPDATE SUBSCRIPTION
         try:
@@ -11276,7 +11392,7 @@ async def subscription_pay_with_prc(request: Request):
                 {"uid": user_id},
                 {
                     "$set": {
-                        "subscription_plan": plan_name,
+                        "subscription_plan": "elite",
                         "subscription_expiry": new_expiry,
                         "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
                         "subscription_start": now.isoformat(),
@@ -11292,16 +11408,36 @@ async def subscription_pay_with_prc(request: Request):
             await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": prc_amount}})
             raise HTTPException(status_code=500, detail="Subscription activation failed. PRC has been refunded.")
         
-        # RECORD PAYMENT
+        # CREDIT COMPANY WALLETS (New Feature - 1 April 2026)
+        try:
+            await credit_company_wallets_for_subscription(user_id, pricing, user_name)
+        except Exception as wallet_err:
+            logging.error(f"[PRC-SUB] Company wallet credit failed: {wallet_err}")
+            # Don't fail the subscription for this
+        
+        # RECORD PAYMENT with detailed breakdown
         payment_record = {
             "user_id": user_id,
             "user_name": user_name,
             "plan_name": plan_name,
             "plan_type": plan_type,
             "payment_method": "prc",
-            "prc_amount": prc_amount,
+            "prc_amount": round(prc_amount, 2),
             "prc_rate_used": prc_rate,
-            "inr_equivalent": plan_price,
+            # NEW: Detailed breakdown (1 April 2026)
+            "pricing_breakdown": {
+                "base_inr": pricing["base_inr"],
+                "gst_inr": pricing["gst_inr"],
+                "gst_rate": pricing["gst_rate"],
+                "processing_fee_inr": pricing["processing_fee_inr"],
+                "admin_charge_rate": pricing["admin_charge_rate"],
+                "base_prc": pricing["base_prc"],
+                "gst_prc": pricing["gst_prc"],
+                "processing_fee_prc": pricing["processing_fee_prc"],
+                "admin_charges_prc": pricing["admin_charges_prc"],
+                "total_prc": pricing["total_prc"]
+            },
+            "inr_equivalent": pricing["base_with_gst_inr"],
             "status": "paid",
             "created_at": now.isoformat(),
             "subscription_expiry": new_expiry,
@@ -11316,8 +11452,8 @@ async def subscription_pay_with_prc(request: Request):
             "user_id": user_id,
             "type": "subscription_prc",
             "prc_amount": prc_amount,
-            "inr_value": plan_price,
-            "description": f"Subscription: {plan_name.capitalize()} ({duration_days} days)",
+            "inr_value": pricing["base_with_gst_inr"],
+            "description": f"Elite Subscription ({duration_days} days) - ₹{pricing['base_inr']} + GST + Fees",
             "timestamp": now,
             "status": "completed"
         })
@@ -11328,43 +11464,28 @@ async def subscription_pay_with_prc(request: Request):
         except:
             pass
         
-        # Record category usage for utility limit (subscription counts as utility - 40%)
-        try:
-            category_usage_record = {
-                "user_id": user_id,
-                "category": "utility",
-                "service_type": "subscription_prc",
-                "amount_prc": prc_amount,
-                "amount_inr": plan_price,
-                "description": f"Subscription: {plan_name.capitalize()}",
-                "created_at": now.isoformat(),
-                "status": "completed"
-            }
-            await db.category_usage.insert_one(category_usage_record)
-        except Exception as cat_err:
-            logging.warning(f"[PRC-SUB] Category usage record failed: {cat_err}")
-        
         # Log activity and notification
         try:
             await log_activity(user_id=user_id, action_type="subscription_prc_payment",
-                description=f"Paid {prc_amount:.0f} PRC for {plan_name} subscription", metadata=payment_record)
-            await create_notification(user_id=user_id, title="Subscription Activated!",
-                message=f"Your {plan_name.capitalize()} plan is active until {new_expiry[:10]}. Paid {prc_amount:,.0f} PRC.",
+                description=f"Paid {prc_amount:.0f} PRC for Elite subscription", metadata=payment_record)
+            await create_notification(user_id=user_id, title="Elite Subscription Activated!",
+                message=f"Your Elite plan is active until {new_expiry[:10]}. Paid {prc_amount:,.0f} PRC (₹{pricing['base_inr']} + GST + Fees).",
                 notification_type="subscription")
         except:
             pass
         
-        logging.info(f"[PRC-SUB] SUCCESS: {user_name} ({user_id}) bought {plan_name} for {prc_amount:.0f} PRC, expires {new_expiry[:10]}")
+        logging.info(f"[PRC-SUB] SUCCESS: {user_name} ({user_id}) bought Elite for {prc_amount:.0f} PRC, expires {new_expiry[:10]}")
         
         return {
             "success": True,
-            "message": f"{plan_name.capitalize()} subscription activated successfully!",
+            "message": "Elite subscription activated successfully!",
             "subscription": {
-                "plan": plan_name,
+                "plan": "elite",
                 "expiry": new_expiry,
-                "prc_paid": prc_amount,
+                "prc_paid": round(prc_amount, 2),
                 "days_added": duration_days,
-                "total_days": total_days
+                "total_days": total_days,
+                "pricing_breakdown": pricing
             }
         }
         
@@ -11375,7 +11496,6 @@ async def subscription_pay_with_prc(request: Request):
         import traceback
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Subscription failed. Technical error: {str(e)}")
-
 @api_router.post("/subscription/downgrade/{uid}")
 async def downgrade_subscription(uid: str, request: Request):
     """Admin: Downgrade user to Explorer (free) plan"""
@@ -27441,13 +27561,17 @@ async def add_other_income(request: Request):
 async def get_company_wallets():
     """Get all company master wallets"""
     try:
-        # Define wallet types
+        # Define wallet types - UPDATED 1 April 2026
         wallet_types = [
             {"type": "ads_revenue", "name": "Ads Revenue Wallet", "description": "Income from AdMob & Unity Ads"},
             {"type": "subscription", "name": "Subscription Wallet", "description": "VIP Membership payments"},
             {"type": "redeem_reserve", "name": "Redeem Reserve Wallet", "description": "Reserved for user redemptions"},
             {"type": "charity", "name": "Charity Wallet", "description": "Social responsibility fund"},
-            {"type": "profit", "name": "Profit Wallet", "description": "Net company profit"}
+            {"type": "profit", "name": "Profit Wallet", "description": "Net company profit"},
+            # NEW WALLETS - 1 April 2026
+            {"type": "processing_fees", "name": "Processing Fees Wallet", "description": "₹10 processing fee collection"},
+            {"type": "admin_charges", "name": "Admin Charges Wallet", "description": "20% admin charges collection"},
+            {"type": "gst_collection", "name": "GST Collection Wallet", "description": "18% GST collected"}
         ]
         
         wallets = []
