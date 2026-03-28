@@ -243,32 +243,38 @@ const DailyRewards = ({ user }) => {
       setNetworkRate(miningData.network_rate || 0); // Growth Network rate
       
       // Auto-start mining display if session is active
-      // FIXED: Always update session state from API response (source of truth)
-      if (miningData.session_active && miningData.remaining_hours > 0) {
+      // FIXED: Check session_active flag from API (source of truth)
+      if (miningData.session_active) {
         const sessionStart = new Date(miningData.session_start).getTime();
         const totalDuration = 24 * 60 * 60 * 1000;
         const elapsed = Date.now() - sessionStart;
+        const remainingSeconds = miningData.time_remaining || (miningData.remaining_hours * 3600) || 0;
         
         setIsMining(true);
-        setSessionTimeRemaining(Math.floor(miningData.remaining_hours * 3600));
+        setSessionTimeRemaining(Math.max(0, Math.floor(remainingSeconds)));
         setSessionStartTime(sessionStart);
         setSessionProgress(Math.min(100, (elapsed / totalDuration) * 100));
         
-        // Only set sessionPRC on initial load, not on background refresh
-        // This prevents the counter from jumping backwards
-        if (isInitialLoad) {
-          setSessionPRC(miningData.mined_this_session || 0);
+        // Set sessionPRC from API on every load to sync with server
+        const minedAmount = miningData.mined_this_session || miningData.mined_coins || 0;
+        if (isInitialLoad || minedAmount > sessionPRC) {
+          setSessionPRC(minedAmount);
         }
         
-        /* console.log('Session restored from API:', {
-          remaining: miningData.remaining_hours,
-          mined: miningData.mined_this_session
-        }); */
-      } else if (miningData.session_active === false) {
-        // API explicitly says no active session
+        console.log('[MINING] Session restored:', {
+          active: true,
+          remaining: remainingSeconds,
+          mined: minedAmount
+        });
+      } else {
+        // No active session
         setIsMining(false);
         setSessionTimeRemaining(0);
         setSessionProgress(0);
+        if (isInitialLoad) {
+          setSessionPRC(0);
+        }
+        console.log('[MINING] No active session');
       }
       
       // Clear loading immediately after mining data
@@ -428,6 +434,13 @@ const DailyRewards = ({ user }) => {
     // Haptic feedback on button press
     triggerHaptic('medium');
     
+    // If already mining, just refresh data instead of starting new session
+    if (isMining) {
+      console.log('[MINING] Already mining, refreshing data...');
+      await fetchUserData(true);
+      return;
+    }
+    
     setIsStarting(true);
     try {
       const response = await axios.post(`${API}/mining/start/${user.uid}`);
@@ -451,8 +464,10 @@ const DailyRewards = ({ user }) => {
     } catch (error) {
       const detail = error.response?.data?.detail || 'Failed to start session';
       if (detail.includes('already active')) {
-        smartToast.info('Session already active!');
-        fetchUserData();
+        // Session is active on server but not showing locally - sync it
+        console.log('[MINING] Session active on server, syncing...');
+        smartToast.info('Syncing active session...');
+        await fetchUserData(true);
       } else {
         smartToast.error(detail);
       }
