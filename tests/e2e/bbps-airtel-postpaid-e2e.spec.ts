@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://redeem-limit-test.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://network-bonus-calc.preview.emergentagent.com';
 
 /**
  * BBPS Airtel Postpaid E2E Tests

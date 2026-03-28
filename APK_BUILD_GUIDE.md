@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://redeem-limit-test.preview.emergentagent.com",
+    "url": "https://network-bonus-calc.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

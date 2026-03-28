@@ -26,5 +26,5 @@
 - PIN: 153759
 
 ## Other Test Users (No PIN set)
-- DMT Test (elite): uid=923d983c-bdc3-4dc6-b20a-eeca1d32df6d, email=dmttest@test.com
-- Mahaveer Vyas (elite): uid=2874ddb8-acc2-455e-b579-0ac1f588176a, email=manoj.vyas50@gmail.com
+- DMT Test (elite): uid=network-bonus-calc, email=dmttest@test.com
+- Mahaveer Vyas (elite): uid=network-bonus-calc, email=manoj.vyas50@gmail.com

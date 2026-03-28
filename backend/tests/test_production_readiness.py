@@ -20,7 +20,7 @@ import uuid
 import time
 import random
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redeem-limit-test.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://network-bonus-calc.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 ADMIN_EMAIL = "admin@test.com"

@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://redeem-limit-test.preview.emergentagent.com/setup
+   https://network-bonus-calc.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
