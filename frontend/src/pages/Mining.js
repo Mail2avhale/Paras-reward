@@ -177,6 +177,7 @@ const DailyRewards = ({ user }) => {
   const [sessionProgress, setSessionProgress] = useState(0); // Real progress percentage
   const [referralBreakdown, setReferralBreakdown] = useState(null); // Level-wise breakdown
   const [baseRate, setBaseRate] = useState(0); // Individual base mining rate (includes single leg bonus)
+  const [networkRate, setNetworkRate] = useState(0); // Network mining rate from Growth Economy
   
   // Collect state
   const [lastCollectedAmount, setLastCollectedAmount] = useState(0);
@@ -239,7 +240,7 @@ const DailyRewards = ({ user }) => {
       
       setReferralBreakdown(miningData.referral_breakdown || null);
       setBaseRate(miningData.base_rate || 20.83);
-      // single_leg_info is included in base_rate, no separate display needed
+      setNetworkRate(miningData.network_rate || 0); // Growth Network rate
       
       // Auto-start mining display if session is active
       // FIXED: Always update session state from API response (source of truth)
@@ -964,7 +965,7 @@ const DailyRewards = ({ user }) => {
               </div>
             </div>
             <p className="text-purple-400 font-mono text-sm font-semibold">
-              +{(miningStatus?.network_rate || 0).toFixed(2)} PRC/hr
+              +{(networkRate || 0).toFixed(2)} PRC/hr
             </p>
           </div>
           
