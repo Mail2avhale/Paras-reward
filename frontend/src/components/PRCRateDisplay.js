@@ -21,6 +21,7 @@ const PRCRateDisplay = ({
   amount = 0, 
   processingFee = 10, 
   adminChargePercent = 20,
+  burnRate = 0,
   showBreakdown = true,
   serviceType = 'general'
 }) => {
@@ -47,16 +48,13 @@ const PRCRateDisplay = ({
     }
   };
 
-  // Calculate PRC values
+  // Calculate PRC values - admin on (amount + processing) to match backend
   const amountInPRC = Math.round(amount * currentRate);
   const processingFeeInPRC = Math.round(processingFee * currentRate);
-  const adminChargeINR = Math.round(amount * adminChargePercent / 100);
-  const adminChargeInPRC = Math.round(adminChargeINR * currentRate);
-  const totalPRC = amountInPRC + processingFeeInPRC + adminChargeInPRC;
-
-  // Old rate calculation for comparison in breakdown
-  const oldTotalPRC = Math.round(amount * BASE_RATE) + Math.round(processingFee * BASE_RATE) + Math.round(adminChargeINR * BASE_RATE);
-  const prcDifference = totalPRC - oldTotalPRC;
+  const adminChargeInPRC = Math.round((amountInPRC + processingFeeInPRC) * adminChargePercent / 100);
+  const totalBeforeBurn = amountInPRC + processingFeeInPRC + adminChargeInPRC;
+  const burnPRC = Math.round(totalBeforeBurn * burnRate / 100);
+  const totalPRC = totalBeforeBurn + burnPRC;
 
   if (loading) {
     return (
@@ -120,7 +118,17 @@ const PRCRateDisplay = ({
               <div className="flex justify-between items-center">
                 <span className="text-gray-400">Admin Charge ({adminChargePercent}%)</span>
                 <span className="text-gray-300 font-mono">
-                  ₹{adminChargeINR} × {currentRate} = <span className="text-yellow-400">+{adminChargeInPRC.toLocaleString()} PRC</span>
+                  <span className="text-yellow-400">+{adminChargeInPRC.toLocaleString()} PRC</span>
+                </span>
+              </div>
+            )}
+
+            {/* Burning Row */}
+            {burnRate > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Burning ({burnRate}%)</span>
+                <span className="text-gray-300 font-mono">
+                  <span className="text-red-400">+{burnPRC.toLocaleString()} PRC</span>
                 </span>
               </div>
             )}

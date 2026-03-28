@@ -72,7 +72,7 @@ const SubscriptionPlans = ({ user }) => {
 
   // PRC Rate for subscription (dynamic, 2x multiplier)
   const [prcRate, setPrcRate] = useState(10);
-  const PRC_MULTIPLIER = 2;
+  const PRC_BURN_RATE = 5; // 5% burning for PRC subscription
 
   // New Pricing (March 2026) - ₹999 + 18% GST = ₹1178.82
   // No more special offers - standard GST pricing
@@ -366,10 +366,17 @@ const SubscriptionPlans = ({ user }) => {
     return selectedPlan.pricing[selectedDuration] || selectedPlan.pricing.monthly;
   };
 
-  // Calculate PRC price for subscription (Price × 2 × prcRate)
+  // Calculate PRC price for subscription: (Amount + ₹10 Processing) × PRC_RATE + 20% Admin + 5% Burning
   const getPRCPrice = () => {
     const inrPrice = getPrice();
-    return inrPrice * PRC_MULTIPLIER * prcRate;
+    const processingFee = 10;
+    // Convert to PRC first (matching backend formula)
+    const basePRC = Math.round(inrPrice * prcRate);
+    const processingPRC = Math.round(processingFee * prcRate);
+    const adminPRC = Math.round((basePRC + processingPRC) * 0.20);
+    const totalBeforeBurn = basePRC + processingPRC + adminPRC;
+    const burnPRC = Math.round(totalBeforeBurn * PRC_BURN_RATE / 100);
+    return totalBeforeBurn + burnPRC;
   };
 
   // Handle PRC Payment for Subscription
@@ -1034,7 +1041,7 @@ const SubscriptionPlans = ({ user }) => {
                 { feature: 'Network Income', cash: 'Full', cashIcon: '', prc: 'Reduced', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
                 { feature: 'Earning Growth', cash: 'Fast', cashIcon: '🚀', prc: 'Slow', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-zinc-400' },
                 { feature: 'Redeem Power', cash: 'Full Unlock', cashIcon: '', prc: 'Limited', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
-                { feature: 'Burn Rate', cash: '1%', cashIcon: '', prc: '5-7%', prcIcon: '🔥', cashColor: 'text-emerald-400', prcColor: 'text-red-400' },
+                { feature: 'Burn Rate', cash: '1%', cashIcon: '', prc: '5%', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-red-400' },
                 { feature: 'Priority', cash: 'High', cashIcon: '', prc: 'Normal', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-zinc-400' },
                 { feature: 'Best For', cash: 'Serious Users', cashIcon: '', prc: 'Backup Option', prcIcon: '', cashColor: 'text-amber-400', prcColor: 'text-purple-400' },
               ].map((row, i) => (
@@ -1445,10 +1452,10 @@ const SubscriptionPlans = ({ user }) => {
               {/* PRC Rate Display with Breakdown */}
               <PRCRateDisplay 
                 amount={getPrice()}
-                processingFee={0}
-                adminChargePercent={100}
+                processingFee={10}
+                adminChargePercent={20}
+                burnRate={5}
                 showBreakdown={true}
-                showRateAlert={true}
                 serviceType="subscription"
               />
 

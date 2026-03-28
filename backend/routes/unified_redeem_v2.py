@@ -687,7 +687,7 @@ class AdminCompleteRequest(BaseModel):
 
 # ==================== HELPER FUNCTIONS ====================
 
-async def calculate_charges(amount: float) -> dict:
+async def calculate_charges(amount: float, burn_rate: float = 0.01) -> dict:
     """
     Calculate all charges for a transaction
     
@@ -696,6 +696,7 @@ async def calculate_charges(amount: float) -> dict:
     - Admin Charge: 20% of transaction amount
     - Total = Amount + Platform Fee + Admin Charge
     - PRC Rate: Dynamic from database
+    - Burning: burn_rate% on total PRC (PRC subs: 5%, Cash subs: 1%)
     """
     amount_inr = float(amount)
     platform_fee = PLATFORM_FEE
@@ -705,6 +706,13 @@ async def calculate_charges(amount: float) -> dict:
     
     # Get dynamic PRC rate
     prc_rate = await get_dynamic_prc_rate()
+    
+    # Total PRC before burn
+    total_prc_before_burn = int(total_amount * prc_rate)
+    
+    # Burning
+    burn_prc = int(total_prc_before_burn * burn_rate)
+    total_prc = total_prc_before_burn + burn_prc
     
     return {
         "amount_inr": amount_inr,
@@ -718,7 +726,10 @@ async def calculate_charges(amount: float) -> dict:
         "platform_fee_prc": platform_fee * prc_rate,
         "admin_charge_prc": admin_charge * prc_rate,
         "total_charges_prc": total_charges * prc_rate,
-        "total_prc_required": int(total_amount * prc_rate),
+        "burn_rate": burn_rate * 100,
+        "burn_prc": burn_prc,
+        "total_before_burn_prc": total_prc_before_burn,
+        "total_prc_required": total_prc,
         "prc_rate": prc_rate
     }
 
@@ -774,18 +785,17 @@ async def get_available_services():
 
 
 @router.get("/calculate-charges")
-async def calculate_charges_api(amount: float = Query(..., gt=0)):
+async def calculate_charges_api(amount: float = Query(..., gt=0), payment_type: str = Query("cash")):
     """
-    Calculate charges for a given amount
-    
-    Returns breakdown of all charges including PRC equivalent
+    Calculate charges for a given amount with burning based on payment type
     """
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be greater than 0")
     
+    burn_rate = 0.05 if payment_type == "prc" else 0.01
     return {
         "success": True,
-        "charges": await calculate_charges(amount)
+        "charges": await calculate_charges(amount, burn_rate=burn_rate)
     }
 
 
@@ -1059,8 +1069,10 @@ async def create_redeem_request(request: RedeemRequestCreate):
         except Exception as e:
             logging.error(f"[REDEEM] Limit check error: {e}")
     
-    # Calculate charges
-    charges = await calculate_charges(request.amount)
+    # Calculate charges with burning based on subscription payment type
+    subscription_payment_type = user.get("subscription_payment_type", "cash")
+    burn_rate = 0.05 if subscription_payment_type == "prc" else 0.01
+    charges = await calculate_charges(request.amount, burn_rate=burn_rate)
     total_prc_required = charges["total_prc_required"]
     
     # Check PRC balance

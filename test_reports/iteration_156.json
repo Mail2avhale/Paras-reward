@@ -1,0 +1,120 @@
+{
+  "iteration": 156,
+  "mode": "feature_verification",
+  "summary": "Verified Subscription Pricing with Burning Formula. All 15 backend tests passed. Frontend UI correctly displays PRC Calculation Breakdown with Amount, Processing Fee (₹10), Admin Charge (20%), Burning (5%), and Total PRC. Comparison table shows Burn Rate: Cash 1%, PRC 5%.",
+  "features_tested": {
+    "/api/subscription/elite-pricing returns success": "PASS",
+    "/api/subscription/elite-pricing returns both PRC and Cash pricing": "PASS",
+    "PRC pricing includes 5% burning": "PASS - burn_rate=5, burn_prc calculated correctly",
+    "Cash pricing includes 1% burning": "PASS - burn_rate=1, burn_prc calculated correctly",
+    "Admin charge calculated on (base_prc + processing_prc)": "PASS - 20% of (11788 + 100) = 2378",
+    "Pricing breakdown has all required fields": "PASS - base_inr, gst_inr, processing_fee_prc, admin_charges_prc, burn_prc, total_prc",
+    "Burn rate labels in response": "PASS - burn_rate_prc='5%', burn_rate_cash='1%'",
+    "/api/redeem/calculate-charges?payment_type=prc shows 5% burn": "PASS",
+    "/api/redeem/calculate-charges?payment_type=cash shows 1% burn": "PASS",
+    "Default payment type is cash (1% burn)": "PASS",
+    "Burn PRC calculated correctly in redeem charges": "PASS",
+    "PRC subscription math verified (rate=10)": "PASS - Total: 14,979 PRC",
+    "Cash subscription math verified (rate=10)": "PASS - Total: 14,409 PRC",
+    "PRC burn rate > Cash burn rate": "PASS - 5% > 1%",
+    "PRC total > Cash total (due to higher burn)": "PASS - 14,979 > 14,409",
+    "Frontend: PRC Calculation Breakdown visible": "PASS",
+    "Frontend: Amount row shows ₹1178.82 × 10 = 11,788 PRC": "PASS",
+    "Frontend: Processing Fee row shows ₹10 × 10 = +100 PRC": "PASS",
+    "Frontend: Admin Charge (20%) shows +2,378 PRC": "PASS",
+    "Frontend: Burning (5%) shows +713 PRC": "PASS",
+    "Frontend: Total PRC shows 14,979 PRC": "PASS",
+    "Frontend: Comparison table shows Burn Rate: Cash 1%, PRC 5%": "PASS"
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_subscription_burning.py",
+    "/app/test_reports/pytest/subscription_burning_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py calculate_elite_prc_price() correctly implements burn_rate based on payment_type (PRC: 5%, Cash: 1%)",
+    "server.py get_elite_pricing() returns both pricing_prc and pricing_cash with correct burn rates",
+    "Admin charge correctly calculated on (base_prc + processing_prc), not just base_prc",
+    "unified_redeem_v2.py calculate_charges() correctly accepts burn_rate parameter",
+    "bank_redeem.py calculate_total_prc() correctly accepts burn_rate parameter",
+    "PRCRateDisplay.js correctly shows Burning row when burnRate > 0",
+    "SubscriptionPlans.js getPRCPrice() correctly calculates with 5% burn rate",
+    "Comparison table in SubscriptionPlans.js shows Burn Rate: Cash 1%, PRC 5%"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_subscription_burning.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (All UI elements verified)"
+  },
+  "test_credentials": {
+    "elite_user": {
+      "uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+      "phone": "9970100782",
+      "pin": "997010",
+      "subscription_plan": "elite",
+      "subscription_payment_type": "cash"
+    }
+  },
+  "seed_data_creation": "None - used existing test user",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Subscription pricing with burning formula verified. Backend API /api/subscription/elite-pricing returns both PRC and Cash pricing with correct burn rates (5% and 1%). Frontend displays PRC Calculation Breakdown with all components: Amount, Processing Fee, Admin Charge, Burning, Total PRC. Comparison table shows Burn Rate row with Cash 1% and PRC 5%.",
+  "api_responses_verified": {
+    "GET /api/subscription/elite-pricing": {
+      "success": true,
+      "pricing_prc": {
+        "payment_type": "prc",
+        "burn_rate": 5,
+        "base_prc": 11788,
+        "processing_fee_prc": 100,
+        "admin_charges_prc": 2378,
+        "burn_prc": 713,
+        "total_prc": 14979
+      },
+      "pricing_cash": {
+        "payment_type": "cash",
+        "burn_rate": 1,
+        "burn_prc": 143,
+        "total_prc": 14409
+      },
+      "burn_rate_prc": "5%",
+      "burn_rate_cash": "1%"
+    },
+    "GET /api/redeem/calculate-charges?amount=100&payment_type=prc": {
+      "success": true,
+      "charges": {
+        "burn_rate": 5,
+        "burn_prc": "calculated correctly"
+      }
+    },
+    "GET /api/redeem/calculate-charges?amount=100&payment_type=cash": {
+      "success": true,
+      "charges": {
+        "burn_rate": 1,
+        "burn_prc": "calculated correctly"
+      }
+    }
+  },
+  "math_verification": {
+    "prc_rate": 10,
+    "base_with_gst_inr": 1178.82,
+    "base_prc": 11788,
+    "processing_prc": 100,
+    "admin_prc_20_percent": 2378,
+    "total_before_burn": 14266,
+    "burn_prc_5_percent": 713,
+    "total_prc": 14979,
+    "formula": "₹999 + 18% GST + ₹10 Processing + 20% Admin + 5% Burning"
+  }
+}

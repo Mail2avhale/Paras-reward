@@ -409,8 +409,8 @@ const BankRedeemPage = ({ user: initialUser }) => {
                 amount={parseFloat(amount) || 0}
                 processingFee={config.transaction_fee || 10}
                 adminChargePercent={config.admin_fee_percent || 20}
+                burnRate={user?.subscription_payment_type === 'prc' ? 5 : 1}
                 showBreakdown={true}
-                showRateAlert={true}
                 serviceType="bank"
               />
             )}

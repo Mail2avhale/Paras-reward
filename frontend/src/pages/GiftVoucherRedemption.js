@@ -244,6 +244,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
               amount={selectedInfo.value}
               processingFee={10}
               adminChargePercent={20}
+              burnRate={user?.subscription_payment_type === 'prc' ? 5 : 1}
               showBreakdown={false}
               showRateAlert={true}
               serviceType="gift"

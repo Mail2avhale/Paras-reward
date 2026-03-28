@@ -305,8 +305,8 @@ MIN_AMOUNT = 100
 MAX_AMOUNT = 25000
 
 
-def calculate_total_prc(amount_inr: int) -> dict:
-    """Calculate total PRC needed for withdrawal - EMI style fees + 20% admin"""
+def calculate_total_prc(amount_inr: int, burn_rate: float = 0.01) -> dict:
+    """Calculate total PRC needed for withdrawal - fees + admin + burning"""
     if amount_inr < MIN_AMOUNT:
         return None
     
@@ -317,6 +317,13 @@ def calculate_total_prc(amount_inr: int) -> dict:
     # PRC rate: Dynamic from database
     prc_rate = get_dynamic_prc_rate()
     
+    # Total PRC before burn
+    total_prc_before_burn = int(total_inr * prc_rate)
+    
+    # Burning
+    burn_prc = int(total_prc_before_burn * burn_rate)
+    total_prc = total_prc_before_burn + burn_prc
+    
     return {
         "amount_inr": amount_inr,
         "processing_fee_inr": processing_fee,
@@ -326,7 +333,10 @@ def calculate_total_prc(amount_inr: int) -> dict:
         "amount_prc": amount_inr * prc_rate,
         "processing_fee_prc": processing_fee * prc_rate,
         "admin_charge_prc": admin_charge * prc_rate,
-        "total_prc": int(total_inr * prc_rate),
+        "burn_rate": burn_rate * 100,
+        "burn_prc": burn_prc,
+        "total_before_burn_prc": total_prc_before_burn,
+        "total_prc": total_prc,
         "prc_rate": prc_rate
     }
 
@@ -661,8 +671,10 @@ async def create_withdrawal_request(user_id: str, request: Request):
     
     # NOTE: Referral requirement removed as per user request (March 2026)
     
-    # Calculate charges - EMI style
-    charges = calculate_total_prc(amount_inr)
+    # Calculate charges - with burning based on subscription payment type
+    subscription_payment_type = user.get("subscription_payment_type", "cash")
+    burn_rate = 0.05 if subscription_payment_type == "prc" else 0.01
+    charges = calculate_total_prc(amount_inr, burn_rate=burn_rate)
     if not charges:
         raise HTTPException(status_code=400, detail="Invalid amount")
     total_prc = charges["total_prc"]
