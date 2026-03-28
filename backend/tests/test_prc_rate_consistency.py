@@ -7,7 +7,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://unified-redeem-check.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redeem-limit-test.preview.emergentagent.com').rstrip('/')
 
 class TestPRCRateConsistency:
     """Test that PRC rate is global and consistent across all API calls"""

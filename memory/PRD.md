@@ -1,6 +1,12 @@
 # PARAS REWARD - Product Requirements Document
 
-## LAST UPDATED - 28 March 2026 (Mining Formula P0 Fix Complete)
+## LAST UPDATED - 28 March 2026 (Redeem Limit UI Verified)
+
+## COMPLETED: Redeem Limit UI Verification - 28 March 2026
+- Verified CategoryLimitsDisplay.js shows clear Limit -> Used -> Balance layout
+- Backend API returns correct data (10.88% unlocked, 5327.72 PRC limit)
+- Component renders properly on Redeem, BankRedeem, and GiftVoucher pages
+- Visual test passed on /redeem page
 
 ## COMPLETED: Mining Formula Update - 28 March 2026
 - Updated mining formula to spreadsheet-based: Base 500 PRC/day + Team Bonus
@@ -37,6 +43,12 @@
 - Complete economy system with mining, network, redeem calculations
 - MLM-Free terminology
 - Testing: 100% passed (27/27 tests)
+
+## COMPLETED: Category Limits UI Cleanup - 28 March 2026
+- Removed legacy Utility/Shop/Bank category limits
+- Replaced with unified Redeem Limit display (Limit/Used/Balance)
+- Added Cash vs PRC subscription comparison table
+- Dynamic burn rates (Cash=1%, PRC=5%)
 
 ## Application Overview
 Paras Reward is a PRC mining and redemption platform:
@@ -80,7 +92,7 @@ Paras Reward is a PRC mining and redemption platform:
 ## Known Issues
 ### P0 - None currently
 ### P1 - Pending
-- Razorpay Elite Pricing Update: ₹999 + 18% GST (User requested April 1, 2026)
+- Razorpay Elite Pricing Update: Rs 999 + 18% GST (User requested April 1, 2026)
 - User Rakhi Ghehlod Refund: 14,260 PRC (PRODUCTION ONLY)
 ### P2 - Lower Priority
 - server.py refactoring (45K+ lines)
@@ -88,7 +100,7 @@ Paras Reward is a PRC mining and redemption platform:
 
 ## Upcoming Tasks
 ### P1
-1. Razorpay pricing update (₹999 + GST) - April 1, 2026
+1. Razorpay pricing update (Rs 999 + GST) - April 1, 2026
 2. Run migration script on production
 
 ### P2
@@ -100,9 +112,9 @@ Paras Reward is a PRC mining and redemption platform:
 2. Email/Mobile OTP verification
 
 ## Credentials
+- Primary Test User: 9970100782 / PIN: 997010
 - Elite User: burntest1@test.com / PIN: 246813
 - Admin: Admin@paras.com / PIN: 153759
-- Test User: 9970100782 (no PIN)
 
 ## Notes for Next Agent
 1. User's primary language: Marathi mixed with English

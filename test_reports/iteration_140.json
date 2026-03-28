@@ -52,7 +52,7 @@
   },
   "test_credentials": {
     "preview_admin": {
-      "url": "https://unified-redeem-check.preview.emergentagent.com",
+      "url": "https://redeem-limit-test.preview.emergentagent.com",
       "email": "admin@test.com",
       "pin": "123456"
     },
@@ -88,7 +88,7 @@
   },
   "testing_environment_comparison": {
     "preview": {
-      "url": "https://unified-redeem-check.preview.emergentagent.com",
+      "url": "https://redeem-limit-test.preview.emergentagent.com",
       "status": "WORKING",
       "api_response": "200 OK for all tested queries"
     },
