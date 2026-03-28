@@ -544,11 +544,17 @@ async def login(request: Request):
     normalized_identifier = identifier.lower() if '@' in identifier else identifier
     
     # OPTIMIZED: Use sequential equality checks instead of slow $regex $or query
-    # Try email first (most common), then mobile, then uid
+    # Try email first, then phone, then mobile, then uid
     user = await db.users.find_one(
         {"email": normalized_identifier},
         {"_id": 0, "profile_picture": 0}
     )
+    
+    if not user:
+        user = await db.users.find_one(
+            {"phone": identifier},
+            {"_id": 0, "profile_picture": 0}
+        )
     
     if not user:
         user = await db.users.find_one(
@@ -596,6 +602,29 @@ async def login(request: Request):
         )
         logging.info(f"[LOGIN DEBUG] Password verification result: {is_valid}")
         print(f"[LOGIN DEBUG] Password verification result: {is_valid}", flush=True)
+        
+        # If PIN doesn't match, try alternate user (phone/mobile collision)
+        if not is_valid:
+            alt_user = None
+            if not '@' in identifier:
+                # Try the other field (phone vs mobile)
+                alt_user = await db.users.find_one(
+                    {"mobile": identifier, "uid": {"$ne": user.get("uid")}},
+                    {"_id": 0, "profile_picture": 0}
+                )
+                if not alt_user:
+                    alt_user = await db.users.find_one(
+                        {"phone": identifier, "uid": {"$ne": user.get("uid")}},
+                        {"_id": 0, "profile_picture": 0}
+                    )
+            if alt_user:
+                alt_pw = alt_user.get("pin_hash") or alt_user.get("hashed_pin") or alt_user.get("password_hash") or alt_user.get("password")
+                if alt_pw:
+                    alt_valid = await loop.run_in_executor(_password_executor, verify_password, password, alt_pw)
+                    if alt_valid:
+                        user = alt_user
+                        is_valid = True
+                        logging.info(f"[LOGIN DEBUG] Alternate user matched: {user.get('uid')}")
         
         if not is_valid:
             record_login_attempt(identifier, False)

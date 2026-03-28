@@ -207,7 +207,7 @@ const PinInput = forwardRef(({ value, onChange, error, label, testId = 'pin', au
               />
               {/* Visual display box */}
               <div
-                className={`w-12 h-14 flex items-center justify-center text-2xl font-bold rounded-xl border-2 transition-all cursor-pointer
+                className={`w-10 h-11 flex items-center justify-center text-xl font-bold rounded-lg border-2 transition-all cursor-pointer
                   ${error ? 'border-red-500 bg-red-50' : 'border-gray-200'}
                   ${pin ? 'bg-purple-50 border-purple-400' : 'bg-white'}
                   ${document.activeElement === inputRefs.current[index] ? 'border-purple-500 ring-2 ring-purple-200 scale-105' : ''}
@@ -254,12 +254,12 @@ const PinInput = forwardRef(({ value, onChange, error, label, testId = 'pin', au
         </div>
       </div>
 
-      {/* Error Message - Centered and Prominent */}
+      {/* Error Message */}
       {error && (
-        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl animate-fadeIn">
+        <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg animate-fadeIn">
           <div className="flex items-center justify-center gap-2 text-red-400">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span className="text-sm font-medium text-center">{error}</span>
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span className="text-xs font-medium text-center">{error}</span>
           </div>
           <button
             type="button"

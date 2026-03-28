@@ -341,16 +341,16 @@ const LoginNew = ({ onLogin }) => {
     <>
       <SEO {...SEOConfigs.login} />
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
-      <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl mb-4">
-            <LogIn className="h-10 w-10 text-white" />
+      <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-6">
+        <div className="text-center mb-5">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl mb-3">
+            <LogIn className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your PARAS REWARD account</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Welcome Back</h1>
+          <p className="text-gray-600 text-sm">Sign in to your PARAS REWARD account</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-4">
           {/* Email/Mobile Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -370,7 +370,7 @@ const LoginNew = ({ onLogin }) => {
                 }}
                 required
                 disabled={step === 2}
-                className={`pl-10 pr-16 py-6 rounded-xl focus:ring-2 ${
+                className={`pl-10 pr-16 py-4 rounded-xl focus:ring-2 ${
                   step === 2 
                     ? 'bg-gray-50 text-gray-600 border-green-300' 
                     : idStatus === 'invalid' 
@@ -439,7 +439,7 @@ const LoginNew = ({ onLogin }) => {
 
           {/* PIN Input - Only shown after ID is verified */}
           {step === 2 && (
-            <div className="pt-2">
+            <div className="pt-1">
               <PinInput
                 value={loginData.pin}
                 onChange={(val) => {

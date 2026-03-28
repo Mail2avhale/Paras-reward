@@ -5815,14 +5815,30 @@ async def login(
     # Normalize email to lowercase for case-insensitive matching
     normalized_identifier = identifier.lower() if '@' in identifier else identifier
     
-    # Find user by email (case-insensitive), mobile, or UID
-    user = await db.users.find_one({
-        "$or": [
-            {"email": {"$regex": f"^{normalized_identifier}$", "$options": "i"}},
-            {"mobile": identifier},
-            {"uid": identifier}
-        ]
-    }, {"_id": 0})  # Exclude _id to avoid serialization issues
+    # Find user by email (case-insensitive), phone, mobile, or UID
+    # Sequential lookup: try phone first (some users have phone instead of mobile)
+    user = None
+    if '@' in identifier:
+        user = await db.users.find_one({"email": {"$regex": f"^{normalized_identifier}$", "$options": "i"}}, {"_id": 0})
+    else:
+        # Try phone first, then mobile, then uid
+        user = await db.users.find_one({"phone": identifier}, {"_id": 0})
+        if not user:
+            user = await db.users.find_one({"mobile": identifier}, {"_id": 0})
+        if not user:
+            user = await db.users.find_one({"uid": identifier}, {"_id": 0})
+    
+    # If PIN doesn't match first found user, check alternate user with same number
+    if user:
+        stored_pw = user.get("pin_hash") or user.get("password_hash") or user.get("password")
+        if stored_pw and not verify_password(password, stored_pw):
+            # Try alternate lookup (phone vs mobile collision)
+            alt_query = {"$or": [{"mobile": identifier}, {"phone": identifier}], "uid": {"$ne": user.get("uid")}}
+            alt_user = await db.users.find_one(alt_query, {"_id": 0})
+            if alt_user:
+                alt_pw = alt_user.get("pin_hash") or alt_user.get("password_hash") or alt_user.get("password")
+                if alt_pw and verify_password(password, alt_pw):
+                    user = alt_user  # Switch to the correct user
     
     if not user:
         record_login_attempt(identifier, False)
