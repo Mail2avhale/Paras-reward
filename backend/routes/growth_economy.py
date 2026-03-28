@@ -38,7 +38,8 @@ DEFAULT_MIN_PRC_PER_USER = 2.5  # Minimum PRC per user in team (at 16384 users)
 DEFAULT_MAX_PRC_PER_USER = 7.142857  # Maximum PRC per user (at 2 users = 50/7)
 
 DEFAULT_REDEEM_PERCENT = 70  # Default redeem percentage
-DEFAULT_BURN_RATE = 5  # 5% burn on every redeem
+DEFAULT_BURN_RATE_PRC = 5  # 5% burn for Elite by PRC
+DEFAULT_BURN_RATE_CASH = 1  # 1% burn for Elite by Cash/Razorpay
 DEFAULT_PROCESSING_FEE_INR = 10  # ₹10 processing fee
 DEFAULT_ADMIN_CHARGE_PERCENT = 20  # 20% admin charges on PRC
 
@@ -47,7 +48,7 @@ DEFAULT_ADMIN_CHARGE_PERCENT = 20  # 20% admin charges on PRC
 
 class EconomySettings(BaseModel):
     redeem_percent: int = DEFAULT_REDEEM_PERCENT
-    burn_rate: float = DEFAULT_BURN_RATE
+    burn_rate: float = DEFAULT_BURN_RATE_PRC
     processing_fee_inr: float = DEFAULT_PROCESSING_FEE_INR
     admin_charge_percent: float = DEFAULT_ADMIN_CHARGE_PERCENT
     base_mining: int = DEFAULT_BASE_MINING
@@ -139,7 +140,9 @@ async def get_economy_settings() -> dict:
         if settings:
             return {
                 "redeem_percent": settings.get("redeem_percent", DEFAULT_REDEEM_PERCENT),
-                "burn_rate": settings.get("burn_rate", DEFAULT_BURN_RATE),
+                "burn_rate_prc": settings.get("burn_rate_prc", DEFAULT_BURN_RATE_PRC),
+                "burn_rate_cash": settings.get("burn_rate_cash", DEFAULT_BURN_RATE_CASH),
+                "burn_rate": settings.get("burn_rate", DEFAULT_BURN_RATE_PRC),
                 "processing_fee_inr": settings.get("processing_fee_inr", DEFAULT_PROCESSING_FEE_INR),
                 "admin_charge_percent": settings.get("admin_charge_percent", DEFAULT_ADMIN_CHARGE_PERCENT),
                 "base_mining": settings.get("base_mining", DEFAULT_BASE_MINING),
@@ -151,7 +154,9 @@ async def get_economy_settings() -> dict:
     
     return {
         "redeem_percent": DEFAULT_REDEEM_PERCENT,
-        "burn_rate": DEFAULT_BURN_RATE,
+        "burn_rate_prc": DEFAULT_BURN_RATE_PRC,
+        "burn_rate_cash": DEFAULT_BURN_RATE_CASH,
+        "burn_rate": DEFAULT_BURN_RATE_PRC,
         "processing_fee_inr": DEFAULT_PROCESSING_FEE_INR,
         "admin_charge_percent": DEFAULT_ADMIN_CHARGE_PERCENT,
         "base_mining": DEFAULT_BASE_MINING,
@@ -415,22 +420,32 @@ async def get_user_unlock_percent(user_id: str) -> float:
 
 async def calculate_redeem_charges(redeem_prc: float, user_id: str = None) -> dict:
     """
-    Calculate all redeem charges with Dynamic PRC Rate
+    Calculate all redeem charges with Dynamic Burn Rate
     
-    Formula:
-    - Redeem Value: X PRC
-    - PRC Burning: 5% of X
+    Burn Rate:
+    - Elite by Cash/Razorpay: 1% burn
+    - Elite by PRC: 5% burn
+    
+    Other Charges:
     - Processing Fee: ₹10 converted to PRC at dynamic rate
     - Admin Charges: 20% of X PRC
-    
-    Total Deducted = X + (5% burn) + (Processing PRC) + (20% admin)
-    User Gets = X PRC × (1/PRC_Rate) = ₹ value
     """
     settings = await get_economy_settings()
     prc_rate = await get_dynamic_prc_rate()
     
-    # Burn calculation (5% of redeem PRC)
-    burn_rate = settings["burn_rate"] / 100
+    # Dynamic burn rate based on subscription payment type
+    burn_rate_percent = settings["burn_rate_cash"]  # Default 1% (Cash/Razorpay)
+    subscription_payment_type = "cash"
+    
+    if user_id:
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "subscription_payment_type": 1})
+        if user:
+            subscription_payment_type = user.get("subscription_payment_type", "cash")
+            if subscription_payment_type == "prc":
+                burn_rate_percent = settings["burn_rate_prc"]  # 5% for PRC subscription
+    
+    # Burn calculation
+    burn_rate = burn_rate_percent / 100
     burn_prc = round(redeem_prc * burn_rate, 2)
     
     # Processing fee (₹10 → PRC)
@@ -450,7 +465,8 @@ async def calculate_redeem_charges(redeem_prc: float, user_id: str = None) -> di
     return {
         "redeem_prc": redeem_prc,
         "burn_prc": burn_prc,
-        "burn_rate_percent": settings["burn_rate"],
+        "burn_rate_percent": burn_rate_percent,
+        "subscription_payment_type": subscription_payment_type,
         "processing_fee_inr": processing_fee_inr,
         "processing_fee_prc": processing_fee_prc,
         "admin_charge_percent": settings["admin_charge_percent"],
@@ -460,7 +476,7 @@ async def calculate_redeem_charges(redeem_prc: float, user_id: str = None) -> di
         "prc_rate": prc_rate,
         "breakdown": {
             "redeem_value": f"{redeem_prc} PRC",
-            "burning": f"{burn_prc} PRC ({settings['burn_rate']}%)",
+            "burning": f"{burn_prc} PRC ({burn_rate_percent}%)",
             "processing_fee": f"{processing_fee_prc} PRC (₹{processing_fee_inr})",
             "admin_charges": f"{admin_charge_prc} PRC ({settings['admin_charge_percent']}%)",
             "total_deducted": f"{total_prc_deducted} PRC",
