@@ -296,55 +296,74 @@ async def calculate_mining_speed(user_id: str) -> dict:
 async def get_network_size(user_id: str, max_depth: int = 10) -> int:
     """
     Get total ACTIVE network size (only Elite + active mining session users).
-    Uses BFS to traverse referral tree, but only counts active members.
+    Uses batched BFS for performance (1 query per level).
     """
     try:
         now = datetime.now(timezone.utc)
-        visited = set()
-        queue = [user_id]
-        total_count = 0
+        now_iso = now.isoformat()
         
-        while queue and len(visited) < DEFAULT_NETWORK_CAP_WITH_REFERRAL:
-            current_user = queue.pop(0)
-            if current_user in visited:
-                continue
-            visited.add(current_user)
-            
-            # Find ALL referrals (for tree traversal)
-            referrals = await db.users.find(
-                {"referred_by": current_user},
-                {"uid": 1, "subscription_plan": 1, "mining_active": 1, "mining_session_end": 1, "_id": 0}
-            ).to_list(1000)
-            
-            for ref in referrals:
-                ref_uid = ref.get("uid")
-                if ref_uid and ref_uid not in visited:
-                    queue.append(ref_uid)
-                    
-                    # Only COUNT if user is active (Elite + mining session active)
-                    ref_plan = (ref.get("subscription_plan") or "explorer").lower()
-                    is_elite = ref_plan in ["elite", "vip", "startup", "growth", "pro"]
-                    is_mining = ref.get("mining_active", False)
-                    
-                    if is_elite and is_mining:
-                        session_end = ref.get("mining_session_end")
-                        if session_end:
-                            if isinstance(session_end, str):
-                                try:
-                                    end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                                    if end_dt > now:
-                                        total_count += 1
-                                except Exception:
-                                    pass
-                            elif isinstance(session_end, datetime):
-                                if session_end > now:
-                                    total_count += 1
-                        else:
-                            total_count += 1
+        all_uids = set()
+        current_level = {user_id}
         
-        return total_count
+        while current_level and len(all_uids) < DEFAULT_NETWORK_CAP_WITH_REFERRAL:
+            all_uids.update(current_level)
+            remaining = DEFAULT_NETWORK_CAP_WITH_REFERRAL - len(all_uids)
+            if remaining <= 0:
+                break
+            next_docs = await db.users.find(
+                {"referred_by": {"$in": list(current_level)}},
+                {"uid": 1, "_id": 0}
+            ).to_list(remaining + 100)
+            next_level = {d["uid"] for d in next_docs if d.get("uid") and d["uid"] not in all_uids}
+            if not next_level:
+                break
+            current_level = next_level
+        
+        all_uids.discard(user_id)
+        if not all_uids:
+            return 0
+        
+        uid_list = list(all_uids)[:DEFAULT_NETWORK_CAP_WITH_REFERRAL]
+        active_count = await db.users.count_documents({
+            "uid": {"$in": uid_list},
+            "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP"]},
+            "mining_active": True,
+            "mining_session_end": {"$gt": now_iso}
+        })
+        
+        return active_count
     except Exception as e:
         logging.error(f"Error getting network size: {e}")
+        return 0
+
+
+async def get_total_network_size(user_id: str) -> int:
+    """
+    Get TOTAL network size (all members regardless of active status).
+    For display on referral page.
+    """
+    try:
+        all_uids = set()
+        current_level = {user_id}
+        
+        while current_level and len(all_uids) < DEFAULT_NETWORK_CAP_WITH_REFERRAL:
+            all_uids.update(current_level)
+            remaining = DEFAULT_NETWORK_CAP_WITH_REFERRAL - len(all_uids)
+            if remaining <= 0:
+                break
+            next_docs = await db.users.find(
+                {"referred_by": {"$in": list(current_level)}},
+                {"uid": 1, "_id": 0}
+            ).to_list(remaining + 100)
+            next_level = {d["uid"] for d in next_docs if d.get("uid") and d["uid"] not in all_uids}
+            if not next_level:
+                break
+            current_level = next_level
+        
+        all_uids.discard(user_id)
+        return len(all_uids)
+    except Exception as e:
+        logging.error(f"Error getting total network size: {e}")
         return 0
 
 
@@ -352,30 +371,28 @@ async def get_network_size(user_id: str, max_depth: int = 10) -> int:
 
 async def get_growth_network_stats(user_id: str) -> dict:
     """
-    Get Growth Network statistics for a user
-    
-    Returns:
-    - Direct Referrals count
-    - Network Size (total members)
-    - Network Cap (max capacity)
-    - Growth Level
-    - Unlock Percent
+    Get Growth Network statistics for a user.
+    Returns both total network (for display) and active network (for mining rate).
     """
     # Get direct referrals
     direct_referrals = await db.users.count_documents({"referred_by": user_id})
     
-    # Get network size
-    network_size = await get_network_size(user_id)
+    # Get total network size (all members - for display)
+    total_network = await get_total_network_size(user_id)
+    
+    # Get active network size (for mining rate)
+    active_network = await get_network_size(user_id)
     
     # Calculate network cap
     network_cap = calculate_network_cap(direct_referrals)
     
-    # Calculate redeem limit % based on network size
-    redeem_limit_percent = calculate_growth_level(network_size)
+    # Redeem limit uses active network
+    redeem_limit_percent = calculate_growth_level(active_network)
     
     return {
         "direct_referrals": direct_referrals,
-        "network_size": network_size,
+        "network_size": total_network,
+        "active_network_size": active_network,
         "network_cap": network_cap,
         "redeem_limit_percent": redeem_limit_percent,
         "unlock_percent": redeem_limit_percent

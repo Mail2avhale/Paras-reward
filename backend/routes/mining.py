@@ -148,56 +148,46 @@ async def check_subscription_expiry(user: dict) -> dict:
 
 async def get_network_size(user_id: str) -> int:
     """
-    Get total ACTIVE network size for a user.
-    Active user = Elite subscription + active mining session (not expired).
+    Get ACTIVE network size for mining rate calculation.
+    Active = Elite + mining_active + session not expired.
+    Uses batched BFS (1 query per level, not per node).
     """
     try:
         now = datetime.now(timezone.utc)
-        visited = set()
-        queue = [user_id]
-        total_count = 0
+        now_iso = now.isoformat()
         
-        while queue and len(visited) < NETWORK_CAP_WITH_REFERRAL:
-            current_user = queue.pop(0)
-            if current_user in visited:
-                continue
-            visited.add(current_user)
-            
-            # Find ALL referrals (for tree traversal)
-            referrals = await db.users.find(
-                {"referred_by": current_user},
-                {"uid": 1, "subscription_plan": 1, "mining_active": 1, "mining_session_end": 1, "_id": 0}
-            ).to_list(500)
-            
-            for ref in referrals:
-                ref_uid = ref.get("uid")
-                if ref_uid and ref_uid not in visited:
-                    queue.append(ref_uid)
-                    
-                    # Only COUNT if user is active (Elite + mining session active)
-                    ref_plan = (ref.get("subscription_plan") or "explorer").lower()
-                    is_elite = ref_plan in ["elite", "vip", "startup", "growth", "pro"]
-                    is_mining = ref.get("mining_active", False)
-                    
-                    if is_elite and is_mining:
-                        # Check session not expired
-                        session_end = ref.get("mining_session_end")
-                        if session_end:
-                            if isinstance(session_end, str):
-                                try:
-                                    end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                                    if end_dt > now:
-                                        total_count += 1
-                                except Exception:
-                                    pass
-                            elif isinstance(session_end, datetime):
-                                if session_end > now:
-                                    total_count += 1
-                        else:
-                            # mining_active but no session_end → count as active
-                            total_count += 1
+        # Step 1: Collect all UIDs via batched level-by-level BFS
+        all_uids = set()
+        current_level = {user_id}
         
-        return total_count
+        while current_level and len(all_uids) < NETWORK_CAP_WITH_REFERRAL:
+            all_uids.update(current_level)
+            remaining = NETWORK_CAP_WITH_REFERRAL - len(all_uids)
+            if remaining <= 0:
+                break
+            next_docs = await db.users.find(
+                {"referred_by": {"$in": list(current_level)}},
+                {"uid": 1, "_id": 0}
+            ).to_list(remaining + 100)
+            next_level = {d["uid"] for d in next_docs if d.get("uid") and d["uid"] not in all_uids}
+            if not next_level:
+                break
+            current_level = next_level
+        
+        all_uids.discard(user_id)
+        if not all_uids:
+            return 0
+        
+        # Step 2: Single query to count active users
+        uid_list = list(all_uids)[:NETWORK_CAP_WITH_REFERRAL]
+        active_count = await db.users.count_documents({
+            "uid": {"$in": uid_list},
+            "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP"]},
+            "mining_active": True,
+            "mining_session_end": {"$gt": now_iso}
+        })
+        
+        return active_count
     except Exception as e:
         logging.error(f"Error getting network size: {e}")
         return 0
