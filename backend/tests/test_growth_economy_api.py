@@ -19,7 +19,7 @@ import math
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://vip-manual-fees.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://network-capacity-ui.preview.emergentagent.com')
 
 # ==================== FORMULA VERIFICATION HELPERS ====================
 

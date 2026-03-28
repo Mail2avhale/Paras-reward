@@ -10,7 +10,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://vip-manual-fees.preview.emergentagent.com';
+const BASE_URL = 'https://network-capacity-ui.preview.emergentagent.com';
 
 // Test data
 const TEST_USER_ID = 'test_playwright_user_' + Date.now();

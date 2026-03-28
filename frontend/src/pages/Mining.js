@@ -488,11 +488,11 @@ const DailyRewards = ({ user }) => {
     
     setIsCollecting(true);
     try {
-      // Claim mining rewards - uses correct endpoint with 80/20 luxury split
-      const response = await axios.post(`${API}/mining/claim/${user.uid}`);
+      // Collect mining rewards - correct endpoint
+      const response = await axios.post(`${API}/mining/collect/${user.uid}`);
       
       const data = response.data;
-      const claimed = data.claimed_amount || data.prc_collected || sessionPRC;
+      const claimed = data.collected_amount || data.claimed_amount || data.prc_collected || sessionPRC;
       
       // Store claimed amount for display
       setLastCollectedAmount(claimed);

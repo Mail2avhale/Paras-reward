@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts, waitForAppReady } from '../fixtures/helpers';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL || 'https://vip-manual-fees.preview.emergentagent.com';
+const API_BASE = process.env.REACT_APP_BACKEND_URL || 'https://network-capacity-ui.preview.emergentagent.com';
 
 test.describe('Razorpay Subscription Payment E2E Flow', () => {
   

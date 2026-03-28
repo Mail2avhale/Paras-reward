@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://vip-manual-fees.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://network-capacity-ui.preview.emergentagent.com';
 
 test.describe('BBPS Universal Module - API Tests', () => {
   
