@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Users, Copy, Check, Share2, ArrowLeft, TrendingUp, 
-  ChevronRight, UserCheck, Link2, RefreshCw
+  UserCheck, Link2, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ const ReferralsEnhanced = ({ user }) => {
       // Fetch network stats and referrals in parallel with timeout
       const [statsRes, referralsRes] = await Promise.all([
         axios.get(`${API}/api/growth/network-stats/${user.uid}`, { timeout: 15000 }).catch(() => null),
-        axios.get(`${API}/api/referrals/direct/${user.uid}`, { timeout: 10000 }).catch(() => null)
+        axios.get(`${API}/api/referrals/${user.uid}/direct-list`, { timeout: 10000 }).catch(() => null)
       ]);
       
       if (statsRes?.data?.success) {
@@ -160,24 +160,33 @@ const ReferralsEnhanced = ({ user }) => {
           </div>
         )}
 
-        {/* Stats Cards - Only Direct Referrals & Network Size */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Stats Cards - Direct, Active, Network */}
+        <div className="grid grid-cols-3 gap-3">
           {/* Direct Referrals */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 text-center" data-testid="direct-referrals-card">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-400" />
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center" data-testid="direct-referrals-card">
+            <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-blue-500/20 flex items-center justify-center">
+              <Users className="w-5 h-5 text-blue-400" />
             </div>
-            <p className="text-3xl font-bold text-white">{networkStats?.direct_referrals || 0}</p>
-            <p className="text-sm text-gray-500">Direct Referrals</p>
+            <p className="text-2xl font-bold text-white">{networkStats?.direct_referrals || 0}</p>
+            <p className="text-xs text-gray-500">Direct</p>
           </div>
 
-          {/* Network Size */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 text-center" data-testid="network-size-card">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-purple-500/20 flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-purple-400" />
+          {/* Active Network */}
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center" data-testid="active-network-card">
+            <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+              <UserCheck className="w-5 h-5 text-emerald-400" />
             </div>
-            <p className="text-3xl font-bold text-white">{networkStats?.network_size || 0}</p>
-            <p className="text-sm text-gray-500">Network Size</p>
+            <p className="text-2xl font-bold text-emerald-400">{networkStats?.active_network_size || 0}</p>
+            <p className="text-xs text-gray-500">Active</p>
+          </div>
+
+          {/* Total Network Size */}
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center" data-testid="network-size-card">
+            <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-purple-500/20 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-purple-400" />
+            </div>
+            <p className="text-2xl font-bold text-white">{networkStats?.network_size || 0}</p>
+            <p className="text-xs text-gray-500">Total</p>
           </div>
         </div>
 
@@ -203,40 +212,50 @@ const ReferralsEnhanced = ({ user }) => {
             <div className="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
               <h3 className="text-white font-semibold flex items-center gap-2">
                 <UserCheck className="w-5 h-5 text-blue-400" />
-                Your Direct Referrals
+                Direct Connections
               </h3>
-              <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg text-sm">
-                {directReferrals.length}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-xs">
+                  {directReferrals.filter(r => r.is_active).length} Active
+                </span>
+                <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">
+                  {directReferrals.filter(r => !r.is_active).length} Inactive
+                </span>
+              </div>
             </div>
             
-            <div className="divide-y divide-gray-800 max-h-64 overflow-y-auto">
+            <div className="divide-y divide-gray-800 max-h-80 overflow-y-auto">
               {directReferrals.map((ref, index) => (
-                <div key={ref.uid || index} className="px-5 py-3 flex items-center justify-between">
+                <div key={ref.uid || index} className="px-5 py-3 flex items-center justify-between" data-testid={`referral-item-${index}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                      ref.subscription_plan && ref.subscription_plan !== 'explorer' 
-                        ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/30' 
-                        : 'bg-gray-700 text-gray-400'
-                    }`}>
-                      {ref.name?.charAt(0)?.toUpperCase() || 'U'}
+                    <div className="relative">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                        ref.is_active
+                          ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/30' 
+                          : 'bg-gray-700 text-gray-400'
+                      }`}>
+                        {ref.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                      {/* Active/Inactive dot indicator */}
+                      <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0a0a0f] ${
+                        ref.is_active ? 'bg-emerald-500' : 'bg-red-500'
+                      }`} />
                     </div>
                     <div>
                       <p className="text-white text-sm font-medium">{ref.name || 'User'}</p>
-                      <p className="text-xs text-gray-500">
-                        {ref.subscription_plan && ref.subscription_plan !== 'explorer' 
-                          ? `Elite Member` 
+                      <p className={`text-xs ${ref.is_active ? 'text-emerald-400' : 'text-gray-500'}`}>
+                        {ref.subscription_plan && ref.subscription_plan.toLowerCase() !== 'explorer' 
+                          ? 'Elite' 
                           : 'Explorer'}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {ref.subscription_plan && ref.subscription_plan !== 'explorer' ? (
-                      <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-lg">Active</span>
+                    {ref.is_active ? (
+                      <span className="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 text-xs rounded-lg font-medium" data-testid={`status-active-${index}`}>Active</span>
                     ) : (
-                      <span className="px-2 py-1 bg-gray-700 text-gray-500 text-xs rounded-lg">Free</span>
+                      <span className="px-2.5 py-1 bg-red-500/15 text-red-400 text-xs rounded-lg font-medium" data-testid={`status-inactive-${index}`}>Inactive</span>
                     )}
-                    <ChevronRight className="w-4 h-4 text-gray-600" />
                   </div>
                 </div>
               ))}

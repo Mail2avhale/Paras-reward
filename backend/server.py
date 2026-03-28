@@ -35506,19 +35506,27 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
     result = []
     now = datetime.now(timezone.utc)
     for ref in direct_referrals:
-        # UPDATED: Active = Elite subscription + Mining session active
+        # UPDATED: Active = Elite subscription + Mining session active + session not expired
         is_active = False
         subscription_plan = (ref.get("subscription_plan") or "").lower()
         
-        is_elite = subscription_plan == "elite"
-        is_mining = False
+        is_elite = subscription_plan in ["elite", "vip", "startup", "growth", "pro"]
         
-        # Check mining_active flag (ignore session end time)
+        # Check mining_active flag
         mining_active = ref.get("mining_active")
         is_mining_flag = mining_active is True or mining_active == "true" or mining_active == True
         
-        # Active only if Elite AND mining_active flag is True
-        is_active = is_elite and is_mining_flag
+        # Check mining session not expired
+        session_end = ref.get("mining_session_end", "")
+        session_valid = False
+        if session_end:
+            try:
+                session_valid = str(session_end) > now.isoformat()
+            except Exception:
+                session_valid = False
+        
+        # Active only if Elite AND mining_active AND session not expired
+        is_active = is_elite and is_mining_flag and session_valid
         
         result.append({
             "uid": ref["uid"],
