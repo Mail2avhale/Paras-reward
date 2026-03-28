@@ -237,10 +237,13 @@ async def calculate_mining_rate(user_id: str) -> dict:
     REFRESH_INTERVAL = 1800  # 30 minutes
     need_refresh = True
     network_size = 0
+    total_network_members = user.get("_cached_total_network", 0) or 0
     
-    # Check ALL possible cache field names (shared between mining.py and growth_economy.py)
-    cached_network = user.get("_cached_network_size") or user.get("_cached_active_network")
-    cached_at = user.get("_cached_network_at") or user.get("_cached_network_stats_at") or ""
+    # Check cache fields — use explicit None check (0 is valid!)
+    cached_network = user.get("_cached_active_network")
+    if cached_network is None:
+        cached_network = user.get("_cached_network_size")
+    cached_at = user.get("_cached_network_stats_at") or user.get("_cached_network_at") or ""
     
     if cached_network is not None and cached_at:
         try:
@@ -251,14 +254,14 @@ async def calculate_mining_rate(user_id: str) -> dict:
             if age < REFRESH_INTERVAL:
                 network_size = cached_network
                 need_refresh = False
-                logging.info(f"[MINING] Cache HIT for {user_id}: size={network_size}, age={age:.0f}s")
         except Exception as e:
             logging.warning(f"[MINING] Cache parse error for {user_id}: {e}")
     
     if need_refresh:
-        logging.info(f"[MINING] Cache MISS for {user_id}, computing BFS...")
         network_size = await get_network_size(user_id)
-        # Store in user doc — use BOTH field names for cross-compatibility
+        # Also get total network for transparency
+        all_uids = await _get_network_uids(user_id)
+        total_network_members = len(all_uids)
         now_iso = datetime.now(timezone.utc).isoformat()
         try:
             await db.users.update_one(
@@ -267,10 +270,10 @@ async def calculate_mining_rate(user_id: str) -> dict:
                     "_cached_network_size": network_size,
                     "_cached_network_at": now_iso,
                     "_cached_active_network": network_size,
-                    "_cached_network_stats_at": now_iso
+                    "_cached_network_stats_at": now_iso,
+                    "_cached_total_network": total_network_members
                 }}
             )
-            logging.info(f"[MINING] Cache STORED for {user_id}: size={network_size}")
         except Exception as e:
             logging.warning(f"[MINING] Cache store failed for {user_id}: {e}")
     
@@ -299,6 +302,8 @@ async def calculate_mining_rate(user_id: str) -> dict:
         "network_rate": round(network_rate, 2),
         "prc_per_user": round(prc_per_user, 6),
         "network_size": effective_network,
+        "active_network": network_size,
+        "total_network_members": total_network_members,
         "network_cap": network_cap,
         "direct_referrals": direct_referrals,
         "boost_multiplier": boost_multiplier,
@@ -394,6 +399,9 @@ async def get_mining_status(uid: str):
             "remaining_hours": round(remaining_hours, 2),  # For frontend
             "session_progress": round(session_progress, 2),
             "network_size": rate_info["network_size"],
+            "active_network": rate_info["active_network"],
+            "total_network_members": rate_info["total_network_members"],
+            "direct_referrals": rate_info["direct_referrals"],
             "network_cap": rate_info["network_cap"],
             "prc_per_user": rate_info["prc_per_user"],
             "subscription_type": rate_info["subscription_type"]
@@ -627,6 +635,8 @@ async def get_rate_breakdown(uid: str):
             "network_cap_formula": "0 refs → 800, ≥1 ref → 4000",
             "base_rate": rate_info["base_rate"],
             "network_size": rate_info["network_size"],
+            "active_network": rate_info["active_network"],
+            "total_network_members": rate_info["total_network_members"],
             "network_cap": rate_info["network_cap"],
             "prc_per_user": rate_info["prc_per_user"],
             "network_rate": rate_info["network_rate"],

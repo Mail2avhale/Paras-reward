@@ -388,7 +388,7 @@ async def get_growth_network_stats(user_id: str) -> dict:
     # Direct referrals (fast - indexed)
     direct_referrals = await db.users.count_documents({"referred_by": user_id})
     
-    # Check if cached stats are fresh — check ALL cache field names
+    # Check if cached stats are fresh — use explicit None check (0 is valid)
     cached_at = (user or {}).get("_cached_network_stats_at") or (user or {}).get("_cached_network_at") or ""
     need_refresh = True
     total_network = 0
@@ -401,8 +401,11 @@ async def get_growth_network_stats(user_id: str) -> dict:
                 cached_dt = cached_dt.replace(tzinfo=timezone.utc)
             age = (datetime.now(timezone.utc) - cached_dt).total_seconds()
             if age < REFRESH_INTERVAL:
-                total_network = (user or {}).get("_cached_total_network", 0)
-                active_network = (user or {}).get("_cached_active_network") or (user or {}).get("_cached_network_size", 0)
+                total_network = (user or {}).get("_cached_total_network") or 0
+                active_val = (user or {}).get("_cached_active_network")
+                if active_val is None:
+                    active_val = (user or {}).get("_cached_network_size", 0)
+                active_network = active_val if active_val is not None else 0
                 need_refresh = False
         except Exception:
             pass

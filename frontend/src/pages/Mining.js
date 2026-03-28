@@ -178,6 +178,7 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
   const [referralBreakdown, setReferralBreakdown] = useState(null); // Level-wise breakdown
   const [baseRate, setBaseRate] = useState(0); // Individual base mining rate (includes growth network bonus)
   const [networkRate, setNetworkRate] = useState(0); // Network mining rate from Growth Economy
+  const [formulaData, setFormulaData] = useState(null); // Transparent formula breakdown
   
   // Collect state
   const [lastCollectedAmount, setLastCollectedAmount] = useState(0);
@@ -241,6 +242,17 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
       setReferralBreakdown(miningData.referral_breakdown || null);
       setBaseRate(miningData.base_rate || 20.83);
       setNetworkRate(miningData.network_rate || 0); // Growth Network rate
+      setFormulaData({
+        activeNetwork: miningData.network_size || 0,
+        totalMembers: miningData.total_network_members || 0,
+        directReferrals: miningData.direct_referrals || 0,
+        networkCap: miningData.network_cap || 0,
+        prcPerUser: miningData.prc_per_user || 0,
+        networkRate: miningData.network_rate || 0,
+        baseRate: miningData.base_rate || 500,
+        boostMultiplier: miningData.boost_multiplier || 1,
+        totalDailyRate: miningData.total_daily_rate || 500
+      });
       
       // Auto-start mining display if session is active
       // FIXED: Check session_active flag from API (source of truth)
@@ -988,6 +1000,79 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
           </div>
         </motion.div>
       </div>
+
+      {/* Mining Formula Breakdown - Transparent Calculation */}
+      {formulaData && (
+        <div className="px-5 mb-6" data-testid="mining-formula-breakdown">
+          <div className="bg-zinc-900/80 backdrop-blur-sm rounded-2xl p-5 border border-zinc-800/50">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-4 h-4 text-amber-400" />
+              <p className="text-zinc-300 text-sm font-medium">Mining Formula</p>
+            </div>
+            
+            <div className="space-y-2.5">
+              {/* Base Rate */}
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500 text-xs">Base Rate</span>
+                <span className="text-zinc-200 text-xs font-mono">{formulaData.baseRate} PRC/day</span>
+              </div>
+              
+              {/* Active Network */}
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500 text-xs">Active Members</span>
+                <span className="text-zinc-200 text-xs font-mono">
+                  {formulaData.activeNetwork}{formulaData.totalMembers > 0 ? ` / ${formulaData.totalMembers} total` : ''}
+                </span>
+              </div>
+              
+              {/* Network Cap */}
+              {formulaData.directReferrals > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-500 text-xs">Network Cap ({formulaData.directReferrals} direct)</span>
+                  <span className="text-zinc-200 text-xs font-mono">{formulaData.networkCap}</span>
+                </div>
+              )}
+              
+              {/* PRC per Member */}
+              {formulaData.activeNetwork > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-500 text-xs">PRC per Member</span>
+                  <span className="text-zinc-200 text-xs font-mono">{formulaData.prcPerUser.toFixed(2)}</span>
+                </div>
+              )}
+              
+              {/* Network Bonus Calculation */}
+              <div className="pt-2 border-t border-zinc-800">
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-400 text-xs">Network Bonus</span>
+                  <span className="text-amber-400 text-xs font-mono">
+                    {formulaData.activeNetwork > 0 
+                      ? `${formulaData.activeNetwork} x ${formulaData.prcPerUser.toFixed(2)} = ${formulaData.networkRate.toFixed(2)}`
+                      : '0.00'
+                    } PRC/day
+                  </span>
+                </div>
+              </div>
+              
+              {/* Speed Multiplier */}
+              {formulaData.boostMultiplier < 1 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-500 text-xs">Speed (PRC payment)</span>
+                  <span className="text-amber-400 text-xs font-mono">{(formulaData.boostMultiplier * 100).toFixed(0)}%</span>
+                </div>
+              )}
+              
+              {/* Total */}
+              <div className="pt-2 border-t border-zinc-800">
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-300 text-sm font-medium">Total Daily</span>
+                  <span className="text-amber-400 text-sm font-bold font-mono">{formulaData.totalDailyRate.toFixed(2)} PRC</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Free User Warning - Dark Theme */}
       {!hasPaidPlan && (
