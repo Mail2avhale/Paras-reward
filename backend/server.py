@@ -15665,24 +15665,85 @@ async def update_redeem_settings(
 
 async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
-    DEPRECATED: Redeem limits have been removed.
-    Returns unlimited for backwards compatibility.
+    Dynamic Redeem Limit based on Growth Network size.
+    
+    Formula:
+    - Total Earned PRC = Current Balance + All Time Redeemed
+    - Unlock % = based on Growth Network level, capped by admin max
+    - Redeemable PRC = Total Earned × (Unlock% / 100)
+    - Used = All Time Redeemed
+    - Available = Redeemable - Used (capped at current balance)
     """
-    return {
-        "deprecated": True,
-        "message": "Redeem limits have been removed. Redemption is now unlimited.",
-        "plan": "unlimited",
-        "plan_price": 0,
-        "base_limit": 999999999,
-        "monthly_limit": 999999999,
-        "months_active": 999,
-        "active_referrals": 0,
-        "referral_percentage_increase": 0,
-        "total_limit": 999999999,
-        "carry_forward_enabled": False,
-        "unlimited": True,
-        "feature_removed": True
-    }
+    try:
+        from routes.growth_economy import get_user_unlock_percent, get_network_size, calculate_growth_level
+        
+        # Get user data
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "total_mined_prc": 1, "total_mined": 1})
+        if not user:
+            return {
+                "total_earned": 0,
+                "unlock_percent": 0,
+                "redeemable": 0,
+                "total_redeemed": 0,
+                "available": 0,
+                "network_size": 0,
+                "growth_level": 0,
+                "total_limit": 0,
+                "unlimited": False
+            }
+        
+        current_balance = float(user.get("prc_balance", 0) or 0)
+        
+        # Total used PRC (all time)
+        total_redeemed = await get_user_all_time_redeemed(user_id)
+        
+        # Total earned = what user has now + what they already spent
+        total_earned = current_balance + total_redeemed
+        
+        # Get unlock % from growth network
+        unlock_percent = await get_user_unlock_percent(user_id)
+        network_size = await get_network_size(user_id)
+        growth_level = calculate_growth_level(network_size)
+        
+        # Redeemable PRC = Total Earned × Unlock%
+        redeemable = total_earned * (unlock_percent / 100)
+        
+        # Available = Redeemable - Already Used
+        available = max(0, redeemable - total_redeemed)
+        
+        # Cannot exceed current balance
+        effective_available = min(available, current_balance)
+        
+        return {
+            "total_earned": round(total_earned, 2),
+            "unlock_percent": unlock_percent,
+            "redeemable": round(redeemable, 2),
+            "total_redeemed": round(total_redeemed, 2),
+            "available": round(available, 2),
+            "effective_available": round(effective_available, 2),
+            "current_balance": round(current_balance, 2),
+            "network_size": network_size,
+            "growth_level": growth_level,
+            "total_limit": round(redeemable, 2),
+            "unlimited": False
+        }
+    except Exception as e:
+        logging.error(f"Error calculating redeem limit for {user_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "total_earned": 0,
+            "unlock_percent": 0,
+            "redeemable": 0,
+            "total_redeemed": 0,
+            "available": 0,
+            "effective_available": 0,
+            "current_balance": 0,
+            "network_size": 0,
+            "growth_level": 0,
+            "total_limit": 0,
+            "unlimited": False
+        }
     try:
         # Plan prices for formula: Plan × 5 × 10
         PLAN_PRICES = {
@@ -16058,61 +16119,57 @@ async def debug_redemption_fields(user_id: str):
 async def get_user_redeem_limit_internal(user_id: str, user: dict = None) -> dict:
     """
     Internal helper to get user's redeem limit data.
-    Used by admin members list and other internal functions.
+    Uses dynamic Growth Network based formula.
     """
     try:
         limit_info = await calculate_user_redeem_limit(user_id)
-        total_limit = limit_info.get("total_limit", 0)
-        # Use get_user_all_time_redeemed for consistent calculation across the app
-        total_redeemed = await get_user_all_time_redeemed(user_id)
-        remaining = max(0, total_limit - total_redeemed)
         
         return {
-            "plan": limit_info.get("plan", "explorer"),
-            "months_active": limit_info.get("months_active", 1),
-            "total_referrals": limit_info.get("total_referrals", 0),
-            "active_referrals": limit_info.get("active_referrals", 0),
-            "referral_bonus_percent": limit_info.get("referral_percentage_increase", 0),
-            "total_limit": round(total_limit, 2),
-            "total_redeemed": round(total_redeemed, 2),
-            "remaining_limit": round(remaining, 2)
+            "unlock_percent": limit_info.get("unlock_percent", 0),
+            "network_size": limit_info.get("network_size", 0),
+            "growth_level": limit_info.get("growth_level", 0),
+            "total_earned": limit_info.get("total_earned", 0),
+            "total_limit": limit_info.get("total_limit", 0),
+            "total_redeemed": limit_info.get("total_redeemed", 0),
+            "remaining_limit": limit_info.get("available", 0),
+            "effective_available": limit_info.get("effective_available", 0)
         }
     except Exception as e:
         logging.error(f"Error getting redeem limit for {user_id}: {e}")
         return {
-            "plan": "explorer",
-            "months_active": 1,
-            "active_referrals": 0,
+            "unlock_percent": 0,
+            "network_size": 0,
+            "growth_level": 0,
+            "total_earned": 0,
             "total_limit": 0,
             "total_redeemed": 0,
-            "remaining_limit": 0
+            "remaining_limit": 0,
+            "effective_available": 0
         }
 
 
 async def check_redeem_limit(user_id: str, amount: float) -> dict:
     """
     Check if user can redeem the specified amount.
+    Uses dynamic Growth Network based limits.
     Returns: {"allowed": bool, "reason": str, "limit_info": dict}
     """
     try:
-        # Get limit info
         limit_info = await calculate_user_redeem_limit(user_id)
-        total_limit = limit_info["total_limit"]
+        effective_available = limit_info.get("effective_available", 0)
+        unlock_percent = limit_info.get("unlock_percent", 0)
         
-        # Get total redeemed - use consistent function
-        total_redeemed = await get_user_all_time_redeemed(user_id)
-        
-        # Calculate remaining
-        remaining = total_limit - total_redeemed
-        
-        limit_info["total_redeemed"] = total_redeemed
-        limit_info["remaining_limit"] = round(remaining, 2)
-        
-        # Check if amount exceeds remaining
-        if amount > remaining:
+        if unlock_percent == 0:
             return {
                 "allowed": False,
-                "reason": f"Redeem limit exceeded. Remaining limit: {remaining:.2f} PRC. Total limit: {total_limit:.2f} PRC",
+                "reason": "Your Growth Network is too small. Get referrals to unlock redeem.",
+                "limit_info": limit_info
+            }
+        
+        if amount > effective_available:
+            return {
+                "allowed": False,
+                "reason": f"Redeem limit exceeded. Available: {effective_available:.2f} PRC (Unlock: {unlock_percent}%)",
                 "limit_info": limit_info
             }
         
@@ -16123,7 +16180,6 @@ async def check_redeem_limit(user_id: str, amount: float) -> dict:
         }
     except Exception as e:
         logging.error(f"Error checking redeem limit: {e}")
-        # Fail open - allow transaction on error
         return {
             "allowed": True,
             "reason": None,
@@ -16157,40 +16213,30 @@ async def get_user_redeem_limit(user_id: str, request: Request):
     
     try:
         limit_info = await calculate_user_redeem_limit(user_id)
-        # Use consistent function for total redeemed
-        total_redeemed = await get_user_all_time_redeemed(user_id)
-        
-        # Get user's current PRC balance
-        user = await db.users.find_one({"uid": user_id}, {"prc_balance": 1})
-        available_prc = float(user.get("prc_balance", 0) or 0) if user else 0
-        
-        # Calculate remaining based on limit
-        remaining_from_limit = limit_info["total_limit"] - total_redeemed
-        
-        # IMPORTANT: Effective remaining = MIN(remaining_limit, available_prc)
-        # User can only redeem up to their available PRC balance
-        effective_remaining = min(max(0, remaining_from_limit), available_prc)
-        
-        usage_percentage = (total_redeemed / limit_info["total_limit"]) * 100 if limit_info["total_limit"] > 0 else 0
         
         return {
             "success": True,
             "user_id": user_id,
             "limit": {
-                "base_limit": limit_info["base_limit"],
-                "monthly_limit": limit_info.get("monthly_limit", BASE_REDEEM_LIMIT),
-                "monthly_limit_with_bonus": limit_info.get("monthly_limit_with_bonus", BASE_REDEEM_LIMIT),
-                "months_active": limit_info.get("months_active", 1),
-                "active_referrals": limit_info.get("active_referrals", 0),
-                "referral_percentage_increase": limit_info.get("referral_percentage_increase", 0),
-                "total_limit": limit_info["total_limit"],
-                "total_redeemed": total_redeemed,
-                "remaining_limit": round(max(0, remaining_from_limit), 2),  # Limit-based remaining
-                "available_prc": round(available_prc, 2),  # User's actual PRC balance
-                "effective_remaining": round(effective_remaining, 2),  # MIN(remaining_limit, available_prc)
-                "usage_percentage": round(usage_percentage, 2),
-                "carry_forward_enabled": limit_info.get("carry_forward_enabled", True),
-                "note": "effective_remaining = MIN(remaining_limit, available_prc)"
+                "unlock_percent": limit_info.get("unlock_percent", 0),
+                "network_size": limit_info.get("network_size", 0),
+                "growth_level": limit_info.get("growth_level", 0),
+                "total_earned": limit_info.get("total_earned", 0),
+                "redeemable": limit_info.get("redeemable", 0),
+                "total_limit": limit_info.get("total_limit", 0),
+                "total_redeemed": limit_info.get("total_redeemed", 0),
+                "available": limit_info.get("available", 0),
+                "effective_available": limit_info.get("effective_available", 0),
+                "current_balance": limit_info.get("current_balance", 0),
+                "remaining_limit": limit_info.get("available", 0),
+                "available_prc": limit_info.get("current_balance", 0),
+                "effective_remaining": limit_info.get("effective_available", 0),
+                "usage_percentage": round(
+                    (limit_info.get("total_redeemed", 0) / limit_info.get("redeemable", 1)) * 100 
+                    if limit_info.get("redeemable", 0) > 0 else 0, 2
+                ),
+                "unlimited": False,
+                "note": "Dynamic limit based on Growth Network. Grow your network to unlock more."
             }
         }
     except Exception as e:

@@ -342,31 +342,26 @@ def calculate_growth_level(network_size: int) -> int:
 
 async def get_user_unlock_percent(user_id: str) -> int:
     """
-    Get user's unlock percentage based on growth level
-    Admin can override this with global setting
+    Get user's unlock percentage based on Growth Network size.
     
-    Default: Level × 10%, max 100%
-    Admin Override: Fixed percentage (50/60/70/80/100)
+    Network Size → Level → Unlock%:
+    10→10%, 20→20%, 40→30%, 80→40%, 160→50%, 320→60%, 640→70%, 800→80%, 1000+→100%
+    
+    Admin can set a MAX CAP (default 70%). 
+    Final unlock = min(network_unlock, admin_max_cap)
     """
     settings = await get_economy_settings()
-    admin_redeem_percent = settings.get("redeem_percent", DEFAULT_REDEEM_PERCENT)
+    admin_max_cap = settings.get("redeem_percent", DEFAULT_REDEEM_PERCENT)
     
-    # If admin has set a fixed percentage, use that
-    if admin_redeem_percent < 100:
-        return admin_redeem_percent
-    
-    # Otherwise, calculate based on growth level
-    user = await db.users.find_one({"uid": user_id}, {"_id": 0})
-    if not user:
-        return admin_redeem_percent
-    
+    # Calculate unlock from network level
     network_size = await get_network_size(user_id)
     growth_level = calculate_growth_level(network_size)
+    network_unlock = min(100, growth_level * 10)
     
-    # Unlock% = min(100, Level × 10)
-    unlock_percent = min(100, growth_level * 10)
+    # Cap at admin max
+    final_unlock = min(network_unlock, admin_max_cap)
     
-    return max(unlock_percent, admin_redeem_percent)
+    return final_unlock
 
 
 # ==================== REDEEM CALCULATION ====================

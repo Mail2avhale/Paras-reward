@@ -1441,11 +1441,11 @@ const RedeemPageV2 = ({ user }) => {
       }
     }
     
-    // Check Available Redeem Limit (NOT prc_balance)
+    // Check Available Redeem Limit (Dynamic Growth Network based)
     if (charges && redeemLimit) {
-      const availableLimit = redeemLimit.effective_remaining || redeemLimit.remaining_limit || redeemLimit.remaining || 0;
+      const availableLimit = redeemLimit.effective_available || redeemLimit.effective_remaining || redeemLimit.available || redeemLimit.remaining_limit || 0;
       if (availableLimit < charges.total_prc_required) {
-        toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${charges.total_prc_required.toLocaleString()} PRC`);
+        toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${charges.total_prc_required.toLocaleString()} PRC. Grow your network to unlock more.`);
         return;
       }
     }

@@ -1,0 +1,107 @@
+{
+  "iteration": 150,
+  "mode": "feature_testing",
+  "summary": "Tested Dynamic Redeem Limit System based on Growth Network size. All 17 backend tests passed. The new system correctly calculates unlock% from network size (Level thresholds: 10→10%, 20→20%, 40→30%, etc.), applies admin max cap (70% default), and computes redeemable/available PRC using the formula: Redeemable = Total Earned × Unlock%, Available = max(0, Redeemable - Total Redeemed), capped at current balance.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_dynamic_redeem_limit.py",
+    "/app/test_reports/pytest/dynamic_redeem_limit_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "calculate_user_redeem_limit() in server.py line ~15666 correctly implements the formula",
+    "get_user_unlock_percent() in growth_economy.py correctly calculates unlock from network level with admin cap",
+    "calculate_growth_level() uses correct thresholds: [10, 20, 40, 80, 160, 320, 640, 800, 1000]",
+    "get_network_size() uses BFS to traverse referral tree up to max depth",
+    "API endpoint /api/user/{uid}/redeem-limit returns all required fields including effective_available"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_dynamic_redeem_limit.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)",
+    "frontend": "N/A - backend only testing as requested"
+  },
+  "test_credentials": {
+    "test_user_no_referrals": {
+      "uid": "burn-test-1-e8c8c055",
+      "email": "burntest1@test.com",
+      "network_size": 0,
+      "growth_level": 0,
+      "unlock_percent": 0,
+      "total_earned": 49443.17,
+      "redeemable": 0,
+      "available": 0
+    },
+    "test_user_with_referrals": {
+      "uid": "cbdf46d7-7d66-4d43-8495-e1432a2ab071",
+      "email": "santosh@test.com",
+      "network_size": 50,
+      "growth_level": 3,
+      "unlock_percent": 30,
+      "total_earned": 110173.37,
+      "redeemable": 33052.01,
+      "total_redeemed": 83099,
+      "available": 0,
+      "note": "User has already redeemed more than current limit allows (251% usage)"
+    }
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Dynamic Redeem Limit System fully verified. Formula: Unlock% = min(Level × 10, AdminMaxCap), Redeemable = TotalEarned × Unlock%, Available = max(0, Redeemable - TotalRedeemed), EffectiveAvailable = min(Available, CurrentBalance). Level thresholds: [10, 20, 40, 80, 160, 320, 640, 800, 1000]. Admin default max cap is 70%. burn-test-1 has 0 network = 0% unlock. santosh has 50 network = Level 3 = 30% unlock but has already exceeded limit (83099 redeemed vs 33052 redeemable).",
+  "features_tested": {
+    "GET /api/user/{uid}/redeem-limit": "PASS - Returns unlock_percent, network_size, growth_level, total_earned, redeemable, total_redeemed, available, effective_available",
+    "User with 0 referrals": "PASS - Has 0% unlock, 0 redeemable, 0 available",
+    "User with 50 network": "PASS - Has Level 3 = 30% unlock (capped by admin 70% default)",
+    "Redeemable formula": "PASS - Redeemable = total_earned × (unlock_percent / 100)",
+    "Available formula": "PASS - Available = max(0, redeemable - total_redeemed)",
+    "Effective available cap": "PASS - Capped at current_balance",
+    "Growth level calculation": "PASS - Follows thresholds [10, 20, 40, 80, 160, 320, 640, 800, 1000]",
+    "Unlock percent calculation": "PASS - unlock_percent = min(level × 10, admin_max_cap)",
+    "Total earned formula": "PASS - total_earned = current_balance + total_redeemed",
+    "Non-existent user": "PASS - Returns zero values",
+    "Unlimited flag": "PASS - Always false in new dynamic system"
+  },
+  "api_responses_verified": {
+    "burn-test-1-e8c8c055 (0 referrals)": {
+      "unlock_percent": 0,
+      "network_size": 0,
+      "growth_level": 0,
+      "total_earned": 49443.17,
+      "redeemable": 0,
+      "available": 0,
+      "effective_available": 0,
+      "current_balance": 49443.17
+    },
+    "santosh (50 network)": {
+      "unlock_percent": 30,
+      "network_size": 50,
+      "growth_level": 3,
+      "total_earned": 110173.37,
+      "redeemable": 33052.01,
+      "total_redeemed": 83099,
+      "available": 0,
+      "effective_available": 0,
+      "current_balance": 27074.37,
+      "usage_percentage": 251.42
+    }
+  },
+  "formula_verification": {
+    "level_thresholds": [10, 20, 40, 80, 160, 320, 640, 800, 1000],
+    "unlock_percent_per_level": "Level × 10 (L1=10%, L2=20%, L3=30%, etc.)",
+    "admin_max_cap_default": 70,
+    "redeemable_formula": "total_earned × (unlock_percent / 100)",
+    "available_formula": "max(0, redeemable - total_redeemed)",
+    "effective_available_formula": "min(available, current_balance)",
+    "total_earned_formula": "current_balance + all_time_redeemed"
+  }
+}
