@@ -1077,54 +1077,41 @@ const DashboardModern = ({ user, onLogout }) => {
                 </div>
                 
                 <div className="relative z-10">
-                  {/* Header - Total PRC - Used = Available with INR */}
+                  {/* Clean PRC Redeem Card */}
                   {(() => {
                     const prcRate = stats.prcRate || 10;
                     const rl = stats.redeemLimit || {};
-                    const totalEarned = rl.total_earned || (stats.prcBalance + stats.totalRedeemed);
-                    const totalUsed = rl.total_redeemed || stats.totalRedeemed || 0;
-                    const availablePRC = rl.effective_available || Math.max(0, stats.prcBalance);
+                    const balance = stats.prcBalance || 0;
+                    const availablePRC = rl.effective_available || 0;
                     const unlockPct = rl.redeem_limit_percent || rl.unlock_percent || 0;
                     
                     return (
                       <>
-                        {/* Total Earned */}
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                            <Banknote className="w-5 h-5 text-white" />
+                        {/* Available to Redeem - Main Focus */}
+                        <div className="mb-3">
+                          <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Available to Redeem</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-white text-3xl font-bold">{availablePRC.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                            <p className="text-white/60 text-sm">PRC</p>
                           </div>
-                          <div>
-                            <p className="text-white/60 text-xs uppercase tracking-wider">Total Earned PRC</p>
-                            <p className="text-white text-2xl font-bold">{totalEarned.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                            <p className="text-emerald-300/70 text-xs">≈ ₹{Math.floor(totalEarned / prcRate).toLocaleString()}</p>
+                          <p className="text-emerald-300 text-sm font-semibold">≈ ₹{Math.floor(availablePRC / prcRate).toLocaleString()}</p>
+                        </div>
+
+                        {/* Balance + Unlock % */}
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <div className="bg-white/10 backdrop-blur rounded-xl p-2.5">
+                            <p className="text-white/50 text-[10px] uppercase">PRC Balance</p>
+                            <p className="text-white text-sm font-bold">{balance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                          </div>
+                          <div className="bg-white/10 backdrop-blur rounded-xl p-2.5">
+                            <p className="text-white/50 text-[10px] uppercase">Unlock</p>
+                            <p className="text-amber-400 text-sm font-bold">{unlockPct}%</p>
                           </div>
                         </div>
 
-                        {/* Breakdown: Total - Used = Available */}
-                        <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/60 text-xs">Total Earned</span>
-                            <span className="text-white text-sm font-semibold">{totalEarned.toLocaleString(undefined, {maximumFractionDigits: 0})} PRC</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-red-300/70 text-xs">- Used</span>
-                            <span className="text-red-300 text-sm font-semibold">{totalUsed.toLocaleString(undefined, {maximumFractionDigits: 0})} PRC</span>
-                          </div>
-                          <div className="border-t border-white/10 pt-2 flex items-center justify-between">
-                            <span className="text-emerald-300 text-xs font-semibold">= Available to Redeem ({unlockPct}%)</span>
-                            <span className="text-emerald-400 text-sm font-bold">{availablePRC.toLocaleString(undefined, {maximumFractionDigits: 0})} PRC</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-emerald-300/70 text-xs">≈ ₹{Math.floor(availablePRC / prcRate).toLocaleString()}</span>
-                          </div>
-                        </div>
-
-                        {/* Rate + Redeem Button */}
-                        <div className="flex items-center justify-between bg-white/10 backdrop-blur rounded-xl p-3">
-                          <div>
-                            <p className="text-emerald-200/60 text-[10px]">Rate</p>
-                            <p className="text-white text-sm font-bold">{prcRate} PRC = ₹1</p>
-                          </div>
+                        {/* Rate + Redeem */}
+                        <div className="flex items-center justify-between bg-white/10 backdrop-blur rounded-xl p-2.5">
+                          <p className="text-white text-sm font-bold">{prcRate} PRC = ₹1</p>
                           <div 
                             onClick={() => navigate('/redeem')}
                             className="bg-emerald-500/30 hover:bg-emerald-500/40 rounded-lg px-4 py-2 cursor-pointer transition-colors"
