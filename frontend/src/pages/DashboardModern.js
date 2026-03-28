@@ -154,14 +154,14 @@ const DashboardModern = ({ user, onLogout }) => {
             mining_start_time: miningData.session_start
           });
           
-          // Fetch PRC rate and category limits in parallel
-          const [rateRes, limitsRes] = await Promise.allSettled([
+          // Fetch PRC rate and redeem limit in parallel
+          const [rateRes, redeemLimitRes] = await Promise.allSettled([
             axios.get(`${API}/admin/prc-rate/current`),
-            axios.get(`${API}/redeem-categories/user/${user.uid}`)
+            axios.get(`${API}/user/${user.uid}/redeem-limit`)
           ]);
           
           const prcRate = rateRes.status === 'fulfilled' ? (rateRes.value.data?.current_rate || 10) : 10;
-          const categoryLimits = limitsRes.status === 'fulfilled' ? (limitsRes.value.data?.categories || {}) : {};
+          const redeemLimit = redeemLimitRes.status === 'fulfilled' ? (redeemLimitRes.value.data?.limit || {}) : {};
           
           setStats({
             prcBalance: userData.prc_balance || 0,
@@ -172,7 +172,7 @@ const DashboardModern = ({ user, onLogout }) => {
             subscriptionExpiry: userData.subscription_expiry || null,
             subscriptionStart: userData.subscription_start || null,
             prcRate: prcRate,
-            categoryLimits: categoryLimits
+            redeemLimit: redeemLimit
           });
           
           // Set recent activity from combined response
@@ -188,15 +188,15 @@ const DashboardModern = ({ user, onLogout }) => {
       }
       
       // Fallback to individual API calls
-      const [userResult, activityResult, rateResult, limitsResult] = await Promise.allSettled([
+      const [userResult, activityResult, rateResult, redeemLimitResult] = await Promise.allSettled([
         axios.get(`${API}/user/${user.uid}`),
         axios.get(`${API}/user/${user.uid}/recent-activity?limit=10`),
         axios.get(`${API}/admin/prc-rate/current`),
-        axios.get(`${API}/redeem-categories/user/${user.uid}`)
+        axios.get(`${API}/user/${user.uid}/redeem-limit`)
       ]);
       
       const prcRate = rateResult.status === 'fulfilled' ? (rateResult.value.data?.current_rate || 10) : 10;
-      const categoryLimits = limitsResult.status === 'fulfilled' ? (limitsResult.value.data?.categories || {}) : {};
+      const redeemLimit = redeemLimitResult.status === 'fulfilled' ? (redeemLimitResult.value.data?.limit || {}) : {};
       
       // Process user data
       if (userResult.status === 'fulfilled') {
@@ -212,7 +212,7 @@ const DashboardModern = ({ user, onLogout }) => {
           subscriptionExpiry: fetchedUserData.subscription_expiry || null,
           subscriptionStart: fetchedUserData.subscription_start || fetchedUserData.vip_activation_date || null,
           prcRate: prcRate,
-          categoryLimits: categoryLimits
+          redeemLimit: redeemLimit
         });
       } else {
         // Fallback to user prop data
@@ -226,7 +226,7 @@ const DashboardModern = ({ user, onLogout }) => {
           subscriptionExpiry: user.subscription_expiry || null,
           subscriptionStart: user.subscription_start || user.vip_activation_date || null,
           prcRate: prcRate,
-          categoryLimits: categoryLimits
+          redeemLimit: redeemLimit
         });
       }
       
@@ -1077,36 +1077,59 @@ const DashboardModern = ({ user, onLogout }) => {
                 </div>
                 
                 <div className="relative z-10">
-                  {/* Header - Available PRC to Redeem (Unified Limit) */}
+                  {/* Header - Total PRC - Used = Available with INR */}
                   {(() => {
                     const prcRate = stats.prcRate || 10;
+                    const rl = stats.redeemLimit || {};
+                    const totalEarned = rl.total_earned || (stats.prcBalance + stats.totalRedeemed);
+                    const totalUsed = rl.total_redeemed || stats.totalRedeemed || 0;
+                    const availablePRC = rl.effective_available || Math.max(0, stats.prcBalance);
+                    const unlockPct = rl.redeem_limit_percent || rl.unlock_percent || 0;
                     
                     return (
                       <>
-                        <div className="flex items-center gap-2 mb-4">
+                        {/* Total Earned */}
+                        <div className="flex items-center gap-2 mb-3">
                           <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
                             <Banknote className="w-5 h-5 text-white" />
                           </div>
                           <div>
-                            <p className="text-white/60 text-xs uppercase tracking-wider">PRC Balance</p>
-                            <p className="text-white text-2xl font-bold">{stats.prcBalance?.toLocaleString() || 0} PRC</p>
-                            <p className="text-emerald-300 text-sm font-semibold">≈ ₹{Math.floor((stats.prcBalance || 0) / prcRate).toLocaleString()}</p>
+                            <p className="text-white/60 text-xs uppercase tracking-wider">Total Earned PRC</p>
+                            <p className="text-white text-2xl font-bold">{totalEarned.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                            <p className="text-emerald-300/70 text-xs">≈ ₹{Math.floor(totalEarned / prcRate).toLocaleString()}</p>
                           </div>
                         </div>
-                        
-                        {/* Current Rate Info */}
-                        <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
+
+                        {/* Breakdown: Total - Used = Available */}
+                        <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-3 space-y-2">
                           <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-emerald-200/80 text-xs">Current Rate</p>
-                              <p className="text-white text-lg font-bold">{prcRate} PRC = ₹1</p>
-                            </div>
-                            <div 
-                              onClick={() => navigate('/redeem')}
-                              className="bg-emerald-500/30 hover:bg-emerald-500/40 rounded-lg px-3 py-1.5 cursor-pointer transition-colors"
-                            >
-                              <p className="text-emerald-200 text-xs font-semibold">Redeem →</p>
-                            </div>
+                            <span className="text-white/60 text-xs">Total Earned</span>
+                            <span className="text-white text-sm font-semibold">{totalEarned.toLocaleString(undefined, {maximumFractionDigits: 0})} PRC</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-red-300/70 text-xs">- Used</span>
+                            <span className="text-red-300 text-sm font-semibold">{totalUsed.toLocaleString(undefined, {maximumFractionDigits: 0})} PRC</span>
+                          </div>
+                          <div className="border-t border-white/10 pt-2 flex items-center justify-between">
+                            <span className="text-emerald-300 text-xs font-semibold">= Available to Redeem ({unlockPct}%)</span>
+                            <span className="text-emerald-400 text-sm font-bold">{availablePRC.toLocaleString(undefined, {maximumFractionDigits: 0})} PRC</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-emerald-300/70 text-xs">≈ ₹{Math.floor(availablePRC / prcRate).toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Rate + Redeem Button */}
+                        <div className="flex items-center justify-between bg-white/10 backdrop-blur rounded-xl p-3">
+                          <div>
+                            <p className="text-emerald-200/60 text-[10px]">Rate</p>
+                            <p className="text-white text-sm font-bold">{prcRate} PRC = ₹1</p>
+                          </div>
+                          <div 
+                            onClick={() => navigate('/redeem')}
+                            className="bg-emerald-500/30 hover:bg-emerald-500/40 rounded-lg px-4 py-2 cursor-pointer transition-colors"
+                          >
+                            <p className="text-emerald-200 text-xs font-semibold">Redeem →</p>
                           </div>
                         </div>
                       </>

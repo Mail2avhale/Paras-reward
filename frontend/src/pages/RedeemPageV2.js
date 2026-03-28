@@ -1663,15 +1663,6 @@ const RedeemPageV2 = ({ user }) => {
             </h1>
             <p className="text-gray-400 text-sm">Pay bills & recharge using your PRC balance</p>
           </div>
-          {/* Balance */}
-          <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-2xl">
-            <Wallet className="h-5 w-5 text-amber-400" />
-            <div>
-              <p className="text-[10px] text-amber-300/70 uppercase">Balance</p>
-              <p className="text-sm font-bold text-amber-400">{(userData?.prc_balance || 0).toLocaleString()} PRC</p>
-            </div>
-          </div>
-          {/* My Requests Button - REMOVED - chatbot withdrawals deprecated */}
           {/* Bill History Button */}
           <button
             onClick={() => navigate('/bill-history')}

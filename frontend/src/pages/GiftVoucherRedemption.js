@@ -198,28 +198,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
         <div className="mb-4">
         </div>
         
-        <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-2xl p-5 border border-amber-500/30">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <p className="text-gray-400 text-sm">{t('availablePrcBalance')}</p>
-                <InfoTooltip>
-                  <p>PRC available for voucher redemption. Vouchers are delivered within 24-48 hours after admin approval</p>
-                </InfoTooltip>
-              </div>
-              <p className="text-3xl font-bold text-amber-500">{currentUser?.prc_balance?.toFixed(2) || '0.00'}</p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center">
-              <Wallet className="w-7 h-7 text-amber-500" />
-            </div>
-          </div>
-          {/* Current PRC Rate Badge */}
-          <div className="mt-3 pt-3 border-t border-amber-500/20">
-            <PRCRateBadge />
-          </div>
-        </div>
-
-        {/* Utility Category Limit Card */}
+        {/* Unified Redeem Limit Card */}
         {user?.uid && (
           <div className="mt-4">
             <CategoryLimitsDisplay userId={user.uid} />
