@@ -673,7 +673,7 @@ const DashboardModern = ({ user, onLogout }) => {
               </div>
             </div>
 
-            {/* Bottom Row - Card Holder & Multiplier */}
+            {/* Bottom Row - Card Holder & Mining Speed */}
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">CARD HOLDER</p>
@@ -683,17 +683,16 @@ const DashboardModern = ({ user, onLogout }) => {
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-1 justify-end">
-                  <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">MULTIPLIER</p>
+                  <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">MINING SPEED</p>
                 </div>
                 <p className={`text-sm font-bold ${
-                  stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
-                  stats.subscriptionPlan === 'growth' ? 'text-emerald-400' :
-                  stats.subscriptionPlan === 'startup' ? 'text-blue-400' :
+                  stats.subscriptionPlan === 'elite' ? 
+                    (userData?.subscription_payment_type === 'prc' ? 'text-amber-400' : 'text-emerald-400') :
                   'text-gray-500'
                 }`}>
-                  {stats.subscriptionPlan === 'elite' ? '3.0x' :
-                   stats.subscriptionPlan === 'growth' ? '2.0x' :
-                   stats.subscriptionPlan === 'startup' ? '1.5x' : '1.0x'}
+                  {stats.subscriptionPlan === 'elite' || stats.subscriptionPlan === 'growth' || stats.subscriptionPlan === 'vip' ? 
+                    (userData?.subscription_payment_type === 'prc' ? '70%' : '100%') : 
+                    '0%'}
                 </p>
               </div>
             </div>

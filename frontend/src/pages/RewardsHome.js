@@ -387,22 +387,22 @@ const RewardsHome = () => {
       icon: Users,
       color: 'from-gray-500 to-gray-600',
       features: [
-        { text: '1x Point Rate', included: true },
-        { text: '10 Points/day', included: true },
+        { text: '0% Mining Speed', included: true },
+        { text: 'View Balance', included: true },
         { text: 'Basic Features', included: true },
         { text: 'Redeem Vouchers', included: false }
       ]
     },
     {
       name: 'Elite',
-      price: '799',
-      originalPrice: '2000',
+      price: '999 + GST',
+      originalPrice: '999',
       icon: Crown,
       color: 'from-amber-500 to-orange-600',
       isPopular: true,
       features: [
-        { text: '3x Point Rate', included: true },
-        { text: '200 Points/day', included: true },
+        { text: '100% Mining Speed', included: true },
+        { text: 'Unlimited Mining', included: true },
         { text: 'VIP Support', included: true },
         { text: 'Maximum Benefits', included: true }
       ]
