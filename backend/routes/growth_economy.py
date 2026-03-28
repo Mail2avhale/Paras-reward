@@ -374,22 +374,52 @@ async def get_total_network_size(user_id: str) -> int:
 
 async def get_growth_network_stats(user_id: str) -> dict:
     """
-    Get Growth Network statistics for a user.
-    Returns both total network (for display) and active network (for mining rate).
+    Get Growth Network statistics.
+    Uses cached values from user doc for fast response.
     """
-    # Get direct referrals
+    REFRESH_INTERVAL = 1800  # 30 minutes
+    
+    user = await db.users.find_one(
+        {"uid": user_id},
+        {"_id": 0, "_cached_total_network": 1, "_cached_active_network": 1, "_cached_network_stats_at": 1}
+    )
+    
+    # Direct referrals (fast - indexed)
     direct_referrals = await db.users.count_documents({"referred_by": user_id})
     
-    # Get total network size (all members - for display)
-    total_network = await get_total_network_size(user_id)
+    # Check if cached stats are fresh
+    cached_at = (user or {}).get("_cached_network_stats_at", "")
+    need_refresh = True
+    total_network = 0
+    active_network = 0
     
-    # Get active network size (for mining rate)
-    active_network = await get_network_size(user_id)
+    if cached_at:
+        try:
+            cached_dt = datetime.fromisoformat(str(cached_at).replace('Z', '+00:00'))
+            age = (datetime.now(timezone.utc) - cached_dt).total_seconds()
+            if age < REFRESH_INTERVAL:
+                total_network = (user or {}).get("_cached_total_network", 0)
+                active_network = (user or {}).get("_cached_active_network", 0)
+                need_refresh = False
+        except Exception:
+            pass
     
-    # Calculate network cap
+    if need_refresh:
+        total_network = await get_total_network_size(user_id)
+        active_network = await get_network_size(user_id)
+        try:
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {
+                    "_cached_total_network": total_network,
+                    "_cached_active_network": active_network,
+                    "_cached_network_stats_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+        except Exception:
+            pass
+    
     network_cap = calculate_network_cap(direct_referrals)
-    
-    # Redeem limit uses active network
     redeem_limit_percent = calculate_growth_level(active_network)
     
     return {

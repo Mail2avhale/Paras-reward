@@ -222,42 +222,56 @@ async def _get_network_uids(user_id: str) -> set:
 
 async def calculate_mining_rate(user_id: str) -> dict:
     """
-    Calculate user's mining rate based on Growth Economy formulas
-    
-    Returns:
-    - base_rate: 500 PRC/day (base)
-    - network_rate: N × PRC_per_user(N)
-    - total_rate: base + network
-    - per_second_rate: total / 86400
-    - boost_multiplier: subscription type multiplier
+    Calculate user's mining rate based on Growth Economy formulas.
+    Uses cached network stats from user document for instant response.
+    Network stats refreshed every 30 minutes max.
     """
-    # Get user data
     user = await db.users.find_one({"uid": user_id}, {"_id": 0})
     if not user:
         return {"error": "User not found"}
     
-    # Get direct referrals count
+    # Get direct referrals count (fast - uses index)
     direct_referrals = await db.users.count_documents({"referred_by": user_id})
     
-    # Get network size
-    network_size = await get_network_size(user_id)
+    # Get network size — use cached value from user doc if fresh enough
+    REFRESH_INTERVAL = 1800  # 30 minutes
+    cached_network = user.get("_cached_network_size")
+    cached_at = user.get("_cached_network_at", "")
+    need_refresh = True
+    network_size = 0
     
-    # Calculate network cap (binary: 0 refs=800, ≥1 ref=4000)
+    if cached_network is not None and cached_at:
+        try:
+            cached_dt = datetime.fromisoformat(str(cached_at).replace('Z', '+00:00'))
+            age = (datetime.now(timezone.utc) - cached_dt).total_seconds()
+            if age < REFRESH_INTERVAL:
+                network_size = cached_network
+                need_refresh = False
+        except Exception:
+            pass
+    
+    if need_refresh:
+        network_size = await get_network_size(user_id)
+        # Store in user document for future fast lookups
+        try:
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {
+                    "_cached_network_size": network_size,
+                    "_cached_network_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+        except Exception as e:
+            logging.warning(f"Cache update failed for {user_id}: {e}")
+    
+    # Calculate network cap
     network_cap = calculate_network_cap(direct_referrals)
-    
-    # Limit network size to cap
     effective_network = min(network_size, network_cap)
-    
-    # Calculate PRC per user using new formula
     prc_per_user = calculate_prc_per_user(effective_network)
     
-    # Calculate rates
     base_rate = BASE_MINING_PRC
     network_rate = effective_network * prc_per_user
     
-    # Subscription multiplier:
-    # Elite via Razorpay/Manual = 100%, Elite via PRC = 70%
-    # Explorer = 100% (demo - shows speed but can't collect)
     subscription_plan = user.get("subscription_plan", "explorer")
     subscription_payment_type = user.get("subscription_payment_type", "cash")
     is_elite = subscription_plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
@@ -265,11 +279,10 @@ async def calculate_mining_rate(user_id: str) -> dict:
     if is_elite and subscription_payment_type == "prc":
         boost_multiplier = 0.70
     else:
-        boost_multiplier = 1.0  # Cash/Razorpay/Manual Elite OR Explorer (demo)
+        boost_multiplier = 1.0
     
-    # Apply multiplier
     total_daily_rate = (base_rate + network_rate) * boost_multiplier
-    per_second_rate = total_daily_rate / 86400  # 24 hours in seconds
+    per_second_rate = total_daily_rate / 86400
     
     return {
         "base_rate": base_rate,
