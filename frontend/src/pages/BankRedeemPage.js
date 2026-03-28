@@ -320,6 +320,13 @@ const BankRedeemPage = ({ user: initialUser }) => {
       </div>
 
       <div className="max-w-lg mx-auto px-4 -mt-4">
+        {/* Verified Partner Notice - Blinking */}
+        <div className="mb-4 py-3 px-4 bg-amber-500/10 border border-amber-500/40 rounded-xl text-center" data-testid="verified-partner-notice">
+          <p className="text-amber-400 font-semibold text-sm animate-pulse">
+            This Service is available only for verified Partner
+          </p>
+        </div>
+
         {/* Tab Switcher */}
         <div className="flex gap-2 mb-4">
           <button
