@@ -1,7 +1,12 @@
 # PARAS REWARD - Product Requirements Document
 
 ## ✅ DEPLOYED - 19 March 2026
-## 📝 LAST UPDATED - 26 March 2026 (Growth Economy System Implemented)
+## 📝 LAST UPDATED - 28 March 2026 (P0 Mining Collect Bug Fixed & Verified)
+
+## ✅ COMPLETED: Mining Collect P0 Bug Fix - 28 March 2026
+- Fixed frontend using deprecated `/api/mining/claim` → correct `/api/mining/collect`
+- Verified with 14 automated tests (iteration_149): Start → Collect → Balance Update → Session Reset
+- Translation key `processing` added to LanguageContext.js
 
 ## ✅ COMPLETED: Growth Economy System - 26 March 2026
 ```
