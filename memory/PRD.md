@@ -8,6 +8,12 @@
 - Verified with 14 automated tests (iteration_149): Start → Collect → Balance Update → Session Reset
 - Translation key `processing` added to LanguageContext.js
 
+## ✅ COMPLETED: Auto-Start Session After Collect - 28 March 2026
+- Backend `/api/mining/collect` now auto-starts a new session after collecting PRC
+- Returns `auto_started: true`, `new_session_start`, `new_session_end` in response
+- Frontend handles auto-start: keeps mining UI active with fresh 24h timer
+- No manual "Start Session" click needed after collect
+
 ## ✅ COMPLETED: Growth Economy System - 26 March 2026
 ```
 ╔════════════════════════════════════════════════════════════════╗

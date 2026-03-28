@@ -396,16 +396,21 @@ async def collect_mining(uid: str):
         current_balance = user.get("prc_balance", 0)
         new_balance = round(current_balance + mined_coins, 6)
         
-        # Update user
+        # Auto-start new session after collect
+        new_session_start = now
+        new_session_end = now + timedelta(hours=SESSION_DURATION_HOURS)
+        
+        # Update user: credit PRC + start new session in one atomic operation
         await db.users.update_one(
             {"uid": uid},
             {
                 "$set": {
                     "prc_balance": new_balance,
-                    "mining_active": False,
-                    "mining_start_time": None,
-                    "mining_session_end": None,
-                    "last_mining_collect": now.isoformat()
+                    "mining_active": True,
+                    "mining_start_time": new_session_start.isoformat(),
+                    "mining_session_end": new_session_end.isoformat(),
+                    "last_mining_collect": now.isoformat(),
+                    "last_mining_action": now.isoformat()
                 },
                 "$inc": {
                     "total_mined_prc": mined_coins
@@ -430,7 +435,10 @@ async def collect_mining(uid: str):
             "message": f"Collected {mined_coins:.4f} PRC",
             "collected_amount": mined_coins,
             "new_balance": new_balance,
-            "session_duration_seconds": elapsed_seconds
+            "session_duration_seconds": elapsed_seconds,
+            "auto_started": True,
+            "new_session_start": new_session_start.isoformat(),
+            "new_session_end": new_session_end.isoformat()
         }
     except HTTPException:
         raise

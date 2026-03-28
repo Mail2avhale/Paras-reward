@@ -500,17 +500,8 @@ const DailyRewards = ({ user }) => {
       // Simple haptic feedback
       triggerHaptic('success');
       
-      // Show success toast - NO animations
+      // Show success toast
       smartToast.success(`Collected ${claimed.toFixed(2)} PRC!`, { position: 'top-center' });
-      
-      // IMPORTANT: Reset session state after collect
-      setSessionPRC(0);
-      setIsMining(false);  // Session ended
-      setSessionTimeRemaining(0);
-      setSessionProgress(0);
-      
-      // Reset notification flag for new session
-      sessionEndNotifiedRef.current = false;
       
       // Update user balance from response IMMEDIATELY
       if (data.new_balance !== undefined) {
@@ -520,8 +511,29 @@ const DailyRewards = ({ user }) => {
         }));
       }
       
+      // Auto-start: If backend started a new session, keep mining active
+      if (data.auto_started && data.new_session_start) {
+        setSessionPRC(0);
+        setSessionTimeRemaining(24 * 60 * 60); // Fresh 24 hours
+        setSessionStartTime(new Date(data.new_session_start).getTime());
+        setSessionProgress(0);
+        setIsMining(true);
+        
+        // Reset notification flag for new session
+        sessionEndNotifiedRef.current = false;
+        
+        smartToast.info('New session auto-started!', { position: 'top-center' });
+      } else {
+        // Fallback: Reset session state
+        setSessionPRC(0);
+        setIsMining(false);
+        setSessionTimeRemaining(0);
+        setSessionProgress(0);
+        sessionEndNotifiedRef.current = false;
+      }
+      
       // Refresh user data after a brief delay to ensure full sync
-      setTimeout(() => fetchUserData(true), 500);
+      setTimeout(() => fetchUserData(false), 1000);
       
     } catch (error) {
       console.error('Claim error:', error);
