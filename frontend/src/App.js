@@ -199,6 +199,7 @@ const AdminFraudDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackC
 const AdminVideoAds = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVideoAds"));
 const AdminFixedExpenses = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFixedExpenses"));
 const AdminKYC = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminKYC"));
+const AdminEconomySettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminEconomySettings"));
 // AdminDMTRefunds and AdminDMTTransactions REMOVED - Eko API not working
 // AdminOrders removed - Marketplace deprecated (December 2025)
 // const AdminOrders = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminOrders"));
@@ -458,6 +459,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/service-toggles" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminServiceToggles user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/policies" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPolicies user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/kyc" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminKYC user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/economy-settings" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEconomySettings /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/payments" element={<Navigate to="/admin/subscriptions" replace />} />
                 {/* Admin Orders removed - Marketplace deprecated (December 2025) */}
                 <Route path="/admin/orders" element={<Navigate to="/admin" replace />} />

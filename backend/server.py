@@ -83,6 +83,7 @@ from routes.mining import router as mining_router, set_db as set_mining_db, set_
 # DMT V1, V3 and Fund Transfer routes REMOVED - Eko API not working
 from routes.gst_invoice import router as invoice_router, set_db as set_invoice_db
 from routes.eko_callback import router as eko_callback_router, set_db as set_eko_callback_db
+from routes.growth_economy import router as growth_economy_router, set_db as set_growth_economy_db
 
 # ========== SECURITY CONFIGURATION ==========
 # SECURITY: Use stable JWT secret from env, fallback to fixed secret for consistency
@@ -44323,6 +44324,9 @@ api_router.include_router(invoice_router)
 set_eko_callback_db(db)
 api_router.include_router(eko_callback_router)
 
+# Growth Economy Router (Mining, Referral, Redeem formulas)
+set_growth_economy_db(db)
+
 # Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
 # set_eko_db(db)
 # api_router.include_router(eko_router)
@@ -44620,6 +44624,7 @@ async def admin_user_lookup(identifier: str):
 
 
 # Include all API routes (must be after all route definitions and sub-routers)
+api_router.include_router(growth_economy_router)
 app.include_router(api_router)
 
 # Note: User lookup route is now defined BEFORE include_router (line ~43305)
