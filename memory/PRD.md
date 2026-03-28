@@ -19,7 +19,14 @@
 - New flow: Step 1 (ID only) → Click Sign In → DB verify → Step 2 (PIN input)
 - Non-existent users get "Account Not Found" error, PIN never shown
 - "Change" button on Step 2 to go back to ID input
+- Added ✅/❌ visual icons next to ID field for instant feedback
 - File: `/app/frontend/src/pages/LoginNew.js`
+
+## ✅ COMPLETED: PRC Balance Global Sync Fix - 28 March 2026
+- Root cause: `/api/user/{uid}` had 2-minute cache (cache_manager), mining collect didn't invalidate it
+- Fix: Cache `user_data:{uid}` invalidated after both mining start and collect endpoints
+- Added `onBalanceUpdate` callback from App.js → Mining.js for immediate global state + localStorage update
+- Result: PRC balance now matches instantly across Mining page, Dashboard, Profile, all pages
 
 ## ✅ COMPLETED: Growth Economy System - 26 March 2026
 ```

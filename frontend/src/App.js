@@ -274,8 +274,16 @@ const PRCStatement = lazy(() => import("@/pages/PRCStatement"));
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-function AppContent({ user, handleLogin, handleLogout }) {
+function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser }) {
   const { toasts, removeToast } = useNotification();
+
+  // Global balance update callback - updates user state + localStorage immediately
+  const onBalanceUpdate = (newBalance) => {
+    if (newBalance === undefined || newBalance === null) return;
+    const updatedUser = { ...user, prc_balance: newBalance };
+    setUser(updatedUser);
+    localStorage.setItem("paras_user", JSON.stringify(updatedUser));
+  };
 
   // Helper function to get role-based default route
   const getRoleBasedRoute = (user) => {
@@ -327,7 +335,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/dashboard" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DashboardModern user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* fintech route removed - not in use */}
             <Route path="/support" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SupportTickets user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
-            <Route path="/daily-rewards" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DailyRewards user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/daily-rewards" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DailyRewards user={user} onLogout={handleLogout} onBalanceUpdate={onBalanceUpdate} />) : <Navigate to="/login" />} />
             <Route path="/mining" element={<Navigate to="/daily-rewards" />} /> {/* Redirect old route */}
             {/* TapGame removed - feature deprecated */}
             <Route path="/game" element={<Navigate to="/dashboard" replace />} />
@@ -799,7 +807,7 @@ function App() {
   return (
     <LanguageProvider>
       <NotificationProvider userId={user?.uid}>
-        <AppContent user={user} handleLogin={handleLogin} handleLogout={handleLogout} />
+        <AppContent user={user} handleLogin={handleLogin} handleLogout={handleLogout} refreshUserData={refreshUserData} setUser={setUser} />
       </NotificationProvider>
     </LanguageProvider>
   );

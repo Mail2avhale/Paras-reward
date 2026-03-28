@@ -150,7 +150,7 @@ const BalanceCard = ({ label, value, icon: Icon, color, tooltip }) => (
 // Confetti disabled for performance
 const ConfettiParticle = () => null;
 
-const DailyRewards = ({ user }) => {
+const DailyRewards = ({ user, onBalanceUpdate }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
   
@@ -509,6 +509,11 @@ const DailyRewards = ({ user }) => {
           ...prev,
           prc_balance: data.new_balance
         }));
+        
+        // Update GLOBAL state so Dashboard/Profile/all pages show updated balance
+        if (onBalanceUpdate) {
+          onBalanceUpdate(data.new_balance);
+        }
       }
       
       // Auto-start: If backend started a new session, keep mining active
