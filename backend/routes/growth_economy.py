@@ -13,6 +13,7 @@ MLM-Free Terminology Used Throughout
 """
 
 import math
+import time
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Optional, Tuple
@@ -293,34 +294,55 @@ async def calculate_mining_speed(user_id: str) -> dict:
     }
 
 
+# In-memory cache for network calculations (TTL: 5 minutes)
+_ge_network_cache = {}
+GE_CACHE_TTL = 300
+
+
+async def _get_network_uids_ge(user_id: str) -> set:
+    """Get all UIDs in network tree. Cached 5 min."""
+    cache_key = f"tree_{user_id}"
+    cached = _ge_network_cache.get(cache_key)
+    if cached and (time.time() - cached["ts"]) < GE_CACHE_TTL:
+        return cached["val"]
+    
+    all_uids = set()
+    current_level = {user_id}
+    
+    while current_level and len(all_uids) < DEFAULT_NETWORK_CAP_WITH_REFERRAL:
+        all_uids.update(current_level)
+        remaining = DEFAULT_NETWORK_CAP_WITH_REFERRAL - len(all_uids)
+        if remaining <= 0:
+            break
+        next_docs = await db.users.find(
+            {"referred_by": {"$in": list(current_level)}},
+            {"uid": 1, "_id": 0}
+        ).to_list(remaining + 100)
+        next_level = {d["uid"] for d in next_docs if d.get("uid") and d["uid"] not in all_uids}
+        if not next_level:
+            break
+        current_level = next_level
+    
+    all_uids.discard(user_id)
+    _ge_network_cache[cache_key] = {"val": all_uids, "ts": time.time()}
+    return all_uids
+
+
 async def get_network_size(user_id: str, max_depth: int = 10) -> int:
     """
-    Get total ACTIVE network size (only Elite + active mining session users).
-    Uses batched BFS for performance (1 query per level).
+    Get total ACTIVE network size. Cached 5 min.
     """
+    cache_key = f"active_{user_id}"
+    cached = _ge_network_cache.get(cache_key)
+    if cached and (time.time() - cached["ts"]) < GE_CACHE_TTL:
+        return cached["val"]
+    
     try:
-        now = datetime.now(timezone.utc)
-        now_iso = now.isoformat()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        all_uids = await _get_network_uids_ge(user_id)
         
-        all_uids = set()
-        current_level = {user_id}
-        
-        while current_level and len(all_uids) < DEFAULT_NETWORK_CAP_WITH_REFERRAL:
-            all_uids.update(current_level)
-            remaining = DEFAULT_NETWORK_CAP_WITH_REFERRAL - len(all_uids)
-            if remaining <= 0:
-                break
-            next_docs = await db.users.find(
-                {"referred_by": {"$in": list(current_level)}},
-                {"uid": 1, "_id": 0}
-            ).to_list(remaining + 100)
-            next_level = {d["uid"] for d in next_docs if d.get("uid") and d["uid"] not in all_uids}
-            if not next_level:
-                break
-            current_level = next_level
-        
-        all_uids.discard(user_id)
         if not all_uids:
+            _ge_network_cache[cache_key] = {"val": 0, "ts": time.time()}
             return 0
         
         uid_list = list(all_uids)[:DEFAULT_NETWORK_CAP_WITH_REFERRAL]
@@ -331,6 +353,7 @@ async def get_network_size(user_id: str, max_depth: int = 10) -> int:
             "mining_session_end": {"$gt": now_iso}
         })
         
+        _ge_network_cache[cache_key] = {"val": active_count, "ts": time.time()}
         return active_count
     except Exception as e:
         logging.error(f"Error getting network size: {e}")
@@ -338,29 +361,9 @@ async def get_network_size(user_id: str, max_depth: int = 10) -> int:
 
 
 async def get_total_network_size(user_id: str) -> int:
-    """
-    Get TOTAL network size (all members regardless of active status).
-    For display on referral page.
-    """
+    """Get TOTAL network size (all members). Cached 5 min."""
     try:
-        all_uids = set()
-        current_level = {user_id}
-        
-        while current_level and len(all_uids) < DEFAULT_NETWORK_CAP_WITH_REFERRAL:
-            all_uids.update(current_level)
-            remaining = DEFAULT_NETWORK_CAP_WITH_REFERRAL - len(all_uids)
-            if remaining <= 0:
-                break
-            next_docs = await db.users.find(
-                {"referred_by": {"$in": list(current_level)}},
-                {"uid": 1, "_id": 0}
-            ).to_list(remaining + 100)
-            next_level = {d["uid"] for d in next_docs if d.get("uid") and d["uid"] not in all_uids}
-            if not next_level:
-                break
-            current_level = next_level
-        
-        all_uids.discard(user_id)
+        all_uids = await _get_network_uids_ge(user_id)
         return len(all_uids)
     except Exception as e:
         logging.error(f"Error getting total network size: {e}")

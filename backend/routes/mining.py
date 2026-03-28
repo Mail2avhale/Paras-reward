@@ -19,6 +19,7 @@ Subscription Speed:
 
 import math
 import logging
+import time
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -146,39 +147,35 @@ async def check_subscription_expiry(user: dict) -> dict:
     return user
 
 
+# In-memory cache for network size (TTL: 5 minutes)
+_network_cache = {}
+NETWORK_CACHE_TTL = 300  # 5 minutes
+
+
 async def get_network_size(user_id: str) -> int:
     """
     Get ACTIVE network size for mining rate calculation.
     Active = Elite + mining_active + session not expired.
-    Uses batched BFS (1 query per level, not per node).
+    Uses batched BFS + in-memory cache (5 min TTL).
     """
+    # Check cache first
+    cache_key = f"active_{user_id}"
+    cached = _network_cache.get(cache_key)
+    if cached and (time.time() - cached["ts"]) < NETWORK_CACHE_TTL:
+        return cached["val"]
+    
     try:
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
         
-        # Step 1: Collect all UIDs via batched level-by-level BFS
-        all_uids = set()
-        current_level = {user_id}
+        # Get all UIDs in network (use cached tree if available)
+        all_uids = await _get_network_uids(user_id)
         
-        while current_level and len(all_uids) < NETWORK_CAP_WITH_REFERRAL:
-            all_uids.update(current_level)
-            remaining = NETWORK_CAP_WITH_REFERRAL - len(all_uids)
-            if remaining <= 0:
-                break
-            next_docs = await db.users.find(
-                {"referred_by": {"$in": list(current_level)}},
-                {"uid": 1, "_id": 0}
-            ).to_list(remaining + 100)
-            next_level = {d["uid"] for d in next_docs if d.get("uid") and d["uid"] not in all_uids}
-            if not next_level:
-                break
-            current_level = next_level
-        
-        all_uids.discard(user_id)
         if not all_uids:
+            _network_cache[cache_key] = {"val": 0, "ts": time.time()}
             return 0
         
-        # Step 2: Single query to count active users
+        # Single query to count active users
         uid_list = list(all_uids)[:NETWORK_CAP_WITH_REFERRAL]
         active_count = await db.users.count_documents({
             "uid": {"$in": uid_list},
@@ -187,10 +184,40 @@ async def get_network_size(user_id: str) -> int:
             "mining_session_end": {"$gt": now_iso}
         })
         
+        _network_cache[cache_key] = {"val": active_count, "ts": time.time()}
         return active_count
     except Exception as e:
         logging.error(f"Error getting network size: {e}")
         return 0
+
+
+async def _get_network_uids(user_id: str) -> set:
+    """Get all UIDs in a user's network tree. Cached for 5 minutes."""
+    cache_key = f"tree_{user_id}"
+    cached = _network_cache.get(cache_key)
+    if cached and (time.time() - cached["ts"]) < NETWORK_CACHE_TTL:
+        return cached["val"]
+    
+    all_uids = set()
+    current_level = {user_id}
+    
+    while current_level and len(all_uids) < NETWORK_CAP_WITH_REFERRAL:
+        all_uids.update(current_level)
+        remaining = NETWORK_CAP_WITH_REFERRAL - len(all_uids)
+        if remaining <= 0:
+            break
+        next_docs = await db.users.find(
+            {"referred_by": {"$in": list(current_level)}},
+            {"uid": 1, "_id": 0}
+        ).to_list(remaining + 100)
+        next_level = {d["uid"] for d in next_docs if d.get("uid") and d["uid"] not in all_uids}
+        if not next_level:
+            break
+        current_level = next_level
+    
+    all_uids.discard(user_id)
+    _network_cache[cache_key] = {"val": all_uids, "ts": time.time()}
+    return all_uids
 
 
 async def calculate_mining_rate(user_id: str) -> dict:
