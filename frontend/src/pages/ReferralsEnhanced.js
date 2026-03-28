@@ -195,9 +195,6 @@ const ReferralsEnhanced = ({ user }) => {
               style={{ width: `${networkProgress}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-2 text-center">
-            {networkStats?.network_size || 0} of {networkStats?.network_cap || 800} capacity used
-          </p>
         </div>
 
         {/* Direct Referrals List */}
