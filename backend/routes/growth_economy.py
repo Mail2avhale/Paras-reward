@@ -327,12 +327,21 @@ async def get_growth_network_stats(user_id: str) -> dict:
 
 def calculate_growth_level(network_size: int) -> int:
     """
-    Calculate growth level based on network size
+    Calculate growth level based on cumulative network size.
     
-    Level thresholds:
-    10 → L1, 20 → L2, 40 → L3, 80 → L4, 160 → L5, 320 → L6, 640 → L7, 800 → L8, 1000+ → L9
+    Per-Level Users × 5 = Points | Cumulative Users → Level → Unlock%
+    L1:  2 users  (cum: 2)   → 10%
+    L2:  4 users  (cum: 6)   → 20%
+    L3:  8 users  (cum: 14)  → 30%
+    L4:  16 users (cum: 30)  → 40%
+    L5:  32 users (cum: 62)  → 50%
+    L6:  64 users (cum: 126) → 60%
+    L7:  128 users(cum: 254) → 70%
+    L8:  200 users(cum: 454) → 80%
+    L9:  200 users(cum: 654) → 90%
+    L10: 146 users(cum: 800) → 100%
     """
-    thresholds = [10, 20, 40, 80, 160, 320, 640, 800, 1000]
+    thresholds = [2, 6, 14, 30, 62, 126, 254, 454, 654, 800]
     level = 0
     for i, threshold in enumerate(thresholds):
         if network_size >= threshold:

@@ -26,12 +26,13 @@
 - Replaced old DEPRECATED unlimited system with Growth Network based dynamic limits
 - Formula: Unlock% = min(Level × 10, AdminMaxCap), Redeemable = TotalEarned × Unlock%
 - Available = max(0, Redeemable - TotalRedeemed), capped at current balance
-- Level tiers: 10→10%, 20→20%, 40→30%, 80→40%, 160→50%, 320→60%, 640→70%, 800→80%, 1000+→100%
+- Level tiers (cumulative users): L1:2, L2:6, L3:14, L4:30, L5:62, L6:126, L7:254, L8:454, L9:654, L10:800 → 10% per level
 - Admin max cap default 70%, configurable
 - Single unified limit across all pages (removed category-wise limits)
 - New UnifiedRedeemLimit component with progress bar, stats grid, next level hint
 - 17 backend tests passed (iteration_150)
-- Files: server.py (calculate_user_redeem_limit, check_redeem_limit), growth_economy.py (get_user_unlock_percent), CategoryLimitsDisplay.js (rewritten)
+- Deep scan: 10 collections with redeem data (redeem_requests, bank_transfer_requests, gift_voucher_requests, bill_payment_requests, dmt_transactions, chatbot_withdrawal_requests, transactions, wallet_transactions, prc_transactions in users, prc_burns)
+- Files: server.py (calculate_user_redeem_limit, check_redeem_limit), growth_economy.py (calculate_growth_level, get_user_unlock_percent), CategoryLimitsDisplay.js (rewritten)
 - Root cause: `/api/user/{uid}` had 2-min cache AND `/api/user/{uid}/dashboard` had 60s cache. Mining collect didn't invalidate either.
 - Fix: Both caches (`user_data:{uid}` + `user:dashboard:{uid}`) invalidated after mining start and collect
 - Added `onBalanceUpdate` callback from App.js → Mining.js for immediate global state + localStorage update

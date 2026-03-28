@@ -10,15 +10,16 @@ import { Lock, Unlock, TrendingUp, Users } from 'lucide-react';
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const LEVEL_THRESHOLDS = [
-  { size: 10, level: 1, percent: 10 },
-  { size: 20, level: 2, percent: 20 },
-  { size: 40, level: 3, percent: 30 },
-  { size: 80, level: 4, percent: 40 },
-  { size: 160, level: 5, percent: 50 },
-  { size: 320, level: 6, percent: 60 },
-  { size: 640, level: 7, percent: 70 },
-  { size: 800, level: 8, percent: 80 },
-  { size: 1000, level: 9, percent: 100 },
+  { size: 2, level: 1, percent: 10 },
+  { size: 6, level: 2, percent: 20 },
+  { size: 14, level: 3, percent: 30 },
+  { size: 30, level: 4, percent: 40 },
+  { size: 62, level: 5, percent: 50 },
+  { size: 126, level: 6, percent: 60 },
+  { size: 254, level: 7, percent: 70 },
+  { size: 454, level: 8, percent: 80 },
+  { size: 654, level: 9, percent: 90 },
+  { size: 800, level: 10, percent: 100 },
 ];
 
 const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
