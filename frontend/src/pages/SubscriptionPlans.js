@@ -72,7 +72,8 @@ const SubscriptionPlans = ({ user }) => {
 
   // PRC Rate for subscription (dynamic, 2x multiplier)
   const [prcRate, setPrcRate] = useState(10);
-  const PRC_BURN_RATE = 5; // 5% burning for PRC subscription
+  // Burn rate based on current subscription payment type
+  const userBurnRate = userData?.subscription_payment_type === 'prc' ? 5 : 1;
 
   // New Pricing (March 2026) - ₹999 + 18% GST = ₹1178.82
   // No more special offers - standard GST pricing
@@ -375,7 +376,7 @@ const SubscriptionPlans = ({ user }) => {
     const processingPRC = Math.round(processingFee * prcRate);
     const adminPRC = Math.round((basePRC + processingPRC) * 0.20);
     const totalBeforeBurn = basePRC + processingPRC + adminPRC;
-    const burnPRC = Math.round(totalBeforeBurn * PRC_BURN_RATE / 100);
+    const burnPRC = Math.round(totalBeforeBurn * userBurnRate / 100);
     return totalBeforeBurn + burnPRC;
   };
 
@@ -1454,7 +1455,7 @@ const SubscriptionPlans = ({ user }) => {
                 amount={getPrice()}
                 processingFee={10}
                 adminChargePercent={20}
-                burnRate={5}
+                burnRate={userBurnRate}
                 showBreakdown={true}
                 serviceType="subscription"
               />

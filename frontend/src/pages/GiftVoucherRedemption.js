@@ -95,11 +95,16 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   const adminChargeINR = voucherAmountINR * (adminChargePercent / 100);
   const totalINR = voucherAmountINR + processingFeeINR + adminChargeINR;
   
-  // Convert to PRC (Dynamic rate from API)
+  // Burn rate based on subscription payment type
+  const burnRatePercent = user?.subscription_payment_type === 'prc' ? 5 : 1;
+
+  // Convert to PRC (Dynamic rate from API) - admin on (base + processing)
   const voucherAmountPRC = voucherAmountINR * prcRate;
   const processingFeePRC = processingFeeINR * prcRate;
-  const adminChargePRC = adminChargeINR * prcRate;
-  const totalPRC = totalINR * prcRate;
+  const adminChargePRC = (voucherAmountPRC + processingFeePRC) * (adminChargePercent / 100);
+  const totalBeforeBurnPRC = voucherAmountPRC + processingFeePRC + adminChargePRC;
+  const burnPRC = totalBeforeBurnPRC * (burnRatePercent / 100);
+  const totalPRC = totalBeforeBurnPRC + burnPRC;
   
   // Fetch dynamic PRC rate on mount
   useEffect(() => {
@@ -244,7 +249,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
               amount={selectedInfo.value}
               processingFee={10}
               adminChargePercent={20}
-              burnRate={user?.subscription_payment_type === 'prc' ? 5 : 1}
+              burnRate={burnRatePercent}
               showBreakdown={false}
               showRateAlert={true}
               serviceType="gift"
@@ -275,11 +280,15 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Admin Charges ({adminChargePercent}%)</span>
-                  <span className="text-orange-400">+ ₹{adminChargeINR.toFixed(0)} = {adminChargePRC.toFixed(0)} PRC</span>
+                  <span className="text-orange-400">+ {adminChargePRC.toFixed(0)} PRC</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Burning ({burnRatePercent}%)</span>
+                  <span className="text-red-400">+ {burnPRC.toFixed(0)} PRC</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-gray-700 font-semibold">
                   <span className="text-amber-400">Total to Pay</span>
-                  <span className="text-amber-400">₹{totalINR.toFixed(0)} = {totalPRC.toFixed(0)} PRC</span>
+                  <span className="text-amber-400">{totalPRC.toFixed(0)} PRC</span>
                 </div>
               </div>
             </div>
