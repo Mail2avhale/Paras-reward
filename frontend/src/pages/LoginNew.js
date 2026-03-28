@@ -36,6 +36,7 @@ const LoginNew = ({ onLogin }) => {
   const [authType, setAuthType] = useState('pin');
   const [identifierChecked, setIdentifierChecked] = useState(false);
   const [step, setStep] = useState(1); // Step 1: ID, Step 2: PIN
+  const [idStatus, setIdStatus] = useState(null); // null | 'valid' | 'invalid'
   
   const [loginData, setLoginData] = useState({
     identifier: '',
@@ -98,6 +99,7 @@ const LoginNew = ({ onLogin }) => {
     
     setCheckingAuthType(true);
     setPinError('');
+    setIdStatus(null);
     
     try {
       const response = await axios.get(`${API}/auth/check-auth-type`, {
@@ -106,6 +108,7 @@ const LoginNew = ({ onLogin }) => {
       
       // Check if user exists in database
       if (response.data.user_exists === false) {
+        setIdStatus('invalid');
         setAnimatedFeedback({
           message: `❌ Account Not Found\n\n📧 "${loginData.identifier}" is not registered.\n\n👉 Please Sign Up to create an account.`,
           type: 'error',
@@ -123,6 +126,7 @@ const LoginNew = ({ onLogin }) => {
         return;
       }
       
+      setIdStatus('valid');
       setAuthType('pin');
       setIdentifierChecked(true);
       setStep(2); // Move to PIN step
@@ -136,6 +140,7 @@ const LoginNew = ({ onLogin }) => {
     } catch (error) {
       const status = error.response?.status;
       if (status === 404) {
+        setIdStatus('invalid');
         setAnimatedFeedback({
           message: `❌ Account Not Found\n\n📧 "${loginData.identifier}" is not registered.\n\n👉 Please Sign Up to create an account.`,
           type: 'error',
@@ -143,6 +148,7 @@ const LoginNew = ({ onLogin }) => {
         });
       } else {
         // Even if API fails, allow PIN entry (server will validate on login)
+        setIdStatus('valid');
         setAuthType('pin');
         setIdentifierChecked(true);
         setStep(2);
@@ -360,30 +366,64 @@ const LoginNew = ({ onLogin }) => {
                 onChange={(e) => {
                   setLoginData({ ...loginData, identifier: e.target.value });
                   setPinError('');
+                  setIdStatus(null);
                 }}
                 required
                 disabled={step === 2}
-                className={`pl-10 py-6 rounded-xl border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 ${step === 2 ? 'bg-gray-50 text-gray-600' : ''}`}
+                className={`pl-10 pr-16 py-6 rounded-xl focus:ring-2 ${
+                  step === 2 
+                    ? 'bg-gray-50 text-gray-600 border-green-300' 
+                    : idStatus === 'invalid' 
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
+                      : 'border-gray-300 focus:border-purple-500 focus:ring-purple-200'
+                }`}
               />
+              {/* Status Icons */}
               {checkingAuthType && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               )}
+              {!checkingAuthType && idStatus === 'valid' && step === 1 && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div data-testid="login-id-valid-icon" className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+              )}
+              {!checkingAuthType && idStatus === 'invalid' && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div data-testid="login-id-invalid-icon" className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                </div>
+              )}
               {step === 2 && (
-                <button
-                  type="button"
-                  data-testid="login-change-id-btn"
-                  onClick={() => {
-                    setStep(1);
-                    setIdentifierChecked(false);
-                    setLoginData(prev => ({ ...prev, pin: '' }));
-                    setPinError('');
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  Change
-                </button>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="login-change-id-btn"
+                    onClick={() => {
+                      setStep(1);
+                      setIdentifierChecked(false);
+                      setIdStatus(null);
+                      setLoginData(prev => ({ ...prev, pin: '' }));
+                      setPinError('');
+                    }}
+                    className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                  >
+                    Change
+                  </button>
+                </div>
               )}
             </div>
           </div>
