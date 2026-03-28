@@ -28,10 +28,10 @@ const ReferralsEnhanced = ({ user }) => {
     try {
       setRefreshing(true);
       
-      // Fetch network stats from Growth Economy API
+      // Fetch network stats and referrals in parallel with timeout
       const [statsRes, referralsRes] = await Promise.all([
-        axios.get(`${API}/api/growth/network-stats/${user.uid}`).catch(() => null),
-        axios.get(`${API}/api/referrals/direct/${user.uid}`).catch(() => null)
+        axios.get(`${API}/api/growth/network-stats/${user.uid}`, { timeout: 15000 }).catch(() => null),
+        axios.get(`${API}/api/referrals/direct/${user.uid}`, { timeout: 10000 }).catch(() => null)
       ]);
       
       if (statsRes?.data?.success) {

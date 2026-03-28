@@ -229,7 +229,7 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
     try {
       // Fetch mining status FIRST (most important for this page)
       // Then fetch user data and stats in parallel
-      const miningResponse = await axios.get(`${API}/mining/status/${user.uid}`, { timeout: 8000 });
+      const miningResponse = await axios.get(`${API}/mining/status/${user.uid}`, { timeout: 20000 });
       const miningData = miningResponse.data;
       
       // Immediately update mining state for faster UI
