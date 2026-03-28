@@ -83,9 +83,9 @@ const ReferralsEnhanced = ({ user }) => {
     }
   };
 
-  // Calculate progress
+  // Calculate progress - based on ACTIVE users vs network cap
   const networkProgress = networkStats ? 
-    Math.min(100, (networkStats.network_size / networkStats.network_cap) * 100) : 0;
+    Math.min(100, Math.round((networkStats.active_network_size / networkStats.network_cap) * 100)) : 0;
 
   if (loading) {
     return (
@@ -195,7 +195,7 @@ const ReferralsEnhanced = ({ user }) => {
           <div className="flex items-center justify-between mb-3">
             <span className="text-gray-400 text-sm">Network Capacity</span>
             <span className="text-amber-400 font-bold text-lg">
-              {networkProgress.toFixed(0)}%
+              {networkStats?.active_network_size || 0} / {networkStats?.network_cap || 0}
             </span>
           </div>
           <div className="h-4 bg-gray-800 rounded-full overflow-hidden">
@@ -204,6 +204,7 @@ const ReferralsEnhanced = ({ user }) => {
               style={{ width: `${networkProgress}%` }}
             />
           </div>
+          <p className="text-gray-500 text-xs mt-2">{networkProgress}% Active Members Used</p>
         </div>
 
         {/* Direct Referrals List */}
