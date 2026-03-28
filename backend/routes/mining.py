@@ -285,12 +285,34 @@ async def start_mining(uid: str):
                 detail="Elite subscription required to start mining"
             )
         
-        # Check if already mining
+        # Check if already mining (but allow if session expired)
         if user.get("mining_active"):
-            raise HTTPException(
-                status_code=400,
-                detail="Mining session already active"
-            )
+            session_end = user.get("mining_session_end")
+            if session_end:
+                # Parse session end time
+                if isinstance(session_end, str):
+                    session_end = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                
+                # If session expired, auto-collect and allow new session
+                now = datetime.now(timezone.utc)
+                if now > session_end:
+                    # Session expired - auto-reset (user should collect first)
+                    logging.info(f"[MINING] Session expired for {uid}, auto-resetting")
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {"mining_active": False}}
+                    )
+                else:
+                    # Session still active
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Mining session already active"
+                    )
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mining session already active"
+                )
         
         now = datetime.now(timezone.utc)
         session_end = now + timedelta(hours=SESSION_DURATION_HOURS)
