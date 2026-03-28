@@ -347,7 +347,7 @@ const NetworkFeed = ({ user }) => {
         <p className="text-gray-500 text-sm truncate">
           {userItem.city && <span>{userItem.city}</span>}
           {userItem.city && userItem.team_size > 0 && <span> • </span>}
-          {userItem.team_size > 0 && <span>{userItem.team_size} team</span>}
+          {userItem.team_size > 0 && <span>{userItem.team_size} network</span>}
           {(userItem.city || userItem.team_size > 0) && <span> • </span>}
           {userItem.followers_count || 0} followers
         </p>

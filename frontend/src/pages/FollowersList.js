@@ -181,7 +181,7 @@ const FollowersList = ({ user, type = 'followers' }) => {
                     {['startup', 'growth', 'elite'].includes(item.subscription_plan?.toLowerCase()) && <Crown className="w-4 h-4 text-amber-400" />}
                   </button>
                   <p className="text-gray-500 text-sm">
-                    {item.team_size || 0} team • {item.followers_count || 0} followers
+                    {item.team_size || 0} network • {item.followers_count || 0} followers
                   </p>
                 </div>
                 

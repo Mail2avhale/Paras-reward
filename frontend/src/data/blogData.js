@@ -72,8 +72,8 @@ export const blogArticles = [
 
       <h2>🚀 How to Increase Your Earning Speed:</h2>
       <ul>
-        <li><strong>Refer friends</strong> → 1 invite = higher rate</li>
-        <li><strong>Get active referrals</strong> → More earnings</li>
+        <li><strong>Invite friends</strong> → 1 connection = higher rate</li>
+        <li><strong>Get active network members</strong> → More rewards</li>
         <li><strong>Become a VIP</strong> → Unlock redeem and bonus perks</li>
       </ul>
 
@@ -84,40 +84,40 @@ export const blogArticles = [
   {
     id: 3,
     slug: "earn-more-with-referrals",
-    title: "How to Earn More Coins with Paras Reward Referrals",
-    excerpt: "The referral system is your best tool for maximizing earnings. Learn how to build a passive network that helps you earn more.",
+    title: "How to Grow Your Network & Increase Rewards with Paras Reward",
+    excerpt: "The Growth Network is your best tool for maximizing rewards. Learn how to grow your network and increase your benefits.",
     author: "PARAS REWARD Team",
     date: "November 2, 2024",
     readTime: "4 min read",
     category: "Referrals",
     image: "https://images.unsplash.com/photo-1556742393-d75f468bfcb0?w=800&h=400&fit=crop",
     content: `
-      <p class="lead">If you're serious about earning more with Paras Reward, the referral system is your best friend.</p>
+      <p class="lead">If you're serious about increasing rewards with Paras Reward, the Growth Network is your best friend.</p>
 
-      <h2>🎯 Benefits of Referring:</h2>
+      <h2>🎯 Benefits of Growing Your Network:</h2>
       <ul>
         <li>You earn more coins per hour</li>
-        <li>Your earning rate permanently increases</li>
-        <li>You build a passive network of users helping you earn</li>
+        <li>Your reward rate increases</li>
+        <li>You build a network of active members boosting your rewards</li>
       </ul>
 
-      <h2>🔗 How Referral Works:</h2>
+      <h2>🔗 How Growth Network Works:</h2>
       <ol>
-        <li>Share your referral link from the app</li>
-        <li>User joins → Your earning rate increases</li>
-        <li>Referred user must be active to count toward bonus</li>
+        <li>Share your invite link from the app</li>
+        <li>New member joins → Your reward rate increases</li>
+        <li>Network member must be active to count toward bonus</li>
       </ol>
 
-      <h2>📈 Best Referral Tips:</h2>
+      <h2>📈 Best Growth Tips:</h2>
       <ul>
-        <li><strong>Share videos/screenshots</strong> of your earnings to build trust</li>
+        <li><strong>Share videos/screenshots</strong> of your rewards to build trust</li>
         <li><strong>Explain it's free</strong> — no investment required</li>
         <li><strong>Give simple steps</strong> to join and start earning</li>
-        <li><strong>Follow up</strong> with your referrals to keep them active</li>
+        <li><strong>Follow up</strong> with your network members to keep them active</li>
       </ul>
 
-      <h2>💰 Referral Earnings Breakdown:</h2>
-      <p>You can refer up to 200 users, and each active referral gives you 10% bonus on their earning rate. The more active referrals you have, the higher your passive earnings!</p>
+      <h2>💰 Growth Reward Breakdown:</h2>
+      <p>You can invite up to 200 members, and each active member gives you bonus on your reward rate. The more active members you have, the higher your rewards!</p>
     `
   },
   {
@@ -160,7 +160,7 @@ export const blogArticles = [
       </ul>
 
       <h2>✅ Is VIP Worth It?</h2>
-      <p>If you're actively using the platform and have built a good referral network, VIP membership pays for itself quickly through redemptions and increased earning rates.</p>
+      <p>If you're actively using the platform and have a strong Growth Network, VIP membership pays for itself quickly through redemptions and increased reward rates.</p>
     `
   },
   {
@@ -279,15 +279,15 @@ export const blogArticles = [
       <ul>
         <li>Track your earning rate daily</li>
         <li>Invite friends when you see rate changes</li>
-        <li>Keep your referrals engaged</li>
+        <li>Keep your network members engaged</li>
         <li>Participate in special events</li>
       </ul>
 
       <h2>📈 Earning Rate Formula:</h2>
-      <p><strong>Base Rate + (10% × Active Referrals) + VIP Bonus = Your Hourly Rate</strong></p>
+      <p><strong>Base Rate + (Active Network Members Bonus) + VIP Bonus = Your Hourly Rate</strong></p>
 
       <h2>💡 Advanced Strategy:</h2>
-      <p>Focus on building a network of 20-50 active referrals. This creates a sustainable passive income stream while you continue your daily activities.</p>
+      <p>Focus on growing a network of 20-50 active members. This creates sustainable reward growth while you continue your daily activities.</p>
     `
   },
   {
@@ -306,8 +306,8 @@ export const blogArticles = [
       <h2>❌ Mistake #1: Missing Daily Login</h2>
       <p><strong>✔️ Solution:</strong> Login daily to maintain optimal earning rates. Set a daily reminder if needed.</p>
 
-      <h2>❌ Mistake #2: Ignoring Referrals</h2>
-      <p><strong>✔️ Solution:</strong> Even 5 active referrals can significantly boost your rate! Don't skip this crucial earning multiplier.</p>
+      <h2>❌ Mistake #2: Ignoring Growth Network</h2>
+      <p><strong>✔️ Solution:</strong> Even 5 active network members can significantly boost your rate! Don't skip this crucial reward multiplier.</p>
 
       <h2>❌ Mistake #3: Skipping VIP Benefits</h2>
       <p><strong>✔️ Solution:</strong> Without VIP, coins cannot be redeemed to rewards — consider upgrading if you are serious about earnings.</p>

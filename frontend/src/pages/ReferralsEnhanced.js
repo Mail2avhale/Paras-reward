@@ -72,7 +72,7 @@ const ReferralsEnhanced = ({ user }) => {
       try {
         await navigator.share({
           title: 'Join Paras Reward',
-          text: 'Join Paras Reward and start earning!',
+          text: 'Join Paras Reward and start growing!',
           url: referralLink
         });
       } catch (err) {
@@ -252,7 +252,7 @@ const ReferralsEnhanced = ({ user }) => {
             </div>
             <h3 className="text-white font-semibold mb-2">No Referrals Yet</h3>
             <p className="text-gray-500 text-sm mb-4">
-              Share your referral link to grow your network and earn more rewards!
+              Share your invite link to grow your network and increase your rewards!
             </p>
             <Button
               onClick={handleShare}

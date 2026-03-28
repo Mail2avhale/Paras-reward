@@ -88,9 +88,9 @@ export const SEOConfigs = {
   },
   // tapGame removed - feature deprecated
   referrals: {
-    title: "Referrals - Invite Friends & Earn Bonus PRC",
-    description: "Earn 10% bonus on every referral! Share your code, grow your team, and earn passive rewards.",
-    keywords: "referral program india, invite friends earn money, referral bonus",
+    title: "Growth Network - Invite Friends & Earn Bonus PRC",
+    description: "Grow your network and increase your rewards! Share your code and unlock more benefits through activity.",
+    keywords: "growth network india, invite friends earn rewards, partner program",
     url: "https://www.parasreward.com/referrals",
     noIndex: true
   },

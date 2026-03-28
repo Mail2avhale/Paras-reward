@@ -1,404 +1,237 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Download, Filter, RefreshCw, Receipt, Gift, Building2, ArrowUpRight, ArrowDownLeft, Send, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, TrendingUp, TrendingDown, Wallet, ChevronLeft, ChevronRight, Filter, ArrowUpDown } from 'lucide-react';
+import { Card } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+const API = process.env.REACT_APP_BACKEND_URL;
 
-const PRCStatement = ({ user }) => {
-  const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  
-  const [statement, setStatement] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [page, setPage] = useState(1);
-  
-  // Filters - Start from user's joining date (or 1 year ago if not available)
-  const [startDate, setStartDate] = useState(() => {
-    // Try to get user's joining date
-    if (user?.created_at) {
-      const joinDate = new Date(user.created_at);
-      return joinDate.toISOString().split('T')[0];
-    }
-    // Fallback to 1 year ago
-    const d = new Date();
-    d.setFullYear(d.getFullYear() - 1);
-    return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [filterType, setFilterType] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+const TYPE_COLORS = {
+  'Reward': { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+  'Recharge': { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/30' },
+  'Bill Pay': { bg: 'bg-purple-500/15', text: 'text-purple-400', border: 'border-purple-500/30' },
+  'Redeem': { bg: 'bg-orange-500/15', text: 'text-orange-400', border: 'border-orange-500/30' },
+  'Bank Redeem': { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30' },
+  'Voucher Redeem': { bg: 'bg-pink-500/15', text: 'text-pink-400', border: 'border-pink-500/30' },
+  'Refund': { bg: 'bg-teal-500/15', text: 'text-teal-400', border: 'border-teal-500/30' },
+  'Burn': { bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30' },
+  'Admin Credit': { bg: 'bg-cyan-500/15', text: 'text-cyan-400', border: 'border-cyan-500/30' },
+  'Admin Debit': { bg: 'bg-rose-500/15', text: 'text-rose-400', border: 'border-rose-500/30' },
+  'Subscription': { bg: 'bg-indigo-500/15', text: 'text-indigo-400', border: 'border-indigo-500/30' },
+  'Other': { bg: 'bg-slate-500/15', text: 'text-slate-400', border: 'border-slate-500/30' },
+};
 
-  const fetchStatement = useCallback(async () => {
-    if (!user?.uid) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const params = new URLSearchParams({
-        start_date: startDate,
-        end_date: endDate,
-        filter_type: filterType,
-        service_type: categoryFilter
-      });
-      
-      const response = await fetch(
-        `${API_URL}/api/user/prc-statement/${user.uid}?${params}`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
-      
-      if (!response.ok) throw new Error('Failed to fetch statement');
-      
-      const data = await response.json();
-      
-      // Transform data for UI
-      setStatement({
-        transactions: data.transactions || [],
-        totals: {
-          total_redeemed: data.summary?.total_debits || 0,
-          total_refunded: data.summary?.total_refunds || 0,
-          total_credits: data.summary?.total_credits || 0,
-          net_prc: data.summary?.net_balance || 0
-        },
-        pagination: {
-          total: data.summary?.transaction_count || 0,
-          page: 1,
-          pages: 1
-        }
-      });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.uid, token, startDate, endDate, filterType, categoryFilter]);
-
-  useEffect(() => {
-    fetchStatement();
-  }, [fetchStatement]);
-
-  const handleDownload = async () => {
-    try {
-      const params = new URLSearchParams({
-        start_date: startDate,
-        end_date: endDate,
-        filter_type: filterType,
-        service_type: categoryFilter
-      });
-      
-      const response = await fetch(
-        `${API_URL}/api/user/prc-statement/${user.uid}/download?${params}`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
-      
-      if (!response.ok) throw new Error('Download failed');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `prc_statement_${startDate}_${endDate}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Download error:', err);
-    }
-  };
-
-  const getCategoryIcon = (category) => {
-    switch (category) {
-      case 'bill_payment': return <Receipt className="w-4 h-4" />;
-      case 'gift_voucher': return <Gift className="w-4 h-4" />;
-      case 'bank_redeem': return <Building2 className="w-4 h-4" />;
-      case 'dmt': return <Send className="w-4 h-4" />;
-      case 'mining': return <Gift className="w-4 h-4" />;
-      case 'referral': return <Gift className="w-4 h-4" />;
-      case 'subscription': return <Receipt className="w-4 h-4" />;
-      case 'refund': return <RefreshCw className="w-4 h-4" />;
-      case 'subscription_payment': return <Receipt className="w-4 h-4" />;
-      case 'shop': return <ShoppingBag className="w-4 h-4" />;
-      case 'utility': return <Receipt className="w-4 h-4" />;
-      default: return <Receipt className="w-4 h-4" />;
-    }
-  };
-
-  const getCategoryColor = (category) => {
-    switch (category) {
-      case 'bill_payment': return 'bg-blue-500/20 text-blue-400';
-      case 'gift_voucher': return 'bg-purple-500/20 text-purple-400';
-      case 'bank_redeem': return 'bg-green-500/20 text-green-400';
-      case 'dmt': return 'bg-cyan-500/20 text-cyan-400';
-      case 'mining': return 'bg-amber-500/20 text-amber-400';
-      case 'referral': return 'bg-pink-500/20 text-pink-400';
-      case 'subscription': return 'bg-violet-500/20 text-violet-400';
-      case 'refund': return 'bg-yellow-500/20 text-yellow-400';
-      case 'subscription_payment': return 'bg-violet-500/20 text-violet-400';
-      case 'shop': return 'bg-orange-500/20 text-orange-400';
-      case 'utility': return 'bg-teal-500/20 text-teal-400';
-      default: return 'bg-gray-500/20 text-gray-400';
-    }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
+const TypeBadge = ({ type }) => {
+  const colors = TYPE_COLORS[type] || TYPE_COLORS['Other'];
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-black text-white">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => navigate(-1)}
-              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-lg font-bold">PRC Statement</h1>
-              <p className="text-xs text-gray-400">Redeem & Refund History</p>
-            </div>
-          </div>
-          <button
-            onClick={handleDownload}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors text-sm"
-          >
-            <Download className="w-4 h-4" />
-            CSV
-          </button>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-4">
-        {/* Filters */}
-        <div className="bg-gray-800/50 rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <Filter className="w-4 h-4" />
-            <span>Filters</span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">From Date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 rounded-lg text-sm border border-gray-600 focus:border-emerald-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">To Date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 rounded-lg text-sm border border-gray-600 focus:border-emerald-500 outline-none"
-              />
-            </div>
-          </div>
-          
-          <div className="flex gap-2">
-            {['all', 'redeemed', 'refunds', 'credits'].map((type) => (
-              <button
-                key={type}
-                onClick={() => setFilterType(type)}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filterType === type
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-              >
-                {type === 'all' ? 'All' : type === 'redeemed' ? 'Debits' : type === 'refunds' ? 'Refunds' : 'Credits'}
-              </button>
-            ))}
-          </div>
-          
-          {/* Category Filter */}
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Service Type</label>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 rounded-lg text-sm border border-gray-600 focus:border-emerald-500 outline-none"
-            >
-              <option value="all">All Services</option>
-              <option value="bill_payment">BBPS (Bill Payments)</option>
-              <option value="dmt">Money Transfer (DMT)</option>
-              <option value="bank_redeem">Bank Withdrawals</option>
-              <option value="gift_voucher">Gift Vouchers</option>
-              <option value="shop">Shopping / Orders</option>
-              <option value="utility">Utility / Recharge</option>
-              <option value="mining">Mining Rewards</option>
-              <option value="referral">Referral Bonus</option>
-              <option value="subscription">Subscription</option>
-              <option value="refund">Refunds Only</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Summary Cards */}
-        {statement?.totals && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-red-900/30 to-red-800/20 rounded-xl p-4 border border-red-800/30">
-              <div className="flex items-center gap-2 text-red-400 mb-1">
-                <ArrowUpRight className="w-4 h-4" />
-                <span className="text-xs">Total Debits</span>
-              </div>
-              <p className="text-xl font-bold text-red-300">
-                {statement.totals.total_redeemed?.toLocaleString('en-IN') || 0}
-              </p>
-              <p className="text-xs text-gray-400">PRC</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-xl p-4 border border-green-800/30">
-              <div className="flex items-center gap-2 text-green-400 mb-1">
-                <ArrowDownLeft className="w-4 h-4" />
-                <span className="text-xs">Total Credits</span>
-              </div>
-              <p className="text-xl font-bold text-green-300">
-                {statement.totals.total_credits?.toLocaleString('en-IN') || 0}
-              </p>
-              <p className="text-xs text-gray-400">PRC</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-amber-900/30 to-amber-800/20 rounded-xl p-4 border border-amber-800/30">
-              <div className="flex items-center gap-2 text-amber-400 mb-1">
-                <RefreshCw className="w-4 h-4" />
-                <span className="text-xs">Refunded</span>
-              </div>
-              <p className="text-xl font-bold text-amber-300">
-                {statement.totals.total_refunded?.toLocaleString('en-IN') || 0}
-              </p>
-              <p className="text-xs text-gray-400">PRC</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-emerald-900/30 to-emerald-800/20 rounded-xl p-4 border border-emerald-800/30">
-              <div className="flex items-center gap-2 text-emerald-400 mb-1">
-                <Receipt className="w-4 h-4" />
-                <span className="text-xs">Net Balance</span>
-              </div>
-              <p className="text-xl font-bold text-emerald-300">
-                {statement.totals.net_prc?.toLocaleString('en-IN') || 0}
-              </p>
-              <p className="text-xs text-gray-400">PRC</p>
-            </div>
-          </div>
-        )}
-
-        {/* Transaction List */}
-        <div className="bg-gray-800/50 rounded-xl overflow-hidden">
-          <div className="p-3 border-b border-gray-700 flex items-center justify-between">
-            <h3 className="font-medium text-sm">Transactions</h3>
-            {statement?.pagination && (
-              <span className="text-xs text-gray-400">
-                {statement.pagination.total} entries
-              </span>
-            )}
-          </div>
-          
-          {loading ? (
-            <div className="p-8 text-center text-gray-400">
-              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-              Loading...
-            </div>
-          ) : error ? (
-            <div className="p-8 text-center text-red-400">
-              {error}
-              <button 
-                onClick={fetchStatement}
-                className="block mx-auto mt-2 text-sm text-emerald-400 hover:underline"
-              >
-                Retry
-              </button>
-            </div>
-          ) : statement?.transactions?.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">
-              No transactions found for this period
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-700/50">
-              {statement?.transactions?.map((entry, idx) => (
-                <div key={entry.id || idx} className="p-3 hover:bg-gray-700/30 transition-colors">
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg ${getCategoryColor(entry.category)}`}>
-                      {getCategoryIcon(entry.category)}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{entry.description}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-400">{formatDate(entry.date)}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${
-                          entry.status === 'success' ? 'bg-green-500/20 text-green-400' :
-                          entry.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                          entry.status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
-                          'bg-gray-500/20 text-gray-400'
-                        }`}>
-                          {entry.status}
-                        </span>
-                        {entry.reference && (
-                          <span className="text-xs text-gray-500 truncate max-w-[100px]">
-                            {entry.reference}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <p className={`text-sm font-bold ${
-                        entry.type === 'credit' ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        {entry.type === 'credit' ? '+' : '-'}{entry.amount?.toLocaleString('en-IN')} PRC
-                      </p>
-                      <p className="text-xs text-gray-500 capitalize">{entry.category}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {/* Pagination */}
-          {statement?.pagination && statement.pagination.pages > 1 && (
-            <div className="p-3 border-t border-gray-700 flex items-center justify-between">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg bg-gray-700 text-sm disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-400">
-                Page {page} of {statement.pagination.pages}
-              </span>
-              <button
-                onClick={() => setPage(p => Math.min(statement.pagination.pages, p + 1))}
-                disabled={page === statement.pagination.pages}
-                className="px-3 py-1.5 rounded-lg bg-gray-700 text-sm disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors.bg} ${colors.text} border ${colors.border}`} data-testid={`type-badge-${type}`}>
+      {type}
+    </span>
   );
 };
 
-export default PRCStatement;
+const formatDate = (iso) => {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  const day = d.getDate().toString().padStart(2, '0');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const mon = months[d.getMonth()];
+  const h = d.getHours().toString().padStart(2, '0');
+  const m = d.getMinutes().toString().padStart(2, '0');
+  return `${day} ${mon} ${h}:${m}`;
+};
+
+const formatPRC = (val) => {
+  if (!val || val === 0) return '–';
+  return val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+export default function PRCStatement({ user }) {
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [filterType, setFilterType] = useState('All');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const LIMIT = 20;
+
+  const fetchStatement = useCallback(async () => {
+    if (!user?.uid) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/prc-statement/${user.uid}?page=${page}&limit=${LIMIT}&filter_type=${filterType}&sort_order=${sortOrder}`);
+      const json = await res.json();
+      if (json.success) setData(json);
+    } catch (err) {
+      console.error('Statement fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.uid, page, filterType, sortOrder]);
+
+  useEffect(() => { fetchStatement(); }, [fetchStatement]);
+
+  const summary = data?.summary || {};
+  const entries = data?.entries || [];
+  const pagination = data?.pagination || {};
+  const filters = data?.filters || [];
+
+  return (
+    <div className="min-h-screen bg-slate-950" data-testid="prc-statement-page">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 px-4 py-5">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-white mb-4 text-sm" data-testid="back-btn">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
+        </button>
+        <h1 className="text-xl font-bold text-white mb-1">PRC Statement</h1>
+        <p className="text-slate-400 text-xs">Your complete PRC passbook</p>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-3 gap-3" data-testid="summary-section">
+          <Card className="bg-emerald-500/10 border-emerald-500/30 p-3 text-center">
+            <TrendingUp className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
+            <p className="text-slate-400 text-[10px] uppercase tracking-wider">Total Earned (CR)</p>
+            <p className="text-emerald-400 font-bold text-sm mt-0.5" data-testid="total-earned">
+              {formatPRC(summary.total_earned)} PRC
+            </p>
+          </Card>
+          <Card className="bg-red-500/10 border-red-500/30 p-3 text-center">
+            <TrendingDown className="w-5 h-5 text-red-400 mx-auto mb-1" />
+            <p className="text-slate-400 text-[10px] uppercase tracking-wider">Total Used (DR)</p>
+            <p className="text-red-400 font-bold text-sm mt-0.5" data-testid="total-used">
+              {formatPRC(summary.total_used)} PRC
+            </p>
+          </Card>
+          <Card className="bg-blue-500/10 border-blue-500/30 p-3 text-center">
+            <Wallet className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+            <p className="text-slate-400 text-[10px] uppercase tracking-wider">Current Balance</p>
+            <p className="text-blue-400 font-bold text-sm mt-0.5" data-testid="current-balance">
+              {formatPRC(summary.current_balance)} PRC
+            </p>
+          </Card>
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" data-testid="filter-section">
+          <Filter className="w-4 h-4 text-slate-500 flex-shrink-0" />
+          {filters.map(f => (
+            <button
+              key={f}
+              onClick={() => { setFilterType(f); setPage(1); }}
+              data-testid={`filter-${f.replace(/\s+/g, '-')}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                filterType === f
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+          <button
+            onClick={() => setSortOrder(s => s === 'desc' ? 'asc' : 'desc')}
+            className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-400 hover:bg-slate-700 flex-shrink-0"
+            data-testid="sort-toggle"
+          >
+            <ArrowUpDown className="w-3 h-3" />
+            {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
+          </button>
+        </div>
+
+        {/* Ledger Table — Desktop */}
+        <div className="hidden md:block" data-testid="desktop-table">
+          <Card className="bg-slate-900 border-slate-700 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-800/80 text-slate-400 text-xs uppercase tracking-wider">
+                  <th className="text-left p-3">Date</th>
+                  <th className="text-left p-3">Type</th>
+                  <th className="text-left p-3">Narration</th>
+                  <th className="text-right p-3 text-emerald-400">CR</th>
+                  <th className="text-right p-3 text-red-400">DR</th>
+                  <th className="text-right p-3 text-blue-400">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-500">Loading...</td></tr>
+                ) : entries.length === 0 ? (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-500">No transactions found</td></tr>
+                ) : entries.map((e, i) => (
+                  <tr key={e.txn_id || i} className="border-t border-slate-800 hover:bg-slate-800/40 transition-colors" data-testid={`row-${i}`}>
+                    <td className="p-3 text-slate-300 text-xs whitespace-nowrap">{formatDate(e.date)}</td>
+                    <td className="p-3"><TypeBadge type={e.type} /></td>
+                    <td className="p-3 text-slate-300 text-xs max-w-[200px] truncate">{e.narration}</td>
+                    <td className="p-3 text-right text-emerald-400 font-mono text-xs">{e.credit > 0 ? formatPRC(e.credit) : '–'}</td>
+                    <td className="p-3 text-right text-red-400 font-mono text-xs">{e.debit > 0 ? formatPRC(e.debit) : '–'}</td>
+                    <td className="p-3 text-right text-blue-300 font-mono text-xs font-medium">{formatPRC(e.balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </div>
+
+        {/* Ledger Cards — Mobile */}
+        <div className="md:hidden space-y-2" data-testid="mobile-cards">
+          {loading ? (
+            <div className="text-center py-8 text-slate-500">Loading...</div>
+          ) : entries.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">No transactions found</div>
+          ) : entries.map((e, i) => (
+            <Card key={e.txn_id || i} className="bg-slate-900 border-slate-700/50 p-3" data-testid={`card-${i}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <TypeBadge type={e.type} />
+                  <span className="text-slate-500 text-[10px]">{formatDate(e.date)}</span>
+                </div>
+                <span className="text-blue-300 font-mono text-xs font-medium">{formatPRC(e.balance)}</span>
+              </div>
+              <p className="text-slate-300 text-xs mb-2 truncate">{e.narration}</p>
+              <div className="flex gap-4">
+                {e.credit > 0 && (
+                  <span className="text-emerald-400 font-mono text-xs">+ {formatPRC(e.credit)} CR</span>
+                )}
+                {e.debit > 0 && (
+                  <span className="text-red-400 font-mono text-xs">- {formatPRC(e.debit)} DR</span>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {/* Pagination */}
+        {pagination.total_pages > 1 && (
+          <div className="flex items-center justify-between pt-2" data-testid="pagination">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage(p => p - 1)}
+              className="border-slate-600 text-slate-300 disabled:opacity-30"
+              data-testid="prev-page"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+            </Button>
+            <span className="text-slate-500 text-xs">
+              Page {page} of {pagination.total_pages} ({pagination.total_entries} entries)
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= pagination.total_pages}
+              onClick={() => setPage(p => p + 1)}
+              className="border-slate-600 text-slate-300 disabled:opacity-30"
+              data-testid="next-page"
+            >
+              Next <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

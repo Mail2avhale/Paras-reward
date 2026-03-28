@@ -176,7 +176,7 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
   const [showFloatingCoin, setShowFloatingCoin] = useState(false);
   const [sessionProgress, setSessionProgress] = useState(0); // Real progress percentage
   const [referralBreakdown, setReferralBreakdown] = useState(null); // Level-wise breakdown
-  const [baseRate, setBaseRate] = useState(0); // Individual base mining rate (includes single leg bonus)
+  const [baseRate, setBaseRate] = useState(0); // Individual base mining rate (includes growth network bonus)
   const [networkRate, setNetworkRate] = useState(0); // Network mining rate from Growth Economy
   
   // Collect state

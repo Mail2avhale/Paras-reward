@@ -550,7 +550,7 @@ const translations = {
   tutorialReferralSubtitle: {
     mr: "Team बनवा, जास्त bonus मिळवा",
     hi: "Team बनाएं, ज्यादा bonus पाएं",
-    en: "Build Team, Get More Bonus"
+    en: "Grow Network, Get More Bonus"
   },
   tutorialReferralDesc: {
     mr: "तुमचा referral code share करा. तुमच्या 5 levels पर्यंतच्या team वर bonus मिळतो!",
@@ -575,7 +575,7 @@ const translations = {
   mascotReferral: {
     mr: "Team बनवा!",
     hi: "Team बनाएं!",
-    en: "Build Team!"
+    en: "Grow Network!"
   },
 
   // Rain Slide

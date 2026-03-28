@@ -218,7 +218,7 @@ const PublicProfile = ({ user }) => {
             </button>
             <div className="text-center">
               <p className="text-2xl font-bold text-white">{profile.team_size || 0}</p>
-              <p className="text-gray-500 text-sm">Team</p>
+              <p className="text-gray-500 text-sm">Network</p>
             </div>
           </div>
 

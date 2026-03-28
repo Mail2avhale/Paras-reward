@@ -169,7 +169,7 @@ async def get_economy_settings() -> dict:
 
 def calculate_prc_per_user(network_size: int, min_prc: float = DEFAULT_MIN_PRC_PER_USER, max_prc: float = DEFAULT_MAX_PRC_PER_USER) -> float:
     """
-    Calculate PRC per user in team based on network size (Single Leg).
+    Calculate PRC per user in network based on network size (Growth Network).
     
     Formula: PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14)
     
@@ -220,7 +220,7 @@ def calculate_network_cap(direct_referrals: int) -> int:
 
 async def calculate_mining_speed(user_id: str) -> dict:
     """
-    Calculate user's mining speed based on Single Leg Growth Network.
+    Calculate user's mining speed based on Growth Network.
     
     Formula:
     - Base Mining: 500 PRC/day (user's own)
