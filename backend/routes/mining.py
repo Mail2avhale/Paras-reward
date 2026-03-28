@@ -1,17 +1,20 @@
 """
-Mining Routes - NEW GROWTH ECONOMY SYSTEM (March 2026)
-=======================================================
+Mining Routes - GROWTH ECONOMY SYSTEM (March 2026)
+====================================================
 
-Mining Formula (Per User - Decreasing):
-- R(U) = max(3, 8 - 0.5 × log₂(U))
-- Daily PRC = 550 + (U × R(U))
+Mining Formula:
+- Base: 500 PRC/day
+- Team Bonus: N × PRC_per_user(N)
+- PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
 
-Network Cap Formula:
-- NetworkCap = min(4000, 800 + 16×D)
+Network Cap:
+- 0 direct referrals → 800 users cap
+- ≥1 direct referral → 4000 users cap
 
-Subscription Multiplier:
-- Cash Payment: 100% mining speed
-- PRC Payment: 70% mining speed
+Subscription Speed:
+- Explorer: Shows speed (demo), CANNOT collect
+- Elite (Razorpay/Manual): 100% speed
+- Elite (PRC payment): 70% speed
 """
 
 import math
@@ -43,12 +46,10 @@ def set_helpers(helpers: dict):
 
 # ==================== MINING FORMULA CONSTANTS ====================
 
-BASE_MINING_PRC = 550  # Base daily PRC
-MIN_PRC_PER_USER = 3  # Minimum PRC per network user
-MAX_PRC_PER_USER = 8  # Maximum PRC per network user (early users)
-NETWORK_CAP_BASE = 800  # Base network capacity
-NETWORK_CAP_PER_REFERRAL = 16  # Capacity increase per direct referral
-MAX_NETWORK_CAP = 4000  # Maximum network capacity
+BASE_MINING_PRC = 500  # Base daily PRC (user's own mining)
+MIN_PRC_PER_USER = 2.5  # Minimum PRC per user at 16384 network
+NETWORK_CAP_NO_REFERRAL = 800  # Cap when 0 direct referrals
+NETWORK_CAP_WITH_REFERRAL = 4000  # Cap when ≥1 direct referral
 SESSION_DURATION_HOURS = 24  # Mining session duration
 
 
@@ -58,27 +59,38 @@ def calculate_prc_per_user(network_size: int) -> float:
     """
     Calculate PRC per user based on network size (Decreasing formula)
     
-    Formula: R(U) = max(3, 8 - 0.5 × log₂(U))
+    Formula: PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14)
     
-    As network grows, PRC per user decreases
+    Spreadsheet:
+    | Users | PRC/User |
+    |   2   |  7.14    |
+    | 128   |  5.00    |
+    |16384  |  2.50    |
     """
     if network_size <= 0:
-        return MAX_PRC_PER_USER
+        return 0  # No team = no team bonus
     
-    log_value = math.log2(max(1, network_size))
-    prc_per_user = MAX_PRC_PER_USER - (0.5 * log_value)
+    if network_size == 1:
+        # 1 user: 5 × (21 - 0) / 14 = 7.5, but cap per spreadsheet pattern
+        return 5 * (21 - math.log2(2)) / 14  # Treat as 2 → 7.142857
     
-    return max(MIN_PRC_PER_USER, round(prc_per_user, 4))
+    log_value = math.log2(max(2, network_size))
+    prc_per_user = 5 * (21 - log_value) / 14
+    
+    return round(max(MIN_PRC_PER_USER, prc_per_user), 6)
 
 
 def calculate_network_cap(direct_referrals: int) -> int:
     """
     Calculate maximum network capacity based on direct referrals
     
-    Formula: NetworkCap = min(4000, 800 + 16 × D)
+    Binary cap:
+    - 0 direct referrals → 800 users
+    - ≥1 direct referral → 4000 users
     """
-    cap = NETWORK_CAP_BASE + (NETWORK_CAP_PER_REFERRAL * direct_referrals)
-    return min(MAX_NETWORK_CAP, cap)
+    if direct_referrals >= 1:
+        return NETWORK_CAP_WITH_REFERRAL
+    return NETWORK_CAP_NO_REFERRAL
 
 
 async def get_network_size(user_id: str) -> int:
@@ -88,7 +100,7 @@ async def get_network_size(user_id: str) -> int:
         queue = [user_id]
         total_count = 0
         
-        while queue and len(visited) < MAX_NETWORK_CAP:
+        while queue and len(visited) < NETWORK_CAP_WITH_REFERRAL:
             current_user = queue.pop(0)
             if current_user in visited:
                 continue
@@ -116,8 +128,8 @@ async def calculate_mining_rate(user_id: str) -> dict:
     Calculate user's mining rate based on Growth Economy formulas
     
     Returns:
-    - base_rate: 550 PRC/day (base)
-    - network_rate: U × R(U) PRC/day
+    - base_rate: 500 PRC/day (base)
+    - network_rate: N × PRC_per_user(N)
     - total_rate: base + network
     - per_second_rate: total / 86400
     - boost_multiplier: subscription type multiplier
@@ -133,22 +145,30 @@ async def calculate_mining_rate(user_id: str) -> dict:
     # Get network size
     network_size = await get_network_size(user_id)
     
-    # Calculate network cap
+    # Calculate network cap (binary: 0 refs=800, ≥1 ref=4000)
     network_cap = calculate_network_cap(direct_referrals)
     
     # Limit network size to cap
     effective_network = min(network_size, network_cap)
     
-    # Calculate PRC per user
+    # Calculate PRC per user using new formula
     prc_per_user = calculate_prc_per_user(effective_network)
     
     # Calculate rates
     base_rate = BASE_MINING_PRC
     network_rate = effective_network * prc_per_user
     
-    # Subscription multiplier (Cash = 100%, PRC = 70%)
-    subscription_type = user.get("subscription_payment_type", "cash")
-    boost_multiplier = 0.70 if subscription_type == "prc" else 1.0
+    # Subscription multiplier:
+    # Elite via Razorpay/Manual = 100%, Elite via PRC = 70%
+    # Explorer = 100% (demo - shows speed but can't collect)
+    subscription_plan = user.get("subscription_plan", "explorer")
+    subscription_payment_type = user.get("subscription_payment_type", "cash")
+    is_elite = subscription_plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
+    
+    if is_elite and subscription_payment_type == "prc":
+        boost_multiplier = 0.70
+    else:
+        boost_multiplier = 1.0  # Cash/Razorpay/Manual Elite OR Explorer (demo)
     
     # Apply multiplier
     total_daily_rate = (base_rate + network_rate) * boost_multiplier
@@ -157,15 +177,16 @@ async def calculate_mining_rate(user_id: str) -> dict:
     return {
         "base_rate": base_rate,
         "network_rate": round(network_rate, 2),
-        "prc_per_user": prc_per_user,
+        "prc_per_user": round(prc_per_user, 6),
         "network_size": effective_network,
         "network_cap": network_cap,
         "direct_referrals": direct_referrals,
         "boost_multiplier": boost_multiplier,
-        "subscription_type": subscription_type,
+        "subscription_type": subscription_payment_type,
+        "subscription_plan": subscription_plan,
         "total_daily_rate": round(total_daily_rate, 2),
         "per_second_rate": round(per_second_rate, 6),
-        "final_rate": round(per_second_rate, 6)  # Alias for compatibility
+        "final_rate": round(per_second_rate, 6)
     }
 
 
@@ -187,18 +208,32 @@ async def get_mining_status(uid: str):
         subscription_plan = user.get("subscription_plan", "explorer")
         is_elite = subscription_plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
         
+        # Calculate mining rate for ALL users (Explorer sees demo speed)
+        rate_info = await calculate_mining_rate(uid)
+        
         if not is_elite:
+            # Explorer: show speed as DEMO but cannot collect/start
             return {
                 "mining_active": False,
                 "mined_coins": 0,
-                "mining_rate": 0,
+                "mining_rate": rate_info["per_second_rate"],
+                "mining_rate_per_hour": rate_info["per_second_rate"] * 3600,
+                "total_daily_rate": rate_info["total_daily_rate"],
+                "base_rate": rate_info["base_rate"],
+                "network_rate": rate_info["network_rate"],
+                "boost_multiplier": rate_info["boost_multiplier"],
                 "can_start": False,
+                "can_collect": False,
                 "requires_subscription": True,
-                "message": "Upgrade to Elite subscription to start mining"
+                "is_demo": True,
+                "network_size": rate_info["network_size"],
+                "network_cap": rate_info["network_cap"],
+                "prc_per_user": rate_info["prc_per_user"],
+                "subscription_type": rate_info["subscription_type"],
+                "message": "Upgrade to Elite to collect PRC"
             }
         
-        # Calculate mining rate
-        rate_info = await calculate_mining_rate(uid)
+        # Elite user flow
         
         # Get session info
         mining_active = user.get("mining_active", False)
@@ -477,9 +512,9 @@ async def get_rate_breakdown(uid: str):
             raise HTTPException(status_code=404, detail=rate_info["error"])
         
         return {
-            "formula": "R(U) = max(3, 8 - 0.5 × log₂(U))",
-            "daily_formula": "Daily PRC = 550 + (U × R(U))",
-            "network_cap_formula": "NetworkCap = min(4000, 800 + 16×D)",
+            "formula": "PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14)",
+            "daily_formula": "Daily PRC = 500 + (N × PRC_per_user)",
+            "network_cap_formula": "0 refs → 800, ≥1 ref → 4000",
             "base_rate": rate_info["base_rate"],
             "network_size": rate_info["network_size"],
             "network_cap": rate_info["network_cap"],

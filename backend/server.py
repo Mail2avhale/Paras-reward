@@ -2153,7 +2153,8 @@ async def auto_sync_razorpay_payments():
                                     "last_payment_date": now,
                                     "previous_plan": old_plan,
                                     "previous_remaining_days_added": remaining_days,
-                                    "activated_via": "auto_sync"
+                                    "activated_via": "auto_sync",
+                                    "subscription_payment_type": "cash"
                                 },
                                 "$unset": {"_auto_sync_claiming": ""}
                             }
@@ -2410,7 +2411,8 @@ async def auto_sync_captured_from_razorpay():
                             "last_payment_id": payment_id,
                             "last_payment_amount": amount,
                             "last_payment_date": now.isoformat(),
-                            "activated_via": "captured_sync"
+                            "activated_via": "captured_sync",
+                            "subscription_payment_type": "cash"
                         },
                         "$unset": {"_captured_sync_claiming": ""}
                     }
@@ -9300,7 +9302,8 @@ async def manual_activate_subscription(request: Request):
                     "last_payment_id": payment_id,
                     "last_payment_amount": amount,
                     "last_payment_date": now.isoformat(),
-                    "activated_via": "manual_activate"
+                    "activated_via": "manual_activate",
+                    "subscription_payment_type": "cash"
                 }
             }
         )
@@ -9501,7 +9504,8 @@ async def bulk_sync_captured_payments(request: Request):
                             "last_payment_id": payment_id,
                             "last_payment_amount": amount,
                             "last_payment_date": now.isoformat(),
-                            "activated_via": "bulk_sync"
+                            "activated_via": "bulk_sync",
+                            "subscription_payment_type": "cash"
                         }
                     }
                 )
@@ -9694,7 +9698,8 @@ async def sync_single_razorpay_order(request: Request):
                     "last_payment_id": payment_id,
                     "last_payment_amount": amount,
                     "last_payment_date": now.isoformat(),
-                    "activated_via": "single_sync"
+                    "activated_via": "single_sync",
+                    "subscription_payment_type": "cash"
                 }
             }
         )
@@ -11540,6 +11545,7 @@ async def subscription_pay_with_prc(request: Request):
                         "subscription_start": now.isoformat(),
                         "membership_type": "vip",
                         "subscription_status": "active",
+                        "subscription_payment_type": "prc",
                         "last_prc_subscription": now.isoformat()
                     }
                 }

@@ -610,18 +610,18 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
   
   // Get mining speed display based on subscription
   const getMiningSpeedDisplay = (plan, paymentType) => {
-    // Explorer = 0% (no mining)
-    if (!plan || plan === 'explorer') {
-      return { speed: '0%', color: 'text-zinc-500', canMine: false };
+    // Explorer = shows speed as DEMO (100% calculation, can't collect)
+    if (!plan || plan === 'explorer' || plan === 'free' || plan === '') {
+      return { speed: 'Demo', color: 'text-zinc-400', canMine: false, isDemo: true };
     }
     
     // Elite with PRC payment = 70%
     if (paymentType === 'prc') {
-      return { speed: '70%', color: 'text-amber-400', canMine: true };
+      return { speed: '70%', color: 'text-amber-400', canMine: true, isDemo: false };
     }
     
     // Elite with Cash/Manual/Razorpay = 100%
-    return { speed: '100%', color: 'text-emerald-400', canMine: true };
+    return { speed: '100%', color: 'text-emerald-400', canMine: true, isDemo: false };
   };
   
   const speedInfo = getMiningSpeedDisplay(subscriptionPlan, userData?.subscription_payment_type);
@@ -726,10 +726,16 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
                   )}
                 </span>
               </div>
-              {hasPaidPlan && (
-                <div className={`px-3 py-1.5 rounded-full ${speedInfo.speed === '100%' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-amber-500/10 border border-amber-500/30'}`}>
+              {hasPaidPlan ? (
+                <div className={`px-3 py-1.5 rounded-full ${speedInfo.speed === '100%' ? 'bg-emerald-500/10 border border-emerald-500/30' : speedInfo.speed === '70%' ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-zinc-800/50 border border-zinc-700'}`}>
                   <span className={`text-xs font-semibold flex items-center gap-1 ${speedInfo.color}`}>
                     <Zap className="w-3 h-3" /> {speedInfo.speed} Speed
+                  </span>
+                </div>
+              ) : (
+                <div className="px-3 py-1.5 rounded-full bg-zinc-800/50 border border-zinc-700">
+                  <span className="text-xs font-semibold flex items-center gap-1 text-zinc-400">
+                    <Zap className="w-3 h-3" /> Demo
                   </span>
                 </div>
               )}
@@ -878,28 +884,62 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
                 >
                   <Star className="w-12 h-12 text-amber-500" />
                 </motion.div>
-                <p className="text-zinc-400 mb-4">{globalT('startEarning')}</p>
-                <Button 
-                  onClick={startSession}
-                  disabled={isStarting}
-                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-semibold py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] border border-emerald-500/50 active:scale-[0.98] transition-all"
-                >
-                  {isStarting ? (
-                    <span className="flex items-center gap-2 justify-center">
-                      <motion.div 
-                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      />
-                      {globalT('processing')}...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2 justify-center">
-                      <Play className="w-5 h-5" />
-                      {globalT('startSession')}
-                    </span>
-                  )}
-                </Button>
+                
+                {/* Show daily rate for ALL users including Explorer */}
+                <div className="mb-4 bg-zinc-800/50 rounded-2xl p-4 border border-zinc-700/50">
+                  <p className="text-zinc-500 text-xs mb-1">Daily Earning Rate</p>
+                  <p className="text-2xl font-bold text-amber-400 font-mono">
+                    {(baseRate || 500).toFixed(0)} + {(networkRate || 0).toFixed(2)}
+                  </p>
+                  <p className="text-zinc-500 text-xs mt-1">Base + Network PRC/day</p>
+                </div>
+                
+                {isFreeUser ? (
+                  /* Explorer Demo Mode - Upgrade prompt */
+                  <div className="bg-gradient-to-br from-amber-900/30 to-orange-900/20 rounded-2xl p-4 border border-amber-500/30">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Crown className="w-6 h-6 text-amber-400" />
+                      <div className="text-left">
+                        <p className="text-amber-400 font-semibold text-sm">Upgrade to Elite</p>
+                        <p className="text-gray-400 text-xs">Start collecting PRC daily</p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => navigate('/subscription')}
+                      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-semibold py-3 rounded-xl"
+                      data-testid="upgrade-elite-btn"
+                    >
+                      <Crown className="w-4 h-4 mr-2" />
+                      Upgrade Now
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-zinc-400 mb-4">{globalT('startEarning')}</p>
+                    <Button 
+                      onClick={startSession}
+                      disabled={isStarting}
+                      className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-semibold py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] border border-emerald-500/50 active:scale-[0.98] transition-all"
+                      data-testid="start-mining-btn"
+                    >
+                      {isStarting ? (
+                        <span className="flex items-center gap-2 justify-center">
+                          <motion.div 
+                            className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          />
+                          {globalT('processing')}...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2 justify-center">
+                          <Play className="w-5 h-5" />
+                          {globalT('startSession')}
+                        </span>
+                      )}
+                    </Button>
+                  </>
+                )}
               </div>
             )}
 
@@ -933,16 +973,17 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
       {/* Free User Warning - Dark Theme */}
       {!hasPaidPlan && (
         <div className="px-5 mb-6">
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4" data-testid="explorer-demo-warning">
             <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-amber-500 mt-0.5" />
+              <Info className="w-5 h-5 text-amber-500 mt-0.5" />
               <div>
-                <p className="text-amber-400 font-medium text-sm">{globalT('freeUserWarning')}</p>
+                <p className="text-amber-400 font-medium text-sm">Explorer Plan - Demo Mode</p>
+                <p className="text-zinc-500 text-xs mt-1">Mining speed is visible but PRC collection requires Elite plan</p>
                 <button 
                   onClick={() => navigate('/subscription')}
                   className="text-amber-500 text-xs mt-1 underline hover:text-amber-400"
                 >
-                  {globalT('upgradeToVip')} →
+                  Upgrade to Elite →
                 </button>
               </div>
             </div>

@@ -32,9 +32,8 @@ def set_db(database):
 # ==================== CONSTANTS ====================
 
 DEFAULT_BASE_MINING = 500  # Base daily PRC (user's own mining)
-DEFAULT_NETWORK_CAP_BASE = 800  # Base network capacity
-DEFAULT_NETWORK_CAP_PER_REFERRAL = 16  # Capacity increase per direct referral
-DEFAULT_MAX_NETWORK_CAP = 4000  # Maximum network capacity
+DEFAULT_NETWORK_CAP_NO_REFERRAL = 800  # Cap when 0 direct referrals
+DEFAULT_NETWORK_CAP_WITH_REFERRAL = 4000  # Cap when ≥1 direct referral
 DEFAULT_MIN_PRC_PER_USER = 2.5  # Minimum PRC per user in team (at 16384 users)
 DEFAULT_MAX_PRC_PER_USER = 7.142857  # Maximum PRC per user (at 2 users = 50/7)
 
@@ -203,10 +202,13 @@ def calculate_network_cap(direct_referrals: int) -> int:
     """
     Calculate maximum network capacity based on direct referrals
     
-    Formula: NetworkCap = min(4000, 800 + 16 × D)
+    Binary cap:
+    - 0 direct referrals → 800 users
+    - ≥1 direct referral → 4000 users
     """
-    cap = DEFAULT_NETWORK_CAP_BASE + (DEFAULT_NETWORK_CAP_PER_REFERRAL * direct_referrals)
-    return min(DEFAULT_MAX_NETWORK_CAP, cap)
+    if direct_referrals >= 1:
+        return DEFAULT_NETWORK_CAP_WITH_REFERRAL
+    return DEFAULT_NETWORK_CAP_NO_REFERRAL
 
 
 async def calculate_mining_speed(user_id: str) -> dict:
@@ -218,7 +220,8 @@ async def calculate_mining_speed(user_id: str) -> dict:
     - Team Bonus: NetworkSize × PRC_per_user(N)
     - PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
     - Total: (Base + Team Bonus) × subscription_speed
-    - Subscription Speed: Elite/VIP=100%, Growth/Startup=70%
+    - Elite (Cash/Razorpay/Manual) = 100%, Elite (PRC) = 70%
+    - Explorer = shows speed (demo) but can't collect
     """
     settings = await get_economy_settings()
     
@@ -230,11 +233,10 @@ async def calculate_mining_speed(user_id: str) -> dict:
     # Get direct referrals count
     direct_referrals = await db.users.count_documents({"referred_by": user_id})
     
-    # Get network size (users in growth network - active members referred directly or indirectly)
-    # For now, use direct referrals as network base
+    # Get network size
     network_size = await get_network_size(user_id)
     
-    # Calculate network cap
+    # Calculate network cap (binary: 0 refs=800, ≥1 ref=4000)
     network_cap = calculate_network_cap(direct_referrals)
     
     # Limit network size to cap
@@ -253,14 +255,19 @@ async def calculate_mining_speed(user_id: str) -> dict:
     # Base mining
     base_mining = settings["base_mining"]
     
-    # Subscription speed (Elite/VIP = 100%, Growth/Startup = 70%)
+    # Subscription speed based on payment method
     plan = user.get("subscription_plan", "")
-    if plan in ["elite", "vip"]:
-        subscription_multiplier = 1.0
-    elif plan in ["growth", "startup"]:
-        subscription_multiplier = 0.70
+    payment_type = user.get("subscription_payment_type", "cash")
+    
+    if plan in ["elite", "vip", "startup", "growth", "pro"]:
+        # Elite: check payment method
+        if payment_type == "prc":
+            subscription_multiplier = 0.70  # PRC payment = 70%
+        else:
+            subscription_multiplier = 1.0   # Cash/Razorpay/Manual = 100%
     else:
-        subscription_multiplier = 0.0  # No plan = no mining
+        # Explorer: show full speed (demo) but can't collect
+        subscription_multiplier = 1.0
     
     # Total daily PRC
     total_daily_prc = (base_mining + network_mining) * subscription_multiplier
@@ -274,7 +281,8 @@ async def calculate_mining_speed(user_id: str) -> dict:
         "network_cap": network_cap,
         "direct_referrals": direct_referrals,
         "subscription_multiplier": subscription_multiplier,
-        "subscription_plan": plan
+        "subscription_plan": plan,
+        "subscription_payment_type": payment_type
     }
 
 
@@ -288,7 +296,7 @@ async def get_network_size(user_id: str, max_depth: int = 10) -> int:
         queue = [user_id]
         total_count = 0
         
-        while queue and len(visited) < DEFAULT_MAX_NETWORK_CAP:
+        while queue and len(visited) < DEFAULT_NETWORK_CAP_WITH_REFERRAL:
             current_user = queue.pop(0)
             if current_user in visited:
                 continue
