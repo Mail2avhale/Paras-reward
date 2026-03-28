@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://network-capacity-ui.preview.emergentagent.com",
+    "url": "https://unified-redeem-check.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

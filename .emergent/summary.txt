@@ -1,119 +1,117 @@
-<analysis>**original_problem_statement:**
-The user requested massive changes to the platform's core mechanics. First, they ordered the complete removal/deprecation of 5 major systems: Mining Formula, Referral Bonus, Single Leg, Level Bonus (L1, L2, L3), and Redeem Limits. Second, they requested an Admin feature to view Subscription activations broken down by PRC vs. Razorpay. Finally, they requested a major update to the Elite Subscription Pricing formula (₹999 + 18% GST + ₹10 Processing Fee + 20% Admin Charges) where all fees must be dynamically routed to respective Company Wallets.
+<analysis>**original_problem_statement**: The user requested massive changes to the platform's core mechanics to transition away from MLM (Multi-Level Marketing) concepts into a Growth Economy System. This included a new decreasing mining formula based on network size, changing direct referrals to only increase network capacity, a dynamic unlock system for redeem limits, and implementing a new ₹999 + 18% GST pricing structure for Manual/VIP Subscriptions. All old MLM terminology (Single Leg, Downline, Level 1/2/3, Multiplier) needed to be replaced with modern terms (Growth Network, Network Members, Mining Speed). 
 
-**User's preferred language**: Marathi mixed with technical English. (INSTRUCT NEXT AGENT: You MUST respond in Marathi mixed with technical English).
+**User's preferred language**: Marathi mixed with technical English. (INSTRUCT NEXT AGENT: You MUST respond in Marathi mixed with technical English only).
 
-**what currently exists?**
-A React/FastAPI/MongoDB full-stack application. The admin panel's light theme is now fully consistent. 5 major legacy features (Mining, Referrals, Level Bonuses, Single Leg, Redeem Limits) have been successfully deprecated across the backend and frontend. The Razorpay admin dashboard has been heavily upgraded with analytics, UTR search, and a PRC vs Razorpay stats modal. The new Elite Subscription formula has been successfully implemented for PRC-based subscriptions, correctly routing GST, processing, and admin fees into company master wallets. 
+**what currently exists?** 
+A React/FastAPI/MongoDB full-stack application. The new Growth Economy System is active. The system uses a Single-Leg (BFS) counting method to determine a user's Growth Network. Dynamic, unified redeem limits have been implemented based on network size (replacing category-wise limits). The login flow uses a secure two-step process (ID verify → PIN). A new spreadsheet-based mining formula (Base 500 + Team PRC) has been implemented in the backend.
 
-**Last working item**:
-- **Last item agent was working**: Updating the Manual Subscription (VIP/UTR payment) pricing formula to match the newly implemented Elite pricing formula (₹999 + GST + Processing + Admin). The agent had successfully applied this to the PRC flow but was interrupted while searching for  in  to apply the same logic to manual/VIP payments.
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: Backend testing via  or  to verify the manual/VIP pricing endpoint returns the correct new breakdown.
-- **User Testing Done**: N
+**Last working item**: 
+    - **Last item agent was working**: Updating the core Mining Formula based on a spreadsheet image provided by the user. The agent successfully analyzed the image, extracted the formula (), updated  and  in , and verified the math via a bash script.
+    - **Status**: USER VERIFICATION PENDING
+    - **Agent Testing Done**: Y (Backend bash/python script testing only)
+    - **Which testing method agent to use?**: manual testing by screenshot tool (to visually verify that the Frontend Mining UI reflects the newly calculated daily rates from the updated backend formula) or wait for user confirmation.
+    - **User Testing Done**: N
 
-**All Pending/In progress Issue list**:
-- **Issue 1: Apply New Elite Pricing to Manual/VIP Subscriptions (P0)**
-  - **Attempted fixes**: The agent identified that manual subscriptions are handled via VIP Payment routes. Attempted to search for  in  but failed with an exit code 1 just before the context window ended.
-  - **Next debug checklist**: 
-    1. Locate  and related VIP pricing endpoints in .
-    2. Update the manual pricing logic to reflect: Base(₹999) + GST(18%) + Processing(₹10).
-    3. Ensure that when a manual VIP payment is approved, the required PRC equivalents for GST, processing, and admin charges are properly routed to the  (just like the PRC flow).
-  - **Why fix this issue and what will be achieved with the fix?**: User specifically requested the new pricing formula to be applied to *both* PRC and Manual subscriptions immediately (leaving Razorpay for April 1st). 
-  - **Status**: IN PROGRESS
-  - **Is recurring issue?**: N
-  - **Should Test frontend/backend/both after fix?**: Both (Backend logic, Frontend VIP manual page display).
-  - **Blocked on other issue**: None
+**All Pending/In progress Issue list**:  
+  - Issue 1: E2E Verification of New Mining Formula (P0)
+     - Attempted fixes: The backend formula was updated and tested via script, but the agent ran out of context before doing a full UI test.
+     - Next debug checklist: Log in as a user with referrals (e.g., SANTOSH AVHALE) and check if the Mining Page UI correctly displays the new daily earning rates based on the updated  logic.
+     - Why fix this issue and what will be achieved with the fix?: Ensures the user's requested spreadsheet formula actually reflects on the frontend.
+     - Status: TESTING PENDING / USER VERIFICATION PENDING
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix?: Frontend
+     - Blocked on other issue: None
 
-**In progress Task List**:
-- None currently, aside from Issue 1.
+**In progress Task List**: 
+  - None
 
-**Upcoming and Future Tasks**:
-- **Implement NEW core logic for the 5 deleted features (P0)**: The user explicitly stated they will provide the *new* rules for Mining, Referral, Single Leg, Level Bonus, and Redeem Limits *after* the old ones were deleted. Await user instructions.
-- **Razorpay Elite Pricing Update (P1)**: The user noted the Razorpay gateway pricing should be updated to the new formula on April 1, 2026. Keep this in the backlog.
-- **Refactor  (P3)**: Break down the monolithic server file into smaller domain-specific modules.
-- **MongoDB → PostgreSQL migration (P4)**
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - Razorpay Elite Pricing Update (P1): Update the Razorpay gateway pricing to the new ₹999 + GST formula. User explicitly requested this to be done on April 1, 2026.
+    
+    Future Tasks:
+    - Refactor  (P3): Break down the massive 45,000+ line server file into smaller domain-specific modules inside .
+    - MongoDB → PostgreSQL migration (P4)
 
-**Completed work in this session**:
-- **Admin Theme UI Consistency (DONE)**: Fixed remaining dark theme classes in , , etc.
-- **PhonePe Block Mitigation (DONE)**: Added , , and  to Razorpay payload in  and  to boost merchant trust.
-- **Razorpay Admin Enhancements (DONE)**: Added actual Razorpay timestamps, UTR/UPI ID search, Revenue Dashboard, Date Filters, and Invoice/Refund UI in .
-- **Mass Deprecation of 5 Features (DONE)**: Fully removed logic for Mining, Referrals, Level Bonus, Single Leg, and Redeem limits in , , ,  and frontend pages.
-- **PRC vs Razorpay Stats (DONE)**: Added an API and Admin UI modal to compare subscription activation sources.
-- **New Elite PRC Pricing Formula (DONE)**: Implemented  calculating ₹999 base + 18% GST + ₹10 Processing + 20% Admin. Successfully routed these to .
+**Completed work in this session**
+- Mining Page UI not reflecting Collect state correctly (DONE)
+- Auto-Start session logic upon PRC collection (DONE)
+- Login PIN auto-typing bug fixed via Two-Step Auth Flow implementation (DONE)
+- Added Visual ✅/❌ feedback for Login ID verification (DONE)
+- Global PRC Balance Sync fixed (Invalidated  and  cache on collection) (DONE)
+- Unified Dynamic Redeem Limit System implemented based on Network Size levels (DONE)
+- Updated Network Size thresholds for Redeem limits (L1:2, L2:6, L3:14, L4:30... users) (DONE)
+- Removed all remnants of L1/L2/L3 MLM terminology from UI (DONE)
+- Implemented new spreadsheet-based Mining Formula in backend (DONE)
 
-**Earlier issues found/mentioned but not fixed**:
-- None.
+**Earlier issues found/mentioned but not fixed**
+   - None
 
-**Known issue recurrence from previous fork**:
-- None.
+**Known issue recurrence from previous fork**
+  - Issue recurrence in previous fork: None
+  - Recurrence count: 0
+  - Status: RESOLVED
 
-**Code Architecture**:
+**Code Architecture**
 
 
-**Key Technical Concepts**:
-- **Company Wallets Routing**: The system now utilizes master company wallets (, , , ). When a user subscribes via PRC, portions of their PRC balance are calculated and transferred directly to these company wallets.
-- **Deprecation Pattern**: Removed features were not strictly deleted but replaced with mock responses returning  to prevent frontend crashes while the UI is replaced.
+**Key Technical Concepts**
+- **Unified Redeem Limits**: No more category limits (utility/bank). Unlock % =  capped by Admin (default 70%).
+- **New Mining Formula**: Base Mining (500 PRC/day) + Network Contribution. PRC per user = .
+- **Single Leg Logic**: BFS traversal down the referral tree counts *all* members as a unified Growth Network. No multi-leg separation.
 
-**key DB schema**:
-- : { wallet_type, balance, updated_at }
-- : Tracks users who activated via PRC.
-- : Tracks users who activated via INR/Gateway.
-- : Tracks manual bank transfer/UTR subscriptions.
+**key DB schema**
+  - : { prc_balance, mining_active, session_start, session_end, total_mined }
+  - : Tracks all historical PRC usage.
 
-**changes in tech stack**:
-- None
+**changes in tech stack**
+  - None
 
-**All files of reference**:
-- : Contains  (reference for the new formula) and the pending  that needs updating.
-- : Contains updated Razorpay creation and webhook handling.
-- : Newly upgraded with heavy analytics.
+**All files of reference** 
+-  (Contains the new mining and redeem limit formulas)
+-  (Updated to two-step logic)
+-  (Rewritten for dynamic unified limits)
+-  (Managed cache invalidation to fix global PRC sync issues)
+-  (Added deep DB scanning logic for total redeemed PRC)
 
-**Areas that need refactoring**:
--  is over 45,000 lines long. Extensive caution is needed with . Use precise line numbers or unique strings.
+**Areas that need refactoring**: 
+-  remains extremely large and needs modularization.
 
-**key api endpoints**:
-- : Returns the new dynamic pricing breakdown.
-- : Activates plan using PRC balance and distributes to company wallets.
-- Pending update: VIP/Manual endpoints inside .
+**key api endpoints**
+- : Collects PRC, auto-starts new session, and invalidates user cache.
+- : Returns the unified dynamic redeem calculation.
+- : Validates user ID before showing PIN input.
 
-**Critical Info for New Agent**:
-- **The user's immediate request was to update the Manual Subscription pricing to match the new Elite formula.** Start your session by fixing this in  for the VIP payment flow.
-- Ensure that the manual subscription flow also accounts for routing the mathematical equivalent to the  upon admin approval.
-- Wait for the user to provide the *new* rules for the 5 deleted features (Mining, Referrals, etc.). Do not invent new rules; ask the user for them if they don't provide them proactively.
-- Respond in Marathi mixed with technical English.
+**Critical Info for New Agent** 
+- **Caching**: The backend uses  heavily. When altering balances (mining, redeeming), you *must* explicitly invalidate  and  caches, otherwise the frontend Dashboard will show stale data.
+- **Terminology**: MLM terminology is strictly banned. Do not use L1/L2/L3 or levels in the UI. Always use Growth Network or Network Members.
+- **Two-Step Login**: The user wanted PIN to only appear *after* the ID is verified with a ✅ checkmark. Do not break this flow.
 
-**documents and test reports created in this job**:
--  (Updated with deprecated features and new Elite formula)
+**documents and test reports created in this job** 
+  - /app/test_reports/iteration_149.json (Mining Collect tests)
+  - /app/test_reports/iteration_150.json (Redeem Limit tests)
+  - /app/memory/PRD.md
+  - /app/memory/test_credentials.md
 
-**Last 10 User Messages and any pending HUMAN messages**:
-1. **User**: Manual subcription fees update झाली आहे का (Has the manual subscription fee been updated?) -> **PENDING P0**.
-2. **Agent**: Explained the new Elite pricing formula, verified company wallet routing, asked if anything else was needed.
-3. **User**: Requested the Elite plan price change to ₹999 + 18% GST + ₹10 Processing + 20% Admin charges, requested it be applied to PRC and Manual flows immediately, and asked if company wallets are provisioned for this.
-4. **Agent**: Implemented the PRC vs Razorpay stats feature and showed screenshots.
-5. **User**: Asked how the Admin can know how many users activated subscriptions via PRC vs Razorpay.
-6. **Agent**: Finished deprecating the 5 features, updated PRD, and asked the user for the fresh requirements.
-7. **User**: Confirmed with a to proceed with deletion.
-8. **Agent**: Asked for confirmation before executing the massive deletion of 5 core features.
-9. **User**: Instructed to DELETE/REMOVE 5 core features (Mining formula, Referral bonus, Single leg, Level bonus, Redeem limit) completely, stating they will provide fresh instructions later.
-10. **Agent**: Implemented and verified the 4 new Razorpay admin features.
+**Last 10 User Messages and any pending HUMAN messages** 
+ - *User*: मला आता Mining फॉर्म्युला कसा काम करतो ते सांग User ID 9970100782 (Explain how the mining formula works for this UID) -> *Status*: Agent provided detailed breakdown.
+ - *User*: हो संपून फॉर्म्युला single leg नुसार करायचा आहे. अंडर 2 speed 500+14.28 [Image attached] (Yes, change formula based on single leg as per this image) -> *Status*: Agent analyzed image, extracted mathematical formula, implemented it in backend, tested via bash, and ran out of context. (Needs user verification/Frontend test).
 
-**Project Health Check**:
-- **Broken**: None
-- **Mocked**: Mining, Referral, and Level Bonus endpoints currently return static deprecated messages intentionally. 
+**Project Health Check:**
+- Broken: None.
+- Mocked: Dummy users exist for testing network counting.
 
-**3rd Party Integrations**:
-- Razorpay (Payments) — requires User API Key
+**3rd Party Integrations** 
+ • Razorpay (Payments) — requires User API Key
 
-**Testing status**:
-- Testing agent used after significant changes: YES (earlier in session)
-- Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: None
-- Known regressions: None
+**Testing status**
+  - Testing agent used after significant changes: YES (Tests 149 & 150 confirmed bug fixes and redeem features).
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: NA (Testing agent generated reports)
+  - Known regressions: None currently.
 
-**Credentials to test flow**:
-- Standard testing credentials apply.
+**Credentials to test flow:**
+Check 
 
-**What agent forgot to execute**:
-- The agent was interrupted by the context window limit while trying to locate and update the manual/VIP subscription pricing logic. This is the immediate pending task.</analysis>
+**What agent forgot to execute**
+The agent implemented the very last user request (updating the backend mining formulas based on a spreadsheet image) and tested it successfully using a python script in the bash terminal. However, the agent reached the context limit before performing a final E2E UI verification (via screenshot) to ensure the frontend  accurately displays the new  rates, and before calling the  tool for that specific task.</analysis>

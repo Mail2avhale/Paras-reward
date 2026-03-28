@@ -31,12 +31,12 @@ def set_db(database):
 
 # ==================== CONSTANTS ====================
 
-DEFAULT_BASE_MINING = 550  # Base daily PRC
+DEFAULT_BASE_MINING = 500  # Base daily PRC (user's own mining)
 DEFAULT_NETWORK_CAP_BASE = 800  # Base network capacity
 DEFAULT_NETWORK_CAP_PER_REFERRAL = 16  # Capacity increase per direct referral
 DEFAULT_MAX_NETWORK_CAP = 4000  # Maximum network capacity
-DEFAULT_MIN_PRC_PER_USER = 3  # Minimum PRC per user
-DEFAULT_MAX_PRC_PER_USER = 8  # Maximum PRC per user (at start)
+DEFAULT_MIN_PRC_PER_USER = 2.5  # Minimum PRC per user in team (at 16384 users)
+DEFAULT_MAX_PRC_PER_USER = 7.142857  # Maximum PRC per user (at 2 users = 50/7)
 
 DEFAULT_REDEEM_PERCENT = 70  # Default redeem percentage
 DEFAULT_BURN_RATE = 5  # 5% burn on every redeem
@@ -165,20 +165,38 @@ async def get_economy_settings() -> dict:
 
 def calculate_prc_per_user(network_size: int, min_prc: float = DEFAULT_MIN_PRC_PER_USER, max_prc: float = DEFAULT_MAX_PRC_PER_USER) -> float:
     """
-    Calculate PRC per user based on network size (Decreasing formula)
+    Calculate PRC per user in team based on network size (Single Leg).
     
-    Formula: R(U) = max(min_prc, max_prc - 0.5 × log₂(U))
+    Formula: PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14)
     
-    As network grows, PRC per user decreases (anti-inflation)
+    Spreadsheet reference:
+    | Users | PRC/User |
+    |   2   |  7.14    |
+    |   4   |  6.79    |
+    |   8   |  6.43    |
+    |  16   |  6.07    |
+    |  32   |  5.71    |
+    |  64   |  5.36    |
+    | 128   |  5.00    |
+    | 256   |  4.64    |
+    | 512   |  4.29    |
+    | 1024  |  3.93    |
+    | 2048  |  3.57    |
+    | 4096  |  3.21    |
+    | 8192  |  2.86    |
+    |16384  |  2.50    |
     """
     if network_size <= 0:
-        return max_prc
+        return 0  # No team = no team bonus
     
-    # R(U) = max(3, 8 - 0.5 × log₂(U))
-    log_value = math.log2(max(1, network_size))
-    prc_per_user = max_prc - (0.5 * log_value)
+    if network_size == 1:
+        return max_prc  # 1 user = max rate
     
-    return max(min_prc, round(prc_per_user, 2))
+    # PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14)
+    log_value = math.log2(max(2, network_size))
+    prc_per_user = 5 * (21 - log_value) / 14
+    
+    return round(max(min_prc, prc_per_user), 6)
 
 
 def calculate_network_cap(direct_referrals: int) -> int:
@@ -193,13 +211,14 @@ def calculate_network_cap(direct_referrals: int) -> int:
 
 async def calculate_mining_speed(user_id: str) -> dict:
     """
-    Calculate user's mining speed based on their Growth Network
+    Calculate user's mining speed based on Single Leg Growth Network.
     
     Formula:
-    - Base Mining: 550 PRC/day
-    - Network Mining: U × R(U) where R(U) = max(3, 8 - 0.5 × log₂(U))
-    - Total: 550 + Network Mining
-    - Subscription Multiplier: Cash=100%, PRC=70%
+    - Base Mining: 500 PRC/day (user's own)
+    - Team Bonus: NetworkSize × PRC_per_user(N)
+    - PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
+    - Total: (Base + Team Bonus) × subscription_speed
+    - Subscription Speed: Elite/VIP=100%, Growth/Startup=70%
     """
     settings = await get_economy_settings()
     
@@ -234,9 +253,14 @@ async def calculate_mining_speed(user_id: str) -> dict:
     # Base mining
     base_mining = settings["base_mining"]
     
-    # Subscription multiplier (Cash = 100%, PRC = 70%)
-    subscription_type = user.get("subscription_payment_type", "cash")
-    subscription_multiplier = 0.70 if subscription_type == "prc" else 1.0
+    # Subscription speed (Elite/VIP = 100%, Growth/Startup = 70%)
+    plan = user.get("subscription_plan", "")
+    if plan in ["elite", "vip"]:
+        subscription_multiplier = 1.0
+    elif plan in ["growth", "startup"]:
+        subscription_multiplier = 0.70
+    else:
+        subscription_multiplier = 0.0  # No plan = no mining
     
     # Total daily PRC
     total_daily_prc = (base_mining + network_mining) * subscription_multiplier
@@ -250,7 +274,7 @@ async def calculate_mining_speed(user_id: str) -> dict:
         "network_cap": network_cap,
         "direct_referrals": direct_referrals,
         "subscription_multiplier": subscription_multiplier,
-        "subscription_type": subscription_type
+        "subscription_plan": plan
     }
 
 

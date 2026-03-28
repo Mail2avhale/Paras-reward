@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://network-capacity-ui.preview.emergentagent.com/setup
+   https://unified-redeem-check.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

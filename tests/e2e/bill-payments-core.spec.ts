@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
  * Test user: testmember@paras.com / PIN: 123456 (Elite, 50000 PRC)
  */
 
-const BASE_URL = 'https://network-capacity-ui.preview.emergentagent.com';
+const BASE_URL = 'https://unified-redeem-check.preview.emergentagent.com';
 
 test.describe('Bill Payments API Endpoints', () => {
   

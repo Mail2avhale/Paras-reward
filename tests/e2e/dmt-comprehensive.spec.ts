@@ -16,7 +16,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://network-capacity-ui.preview.emergentagent.com';
+const BASE_URL = 'https://unified-redeem-check.preview.emergentagent.com';
 
 // Test data
 const TEST_CREDENTIALS = {
