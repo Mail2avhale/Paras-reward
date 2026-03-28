@@ -76,7 +76,7 @@ const SubscriptionPlans = ({ user }) => {
 
   // New Pricing (March 2026) - ₹999 + 18% GST = ₹1178.82
   // No more special offers - standard GST pricing
-  const specialOffers = null;
+  const specialOffers = {};
 
   const planIcons = {
     explorer: Users,
@@ -999,6 +999,102 @@ const SubscriptionPlans = ({ user }) => {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Subscription Comparison Table - Step 1 */}
+      {currentStep === 1 && (
+        <div className="px-5 mt-6 mb-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl border border-zinc-700/50 overflow-hidden"
+          >
+            {/* Table Header */}
+            <div className="p-4 border-b border-zinc-700/50">
+              <h3 className="text-white font-bold text-base flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-amber-400" />
+                Cash vs PRC Subscription
+              </h3>
+            </div>
+
+            {/* Comparison Rows */}
+            <div className="divide-y divide-zinc-800/80">
+              {/* Header Row */}
+              <div className="grid grid-cols-3 text-center">
+                <div className="p-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Feature</div>
+                <div className="p-3 text-xs font-bold text-amber-400 bg-amber-500/5">Cash</div>
+                <div className="p-3 text-xs font-bold text-purple-400 bg-purple-500/5">PRC</div>
+              </div>
+
+              {[
+                { feature: 'Mining Speed', cash: '100%', cashIcon: '⚡', prc: '70%', prcIcon: '⚠️', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
+                { feature: 'Daily Base Mining', cash: '500 PRC', cashIcon: '', prc: '350 PRC', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
+                { feature: 'Network Income', cash: 'Full', cashIcon: '', prc: 'Reduced', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
+                { feature: 'Earning Growth', cash: 'Fast', cashIcon: '🚀', prc: 'Slow', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-zinc-400' },
+                { feature: 'Redeem Power', cash: 'Full Unlock', cashIcon: '', prc: 'Limited', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
+                { feature: 'Burn Rate', cash: '1%', cashIcon: '', prc: '5-7%', prcIcon: '🔥', cashColor: 'text-emerald-400', prcColor: 'text-red-400' },
+                { feature: 'Priority', cash: 'High', cashIcon: '', prc: 'Normal', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-zinc-400' },
+                { feature: 'Best For', cash: 'Serious Users', cashIcon: '', prc: 'Backup Option', prcIcon: '', cashColor: 'text-amber-400', prcColor: 'text-purple-400' },
+              ].map((row, i) => (
+                <div key={i} className={`grid grid-cols-3 text-center ${i % 2 === 0 ? 'bg-zinc-800/30' : ''}`}>
+                  <div className="p-2.5 text-xs text-zinc-400 font-medium text-left pl-4">{row.feature}</div>
+                  <div className={`p-2.5 text-xs font-semibold ${row.cashColor} bg-amber-500/5`}>
+                    {row.cash} {row.cashIcon}
+                  </div>
+                  <div className={`p-2.5 text-xs font-semibold ${row.prcColor} bg-purple-500/5`}>
+                    {row.prc} {row.prcIcon}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Understanding Section */}
+            <div className="p-4 border-t border-zinc-700/50">
+              <div className="grid grid-cols-2 gap-3">
+                {/* Cash Benefits */}
+                <div className="bg-amber-500/5 rounded-xl p-3 border border-amber-500/20">
+                  <p className="text-amber-400 font-bold text-xs mb-2 flex items-center gap-1">
+                    <CreditCard className="w-3.5 h-3.5" /> Cash
+                  </p>
+                  <div className="space-y-1.5">
+                    {['Full speed earning', 'Max Network benefit', 'Faster growth', 'Best performance'].map((item, i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <Check className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                        <span className="text-[10px] text-zinc-300">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* PRC Benefits */}
+                <div className="bg-purple-500/5 rounded-xl p-3 border border-purple-500/20">
+                  <p className="text-purple-400 font-bold text-xs mb-2 flex items-center gap-1">
+                    <Wallet className="w-3.5 h-3.5" /> PRC
+                  </p>
+                  <div className="space-y-1.5">
+                    {['Stay active without cash', 'Reduced earning speed', 'Higher burn impact', 'Limited growth'].map((item, i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <Check className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                        <span className="text-[10px] text-zinc-300">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Final Positioning */}
+              <div className="mt-3 bg-zinc-800/60 rounded-xl p-3 text-center">
+                <p className="text-xs text-zinc-400">
+                  <span className="text-purple-400 font-semibold">PRC subscription</span> keeps you active
+                </p>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  <span className="text-amber-400 font-semibold">Cash subscription</span> helps you grow
+                </p>
+              </div>
+            </div>
+          </motion.div>
         </div>
       )}
 
