@@ -415,7 +415,7 @@ async def collect_mining(uid: str):
         
         # Record transaction
         await db.transactions.insert_one({
-            "txn_id": str(uuid.uuid4()),
+            "transaction_id": str(uuid.uuid4()),
             "user_id": uid,
             "type": "credit",
             "amount": mined_coins,
