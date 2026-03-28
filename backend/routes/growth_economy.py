@@ -358,26 +358,43 @@ async def get_growth_network_stats(user_id: str) -> dict:
 
 def calculate_growth_level(network_size: int) -> float:
     """
-    Calculate redeem limit percentage based on network size.
+    Calculate CUMULATIVE redeem limit percentage based on network size.
     
-    Formula: Redeem_Limit_% = 3 + 0.5 × log₂(N)
+    Each tier adds its contribution incrementally:
+    | Team  | Tier %  | Cumulative % |
+    |   2   |   3.5   |     3.5      |
+    |   4   |   4.0   |     7.5      |
+    |   8   |   4.5   |    12.0      |
+    |  16   |   5.0   |    17.0      |
+    |  ...  |   ...   |     ...      |
+    |16384  |  10.0   |    94.5      |
     
-    Spreadsheet:
-    | Team  | Redeem Limit % |
-    |   2   |     3.5        |
-    |   4   |     4.0        |
-    |  128  |     6.5        |
-    | 16384 |    10.0 (max)  |
-    
-    Returns the redeem limit percentage (not tier number).
+    Between tiers, contribution is proportional per user.
+    Max total: 94.5%
     """
+    TIERS = [
+        (2, 3.5), (4, 4.0), (8, 4.5), (16, 5.0), (32, 5.5), (64, 6.0),
+        (128, 6.5), (256, 7.0), (512, 7.5), (1024, 8.0), (2048, 8.5),
+        (4096, 9.0), (8192, 9.5), (16384, 10.0)
+    ]
+    
     if network_size < 1:
         return 0
-    if network_size == 1:
-        return 3.0  # 3 + 0.5 × log₂(1) = 3
     
-    redeem_percent = 3 + 0.5 * math.log2(network_size)
-    return round(min(10, redeem_percent), 2)
+    total = 0
+    prev = 0
+    for threshold, contribution in TIERS:
+        bracket_size = threshold - prev
+        if network_size >= threshold:
+            total += contribution
+        elif network_size > prev:
+            total += (network_size - prev) / bracket_size * contribution
+            break
+        else:
+            break
+        prev = threshold
+    
+    return round(total, 2)
 
 
 async def get_user_unlock_percent(user_id: str) -> float:

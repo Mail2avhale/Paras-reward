@@ -52,13 +52,16 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
   const totalRedeemed = limitData.total_redeemed || 0;
   const available = limitData.effective_available || limitData.available || 0;
 
-  // Calculate next milestone: next power of 2 where % increases by 0.5
+  // Calculate next milestone tier
   const getNextMilestone = (currentSize) => {
-    const milestones = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
-    for (const m of milestones) {
-      if (currentSize < m) {
-        const nextPercent = Math.min(10, 3 + 0.5 * Math.log2(m));
-        return { size: m, percent: nextPercent };
+    const tiers = [
+      [2, 3.5], [4, 7.5], [8, 12], [16, 17], [32, 22.5], [64, 28.5],
+      [128, 35], [256, 42], [512, 49.5], [1024, 57.5], [2048, 66],
+      [4096, 75], [8192, 84.5], [16384, 94.5]
+    ];
+    for (const [size, cumPercent] of tiers) {
+      if (currentSize < size) {
+        return { size, percent: cumPercent };
       }
     }
     return null;
@@ -67,8 +70,8 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
   const nextMilestone = getNextMilestone(networkSize);
   const usersNeeded = nextMilestone ? nextMilestone.size - networkSize : 0;
 
-  // Progress bar: 0% maps to 0, 10% maps to 100% bar width
-  const progressWidth = Math.min(100, (unlockPercent / 10) * 100);
+  // Progress bar (0-94.5% scale)
+  const progressWidth = Math.min(100, (unlockPercent / 94.5) * 100);
 
   return (
     <div data-testid="unified-redeem-limit" className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-5 border border-zinc-700/50">
@@ -79,8 +82,8 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
           Redeem Limit
         </h3>
         <span data-testid="unlock-percent-badge" className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-          unlockPercent >= 8 ? 'bg-emerald-500/20 text-emerald-400' :
-          unlockPercent >= 5 ? 'bg-blue-500/20 text-blue-400' :
+          unlockPercent >= 60 ? 'bg-emerald-500/20 text-emerald-400' :
+          unlockPercent >= 30 ? 'bg-blue-500/20 text-blue-400' :
           unlockPercent > 0 ? 'bg-amber-500/20 text-amber-400' :
           'bg-red-500/20 text-red-400'
         }`}>
@@ -88,7 +91,7 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
         </span>
       </div>
 
-      {/* Progress bar (0-10% scale) */}
+      {/* Progress bar (0-94.5% scale) */}
       <div className="mb-4">
         <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
           <div
@@ -99,7 +102,7 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
         </div>
         <div className="flex justify-between mt-1">
           <span className="text-[9px] text-zinc-600">0%</span>
-          <span className="text-[9px] text-zinc-600">10% max</span>
+          <span className="text-[9px] text-zinc-600">94.5% max</span>
         </div>
       </div>
 
@@ -137,7 +140,7 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
             <span className="text-[10px] text-cyan-400">{usersNeeded} more for {nextMilestone.percent}%</span>
           </div>
         )}
-        {unlockPercent >= 10 && (
+        {unlockPercent >= 94.5 && (
           <span className="text-[10px] text-emerald-400 font-semibold">MAX Unlocked</span>
         )}
       </div>

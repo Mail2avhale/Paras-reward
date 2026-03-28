@@ -15691,7 +15691,7 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
     
     Formula:
     - Total Earned PRC = Current Balance + All Time Redeemed
-    - Unlock % = 3 + 0.5 × log₂(N), max 10%
+    - Unlock % = Cumulative tier-based (max 94.5%)
     - Redeemable PRC = Total Earned × (Unlock% / 100)
     - Used = All Time Redeemed
     - Available = Redeemable - Used (capped at current balance)
