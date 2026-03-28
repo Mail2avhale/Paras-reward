@@ -95,9 +95,64 @@ def calculate_network_cap(direct_referrals: int) -> int:
     return min(4000, cap)
 
 
-async def get_network_size(user_id: str) -> int:
-    """Get total network size for a user (all downstream referrals)"""
+async def check_subscription_expiry(user: dict) -> dict:
+    """
+    Check if user's subscription has expired.
+    If expired, auto-set to explorer and return updated user dict.
+    Returns the (possibly updated) user dict.
+    """
+    if not user:
+        return user
+    
+    plan = user.get("subscription_plan", "explorer")
+    if plan.lower() in ["explorer", "free", ""]:
+        return user  # Already explorer, nothing to check
+    
+    expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+    if not expiry:
+        return user  # No expiry set
+    
     try:
+        if isinstance(expiry, str):
+            expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+        elif isinstance(expiry, datetime):
+            expiry_dt = expiry
+        else:
+            return user
+        
+        now = datetime.now(timezone.utc)
+        if now > expiry_dt:
+            # Subscription expired → set to explorer
+            uid = user.get("uid")
+            logging.info(f"[SUBSCRIPTION] Expired for {uid}, setting to explorer")
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    "subscription_plan": "explorer",
+                    "subscription_expired": True,
+                    "subscription_expired_at": now.isoformat()
+                }}
+            )
+            user["subscription_plan"] = "explorer"
+            user["subscription_expired"] = True
+            
+            # Invalidate cache
+            if cache:
+                await cache.delete(f"user_data:{uid}")
+                await cache.delete(f"user:dashboard:{uid}")
+    except Exception as e:
+        logging.error(f"Error checking subscription expiry: {e}")
+    
+    return user
+
+
+async def get_network_size(user_id: str) -> int:
+    """
+    Get total ACTIVE network size for a user.
+    Active user = Elite subscription + active mining session (not expired).
+    """
+    try:
+        now = datetime.now(timezone.utc)
         visited = set()
         queue = [user_id]
         total_count = 0
@@ -108,16 +163,39 @@ async def get_network_size(user_id: str) -> int:
                 continue
             visited.add(current_user)
             
+            # Find ALL referrals (for tree traversal)
             referrals = await db.users.find(
                 {"referred_by": current_user},
-                {"uid": 1, "_id": 0}
+                {"uid": 1, "subscription_plan": 1, "mining_active": 1, "mining_session_end": 1, "_id": 0}
             ).to_list(500)
             
             for ref in referrals:
                 ref_uid = ref.get("uid")
                 if ref_uid and ref_uid not in visited:
                     queue.append(ref_uid)
-                    total_count += 1
+                    
+                    # Only COUNT if user is active (Elite + mining session active)
+                    ref_plan = (ref.get("subscription_plan") or "explorer").lower()
+                    is_elite = ref_plan in ["elite", "vip", "startup", "growth", "pro"]
+                    is_mining = ref.get("mining_active", False)
+                    
+                    if is_elite and is_mining:
+                        # Check session not expired
+                        session_end = ref.get("mining_session_end")
+                        if session_end:
+                            if isinstance(session_end, str):
+                                try:
+                                    end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                                    if end_dt > now:
+                                        total_count += 1
+                                except Exception:
+                                    pass
+                            elif isinstance(session_end, datetime):
+                                if session_end > now:
+                                    total_count += 1
+                        else:
+                            # mining_active but no session_end → count as active
+                            total_count += 1
         
         return total_count
     except Exception as e:
@@ -200,42 +278,24 @@ async def get_mining_status(uid: str):
     Get current mining status for a user
     
     Returns session info, mined coins, mining rate, etc.
+    Explorer can start sessions but cannot collect.
     """
     try:
         user = await db.users.find_one({"uid": uid}, {"_id": 0})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
+        # Check subscription expiry first
+        user = await check_subscription_expiry(user)
+        
         # Check subscription status
         subscription_plan = user.get("subscription_plan", "explorer")
         is_elite = subscription_plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
         
-        # Calculate mining rate for ALL users (Explorer sees demo speed)
+        # Calculate mining rate for ALL users
         rate_info = await calculate_mining_rate(uid)
         
-        if not is_elite:
-            # Explorer: show speed as DEMO but cannot collect/start
-            return {
-                "mining_active": False,
-                "mined_coins": 0,
-                "mining_rate": rate_info["per_second_rate"],
-                "mining_rate_per_hour": rate_info["per_second_rate"] * 3600,
-                "total_daily_rate": rate_info["total_daily_rate"],
-                "base_rate": rate_info["base_rate"],
-                "network_rate": rate_info["network_rate"],
-                "boost_multiplier": rate_info["boost_multiplier"],
-                "can_start": False,
-                "can_collect": False,
-                "requires_subscription": True,
-                "is_demo": True,
-                "network_size": rate_info["network_size"],
-                "network_cap": rate_info["network_cap"],
-                "prc_per_user": rate_info["prc_per_user"],
-                "subscription_type": rate_info["subscription_type"],
-                "message": "Upgrade to Elite to collect PRC"
-            }
-        
-        # Elite user flow
+        # ALL users (Explorer + Elite) can have active sessions
         
         # Get session info
         mining_active = user.get("mining_active", False)
@@ -285,8 +345,9 @@ async def get_mining_status(uid: str):
             "base_rate": rate_info["base_rate"],
             "network_rate": rate_info["network_rate"],
             "boost_multiplier": rate_info["boost_multiplier"],
-            "can_start": is_elite and not mining_active,
-            "can_collect": mined_coins > 0,
+            "can_start": not mining_active,  # All users can start (Explorer + Elite)
+            "can_collect": is_elite and mined_coins > 0,  # Only Elite can collect
+            "is_explorer": not is_elite,
             "session_start": session_start.isoformat() if isinstance(session_start, datetime) else session_start,
             "session_end": session_end.isoformat() if isinstance(session_end, datetime) else session_end,
             "time_remaining": int(time_remaining),
@@ -306,21 +367,16 @@ async def get_mining_status(uid: str):
 
 @router.post("/start/{uid}")
 async def start_mining(uid: str):
-    """Start a new mining session"""
+    """Start a new mining session - Explorer and Elite both can start"""
     try:
         user = await db.users.find_one({"uid": uid}, {"_id": 0})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Check subscription
-        subscription_plan = user.get("subscription_plan", "explorer")
-        is_elite = subscription_plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
+        # Check subscription expiry
+        user = await check_subscription_expiry(user)
         
-        if not is_elite:
-            raise HTTPException(
-                status_code=403,
-                detail="Elite subscription required to start mining"
-            )
+        # Explorer and Elite both can start sessions (no elite check)
         
         # Check if already mining (but allow if session expired)
         if user.get("mining_active"):
@@ -393,11 +449,23 @@ async def start_mining(uid: str):
 
 @router.post("/collect/{uid}")
 async def collect_mining(uid: str):
-    """Collect mined PRC from current session"""
+    """Collect mined PRC from current session - Elite only"""
     try:
         user = await db.users.find_one({"uid": uid}, {"_id": 0})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
+        
+        # Check subscription expiry
+        user = await check_subscription_expiry(user)
+        
+        # Only Elite users can collect
+        subscription_plan = user.get("subscription_plan", "explorer")
+        is_elite = subscription_plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
+        if not is_elite:
+            raise HTTPException(
+                status_code=403,
+                detail="Elite subscription required to collect PRC. Upgrade to collect!"
+            )
         
         session_start = user.get("mining_start_time")
         session_end = user.get("mining_session_end")

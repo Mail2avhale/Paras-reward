@@ -295,10 +295,11 @@ async def calculate_mining_speed(user_id: str) -> dict:
 
 async def get_network_size(user_id: str, max_depth: int = 10) -> int:
     """
-    Get total network size (all users in growth network)
-    Uses BFS to traverse referral tree
+    Get total ACTIVE network size (only Elite + active mining session users).
+    Uses BFS to traverse referral tree, but only counts active members.
     """
     try:
+        now = datetime.now(timezone.utc)
         visited = set()
         queue = [user_id]
         total_count = 0
@@ -309,17 +310,37 @@ async def get_network_size(user_id: str, max_depth: int = 10) -> int:
                 continue
             visited.add(current_user)
             
-            # Find users referred by current user
+            # Find ALL referrals (for tree traversal)
             referrals = await db.users.find(
                 {"referred_by": current_user},
-                {"uid": 1, "_id": 0}
+                {"uid": 1, "subscription_plan": 1, "mining_active": 1, "mining_session_end": 1, "_id": 0}
             ).to_list(1000)
             
             for ref in referrals:
                 ref_uid = ref.get("uid")
                 if ref_uid and ref_uid not in visited:
                     queue.append(ref_uid)
-                    total_count += 1
+                    
+                    # Only COUNT if user is active (Elite + mining session active)
+                    ref_plan = (ref.get("subscription_plan") or "explorer").lower()
+                    is_elite = ref_plan in ["elite", "vip", "startup", "growth", "pro"]
+                    is_mining = ref.get("mining_active", False)
+                    
+                    if is_elite and is_mining:
+                        session_end = ref.get("mining_session_end")
+                        if session_end:
+                            if isinstance(session_end, str):
+                                try:
+                                    end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                                    if end_dt > now:
+                                        total_count += 1
+                                except Exception:
+                                    pass
+                            elif isinstance(session_end, datetime):
+                                if session_end > now:
+                                    total_count += 1
+                        else:
+                            total_count += 1
         
         return total_count
     except Exception as e:

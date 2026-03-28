@@ -610,9 +610,9 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
   
   // Get mining speed display based on subscription
   const getMiningSpeedDisplay = (plan, paymentType) => {
-    // Explorer = shows speed as DEMO (100% calculation, can't collect)
+    // Explorer = can mine but can't collect
     if (!plan || plan === 'explorer' || plan === 'free' || plan === '') {
-      return { speed: 'Demo', color: 'text-zinc-400', canMine: false, isDemo: true };
+      return { speed: '100%', color: 'text-zinc-400', canMine: true, isDemo: false };
     }
     
     // Elite with PRC payment = 70%
@@ -830,20 +830,30 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
                 
                 {/* FREE USER - Show upgrade prompt instead of collect button */}
                 {isFreeUser ? (
+                  /* Explorer - Show Collect disabled with upgrade prompt */
                   <div className="mt-6 bg-gradient-to-br from-amber-900/30 to-orange-900/20 rounded-2xl p-4 border border-amber-500/30">
                     <div className="flex items-center gap-3 mb-3">
                       <Crown className="w-6 h-6 text-amber-400" />
                       <div>
                         <p className="text-amber-400 font-semibold text-sm">Upgrade to Collect PRC!</p>
-                        <p className="text-gray-400 text-xs">Upgrade your plan to collect {sessionPRC.toFixed(2)} PRC</p>
+                        <p className="text-gray-400 text-xs">Session active - upgrade to collect {sessionPRC.toFixed(2)} PRC</p>
                       </div>
                     </div>
                     <Button 
+                      disabled={true}
+                      className="w-full bg-zinc-800 text-zinc-500 font-semibold py-3 rounded-xl cursor-not-allowed border border-zinc-700 mb-2"
+                      data-testid="collect-disabled-btn"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Collect ({sessionPRC.toFixed(2)} PRC)
+                    </Button>
+                    <Button 
                       onClick={() => navigate('/subscription')}
                       className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-semibold py-3 rounded-xl"
+                      data-testid="upgrade-to-collect-btn"
                     >
                       <Crown className="w-4 h-4 mr-2" />
-                      Upgrade Now
+                      Upgrade to Elite
                     </Button>
                   </div>
                 ) : (
@@ -895,24 +905,33 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
                 </div>
                 
                 {isFreeUser ? (
-                  /* Explorer Demo Mode - Upgrade prompt */
-                  <div className="bg-gradient-to-br from-amber-900/30 to-orange-900/20 rounded-2xl p-4 border border-amber-500/30">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Crown className="w-6 h-6 text-amber-400" />
-                      <div className="text-left">
-                        <p className="text-amber-400 font-semibold text-sm">Upgrade to Elite</p>
-                        <p className="text-gray-400 text-xs">Start collecting PRC daily</p>
-                      </div>
-                    </div>
+                  /* Explorer - Can Start Session */
+                  <>
+                    <p className="text-zinc-400 mb-4">{globalT('startEarning')}</p>
                     <Button 
-                      onClick={() => navigate('/subscription')}
-                      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-semibold py-3 rounded-xl"
-                      data-testid="upgrade-elite-btn"
+                      onClick={startSession}
+                      disabled={isStarting}
+                      className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-semibold py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] border border-emerald-500/50 active:scale-[0.98] transition-all"
+                      data-testid="start-mining-btn"
                     >
-                      <Crown className="w-4 h-4 mr-2" />
-                      Upgrade Now
+                      {isStarting ? (
+                        <span className="flex items-center gap-2 justify-center">
+                          <motion.div 
+                            className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          />
+                          {globalT('processing')}...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2 justify-center">
+                          <Play className="w-5 h-5" />
+                          {globalT('startSession')}
+                        </span>
+                      )}
                     </Button>
-                  </div>
+                    <p className="text-amber-400/70 text-xs mt-2 text-center">Upgrade to Elite to collect earned PRC</p>
+                  </>
                 ) : (
                   <>
                     <p className="text-zinc-400 mb-4">{globalT('startEarning')}</p>
@@ -977,8 +996,8 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-amber-500 mt-0.5" />
               <div>
-                <p className="text-amber-400 font-medium text-sm">Explorer Plan - Demo Mode</p>
-                <p className="text-zinc-500 text-xs mt-1">Mining speed is visible but PRC collection requires Elite plan</p>
+                <p className="text-amber-400 font-medium text-sm">Explorer Plan</p>
+                <p className="text-zinc-500 text-xs mt-1">You can mine PRC but collection requires Elite plan</p>
                 <button 
                   onClick={() => navigate('/subscription')}
                   className="text-amber-500 text-xs mt-1 underline hover:text-amber-400"
