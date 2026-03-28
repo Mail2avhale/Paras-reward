@@ -381,14 +381,15 @@ async def get_growth_network_stats(user_id: str) -> dict:
     
     user = await db.users.find_one(
         {"uid": user_id},
-        {"_id": 0, "_cached_total_network": 1, "_cached_active_network": 1, "_cached_network_stats_at": 1}
+        {"_id": 0, "_cached_total_network": 1, "_cached_active_network": 1, 
+         "_cached_network_stats_at": 1, "_cached_network_size": 1, "_cached_network_at": 1}
     )
     
     # Direct referrals (fast - indexed)
     direct_referrals = await db.users.count_documents({"referred_by": user_id})
     
-    # Check if cached stats are fresh
-    cached_at = (user or {}).get("_cached_network_stats_at", "")
+    # Check if cached stats are fresh — check ALL cache field names
+    cached_at = (user or {}).get("_cached_network_stats_at") or (user or {}).get("_cached_network_at") or ""
     need_refresh = True
     total_network = 0
     active_network = 0
@@ -396,10 +397,12 @@ async def get_growth_network_stats(user_id: str) -> dict:
     if cached_at:
         try:
             cached_dt = datetime.fromisoformat(str(cached_at).replace('Z', '+00:00'))
+            if cached_dt.tzinfo is None:
+                cached_dt = cached_dt.replace(tzinfo=timezone.utc)
             age = (datetime.now(timezone.utc) - cached_dt).total_seconds()
             if age < REFRESH_INTERVAL:
                 total_network = (user or {}).get("_cached_total_network", 0)
-                active_network = (user or {}).get("_cached_active_network", 0)
+                active_network = (user or {}).get("_cached_active_network") or (user or {}).get("_cached_network_size", 0)
                 need_refresh = False
         except Exception:
             pass
@@ -407,13 +410,16 @@ async def get_growth_network_stats(user_id: str) -> dict:
     if need_refresh:
         total_network = await get_total_network_size(user_id)
         active_network = await get_network_size(user_id)
+        now_iso = datetime.now(timezone.utc).isoformat()
         try:
             await db.users.update_one(
                 {"uid": user_id},
                 {"$set": {
                     "_cached_total_network": total_network,
                     "_cached_active_network": active_network,
-                    "_cached_network_stats_at": datetime.now(timezone.utc).isoformat()
+                    "_cached_network_size": active_network,
+                    "_cached_network_stats_at": now_iso,
+                    "_cached_network_at": now_iso
                 }}
             )
         except Exception:

@@ -235,34 +235,44 @@ async def calculate_mining_rate(user_id: str) -> dict:
     
     # Get network size — use cached value from user doc if fresh enough
     REFRESH_INTERVAL = 1800  # 30 minutes
-    cached_network = user.get("_cached_network_size")
-    cached_at = user.get("_cached_network_at", "")
     need_refresh = True
     network_size = 0
+    
+    # Check ALL possible cache field names (shared between mining.py and growth_economy.py)
+    cached_network = user.get("_cached_network_size") or user.get("_cached_active_network")
+    cached_at = user.get("_cached_network_at") or user.get("_cached_network_stats_at") or ""
     
     if cached_network is not None and cached_at:
         try:
             cached_dt = datetime.fromisoformat(str(cached_at).replace('Z', '+00:00'))
+            if cached_dt.tzinfo is None:
+                cached_dt = cached_dt.replace(tzinfo=timezone.utc)
             age = (datetime.now(timezone.utc) - cached_dt).total_seconds()
             if age < REFRESH_INTERVAL:
                 network_size = cached_network
                 need_refresh = False
-        except Exception:
-            pass
+                logging.info(f"[MINING] Cache HIT for {user_id}: size={network_size}, age={age:.0f}s")
+        except Exception as e:
+            logging.warning(f"[MINING] Cache parse error for {user_id}: {e}")
     
     if need_refresh:
+        logging.info(f"[MINING] Cache MISS for {user_id}, computing BFS...")
         network_size = await get_network_size(user_id)
-        # Store in user document for future fast lookups
+        # Store in user doc — use BOTH field names for cross-compatibility
+        now_iso = datetime.now(timezone.utc).isoformat()
         try:
             await db.users.update_one(
                 {"uid": user_id},
                 {"$set": {
                     "_cached_network_size": network_size,
-                    "_cached_network_at": datetime.now(timezone.utc).isoformat()
+                    "_cached_network_at": now_iso,
+                    "_cached_active_network": network_size,
+                    "_cached_network_stats_at": now_iso
                 }}
             )
+            logging.info(f"[MINING] Cache STORED for {user_id}: size={network_size}")
         except Exception as e:
-            logging.warning(f"Cache update failed for {user_id}: {e}")
+            logging.warning(f"[MINING] Cache store failed for {user_id}: {e}")
     
     # Calculate network cap
     network_cap = calculate_network_cap(direct_referrals)
