@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Users, Copy, Check, Share2, ArrowLeft, TrendingUp, 
-  ChevronRight, UserCheck, Zap, Link2, RefreshCw, Target
+  ChevronRight, UserCheck, Link2, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -160,72 +160,44 @@ const ReferralsEnhanced = ({ user }) => {
           </div>
         )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* Stats Cards - Only Direct Referrals & Network Size */}
+        <div className="grid grid-cols-2 gap-4">
           {/* Direct Referrals */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center" data-testid="direct-referrals-card">
-            <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-400" />
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 text-center" data-testid="direct-referrals-card">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-blue-500/20 flex items-center justify-center">
+              <Users className="w-6 h-6 text-blue-400" />
             </div>
-            <p className="text-2xl font-bold text-white">{networkStats?.direct_referrals || 0}</p>
-            <p className="text-xs text-gray-500">Direct Referrals</p>
+            <p className="text-3xl font-bold text-white">{networkStats?.direct_referrals || 0}</p>
+            <p className="text-sm text-gray-500">Direct Referrals</p>
           </div>
 
           {/* Network Size */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center" data-testid="network-size-card">
-            <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-purple-500/20 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-purple-400" />
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 text-center" data-testid="network-size-card">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-purple-500/20 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-purple-400" />
             </div>
-            <p className="text-2xl font-bold text-white">{networkStats?.network_size || 0}</p>
-            <p className="text-xs text-gray-500">Network Size</p>
-          </div>
-
-          {/* Network Cap */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center" data-testid="network-cap-card">
-            <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-              <Target className="w-5 h-5 text-emerald-400" />
-            </div>
-            <p className="text-2xl font-bold text-white">{networkStats?.network_cap || 800}</p>
-            <p className="text-xs text-gray-500">Network Cap</p>
+            <p className="text-3xl font-bold text-white">{networkStats?.network_size || 0}</p>
+            <p className="text-sm text-gray-500">Network Size</p>
           </div>
         </div>
 
-        {/* Network Progress */}
+        {/* Network Capacity Progress Bar */}
         <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5" data-testid="network-progress-card">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-gray-400 text-sm">Network Growth</span>
-            <span className="text-white font-medium">
-              {networkStats?.network_size || 0} / {networkStats?.network_cap || 800}
+            <span className="text-gray-400 text-sm">Network Capacity</span>
+            <span className="text-amber-400 font-bold text-lg">
+              {networkProgress.toFixed(0)}%
             </span>
           </div>
-          <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
+          <div className="h-4 bg-gray-800 rounded-full overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
               style={{ width: `${networkProgress}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Invite more friends to increase your network capacity
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            {networkStats?.network_size || 0} of {networkStats?.network_cap || 800} capacity used
           </p>
-        </div>
-
-        {/* Growth Level */}
-        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5" data-testid="growth-level-card">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm">Growth Level</p>
-                <p className="text-2xl font-bold text-white">Level {networkStats?.growth_level || 0}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-gray-400 text-sm">Mining Unlock</p>
-              <p className="text-2xl font-bold text-emerald-400">{networkStats?.unlock_percent || 0}%</p>
-            </div>
-          </div>
         </div>
 
         {/* Direct Referrals List */}
@@ -296,10 +268,9 @@ const ReferralsEnhanced = ({ user }) => {
         )}
 
         {/* Info Card */}
-        <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4">
-          <p className="text-purple-300 text-sm text-center">
-            Each direct referral increases your network capacity by 16. 
-            Maximum capacity is 4000 members.
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
+          <p className="text-amber-300 text-sm text-center">
+            Grow your network to increase mining rewards!
           </p>
         </div>
 
