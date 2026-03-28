@@ -84,13 +84,15 @@ def calculate_network_cap(direct_referrals: int) -> int:
     """
     Calculate maximum network capacity based on direct referrals
     
-    Binary cap:
-    - 0 direct referrals → 800 users
-    - ≥1 direct referral → 4000 users
+    Formula: NetworkCap = min(4000, 800 + 16 × D)
+    - 0 referrals → 800
+    - 1 referral → 816
+    - 2 referrals → 832
+    - ...
+    - 200 referrals → 4000 (cap)
     """
-    if direct_referrals >= 1:
-        return NETWORK_CAP_WITH_REFERRAL
-    return NETWORK_CAP_NO_REFERRAL
+    cap = 800 + (16 * direct_referrals)
+    return min(4000, cap)
 
 
 async def get_network_size(user_id: str) -> int:
