@@ -35,6 +35,7 @@ const LoginNew = ({ onLogin }) => {
   // Auth type: always 'pin' now (password disabled)
   const [authType, setAuthType] = useState('pin');
   const [identifierChecked, setIdentifierChecked] = useState(false);
+  const [step, setStep] = useState(1); // Step 1: ID, Step 2: PIN
   
   const [loginData, setLoginData] = useState({
     identifier: '',
@@ -74,44 +75,8 @@ const LoginNew = ({ onLogin }) => {
     fetchIP();
   }, []);
 
-  // Check auth type when identifier changes (with debounce)
-  useEffect(() => {
-    const checkAuthType = async () => {
-      if (!loginData.identifier || loginData.identifier.length < 3) {
-        setAuthType('unknown');
-        setIdentifierChecked(false);
-        return;
-      }
-
-      setCheckingAuthType(true);
-      try {
-        const response = await axios.get(`${API}/auth/check-auth-type`, {
-          params: { identifier: loginData.identifier }
-        });
-        
-        setAuthType('pin'); // Always PIN
-        setIdentifierChecked(true);
-        
-        // Check if user needs to set up PIN (no PIN exists yet)
-        if (response.data.needs_pin_setup) {
-          toast.info('Please set your 6-digit PIN to login', { duration: 5000 });
-        }
-        
-        // Clear previous credential
-        setLoginData(prev => ({ ...prev, pin: '' }));
-        setPinError('');
-      } catch (error) {
-        console.error('Error checking auth type:', error);
-        setAuthType('pin');
-        setIdentifierChecked(true);
-      } finally {
-        setCheckingAuthType(false);
-      }
-    };
-
-    const debounceTimer = setTimeout(checkAuthType, 500);
-    return () => clearTimeout(debounceTimer);
-  }, [loginData.identifier]);
+  // Check auth type is now triggered manually on "Sign In" click in Step 1
+  // No auto-debounce - user must click button to verify ID
 
   // Auto-login when 6-digit PIN is complete
   useEffect(() => {
@@ -123,6 +88,70 @@ const LoginNew = ({ onLogin }) => {
       return () => clearTimeout(autoLoginTimer);
     }
   }, [loginData.pin, loginData.identifier, loading]);
+
+  // Step 1: Verify identifier against database
+  const handleIdentifierSubmit = async () => {
+    if (!loginData.identifier || loginData.identifier.length < 3) {
+      toast.error('Please enter your email or mobile number');
+      return;
+    }
+    
+    setCheckingAuthType(true);
+    setPinError('');
+    
+    try {
+      const response = await axios.get(`${API}/auth/check-auth-type`, {
+        params: { identifier: loginData.identifier }
+      });
+      
+      // Check if user exists in database
+      if (response.data.user_exists === false) {
+        setAnimatedFeedback({
+          message: `❌ Account Not Found\n\n📧 "${loginData.identifier}" is not registered.\n\n👉 Please Sign Up to create an account.`,
+          type: 'error',
+          duration: 5000
+        });
+        setTimeout(() => {
+          toast('Would you like to create an account?', {
+            duration: 6000,
+            action: {
+              label: 'Sign Up',
+              onClick: () => navigate('/register')
+            }
+          });
+        }, 2000);
+        return;
+      }
+      
+      setAuthType('pin');
+      setIdentifierChecked(true);
+      setStep(2); // Move to PIN step
+      
+      // Clear previous PIN
+      setLoginData(prev => ({ ...prev, pin: '' }));
+      
+      if (response.data.needs_pin_setup) {
+        toast.info('Please set your 6-digit PIN to login', { duration: 5000 });
+      }
+    } catch (error) {
+      const status = error.response?.status;
+      if (status === 404) {
+        setAnimatedFeedback({
+          message: `❌ Account Not Found\n\n📧 "${loginData.identifier}" is not registered.\n\n👉 Please Sign Up to create an account.`,
+          type: 'error',
+          duration: 5000
+        });
+      } else {
+        // Even if API fails, allow PIN entry (server will validate on login)
+        setAuthType('pin');
+        setIdentifierChecked(true);
+        setStep(2);
+        setLoginData(prev => ({ ...prev, pin: '' }));
+      }
+    } finally {
+      setCheckingAuthType(false);
+    }
+  };
 
   const handleLoginSubmit = async () => {
     setPinError('');
@@ -260,7 +289,11 @@ const LoginNew = ({ onLogin }) => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    handleLoginSubmit();
+    if (step === 1) {
+      handleIdentifierSubmit();
+    } else {
+      handleLoginSubmit();
+    }
   };
 
   const handleBiometricLogin = async () => {
@@ -329,18 +362,34 @@ const LoginNew = ({ onLogin }) => {
                   setPinError('');
                 }}
                 required
-                className="pl-10 py-6 rounded-xl border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                disabled={step === 2}
+                className={`pl-10 py-6 rounded-xl border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 ${step === 2 ? 'bg-gray-50 text-gray-600' : ''}`}
               />
               {checkingAuthType && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               )}
+              {step === 2 && (
+                <button
+                  type="button"
+                  data-testid="login-change-id-btn"
+                  onClick={() => {
+                    setStep(1);
+                    setIdentifierChecked(false);
+                    setLoginData(prev => ({ ...prev, pin: '' }));
+                    setPinError('');
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-purple-600 hover:text-purple-700 font-medium"
+                >
+                  Change
+                </button>
+              )}
             </div>
           </div>
 
           {/* Auth Type Badge - PIN Only */}
-          {identifierChecked && (
+          {step === 2 && (
             <div className="flex justify-center">
               <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
                 🔢 Login with 6-Digit PIN
@@ -348,8 +397,8 @@ const LoginNew = ({ onLogin }) => {
             </div>
           )}
 
-          {/* PIN Input */}
-          {identifierChecked && (
+          {/* PIN Input - Only shown after ID is verified */}
+          {step === 2 && (
             <div className="pt-2">
               <PinInput
                 value={loginData.pin}
@@ -381,7 +430,7 @@ const LoginNew = ({ onLogin }) => {
             </label>
             
             {/* Forgot PIN */}
-            {identifierChecked && (
+            {step === 2 && (
               <button 
                 type="button"
                 onClick={() => setShowForgotPin(true)}
@@ -429,17 +478,17 @@ const LoginNew = ({ onLogin }) => {
           <Button
             data-testid="login-submit-btn"
             type="submit"
-            disabled={loading || biometricLoading || checkingAuthType || (!identifierChecked && loginData.identifier.length > 2)}
+            disabled={loading || biometricLoading || checkingAuthType}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
           >
-            {loading ? (
+            {loading || checkingAuthType ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Signing in...
+                {checkingAuthType ? 'Verifying...' : 'Signing in...'}
               </div>
             ) : (
               <>
-                Sign In
+                {step === 1 ? 'Sign In' : 'Sign In'}
                 <ArrowRight className="h-5 w-5" />
               </>
             )}

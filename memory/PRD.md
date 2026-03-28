@@ -14,6 +14,13 @@
 - Frontend handles auto-start: keeps mining UI active with fresh 24h timer
 - No manual "Start Session" click needed after collect
 
+## ✅ COMPLETED: Login Two-Step Flow Fix - 28 March 2026
+- Fixed: PIN input was appearing while user typed ID (auto-debounce triggering check-auth-type)
+- New flow: Step 1 (ID only) → Click Sign In → DB verify → Step 2 (PIN input)
+- Non-existent users get "Account Not Found" error, PIN never shown
+- "Change" button on Step 2 to go back to ID input
+- File: `/app/frontend/src/pages/LoginNew.js`
+
 ## ✅ COMPLETED: Growth Economy System - 26 March 2026
 ```
 ╔════════════════════════════════════════════════════════════════╗
