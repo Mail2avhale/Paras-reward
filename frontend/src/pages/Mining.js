@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
-import { Coins, Play, Clock, Star, Crown, ArrowLeft, Zap, Gift, TrendingUp, CheckCircle, Pause, Info } from 'lucide-react';
+import { Coins, Play, Clock, Star, Crown, ArrowLeft, Zap, Gift, TrendingUp, CheckCircle, Pause, Info, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import smartToast from '@/utils/smartToast';
 import { useNavigate } from 'react-router-dom';
@@ -586,16 +586,23 @@ const DailyRewards = ({ user }) => {
   // Get subscription plan info - use existing subscriptionPlan from state
   const hasPaidPlan = ['startup', 'growth', 'elite'].includes(subscriptionPlan);
   
-  // Get multiplier display
-  const getMultiplierDisplay = (plan) => {
-    const multipliers = {
-      'explorer': '1x',
-      'startup': '1.5x',
-      'growth': '2x',
-      'elite': '3x'
-    };
-    return multipliers[plan] || '1x';
+  // Get mining speed display based on subscription
+  const getMiningSpeedDisplay = (plan, paymentType) => {
+    // Explorer = 0% (no mining)
+    if (!plan || plan === 'explorer') {
+      return { speed: '0%', color: 'text-zinc-500', canMine: false };
+    }
+    
+    // Elite with PRC payment = 70%
+    if (paymentType === 'prc') {
+      return { speed: '70%', color: 'text-amber-400', canMine: true };
+    }
+    
+    // Elite with Cash/Manual/Razorpay = 100%
+    return { speed: '100%', color: 'text-emerald-400', canMine: true };
   };
+  
+  const speedInfo = getMiningSpeedDisplay(subscriptionPlan, userData?.subscription_payment_type);
   
   const canCollect = sessionPRC >= 0.01;
 
@@ -698,9 +705,9 @@ const DailyRewards = ({ user }) => {
                 </span>
               </div>
               {hasPaidPlan && (
-                <div className="px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30">
-                  <span className="text-xs font-semibold text-amber-400 flex items-center gap-1">
-                    <Crown className="w-3 h-3" /> {getMultiplierDisplay(subscriptionPlan)} BONUS
+                <div className={`px-3 py-1.5 rounded-full ${speedInfo.speed === '100%' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-amber-500/10 border border-amber-500/30'}`}>
+                  <span className={`text-xs font-semibold flex items-center gap-1 ${speedInfo.color}`}>
+                    <Zap className="w-3 h-3" /> {speedInfo.speed} Speed
                   </span>
                 </div>
               )}
@@ -945,51 +952,37 @@ const DailyRewards = ({ user }) => {
             </p>
           </div>
           
-          {/* Level 1 */}
+          {/* Network Mining */}
           <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-xs font-bold">L1</div>
+              <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <Users className="w-4 h-4 text-purple-400" />
+              </div>
               <div>
-                <p className="text-zinc-200 text-sm font-medium">Direct Friends</p>
-                <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_1?.total_count || 0} invited • {referralBreakdown?.level_1?.active_count || 0} active
-                </p>
+                <p className="text-zinc-200 text-sm font-medium">Network Mining</p>
+                <p className="text-zinc-500 text-xs">Growth Network bonus</p>
               </div>
             </div>
-            <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_1?.bonus || 0) > 0 ? 'text-blue-400' : 'text-zinc-600'}`}>
-              +{(referralBreakdown?.level_1?.bonus || 0).toFixed(2)} PRC/hr
+            <p className="text-purple-400 font-mono text-sm font-semibold">
+              +{(miningStatus?.network_rate || 0).toFixed(2)} PRC/hr
             </p>
           </div>
           
-          {/* Level 2 */}
+          {/* Speed Multiplier */}
           <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold">L2</div>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${speedInfo.speed === '100%' ? 'bg-emerald-500/20' : 'bg-amber-500/20'}`}>
+                <Zap className={`w-4 h-4 ${speedInfo.color}`} />
+              </div>
               <div>
-                <p className="text-zinc-200 text-sm font-medium">Level 2 Friends</p>
+                <p className="text-zinc-200 text-sm font-medium">Mining Speed</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_2?.total_count || 0} invited • {referralBreakdown?.level_2?.active_count || 0} active
+                  {userData?.subscription_payment_type === 'prc' ? 'PRC Subscription' : 'Cash Subscription'}
                 </p>
               </div>
             </div>
-            <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_2?.bonus || 0) > 0 ? 'text-purple-400' : 'text-zinc-600'}`}>
-              +{(referralBreakdown?.level_2?.bonus || 0).toFixed(2)} PRC/hr
-            </p>
-          </div>
-          
-          {/* Level 3 */}
-          <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">L3</div>
-              <div>
-                <p className="text-zinc-200 text-sm font-medium">Level 3 Friends</p>
-                <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_3?.total_count || 0} invited • {referralBreakdown?.level_3?.active_count || 0} active
-                </p>
-              </div>
-            </div>
-            <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_3?.bonus || 0) > 0 ? 'text-orange-400' : 'text-zinc-600'}`}>
-              +{(referralBreakdown?.level_3?.bonus || 0).toFixed(2)} PRC/hr
+            <p className={`font-mono text-sm font-semibold ${speedInfo.color}`}>
+              {speedInfo.speed}
             </p>
           </div>
           

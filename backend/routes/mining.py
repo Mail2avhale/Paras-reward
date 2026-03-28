@@ -234,10 +234,16 @@ async def get_mining_status(uid: str):
                 # Calculate final mined coins for expired session
                 mined_coins = total_session * rate_info["per_second_rate"]
         
+        # Calculate remaining hours
+        remaining_hours = time_remaining / 3600 if time_remaining > 0 else 0
+        
         return {
             "mining_active": mining_active,
+            "session_active": mining_active,  # Alias for frontend compatibility
             "mined_coins": round(max(0, mined_coins), 6),
+            "mined_this_session": round(max(0, mined_coins), 6),  # Alias for frontend
             "mining_rate": rate_info["per_second_rate"],
+            "mining_rate_per_hour": rate_info["per_second_rate"] * 3600,  # PRC per hour
             "total_daily_rate": rate_info["total_daily_rate"],
             "base_rate": rate_info["base_rate"],
             "network_rate": rate_info["network_rate"],
@@ -247,6 +253,7 @@ async def get_mining_status(uid: str):
             "session_start": session_start.isoformat() if isinstance(session_start, datetime) else session_start,
             "session_end": session_end.isoformat() if isinstance(session_end, datetime) else session_end,
             "time_remaining": int(time_remaining),
+            "remaining_hours": round(remaining_hours, 2),  # For frontend
             "session_progress": round(session_progress, 2),
             "network_size": rate_info["network_size"],
             "network_cap": rate_info["network_cap"],
