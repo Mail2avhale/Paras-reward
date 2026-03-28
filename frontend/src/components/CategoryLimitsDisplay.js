@@ -1,6 +1,6 @@
 /**
  * UnifiedRedeemLimit - Dynamic Growth Network based redeem limit display
- * Shows: Unlock%, Total Earned, Redeemable, Used, Available
+ * Formula: Redeem % = 3 + 0.5 × log₂(N), max 10%
  */
 
 import { useState, useEffect } from 'react';
@@ -8,19 +8,6 @@ import axios from 'axios';
 import { Lock, Unlock, TrendingUp, Users } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-
-const LEVEL_THRESHOLDS = [
-  { size: 2, level: 1, percent: 10 },
-  { size: 6, level: 2, percent: 20 },
-  { size: 14, level: 3, percent: 30 },
-  { size: 30, level: 4, percent: 40 },
-  { size: 62, level: 5, percent: 50 },
-  { size: 126, level: 6, percent: 60 },
-  { size: 254, level: 7, percent: 70 },
-  { size: 454, level: 8, percent: 80 },
-  { size: 654, level: 9, percent: 90 },
-  { size: 800, level: 10, percent: 100 },
-];
 
 const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
   const [limitData, setLimitData] = useState(null);
@@ -58,16 +45,30 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
 
   if (!limitData) return null;
 
-  const unlockPercent = limitData.unlock_percent || 0;
+  const unlockPercent = limitData.redeem_limit_percent || limitData.unlock_percent || 0;
   const networkSize = limitData.network_size || 0;
   const totalEarned = limitData.total_earned || 0;
   const redeemable = limitData.redeemable || 0;
   const totalRedeemed = limitData.total_redeemed || 0;
   const available = limitData.effective_available || limitData.available || 0;
 
-  // Find next level threshold
-  const nextLevel = LEVEL_THRESHOLDS.find(t => networkSize < t.size);
-  const usersNeeded = nextLevel ? nextLevel.size - networkSize : 0;
+  // Calculate next milestone: next power of 2 where % increases by 0.5
+  const getNextMilestone = (currentSize) => {
+    const milestones = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
+    for (const m of milestones) {
+      if (currentSize < m) {
+        const nextPercent = Math.min(10, 3 + 0.5 * Math.log2(m));
+        return { size: m, percent: nextPercent };
+      }
+    }
+    return null;
+  };
+
+  const nextMilestone = getNextMilestone(networkSize);
+  const usersNeeded = nextMilestone ? nextMilestone.size - networkSize : 0;
+
+  // Progress bar: 0% maps to 0, 10% maps to 100% bar width
+  const progressWidth = Math.min(100, (unlockPercent / 10) * 100);
 
   return (
     <div data-testid="unified-redeem-limit" className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-5 border border-zinc-700/50">
@@ -78,8 +79,8 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
           Redeem Limit
         </h3>
         <span data-testid="unlock-percent-badge" className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-          unlockPercent >= 70 ? 'bg-emerald-500/20 text-emerald-400' :
-          unlockPercent >= 40 ? 'bg-blue-500/20 text-blue-400' :
+          unlockPercent >= 8 ? 'bg-emerald-500/20 text-emerald-400' :
+          unlockPercent >= 5 ? 'bg-blue-500/20 text-blue-400' :
           unlockPercent > 0 ? 'bg-amber-500/20 text-amber-400' :
           'bg-red-500/20 text-red-400'
         }`}>
@@ -87,14 +88,18 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
         </span>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar (0-10% scale) */}
       <div className="mb-4">
         <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
           <div
             data-testid="unlock-progress-bar"
             className="h-full rounded-full bg-gradient-to-r from-amber-500 via-emerald-500 to-cyan-500 transition-all duration-700"
-            style={{ width: `${unlockPercent}%` }}
+            style={{ width: `${progressWidth}%` }}
           />
+        </div>
+        <div className="flex justify-between mt-1">
+          <span className="text-[9px] text-zinc-600">0%</span>
+          <span className="text-[9px] text-zinc-600">10% max</span>
         </div>
       </div>
 
@@ -126,11 +131,14 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
             Growth Network: <span className="text-zinc-200 font-semibold">{networkSize}</span> members
           </span>
         </div>
-        {nextLevel && (
+        {nextMilestone && unlockPercent < 10 && (
           <div className="flex items-center gap-1">
             <TrendingUp className="h-3 w-3 text-cyan-400" />
-            <span className="text-[10px] text-cyan-400">{usersNeeded} more for {nextLevel.percent}%</span>
+            <span className="text-[10px] text-cyan-400">{usersNeeded} more for {nextMilestone.percent}%</span>
           </div>
+        )}
+        {unlockPercent >= 10 && (
+          <span className="text-[10px] text-emerald-400 font-semibold">MAX Unlocked</span>
         )}
       </div>
     </div>

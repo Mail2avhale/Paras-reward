@@ -344,62 +344,54 @@ async def get_growth_network_stats(user_id: str) -> dict:
     # Calculate network cap
     network_cap = calculate_network_cap(direct_referrals)
     
-    # Calculate growth level based on network size
-    growth_level = calculate_growth_level(network_size)
-    
-    # Calculate unlock percent
-    unlock_percent = await get_user_unlock_percent(user_id)
+    # Calculate redeem limit % based on network size
+    redeem_limit_percent = calculate_growth_level(network_size)
     
     return {
         "direct_referrals": direct_referrals,
         "network_size": network_size,
         "network_cap": network_cap,
-        "growth_level": growth_level,
-        "unlock_percent": unlock_percent
+        "redeem_limit_percent": redeem_limit_percent,
+        "unlock_percent": redeem_limit_percent
     }
 
 
-def calculate_growth_level(network_size: int) -> int:
+def calculate_growth_level(network_size: int) -> float:
     """
-    Calculate unlock tier based on cumulative network size.
-    Returns tier number (1-10) used internally for unlock % calculation.
-    NOT exposed as "Level" to users - Growth Network is single leg, no MLM levels.
+    Calculate redeem limit percentage based on network size.
     
-    Thresholds (cumulative users):
-    2→Tier1(10%), 6→Tier2(20%), 14→Tier3(30%), 30→Tier4(40%),
-    62→Tier5(50%), 126→Tier6(60%), 254→Tier7(70%), 454→Tier8(80%),
-    654→Tier9(90%), 800→Tier10(100%)
+    Formula: Redeem_Limit_% = 3 + 0.5 × log₂(N)
+    
+    Spreadsheet:
+    | Team  | Redeem Limit % |
+    |   2   |     3.5        |
+    |   4   |     4.0        |
+    |  128  |     6.5        |
+    | 16384 |    10.0 (max)  |
+    
+    Returns the redeem limit percentage (not tier number).
     """
-    thresholds = [2, 6, 14, 30, 62, 126, 254, 454, 654, 800]
-    tier = 0
-    for i, threshold in enumerate(thresholds):
-        if network_size >= threshold:
-            tier = i + 1
-    return tier
+    if network_size < 1:
+        return 0
+    if network_size == 1:
+        return 3.0  # 3 + 0.5 × log₂(1) = 3
+    
+    redeem_percent = 3 + 0.5 * math.log2(network_size)
+    return round(min(10, redeem_percent), 2)
 
 
-async def get_user_unlock_percent(user_id: str) -> int:
+async def get_user_unlock_percent(user_id: str) -> float:
     """
     Get user's unlock percentage based on Growth Network size.
     
-    Network Size → Level → Unlock%:
-    10→10%, 20→20%, 40→30%, 80→40%, 160→50%, 320→60%, 640→70%, 800→80%, 1000+→100%
+    Formula: Redeem_Limit_% = 3 + 0.5 × log₂(N), max 10%
     
-    Admin can set a MAX CAP (default 70%). 
-    Final unlock = min(network_unlock, admin_max_cap)
+    No admin cap needed - formula already caps at 10%.
     """
-    settings = await get_economy_settings()
-    admin_max_cap = settings.get("redeem_percent", DEFAULT_REDEEM_PERCENT)
-    
-    # Calculate unlock from network level
     network_size = await get_network_size(user_id)
-    growth_level = calculate_growth_level(network_size)
-    network_unlock = min(100, growth_level * 10)
+    unlock_percent = calculate_growth_level(network_size)
     
-    # Cap at admin max
-    final_unlock = min(network_unlock, admin_max_cap)
-    
-    return final_unlock
+    return unlock_percent
 
 
 # ==================== REDEEM CALCULATION ====================

@@ -15675,7 +15675,7 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
     
     Formula:
     - Total Earned PRC = Current Balance + All Time Redeemed
-    - Unlock % = based on Growth Network level, capped by admin max
+    - Unlock % = 3 + 0.5 × log₂(N), max 10%
     - Redeemable PRC = Total Earned × (Unlock% / 100)
     - Used = All Time Redeemed
     - Available = Redeemable - Used (capped at current balance)
@@ -15693,7 +15693,7 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
                 "total_redeemed": 0,
                 "available": 0,
                 "network_size": 0,
-                "growth_level": 0,
+                "redeem_limit_percent": 0,
                 "total_limit": 0,
                 "unlimited": False
             }
@@ -15706,13 +15706,12 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         # Total earned = what user has now + what they already spent
         total_earned = current_balance + total_redeemed
         
-        # Get unlock % from growth network
-        unlock_percent = await get_user_unlock_percent(user_id)
+        # Get unlock % from growth network: 3 + 0.5 × log₂(N), max 10%
         network_size = await get_network_size(user_id)
-        growth_level = calculate_growth_level(network_size)
+        redeem_limit_percent = calculate_growth_level(network_size)
         
         # Redeemable PRC = Total Earned × Unlock%
-        redeemable = total_earned * (unlock_percent / 100)
+        redeemable = total_earned * (redeem_limit_percent / 100)
         
         # Available = Redeemable - Already Used
         available = max(0, redeemable - total_redeemed)
@@ -15722,14 +15721,14 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         
         return {
             "total_earned": round(total_earned, 2),
-            "unlock_percent": unlock_percent,
+            "unlock_percent": redeem_limit_percent,
+            "redeem_limit_percent": redeem_limit_percent,
             "redeemable": round(redeemable, 2),
             "total_redeemed": round(total_redeemed, 2),
             "available": round(available, 2),
             "effective_available": round(effective_available, 2),
             "current_balance": round(current_balance, 2),
             "network_size": network_size,
-            "growth_level": growth_level,
             "total_limit": round(redeemable, 2),
             "unlimited": False
         }
