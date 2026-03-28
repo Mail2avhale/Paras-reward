@@ -1,11 +1,11 @@
 /**
- * UnifiedRedeemLimit - Dynamic Growth Network based redeem limit display
- * Formula: Redeem % = 3 + 0.5 × log₂(N), max 10%
+ * UnifiedRedeemLimit - Clear redeem limit display
+ * Shows: Redeem Limit → Used → Balance (remaining to redeem)
  */
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Lock, Unlock, TrendingUp } from 'lucide-react';
+import { Lock, Unlock } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -21,7 +21,7 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
         if (res.data?.success) {
           setLimitData(res.data.limit);
           if (onLimitCheck) {
-            const available = res.data.limit.effective_available || res.data.limit.effective_remaining || 0;
+            const available = res.data.limit.effective_available || 0;
             onLimitCheck({ allowed: available > 0, available });
           }
         }
@@ -46,31 +46,10 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
   if (!limitData) return null;
 
   const unlockPercent = limitData.redeem_limit_percent || limitData.unlock_percent || 0;
-  const networkSize = limitData.network_size || 0;
-  const totalEarned = limitData.total_earned || 0;
-  const redeemable = limitData.redeemable || 0;
-  const totalRedeemed = limitData.total_redeemed || 0;
-  const available = limitData.effective_available || limitData.available || 0;
+  const redeemLimit = limitData.redeemable || 0;
+  const totalUsed = limitData.total_redeemed || 0;
+  const redeemBalance = limitData.effective_available || Math.max(0, redeemLimit - totalUsed);
 
-  // Calculate next milestone tier
-  const getNextMilestone = (currentSize) => {
-    const tiers = [
-      [2, 3.5], [4, 7.5], [8, 12], [16, 17], [32, 22.5], [64, 28.5],
-      [128, 35], [256, 42], [512, 49.5], [1024, 57.5], [2048, 66],
-      [4096, 75], [8192, 84.5], [16384, 94.5]
-    ];
-    for (const [size, cumPercent] of tiers) {
-      if (currentSize < size) {
-        return { size, percent: cumPercent };
-      }
-    }
-    return null;
-  };
-
-  const nextMilestone = getNextMilestone(networkSize);
-  const usersNeeded = nextMilestone ? nextMilestone.size - networkSize : 0;
-
-  // Progress bar (0-94.5% scale)
   const progressWidth = Math.min(100, (unlockPercent / 94.5) * 100);
 
   return (
@@ -91,7 +70,7 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
         </span>
       </div>
 
-      {/* Progress bar (0-94.5% scale) */}
+      {/* Progress bar */}
       <div className="mb-4">
         <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
           <div
@@ -106,30 +85,30 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-zinc-800/60 rounded-xl p-3">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Total Earned</p>
-          <p data-testid="total-earned" className="text-sm font-bold text-zinc-200 tabular-nums">{totalEarned.toLocaleString()} PRC</p>
+      {/* Clear 3-row breakdown: Limit → Used → Balance */}
+      <div className="space-y-2">
+        {/* Row 1: Redeem Limit */}
+        <div className="flex items-center justify-between bg-zinc-800/60 rounded-xl p-3">
+          <span className="text-zinc-400 text-xs font-medium">Redeem Limit</span>
+          <span data-testid="redeem-limit-value" className="text-blue-400 text-sm font-bold tabular-nums">{redeemLimit.toLocaleString()} PRC</span>
         </div>
-        <div className="bg-zinc-800/60 rounded-xl p-3">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Redeemable</p>
-          <p data-testid="redeemable-prc" className="text-sm font-bold text-blue-400 tabular-nums">{redeemable.toLocaleString()} PRC</p>
+
+        {/* Row 2: Used */}
+        <div className="flex items-center justify-between bg-zinc-800/60 rounded-xl p-3">
+          <span className="text-zinc-400 text-xs font-medium">Used</span>
+          <span data-testid="total-used" className="text-orange-400 text-sm font-bold tabular-nums">- {totalUsed.toLocaleString()} PRC</span>
         </div>
-        <div className="bg-zinc-800/60 rounded-xl p-3">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Used</p>
-          <p data-testid="total-used" className="text-sm font-bold text-orange-400 tabular-nums">{totalRedeemed.toLocaleString()} PRC</p>
-        </div>
-        <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20">
-          <p className="text-[10px] text-emerald-500 uppercase tracking-wider">Available</p>
-          <p data-testid="available-prc" className="text-sm font-bold text-emerald-400 tabular-nums">{available.toLocaleString()} PRC</p>
+
+        {/* Row 3: Redeem Balance (what user can actually redeem) */}
+        <div className="flex items-center justify-between bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20">
+          <span className="text-emerald-400 text-xs font-semibold">Redeem Balance</span>
+          <span data-testid="redeem-balance" className="text-emerald-400 text-base font-bold tabular-nums">{redeemBalance.toLocaleString()} PRC</span>
         </div>
       </div>
     </div>
   );
 };
 
-// Backward compatible export
 const CategoryLimitsDisplay = UnifiedRedeemLimit;
 export const CategoryLimitBadge = () => null;
 export default CategoryLimitsDisplay;

@@ -1,48 +1,47 @@
-<analysis>**original_problem_statement**: The user requested massive changes to the platform's core mechanics to transition away from MLM (Multi-Level Marketing) concepts into a Growth Economy System. This included a new decreasing mining formula based on network size, changing direct referrals to only increase network capacity, a dynamic unlock system for redeem limits, and implementing a new ₹999 + 18% GST pricing structure for Manual/VIP Subscriptions. All old MLM terminology (Single Leg, Downline, Level 1/2/3, Multiplier) needed to be replaced with modern terms (Growth Network, Network Members, Mining Speed). 
+<analysis>**original_problem_statement**: The user is transitioning the platform to a Growth Economy System. Key requirements include a new dynamic mining formula (Base 500 + Team PRC), Subscription types (Cash = 100% speed/1% burn vs PRC = 70% speed/5% burn), a dynamic *cumulative* redeem limit based on network size (max 94.5%), and removing all old category-wise (Utility/Shop/Bank) redeem limits from the UI. 
 
-**User's preferred language**: Marathi mixed with technical English. (INSTRUCT NEXT AGENT: You MUST respond in Marathi mixed with technical English only).
+**User's preferred language**: Marathi mixed with technical English. (INSTRUCT NEXT AGENT: You MUST automatically detect the user's primary language and respond in Marathi mixed with technical English only).
 
 **what currently exists?** 
-A React/FastAPI/MongoDB full-stack application. The new Growth Economy System is active. The system uses a Single-Leg (BFS) counting method to determine a user's Growth Network. Dynamic, unified redeem limits have been implemented based on network size (replacing category-wise limits). The login flow uses a secure two-step process (ID verify → PIN). A new spreadsheet-based mining formula (Base 500 + Team PRC) has been implemented in the backend.
+A React/FastAPI/MongoDB full-stack application. The backend calculates mining speed and cumulative redeem limits based on a Single-Leg network size. Subscriptions have dynamic burn rates (1% for Cash, 5% for PRC). The frontend has been cleaned up to remove legacy category limits and display unified redeem/mining statistics. 
 
 **Last working item**: 
-    - **Last item agent was working**: Updating the core Mining Formula based on a spreadsheet image provided by the user. The agent successfully analyzed the image, extracted the formula (), updated  and  in , and verified the math via a bash script.
-    - **Status**: USER VERIFICATION PENDING
-    - **Agent Testing Done**: Y (Backend bash/python script testing only)
-    - **Which testing method agent to use?**: manual testing by screenshot tool (to visually verify that the Frontend Mining UI reflects the newly calculated daily rates from the updated backend formula) or wait for user confirmation.
+    - **Last item agent was working**: Refining the  component UI. The user found the previous Available to Redeem math confusing and requested a clear Limit → Used → Balance visual layout, emphasizing that redemption comes from the actual PRC balance, not a separate available pool.
+    - **Status**: TESTING PENDING / USER VERIFICATION PENDING
+    - **Agent Testing Done**: N (The agent rewrote the file but ran out of context before taking a screenshot to verify the visual layout).
+    - **Which testing method agent to use?**: manual testing by screenshot tool (Take screenshots of the Dashboard and Redeem pages to verify the new UI layout).
     - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:  
-  - Issue 1: E2E Verification of New Mining Formula (P0)
-     - Attempted fixes: The backend formula was updated and tested via script, but the agent ran out of context before doing a full UI test.
-     - Next debug checklist: Log in as a user with referrals (e.g., SANTOSH AVHALE) and check if the Mining Page UI correctly displays the new daily earning rates based on the updated  logic.
-     - Why fix this issue and what will be achieved with the fix?: Ensures the user's requested spreadsheet formula actually reflects on the frontend.
-     - Status: TESTING PENDING / USER VERIFICATION PENDING
+  - Issue 1: Verify Updated Redeem Limit UI (P0)
+     - Attempted fixes: Rewrote  to strictly show Limit, Used amount, and actual Balance in a clearer format based on user-provided screenshots.
+     - Next debug checklist: Start frontend, navigate to Dashboard and , and use the screenshot tool to visually verify that the confusing Total Earned and separate Available metrics are replaced with the clear Limit/Used/Balance layout.
+     - Why fix this issue and what will be achieved with the fix?: Ensures user clarity on how much they can actually redeem based on their current balance and network tier.
+     - Status: TESTING PENDING
      - Is recurring issue? N
      - Should Test frontend/backend/both after fix?: Frontend
      - Blocked on other issue: None
 
 **In progress Task List**: 
-  - None
+  - None active besides the UI verification mentioned above.
 
-**Upcoming and Future Tasks**
+**Upcoming and Future Tasks**:
     Upcoming Tasks:
-    - Razorpay Elite Pricing Update (P1): Update the Razorpay gateway pricing to the new ₹999 + GST formula. User explicitly requested this to be done on April 1, 2026.
+    - Razorpay Elite Pricing Update (P1): Update the Razorpay gateway pricing to the new ₹999 + 18% GST formula. (User explicitly requested this to be done on April 1, 2026).
     
     Future Tasks:
     - Refactor  (P3): Break down the massive 45,000+ line server file into smaller domain-specific modules inside .
     - MongoDB → PostgreSQL migration (P4)
 
 **Completed work in this session**
-- Mining Page UI not reflecting Collect state correctly (DONE)
-- Auto-Start session logic upon PRC collection (DONE)
-- Login PIN auto-typing bug fixed via Two-Step Auth Flow implementation (DONE)
-- Added Visual ✅/❌ feedback for Login ID verification (DONE)
-- Global PRC Balance Sync fixed (Invalidated  and  cache on collection) (DONE)
-- Unified Dynamic Redeem Limit System implemented based on Network Size levels (DONE)
-- Updated Network Size thresholds for Redeem limits (L1:2, L2:6, L3:14, L4:30... users) (DONE)
-- Removed all remnants of L1/L2/L3 MLM terminology from UI (DONE)
-- Implemented new spreadsheet-based Mining Formula in backend (DONE)
+- Updated Mining Formula (Base 500 + Team Bonus based on spreadsheet) (DONE)
+- Implemented Incremental Network Cap () (DONE)
+- Implemented Cumulative Redeem Limit (Tiers add up to max 94.5%) (DONE)
+- Fixed Login Bug caused by  vs  indexing collision for PIN auth (DONE)
+- Made PIN Input UI more compact (DONE)
+- Removed legacy category-wise (Utility/Shop/Bank) limits from Dashboard and Redeem pages (DONE)
+- Added Cash vs PRC Subscription Comparison Table to UI (DONE)
+- Implemented Dynamic Redeem Burn Rates (Cash Elite = 1%, PRC Elite = 5%) (DONE)
 
 **Earlier issues found/mentioned but not fixed**
    - None
@@ -56,62 +55,59 @@ A React/FastAPI/MongoDB full-stack application. The new Growth Economy System is
 
 
 **Key Technical Concepts**
-- **Unified Redeem Limits**: No more category limits (utility/bank). Unlock % =  capped by Admin (default 70%).
-- **New Mining Formula**: Base Mining (500 PRC/day) + Network Contribution. PRC per user = .
-- **Single Leg Logic**: BFS traversal down the referral tree counts *all* members as a unified Growth Network. No multi-leg separation.
+- **Dynamic Burn Rate**: Elite users activating via Cash/Razorpay get a 1% burn rate on redemptions. Activating via PRC results in a 5% burn rate. Handled in .
+- **Cumulative Redeem Limit**: Network tiers are additive (e.g., tier 1 + tier 2 = total %). Max is 94.5%.
+- **Auth Sequence**: Login falls back sequentially. It checks  first, then . This is crucial because some legacy test users share the same 10-digit number across different fields.
 
 **key DB schema**
-  - : { prc_balance, mining_active, session_start, session_end, total_mined }
-  - : Tracks all historical PRC usage.
+  - : { prc_balance, subscription_payment_type (cash or prc), phone, mobile, pin_hash }
 
 **changes in tech stack**
   - None
 
 **All files of reference** 
--  (Contains the new mining and redeem limit formulas)
--  (Updated to two-step logic)
--  (Rewritten for dynamic unified limits)
--  (Managed cache invalidation to fix global PRC sync issues)
--  (Added deep DB scanning logic for total redeemed PRC)
+-  (Rewritten at the end of the session to fix confusing UI).
+-  (Contains the updated cumulative formulas and burn rates).
+-  (Updated to fix login field collisions).
+-  (Updated with comparison table).
 
 **Areas that need refactoring**: 
 -  remains extremely large and needs modularization.
 
 **key api endpoints**
-- : Collects PRC, auto-starts new session, and invalidates user cache.
-- : Returns the unified dynamic redeem calculation.
-- : Validates user ID before showing PIN input.
+- : Returns the cumulative dynamic redeem calculation.
+- : Returns base mining, network bonus, and active session data.
+- : Handles PIN auth with sequential phone/mobile lookup.
 
 **Critical Info for New Agent** 
-- **Caching**: The backend uses  heavily. When altering balances (mining, redeeming), you *must* explicitly invalidate  and  caches, otherwise the frontend Dashboard will show stale data.
-- **Terminology**: MLM terminology is strictly banned. Do not use L1/L2/L3 or levels in the UI. Always use Growth Network or Network Members.
-- **Two-Step Login**: The user wanted PIN to only appear *after* the ID is verified with a ✅ checkmark. Do not break this flow.
+- **Subscription Payment Type**: The system now strictly differentiates between users who bought Elite via  (Razorpay/Admin) vs . This affects both their mining speed multiplier (100% vs 70%) and their redeem burn rate (1% vs 5%). 
+- **Terminology**: Never use Utility/Bank/Shopping limits. Everything is now a single unified Growth Network Limit. 
 
 **documents and test reports created in this job** 
-  - /app/test_reports/iteration_149.json (Mining Collect tests)
-  - /app/test_reports/iteration_150.json (Redeem Limit tests)
-  - /app/memory/PRD.md
-  - /app/memory/test_credentials.md
+  - /app/test_reports/iteration_151.json (Growth Economy Feature tests)
+  - /app/memory/PRD.md (Updated with latest completed items)
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - *User*: मला आता Mining फॉर्म्युला कसा काम करतो ते सांग User ID 9970100782 (Explain how the mining formula works for this UID) -> *Status*: Agent provided detailed breakdown.
- - *User*: हो संपून फॉर्म्युला single leg नुसार करायचा आहे. अंडर 2 speed 500+14.28 [Image attached] (Yes, change formula based on single leg as per this image) -> *Status*: Agent analyzed image, extracted mathematical formula, implemented it in backend, tested via bash, and ran out of context. (Needs user verification/Frontend test).
+ - *User*: Requested removal of confusing Total Available cards on Redeem pages, wanting Dashboard to show Total - Used = Available.
+ - *Agent*: Updated Dashboard UI.
+ - *User*: Shared screenshots stating the UI is still confusing. User needs clarity on Limit, Used, and Balance. Redeem comes from Balance, not total available.
+ - *Agent*: Created/Overwrite  to implement the specific Limit -> Used -> Balance format. (Session ended before visual testing).
 
 **Project Health Check:**
 - Broken: None.
-- Mocked: Dummy users exist for testing network counting.
+- Mocked: Dummy users exist for testing network counting ( is the primary test user).
 
 **3rd Party Integrations** 
  • Razorpay (Payments) — requires User API Key
 
 **Testing status**
-  - Testing agent used after significant changes: YES (Tests 149 & 150 confirmed bug fixes and redeem features).
+  - Testing agent used after significant changes: YES (Iteration 151 verified backend math).
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: NA (Testing agent generated reports)
-  - Known regressions: None currently.
+  - Test files created: NA
+  - Known regressions: None.
 
 **Credentials to test flow:**
-Check 
+Check  (Use  / PIN  for testing the Growth Network logic).
 
 **What agent forgot to execute**
-The agent implemented the very last user request (updating the backend mining formulas based on a spreadsheet image) and tested it successfully using a python script in the bash terminal. However, the agent reached the context limit before performing a final E2E UI verification (via screenshot) to ensure the frontend  accurately displays the new  rates, and before calling the  tool for that specific task.</analysis>
+The agent updated  based on the user's final feedback regarding UI confusion, but context ran out before taking a screenshot to verify the layout, and before calling the  tool for this specific UI refinement. Next agent MUST verify this UI change first.</analysis>
