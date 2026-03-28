@@ -23,8 +23,8 @@
 - File: `/app/frontend/src/pages/LoginNew.js`
 
 ## ✅ COMPLETED: PRC Balance Global Sync Fix - 28 March 2026
-- Root cause: `/api/user/{uid}` had 2-minute cache (cache_manager), mining collect didn't invalidate it
-- Fix: Cache `user_data:{uid}` invalidated after both mining start and collect endpoints
+- Root cause: `/api/user/{uid}` had 2-min cache AND `/api/user/{uid}/dashboard` had 60s cache. Mining collect didn't invalidate either.
+- Fix: Both caches (`user_data:{uid}` + `user:dashboard:{uid}`) invalidated after mining start and collect
 - Added `onBalanceUpdate` callback from App.js → Mining.js for immediate global state + localStorage update
 - Result: PRC balance now matches instantly across Mining page, Dashboard, Profile, all pages
 

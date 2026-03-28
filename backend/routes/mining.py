@@ -333,6 +333,7 @@ async def start_mining(uid: str):
         # Invalidate user data cache
         if cache:
             await cache.delete(f"user_data:{uid}")
+            await cache.delete(f"user:dashboard:{uid}")
         
         # Get rate info
         rate_info = await calculate_mining_rate(uid)
@@ -434,9 +435,10 @@ async def collect_mining(uid: str):
             "timestamp": now.isoformat()
         })
         
-        # Invalidate user data cache so all pages see updated balance
+        # Invalidate ALL user-related caches so all pages see updated balance
         if cache:
             await cache.delete(f"user_data:{uid}")
+            await cache.delete(f"user:dashboard:{uid}")
         
         return {
             "success": True,
