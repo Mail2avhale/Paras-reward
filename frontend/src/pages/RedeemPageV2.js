@@ -2682,7 +2682,7 @@ const RedeemPageV2 = ({ user }) => {
           <div className="space-y-6">
             {/* Category-wise Limit - UTILITY ONLY (Main limit card removed per user request) */}
             {user?.uid && (
-              <CategoryLimitsDisplay userId={user.uid} category="utility" />
+              <CategoryLimitsDisplay userId={user.uid} />
             )}
             
             {/* Charges Info */}

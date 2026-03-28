@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Lock, Unlock, TrendingUp, Users } from 'lucide-react';
+import { Lock, Unlock, TrendingUp } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -124,25 +124,6 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
           <p className="text-[10px] text-emerald-500 uppercase tracking-wider">Available</p>
           <p data-testid="available-prc" className="text-sm font-bold text-emerald-400 tabular-nums">{available.toLocaleString()} PRC</p>
         </div>
-      </div>
-
-      {/* Network Info */}
-      <div className="bg-zinc-800/40 rounded-xl p-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-purple-400" />
-          <span className="text-xs text-zinc-400">
-            Growth Network: <span className="text-zinc-200 font-semibold">{networkSize}</span> members
-          </span>
-        </div>
-        {nextMilestone && unlockPercent < 10 && (
-          <div className="flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-cyan-400" />
-            <span className="text-[10px] text-cyan-400">{usersNeeded} more for {nextMilestone.percent}%</span>
-          </div>
-        )}
-        {unlockPercent >= 94.5 && (
-          <span className="text-[10px] text-emerald-400 font-semibold">MAX Unlocked</span>
-        )}
       </div>
     </div>
   );

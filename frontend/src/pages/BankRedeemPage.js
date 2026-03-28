@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import PRCRateDisplay, { PRCRateBadge } from '../components/PRCRateDisplay';
-import CategoryLimitsDisplay, { CategoryLimitBadge } from '../components/CategoryLimitsDisplay';
+import CategoryLimitsDisplay from '../components/CategoryLimitsDisplay';
 import {
   ArrowLeft, Banknote, Building2, CheckCircle, Clock, XCircle, 
   AlertCircle, Info, Loader2, RefreshCw, IndianRupee, CreditCard,
@@ -313,7 +313,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
           {/* Category-wise Limit - BANK - (Main limit card removed per user request) */}
           {user?.uid && (
             <div className="mt-4">
-              <CategoryLimitsDisplay userId={user.uid} category="bank" />
+              <CategoryLimitsDisplay userId={user.uid} />
             </div>
           )}
         </div>

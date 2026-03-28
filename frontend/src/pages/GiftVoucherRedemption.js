@@ -222,7 +222,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
         {/* Utility Category Limit Card */}
         {user?.uid && (
           <div className="mt-4">
-            <CategoryLimitsDisplay userId={user.uid} category="utility" />
+            <CategoryLimitsDisplay userId={user.uid} />
           </div>
         )}
       </div>
