@@ -60,7 +60,6 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
 
   const unlockPercent = limitData.unlock_percent || 0;
   const networkSize = limitData.network_size || 0;
-  const growthLevel = limitData.growth_level || 0;
   const totalEarned = limitData.total_earned || 0;
   const redeemable = limitData.redeemable || 0;
   const totalRedeemed = limitData.total_redeemed || 0;
@@ -124,7 +123,7 @@ const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-purple-400" />
           <span className="text-xs text-zinc-400">
-            Growth Network: <span className="text-zinc-200 font-semibold">{networkSize}</span> users (L{growthLevel})
+            Growth Network: <span className="text-zinc-200 font-semibold">{networkSize}</span> members
           </span>
         </div>
         {nextLevel && (

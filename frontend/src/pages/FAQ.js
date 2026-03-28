@@ -112,7 +112,7 @@ const FAQ = () => {
         },
         {
           question: "How much mining boost can I get?",
-          answer: "You get mining speed boost from 3 levels of friends: Direct friends (L1): 10%, Level 2: 5%, Level 3: 3%. Total potential boost up to 18%!"
+          answer: "Your mining speed depends on your Growth Network size. More members in your network means higher mining speed!"
         },
         {
           question: "When does the mining boost apply?",

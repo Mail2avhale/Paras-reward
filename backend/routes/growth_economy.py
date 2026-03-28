@@ -327,26 +327,21 @@ async def get_growth_network_stats(user_id: str) -> dict:
 
 def calculate_growth_level(network_size: int) -> int:
     """
-    Calculate growth level based on cumulative network size.
+    Calculate unlock tier based on cumulative network size.
+    Returns tier number (1-10) used internally for unlock % calculation.
+    NOT exposed as "Level" to users - Growth Network is single leg, no MLM levels.
     
-    Per-Level Users × 5 = Points | Cumulative Users → Level → Unlock%
-    L1:  2 users  (cum: 2)   → 10%
-    L2:  4 users  (cum: 6)   → 20%
-    L3:  8 users  (cum: 14)  → 30%
-    L4:  16 users (cum: 30)  → 40%
-    L5:  32 users (cum: 62)  → 50%
-    L6:  64 users (cum: 126) → 60%
-    L7:  128 users(cum: 254) → 70%
-    L8:  200 users(cum: 454) → 80%
-    L9:  200 users(cum: 654) → 90%
-    L10: 146 users(cum: 800) → 100%
+    Thresholds (cumulative users):
+    2→Tier1(10%), 6→Tier2(20%), 14→Tier3(30%), 30→Tier4(40%),
+    62→Tier5(50%), 126→Tier6(60%), 254→Tier7(70%), 454→Tier8(80%),
+    654→Tier9(90%), 800→Tier10(100%)
     """
     thresholds = [2, 6, 14, 30, 62, 126, 254, 454, 654, 800]
-    level = 0
+    tier = 0
     for i, threshold in enumerate(thresholds):
         if network_size >= threshold:
-            level = i + 1
-    return level
+            tier = i + 1
+    return tier
 
 
 async def get_user_unlock_percent(user_id: str) -> int:
