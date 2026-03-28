@@ -543,6 +543,14 @@ const AdminBankTransfers = () => {
                         <td className="p-4">
                           <p className="text-slate-900 font-medium">{req.user_name}</p>
                           <p className="text-slate-500 text-sm">{req.user_phone}</p>
+                          {/* Subscription Status Indicator */}
+                          <div className="mt-1 flex items-center gap-1.5" data-testid={`sub-status-${req.request_id}`}>
+                            <span className={`w-2.5 h-2.5 rounded-full inline-block ${req.subscription_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                            <span className={`text-xs font-medium ${req.subscription_active ? 'text-green-600' : 'text-red-600'}`}>
+                              {req.subscription_active ? 'Active' : 'Inactive'}
+                            </span>
+                            <span className="text-slate-400 text-xs">({req.subscription_plan || 'N/A'})</span>
+                          </div>
                         </td>
                         <td className="p-4">
                           <p className="text-emerald-600 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</p>
@@ -687,6 +695,13 @@ const AdminBankTransfers = () => {
                       <div>
                         <p className="text-slate-900 font-medium">{req.user_name}</p>
                         <p className="text-slate-500 text-sm">{req.user_phone}</p>
+                        {/* Subscription Status */}
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full inline-block ${req.subscription_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                          <span className={`text-xs ${req.subscription_active ? 'text-green-600' : 'text-red-600'}`}>
+                            {req.subscription_active ? 'Active' : 'Inactive'} ({req.subscription_plan || 'N/A'})
+                          </span>
+                        </div>
                       </div>
                       <StatusBadge status={req.status} />
                     </div>
@@ -838,6 +853,13 @@ const AdminBankTransfers = () => {
                   <div>
                     <p className="text-slate-500 text-xs">User</p>
                     <p className="text-slate-900">{selectedRequest.user_name}</p>
+                  </div>
+                  {/* Subscription Active Indicator */}
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${selectedRequest.subscription_active ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'}`} data-testid="modal-sub-status">
+                    <span className={`w-2.5 h-2.5 rounded-full ${selectedRequest.subscription_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className={`text-xs font-semibold ${selectedRequest.subscription_active ? 'text-green-700' : 'text-red-700'}`}>
+                      {selectedRequest.subscription_active ? 'Sub Active' : 'Sub Inactive'}
+                    </span>
                   </div>
                 </div>
                 

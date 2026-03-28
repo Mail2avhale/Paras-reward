@@ -288,7 +288,8 @@ async def get_config():
         "admin_fee_percent": ADMIN_FEE_PERCENT,
         "min_withdrawal": MIN_WITHDRAWAL,
         "max_withdrawal": MAX_WITHDRAWAL,
-        "note": f"1 INR = {prc_rate} PRC"
+        "cycle_days": 28,
+        "note": f"1 INR = {prc_rate} PRC | 1 redeem per 28-day cycle"
     }
 
 @router.get("/calculate-fees")
@@ -347,105 +348,119 @@ async def create_redeem_request(request: RedeemRequest):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # 2.5. CHECK 7-DAY COOLDOWN (One bank transfer per week)
-        cooldown_days = 7
+        # ═══════════════════════════════════════════════════════════════════════
+        # 2.5. CHECK SUBSCRIPTION ACTIVE + 28-DAY CYCLE REDEEM LIMIT
+        # Rule: 1 redeem per 28-day subscription cycle
+        # ═══════════════════════════════════════════════════════════════════════
         now = datetime.now(timezone.utc)
-        cutoff_time = now - timedelta(days=cooldown_days)
         
-        # ═══════════════════════════════════════════════════════════════════════
-        # IMPORTANT: Check ALL THREE collections where bank requests might be stored
-        # 1. bank_withdrawal_requests (legacy)
-        # 2. redeem_requests (unified)
-        # 3. bank_transfer_requests (THIS service's collection)
-        # ═══════════════════════════════════════════════════════════════════════
+        # CHECK A: Subscription must be active (not explorer/free)
+        subscription_plan = (user.get("subscription_plan") or "explorer").lower()
+        if subscription_plan in ["explorer", "free", ""]:
+            raise HTTPException(
+                status_code=403,
+                detail="Active subscription required for bank withdrawal. Please upgrade your plan."
+            )
         
-        last_request = None
-        last_request_time = None
+        # CHECK B: Subscription must not be expired
+        sub_expiry = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
+        if sub_expiry:
+            try:
+                if isinstance(sub_expiry, str):
+                    expiry_dt = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
+                else:
+                    expiry_dt = sub_expiry
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                if expiry_dt < now:
+                    days_expired = (now - expiry_dt).days
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"Your subscription expired {days_expired} days ago. Please renew to use bank withdrawal."
+                    )
+            except HTTPException:
+                raise
+            except Exception as e:
+                logging.warning(f"[BANK-TRANSFER] Expiry parse error for {user_id}: {e}")
         
-        # Check 1: bank_withdrawal_requests
-        bw_request = await db.bank_withdrawal_requests.find_one(
-            {
-                "user_id": user_id,
-                "status": {"$nin": ["rejected", "failed", "cancelled", "Failed", "FAILED", "Rejected", "REJECTED", "Cancelled", "CANCELLED"]}
-            },
-            sort=[("created_at", -1)]
+        # CHECK C: 28-day subscription cycle - only 1 redeem per cycle
+        CYCLE_DAYS = 28
+        sub_start = (
+            user.get("subscription_start_date") or 
+            user.get("subscription_start") or 
+            user.get("subscription_created_at") or 
+            user.get("vip_activated_at")
         )
-        if bw_request:
-            bw_time = bw_request.get("created_at")
-            if isinstance(bw_time, str):
-                try:
-                    bw_time = datetime.fromisoformat(bw_time.replace('Z', '+00:00'))
-                except:
-                    bw_time = None
-            if bw_time:
-                if bw_time.tzinfo is None:
-                    bw_time = bw_time.replace(tzinfo=timezone.utc)
-                if last_request_time is None or bw_time > last_request_time:
-                    last_request = bw_request
-                    last_request_time = bw_time
         
-        # Check 2: redeem_requests with bank service_type
-        redeem_req = await db.redeem_requests.find_one(
-            {
+        if sub_start:
+            try:
+                if isinstance(sub_start, str):
+                    sub_start_dt = datetime.fromisoformat(sub_start.replace('Z', '+00:00'))
+                else:
+                    sub_start_dt = sub_start
+                if sub_start_dt.tzinfo is None:
+                    sub_start_dt = sub_start_dt.replace(tzinfo=timezone.utc)
+                
+                # Calculate current cycle
+                days_since_start = (now - sub_start_dt).total_seconds() / 86400
+                current_cycle_num = int(days_since_start // CYCLE_DAYS)
+                current_cycle_start = sub_start_dt + timedelta(days=current_cycle_num * CYCLE_DAYS)
+                current_cycle_end = current_cycle_start + timedelta(days=CYCLE_DAYS)
+                cycle_start_iso = current_cycle_start.isoformat()
+            except Exception as e:
+                logging.warning(f"[BANK-TRANSFER] Cycle calc error for {user_id}: {e}")
+                cycle_start_iso = (now - timedelta(days=CYCLE_DAYS)).isoformat()
+                current_cycle_end = now + timedelta(days=CYCLE_DAYS)
+        else:
+            # No subscription start date — fallback: 28-day rolling window
+            cycle_start_iso = (now - timedelta(days=CYCLE_DAYS)).isoformat()
+            current_cycle_end = now + timedelta(days=CYCLE_DAYS)
+        
+        # Check ALL collections for a redeem in current cycle
+        failed_statuses = [
+            "rejected", "failed", "cancelled", 
+            "Failed", "FAILED", "Rejected", "REJECTED", 
+            "Cancelled", "CANCELLED"
+        ]
+        
+        cycle_redeem_found = False
+        
+        # Check bank_transfer_requests
+        bt_in_cycle = await db.bank_transfer_requests.find_one({
+            "user_id": user_id,
+            "created_at": {"$gte": cycle_start_iso},
+            "status": {"$nin": failed_statuses}
+        })
+        if bt_in_cycle:
+            cycle_redeem_found = True
+        
+        # Check bank_withdrawal_requests (legacy)
+        if not cycle_redeem_found:
+            bw_in_cycle = await db.bank_withdrawal_requests.find_one({
+                "user_id": user_id,
+                "created_at": {"$gte": cycle_start_iso},
+                "status": {"$nin": failed_statuses}
+            })
+            if bw_in_cycle:
+                cycle_redeem_found = True
+        
+        # Check redeem_requests (unified)
+        if not cycle_redeem_found:
+            rr_in_cycle = await db.redeem_requests.find_one({
                 "user_id": user_id,
                 "service_type": {"$in": ["bank_transfer", "bank_withdrawal", "bank_redeem", "bank", "prc_to_bank"]},
-                "status": {"$nin": ["rejected", "failed", "cancelled", "Failed", "FAILED", "Rejected", "REJECTED", "Cancelled", "CANCELLED", "retry_failed"]}
-            },
-            sort=[("created_at", -1)]
-        )
-        if redeem_req:
-            redeem_time = redeem_req.get("created_at")
-            if isinstance(redeem_time, str):
-                try:
-                    redeem_time = datetime.fromisoformat(redeem_time.replace('Z', '+00:00'))
-                except:
-                    redeem_time = None
-            if redeem_time:
-                if redeem_time.tzinfo is None:
-                    redeem_time = redeem_time.replace(tzinfo=timezone.utc)
-                if last_request_time is None or redeem_time > last_request_time:
-                    last_request = redeem_req
-                    last_request_time = redeem_time
+                "created_at": {"$gte": cycle_start_iso},
+                "status": {"$nin": failed_statuses}
+            })
+            if rr_in_cycle:
+                cycle_redeem_found = True
         
-        # Check 3: bank_transfer_requests (THIS SERVICE'S COLLECTION - CRITICAL!)
-        bt_request = await db.bank_transfer_requests.find_one(
-            {
-                "user_id": user_id,
-                "status": {"$nin": ["rejected", "failed", "cancelled", "Failed", "FAILED", "Rejected", "REJECTED", "Cancelled", "CANCELLED"]}
-            },
-            sort=[("created_at", -1)]
-        )
-        if bt_request:
-            bt_time = bt_request.get("created_at")
-            if isinstance(bt_time, str):
-                try:
-                    bt_time = datetime.fromisoformat(bt_time.replace('Z', '+00:00'))
-                except:
-                    bt_time = None
-            if bt_time:
-                if bt_time.tzinfo is None:
-                    bt_time = bt_time.replace(tzinfo=timezone.utc)
-                if last_request_time is None or bt_time > last_request_time:
-                    last_request = bt_request
-                    last_request_time = bt_time
-        
-        # Now check if last request is within cooldown period
-        if last_request and last_request_time:
-            if last_request_time > cutoff_time:
-                time_passed = now - last_request_time
-                remaining = timedelta(days=cooldown_days) - time_passed
-                remaining_days = remaining.total_seconds() / 86400
-                if remaining_days >= 1:
-                    raise HTTPException(
-                        status_code=429,
-                        detail=f"Bank transfer is limited to ONE per week. Please wait {remaining_days:.0f} days before requesting another bank transfer."
-                    )
-                else:
-                    remaining_hours = remaining.total_seconds() / 3600
-                    raise HTTPException(
-                        status_code=429,
-                        detail=f"Bank transfer is limited to ONE per week. Please wait {remaining_hours:.0f} hours before requesting another bank transfer."
-                    )
+        if cycle_redeem_found:
+            remaining_days = max(0, (current_cycle_end - now).days)
+            raise HTTPException(
+                status_code=429,
+                detail=f"You can redeem once per subscription cycle (28 days). Next redeem available after {remaining_days} days when your next cycle starts."
+            )
         
         # 3. Check KYC
         if user.get("kyc_status") != "verified":
@@ -676,6 +691,40 @@ async def get_all_requests(
             query,
             {"_id": 0}
         ).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(limit)
+        
+        # Enrich each request with subscription_active status
+        for req in requests:
+            req_user_id = req.get("user_id")
+            if req_user_id:
+                req_user = await db.users.find_one(
+                    {"uid": req_user_id},
+                    {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expires": 1, "vip_expiry": 1}
+                )
+                if req_user:
+                    plan = (req_user.get("subscription_plan") or "explorer").lower()
+                    is_active = plan not in ["explorer", "free", ""]
+                    
+                    # Check expiry
+                    if is_active:
+                        expiry = req_user.get("subscription_expiry") or req_user.get("subscription_expires") or req_user.get("vip_expiry")
+                        if expiry:
+                            try:
+                                if isinstance(expiry, str):
+                                    exp_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                                else:
+                                    exp_dt = expiry
+                                if exp_dt.tzinfo is None:
+                                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                                if exp_dt < datetime.now(timezone.utc):
+                                    is_active = False
+                            except Exception:
+                                pass
+                    
+                    req["subscription_active"] = is_active
+                    req["subscription_plan"] = plan
+                else:
+                    req["subscription_active"] = False
+                    req["subscription_plan"] = "unknown"
         
         total = await db.bank_transfer_requests.count_documents(query)
         

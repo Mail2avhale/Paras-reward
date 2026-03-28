@@ -576,12 +576,14 @@ const BankRedeemPage = ({ user: initialUser }) => {
             </Button>
 
             {/* Info Note */}
-            <div className="flex items-start gap-3 p-4 bg-blue-500/10 rounded-xl border border-blue-500/30">
+            <div className="flex items-start gap-3 p-4 bg-blue-500/10 rounded-xl border border-blue-500/30" data-testid="redeem-cycle-info">
               <Info className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-blue-300">
-                <p className="font-medium mb-1">Processing Time</p>
+                <p className="font-medium mb-1">Redeem Policy</p>
                 <p className="text-blue-300/80">
-                  Bank redemptions are processed within 3-7 working days. You will receive a notification once your redemption is complete.
+                  You can redeem once per subscription cycle (28 days). 
+                  Next redeem will be available after your next cycle. 
+                  Processing takes 3-7 working days.
                 </p>
               </div>
             </div>

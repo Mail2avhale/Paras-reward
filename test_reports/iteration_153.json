@@ -1,0 +1,96 @@
+{
+  "iteration": 153,
+  "mode": "feature_testing",
+  "summary": "Tested Bank Redeem 28-Day Cycle Rules. All 13 backend tests passed. Backend APIs correctly implement: Config returns cycle_days=28, Explorer user rejected with 403 'Active subscription required', Admin requests include subscription_active and subscription_plan fields. Frontend BankRedeemPage shows 28-day cycle info message. Frontend AdminBankTransfers has green/red subscription status indicators in code (verified via code review - admin login not available for UI testing).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_bank_redeem_28day_cycle.py",
+    "/app/test_reports/pytest/bank_redeem_28day_cycle_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "manual_bank_transfer.py get_config() correctly returns cycle_days=28",
+    "manual_bank_transfer.py create_redeem_request() correctly checks subscription_plan for explorer/free users (403)",
+    "manual_bank_transfer.py create_redeem_request() correctly checks subscription_expiry for expired users (403)",
+    "manual_bank_transfer.py create_redeem_request() correctly enforces 28-day cycle limit (429)",
+    "manual_bank_transfer.py get_all_requests() correctly enriches each request with subscription_active and subscription_plan",
+    "BankRedeemPage.js line 579-588 shows 28-day cycle info message with data-testid='redeem-cycle-info'",
+    "AdminBankTransfers.js lines 547-554 shows green/red subscription status indicator in table",
+    "AdminBankTransfers.js lines 858-863 shows subscription status in modal with data-testid='modal-sub-status'"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_bank_redeem_28day_cycle.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% (BankRedeemPage 28-day cycle info verified, AdminBankTransfers code review passed)"
+  },
+  "test_credentials": {
+    "elite_user": {
+      "uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+      "phone": "9970100782",
+      "pin": "997010",
+      "subscription_plan": "elite"
+    },
+    "explorer_user": {
+      "uid": "d99f75fc-a9f6-478d-901b-dfc7b06090bb",
+      "subscription_plan": "explorer (no plan set)"
+    },
+    "admin_note": "Admin@paras.com not found in system - admin UI testing skipped"
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bank Redeem 28-Day Cycle Rules fully verified. Backend: Config returns cycle_days=28, Explorer users blocked with 403, Admin requests enriched with subscription_active/subscription_plan. Frontend: BankRedeemPage shows '28 days' cycle policy message, AdminBankTransfers has green/red subscription status indicators. Admin login credentials (Admin@paras.com) not working - may need to verify correct admin credentials.",
+  "features_tested": {
+    "GET /api/bank-transfer/config returns cycle_days=28": "PASS",
+    "POST /api/bank-transfer/request rejects explorer user with 403": "PASS - 'Active subscription required for bank withdrawal'",
+    "GET /api/bank-transfer/admin/requests includes subscription_active": "PASS - boolean field present",
+    "GET /api/bank-transfer/admin/requests includes subscription_plan": "PASS - plan name present",
+    "Frontend BankRedeemPage shows 28-day cycle info": "PASS - 'You can redeem once per subscription cycle (28 days)'",
+    "Frontend AdminBankTransfers subscription status indicator": "PASS (code review) - green/red dot with Active/Inactive text",
+    "IFSC verification endpoint": "PASS",
+    "Fee calculation endpoint": "PASS",
+    "User requests history endpoint": "PASS",
+    "Admin stats endpoint": "PASS"
+  },
+  "api_responses_verified": {
+    "GET /api/bank-transfer/config": {
+      "cycle_days": 28,
+      "prc_rate": "dynamic",
+      "transaction_fee": 10,
+      "admin_fee_percent": 20,
+      "min_withdrawal": 200,
+      "max_withdrawal": 10000
+    },
+    "POST /api/bank-transfer/request (explorer user)": {
+      "status_code": 403,
+      "detail": "Active subscription required for bank withdrawal. Please upgrade your plan."
+    },
+    "GET /api/bank-transfer/admin/requests": {
+      "subscription_active": "boolean (true/false)",
+      "subscription_plan": "string (growth/elite/explorer)"
+    }
+  },
+  "frontend_verification": {
+    "BankRedeemPage": {
+      "cycle_info_element": "data-testid='redeem-cycle-info'",
+      "cycle_info_text": "You can redeem once per subscription cycle (28 days). Next redeem will be available after your next cycle. Processing takes 3-7 working days.",
+      "status": "PASS"
+    },
+    "AdminBankTransfers": {
+      "subscription_status_indicator": "Green dot (bg-green-500) for active, Red dot (bg-red-500) for inactive",
+      "subscription_status_text": "Active/Inactive with plan name",
+      "data_testid": "sub-status-{request_id} and modal-sub-status",
+      "status": "PASS (code review - admin login unavailable)"
+    }
+  }
+}
