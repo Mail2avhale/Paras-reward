@@ -2,10 +2,35 @@ from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, File, Up
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from pathlib import Path
+import os as _os
 
-# Load environment variables BEFORE any other imports
+# ========== ENVIRONMENT VARIABLE LOADING (PRODUCTION-SAFE) ==========
+# Save platform-injected env vars BEFORE load_dotenv can touch them
+# Platform (Emergent) sets these as system env vars; .env file in git has localhost values
+_platform_env_backup = {}
+for _key in ['MONGO_URL', 'DB_NAME', 'CORS_ORIGINS', 'REACT_APP_BACKEND_URL']:
+    _val = _os.environ.get(_key)
+    if _val:
+        _platform_env_backup[_key] = _val
+
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+load_dotenv(ROOT_DIR / '.env', override=False)
+
+# CRITICAL: Restore platform env vars in case load_dotenv overwrote them
+for _key, _val in _platform_env_backup.items():
+    _os.environ[_key] = _val
+
+# Log which MONGO_URL source is active (masked for security)
+_mongo = _os.environ.get('MONGO_URL', '')
+_db = _os.environ.get('DB_NAME', '')
+if 'mongodb+srv' in _mongo or 'mongodb.net' in _mongo:
+    print(f"[STARTUP] MONGO_URL = Atlas (****{_mongo[-30:]})")
+elif 'localhost' in _mongo:
+    print(f"[STARTUP] MONGO_URL = localhost")
+else:
+    print(f"[STARTUP] MONGO_URL = custom ({_mongo[:20]}****)")
+print(f"[STARTUP] DB_NAME = {_db}")
+print(f"[STARTUP] Platform backup keys: {list(_platform_env_backup.keys())}")
 
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -648,7 +673,7 @@ connection_options = {
     'heartbeatFrequencyMS': 10000,  # Check server health every 10s
     
     # ========== NETWORK OPTIMIZATION ==========
-    'compressors': ['zstd', 'snappy', 'zlib'],  # Network compression
+    'compressors': ['zlib'],  # Only zlib (built-in); zstd/snappy require extra packages
     'readPreference': 'primaryPreferred',        # Fallback to secondary if primary slow
     
     # ========== CONNECTION MODE ==========
@@ -1258,6 +1283,11 @@ async def db_health_detailed():
     try:
         import time
         
+        # Show which MONGO_URL source is active (masked)
+        mongo_source = "atlas" if is_atlas else "local"
+        masked_url = mongo_url[:20] + "****" + mongo_url[-20:] if len(mongo_url) > 50 else "****"
+        db_name = os.environ.get('DB_NAME', 'unknown')
+        
         # Ping test
         start = time.time()
         await db.command("ping")
@@ -1285,6 +1315,9 @@ async def db_health_detailed():
         return {
             "status": "healthy",
             "ping_ms": round(ping_ms, 2),
+            "mongo_source": mongo_source,
+            "mongo_url_masked": masked_url,
+            "db_name": db_name,
             "connections": {
                 "current": connections.get("current", 0),
                 "available": connections.get("available", 0),
@@ -1292,9 +1325,10 @@ async def db_health_detailed():
             },
             "collections": collection_stats,
             "pool_config": {
-                "maxPoolSize": 50,
-                "minPoolSize": 5,
-                "note": "Using optimized connection pool"
+                "maxPoolSize": connection_options.get('maxPoolSize'),
+                "minPoolSize": connection_options.get('minPoolSize'),
+                "serverSelectionTimeoutMS": connection_options.get('serverSelectionTimeoutMS'),
+                "compressors": connection_options.get('compressors'),
             },
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
