@@ -6,48 +6,41 @@
 - Removed `.env` from git tracking, made `load_dotenv` conditional
 
 ## COMPLETED: Single Leg Tree + Mining Testing - 29 March 2026
-- Single Leg Tree: All users in single chain by `created_at`
-- String/datetime fix for `mining_session_end`
+- Single Leg Tree by `created_at`, `tree_position`, `network_parent`
 
 ## COMPLETED: Growth Network UI Improvements - 29 March 2026
-- Fixed API URL mismatch, Active/Inactive badges
+- Fixed API URL, Active/Inactive badges
 
 ## COMPLETED: Subscription & Redeem Economy Rules (P0) - 29 March 2026
-- **Explorer Plan**: Free (₹0)
-- **Elite (Cash/INR)**: ₹999 + 18% GST → 100% mining speed, 1% burn rate
-- **Elite (PRC)**: → 70% mining speed, 5% burn rate
-- **Burn formula (ALL redeem services)**: Subtotal = Amount + ₹10 Processing + 20% Admin; Burn = burn_rate% × Subtotal; Total = Subtotal + Burn
-- Testing: iteration 159 - 14/14 PASS
+- Explorer=Free, Elite(Cash)=₹999+GST/100% speed/1% burn, Elite(PRC)=70% speed/5% burn
+- Burn formula: Subtotal = Amount + ₹10 + 20% Admin; Burn = rate% × Subtotal; Total = Subtotal + Burn
+- Testing: iteration 159 (14/14 PASS)
 
-## COMPLETED: Razorpay Elite Pricing (P1) - Active from 29 March 2026
-- ₹999 + 18% GST = ₹1178.82 (Razorpay), 15,692 PRC (PRC payment)
+## COMPLETED: Razorpay Pricing Active - 29 March 2026
+- ₹999 + 18% GST = ₹1178.82, PRC: 15,692 PRC
 - Fixed `subscription_payment_type: "cash"` in all 6 Razorpay activation flows
 
-## COMPLETED: PRC Subscription Flow Test - 29 March 2026
-- Successfully tested PRC subscription: User 6c96a6cc paid 15,692 PRC for Elite
-- Verified: `subscription_payment_type: "prc"` set correctly after PRC payment
-- Pricing breakdown confirmed: Base ₹999 + GST ₹179.82 + ₹10 Processing + 20% Admin = 15,692 PRC
+## COMPLETED: PRC Subscription Flow Tested - 29 March 2026
+- Successfully tested: deducts 15,692 PRC, sets `subscription_payment_type: "prc"`
 
-## COMPLETED: Burn Rate Breakdown on Frontend Redeem Pages - 29 March 2026
-- **RedeemPageV2.js**: Shows burn line (rate%, INR, PRC) in charge breakdown
-- **BankRedeemPage.js**: Shows burn line in fee breakdown section
-- **GiftVoucherRedemption.js**: Shows burn line with PRC user warning
-- **unified_redeem_v2.py**: Added `get_user_burn_rate_redeem()`, updated `calculate_charges()` with burn fields
-- PRC users see red warning: "PRC subscribers: 5% burn rate. Cash subscribers pay only 1%."
-- Testing: iteration 160 - 10/10 PASS (both APIs verified)
+## COMPLETED: Burn Rate Breakdown Frontend - 29 March 2026
+- All 3 redeem pages show burn line (rate%, INR, PRC), PRC user warning
+- Testing: iteration 160 (10/10 PASS)
+
+## COMPLETED: PRC Subscription Page Bug Fix - 29 March 2026
+- **Bug**: PRC Rate=10 (should 11), Admin Charge=100% (should 20%), Total=23,576 (should 15,692)
+- **Root cause**: `PRC_MULTIPLIER=2` hack + hardcoded `adminChargePercent={100}` + admin-only PRC rate endpoint returning 403
+- **Fix**: 
+  - Removed `PRC_MULTIPLIER`, `getPRCPrice()` now uses `/api/subscription/elite-pricing` backend response
+  - PRCRateDisplay: 3-level fallback (admin -> prc-economy/current-rate -> elite-pricing)
+  - Admin charge fixed to 20%, Processing fee ₹10 added
+- Testing: iteration 161 (8/8 PASS — verified PRC Rate=11, Admin=20%, Total=15,692.42)
 
 ## Active Architecture
-- `tree_position`: Integer position in single leg (1=first, N=last)
-- `network_parent`: UID of user above in chain
-- Mining formula: (500 + N×prc_per_user) × boost_multiplier
-- **Boost multiplier**: Cash=1.0, PRC=0.70
-- **Burn rate**: Cash=1%, PRC=5% of (Amount + Processing + Admin)
-- **Razorpay**: ₹999 + 18% GST = ₹1178.82
-
-## Key DB Fields (users collection)
-- `subscription_plan`: explorer | elite
-- `subscription_payment_type`: cash | prc
-- `tree_position`, `network_parent`, `mining_active`, `mining_session_end`
+- Mining: (500 + N×prc_per_user) × boost (Cash=1.0, PRC=0.70)
+- Burn: Cash=1%, PRC=5% of (Amount + Processing + Admin)
+- Razorpay: ₹999 + 18% GST = ₹1178.82
+- PRC subscription: 15,692.42 PRC (dynamic rate=11)
 
 ## Upcoming
 - P2: server.py refactoring (45k+ lines)
