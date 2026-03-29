@@ -44951,86 +44951,55 @@ async def initialize_database_indexes():
     
     print("✅ Database indexes initialization complete")
 
+async def _complete_db_init():
+    """Background task: complete DB initialization after successful connection"""
+    try:
+        await create_performance_indexes(db)
+        print("✅ Performance indexes created")
+    except Exception as e:
+        print(f"⚠️ Error creating performance indexes (non-critical): {e}")
+    
+    try:
+        await initialize_database_indexes()
+        print("✅ Database indexes initialized")
+    except Exception as e:
+        print(f"⚠️ Error initializing indexes (non-critical): {e}")
+    
+    try:
+        video_ads_count = await db.video_ads.count_documents({})
+        if video_ads_count == 0:
+            print("📹 No video ads found, database ready for admin to create videos")
+    except Exception as e:
+        print(f"⚠️ Error checking video ads (non-critical): {e}")
+    
+    print("✅ Database initialization complete!")
+
 @app.on_event("startup")
 async def startup_db():
-    """Initialize database with default data and start scheduled tasks"""
-    import asyncio  # Ensure asyncio is available in this scope
+    """Initialize database and start scheduled tasks - NON-BLOCKING startup"""
+    import asyncio
     global db_ready
-    print("🚀 Starting database initialization...")
+    print("🚀 Starting server (non-blocking startup)...")
     
-    # Initialize cache manager
-    print("📦 Initializing cache system...")
-    await cache.initialize()
+    # Initialize cache manager (quick - just connects to Redis)
+    try:
+        print("📦 Initializing cache system...")
+        await cache.initialize()
+    except Exception as e:
+        print(f"⚠️ Cache init failed (non-critical): {e}")
     
-    # ========== CONNECTION WARMUP ==========
-    # Warm up the connection pool BEFORE any real requests
-    print("🔥 Warming up MongoDB connection pool...")
-    max_retries = 5
-    retry_delay = 2
-    
-    for attempt in range(max_retries):
-        try:
-            # Ping to establish first connection
-            await client.admin.command('ping')
-            print(f"✅ MongoDB ping successful (attempt {attempt + 1})")
-            
-            # Warm up multiple connections in parallel
-            warmup_tasks = []
-            for i in range(5):  # Warm up 5 connections
-                warmup_tasks.append(client.admin.command('ping'))
-            
-            await asyncio.gather(*warmup_tasks, return_exceptions=True)
-            print("🔥 Connection pool warmed up (5 connections ready)")
-            
-            # Quick test query to verify read operations
-            await db.users.find_one({}, {"_id": 1})
-            print("✅ Read operation verified")
-            
-            db_ready = True
-            break
-            
-        except Exception as e:
-            if attempt < max_retries - 1:
-                print(f"⚠️ MongoDB warmup attempt {attempt + 1} failed: {e}")
-                print(f"   Retrying in {retry_delay} seconds...")
-                await asyncio.sleep(retry_delay)
-            else:
-                print(f"⚠️ MongoDB initial connection pending after {max_retries} attempts")
-                print("   App will continue to retry in background")
-                asyncio.create_task(retry_db_connection())
-                break
-    
-    if db_ready:
-        try:
-            # Create performance indexes for high-traffic queries
-            await create_performance_indexes(db)
-            print("✅ Performance indexes created")
-        except Exception as e:
-            print(f"⚠️ Error creating performance indexes (non-critical): {e}")
-        
-        try:
-            # Create indexes with error handling
-            await initialize_database_indexes()
-            print("✅ Database indexes initialized")
-        except Exception as e:
-            print(f"⚠️ Error initializing indexes (non-critical): {e}")
-        
-        # Treasure hunts initialization - REMOVED (feature deprecated)
-        # try:
-        #     await initialize_treasure_hunts()
-        #     print("✅ Treasure hunts initialized")
-        # except Exception as e:
-        #     print(f"⚠️ Error initializing treasure hunts (non-critical): {e}")
-        
-        try:
-            # Check if video_ads collection exists, if not create sample
-            video_ads_count = await db.video_ads.count_documents({})
-            if video_ads_count == 0:
-                print("📹 No video ads found, database ready for admin to create videos")
-        except Exception as e:
-            print(f"⚠️ Error checking video ads (non-critical): {e}")
-        
-        print("✅ Database initialization complete!")
+    # ========== FAST DB CHECK (single attempt, short timeout) ==========
+    # Try ONE quick ping. If it fails, move to background - don't block startup.
+    try:
+        await asyncio.wait_for(client.admin.command('ping'), timeout=5.0)
+        print("✅ MongoDB connected on first attempt")
+        db_ready = True
+        # Run DB init in background so startup completes fast
+        asyncio.create_task(_complete_db_init())
+    except Exception as e:
+        print(f"⚠️ MongoDB not ready on startup: {str(e)[:120]}")
+        print("   → Starting background retry (server will serve requests immediately)")
+        asyncio.create_task(retry_db_connection())
     
     # Start Task Queue Worker (Phase 4 - Background Tasks)
     print("🔄 Starting background task worker...")
