@@ -3,35 +3,32 @@
 ## LAST UPDATED - 29 March 2026
 
 ## COMPLETED: Production 520 Error Fix (P0 CRITICAL) - 29 March 2026
-- **Root Cause**: `.env` files committed to git with `MONGO_URL="mongodb://localhost:27017"` were overwriting Emergent's System Keys
-- **Fix**: Removed `.env` from git tracking, added to `.gitignore`, made `load_dotenv` conditional
-- **Result**: Production backend responds 200 OK with MongoDB Atlas connected
+- Removed `.env` from git tracking, made `load_dotenv` conditional
+- Production backend responds 200 OK with MongoDB Atlas connected
 
 ## COMPLETED: Single Leg Tree Implementation - 29 March 2026
-- **What**: All users arranged in single chain by joining date/time (`created_at`)
-- **Fields**: `tree_position` (integer, 1=oldest) and `network_parent` (uid of user above)
-- **Network Size**: Count ACTIVE users (Elite + mining_active) with `tree_position > user's position`
-- **Direct Referrals**: Unchanged - still uses `referred_by` field (referral_code based)
-- **Mining Formula**: Unchanged - 500 base + team_bonus, uses single leg tree for network
-- **Network Cap**: Unchanged - min(4000, 800 + 16 × direct_referrals)
-- **Migration**: Auto-runs on server startup for users without `tree_position`
-- **New Users**: Auto-assigned to end of chain on registration
-- **Files changed**: mining.py, growth_economy.py, auth.py, server.py
-- **Testing**: 9/9 backend tests passed
+- All users arranged in single chain by `created_at` (joining date/time)
+- `tree_position` (integer) and `network_parent` (uid of user above)
+- Network size = count ACTIVE users with `tree_position > user's position`
+- Direct referrals unchanged (referral_code based `referred_by`)
+- Auto-migration on server startup for users without `tree_position`
+
+## COMPLETED: Growth Network UI Improvements - 29 March 2026
+- **Fixed**: API URL mismatch - frontend was calling wrong endpoint for direct referrals list
+- **Network Progress Bar**: Shows "X active users" and "Cap: Y" below the bar
+- **Direct Referrals**: Green (Active) / Red (Inactive) status with colored dots and badges
+  - Active = Elite subscription + mining_active
+  - Inactive = Explorer or not mining
 
 ## Active Architecture
 - `tree_position`: Integer position in single leg (1=first joiner, N=last)
 - `network_parent`: UID of user immediately above in single leg chain
 - `referred_by`: UID of referrer (referral_code based) - SEPARATE from tree
-- Network size for mining = tree_position based query (efficient single MongoDB query)
-- Direct referrals for network cap = referred_by based count (unchanged)
+- Network size for mining = tree_position based query
+- Direct referrals for network cap = referred_by based count
 
 ## Pricing Formula
-Rs999 + 18% GST = Rs1178.82 base
-+ Rs10 Processing Fee
-+ 20% Admin on (base_prc + processing_prc)
-+ Burning (PRC: 5%, Cash: 1%) on total_before_burn
-= Final PRC Amount
+Rs999 + 18% GST = Rs1178.82 base + Rs10 Processing + 20% Admin + Burning (PRC: 5%, Cash: 1%)
 
 ## TWO-PLAN SYSTEM
 | Feature | Cash Subscription | PRC Subscription |

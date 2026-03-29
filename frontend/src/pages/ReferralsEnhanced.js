@@ -31,7 +31,7 @@ const ReferralsEnhanced = ({ user }) => {
       // Fetch network stats from Growth Economy API
       const [statsRes, referralsRes] = await Promise.all([
         axios.get(`${API}/api/growth/network-stats/${user.uid}`).catch(() => null),
-        axios.get(`${API}/api/referrals/direct/${user.uid}`).catch(() => null)
+        axios.get(`${API}/api/referrals/${user.uid}/direct-list`).catch(() => null)
       ]);
       
       if (statsRes?.data?.success) {
@@ -195,6 +195,10 @@ const ReferralsEnhanced = ({ user }) => {
               style={{ width: `${networkProgress}%` }}
             />
           </div>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-gray-500 text-xs">{networkStats?.network_size || 0} active users</span>
+            <span className="text-gray-500 text-xs">Cap: {networkStats?.network_cap || 0}</span>
+          </div>
         </div>
 
         {/* Direct Referrals List */}
@@ -214,27 +218,32 @@ const ReferralsEnhanced = ({ user }) => {
               {directReferrals.map((ref, index) => (
                 <div key={ref.uid || index} className="px-5 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                      ref.subscription_plan && ref.subscription_plan !== 'explorer' 
-                        ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/30' 
-                        : 'bg-gray-700 text-gray-400'
-                    }`}>
-                      {ref.name?.charAt(0)?.toUpperCase() || 'U'}
+                    <div className="relative">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                        ref.is_active 
+                          ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/30' 
+                          : 'bg-red-500/10 text-red-400 ring-2 ring-red-500/20'
+                      }`}>
+                        {ref.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                      <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-gray-900 ${
+                        ref.is_active ? 'bg-emerald-500' : 'bg-red-500'
+                      }`} />
                     </div>
                     <div>
                       <p className="text-white text-sm font-medium">{ref.name || 'User'}</p>
                       <p className="text-xs text-gray-500">
-                        {ref.subscription_plan && ref.subscription_plan !== 'explorer' 
+                        {ref.subscription_plan && ref.subscription_plan.toLowerCase() !== 'explorer' 
                           ? `Elite Member` 
                           : 'Explorer'}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {ref.subscription_plan && ref.subscription_plan !== 'explorer' ? (
-                      <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-lg">Active</span>
+                    {ref.is_active ? (
+                      <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-lg font-medium">Active</span>
                     ) : (
-                      <span className="px-2 py-1 bg-gray-700 text-gray-500 text-xs rounded-lg">Free</span>
+                      <span className="px-2 py-1 bg-red-500/15 text-red-400 text-xs rounded-lg font-medium">Inactive</span>
                     )}
                     <ChevronRight className="w-4 h-4 text-gray-600" />
                   </div>
