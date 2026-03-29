@@ -648,52 +648,46 @@ def parse_user_agent(user_agent: str) -> dict:
     return {"device": device, "os": os_name, "browser": browser}
 
 # MongoDB connection with Atlas-compatible settings
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL', '')
+if not mongo_url:
+    print("[FATAL] MONGO_URL not set! Using fallback localhost")
+    mongo_url = 'mongodb://localhost:27017'
 
 # Detect if using MongoDB Atlas (contains mongodb+srv or mongodb.net)
 is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 
-# Configure connection options - OPTIMIZED for production performance & reliability
+# Configure connection options - keep it simple and reliable
 connection_options = {
-    # ========== CONNECTION POOL SETTINGS ==========
-    'maxPoolSize': 100,          # Increased to 100 for 5000 users
-    'minPoolSize': 10,           # Keep 10 warm connections
-    'maxIdleTimeMS': 30000,      # 30 sec idle timeout - RELEASE FASTER
-    'waitQueueTimeoutMS': 5000,  # 5s wait timeout - FAIL FAST
-    'maxConnecting': 10,         # Allow 10 parallel connection attempts
-    
-    # ========== TIMEOUT SETTINGS ==========
-    'serverSelectionTimeoutMS': 5000,   # 5s to select server
-    'connectTimeoutMS': 5000,           # 5s to connect
-    'socketTimeoutMS': 20000,           # 20s socket timeout
-    
-    # ========== RELIABILITY SETTINGS ==========
-    'retryWrites': True,        # Auto-retry failed writes
-    'retryReads': True,         # Auto-retry failed reads
-    'heartbeatFrequencyMS': 10000,  # Check server health every 10s
-    
-    # ========== NETWORK OPTIMIZATION ==========
-    'compressors': ['zlib'],  # Only zlib (built-in); zstd/snappy require extra packages
-    'readPreference': 'primaryPreferred',        # Fallback to secondary if primary slow
-    
-    # ========== CONNECTION MODE ==========
-    'directConnection': not is_atlas,  # Direct connection for local MongoDB
+    'serverSelectionTimeoutMS': 10000,
+    'connectTimeoutMS': 10000,
+    'socketTimeoutMS': 30000,
+    'maxPoolSize': 50,
+    'minPoolSize': 5,
+    'retryWrites': True,
+    'retryReads': True,
 }
 
 # Add Atlas-specific options for cloud MongoDB
 if is_atlas:
     connection_options.update({
-        'w': 'majority',                        # Write concern for durability
-        'tls': True,                            # TLS encryption
-        'tlsAllowInvalidCertificates': False,   # Enforce valid certs
-        'appName': 'paras-reward-api',          # App identifier in Atlas logs
+        'tls': True,
+        'tlsAllowInvalidCertificates': False,
     })
-    logging.info("🔒 MongoDB Atlas detected - using optimized TLS connection")
+    print(f"[STARTUP] MongoDB Atlas mode enabled")
 else:
-    logging.info("🏠 Local MongoDB detected - using direct connection")
+    connection_options['directConnection'] = True
+    print(f"[STARTUP] Local MongoDB mode enabled")
 
-client = AsyncIOMotorClient(mongo_url, **connection_options)
-db = client[os.environ['DB_NAME']]
+try:
+    client = AsyncIOMotorClient(mongo_url, **connection_options)
+    db_name = os.environ.get('DB_NAME', 'paras_reward_db')
+    db = client[db_name]
+    print(f"[STARTUP] MongoDB client created for DB: {db_name}")
+except Exception as e:
+    print(f"[FATAL] MongoDB client creation failed: {e}")
+    # Create a minimal client so the server can at least start
+    client = AsyncIOMotorClient('mongodb://localhost:27017', serverSelectionTimeoutMS=5000)
+    db = client['paras_reward_db']
 
 # ========== DATABASE CONNECTION HEALTH & AUTO-RECONNECT ==========
 async def ensure_db_connection():
