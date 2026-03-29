@@ -67,7 +67,7 @@ tzdata==2025.2
 urllib3==2.5.0
 uvicorn==0.25.0
 watchfiles==1.1.0
-webauthn
+webauthn==2.7.0
 APScheduler==3.11.1
 upstash-redis==1.5.0
 httpx==0.28.1
