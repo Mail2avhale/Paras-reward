@@ -2,35 +2,10 @@ from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, File, Up
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from pathlib import Path
-import os as _os
 
-# ========== ENVIRONMENT VARIABLE LOADING (PRODUCTION-SAFE) ==========
-# Save platform-injected env vars BEFORE load_dotenv can touch them
-# Platform (Emergent) sets these as system env vars; .env file in git has localhost values
-_platform_env_backup = {}
-for _key in ['MONGO_URL', 'DB_NAME', 'CORS_ORIGINS', 'REACT_APP_BACKEND_URL']:
-    _val = _os.environ.get(_key)
-    if _val:
-        _platform_env_backup[_key] = _val
-
+# Load environment variables BEFORE any other imports
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env', override=False)
-
-# CRITICAL: Restore platform env vars in case load_dotenv overwrote them
-for _key, _val in _platform_env_backup.items():
-    _os.environ[_key] = _val
-
-# Log which MONGO_URL source is active (masked for security)
-_mongo = _os.environ.get('MONGO_URL', '')
-_db = _os.environ.get('DB_NAME', '')
-if 'mongodb+srv' in _mongo or 'mongodb.net' in _mongo:
-    print(f"[STARTUP] MONGO_URL = Atlas (****{_mongo[-30:]})")
-elif 'localhost' in _mongo:
-    print(f"[STARTUP] MONGO_URL = localhost")
-else:
-    print(f"[STARTUP] MONGO_URL = custom ({_mongo[:20]}****)")
-print(f"[STARTUP] DB_NAME = {_db}")
-print(f"[STARTUP] Platform backup keys: {list(_platform_env_backup.keys())}")
+load_dotenv(ROOT_DIR / '.env')
 
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -648,46 +623,52 @@ def parse_user_agent(user_agent: str) -> dict:
     return {"device": device, "os": os_name, "browser": browser}
 
 # MongoDB connection with Atlas-compatible settings
-mongo_url = os.environ.get('MONGO_URL', '')
-if not mongo_url:
-    print("[FATAL] MONGO_URL not set! Using fallback localhost")
-    mongo_url = 'mongodb://localhost:27017'
+mongo_url = os.environ['MONGO_URL']
 
 # Detect if using MongoDB Atlas (contains mongodb+srv or mongodb.net)
 is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 
-# Configure connection options - keep it simple and reliable
+# Configure connection options - OPTIMIZED for production performance & reliability
 connection_options = {
-    'serverSelectionTimeoutMS': 10000,
-    'connectTimeoutMS': 10000,
-    'socketTimeoutMS': 30000,
-    'maxPoolSize': 50,
-    'minPoolSize': 5,
-    'retryWrites': True,
-    'retryReads': True,
+    # ========== CONNECTION POOL SETTINGS ==========
+    'maxPoolSize': 100,          # Increased to 100 for 5000 users
+    'minPoolSize': 10,           # Keep 10 warm connections
+    'maxIdleTimeMS': 30000,      # 30 sec idle timeout - RELEASE FASTER
+    'waitQueueTimeoutMS': 5000,  # 5s wait timeout - FAIL FAST
+    'maxConnecting': 10,         # Allow 10 parallel connection attempts
+    
+    # ========== TIMEOUT SETTINGS ==========
+    'serverSelectionTimeoutMS': 5000,   # 5s to select server
+    'connectTimeoutMS': 5000,           # 5s to connect
+    'socketTimeoutMS': 20000,           # 20s socket timeout
+    
+    # ========== RELIABILITY SETTINGS ==========
+    'retryWrites': True,        # Auto-retry failed writes
+    'retryReads': True,         # Auto-retry failed reads
+    'heartbeatFrequencyMS': 10000,  # Check server health every 10s
+    
+    # ========== NETWORK OPTIMIZATION ==========
+    'compressors': ['zstd', 'snappy', 'zlib'],  # Network compression
+    'readPreference': 'primaryPreferred',        # Fallback to secondary if primary slow
+    
+    # ========== CONNECTION MODE ==========
+    'directConnection': not is_atlas,  # Direct connection for local MongoDB
 }
 
 # Add Atlas-specific options for cloud MongoDB
 if is_atlas:
     connection_options.update({
-        'tls': True,
-        'tlsAllowInvalidCertificates': False,
+        'w': 'majority',                        # Write concern for durability
+        'tls': True,                            # TLS encryption
+        'tlsAllowInvalidCertificates': False,   # Enforce valid certs
+        'appName': 'paras-reward-api',          # App identifier in Atlas logs
     })
-    print(f"[STARTUP] MongoDB Atlas mode enabled")
+    logging.info("🔒 MongoDB Atlas detected - using optimized TLS connection")
 else:
-    connection_options['directConnection'] = True
-    print(f"[STARTUP] Local MongoDB mode enabled")
+    logging.info("🏠 Local MongoDB detected - using direct connection")
 
-try:
-    client = AsyncIOMotorClient(mongo_url, **connection_options)
-    db_name = os.environ.get('DB_NAME', 'paras_reward_db')
-    db = client[db_name]
-    print(f"[STARTUP] MongoDB client created for DB: {db_name}")
-except Exception as e:
-    print(f"[FATAL] MongoDB client creation failed: {e}")
-    # Create a minimal client so the server can at least start
-    client = AsyncIOMotorClient('mongodb://localhost:27017', serverSelectionTimeoutMS=5000)
-    db = client['paras_reward_db']
+client = AsyncIOMotorClient(mongo_url, **connection_options)
+db = client[os.environ['DB_NAME']]
 
 # ========== DATABASE CONNECTION HEALTH & AUTO-RECONNECT ==========
 async def ensure_db_connection():
@@ -707,7 +688,7 @@ async def ensure_db_connection():
             client.close()
             # Create new connection
             client = AsyncIOMotorClient(mongo_url, **connection_options)
-            db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
+            db = client[os.environ['DB_NAME']]
             # Verify new connection
             await client.admin.command('ping')
             logging.info("✅ Database reconnected successfully")
@@ -1203,7 +1184,7 @@ async def api_health_check():
         "database": "connected" if db_ready else "connecting",
         "service": "paras-reward-api",
         "version": "2.0",
-        "build": "deploy-fix-520-20260329"
+        "build": "user360-fix-v3-20260321"
     }
 
 
@@ -1277,11 +1258,6 @@ async def db_health_detailed():
     try:
         import time
         
-        # Show which MONGO_URL source is active (masked)
-        mongo_source = "atlas" if is_atlas else "local"
-        masked_url = mongo_url[:20] + "****" + mongo_url[-20:] if len(mongo_url) > 50 else "****"
-        db_name = os.environ.get('DB_NAME', 'unknown')
-        
         # Ping test
         start = time.time()
         await db.command("ping")
@@ -1309,9 +1285,6 @@ async def db_health_detailed():
         return {
             "status": "healthy",
             "ping_ms": round(ping_ms, 2),
-            "mongo_source": mongo_source,
-            "mongo_url_masked": masked_url,
-            "db_name": db_name,
             "connections": {
                 "current": connections.get("current", 0),
                 "available": connections.get("available", 0),
@@ -1319,10 +1292,9 @@ async def db_health_detailed():
             },
             "collections": collection_stats,
             "pool_config": {
-                "maxPoolSize": connection_options.get('maxPoolSize'),
-                "minPoolSize": connection_options.get('minPoolSize'),
-                "serverSelectionTimeoutMS": connection_options.get('serverSelectionTimeoutMS'),
-                "compressors": connection_options.get('compressors'),
+                "maxPoolSize": 50,
+                "minPoolSize": 5,
+                "note": "Using optimized connection pool"
             },
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
@@ -2651,7 +2623,7 @@ async def database_keep_alive_ping():
                 client.close()
                 # Create new connection
                 client = AsyncIOMotorClient(mongo_url, **connection_options)
-                db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
+                db = client[os.environ['DB_NAME']]
                 # Test new connection
                 await client.admin.command('ping')
                 print("[DB KEEP-ALIVE] ✅ Reconnected successfully!")
@@ -13873,13 +13845,7 @@ async def get_all_transactions_admin(
 # Keeping this comment for reference
 
 # ========== AI CHATBOT & KYC AUTO-VERIFICATION ==========
-# Lazy import - emergentintegrations may not be installed in all environments
-try:
-    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
-    _HAS_EMERGENT_LLM = True
-except ImportError:
-    _HAS_EMERGENT_LLM = False
-    print("[STARTUP] emergentintegrations not installed - AI chatbot features disabled")
+from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
@@ -15816,6 +15782,145 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
             "growth_level": 0,
             "total_limit": 0,
             "unlimited": False
+        }
+    try:
+        # Plan prices for formula: Plan × 5 × 10
+        PLAN_PRICES = {
+            "elite": 799,
+            "growth": 499,
+            "startup": 299,
+            "explorer": 0,
+            "free": 0,
+            "": 0
+        }
+        MULTIPLIER = 5
+        PRC_FACTOR = 10
+        REFERRAL_BONUS_PERCENT = 20  # 20% per active referral
+        
+        # Get user's data
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            return {
+                "plan": "explorer",
+                "plan_price": 0,
+                "base_limit": 0,
+                "monthly_limit": 0,
+                "months_active": 1,
+                "active_referrals": 0,
+                "referral_percentage_increase": 0,
+                "total_limit": 0,
+                "carry_forward_enabled": True
+            }
+        
+        # Get user's subscription plan
+        plan = (user.get("subscription_plan") or "explorer").lower()
+        if plan not in PLAN_PRICES:
+            plan = "explorer"
+        
+        plan_price = PLAN_PRICES.get(plan, 0)
+        
+        # Calculate base monthly limit: Plan × 5 × 10
+        base_monthly_limit = plan_price * MULTIPLIER * PRC_FACTOR
+        
+        # Calculate months since USER JOINED
+        user_created = user.get("created_at") or user.get("registered_at") or user.get("createdAt")
+        now = datetime.now(timezone.utc)
+        
+        if user_created:
+            if isinstance(user_created, str):
+                try:
+                    user_created = datetime.fromisoformat(user_created.replace('Z', '+00:00'))
+                except:
+                    user_created = now
+            if user_created.tzinfo is None:
+                user_created = user_created.replace(tzinfo=timezone.utc)
+        else:
+            user_created = now.replace(day=1)
+        
+        # Calculate months difference (at least 1 month)
+        months_diff = (now.year - user_created.year) * 12 + (now.month - user_created.month)
+        months_active = max(1, months_diff + 1)
+        
+        referral_code = user.get("referral_code", "")
+        user_uid = user.get("uid", user_id)
+        
+        # Count ACTIVE direct referrals (referred users with active subscription)
+        # Note: In production, referred_by can be either UID or referral_code
+        active_referral_count = 0
+        total_referral_count = 0
+        
+        # Search by both UID and referral_code
+        referred_users = await db.users.find({
+            "$or": [
+                {"referred_by": referral_code} if referral_code else {"referred_by": "___none___"},
+                {"referred_by": user_uid}
+            ]
+        }).to_list(1000)
+            
+        total_referral_count = len(referred_users)
+        
+        for referred_user in referred_users:
+            is_active = False
+            
+            # Check subscription expiry
+            sub_expiry = referred_user.get("subscription_expires") or referred_user.get("subscription_expiry") or referred_user.get("vip_expiry") or referred_user.get("valid_till")
+            if sub_expiry:
+                try:
+                    if isinstance(sub_expiry, str):
+                        exp_date = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
+                    else:
+                        exp_date = sub_expiry
+                    if exp_date.tzinfo is None:
+                        exp_date = exp_date.replace(tzinfo=timezone.utc)
+                    
+                    if exp_date > now:
+                        is_active = True
+                except:
+                    pass
+            
+            # Also check plan or membership flags
+            ref_plan = (referred_user.get("subscription_plan") or "").lower()
+            if ref_plan in ["elite", "growth", "startup"]:
+                is_active = True
+            if referred_user.get("is_premium") or referred_user.get("membership_type") == "vip":
+                is_active = True
+            
+            if is_active:
+                active_referral_count += 1
+        
+        # Calculate referral bonus: 20% per active referral
+        referral_percentage_increase = active_referral_count * REFERRAL_BONUS_PERCENT
+        
+        # Monthly limit with referral bonus
+        monthly_limit_with_bonus = base_monthly_limit * (1 + referral_percentage_increase / 100)
+        
+        # Total limit = Months × Monthly Limit (carry forward from joining)
+        total_limit = months_active * monthly_limit_with_bonus
+        
+        return {
+            "plan": plan,
+            "plan_price": plan_price,
+            "base_limit": base_monthly_limit,
+            "monthly_limit": round(monthly_limit_with_bonus, 2),
+            "months_active": months_active,
+            "total_referrals": total_referral_count,
+            "active_referrals": active_referral_count,
+            "referral_percentage_increase": referral_percentage_increase,
+            "total_limit": round(total_limit, 2),
+            "carry_forward_enabled": True,
+            "formula": f"{plan_price} × 5 × 10 = {base_monthly_limit} + {referral_percentage_increase}% referral bonus"
+        }
+    except Exception as e:
+        logging.error(f"Error calculating redeem limit: {e}")
+        return {
+            "base_limit": BASE_REDEEM_LIMIT,
+            "monthly_limit": BASE_REDEEM_LIMIT,
+            "monthly_limit_with_bonus": BASE_REDEEM_LIMIT,
+            "months_active": 1,
+            "active_referrals": 0,
+            "referral_percentage_increase": 0,
+            "total_limit": BASE_REDEEM_LIMIT,
+            "carry_forward_enabled": True
         }
 
 
@@ -44951,55 +45056,86 @@ async def initialize_database_indexes():
     
     print("✅ Database indexes initialization complete")
 
-async def _complete_db_init():
-    """Background task: complete DB initialization after successful connection"""
-    try:
-        await create_performance_indexes(db)
-        print("✅ Performance indexes created")
-    except Exception as e:
-        print(f"⚠️ Error creating performance indexes (non-critical): {e}")
-    
-    try:
-        await initialize_database_indexes()
-        print("✅ Database indexes initialized")
-    except Exception as e:
-        print(f"⚠️ Error initializing indexes (non-critical): {e}")
-    
-    try:
-        video_ads_count = await db.video_ads.count_documents({})
-        if video_ads_count == 0:
-            print("📹 No video ads found, database ready for admin to create videos")
-    except Exception as e:
-        print(f"⚠️ Error checking video ads (non-critical): {e}")
-    
-    print("✅ Database initialization complete!")
-
 @app.on_event("startup")
 async def startup_db():
-    """Initialize database and start scheduled tasks - NON-BLOCKING startup"""
-    import asyncio
+    """Initialize database with default data and start scheduled tasks"""
+    import asyncio  # Ensure asyncio is available in this scope
     global db_ready
-    print("🚀 Starting server (non-blocking startup)...")
+    print("🚀 Starting database initialization...")
     
-    # Initialize cache manager (quick - just connects to Redis)
-    try:
-        print("📦 Initializing cache system...")
-        await cache.initialize()
-    except Exception as e:
-        print(f"⚠️ Cache init failed (non-critical): {e}")
+    # Initialize cache manager
+    print("📦 Initializing cache system...")
+    await cache.initialize()
     
-    # ========== FAST DB CHECK (single attempt, short timeout) ==========
-    # Try ONE quick ping. If it fails, move to background - don't block startup.
-    try:
-        await asyncio.wait_for(client.admin.command('ping'), timeout=5.0)
-        print("✅ MongoDB connected on first attempt")
-        db_ready = True
-        # Run DB init in background so startup completes fast
-        asyncio.create_task(_complete_db_init())
-    except Exception as e:
-        print(f"⚠️ MongoDB not ready on startup: {str(e)[:120]}")
-        print("   → Starting background retry (server will serve requests immediately)")
-        asyncio.create_task(retry_db_connection())
+    # ========== CONNECTION WARMUP ==========
+    # Warm up the connection pool BEFORE any real requests
+    print("🔥 Warming up MongoDB connection pool...")
+    max_retries = 5
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            # Ping to establish first connection
+            await client.admin.command('ping')
+            print(f"✅ MongoDB ping successful (attempt {attempt + 1})")
+            
+            # Warm up multiple connections in parallel
+            warmup_tasks = []
+            for i in range(5):  # Warm up 5 connections
+                warmup_tasks.append(client.admin.command('ping'))
+            
+            await asyncio.gather(*warmup_tasks, return_exceptions=True)
+            print("🔥 Connection pool warmed up (5 connections ready)")
+            
+            # Quick test query to verify read operations
+            await db.users.find_one({}, {"_id": 1})
+            print("✅ Read operation verified")
+            
+            db_ready = True
+            break
+            
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"⚠️ MongoDB warmup attempt {attempt + 1} failed: {e}")
+                print(f"   Retrying in {retry_delay} seconds...")
+                await asyncio.sleep(retry_delay)
+            else:
+                print(f"⚠️ MongoDB initial connection pending after {max_retries} attempts")
+                print("   App will continue to retry in background")
+                asyncio.create_task(retry_db_connection())
+                break
+    
+    if db_ready:
+        try:
+            # Create performance indexes for high-traffic queries
+            await create_performance_indexes(db)
+            print("✅ Performance indexes created")
+        except Exception as e:
+            print(f"⚠️ Error creating performance indexes (non-critical): {e}")
+        
+        try:
+            # Create indexes with error handling
+            await initialize_database_indexes()
+            print("✅ Database indexes initialized")
+        except Exception as e:
+            print(f"⚠️ Error initializing indexes (non-critical): {e}")
+        
+        # Treasure hunts initialization - REMOVED (feature deprecated)
+        # try:
+        #     await initialize_treasure_hunts()
+        #     print("✅ Treasure hunts initialized")
+        # except Exception as e:
+        #     print(f"⚠️ Error initializing treasure hunts (non-critical): {e}")
+        
+        try:
+            # Check if video_ads collection exists, if not create sample
+            video_ads_count = await db.video_ads.count_documents({})
+            if video_ads_count == 0:
+                print("📹 No video ads found, database ready for admin to create videos")
+        except Exception as e:
+            print(f"⚠️ Error checking video ads (non-critical): {e}")
+        
+        print("✅ Database initialization complete!")
     
     # Start Task Queue Worker (Phase 4 - Background Tasks)
     print("🔄 Starting background task worker...")
