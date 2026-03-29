@@ -12,8 +12,11 @@ from typing import Optional, Any, Callable
 from functools import wraps
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables (only if .env exists - production uses System Keys)
+import pathlib
+_cache_env = pathlib.Path(__file__).parent / '.env'
+if _cache_env.exists():
+    load_dotenv(_cache_env)
 
 # Environment prefix for cache keys to prevent cross-environment pollution
 CACHE_ENV_PREFIX = os.getenv('CACHE_ENV_PREFIX', 'preview')

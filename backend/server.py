@@ -4,8 +4,15 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 # Load environment variables BEFORE any other imports
+# In production, env vars come from System Keys (no .env file)
+# In preview/local, env vars come from .env file
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+_env_file = ROOT_DIR / '.env'
+if _env_file.exists():
+    load_dotenv(_env_file)
+    print(f"[STARTUP] Loaded .env from {_env_file}")
+else:
+    print("[STARTUP] No .env file found - using system environment variables")
 
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -1176,8 +1183,36 @@ async def api_health_check():
         "status": "healthy",
         "database": "connected" if db_ready else "connecting",
         "service": "paras-reward-api",
-        "version": "2.0",
-        "build": "user360-fix-v3-20260321"
+        "version": "2.1",
+        "build": "env-fix-v1-20260329"
+    }
+
+@api_router.get("/health/debug")
+async def api_health_debug():
+    """Detailed debug endpoint for production diagnostics"""
+    import platform
+    env_file_exists = (ROOT_DIR / '.env').exists()
+    mongo_url_source = "env_file" if env_file_exists else "system_keys"
+    mongo_url_raw = os.environ.get('MONGO_URL', 'NOT_SET')
+    # Mask the connection string for security
+    if 'mongodb+srv' in mongo_url_raw:
+        mongo_url_display = f"mongodb+srv://***@{mongo_url_raw.split('@')[-1][:30]}..."
+    elif mongo_url_raw == 'NOT_SET':
+        mongo_url_display = 'NOT_SET'
+    else:
+        mongo_url_display = mongo_url_raw[:30] + "..."
+    
+    return {
+        "status": "healthy",
+        "python": platform.python_version(),
+        "db_ready": db_ready,
+        "env_file_exists": env_file_exists,
+        "mongo_url_source": mongo_url_source,
+        "mongo_url": mongo_url_display,
+        "db_name": os.environ.get('DB_NAME', 'NOT_SET'),
+        "cache_prefix": os.environ.get('CACHE_ENV_PREFIX', 'NOT_SET'),
+        "version": "2.1",
+        "build": "env-fix-v1-20260329"
     }
 
 

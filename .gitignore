@@ -29,7 +29,17 @@ next-env.d.ts
 /build
 dist/
 
-# Sensitive files (NOT .env - those are needed for deployment)
+# Environment files - MUST NOT be committed (breaks production deployment)
+.env
+*.env
+backend/.env
+frontend/.env
+admin-deploy/backend/.env
+admin-deploy/frontend/.env
+admin-frontend/.env
+frontend-admin/.env
+
+# Sensitive files
 *token.json*
 *credentials.json*
 
