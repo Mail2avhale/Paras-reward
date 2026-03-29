@@ -15,7 +15,7 @@ import requests
 import os
 import math
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://economy-platform-v2.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://api-outage-restore.preview.emergentagent.com').rstrip('/')
 
 # Test user credentials
 TEST_USER_UID = "76b75808-47fa-48dd-ad7c-8074678e3607"

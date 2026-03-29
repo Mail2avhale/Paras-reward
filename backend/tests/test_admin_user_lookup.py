@@ -16,7 +16,7 @@ import os
 # Get the API URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://economy-platform-v2.preview.emergentagent.com'
+    BASE_URL = 'https://api-outage-restore.preview.emergentagent.com'
 
 
 class TestAdminUserLookupBugVerification:

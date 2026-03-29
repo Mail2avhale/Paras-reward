@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://economy-platform-v2.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://api-outage-restore.preview.emergentagent.com';
 
 /**
  * Test Suite: Payment Gateway Toggles and PRC Collect Button
