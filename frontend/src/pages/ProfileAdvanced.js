@@ -34,34 +34,25 @@ const SecurityQuestionCard = ({ user }) => {
 
   useEffect(() => {
     if (user?.uid) {
-      fetchSecurityStatus();
-      fetchQuestions();
+      // Security question data only
+      Promise.allSettled([
+        axios.get(`${API}/auth/security-question/check/${user.uid}`, { timeout: 4000 }),
+        axios.get(`${API}/auth/security-questions`, { timeout: 4000 })
+      ]).then(([secRes, qRes]) => {
+        if (secRes.status === 'fulfilled') {
+          setHasQuestion(secRes.value.data.has_security_question);
+          setCurrentQuestion(secRes.value.data.security_question || '');
+          if (secRes.value.data.question_index !== undefined) {
+            setSelectedQuestion(secRes.value.data.question_index);
+          }
+        }
+        if (qRes.status === 'fulfilled') {
+          setQuestions(qRes.value.data.questions || []);
+        }
+        setLoading(false);
+      });
     }
   }, [user]);
-
-  const fetchSecurityStatus = async () => {
-    try {
-      const response = await axios.get(`${API}/auth/security-question/check/${user.uid}`);
-      setHasQuestion(response.data.has_security_question);
-      setCurrentQuestion(response.data.security_question || '');
-      if (response.data.question_index !== undefined) {
-        setSelectedQuestion(response.data.question_index);
-      }
-    } catch (error) {
-      console.error('Error checking security question:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchQuestions = async () => {
-    try {
-      const response = await axios.get(`${API}/auth/security-questions`);
-      setQuestions(response.data.questions || []);
-    } catch (error) {
-      console.error('Error fetching questions:', error);
-    }
-  };
 
   const handleSave = async () => {
     if (!answer.trim()) {
@@ -276,6 +267,46 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const [allowMessages, setAllowMessages] = useState(true);
   const [savingPrivacy, setSavingPrivacy] = useState(false);
 
+  // FAST LOAD: Fetch user data + profile picture in parallel on mount
+  useEffect(() => {
+    if (user?.uid) {
+      Promise.allSettled([
+        axios.get(`${API}/user/${user.uid}`, { timeout: 4000 }),
+        axios.get(`${API}/users/${user.uid}/profile-picture`, { timeout: 4000 })
+      ]).then(([userRes, picRes]) => {
+        if (userRes.status === 'fulfilled') {
+          const data = userRes.value.data;
+          setUserData(data);
+          setFormData({
+            name: data.name || '',
+            phone: data.mobile || data.phone || '',
+            address: data.address_line1 || data.address || '',
+            tahsil: data.tahsil || data.taluka || '',
+            district: data.district || '',
+            state: data.state || '',
+            pincode: data.pincode || '',
+            birthday: data.date_of_birth || data.birthday || ''
+          });
+          setIsProfilePublic(data.is_public !== false);
+          setAllowMessages(data.allow_messages !== false);
+        } else {
+          setUserData(user);
+          setFormData({
+            name: user.name || '', phone: user.mobile || user.phone || '',
+            address: user.address_line1 || user.address || '',
+            tahsil: user.tahsil || user.taluka || '', district: user.district || '',
+            state: user.state || '', pincode: user.pincode || '',
+            birthday: user.date_of_birth || user.birthday || ''
+          });
+        }
+        if (picRes.status === 'fulfilled' && picRes.value?.data?.profile_picture) {
+          setProfilePicture(picRes.value.data.profile_picture);
+        }
+        setLoading(false);
+      });
+    }
+  }, [user]);
+
   const t = {
     profile: language === 'mr' ? 'प्रोफाइल' : language === 'hi' ? 'प्रोफ़ाइल' : 'Profile',
     editProfile: language === 'mr' ? 'प्रोफाइल संपादित करा' : language === 'hi' ? 'प्रोफ़ाइल संपादित करें' : 'Edit Profile',
@@ -289,28 +320,10 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     security: language === 'mr' ? 'सुरक्षा' : language === 'hi' ? 'सुरक्षा' : 'Security',
   };
 
-  useEffect(() => {
-    if (user?.uid) {
-      fetchUserData();
-      fetchProfilePicture();  // Fetch profile picture separately
-    }
-  }, [user]);
-
-  const fetchProfilePicture = async () => {
-    try {
-      const response = await axios.get(`${API}/users/${user.uid}/profile-picture`);
-      if (response.data?.profile_picture) {
-        setProfilePicture(response.data.profile_picture);
-      }
-    } catch (error) {
-      console.error('Error fetching profile picture:', error);
-      // Silently fail - will show default avatar
-    }
-  };
-
+  // fetchUserData kept for profile update/save refresh
   const fetchUserData = async () => {
     try {
-      const response = await axios.get(`${API}/user/${user.uid}`);
+      const response = await axios.get(`${API}/user/${user.uid}`, { timeout: 4000 });
       const data = response.data;
       setUserData(data);
       setFormData({
@@ -323,24 +336,10 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         pincode: data.pincode || '',
         birthday: data.date_of_birth || data.birthday || ''
       });
-      // Set privacy settings
       setIsProfilePublic(data.is_public !== false);
       setAllowMessages(data.allow_messages !== false);
     } catch (error) {
       console.error('Error fetching user:', error);
-      setUserData(user);
-      setFormData({
-        name: user.name || '',
-        phone: user.mobile || user.phone || '',
-        address: user.address_line1 || user.address || '',
-        tahsil: user.tahsil || user.taluka || '',
-        district: user.district || '',
-        state: user.state || '',
-        pincode: user.pincode || '',
-        birthday: user.date_of_birth || user.birthday || ''
-      });
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -205,12 +205,10 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
 
   // Fetch user data and mining status
   const fetchUserData = useCallback(async (isInitialLoad = false, retryCount = 0) => {
-    // Set a timeout to prevent infinite loading on slow networks
-    // OPTIMIZED: 8 second timeout, with retry logic
+    // OPTIMIZED: 4 second timeout (reduced from 8s)
     const timeoutId = setTimeout(() => {
       if (isInitialLoad) {
         setLoading(false);
-        // Use user prop but with reasonable defaults for mining display
         setUserData({
           ...user,
           mining_rate: user.mining_rate || 0.5,
@@ -219,17 +217,15 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
         setMiningRate(user.mining_rate || 0.5);
         setBaseRate(user.mining_rate || 0.5);
         console.warn('Mining data fetch timeout - using cached user data');
-        // Retry once more after timeout
         if (retryCount < 2) {
-          setTimeout(() => fetchUserData(false, retryCount + 1), 2000);
+          setTimeout(() => fetchUserData(false, retryCount + 1), 1000);
         }
       }
-    }, 8000); // Increased to 8 second timeout
+    }, 4000);
     
     try {
       // Fetch mining status FIRST (most important for this page)
-      // Then fetch user data and stats in parallel
-      const miningResponse = await axios.get(`${API}/mining/status/${user.uid}`, { timeout: 8000 });
+      const miningResponse = await axios.get(`${API}/mining/status/${user.uid}`, { timeout: 4000 });
       const miningData = miningResponse.data;
       
       // Immediately update mining state for faster UI
@@ -283,10 +279,10 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
         setLoading(false);
       }
       
-      // Fetch user data and stats in background (non-blocking)
+      // Fetch user data and stats in background (non-blocking, parallel)
       const [userResponse, statsResponse] = await Promise.all([
-        axios.get(`${API}/user/${user.uid}`, { timeout: 8000 }),
-        axios.get(`${API}/user/${user.uid}/redemption-stats`, { timeout: 8000 }).catch(() => ({ data: {} }))
+        axios.get(`${API}/user/${user.uid}`, { timeout: 4000 }),
+        axios.get(`${API}/user/${user.uid}/redemption-stats`, { timeout: 4000 }).catch(() => ({ data: {} }))
       ]);
       
       const data = userResponse.data;
@@ -303,8 +299,7 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
       
       // RETRY LOGIC: If first attempt fails, retry up to 2 times
       if (retryCount < 2) {
-        // console.log(`Retrying mining data fetch (attempt ${retryCount + 2})...`);
-        setTimeout(() => fetchUserData(isInitialLoad, retryCount + 1), 1000);
+        setTimeout(() => fetchUserData(isInitialLoad, retryCount + 1), 500);
         return;
       }
       
