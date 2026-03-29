@@ -5222,32 +5222,56 @@ async def get_redemption_charge_settings():
         "prc_to_inr_rate": prc_rate
     }
 
-async def calculate_redemption_charges(amount_inr: float, request_type: str = None):
+async def get_user_burn_rate(user_id: str = None) -> dict:
+    """
+    Get burn rate based on user's subscription_payment_type.
+    - Cash (INR/Razorpay/Manual) users: 1% burn
+    - PRC subscription users: 5% burn
+    - Explorer (free) users: 1% burn (default)
+    
+    Returns: {"burn_rate_percent": 1 or 5, "payment_type": "cash" or "prc"}
+    """
+    if not user_id:
+        return {"burn_rate_percent": 1, "payment_type": "unknown"}
+    
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "subscription_payment_type": 1, "subscription_plan": 1})
+    if not user:
+        return {"burn_rate_percent": 1, "payment_type": "unknown"}
+    
+    payment_type = user.get("subscription_payment_type", "cash")
+    plan = user.get("subscription_plan", "explorer")
+    
+    # PRC subscribers get 5% burn, all others get 1%
+    if plan in ["elite", "vip", "startup", "growth", "pro"] and payment_type == "prc":
+        return {"burn_rate_percent": 5, "payment_type": "prc"}
+    else:
+        return {"burn_rate_percent": 1, "payment_type": payment_type or "cash"}
+
+
+async def calculate_redemption_charges(amount_inr: float, request_type: str = None, user_id: str = None):
     """
     Calculate all charges for bill payment or gift voucher redemption
     
-    Formula: Total PRC = (Amount_INR + Processing_Fee + Admin_Charges) × PRC_Rate
+    Formula (April 2026):
+      Subtotal = Service_Charges + Processing_Fee + Admin_Charges
+      Burn = burn_rate% × Subtotal
+      Total = Subtotal + Burn
     
     Where:
-    - Processing Fee = 
-        * For loan_emi: 50% of amount if amount <= 499, else flat ₹10
-        * For others: Flat ₹10 (configurable)
-    - Admin Charges = 20% of Amount_INR (configurable)
-    - PRC Rate = 10 (10 PRC = ₹1)
+    - Processing Fee = Flat ₹10 (loan_emi: 50% if <=499, else ₹10)
+    - Admin Charges = 20% of Service_Charges
+    - Burn Rate = 1% (cash/INR users) or 5% (PRC users)
     
     Returns breakdown dict
     """
     settings = await get_redemption_charge_settings()
     
     # Special EMI Processing Fee Logic
-    # If loan_emi and amount <= 499: processing fee = 50% of amount
-    # If loan_emi and amount > 499: flat ₹10
-    # For all other services: flat ₹10
     if request_type == "loan_emi":
         if amount_inr <= 499:
-            processing_fee_inr = amount_inr * 0.50  # 50% of amount
+            processing_fee_inr = amount_inr * 0.50
         else:
-            processing_fee_inr = 10.0  # Flat ₹10 for amounts > 499
+            processing_fee_inr = 10.0
     else:
         processing_fee_inr = settings["processing_fee_inr"]
     
@@ -5256,12 +5280,20 @@ async def calculate_redemption_charges(amount_inr: float, request_type: str = No
     
     # Calculate charges in INR
     admin_charge_inr = (amount_inr * admin_charge_percent) / 100
-    total_inr = amount_inr + processing_fee_inr + admin_charge_inr
+    subtotal_inr = amount_inr + processing_fee_inr + admin_charge_inr
+    
+    # Calculate burn based on user's subscription payment type
+    burn_info = await get_user_burn_rate(user_id)
+    burn_rate_percent = burn_info["burn_rate_percent"]
+    burn_inr = (subtotal_inr * burn_rate_percent) / 100
+    
+    total_inr = subtotal_inr + burn_inr
     
     # Convert to PRC
     amount_prc = amount_inr * prc_rate
     processing_fee_prc = processing_fee_inr * prc_rate
     admin_charge_prc = admin_charge_inr * prc_rate
+    burn_prc = burn_inr * prc_rate
     total_prc = total_inr * prc_rate
     
     return {
@@ -5269,42 +5301,41 @@ async def calculate_redemption_charges(amount_inr: float, request_type: str = No
         "processing_fee_inr": round(processing_fee_inr, 2),
         "admin_charge_inr": round(admin_charge_inr, 2),
         "admin_charge_percent": admin_charge_percent,
+        "burn_inr": round(burn_inr, 2),
+        "burn_rate_percent": burn_rate_percent,
+        "burn_payment_type": burn_info["payment_type"],
+        "subtotal_inr": round(subtotal_inr, 2),
         "total_inr": round(total_inr, 2),
         "amount_prc": round(amount_prc, 2),
         "processing_fee_prc": round(processing_fee_prc, 2),
         "admin_charge_prc": round(admin_charge_prc, 2),
+        "burn_prc": round(burn_prc, 2),
         "total_prc": round(total_prc, 2),
         "prc_rate": prc_rate,
         "request_type": request_type
     }
 
-async def get_bill_payment_service_charge(amount_inr: float, prc_required: float, request_type: str = None):
+async def get_bill_payment_service_charge(amount_inr: float, prc_required: float, request_type: str = None, user_id: str = None):
     """
     Calculate service charge for bill payments
-    Uses new formula: Processing Fee + Admin Charges (20%)
-    
-    For loan_emi: 
-        - Processing Fee = 50% of amount if <= 499, else flat ₹10
-    For others:
-        - Processing Fee = flat ₹10
-        
+    Uses formula: Processing Fee + Admin Charges (20%) + Burn (1% or 5%)
     Returns service charge in PRC
     """
-    charges = await calculate_redemption_charges(amount_inr, request_type)
-    # Service charge = Processing Fee + Admin Charges (in PRC)
-    return charges["processing_fee_prc"] + charges["admin_charge_prc"]
+    charges = await calculate_redemption_charges(amount_inr, request_type, user_id=user_id)
+    # Service charge = Processing Fee + Admin Charges + Burn (in PRC)
+    return charges["processing_fee_prc"] + charges["admin_charge_prc"] + charges["burn_prc"]
 
-async def get_gift_voucher_service_charge(prc_required: float):
+async def get_gift_voucher_service_charge(prc_required: float, user_id: str = None):
     """
     Calculate service charge for gift voucher redemption
-    Uses new formula: Processing Fee (₹10) + Admin Charges (20%)
+    Uses formula: Processing Fee (₹10) + Admin Charges (20%) + Burn (1% or 5%)
     Returns service charge in PRC
     """
     # Convert PRC to INR first (10 PRC = 1 INR)
     amount_inr = prc_required / 10
-    charges = await calculate_redemption_charges(amount_inr)
-    # Service charge = Processing Fee + Admin Charges (in PRC)
-    return charges["processing_fee_prc"] + charges["admin_charge_prc"]
+    charges = await calculate_redemption_charges(amount_inr, user_id=user_id)
+    # Service charge = Processing Fee + Admin Charges + Burn (in PRC)
+    return charges["processing_fee_prc"] + charges["admin_charge_prc"] + charges["burn_prc"]
 
 # ==================== END BILL PAYMENT SYSTEM ====================
 
@@ -31266,17 +31297,17 @@ async def get_vip_plans_admin():
 # ==================== BILL PAYMENT & RECHARGE ENDPOINTS ====================
 
 @api_router.get("/redemption/calculate-charges")
-async def calculate_charges_api(amount_inr: float):
+async def calculate_charges_api(amount_inr: float, user_id: str = None):
     """
-    Calculate all charges for a given amount
+    Calculate all charges for a given amount including burn rate
     Returns full breakdown in INR and PRC
     
-    Formula: Total = Amount + Processing Fee (₹10) + Admin Charges (20%)
+    Formula: Total = Amount + Processing Fee (₹10) + Admin Charges (20%) + Burn (1% or 5%)
     """
     if amount_inr <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
     
-    charges = await calculate_redemption_charges(amount_inr)
+    charges = await calculate_redemption_charges(amount_inr, user_id=user_id)
     return charges
 
 @api_router.get("/redemption/charge-settings")
@@ -31372,8 +31403,8 @@ async def create_bill_payment_request(request: Request):
     if not access_check["allowed"]:
         raise HTTPException(status_code=403, detail=access_check["reason"])
     
-    # Calculate all charges using new formula (pass request_type for EMI special handling)
-    charges = await calculate_redemption_charges(amount_inr, request_type)
+    # Calculate all charges using formula (pass request_type for EMI special handling + user_id for burn rate)
+    charges = await calculate_redemption_charges(amount_inr, request_type, user_id=user_id)
     total_prc = charges["total_prc"]
     
     # ===== REDEMPTION LIMIT CHECK =====
@@ -31432,7 +31463,7 @@ async def create_bill_payment_request(request: Request):
     if user_prc_balance < total_prc:
         raise HTTPException(
             status_code=400, 
-            detail=f"Insufficient PRC. Required: {total_prc:.2f} PRC (₹{charges['amount_inr']} + ₹{charges['processing_fee_inr']} processing + ₹{charges['admin_charge_inr']} admin = ₹{charges['total_inr']}), Available: {user_prc_balance:.2f} PRC"
+            detail=f"Insufficient PRC. Required: {total_prc:.2f} PRC (₹{charges['amount_inr']} + ₹{charges['processing_fee_inr']} processing + ₹{charges['admin_charge_inr']} admin + ₹{charges['burn_inr']} burn = ₹{charges['total_inr']}), Available: {user_prc_balance:.2f} PRC"
         )
     
     # Create request with charge breakdown
@@ -31450,7 +31481,10 @@ async def create_bill_payment_request(request: Request):
         "admin_charge_inr": charges["admin_charge_inr"],
         "admin_charge_prc": charges["admin_charge_prc"],
         "admin_charge_percent": charges["admin_charge_percent"],
-        "service_charge_amount": charges["processing_fee_prc"] + charges["admin_charge_prc"],
+        "burn_inr": charges.get("burn_inr", 0),
+        "burn_prc": charges.get("burn_prc", 0),
+        "burn_rate_percent": charges.get("burn_rate_percent", 1),
+        "service_charge_amount": charges["processing_fee_prc"] + charges["admin_charge_prc"] + charges.get("burn_prc", 0),
         "total_inr": charges["total_inr"],
         "total_prc_deducted": total_prc,
         "charge_breakdown": charges,
@@ -32890,8 +32924,8 @@ async def bulk_reject_all_pending_requests(request: Request):
     # Calculate PRC required (100 INR = 1000 PRC, so 10 INR = 100 PRC)
     prc_required = denomination * 10
     
-    # Calculate service charge
-    service_charge = await get_gift_voucher_service_charge(prc_required)
+    # Calculate service charge (with burn rate based on user's subscription type)
+    service_charge = await get_gift_voucher_service_charge(prc_required, user_id=user_id)
     
     # Total PRC to deduct
     total_prc = prc_required + service_charge
@@ -44637,8 +44671,14 @@ async def admin_user_lookup(identifier: str):
         l3_bonus = l3_active * base_rate * 0.03  # 3% per L3 active
         total_referral_bonus = l1_bonus + l2_bonus + l3_bonus
         
-        # Boost multiplier (if any active boost)
-        boost_multiplier = float(user.get("mining_multiplier") or user.get("boost_multiplier") or 1.0)
+        # Boost multiplier based on subscription payment type
+        # PRC subscribers: 70% mining speed, Cash subscribers: 100%
+        subscription_payment_type = user.get("subscription_payment_type", "cash")
+        is_elite_plan = subscription_plan in ["elite", "vip", "startup", "growth", "pro"]
+        if is_elite_plan and subscription_payment_type == "prc":
+            boost_multiplier = 0.70
+        else:
+            boost_multiplier = float(user.get("mining_multiplier") or user.get("boost_multiplier") or 1.0)
         
         # Final mining rate
         final_rate = (base_rate + total_referral_bonus) * boost_multiplier

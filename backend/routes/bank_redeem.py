@@ -305,14 +305,40 @@ MIN_AMOUNT = 100
 MAX_AMOUNT = 25000
 
 
-def calculate_total_prc(amount_inr: int) -> dict:
-    """Calculate total PRC needed for withdrawal - EMI style fees + 20% admin"""
+async def get_user_burn_rate_bank(user_id: str = None) -> dict:
+    """
+    Get burn rate for bank redeem based on subscription_payment_type.
+    - Cash users: 1% burn
+    - PRC users: 5% burn
+    """
+    if not user_id or not db:
+        return {"burn_rate_percent": 1, "payment_type": "unknown"}
+    
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "subscription_payment_type": 1, "subscription_plan": 1})
+    if not user:
+        return {"burn_rate_percent": 1, "payment_type": "unknown"}
+    
+    payment_type = user.get("subscription_payment_type", "cash")
+    plan = user.get("subscription_plan", "explorer")
+    
+    if plan in ["elite", "vip", "startup", "growth", "pro"] and payment_type == "prc":
+        return {"burn_rate_percent": 5, "payment_type": "prc"}
+    else:
+        return {"burn_rate_percent": 1, "payment_type": payment_type or "cash"}
+
+
+def calculate_total_prc(amount_inr: int, burn_rate_percent: int = 1) -> dict:
+    """Calculate total PRC needed for withdrawal - fees + admin + burn"""
     if amount_inr < MIN_AMOUNT:
         return None
     
     processing_fee = get_processing_fee(amount_inr)
-    admin_charge = int(amount_inr * (ADMIN_CHARGE_PERCENT / 100))  # 20% admin charge
-    total_inr = amount_inr + processing_fee + admin_charge
+    admin_charge = int(amount_inr * (ADMIN_CHARGE_PERCENT / 100))
+    subtotal_inr = amount_inr + processing_fee + admin_charge
+    
+    # Burn calculation: burn_rate% of subtotal
+    burn_inr = round(subtotal_inr * burn_rate_percent / 100, 2)
+    total_inr = subtotal_inr + burn_inr
     
     # PRC rate: Dynamic from database
     prc_rate = get_dynamic_prc_rate()
@@ -322,25 +348,33 @@ def calculate_total_prc(amount_inr: int) -> dict:
         "processing_fee_inr": processing_fee,
         "admin_charge_inr": admin_charge,
         "admin_charge_percent": ADMIN_CHARGE_PERCENT,
-        "total_inr": total_inr,
+        "burn_inr": burn_inr,
+        "burn_rate_percent": burn_rate_percent,
+        "subtotal_inr": subtotal_inr,
+        "total_inr": round(total_inr, 2),
         "amount_prc": amount_inr * prc_rate,
         "processing_fee_prc": processing_fee * prc_rate,
         "admin_charge_prc": admin_charge * prc_rate,
+        "burn_prc": round(burn_inr * prc_rate, 2),
         "total_prc": int(total_inr * prc_rate),
         "prc_rate": prc_rate
     }
 
 
-def calculate_charges(amount_inr: int) -> dict:
-    """Calculate charges breakdown for a given amount"""
+def calculate_charges(amount_inr: int, burn_rate_percent: int = 1) -> dict:
+    """Calculate charges breakdown for a given amount including burn"""
     processing_fee = get_processing_fee(amount_inr)
     admin_charge = int(amount_inr * (ADMIN_CHARGE_PERCENT / 100))
-    total_inr = amount_inr + processing_fee + admin_charge
+    subtotal_inr = amount_inr + processing_fee + admin_charge
+    burn_inr = round(subtotal_inr * burn_rate_percent / 100, 2)
+    total_inr = subtotal_inr + burn_inr
     
     return {
         "processing_fee_inr": processing_fee,
         "admin_charge_inr": admin_charge,
-        "total_inr": total_inr
+        "burn_inr": burn_inr,
+        "burn_rate_percent": burn_rate_percent,
+        "total_inr": round(total_inr, 2)
     }
 
 
@@ -661,8 +695,12 @@ async def create_withdrawal_request(user_id: str, request: Request):
     
     # NOTE: Referral requirement removed as per user request (March 2026)
     
-    # Calculate charges - EMI style
-    charges = calculate_total_prc(amount_inr)
+    # Get user's burn rate based on subscription payment type
+    burn_info = await get_user_burn_rate_bank(user_id)
+    burn_rate = burn_info["burn_rate_percent"]
+    
+    # Calculate charges with burn rate
+    charges = calculate_total_prc(amount_inr, burn_rate_percent=burn_rate)
     if not charges:
         raise HTTPException(status_code=400, detail="Invalid amount")
     total_prc = charges["total_prc"]
@@ -688,6 +726,8 @@ async def create_withdrawal_request(user_id: str, request: Request):
         "amount_inr": amount_inr,
         "processing_fee_inr": charges["processing_fee_inr"],
         "admin_charge_inr": charges["admin_charge_inr"],
+        "burn_inr": charges.get("burn_inr", 0),
+        "burn_rate_percent": charges.get("burn_rate_percent", 1),
         "total_inr": charges["total_inr"],
         "total_prc_deducted": total_prc,
         "bank_details": user["bank_details"].copy(),
@@ -823,9 +863,13 @@ async def edit_pending_request(user_id: str, request_id: str, request: Request):
                 detail=f"Amount must be between ₹{MIN_AMOUNT} and ₹{MAX_AMOUNT}"
             )
         
-        # Calculate new charges
-        new_charges = calculate_charges(new_amount_inr)
-        new_total_prc = calculate_total_prc(new_amount_inr)
+        # Get user's burn rate for charge recalculation
+        burn_info = await get_user_burn_rate_bank(user_id)
+        burn_rate = burn_info["burn_rate_percent"]
+        
+        # Calculate new charges with burn
+        new_charges = calculate_charges(new_amount_inr, burn_rate_percent=burn_rate)
+        new_total_prc = calculate_total_prc(new_amount_inr, burn_rate_percent=burn_rate)
         
         if not new_total_prc:
             raise HTTPException(status_code=400, detail="Invalid amount")
@@ -846,6 +890,8 @@ async def edit_pending_request(user_id: str, request_id: str, request: Request):
             "amount_inr": new_amount_inr,
             "processing_fee_inr": new_charges["processing_fee_inr"],
             "admin_charge_inr": new_charges["admin_charge_inr"],
+            "burn_inr": new_charges.get("burn_inr", 0),
+            "burn_rate_percent": new_charges.get("burn_rate_percent", 1),
             "total_inr": new_charges["total_inr"],
             "total_prc_deducted": new_total_prc
         })
