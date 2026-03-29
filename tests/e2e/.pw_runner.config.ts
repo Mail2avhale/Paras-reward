@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260321_060043/results.json' }],
   ],
   use: {
-    baseURL: 'https://api-outage-restore.preview.emergentagent.com',
+    baseURL: 'https://burn-rates.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

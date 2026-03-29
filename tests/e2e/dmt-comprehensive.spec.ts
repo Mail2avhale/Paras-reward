@@ -16,7 +16,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://api-outage-restore.preview.emergentagent.com';
+const BASE_URL = 'https://burn-rates.preview.emergentagent.com';
 
 // Test data
 const TEST_CREDENTIALS = {

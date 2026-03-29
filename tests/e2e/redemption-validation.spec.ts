@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://api-outage-restore.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://burn-rates.preview.emergentagent.com';
 
 // Test user with verified KYC and active subscription
 const TEST_USER_VERIFIED = {

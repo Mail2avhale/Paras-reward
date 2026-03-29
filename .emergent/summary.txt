@@ -1,126 +1,129 @@
-<analysis>**original_problem_statement**: The user is transitioning the platform to a Growth Economy System. Core requests included fixing a mathematical bug in the mining formula, adding active/inactive indicators on the referrals page, and implementing new dynamic PRC pricing for subscriptions and redemptions (incorporating a 20% admin fee and a variable burning rate: 5% for PRC subscriptions, 1% for Cash subscriptions). Currently, the user is facing a **CRITICAL production deployment blocker** where the application cannot connect to the production database.
+<analysis>**original_problem_statement**: 
+The user initially reported a P0 Critical 520 Error on the production deployment (which was successfully fixed). Subsequent product requirements included:
+1. Rebuilding the network tree into a chronological Single Leg Tree based on joining date/time, while keeping direct referrals separate.
+2. Optimizing the frontend loading speed for Mining, Profile, and Referral pages.
+3. Adding Active/Inactive user statistics to the Admin Dashboard.
+4. **NEW PRODUCT REQUIREMENT (PENDING)**: Implement specific economy rules for Subscription & Redemptions:
+   - **Explorer Plan**: Free (0).
+   - **Elite Plan (Paid via INR/Razorpay/Manual)**: ₹999 + 18% GST. Gets **100% mining speed** and **1% burn rate**.
+   - **Elite Plan (Paid via PRC)**: Gets **70% mining speed** and **5% burn rate**.
+   - **Redemption Rule**: For ALL redeem services, the charges must be calculated as: .
 
 **User's preferred language**: (INSTRUCT NEXT AGENT: You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and respond in **Marathi mixed with technical English** only)
 
 **what currently exists?** 
-A React/FastAPI/MongoDB full-stack application featuring a Growth Economy. The mining formula cache logic is fixed. The referral page accurately displays active (green) vs inactive (red) users. Subscription and redemption pricing dynamically calculate based on the user's  (Cash = 1% burn/100% mining speed; PRC = 5% burn/70% mining speed). Redundant UI pricing breakdowns have been cleaned up. However, **Production deployment is currently broken** due to a MongoDB connection timeout/failure.
+A React/FastAPI/MongoDB application. The P0 deployment crash was resolved by completely untracking  files from Git (which were overriding production System Keys). The backend now uses a  for network calculations (using  and ) instead of a BFS referral tree. Frontend pages have been refactored to use  for parallel API loading, reducing load times to ~3 seconds. The Admin dashboard successfully displays Active vs Inactive mining users.
 
 **Last working item**: 
-    - Last item agent was working: Debugging the production MongoDB connection string provided by the user. The agent ran a python script to test the user-provided MongoDB Atlas SRV string, but it failed with a  / Timeout error.
-    - Status: BLOCKED
-    - Agent Testing Done: Y (Tested the connection string via python script, it failed).
-    - Which testing method agent to use?: backend manual testing by python -c (to verify DB connection strings if provided again).
+    - Last item agent was working: Implementing the newly defined Subscription and Redeem economy rules. The agent was actively investigating , , and  inside  to apply the new dynamic burn rates (1% for cash users, 5% for PRC users) and fixed charges (Service + ₹10 + 20% admin + burn) to all redeem flows.
+    - Status: IN PROGRESS
+    - Agent Testing Done: N (Session ended during code investigation)
+    - Which testing method agent to use?: Both (Frontend testing agent for UI breakdown, manual curl/python-c for math verification of the backend formulas).
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:  
-  - Issue 1: Production Database Connection Failure (P0 - SEVERE)
-     - Attempted fixes: Agent ensured  files were removed from git tracking so they don't override production env vars. User provided their MongoDB connection string. Agent tested it, but it timed out.
+  - Issue 1: Implement Dynamic Burn Rates & Redeem Charges (P0 - Current Task)
+     - Attempted fixes: Agent mapped out the necessary files ( -> , , ) but did not write the code yet.
      - Next debug checklist: 
-        - The timeout () usually indicates that **MongoDB Atlas Network Access (IP Whitelisting)** is not configured correctly. The database is likely blocking external connections.
-        - Advise the user to go to MongoDB Atlas -> Network Access -> and add  (Allow Access from Anywhere) so the deployed app can connect.
-        - Verify if the  environment variable matches the actual database name in Atlas.
-     - Why fix this issue and what will be achieved with the fix?: 5000+ users are facing an outage. Fixing this restores production.
-     - Status: BLOCKED (Waiting on user to fix MongoDB Atlas network settings or provide correct string).
+        1. Modify  (and any related fee calculation functions) in  to enforce: .
+        2. Fetch the user's . If cash (INR), apply a 1% burn rate. If prc, apply a 5% burn rate.
+        3. Ensure the mining speed logic (100% for cash, 70% for PRC) is accurately reflected in the .
+        4. Test the  endpoint to ensure it deducts correctly.
+     - Why fix this issue and what will be achieved with the fix?: This is the core economic engine of the application as requested by the user.
+     - Status: IN PROGRESS
      - Is recurring issue? N
-     - Should Test frontend/backend/both after fix?: Backend (Python DB connection test).
-     - Blocked on other issue: User action required on MongoDB Atlas.
+     - Should Test frontend/backend/both after fix?: Both
+     - Blocked on other issue: None
 
 **In progress Task List**: 
-  - None currently active besides the P0 deployment issue.
+  - None (All UI/Tree tasks from this session were completed. Only the economy rules remain).
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - Razorpay Elite Pricing Update (P1): Update the Razorpay gateway pricing to the new ₹999 + 18% GST formula. (Requested for April 1, 2026. Note: Backend math was updated, but the actual Razorpay integration payload needs verification).
+    - Razorpay Elite Pricing Update (P1): Ensure the Razorpay payment gateway charges exactly ₹999 + 18% GST (Target: April 1, 2026).
     
     Future Tasks:
-    - Refactor  (P3): Break down the massive 45,000+ line server file into smaller domain-specific modules.
-    - MongoDB → PostgreSQL migration (P4).
+    - Refactor  (P2): Modularize the 45,000+ line monolith.
+    - MongoDB → PostgreSQL migration (P3).
 
 **Completed work in this session**
-- Fixed Mining Formula Math Logic (Replaced  with  to prevent stale cache reads) (DONE)
-- Removed formula breakdown from Mining page and added Active/Inactive dots to Direct Referrals list (DONE)
-- Implemented Dynamic Subscription & Redeem Burning Rules (Cash = 1%, PRC = 5%) (DONE)
-- Removed duplicate Fee Breakdown UI components from Bank Redeem and Unified Redeem pages (DONE)
-- Removed dead code from Redeem Limit formula (DONE)
-- Updated Network Capacity progress bar to use Active Network size instead of Total Network size (DONE)
-- Fixed  to ensure  files are not tracked, allowing production platform env vars to work properly (DONE)
+- Removed  from Git and fixed production 520 Error (DONE)
+- Created  and implemented Single Leg Tree (, ) for chronological network sizes (DONE)
+- Fixed  datetime parsing bug that caused Network Size to show as 0 (DONE)
+- Fixed  endpoint mismatch in React frontend (DONE)
+- Optimized Profile, Mining, and Referral frontend pages using  reducing load time to 3s (DONE)
+- Added Active (Elite + Mining) vs Inactive user count to Admin Dashboard  (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-   - None.
+   - None
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: None. 
-  - Recurrence count: 0
+  - Issue recurrence in previous fork: Production Database Connection Failure / 520 Error.
+  - Recurrence count: 6+ (Resolved in this session by removing  from Git. **DO NOT COMMIT .ENV FILES**).
   - Status: RESOLVED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Burning Rules**: Determined by . 
-  -  (Razorpay/Manual): 100% mining speed, 1% burn rate.
-  - : 70% mining speed, 5% burn rate.
-- **Admin Fee**: Now a flat 20% on (Base + Processing) for subscriptions and redemptions.
-- **Network Capacity Bar**: Uses the formula . The cap dynamically increases based on direct referrals: .
-- **Environment Variables**:  must **never** be tracked in git. The platform injects this at deployment. 
+- **Single Leg Tree**: Network size is no longer a BFS of referrals. It's a single linear chain based on . Managed by  and . 
+- **Active Mining Criteria**: A user is active if  AND  AND  is valid (stored as datetime).
+- **Environment Variables**: The production deployment relies strictly on System Keys. Local  files must remain untracked in Git.
 
 **key DB schema**
-  - : Relies heavily on  ('cash' or 'prc') to calculate burn rates and mining boost multipliers.
+  - : 
 
 **changes in tech stack**
   - None
 
 **All files of reference** 
-- 
--  (Updated with dynamic burn rates)
--  (Updated with active/inactive UI)
--  &  (Updated  /  to accept dynamic burn rates).
+-  (Contains the target functions: , )
+-  (Tree logic)
+- , ,  (Optimized)
 
 **Areas that need refactoring**: 
--  (45k+ lines) must be modularized.
+-  (Over 45,000 lines, very difficult to navigate).
 
 **key api endpoints**
-- : Returns breakdown based on payment type.
-- : Accepts  to calculate accurate burn.
+- 
+- 
 
 **Critical Info for New Agent** 
-- **DEPLOYMENT BLOCKER:** The user is highly stressed because 5000+ users are facing an outage. The deployed app cannot connect to their MongoDB Atlas database. 
-- You MUST explain to the user that the timeout error () from the connection string they provided almost certainly means their **MongoDB Atlas Network Access** is blocking the connection. They need to whitelist  in MongoDB Atlas. Do not waste time making code changes for this; it is an infrastructure/credential issue.
-- Be highly empathetic in Marathi regarding the deployment downtime.
+- **DO NOT commit  files to git.** It will instantly break the production deployment by overwriting the Atlas DB URL.
+- When updating the redemption logic in , be careful not to break backward compatibility. Ensure you check  to determine if a user paid via cash or prc to apply the correct 1% or 5% burn rate.
+-  is strictly a MongoDB  object now, not a string. Do not query it as a string.
 
 **documents and test reports created in this job** 
-  - /app/test_reports/iteration_155.json (Testing agent verification for Mining formula)
-  - /app/test_reports/iteration_156.json (Testing agent verification for Burning rules)
-  - /app/memory/PRD.md
+  - 
+  - 
+  - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - *User*: Redeploy done but database connection issue.
- - *Agent*: Fixed  to ensure  isn't pushed to repo.
- - *User*: Deployment done but issue not resolved. 5000 users online!
- - *Agent*: Realized  was still tracked in git. Removed it via .
- - *User*: Checked deployment agent.
- - *Agent*: Deployment agent passed. Told user to redeploy.
- - *User*: Deployment done, still broken. Complained about wasted time/money.
- - *Agent*: Explained that production env vars must be set in the platform deployment settings, not in code. Directed to support.
- - *User*: Provided their MongoDB SRV string and asked Is this correct?
- - *Agent*: Tested the string via bash. It timed out (), meaning it failed to connect. (Session ended before agent could reply to user).
+ - *User*: Admin la किती users active आहे आणि किती inactive कसे दिसणार (How will admin see active/inactive users?)
+ - *Agent*: Implemented Active/Inactive stats in  and UI.
+ - *User*: Subcription plan समजून सांग (Explain subscription plans).
+ - *Agent*: Reviewed code and explained the existing setup.
+ - *User*: Clarified the EXACT rules required: Explorer=0. Elite(INR)=₹999+GST, 100% speed, 1% burn. Elite(PRC)=70% speed, 5% burn. BURNING प्रत्येक वेळी सर्व REDEEM SERVICES साठी लागू करायचे आहे (Burning must be applied to ALL redeem services).
+ - *Agent*: Asked for confirmation on the exact formula.
+ - *User*: हो बरोबर आहे... Redeem charges = Service charges + 10 INR PROCESSING FEES+ 20% admin charges+ burning as per plan. हे सर्व ठिकाणी चेक कर, implement कर ani टेस्ट पण कर... (Yes correct. Redeem charges = Service + 10 INR + 20% admin + burn as per plan. Implement and test everywhere including PRC subscriptions).
+ - *Agent*: Began investigating  in . (Session ended).
 
 **Project Health Check:**
-- Broken: Production Database Connection (Infrastructure/MongoDB Atlas issue, not codebase).
-- Mocked: Dummy test users exist in preview DB.
+- Broken: None. 
+- Mocked: Dummy users in the DB used for tree testing.
 
 **3rd Party Integrations** 
  • Razorpay (Payments) — requires User API Key
- • MongoDB Atlas — currently failing to connect via user's provided string.
+ • MongoDB Atlas — uses Emergent System Keys (Do not override)
 
 **Testing status**
-  - Testing agent used after significant changes: YES (Iterations 155, 156)
+  - Testing agent used after significant changes: YES (Tested the Single Leg Tree thoroughly).
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: NA
-  - Known regressions: None in code.
+  - Test files created: None
+  - Known regressions: None
 
 **Credentials to test flow:**
-Check . 
+Check . Primary test user: 9970100782 / 997010. Admin: Admin@paras.com / 153759.
 
 **What agent forgot to execute**
-The agent successfully completed all feature requests (Mining math, Burning rules, UI cleanups). However, right at the end, the user provided a MongoDB connection string that timed out when the agent tested it. The agent did not get a chance to reply to the user to explain *why* it failed (likely MongoDB Atlas IP whitelisting). The next agent must inform the user about MongoDB Atlas Network Access settings immediately.</analysis>
+The agent gathered the requirements for the new Subscription Burn/Redeem charges (1% for Cash, 5% for PRC applied to all redemptions with flat ₹10 + 20% Admin) but the session ended before writing any code in  to implement it. The next agent must start by implementing these mathematical updates.</analysis>

@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://api-outage-restore.preview.emergentagent.com",
+    "url": "https://burn-rates.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
