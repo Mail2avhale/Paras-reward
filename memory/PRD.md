@@ -3,31 +3,28 @@
 ## LAST UPDATED - 29 March 2026
 
 ## COMPLETED: Production 520 Error Fix (P0 CRITICAL) - 29 March 2026
-- **Root Cause**: `.env` files were committed to git with `MONGO_URL="mongodb://localhost:27017"`. When deployed, the committed `.env` file overwrote the Emergent-generated `.env` (which contains the Atlas connection string from System Keys), causing the backend to connect to a non-existent local MongoDB.
-- **Fix Applied**:
-  - Removed ALL `.env` files from git tracking (`git rm --cached`)
-  - Added `.env` to `.gitignore` to prevent future commits
-  - Made `load_dotenv()` conditional (only loads if `.env` file exists)
-  - Added `/api/health/debug` endpoint for production diagnostics
-- **Result**: Production backend now responds 200 OK with MongoDB Atlas connected
-- **Verification**: `https://www.parasreward.com/api/health` returns healthy
+- **Root Cause**: `.env` files committed to git with `MONGO_URL="mongodb://localhost:27017"` were overwriting Emergent's System Keys
+- **Fix**: Removed `.env` from git tracking, added to `.gitignore`, made `load_dotenv` conditional
+- **Result**: Production backend responds 200 OK with MongoDB Atlas connected
 
-## COMPLETED: Crash-Proof Startup (Previous Session) - 28 March 2026
-- Made `startup_db` non-blocking using `asyncio.create_task`
-- Wrapped `emergentintegrations` and `razorpay` imports in `try/except`
-- Removed missing compressors (`snappy`, `zstd`) from MongoDB options
+## COMPLETED: Single Leg Tree Implementation - 29 March 2026
+- **What**: All users arranged in single chain by joining date/time (`created_at`)
+- **Fields**: `tree_position` (integer, 1=oldest) and `network_parent` (uid of user above)
+- **Network Size**: Count ACTIVE users (Elite + mining_active) with `tree_position > user's position`
+- **Direct Referrals**: Unchanged - still uses `referred_by` field (referral_code based)
+- **Mining Formula**: Unchanged - 500 base + team_bonus, uses single leg tree for network
+- **Network Cap**: Unchanged - min(4000, 800 + 16 × direct_referrals)
+- **Migration**: Auto-runs on server startup for users without `tree_position`
+- **New Users**: Auto-assigned to end of chain on registration
+- **Files changed**: mining.py, growth_economy.py, auth.py, server.py
+- **Testing**: 9/9 backend tests passed
 
-## COMPLETED: Fix Double Breakdown + Burning Consistency - 28 March 2026
-- Removed double breakdown from BankRedeemPage and RedeemPageV2
-- Added burning to Gift Voucher Order Summary
-- Subscription page shows burn rate based on user's subscription_payment_type
-
-## COMPLETED: Subscription + Redeem Burning Formula - 28 March 2026
-- Rs999 + 18% GST + Rs10 Processing + 20% Admin + Burning (PRC: 5%, Cash: 1%)
-
-## COMPLETED: Referral Active/Inactive Status - 28 March 2026
-## COMPLETED: Mining Formula Math Fix - 28 March 2026
-## COMPLETED: PRC Statement, MLM Cleanup, Bank Redeem 28-Day, Explorer Mining, DB Caching
+## Active Architecture
+- `tree_position`: Integer position in single leg (1=first joiner, N=last)
+- `network_parent`: UID of user immediately above in single leg chain
+- `referred_by`: UID of referrer (referral_code based) - SEPARATE from tree
+- Network size for mining = tree_position based query (efficient single MongoDB query)
+- Direct referrals for network cap = referred_by based count (unchanged)
 
 ## Pricing Formula
 Rs999 + 18% GST = Rs1178.82 base
