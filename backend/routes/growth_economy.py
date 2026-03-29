@@ -305,6 +305,7 @@ async def get_network_size(user_id: str, max_depth: int = 10) -> int:
     """
     try:
         now = datetime.now(timezone.utc)
+        now_str = now.isoformat()
         
         # Get user's tree position
         user = await db.users.find_one(
@@ -317,11 +318,13 @@ async def get_network_size(user_id: str, max_depth: int = 10) -> int:
         my_position = user["tree_position"]
         
         # Count ACTIVE users below this user in single leg tree
+        # Handle both string and datetime formats for mining_session_end
         active_filter = {
             "tree_position": {"$gt": my_position},
             "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP", "Startup", "Growth", "Pro"]},
             "mining_active": True,
             "$or": [
+                {"mining_session_end": {"$gt": now_str}},
                 {"mining_session_end": {"$gt": now}},
                 {"mining_session_end": {"$exists": False}},
                 {"mining_session_end": None}

@@ -1,0 +1,107 @@
+{
+  "iteration": 158,
+  "mode": "feature_verification",
+  "summary": "Single Leg Tree mining formula verification PASSED. All backend APIs return correct values. Network_size=20 (fixed from 0 in iteration 157). Frontend Growth Network page displays all data correctly including green/red active/inactive referrals.",
+  "features_tested": {
+    "GET /api/mining/status/{uid}": "PASS - network_size=20, network_rate=119.13, total_daily_rate=619.13, base_rate=500, prc_per_user=5.956454",
+    "GET /api/mining/rate-breakdown/{uid}": "PASS - base=500, network_size=20, prc_per_user=5.956454, network_rate=119.13, direct_referrals=7",
+    "GET /api/growth/network-stats/{uid}": "PASS - network_size=20, network_cap=912, direct_referrals=7, redeem_limit_percent=18.38",
+    "GET /api/growth/mining-speed/{uid}": "PASS - base_mining=500, network_mining=119.13, total_daily_prc=619.13, network_size=20",
+    "GET /api/referrals/{uid}/direct-list": "PASS - 7 referrals, 5 active (is_active=true), 2 inactive (is_active=false)",
+    "Network cap formula": "PASS - min(4000, 800 + 16*7) = 912",
+    "PRC per user formula": "PASS - max(2.5, 5*(21-log2(20))/14) = 5.956454",
+    "Progress bar calculation": "PASS - 20/912 * 100 = 2.19%",
+    "Frontend Growth Network page": "PASS - Shows Direct Referrals=7, Network Size=20, Cap=912, 2% progress, green/red referral status"
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_single_leg_mining.py",
+    "/app/test_reports/pytest/test_single_leg_mining_v2.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "mining.py get_network_size() correctly handles both string and datetime formats for mining_session_end",
+    "growth_economy.py get_network_size() has same fix for string/datetime handling",
+    "Network size now correctly returns 20 (was 0 in iteration 157 due to string/datetime bug)",
+    "Direct referrals correctly use referred_by field (7 referrals)",
+    "Active/inactive status correctly determined by Elite subscription + mining_active",
+    "Frontend ReferralsEnhanced.js correctly displays green/red badges based on is_active"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (9/9 passed, 1 skipped - registration disabled)",
+    "frontend": "100% (Growth Network page displays all data correctly)"
+  },
+  "test_credentials": {
+    "test_user": {
+      "uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+      "mobile": "9970100782",
+      "pin": "997010",
+      "tree_position": 3,
+      "subscription_plan": "elite"
+    }
+  },
+  "seed_data_creation": "15 users at positions 4-18 activated by main agent (elite + mining_active + valid session)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Single Leg Tree implementation fully verified. Network_size=20 (15 activated users + 5 existing). The string/datetime fix in get_network_size() is working correctly. Direct referrals=7 (5 active, 2 inactive). All mining formulas verified mathematically.",
+  "api_responses_verified": {
+    "GET /api/mining/status/76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "mining_active": true,
+      "mined_coins": 507.44,
+      "mining_rate": 0.007166,
+      "total_daily_rate": 619.13,
+      "base_rate": 500,
+      "network_rate": 119.13,
+      "network_size": 20,
+      "network_cap": 912,
+      "prc_per_user": 5.956454,
+      "can_collect": true,
+      "is_explorer": false
+    },
+    "GET /api/growth/network-stats/76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "success": true,
+      "data": {
+        "direct_referrals": 7,
+        "network_size": 20,
+        "network_cap": 912,
+        "redeem_limit_percent": 18.38,
+        "unlock_percent": 18.38
+      }
+    },
+    "GET /api/mining/rate-breakdown/76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "base_rate": 500,
+      "network_size": 20,
+      "network_cap": 912,
+      "prc_per_user": 5.956454,
+      "network_rate": 119.13,
+      "direct_referrals": 7,
+      "total_daily_rate": 619.13
+    },
+    "GET /api/referrals/76b75808-47fa-48dd-ad7c-8074678e3607/direct-list": {
+      "total": 7,
+      "active_count": 5,
+      "inactive_count": 2,
+      "referrals_sample": [
+        {"name": "Test User 83", "subscription_plan": "elite", "is_active": true},
+        {"name": "Test User 84", "subscription_plan": "explorer", "is_active": false},
+        {"name": "Test User 85", "subscription_plan": "elite", "is_active": true}
+      ]
+    }
+  },
+  "formula_verification": {
+    "network_cap": "min(4000, 800 + 16*7) = min(4000, 912) = 912 ✓",
+    "prc_per_user": "max(2.5, 5*(21-log2(20))/14) = max(2.5, 5.956454) = 5.956454 ✓",
+    "network_rate": "20 * 5.956454 = 119.13 ✓",
+    "total_daily_rate": "500 + 119.13 = 619.13 ✓",
+    "progress_bar": "20/912 * 100 = 2.19% ✓"
+  }
+}
