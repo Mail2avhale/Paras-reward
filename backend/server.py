@@ -17454,6 +17454,8 @@ async def get_admin_stats():
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     
     # Batch 1: User statistics (parallel)
+    now = datetime.now(timezone.utc)
+    now_str = now.isoformat()
     user_counts = await asyncio.gather(
         db.users.count_documents({}),  # total_users
         db.users.count_documents({"$or": [
@@ -17466,8 +17468,20 @@ async def get_admin_stats():
         db.users.count_documents({"subscription_plan": "elite"}),
         db.users.count_documents({"created_at": {"$gte": today_start.isoformat()}}),  # new_users_today
         db.users.count_documents({"role": "manager"}),  # managers
+        # Active miners: Elite + mining_active + valid session
+        db.users.count_documents({
+            "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP", "Startup", "Growth", "Pro"]},
+            "mining_active": True,
+            "$or": [
+                {"mining_session_end": {"$gt": now_str}},
+                {"mining_session_end": {"$gt": now}},
+                {"mining_session_end": {"$exists": False}},
+                {"mining_session_end": None}
+            ]
+        }),  # active_mining_users
     )
-    total_users, explorer_users, startup_users, growth_users, elite_users, new_users_today, managers = user_counts
+    total_users, explorer_users, startup_users, growth_users, elite_users, new_users_today, managers, active_mining_users = user_counts
+    inactive_mining_users = total_users - active_mining_users
     vip_users = startup_users + growth_users + elite_users
     free_users = explorer_users
     
@@ -17564,7 +17578,9 @@ async def get_admin_stats():
             "vip": vip_users,
             "free": free_users,
             "managers": managers,
-            "new_today": new_users_today
+            "new_today": new_users_today,
+            "active_mining": active_mining_users,
+            "inactive_mining": inactive_mining_users
         },
         "subscription_stats": {
             "explorer": explorer_users,

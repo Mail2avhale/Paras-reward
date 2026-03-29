@@ -442,7 +442,61 @@ const AdminDashboard = ({ user }) => {
           color="emerald"
           onClick={() => navigate('/admin/prc-analytics')}
         />
+        <HeroStatCard
+          icon={Activity}
+          label="Active Mining"
+          value={stats?.users?.active_mining || 0}
+          subValue={`${stats?.users?.inactive_mining || 0} inactive`}
+          color="green"
+          onClick={() => navigate('/admin/users')}
+        />
       </div>
+
+      {/* Active vs Inactive Mining Users Card */}
+      <Card className="p-6 bg-white border-slate-200 rounded-2xl shadow-sm" data-testid="active-inactive-card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-blue-500" />
+            Mining Activity Status
+          </h3>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-sm font-medium text-emerald-700">Active Mining</span>
+            </div>
+            <p className="text-3xl font-bold text-emerald-700">{stats?.users?.active_mining || 0}</p>
+            <p className="text-xs text-emerald-500 mt-1">Elite + Mining Session Active</p>
+            {totalUsers > 0 && (
+              <div className="mt-2">
+                <div className="h-2 bg-emerald-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full transition-all" 
+                    style={{ width: `${((stats?.users?.active_mining || 0) / totalUsers * 100).toFixed(1)}%` }} />
+                </div>
+                <p className="text-xs text-emerald-400 mt-1">{((stats?.users?.active_mining || 0) / totalUsers * 100).toFixed(1)}% of total</p>
+              </div>
+            )}
+          </div>
+          <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-3 h-3 bg-red-400 rounded-full" />
+              <span className="text-sm font-medium text-red-700">Inactive</span>
+            </div>
+            <p className="text-3xl font-bold text-red-700">{stats?.users?.inactive_mining || 0}</p>
+            <p className="text-xs text-red-500 mt-1">Explorer / Not Mining</p>
+            {totalUsers > 0 && (
+              <div className="mt-2">
+                <div className="h-2 bg-red-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-red-400 rounded-full transition-all" 
+                    style={{ width: `${((stats?.users?.inactive_mining || 0) / totalUsers * 100).toFixed(1)}%` }} />
+                </div>
+                <p className="text-xs text-red-400 mt-1">{((stats?.users?.inactive_mining || 0) / totalUsers * 100).toFixed(1)}% of total</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
 
       {/* Subscription Breakdown - BULKPE STYLE */}
       <Card className="p-6 bg-white border-slate-200 rounded-2xl shadow-sm">

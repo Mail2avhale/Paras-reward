@@ -113,6 +113,18 @@ async def get_admin_stats():
             db.users.count_documents({"subscription_plan": "growth"}),  # 11: growth_count
             db.users.count_documents({"subscription_plan": "elite"}),  # 12: elite_count
             
+            # Active mining users (Elite + mining_active + valid session)
+            db.users.count_documents({
+                "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP", "Startup", "Growth", "Pro"]},
+                "mining_active": True,
+                "$or": [
+                    {"mining_session_end": {"$gt": now.isoformat()}},
+                    {"mining_session_end": {"$gt": now}},
+                    {"mining_session_end": {"$exists": False}},
+                    {"mining_session_end": None}
+                ]
+            }),  # 13: active_mining
+            
             return_exceptions=True
         )
         
@@ -130,6 +142,8 @@ async def get_admin_stats():
         startup_count = results[10] if not isinstance(results[10], Exception) else 0
         growth_count = results[11] if not isinstance(results[11], Exception) else 0
         elite_count = results[12] if not isinstance(results[12], Exception) else 0
+        active_mining = results[13] if not isinstance(results[13], Exception) else 0
+        inactive_mining = total_users - active_mining
         
         # Calculate total PRC circulation
         total_prc_value = round(total_prc[0]["total"], 4) if total_prc else 0
@@ -140,7 +154,9 @@ async def get_admin_stats():
                 "new_today": new_today,
                 "new_week": new_week,
                 "new_month": new_month,
-                "elite": vip_users
+                "elite": vip_users,
+                "active_mining": active_mining,
+                "inactive_mining": inactive_mining
             },
             "subscription_stats": {
                 "explorer": explorer_count,
