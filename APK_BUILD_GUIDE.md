@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://network-bonus-calc.preview.emergentagent.com",
+    "url": "https://economy-platform-v2.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
