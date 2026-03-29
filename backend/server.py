@@ -3160,19 +3160,20 @@ async def get_subscription_pricing():
 @api_router.get("/subscription/elite-pricing")
 async def get_elite_pricing():
     """
-    Get current Elite subscription pricing breakdown (1 April 2026)
-    Shows full formula: ₹999 + 18% GST + ₹10 Processing + 20% Admin
+    Get current Elite subscription pricing breakdown
+    Shows full formula: ₹999 + 18% GST + ₹10 Processing + 20% Admin + 5% Burn
     """
     try:
         pricing = await calculate_elite_prc_price()
         return {
             "success": True,
             "plan": "elite",
-            "formula": "₹999 + 18% GST + ₹10 Processing Fee + 20% Admin Charges",
+            "formula": "₹999 + 18% GST + ₹10 Processing Fee + 20% Admin Charges + 5% Burn",
             "base_price_inr": ELITE_BASE_PRICE,
             "gst_rate": f"{GST_RATE * 100}%",
             "processing_fee": f"₹{PROCESSING_FEE_INR}",
             "admin_charge_rate": f"{ADMIN_CHARGE_RATE * 100}%",
+            "burn_rate": "5%",
             "duration_days": 28,
             "pricing": pricing,
             "total_prc_required": pricing["total_prc"],
@@ -3193,15 +3194,16 @@ ADMIN_CHARGE_RATE = 0.20  # 20% admin charges
 
 async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
     """
-    Calculate Elite subscription PRC price with new formula (1 April 2026)
+    Calculate Elite subscription PRC price (Active - 29 March 2026)
     
     Formula:
     1. Base + GST = ₹999 + 18% = ₹1178.82
     2. Convert to PRC = ₹1178.82 × PRC_RATE
-    3. Processing Fee = ₹10 × PRC_RATE  (goes to Company Wallet)
-    4. Admin Charges = 20% of (Base PRC + Processing)  (goes to Company Wallet)
+    3. Processing Fee = ₹10 × PRC_RATE
+    4. Admin Charges = 20% of (Base PRC + Processing)
+    5. Burn = 5% of (Base PRC + Processing PRC + Admin PRC)  [PRC payment = 5% burn]
     
-    Total PRC = Base PRC + Processing PRC + Admin PRC
+    Total PRC = Base PRC + Processing PRC + Admin PRC + Burn PRC
     """
     if prc_rate is None:
         prc_rate = await get_dynamic_prc_rate()
@@ -3221,8 +3223,13 @@ async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
     subtotal_prc = base_prc + processing_fee_prc
     admin_charges_prc = subtotal_prc * ADMIN_CHARGE_RATE
     
+    # Step 5: Burn (5% for PRC payment — applied on subtotal + admin)
+    burn_rate_percent = 5
+    subtotal_before_burn = base_prc + processing_fee_prc + admin_charges_prc
+    burn_prc = subtotal_before_burn * burn_rate_percent / 100
+    
     # Total
-    total_prc = base_prc + processing_fee_prc + admin_charges_prc
+    total_prc = subtotal_before_burn + burn_prc
     
     return {
         "base_inr": base_inr,
@@ -3237,13 +3244,17 @@ async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
         "gst_prc": round(gst_inr * prc_rate, 2),
         "processing_fee_prc": round(processing_fee_prc, 2),
         "admin_charges_prc": round(admin_charges_prc, 2),
+        "burn_prc": round(burn_prc, 2),
+        "burn_rate_percent": burn_rate_percent,
+        "subtotal_before_burn_prc": round(subtotal_before_burn, 2),
         "total_prc": round(total_prc, 2),
         # For Company Wallet
         "company_wallet_breakdown": {
             "gst_collection": round(gst_inr * prc_rate, 2),
             "processing_fees": round(processing_fee_prc, 2),
             "admin_charges": round(admin_charges_prc, 2),
-            "subscription_revenue": round(base_inr * prc_rate, 2)  # Base goes to subscription wallet
+            "burn_amount": round(burn_prc, 2),
+            "subscription_revenue": round(base_inr * prc_rate, 2)
         }
     }
 

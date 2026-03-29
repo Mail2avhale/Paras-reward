@@ -4,7 +4,7 @@ import { Info, Calculator, TrendingUp } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Base rate for comparison (old rate) - kept for breakdown comparison only
+// Base rate for reference (old rate) - kept for change indicator only
 const BASE_RATE = 10;
 
 /**
@@ -14,6 +14,7 @@ const BASE_RATE = 10;
  * @param {number} amount - Amount in INR
  * @param {number} processingFee - Processing fee in INR (default 10)
  * @param {number} adminChargePercent - Admin charge percentage (default 20)
+ * @param {number} burnRate - Burn rate percentage (0 = no burn, 5 = PRC plan burn)
  * @param {boolean} showBreakdown - Show detailed breakdown
  * @param {string} serviceType - Type of service (bbps, gift, subscription, bank)
  */
@@ -25,7 +26,7 @@ const PRCRateDisplay = ({
   showBreakdown = true,
   serviceType = 'general'
 }) => {
-  const [currentRate, setCurrentRate] = useState(10);
+  const [currentRate, setCurrentRate] = useState(null);
   const [rateSource, setRateSource] = useState('default');
   const [loading, setLoading] = useState(true);
 
@@ -35,36 +36,43 @@ const PRCRateDisplay = ({
 
   const fetchCurrentRate = async () => {
     try {
-      // Try admin endpoint first (if user has access)
+      // Try public economy endpoint first (always accessible)
+      const econRes = await axios.get(`${API}/prc-economy/current-rate`);
+      if (econRes.data?.success && econRes.data?.rate?.final_rate) {
+        setCurrentRate(econRes.data.rate.final_rate);
+        setRateSource('dynamic_economy');
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      // Continue to next fallback
+    }
+    
+    try {
+      // Fallback to elite-pricing
+      const priceRes = await axios.get(`${API}/subscription/elite-pricing`);
+      if (priceRes.data?.pricing?.prc_rate) {
+        setCurrentRate(priceRes.data.pricing.prc_rate);
+        setRateSource('elite_pricing');
+        setLoading(false);
+        return;
+      }
+    } catch (err2) {
+      // Continue to next fallback
+    }
+    
+    try {
+      // Final fallback: admin endpoint (may need auth)
       const response = await axios.get(`${API}/admin/prc-rate/current`);
       if (response.data.success) {
-        setCurrentRate(response.data.current_rate || 10);
+        setCurrentRate(response.data.current_rate);
         setRateSource(response.data.source || 'default');
       }
-    } catch (error) {
-      // Fallback to public economy endpoint
-      try {
-        const econRes = await axios.get(`${API}/prc-economy/current-rate`);
-        if (econRes.data?.success && econRes.data?.rate?.final_rate) {
-          setCurrentRate(econRes.data.rate.final_rate);
-          setRateSource('dynamic_economy');
-        }
-      } catch (err2) {
-        // Fallback to elite-pricing endpoint
-        try {
-          const priceRes = await axios.get(`${API}/subscription/elite-pricing`);
-          if (priceRes.data?.pricing?.prc_rate) {
-            setCurrentRate(priceRes.data.pricing.prc_rate);
-            setRateSource('elite_pricing');
-          }
-        } catch (err3) {
-          console.error('All PRC rate endpoints failed');
-          setCurrentRate(10);
-        }
-      }
-    } finally {
-      setLoading(false);
+    } catch (err3) {
+      console.error('All PRC rate endpoints failed');
     }
+    
+    setLoading(false);
   };
 
   // Calculate PRC values - admin charge on amount only (matches backend formula)
@@ -173,18 +181,23 @@ const PRCRateDisplay = ({
  * Compact PRC Rate Badge - For showing just the current rate
  */
 export const PRCRateBadge = () => {
-  const [currentRate, setCurrentRate] = useState(10);
+  const [currentRate, setCurrentRate] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRate = async () => {
       try {
-        const response = await axios.get(`${API}/admin/prc-rate/current`);
-        if (response.data.success) {
-          setCurrentRate(response.data.current_rate || 10);
+        const response = await axios.get(`${API}/prc-economy/current-rate`);
+        if (response.data?.success && response.data?.rate?.final_rate) {
+          setCurrentRate(response.data.rate.final_rate);
         }
       } catch (error) {
-        console.error('Error fetching rate:', error);
+        try {
+          const res2 = await axios.get(`${API}/subscription/elite-pricing`);
+          if (res2.data?.pricing?.prc_rate) setCurrentRate(res2.data.pricing.prc_rate);
+        } catch (err2) {
+          console.error('PRC rate fetch failed');
+        }
       } finally {
         setLoading(false);
       }

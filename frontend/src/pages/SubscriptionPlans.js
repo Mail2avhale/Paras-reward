@@ -71,7 +71,7 @@ const SubscriptionPlans = ({ user }) => {
   const [hasUnactivatedPayment, setHasUnactivatedPayment] = useState(false);
 
   // PRC Rate for subscription (fetched from backend)
-  const [prcRate, setPrcRate] = useState(10);
+  const [prcRate, setPrcRate] = useState(null);
   const [elitePrcPrice, setElitePrcPrice] = useState(null); // Full pricing from backend
 
   // New Pricing (March 2026) - ₹999 + 18% GST = ₹1178.82
@@ -116,14 +116,14 @@ const SubscriptionPlans = ({ user }) => {
       const configRes = await axios.get(`${API}/settings/public`);
       setPaymentConfig(configRes.data);
       
-      // Get dynamic PRC rate from economy API
+      // Get dynamic PRC rate from public economy API
       try {
-        const rateRes = await axios.get(`${API}/admin/prc-rate/current`);
-        if (rateRes.data?.success && rateRes.data?.current_rate) {
-          setPrcRate(rateRes.data.current_rate);
+        const econRes = await axios.get(`${API}/prc-economy/current-rate`);
+        if (econRes.data?.success && econRes.data?.rate?.final_rate) {
+          setPrcRate(econRes.data.rate.final_rate);
         }
       } catch (err) {
-        // Admin endpoint may require auth, fallback to elite-pricing below
+        // Fallback handled by elite-pricing below
       }
       
       // Fetch exact PRC subscription pricing from backend
@@ -1471,6 +1471,7 @@ const SubscriptionPlans = ({ user }) => {
                 amount={getPrice()}
                 processingFee={10}
                 adminChargePercent={20}
+                burnRate={5}
                 showBreakdown={true}
                 showRateAlert={true}
                 serviceType="subscription"

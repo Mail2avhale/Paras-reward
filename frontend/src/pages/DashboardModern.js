@@ -156,11 +156,11 @@ const DashboardModern = ({ user, onLogout }) => {
           
           // Fetch PRC rate and redeem limit in parallel
           const [rateRes, redeemLimitRes] = await Promise.allSettled([
-            axios.get(`${API}/admin/prc-rate/current`),
+            axios.get(`${API}/prc-economy/current-rate`),
             axios.get(`${API}/user/${user.uid}/redeem-limit`)
           ]);
           
-          const prcRate = rateRes.status === 'fulfilled' ? (rateRes.value.data?.current_rate || 10) : 10;
+          const prcRate = rateRes.status === 'fulfilled' ? (rateRes.value.data?.rate?.final_rate || null) : null;
           const redeemLimit = redeemLimitRes.status === 'fulfilled' ? (redeemLimitRes.value.data?.limit || {}) : {};
           
           setStats({
@@ -191,11 +191,11 @@ const DashboardModern = ({ user, onLogout }) => {
       const [userResult, activityResult, rateResult, redeemLimitResult] = await Promise.allSettled([
         axios.get(`${API}/user/${user.uid}`),
         axios.get(`${API}/user/${user.uid}/recent-activity?limit=10`),
-        axios.get(`${API}/admin/prc-rate/current`),
+        axios.get(`${API}/prc-economy/current-rate`),
         axios.get(`${API}/user/${user.uid}/redeem-limit`)
       ]);
       
-      const prcRate = rateResult.status === 'fulfilled' ? (rateResult.value.data?.current_rate || 10) : 10;
+      const prcRate = rateResult.status === 'fulfilled' ? (rateResult.value.data?.rate?.final_rate || null) : null;
       const redeemLimit = redeemLimitResult.status === 'fulfilled' ? (redeemLimitResult.value.data?.limit || {}) : {};
       
       // Process user data
@@ -1079,7 +1079,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 <div className="relative z-10">
                   {/* Clean PRC Redeem Card */}
                   {(() => {
-                    const prcRate = stats.prcRate || 10;
+                    const prcRate = stats.prcRate || 11;
                     const rl = stats.redeemLimit || {};
                     const balance = stats.prcBalance || 0;
                     const availablePRC = rl.effective_available || 0;

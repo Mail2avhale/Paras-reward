@@ -25,7 +25,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all'); // NEW: Status filter
   const [expandedRequest, setExpandedRequest] = useState(null); // For timeline expansion
-  const [prcRate, setPrcRate] = useState(10); // Dynamic PRC rate
+  const [prcRate, setPrcRate] = useState(null); // Dynamic PRC rate - fetched from API
   const [burnRatePercent, setBurnRatePercent] = useState(1); // 1% default (cash), 5% for PRC
   const [burnPaymentType, setBurnPaymentType] = useState('cash');
   const itemsPerPage = 10;
@@ -110,9 +110,19 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   useEffect(() => {
     const fetchPrcRate = async () => {
       try {
-        const res = await axios.get(`${API}/admin/prc-rate/current`);
-        if (res.data?.success && res.data?.current_rate) {
-          setPrcRate(res.data.current_rate);
+        // Use public economy endpoint (always accessible)
+        const econRes = await axios.get(`${API}/prc-economy/current-rate`);
+        if (econRes.data?.success && econRes.data?.rate?.final_rate) {
+          setPrcRate(econRes.data.rate.final_rate);
+          return;
+        }
+      } catch (err) {
+        // Fallback
+      }
+      try {
+        const res = await axios.get(`${API}/subscription/elite-pricing`);
+        if (res.data?.pricing?.prc_rate) {
+          setPrcRate(res.data.pricing.prc_rate);
         }
       } catch (err) {
         console.error('Failed to fetch PRC rate:', err);

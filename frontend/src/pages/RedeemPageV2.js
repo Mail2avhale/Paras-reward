@@ -506,15 +506,24 @@ const RedeemPageV2 = ({ user }) => {
   // Global Redeem Limit
   const [redeemLimit, setRedeemLimit] = useState(null);
   
-  // PRC Rate for INR conversion (fetched from settings)
-  const [prcRate, setPrcRate] = useState(10);
+  // PRC Rate for INR conversion (fetched from dynamic API)
+  const [prcRate, setPrcRate] = useState(null);
   
   // Eko Wallet Balance (for admin visibility)
   const [ekoBalance, setEkoBalance] = useState(null);
   
-  // Fetch PRC Rate from public settings
+  // Fetch PRC Rate from public economy endpoint
   useEffect(() => {
     const fetchPrcRate = async () => {
+      try {
+        const econRes = await axios.get(`${API}/prc-economy/current-rate`);
+        if (econRes.data?.success && econRes.data?.rate?.final_rate) {
+          setPrcRate(econRes.data.rate.final_rate);
+          return;
+        }
+      } catch (err) {
+        // Fallback
+      }
       try {
         const res = await axios.get(`${API}/settings/public`);
         if (res.data?.prc_to_inr_rate) {
