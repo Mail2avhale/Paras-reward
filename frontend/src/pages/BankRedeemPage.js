@@ -409,10 +409,43 @@ const BankRedeemPage = ({ user: initialUser }) => {
                 amount={parseFloat(amount) || 0}
                 processingFee={config.transaction_fee || 10}
                 adminChargePercent={config.admin_fee_percent || 20}
-                burnRate={user?.subscription_payment_type === 'prc' ? 5 : 1}
                 showBreakdown={true}
+                showRateAlert={true}
                 serviceType="bank"
               />
+            )}
+
+            {/* Fees Breakdown */}
+            {fees && (
+              <Card className="bg-slate-800/50 border-slate-700 p-4">
+                <h3 className="text-white font-medium mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-emerald-400" />
+                  Fee Breakdown
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-slate-400">
+                    <span>Withdrawal Amount</span>
+                    <span>₹{fees.withdrawal_amount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Transaction Fee</span>
+                    <span>₹{fees.transaction_fee}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Admin Fee ({config.admin_fee_percent}%)</span>
+                    <span>₹{fees.admin_fee}</span>
+                  </div>
+                  <hr className="border-slate-700" />
+                  <div className="flex justify-between text-white font-medium">
+                    <span>Total PRC Required</span>
+                    <span className="text-emerald-400">{fees.total_prc.toLocaleString()} PRC</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-400 font-bold text-base">
+                    <span>You Will Receive</span>
+                    <span>₹{fees.user_receives.toLocaleString()}</span>
+                  </div>
+                </div>
+              </Card>
             )}
 
             {/* Bank Details */}

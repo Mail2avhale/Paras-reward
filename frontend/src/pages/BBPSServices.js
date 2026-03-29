@@ -541,7 +541,6 @@ const BBPSServices = ({ user }) => {
                     amount={parseFloat(amount) || 0}
                     processingFee={10}
                     adminChargePercent={20}
-                    burnRate={user?.subscription_payment_type === 'prc' ? 5 : 1}
                     showBreakdown={true}
                     showRateAlert={true}
                     serviceType="bbps"

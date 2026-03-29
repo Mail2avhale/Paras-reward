@@ -1349,8 +1349,7 @@ const RedeemPageV2 = ({ user }) => {
   
   const calculateCharges = async (amount) => {
     try {
-      const paymentType = user?.subscription_payment_type || 'cash';
-      const response = await axios.get(`${API}/redeem/calculate-charges?amount=${amount}&payment_type=${paymentType}`);
+      const response = await axios.get(`${API}/redeem/calculate-charges?amount=${amount}`);
       setCharges(response.data.charges);
     } catch (error) {
       console.error('Error calculating charges:', error);
@@ -2599,7 +2598,23 @@ const RedeemPageV2 = ({ user }) => {
                 )}
                 
                 {/* ============================================ */}
-                {/* CHARGES BREAKDOWN - With burning */}
+                {/* ============================================ */}
+                {/* PRC RATE DISPLAY - Shows current rate & alert */}
+                {/* ============================================ */}
+                {formData.amount && parseFloat(formData.amount) > 0 && (
+                  <PRCRateDisplay 
+                    amount={parseFloat(formData.amount) || 0}
+                    processingFee={10}
+                    adminChargePercent={20}
+                    showBreakdown={false}
+                    showRateAlert={true}
+                    serviceType="redeem"
+                  />
+                )}
+                
+                {/* ============================================ */}
+                {/* ============================================ */}
+                {/* CHARGES BREAKDOWN - Common for all services */}
                 {/* ============================================ */}
                 {charges && formData.amount && (
                   <div className="animate-fadeIn bg-gradient-to-br from-gray-800/50 to-gray-800/30 rounded-2xl p-4 border border-gray-700/50">
@@ -2614,18 +2629,12 @@ const RedeemPageV2 = ({ user }) => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">Platform Fee</span>
-                        <span className="text-orange-400">+₹{charges.platform_fee_inr} ({Math.round(charges.platform_fee_prc)} PRC)</span>
+                        <span className="text-orange-400">+₹{charges.platform_fee_inr} ({charges.platform_fee_prc} PRC)</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">Admin Charges (20%)</span>
-                        <span className="text-orange-400">+₹{charges.admin_charge_inr} ({Math.round(charges.admin_charge_prc)} PRC)</span>
+                        <span className="text-orange-400">+₹{charges.admin_charge_inr} ({charges.admin_charge_prc} PRC)</span>
                       </div>
-                      {charges.burn_prc > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Burning ({charges.burn_rate}%)</span>
-                          <span className="text-red-400">+{charges.burn_prc} PRC</span>
-                        </div>
-                      )}
                       <div className="flex justify-between pt-3 border-t border-gray-700">
                         <span className="text-amber-400 font-bold">Total</span>
                         <span className="text-xl font-bold text-amber-400">{charges.total_prc_required} PRC</span>

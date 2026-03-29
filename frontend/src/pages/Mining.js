@@ -178,7 +178,6 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
   const [referralBreakdown, setReferralBreakdown] = useState(null); // Level-wise breakdown
   const [baseRate, setBaseRate] = useState(0); // Individual base mining rate (includes growth network bonus)
   const [networkRate, setNetworkRate] = useState(0); // Network mining rate from Growth Economy
-  const [formulaData, setFormulaData] = useState(null); // Transparent formula breakdown
   
   // Collect state
   const [lastCollectedAmount, setLastCollectedAmount] = useState(0);
@@ -230,7 +229,7 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
     try {
       // Fetch mining status FIRST (most important for this page)
       // Then fetch user data and stats in parallel
-      const miningResponse = await axios.get(`${API}/mining/status/${user.uid}`, { timeout: 20000 });
+      const miningResponse = await axios.get(`${API}/mining/status/${user.uid}`, { timeout: 8000 });
       const miningData = miningResponse.data;
       
       // Immediately update mining state for faster UI
@@ -242,17 +241,6 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
       setReferralBreakdown(miningData.referral_breakdown || null);
       setBaseRate(miningData.base_rate || 20.83);
       setNetworkRate(miningData.network_rate || 0); // Growth Network rate
-      setFormulaData({
-        activeNetwork: miningData.network_size || 0,
-        totalMembers: miningData.total_network_members || 0,
-        directReferrals: miningData.direct_referrals || 0,
-        networkCap: miningData.network_cap || 0,
-        prcPerUser: miningData.prc_per_user || 0,
-        networkRate: miningData.network_rate || 0,
-        baseRate: miningData.base_rate || 500,
-        boostMultiplier: miningData.boost_multiplier || 1,
-        totalDailyRate: miningData.total_daily_rate || 500
-      });
       
       // Auto-start mining display if session is active
       // FIXED: Check session_active flag from API (source of truth)

@@ -3132,28 +3132,23 @@ async def get_subscription_pricing():
 @api_router.get("/subscription/elite-pricing")
 async def get_elite_pricing():
     """
-    Get current Elite subscription pricing breakdown
-    Shows full formula: ₹999 + 18% GST + Burning + ₹10 Processing + 20% Admin
+    Get current Elite subscription pricing breakdown (1 April 2026)
+    Shows full formula: ₹999 + 18% GST + ₹10 Processing + 20% Admin
     """
     try:
-        pricing_prc = await calculate_elite_prc_price(payment_type="prc")
-        pricing_cash = await calculate_elite_prc_price(payment_type="cash")
+        pricing = await calculate_elite_prc_price()
         return {
             "success": True,
             "plan": "elite",
-            "formula": "₹999 + 18% GST + Burning (as per plan) + ₹10 Processing + 20% Admin",
+            "formula": "₹999 + 18% GST + ₹10 Processing Fee + 20% Admin Charges",
             "base_price_inr": ELITE_BASE_PRICE,
             "gst_rate": f"{GST_RATE * 100}%",
             "processing_fee": f"₹{PROCESSING_FEE_INR}",
             "admin_charge_rate": f"{ADMIN_CHARGE_RATE * 100}%",
             "duration_days": 28,
-            "pricing_prc": pricing_prc,
-            "pricing_cash": pricing_cash,
-            "total_prc_required_prc_payment": pricing_prc["total_prc"],
-            "total_prc_required_cash_payment": pricing_cash["total_prc"],
-            "burn_rate_prc": "5%",
-            "burn_rate_cash": "1%",
-            "message": f"PRC Payment: {pricing_prc['total_prc']:,.0f} PRC (5% burn, 70% speed) | Cash: ₹{pricing_prc['base_with_gst_inr']} (1% burn, 100% speed)"
+            "pricing": pricing,
+            "total_prc_required": pricing["total_prc"],
+            "message": f"Pay {pricing['total_prc']:,.0f} PRC for 28 days Elite subscription"
         }
     except Exception as e:
         logging.error(f"Pricing calc error: {e}")
@@ -3168,22 +3163,20 @@ GST_RATE = 0.18  # 18% GST
 PROCESSING_FEE_INR = 10  # ₹10 flat processing fee
 ADMIN_CHARGE_RATE = 0.20  # 20% admin charges
 
-async def calculate_elite_prc_price(prc_rate: float = None, payment_type: str = "prc") -> dict:
+async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
     """
-    Calculate Elite subscription PRC price with new formula
+    Calculate Elite subscription PRC price with new formula (1 April 2026)
     
     Formula:
     1. Base + GST = ₹999 + 18% = ₹1178.82
-    2. + ₹10 Processing Fee
-    3. + 20% Admin Charges on (Base+GST + Processing)
-    4. Convert total to PRC using dynamic rate
-    5. + Burning as per plan (PRC: 5%, Cash: 1%) on total PRC
+    2. Convert to PRC = ₹1178.82 × PRC_RATE
+    3. Processing Fee = ₹10 × PRC_RATE  (goes to Company Wallet)
+    4. Admin Charges = 20% of (Base PRC + Processing)  (goes to Company Wallet)
+    
+    Total PRC = Base PRC + Processing PRC + Admin PRC
     """
     if prc_rate is None:
         prc_rate = await get_dynamic_prc_rate()
-    
-    # Burn rate based on payment type
-    burn_rate = 0.05 if payment_type == "prc" else 0.01
     
     # Step 1: Base + GST
     base_inr = ELITE_BASE_PRICE
@@ -3200,14 +3193,8 @@ async def calculate_elite_prc_price(prc_rate: float = None, payment_type: str = 
     subtotal_prc = base_prc + processing_fee_prc
     admin_charges_prc = subtotal_prc * ADMIN_CHARGE_RATE
     
-    # Step 5: Total before burn
-    total_before_burn = base_prc + processing_fee_prc + admin_charges_prc
-    
-    # Step 6: Burning
-    burn_prc = total_before_burn * burn_rate
-    
-    # Final total
-    total_prc = total_before_burn + burn_prc
+    # Total
+    total_prc = base_prc + processing_fee_prc + admin_charges_prc
     
     return {
         "base_inr": base_inr,
@@ -3216,24 +3203,19 @@ async def calculate_elite_prc_price(prc_rate: float = None, payment_type: str = 
         "base_with_gst_inr": round(base_with_gst_inr, 2),
         "processing_fee_inr": PROCESSING_FEE_INR,
         "admin_charge_rate": ADMIN_CHARGE_RATE * 100,
-        "burn_rate": burn_rate * 100,
-        "payment_type": payment_type,
         "prc_rate": prc_rate,
         # PRC Breakdown
         "base_prc": round(base_prc, 2),
         "gst_prc": round(gst_inr * prc_rate, 2),
         "processing_fee_prc": round(processing_fee_prc, 2),
         "admin_charges_prc": round(admin_charges_prc, 2),
-        "burn_prc": round(burn_prc, 2),
-        "total_before_burn_prc": round(total_before_burn, 2),
         "total_prc": round(total_prc, 2),
         # For Company Wallet
         "company_wallet_breakdown": {
             "gst_collection": round(gst_inr * prc_rate, 2),
             "processing_fees": round(processing_fee_prc, 2),
             "admin_charges": round(admin_charges_prc, 2),
-            "subscription_revenue": round(base_inr * prc_rate, 2),
-            "burned": round(burn_prc, 2)
+            "subscription_revenue": round(base_inr * prc_rate, 2)  # Base goes to subscription wallet
         }
     }
 
@@ -11499,9 +11481,9 @@ async def subscription_pay_with_prc(request: Request):
         except Exception as cooldown_err:
             logging.warning(f"[PRC-SUB] Cooldown check error for {user_id}: {cooldown_err}")
         
-        # Calculate Elite pricing with new formula (including 5% burn for PRC payment)
+        # Calculate Elite pricing with new formula
         try:
-            pricing = await calculate_elite_prc_price(payment_type="prc")
+            pricing = await calculate_elite_prc_price()
             expected_prc = pricing["total_prc"]
             prc_rate = pricing["prc_rate"]
         except Exception as rate_err:
@@ -35524,27 +35506,19 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
     result = []
     now = datetime.now(timezone.utc)
     for ref in direct_referrals:
-        # UPDATED: Active = Elite subscription + Mining session active + session not expired
+        # UPDATED: Active = Elite subscription + Mining session active
         is_active = False
         subscription_plan = (ref.get("subscription_plan") or "").lower()
         
-        is_elite = subscription_plan in ["elite", "vip", "startup", "growth", "pro"]
+        is_elite = subscription_plan == "elite"
+        is_mining = False
         
-        # Check mining_active flag
+        # Check mining_active flag (ignore session end time)
         mining_active = ref.get("mining_active")
         is_mining_flag = mining_active is True or mining_active == "true" or mining_active == True
         
-        # Check mining session not expired
-        session_end = ref.get("mining_session_end", "")
-        session_valid = False
-        if session_end:
-            try:
-                session_valid = str(session_end) > now.isoformat()
-            except Exception:
-                session_valid = False
-        
-        # Active only if Elite AND mining_active AND session not expired
-        is_active = is_elite and is_mining_flag and session_valid
+        # Active only if Elite AND mining_active flag is True
+        is_active = is_elite and is_mining_flag
         
         result.append({
             "uid": ref["uid"],

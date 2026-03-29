@@ -19,7 +19,6 @@ Subscription Speed:
 
 import math
 import logging
-import time
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -147,144 +146,101 @@ async def check_subscription_expiry(user: dict) -> dict:
     return user
 
 
-# In-memory cache for network size (TTL: 5 minutes)
-_network_cache = {}
-NETWORK_CACHE_TTL = 300  # 5 minutes
-
-
 async def get_network_size(user_id: str) -> int:
     """
-    Get ACTIVE network size for mining rate calculation.
-    Active = Elite + mining_active + session not expired.
-    Uses batched BFS + in-memory cache (5 min TTL).
+    Get total ACTIVE network size for a user.
+    Active user = Elite subscription + active mining session (not expired).
     """
-    # Check cache first
-    cache_key = f"active_{user_id}"
-    cached = _network_cache.get(cache_key)
-    if cached and (time.time() - cached["ts"]) < NETWORK_CACHE_TTL:
-        return cached["val"]
-    
     try:
         now = datetime.now(timezone.utc)
-        now_iso = now.isoformat()
+        visited = set()
+        queue = [user_id]
+        total_count = 0
         
-        # Get all UIDs in network (use cached tree if available)
-        all_uids = await _get_network_uids(user_id)
+        while queue and len(visited) < NETWORK_CAP_WITH_REFERRAL:
+            current_user = queue.pop(0)
+            if current_user in visited:
+                continue
+            visited.add(current_user)
+            
+            # Find ALL referrals (for tree traversal)
+            referrals = await db.users.find(
+                {"referred_by": current_user},
+                {"uid": 1, "subscription_plan": 1, "mining_active": 1, "mining_session_end": 1, "_id": 0}
+            ).to_list(500)
+            
+            for ref in referrals:
+                ref_uid = ref.get("uid")
+                if ref_uid and ref_uid not in visited:
+                    queue.append(ref_uid)
+                    
+                    # Only COUNT if user is active (Elite + mining session active)
+                    ref_plan = (ref.get("subscription_plan") or "explorer").lower()
+                    is_elite = ref_plan in ["elite", "vip", "startup", "growth", "pro"]
+                    is_mining = ref.get("mining_active", False)
+                    
+                    if is_elite and is_mining:
+                        # Check session not expired
+                        session_end = ref.get("mining_session_end")
+                        if session_end:
+                            if isinstance(session_end, str):
+                                try:
+                                    end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                                    if end_dt > now:
+                                        total_count += 1
+                                except Exception:
+                                    pass
+                            elif isinstance(session_end, datetime):
+                                if session_end > now:
+                                    total_count += 1
+                        else:
+                            # mining_active but no session_end → count as active
+                            total_count += 1
         
-        if not all_uids:
-            _network_cache[cache_key] = {"val": 0, "ts": time.time()}
-            return 0
-        
-        # Single query to count active users
-        uid_list = list(all_uids)[:NETWORK_CAP_WITH_REFERRAL]
-        active_count = await db.users.count_documents({
-            "uid": {"$in": uid_list},
-            "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP"]},
-            "mining_active": True,
-            "mining_session_end": {"$gt": now_iso}
-        })
-        
-        _network_cache[cache_key] = {"val": active_count, "ts": time.time()}
-        return active_count
+        return total_count
     except Exception as e:
         logging.error(f"Error getting network size: {e}")
         return 0
 
 
-async def _get_network_uids(user_id: str) -> set:
-    """Get all UIDs in a user's network tree. Cached for 5 minutes."""
-    cache_key = f"tree_{user_id}"
-    cached = _network_cache.get(cache_key)
-    if cached and (time.time() - cached["ts"]) < NETWORK_CACHE_TTL:
-        return cached["val"]
-    
-    all_uids = set()
-    current_level = {user_id}
-    
-    while current_level and len(all_uids) < NETWORK_CAP_WITH_REFERRAL:
-        all_uids.update(current_level)
-        remaining = NETWORK_CAP_WITH_REFERRAL - len(all_uids)
-        if remaining <= 0:
-            break
-        next_docs = await db.users.find(
-            {"referred_by": {"$in": list(current_level)}},
-            {"uid": 1, "_id": 0}
-        ).to_list(remaining + 100)
-        next_level = {d["uid"] for d in next_docs if d.get("uid") and d["uid"] not in all_uids}
-        if not next_level:
-            break
-        current_level = next_level
-    
-    all_uids.discard(user_id)
-    _network_cache[cache_key] = {"val": all_uids, "ts": time.time()}
-    return all_uids
-
-
 async def calculate_mining_rate(user_id: str) -> dict:
     """
-    Calculate user's mining rate based on Growth Economy formulas.
-    Uses cached network stats from user document for instant response.
-    Network stats refreshed every 30 minutes max.
+    Calculate user's mining rate based on Growth Economy formulas
+    
+    Returns:
+    - base_rate: 500 PRC/day (base)
+    - network_rate: N × PRC_per_user(N)
+    - total_rate: base + network
+    - per_second_rate: total / 86400
+    - boost_multiplier: subscription type multiplier
     """
+    # Get user data
     user = await db.users.find_one({"uid": user_id}, {"_id": 0})
     if not user:
         return {"error": "User not found"}
     
-    # Get direct referrals count (fast - uses index)
+    # Get direct referrals count
     direct_referrals = await db.users.count_documents({"referred_by": user_id})
     
-    # Get network size — use cached value from user doc if fresh enough
-    REFRESH_INTERVAL = 1800  # 30 minutes
-    need_refresh = True
-    network_size = 0
-    total_network_members = user.get("_cached_total_network", 0) or 0
+    # Get network size
+    network_size = await get_network_size(user_id)
     
-    # Check cache fields — use explicit None check (0 is valid!)
-    cached_network = user.get("_cached_active_network")
-    if cached_network is None:
-        cached_network = user.get("_cached_network_size")
-    cached_at = user.get("_cached_network_stats_at") or user.get("_cached_network_at") or ""
-    
-    if cached_network is not None and cached_at:
-        try:
-            cached_dt = datetime.fromisoformat(str(cached_at).replace('Z', '+00:00'))
-            if cached_dt.tzinfo is None:
-                cached_dt = cached_dt.replace(tzinfo=timezone.utc)
-            age = (datetime.now(timezone.utc) - cached_dt).total_seconds()
-            if age < REFRESH_INTERVAL:
-                network_size = cached_network
-                need_refresh = False
-        except Exception as e:
-            logging.warning(f"[MINING] Cache parse error for {user_id}: {e}")
-    
-    if need_refresh:
-        network_size = await get_network_size(user_id)
-        # Also get total network for transparency
-        all_uids = await _get_network_uids(user_id)
-        total_network_members = len(all_uids)
-        now_iso = datetime.now(timezone.utc).isoformat()
-        try:
-            await db.users.update_one(
-                {"uid": user_id},
-                {"$set": {
-                    "_cached_network_size": network_size,
-                    "_cached_network_at": now_iso,
-                    "_cached_active_network": network_size,
-                    "_cached_network_stats_at": now_iso,
-                    "_cached_total_network": total_network_members
-                }}
-            )
-        except Exception as e:
-            logging.warning(f"[MINING] Cache store failed for {user_id}: {e}")
-    
-    # Calculate network cap
+    # Calculate network cap (binary: 0 refs=800, ≥1 ref=4000)
     network_cap = calculate_network_cap(direct_referrals)
+    
+    # Limit network size to cap
     effective_network = min(network_size, network_cap)
+    
+    # Calculate PRC per user using new formula
     prc_per_user = calculate_prc_per_user(effective_network)
     
+    # Calculate rates
     base_rate = BASE_MINING_PRC
     network_rate = effective_network * prc_per_user
     
+    # Subscription multiplier:
+    # Elite via Razorpay/Manual = 100%, Elite via PRC = 70%
+    # Explorer = 100% (demo - shows speed but can't collect)
     subscription_plan = user.get("subscription_plan", "explorer")
     subscription_payment_type = user.get("subscription_payment_type", "cash")
     is_elite = subscription_plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
@@ -292,18 +248,17 @@ async def calculate_mining_rate(user_id: str) -> dict:
     if is_elite and subscription_payment_type == "prc":
         boost_multiplier = 0.70
     else:
-        boost_multiplier = 1.0
+        boost_multiplier = 1.0  # Cash/Razorpay/Manual Elite OR Explorer (demo)
     
+    # Apply multiplier
     total_daily_rate = (base_rate + network_rate) * boost_multiplier
-    per_second_rate = total_daily_rate / 86400
+    per_second_rate = total_daily_rate / 86400  # 24 hours in seconds
     
     return {
         "base_rate": base_rate,
         "network_rate": round(network_rate, 2),
         "prc_per_user": round(prc_per_user, 6),
         "network_size": effective_network,
-        "active_network": network_size,
-        "total_network_members": total_network_members,
         "network_cap": network_cap,
         "direct_referrals": direct_referrals,
         "boost_multiplier": boost_multiplier,
@@ -399,9 +354,6 @@ async def get_mining_status(uid: str):
             "remaining_hours": round(remaining_hours, 2),  # For frontend
             "session_progress": round(session_progress, 2),
             "network_size": rate_info["network_size"],
-            "active_network": rate_info["active_network"],
-            "total_network_members": rate_info["total_network_members"],
-            "direct_referrals": rate_info["direct_referrals"],
             "network_cap": rate_info["network_cap"],
             "prc_per_user": rate_info["prc_per_user"],
             "subscription_type": rate_info["subscription_type"]
@@ -635,8 +587,6 @@ async def get_rate_breakdown(uid: str):
             "network_cap_formula": "0 refs → 800, ≥1 ref → 4000",
             "base_rate": rate_info["base_rate"],
             "network_size": rate_info["network_size"],
-            "active_network": rate_info["active_network"],
-            "total_network_members": rate_info["total_network_members"],
             "network_cap": rate_info["network_cap"],
             "prc_per_user": rate_info["prc_per_user"],
             "network_rate": rate_info["network_rate"],

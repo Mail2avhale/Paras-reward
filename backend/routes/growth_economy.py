@@ -13,7 +13,6 @@ MLM-Free Terminology Used Throughout
 """
 
 import math
-import time
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Optional, Tuple
@@ -294,79 +293,58 @@ async def calculate_mining_speed(user_id: str) -> dict:
     }
 
 
-# In-memory cache for network calculations (TTL: 5 minutes)
-_ge_network_cache = {}
-GE_CACHE_TTL = 300
-
-
-async def _get_network_uids_ge(user_id: str) -> set:
-    """Get all UIDs in network tree. Cached 5 min."""
-    cache_key = f"tree_{user_id}"
-    cached = _ge_network_cache.get(cache_key)
-    if cached and (time.time() - cached["ts"]) < GE_CACHE_TTL:
-        return cached["val"]
-    
-    all_uids = set()
-    current_level = {user_id}
-    
-    while current_level and len(all_uids) < DEFAULT_NETWORK_CAP_WITH_REFERRAL:
-        all_uids.update(current_level)
-        remaining = DEFAULT_NETWORK_CAP_WITH_REFERRAL - len(all_uids)
-        if remaining <= 0:
-            break
-        next_docs = await db.users.find(
-            {"referred_by": {"$in": list(current_level)}},
-            {"uid": 1, "_id": 0}
-        ).to_list(remaining + 100)
-        next_level = {d["uid"] for d in next_docs if d.get("uid") and d["uid"] not in all_uids}
-        if not next_level:
-            break
-        current_level = next_level
-    
-    all_uids.discard(user_id)
-    _ge_network_cache[cache_key] = {"val": all_uids, "ts": time.time()}
-    return all_uids
-
-
 async def get_network_size(user_id: str, max_depth: int = 10) -> int:
     """
-    Get total ACTIVE network size. Cached 5 min.
+    Get total ACTIVE network size (only Elite + active mining session users).
+    Uses BFS to traverse referral tree, but only counts active members.
     """
-    cache_key = f"active_{user_id}"
-    cached = _ge_network_cache.get(cache_key)
-    if cached and (time.time() - cached["ts"]) < GE_CACHE_TTL:
-        return cached["val"]
-    
     try:
-        now_iso = datetime.now(timezone.utc).isoformat()
-        all_uids = await _get_network_uids_ge(user_id)
+        now = datetime.now(timezone.utc)
+        visited = set()
+        queue = [user_id]
+        total_count = 0
         
-        if not all_uids:
-            _ge_network_cache[cache_key] = {"val": 0, "ts": time.time()}
-            return 0
+        while queue and len(visited) < DEFAULT_NETWORK_CAP_WITH_REFERRAL:
+            current_user = queue.pop(0)
+            if current_user in visited:
+                continue
+            visited.add(current_user)
+            
+            # Find ALL referrals (for tree traversal)
+            referrals = await db.users.find(
+                {"referred_by": current_user},
+                {"uid": 1, "subscription_plan": 1, "mining_active": 1, "mining_session_end": 1, "_id": 0}
+            ).to_list(1000)
+            
+            for ref in referrals:
+                ref_uid = ref.get("uid")
+                if ref_uid and ref_uid not in visited:
+                    queue.append(ref_uid)
+                    
+                    # Only COUNT if user is active (Elite + mining session active)
+                    ref_plan = (ref.get("subscription_plan") or "explorer").lower()
+                    is_elite = ref_plan in ["elite", "vip", "startup", "growth", "pro"]
+                    is_mining = ref.get("mining_active", False)
+                    
+                    if is_elite and is_mining:
+                        session_end = ref.get("mining_session_end")
+                        if session_end:
+                            if isinstance(session_end, str):
+                                try:
+                                    end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                                    if end_dt > now:
+                                        total_count += 1
+                                except Exception:
+                                    pass
+                            elif isinstance(session_end, datetime):
+                                if session_end > now:
+                                    total_count += 1
+                        else:
+                            total_count += 1
         
-        uid_list = list(all_uids)[:DEFAULT_NETWORK_CAP_WITH_REFERRAL]
-        active_count = await db.users.count_documents({
-            "uid": {"$in": uid_list},
-            "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP"]},
-            "mining_active": True,
-            "mining_session_end": {"$gt": now_iso}
-        })
-        
-        _ge_network_cache[cache_key] = {"val": active_count, "ts": time.time()}
-        return active_count
+        return total_count
     except Exception as e:
         logging.error(f"Error getting network size: {e}")
-        return 0
-
-
-async def get_total_network_size(user_id: str) -> int:
-    """Get TOTAL network size (all members). Cached 5 min."""
-    try:
-        all_uids = await _get_network_uids_ge(user_id)
-        return len(all_uids)
-    except Exception as e:
-        logging.error(f"Error getting total network size: {e}")
         return 0
 
 
@@ -374,67 +352,30 @@ async def get_total_network_size(user_id: str) -> int:
 
 async def get_growth_network_stats(user_id: str) -> dict:
     """
-    Get Growth Network statistics.
-    Uses cached values from user doc for fast response.
+    Get Growth Network statistics for a user
+    
+    Returns:
+    - Direct Referrals count
+    - Network Size (total members)
+    - Network Cap (max capacity)
+    - Growth Level
+    - Unlock Percent
     """
-    REFRESH_INTERVAL = 1800  # 30 minutes
-    
-    user = await db.users.find_one(
-        {"uid": user_id},
-        {"_id": 0, "_cached_total_network": 1, "_cached_active_network": 1, 
-         "_cached_network_stats_at": 1, "_cached_network_size": 1, "_cached_network_at": 1}
-    )
-    
-    # Direct referrals (fast - indexed)
+    # Get direct referrals
     direct_referrals = await db.users.count_documents({"referred_by": user_id})
     
-    # Check if cached stats are fresh — use explicit None check (0 is valid)
-    cached_at = (user or {}).get("_cached_network_stats_at") or (user or {}).get("_cached_network_at") or ""
-    need_refresh = True
-    total_network = 0
-    active_network = 0
+    # Get network size
+    network_size = await get_network_size(user_id)
     
-    if cached_at:
-        try:
-            cached_dt = datetime.fromisoformat(str(cached_at).replace('Z', '+00:00'))
-            if cached_dt.tzinfo is None:
-                cached_dt = cached_dt.replace(tzinfo=timezone.utc)
-            age = (datetime.now(timezone.utc) - cached_dt).total_seconds()
-            if age < REFRESH_INTERVAL:
-                total_network = (user or {}).get("_cached_total_network") or 0
-                active_val = (user or {}).get("_cached_active_network")
-                if active_val is None:
-                    active_val = (user or {}).get("_cached_network_size", 0)
-                active_network = active_val if active_val is not None else 0
-                need_refresh = False
-        except Exception:
-            pass
-    
-    if need_refresh:
-        total_network = await get_total_network_size(user_id)
-        active_network = await get_network_size(user_id)
-        now_iso = datetime.now(timezone.utc).isoformat()
-        try:
-            await db.users.update_one(
-                {"uid": user_id},
-                {"$set": {
-                    "_cached_total_network": total_network,
-                    "_cached_active_network": active_network,
-                    "_cached_network_size": active_network,
-                    "_cached_network_stats_at": now_iso,
-                    "_cached_network_at": now_iso
-                }}
-            )
-        except Exception:
-            pass
-    
+    # Calculate network cap
     network_cap = calculate_network_cap(direct_referrals)
-    redeem_limit_percent = calculate_growth_level(active_network)
+    
+    # Calculate redeem limit % based on network size
+    redeem_limit_percent = calculate_growth_level(network_size)
     
     return {
         "direct_referrals": direct_referrals,
-        "network_size": total_network,
-        "active_network_size": active_network,
+        "network_size": network_size,
         "network_cap": network_cap,
         "redeem_limit_percent": redeem_limit_percent,
         "unlock_percent": redeem_limit_percent
