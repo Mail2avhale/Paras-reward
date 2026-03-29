@@ -13873,7 +13873,13 @@ async def get_all_transactions_admin(
 # Keeping this comment for reference
 
 # ========== AI CHATBOT & KYC AUTO-VERIFICATION ==========
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+# Lazy import - emergentintegrations may not be installed in all environments
+try:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    _HAS_EMERGENT_LLM = True
+except ImportError:
+    _HAS_EMERGENT_LLM = False
+    print("[STARTUP] emergentintegrations not installed - AI chatbot features disabled")
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
