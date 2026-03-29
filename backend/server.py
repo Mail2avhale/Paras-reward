@@ -1203,7 +1203,7 @@ async def api_health_check():
         "database": "connected" if db_ready else "connecting",
         "service": "paras-reward-api",
         "version": "2.0",
-        "build": "user360-fix-v3-20260321"
+        "build": "deploy-fix-520-20260329"
     }
 
 
