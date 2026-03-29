@@ -205,6 +205,26 @@ async def simple_register(request: Request):
     
     user_data["referral_code"] = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
     
+    # Assign single leg tree position (next position after the last user)
+    try:
+        last_user = await db.users.find_one(
+            {"tree_position": {"$exists": True}},
+            {"_id": 0, "uid": 1, "tree_position": 1},
+            sort=[("tree_position", -1)]
+        )
+        if last_user:
+            user_data["tree_position"] = last_user["tree_position"] + 1
+            user_data["network_parent"] = last_user["uid"]
+        else:
+            user_data["tree_position"] = 1
+            user_data["network_parent"] = None
+    except Exception as e:
+        logging.error(f"Failed to assign tree position: {e}")
+        # Fallback: assign a high position
+        total = await db.users.count_documents({})
+        user_data["tree_position"] = total + 1
+        user_data["network_parent"] = None
+    
     await db.users.insert_one(user_data)
     
     # Send welcome notification
@@ -326,6 +346,25 @@ async def register_user(request: Request):
     for field in ["created_at", "updated_at", "last_login"]:
         if user_dict.get(field):
             user_dict[field] = user_dict[field].isoformat()
+    
+    # Assign single leg tree position (next position after the last user)
+    try:
+        last_user = await db.users.find_one(
+            {"tree_position": {"$exists": True}},
+            {"_id": 0, "uid": 1, "tree_position": 1},
+            sort=[("tree_position", -1)]
+        )
+        if last_user:
+            user_dict["tree_position"] = last_user["tree_position"] + 1
+            user_dict["network_parent"] = last_user["uid"]
+        else:
+            user_dict["tree_position"] = 1
+            user_dict["network_parent"] = None
+    except Exception as e:
+        logging.error(f"Failed to assign tree position: {e}")
+        total = await db.users.count_documents({})
+        user_dict["tree_position"] = total + 1
+        user_dict["network_parent"] = None
     
     await db.users.insert_one(user_dict)
     

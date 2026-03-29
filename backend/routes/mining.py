@@ -148,55 +148,41 @@ async def check_subscription_expiry(user: dict) -> dict:
 
 async def get_network_size(user_id: str) -> int:
     """
-    Get total ACTIVE network size for a user.
+    Get total ACTIVE network size for a user using Single Leg Tree.
+    
+    Single Leg: All users arranged by joining date.
+    User's network = all ACTIVE users who joined AFTER them.
     Active user = Elite subscription + active mining session (not expired).
+    
+    Uses tree_position for efficient single-query lookup.
     """
     try:
         now = datetime.now(timezone.utc)
-        visited = set()
-        queue = [user_id]
-        total_count = 0
         
-        while queue and len(visited) < NETWORK_CAP_WITH_REFERRAL:
-            current_user = queue.pop(0)
-            if current_user in visited:
-                continue
-            visited.add(current_user)
-            
-            # Find ALL referrals (for tree traversal)
-            referrals = await db.users.find(
-                {"referred_by": current_user},
-                {"uid": 1, "subscription_plan": 1, "mining_active": 1, "mining_session_end": 1, "_id": 0}
-            ).to_list(500)
-            
-            for ref in referrals:
-                ref_uid = ref.get("uid")
-                if ref_uid and ref_uid not in visited:
-                    queue.append(ref_uid)
-                    
-                    # Only COUNT if user is active (Elite + mining session active)
-                    ref_plan = (ref.get("subscription_plan") or "explorer").lower()
-                    is_elite = ref_plan in ["elite", "vip", "startup", "growth", "pro"]
-                    is_mining = ref.get("mining_active", False)
-                    
-                    if is_elite and is_mining:
-                        # Check session not expired
-                        session_end = ref.get("mining_session_end")
-                        if session_end:
-                            if isinstance(session_end, str):
-                                try:
-                                    end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                                    if end_dt > now:
-                                        total_count += 1
-                                except Exception:
-                                    pass
-                            elif isinstance(session_end, datetime):
-                                if session_end > now:
-                                    total_count += 1
-                        else:
-                            # mining_active but no session_end → count as active
-                            total_count += 1
+        # Get user's tree position
+        user = await db.users.find_one(
+            {"uid": user_id},
+            {"_id": 0, "tree_position": 1}
+        )
+        if not user or not user.get("tree_position"):
+            return 0
         
+        my_position = user["tree_position"]
+        
+        # Count ACTIVE users below this user in single leg tree
+        # Active = Elite plan + mining_active + session not expired
+        active_filter = {
+            "tree_position": {"$gt": my_position},
+            "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP", "Startup", "Growth", "Pro"]},
+            "mining_active": True,
+            "$or": [
+                {"mining_session_end": {"$gt": now}},
+                {"mining_session_end": {"$exists": False}},
+                {"mining_session_end": None}
+            ]
+        }
+        
+        total_count = await db.users.count_documents(active_filter)
         return total_count
     except Exception as e:
         logging.error(f"Error getting network size: {e}")

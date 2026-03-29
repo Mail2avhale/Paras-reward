@@ -45082,10 +45082,55 @@ async def _background_db_init():
     try:
         video_ads_count = await db.video_ads.count_documents({})
         if video_ads_count == 0:
-            print("📹 No video ads found, database ready for admin to create videos")
+            print("No video ads found, database ready for admin to create videos")
     except Exception as e:
-        print(f"⚠️ Video ads check (non-critical): {e}")
-    print("✅ Background DB init complete!")
+        print(f"Video ads check (non-critical): {e}")
+    
+    # Single Leg Tree: auto-migrate users without tree_position
+    try:
+        users_without_tree = await db.users.count_documents({"tree_position": {"$exists": False}})
+        if users_without_tree > 0:
+            print(f"Single Leg Tree: {users_without_tree} users need tree_position, migrating...")
+            # Get all users without tree_position, sorted by created_at
+            users_to_migrate = await db.users.find(
+                {"tree_position": {"$exists": False}},
+                {"_id": 0, "uid": 1, "created_at": 1}
+            ).sort("created_at", 1).to_list(None)
+            
+            # Get current max tree_position
+            last_positioned = await db.users.find_one(
+                {"tree_position": {"$exists": True}},
+                {"_id": 0, "uid": 1, "tree_position": 1},
+                sort=[("tree_position", -1)]
+            )
+            
+            current_pos = last_positioned["tree_position"] if last_positioned else 0
+            prev_uid = last_positioned["uid"] if last_positioned else None
+            
+            from pymongo import UpdateOne
+            bulk_ops = []
+            for u in users_to_migrate:
+                current_pos += 1
+                bulk_ops.append(UpdateOne(
+                    {"uid": u["uid"]},
+                    {"$set": {"tree_position": current_pos, "network_parent": prev_uid}}
+                ))
+                prev_uid = u["uid"]
+            
+            if bulk_ops:
+                result = await db.users.bulk_write(bulk_ops)
+                print(f"Single Leg Tree: Migrated {result.modified_count} users")
+            
+            # Ensure indexes
+            await db.users.create_index("tree_position")
+            await db.users.create_index("network_parent")
+            print("Single Leg Tree: Indexes ready")
+        else:
+            print("Single Leg Tree: All users have tree_position")
+    except Exception as e:
+        print(f"Single Leg Tree migration (non-critical): {e}")
+    
+    print("Background DB init complete!")
 
 @app.on_event("startup")
 async def startup_db():

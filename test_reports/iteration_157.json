@@ -1,0 +1,103 @@
+{
+  "iteration": 157,
+  "mode": "feature_verification",
+  "summary": "Verified Single Leg Tree implementation for mining formula. All 9 backend tests passed (1 skipped - registration disabled). Mining APIs correctly use tree_position for network_size calculation. Direct referrals still use referred_by field (unchanged). Frontend loads correctly.",
+  "features_tested": {
+    "GET /api/health": "PASS - Returns healthy status",
+    "GET /api/mining/status/{uid}": "PASS - Returns network_size=0, network_cap=912, mining_rate, total_daily_rate",
+    "GET /api/mining/rate-breakdown/{uid}": "PASS - Shows base_rate=500, network_size, prc_per_user, network_rate",
+    "GET /api/growth/network-stats/{uid}": "PASS - Returns network_size (from tree_position), direct_referrals (from referred_by)",
+    "GET /api/growth/mining-speed/{uid}": "PASS - Returns base_mining, network_mining, total_daily_prc",
+    "Direct referrals use referred_by field": "PASS - direct_referrals=7 counted from referred_by",
+    "Network cap formula": "PASS - min(4000, 800 + 16 × 7) = 912",
+    "Base rate is 500 PRC/day": "PASS",
+    "PRC per user formula": "PASS - max(2.5, 5 × (21 - log₂(N)) / 14)",
+    "New user registration assigns tree_position": "SKIPPED - Registration disabled on preview"
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_single_leg_mining.py",
+    "/app/test_reports/pytest/test_single_leg_mining.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "mining.py get_network_size() correctly uses tree_position to count ACTIVE users below user in single leg tree",
+    "growth_economy.py get_network_size() has same implementation using tree_position",
+    "auth.py registration correctly assigns tree_position and network_parent to new users",
+    "server.py startup migration auto-migrates users without tree_position",
+    "Direct referrals still use referred_by field (unchanged) - verified in network stats",
+    "Network cap formula correctly uses direct_referrals: min(4000, 800 + 16 × D)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_single_leg_mining.py"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 passed, 1 skipped)",
+    "frontend": "100% (Homepage and login flow working)"
+  },
+  "test_credentials": {
+    "test_user": {
+      "uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+      "mobile": "9970100782",
+      "pin": "997010",
+      "tree_position": 3,
+      "subscription_plan": "elite"
+    }
+  },
+  "seed_data_creation": "None - used existing test user",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Single Leg Tree implementation verified. Mining formula uses tree_position for network_size calculation. Test user at tree_position 3 has network_size=0 (no ACTIVE users below - users need Elite + mining_active). Direct referrals=7 (from referred_by field). Network cap=912 (800 + 16×7). Registration assigns tree_position to new users (tested via code review, registration disabled on preview).",
+  "api_responses_verified": {
+    "GET /api/mining/status/76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "mining_active": true,
+      "mined_coins": 404.07,
+      "mining_rate": 0.005787,
+      "total_daily_rate": 500.0,
+      "base_rate": 500,
+      "network_rate": 0,
+      "network_size": 0,
+      "network_cap": 912,
+      "prc_per_user": 0,
+      "can_collect": true,
+      "is_explorer": false
+    },
+    "GET /api/growth/network-stats/76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "success": true,
+      "data": {
+        "direct_referrals": 7,
+        "network_size": 0,
+        "network_cap": 912,
+        "redeem_limit_percent": 0,
+        "unlock_percent": 0
+      }
+    },
+    "GET /api/mining/rate-breakdown/76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "formula": "PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14)",
+      "daily_formula": "Daily PRC = 500 + (N × PRC_per_user)",
+      "base_rate": 500,
+      "network_size": 0,
+      "network_cap": 912,
+      "prc_per_user": 0,
+      "network_rate": 0,
+      "direct_referrals": 7
+    }
+  },
+  "single_leg_tree_explanation": {
+    "concept": "All users arranged in single chain by created_at (joining date)",
+    "tree_position": "Integer 1=oldest, N=newest",
+    "network_parent": "UID of user just above in chain",
+    "network_size_calculation": "Count ACTIVE users with tree_position > user's position",
+    "active_user_criteria": "Elite subscription + mining_active + session not expired",
+    "direct_referrals": "Still uses referred_by field (unchanged)",
+    "network_cap": "min(4000, 800 + 16 × direct_referrals)"
+  }
+}
