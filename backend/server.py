@@ -623,52 +623,45 @@ def parse_user_agent(user_agent: str) -> dict:
     return {"device": device, "os": os_name, "browser": browser}
 
 # MongoDB connection with Atlas-compatible settings
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 
 # Detect if using MongoDB Atlas (contains mongodb+srv or mongodb.net)
 is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 
-# Configure connection options - OPTIMIZED for production performance & reliability
+# Configure connection options
 connection_options = {
-    # ========== CONNECTION POOL SETTINGS ==========
-    'maxPoolSize': 100,          # Increased to 100 for 5000 users
-    'minPoolSize': 10,           # Keep 10 warm connections
-    'maxIdleTimeMS': 30000,      # 30 sec idle timeout - RELEASE FASTER
-    'waitQueueTimeoutMS': 5000,  # 5s wait timeout - FAIL FAST
-    'maxConnecting': 10,         # Allow 10 parallel connection attempts
-    
-    # ========== TIMEOUT SETTINGS ==========
-    'serverSelectionTimeoutMS': 5000,   # 5s to select server
-    'connectTimeoutMS': 5000,           # 5s to connect
-    'socketTimeoutMS': 20000,           # 20s socket timeout
-    
-    # ========== RELIABILITY SETTINGS ==========
-    'retryWrites': True,        # Auto-retry failed writes
-    'retryReads': True,         # Auto-retry failed reads
-    'heartbeatFrequencyMS': 10000,  # Check server health every 10s
-    
-    # ========== NETWORK OPTIMIZATION ==========
-    'compressors': ['zstd', 'snappy', 'zlib'],  # Network compression
-    'readPreference': 'primaryPreferred',        # Fallback to secondary if primary slow
-    
-    # ========== CONNECTION MODE ==========
-    'directConnection': not is_atlas,  # Direct connection for local MongoDB
+    'serverSelectionTimeoutMS': 10000,
+    'connectTimeoutMS': 10000,
+    'socketTimeoutMS': 30000,
+    'maxPoolSize': 100,
+    'minPoolSize': 5,
+    'retryWrites': True,
+    'retryReads': True,
+    'heartbeatFrequencyMS': 10000,
+    'readPreference': 'primaryPreferred',
+    'directConnection': not is_atlas,
 }
 
 # Add Atlas-specific options for cloud MongoDB
 if is_atlas:
     connection_options.update({
-        'w': 'majority',                        # Write concern for durability
-        'tls': True,                            # TLS encryption
-        'tlsAllowInvalidCertificates': False,   # Enforce valid certs
-        'appName': 'paras-reward-api',          # App identifier in Atlas logs
+        'w': 'majority',
+        'tls': True,
+        'tlsAllowInvalidCertificates': False,
+        'appName': 'paras-reward-api',
     })
-    logging.info("🔒 MongoDB Atlas detected - using optimized TLS connection")
+    print("[STARTUP] MongoDB Atlas mode - TLS enabled")
 else:
-    logging.info("🏠 Local MongoDB detected - using direct connection")
+    print("[STARTUP] Local MongoDB mode - direct connection")
 
-client = AsyncIOMotorClient(mongo_url, **connection_options)
-db = client[os.environ['DB_NAME']]
+try:
+    client = AsyncIOMotorClient(mongo_url, **connection_options)
+    db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
+    print(f"[STARTUP] MongoDB client created OK - DB: {os.environ.get('DB_NAME', 'paras_reward_db')}")
+except Exception as e:
+    print(f"[STARTUP] MongoDB client creation failed: {e} - using fallback")
+    client = AsyncIOMotorClient('mongodb://localhost:27017', serverSelectionTimeoutMS=5000)
+    db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
 
 # ========== DATABASE CONNECTION HEALTH & AUTO-RECONNECT ==========
 async def ensure_db_connection():
@@ -688,7 +681,7 @@ async def ensure_db_connection():
             client.close()
             # Create new connection
             client = AsyncIOMotorClient(mongo_url, **connection_options)
-            db = client[os.environ['DB_NAME']]
+            db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
             # Verify new connection
             await client.admin.command('ping')
             logging.info("✅ Database reconnected successfully")
@@ -2623,7 +2616,7 @@ async def database_keep_alive_ping():
                 client.close()
                 # Create new connection
                 client = AsyncIOMotorClient(mongo_url, **connection_options)
-                db = client[os.environ['DB_NAME']]
+                db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
                 # Test new connection
                 await client.admin.command('ping')
                 print("[DB KEEP-ALIVE] ✅ Reconnected successfully!")
@@ -45030,84 +45023,51 @@ async def initialize_database_indexes():
     
     print("✅ Database indexes initialization complete")
 
+async def _background_db_init():
+    """Background: indexes and warmup after DB is connected"""
+    try:
+        await create_performance_indexes(db)
+        print("✅ Performance indexes created")
+    except Exception as e:
+        print(f"⚠️ Performance indexes (non-critical): {e}")
+    try:
+        await initialize_database_indexes()
+        print("✅ Database indexes initialized")
+    except Exception as e:
+        print(f"⚠️ Database indexes (non-critical): {e}")
+    try:
+        video_ads_count = await db.video_ads.count_documents({})
+        if video_ads_count == 0:
+            print("📹 No video ads found, database ready for admin to create videos")
+    except Exception as e:
+        print(f"⚠️ Video ads check (non-critical): {e}")
+    print("✅ Background DB init complete!")
+
 @app.on_event("startup")
 async def startup_db():
-    """Initialize database with default data and start scheduled tasks"""
-    import asyncio  # Ensure asyncio is available in this scope
+    """Initialize database - NON-BLOCKING so server starts immediately"""
+    import asyncio
     global db_ready
-    print("🚀 Starting database initialization...")
+    print("🚀 Starting server (non-blocking startup)...")
     
-    # Initialize cache manager
-    print("📦 Initializing cache system...")
-    await cache.initialize()
+    # Initialize cache manager (quick)
+    try:
+        print("📦 Initializing cache system...")
+        await cache.initialize()
+    except Exception as e:
+        print(f"⚠️ Cache init failed (non-critical): {e}")
     
-    # ========== CONNECTION WARMUP ==========
-    # Warm up the connection pool BEFORE any real requests
-    print("🔥 Warming up MongoDB connection pool...")
-    max_retries = 5
-    retry_delay = 2
-    
-    for attempt in range(max_retries):
-        try:
-            # Ping to establish first connection
-            await client.admin.command('ping')
-            print(f"✅ MongoDB ping successful (attempt {attempt + 1})")
-            
-            # Warm up multiple connections in parallel
-            warmup_tasks = []
-            for i in range(5):  # Warm up 5 connections
-                warmup_tasks.append(client.admin.command('ping'))
-            
-            await asyncio.gather(*warmup_tasks, return_exceptions=True)
-            print("🔥 Connection pool warmed up (5 connections ready)")
-            
-            # Quick test query to verify read operations
-            await db.users.find_one({}, {"_id": 1})
-            print("✅ Read operation verified")
-            
-            db_ready = True
-            break
-            
-        except Exception as e:
-            if attempt < max_retries - 1:
-                print(f"⚠️ MongoDB warmup attempt {attempt + 1} failed: {e}")
-                print(f"   Retrying in {retry_delay} seconds...")
-                await asyncio.sleep(retry_delay)
-            else:
-                print(f"⚠️ MongoDB initial connection pending after {max_retries} attempts")
-                print("   App will continue to retry in background")
-                asyncio.create_task(retry_db_connection())
-                break
-    
-    if db_ready:
-        try:
-            # Create performance indexes for high-traffic queries
-            await create_performance_indexes(db)
-            print("✅ Performance indexes created")
-        except Exception as e:
-            print(f"⚠️ Error creating performance indexes (non-critical): {e}")
-        
-        try:
-            # Create indexes with error handling
-            await initialize_database_indexes()
-            print("✅ Database indexes initialized")
-        except Exception as e:
-            print(f"⚠️ Error initializing indexes (non-critical): {e}")
-        
-        # Treasure hunts initialization - REMOVED (feature deprecated)
-        # try:
-        #     await initialize_treasure_hunts()
-        #     print("✅ Treasure hunts initialized")
-        # except Exception as e:
-        #     print(f"⚠️ Error initializing treasure hunts (non-critical): {e}")
-        
-        try:
-            # Check if video_ads collection exists, if not create sample
-            video_ads_count = await db.video_ads.count_documents({})
-            if video_ads_count == 0:
-                print("📹 No video ads found, database ready for admin to create videos")
-        except Exception as e:
-            print(f"⚠️ Error checking video ads (non-critical): {e}")
+    # Single quick DB check - if fails, move to background
+    try:
+        await asyncio.wait_for(client.admin.command('ping'), timeout=5.0)
+        print("✅ MongoDB connected!")
+        db_ready = True
+        # Complete init in background
+        asyncio.create_task(_background_db_init())
+    except Exception as e:
+        print(f"⚠️ MongoDB not ready: {str(e)[:100]}")
+        print("   → Background retry started. Server will serve requests immediately.")
+        asyncio.create_task(retry_db_connection())
         
         print("✅ Database initialization complete!")
     
