@@ -707,7 +707,7 @@ async def ensure_db_connection():
             client.close()
             # Create new connection
             client = AsyncIOMotorClient(mongo_url, **connection_options)
-            db = client[os.environ['DB_NAME']]
+            db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
             # Verify new connection
             await client.admin.command('ping')
             logging.info("✅ Database reconnected successfully")
@@ -2651,7 +2651,7 @@ async def database_keep_alive_ping():
                 client.close()
                 # Create new connection
                 client = AsyncIOMotorClient(mongo_url, **connection_options)
-                db = client[os.environ['DB_NAME']]
+                db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
                 # Test new connection
                 await client.admin.command('ping')
                 print("[DB KEEP-ALIVE] ✅ Reconnected successfully!")
