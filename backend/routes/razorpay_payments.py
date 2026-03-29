@@ -456,6 +456,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                     "subscription_expires": expiry_date,
                     "subscription_expiry": expiry_date.isoformat(),  # Also set this field
                     "subscription_status": "active",
+                    "subscription_payment_type": "cash",
                     "last_payment_id": request.razorpay_payment_id,
                     "last_payment_date": now,
                     "previous_plan": old_plan,
@@ -796,6 +797,7 @@ async def razorpay_webhook(request: Request):
                             "subscription_expires": expiry_date,
                             "subscription_expiry": expiry_date.isoformat(),
                             "subscription_status": "active",
+                            "subscription_payment_type": "cash",
                             "last_payment_id": payment_id,
                             "last_payment_date": now,
                             "previous_remaining_days_added": remaining_days,
@@ -1155,6 +1157,7 @@ async def sync_payments_from_razorpay(request: Request):
                                     "subscription_expires": expiry_date,
                                     "subscription_expiry": expiry_date.isoformat(),
                                     "subscription_status": "active",
+                                    "subscription_payment_type": "cash",
                                     "last_payment_id": payment_id,
                                     "last_payment_date": now,
                                     "previous_remaining_days_added": remaining_days,
@@ -1367,6 +1370,7 @@ async def fix_user_subscription(request: Request):
                                             "subscription_expires": expiry_date,
                                             "subscription_expiry": expiry_date.isoformat(),
                                             "subscription_status": "active",
+                                            "subscription_payment_type": "cash",
                                             "last_payment_id": payment_id,
                                             "fixed_by_admin": True,
                                             "fixed_at": now.isoformat()
@@ -1444,6 +1448,7 @@ async def fix_user_subscription(request: Request):
                 "subscription_expires": expiry_date,
                 "subscription_expiry": expiry_date.isoformat(),
                 "subscription_status": "active",
+                "subscription_payment_type": "cash",
                 "last_payment_id": payment_id,
                 "previous_remaining_days_added": remaining_days,
                 "fixed_by_admin": True,
@@ -1556,6 +1561,7 @@ async def manual_activate_by_email(request: Request):
                 "subscription_expires": expiry_date,
                 "subscription_expiry": expiry_date.isoformat(),
                 "subscription_status": "active",
+                "subscription_payment_type": "cash",
                 "manual_activated": True,
                 "manual_activation_reason": reason,
                 "manual_activated_at": now.isoformat()

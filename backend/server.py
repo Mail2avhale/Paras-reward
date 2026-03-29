@@ -3183,7 +3183,7 @@ async def get_elite_pricing():
         raise HTTPException(status_code=500, detail="Could not calculate pricing")
 
 
-# ==================== NEW ELITE PRICING (1 April 2026) ====================
+# ==================== NEW ELITE PRICING (Active - 29 March 2026) ====================
 # Formula: (₹999 + 18% GST) × PRC Rate + ₹10 Processing + 20% Admin Charges
 
 ELITE_BASE_PRICE = 999  # Base price in INR
