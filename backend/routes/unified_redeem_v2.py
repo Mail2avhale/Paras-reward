@@ -687,20 +687,50 @@ class AdminCompleteRequest(BaseModel):
 
 # ==================== HELPER FUNCTIONS ====================
 
-async def calculate_charges(amount: float) -> dict:
+async def get_user_burn_rate_redeem(user_id: str = None) -> dict:
+    """
+    Get burn rate based on user's subscription_payment_type.
+    Cash users: 1%, PRC users: 5%
+    """
+    if not user_id or db is None:
+        return {"burn_rate_percent": 1, "payment_type": "unknown"}
+    
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "subscription_payment_type": 1, "subscription_plan": 1})
+    if not user:
+        return {"burn_rate_percent": 1, "payment_type": "unknown"}
+    
+    payment_type = user.get("subscription_payment_type", "cash")
+    plan = user.get("subscription_plan", "explorer")
+    
+    if plan in ["elite", "vip", "startup", "growth", "pro"] and payment_type == "prc":
+        return {"burn_rate_percent": 5, "payment_type": "prc"}
+    else:
+        return {"burn_rate_percent": 1, "payment_type": payment_type or "cash"}
+
+
+async def calculate_charges(amount: float, user_id: str = None) -> dict:
     """
     Calculate all charges for a transaction
     
     Formula:
     - Platform Fee: ₹10 (flat)
     - Admin Charge: 20% of transaction amount
-    - Total = Amount + Platform Fee + Admin Charge
+    - Subtotal = Amount + Platform Fee + Admin Charge
+    - Burn = burn_rate% × Subtotal (1% cash, 5% PRC)
+    - Total = Subtotal + Burn
     - PRC Rate: Dynamic from database
     """
     amount_inr = float(amount)
     platform_fee = PLATFORM_FEE
     admin_charge = round(amount_inr * (ADMIN_CHARGE_PERCENT / 100))
-    total_charges = platform_fee + admin_charge
+    subtotal = amount_inr + platform_fee + admin_charge
+    
+    # Burn rate based on user's subscription payment type
+    burn_info = await get_user_burn_rate_redeem(user_id)
+    burn_rate_percent = burn_info["burn_rate_percent"]
+    burn_inr = round(subtotal * burn_rate_percent / 100, 2)
+    
+    total_charges = platform_fee + admin_charge + burn_inr
     total_amount = amount_inr + total_charges
     
     # Get dynamic PRC rate
@@ -711,13 +741,18 @@ async def calculate_charges(amount: float) -> dict:
         "platform_fee_inr": platform_fee,
         "admin_charge_inr": admin_charge,
         "admin_charge_percent": ADMIN_CHARGE_PERCENT,
+        "burn_inr": burn_inr,
+        "burn_rate_percent": burn_rate_percent,
+        "burn_payment_type": burn_info["payment_type"],
+        "subtotal_inr": subtotal,
         "total_charges_inr": total_charges,
-        "total_amount_inr": total_amount,
+        "total_amount_inr": round(total_amount, 2),
         # PRC equivalents (dynamic rate)
         "amount_prc": int(amount_inr * prc_rate),
         "platform_fee_prc": platform_fee * prc_rate,
         "admin_charge_prc": admin_charge * prc_rate,
-        "total_charges_prc": total_charges * prc_rate,
+        "burn_prc": round(burn_inr * prc_rate, 2),
+        "total_charges_prc": round(total_charges * prc_rate, 2),
         "total_prc_required": int(total_amount * prc_rate),
         "prc_rate": prc_rate
     }
@@ -774,18 +809,18 @@ async def get_available_services():
 
 
 @router.get("/calculate-charges")
-async def calculate_charges_api(amount: float = Query(..., gt=0)):
+async def calculate_charges_api(amount: float = Query(..., gt=0), user_id: str = None):
     """
-    Calculate charges for a given amount
+    Calculate charges for a given amount including burn rate
     
-    Returns breakdown of all charges including PRC equivalent
+    Returns breakdown of all charges including PRC equivalent and burn
     """
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be greater than 0")
     
     return {
         "success": True,
-        "charges": await calculate_charges(amount)
+        "charges": await calculate_charges(amount, user_id=user_id)
     }
 
 
@@ -1059,8 +1094,8 @@ async def create_redeem_request(request: RedeemRequestCreate):
         except Exception as e:
             logging.error(f"[REDEEM] Limit check error: {e}")
     
-    # Calculate charges
-    charges = await calculate_charges(request.amount)
+    # Calculate charges with user_id for burn rate
+    charges = await calculate_charges(request.amount, user_id=request.user_id)
     total_prc_required = charges["total_prc_required"]
     
     # Check PRC balance

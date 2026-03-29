@@ -26,6 +26,8 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   const [statusFilter, setStatusFilter] = useState('all'); // NEW: Status filter
   const [expandedRequest, setExpandedRequest] = useState(null); // For timeline expansion
   const [prcRate, setPrcRate] = useState(10); // Dynamic PRC rate
+  const [burnRatePercent, setBurnRatePercent] = useState(1); // 1% default (cash), 5% for PRC
+  const [burnPaymentType, setBurnPaymentType] = useState('cash');
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -88,20 +90,23 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
 
   const selectedInfo = denominations.find(d => d.value === selectedDenomination);
   
-  // New charge calculation: Voucher Amount + ₹10 Processing + 20% Admin
+  // New charge calculation: Voucher Amount + ₹10 Processing + 20% Admin + Burn
   const voucherAmountINR = selectedDenomination || 0;
   const processingFeeINR = 10;
   const adminChargePercent = 20;
   const adminChargeINR = voucherAmountINR * (adminChargePercent / 100);
-  const totalINR = voucherAmountINR + processingFeeINR + adminChargeINR;
+  const subtotalINR = voucherAmountINR + processingFeeINR + adminChargeINR;
+  const burnINR = Math.round(subtotalINR * burnRatePercent / 100 * 100) / 100;
+  const totalINR = subtotalINR + burnINR;
   
   // Convert to PRC (Dynamic rate from API)
   const voucherAmountPRC = voucherAmountINR * prcRate;
   const processingFeePRC = processingFeeINR * prcRate;
   const adminChargePRC = adminChargeINR * prcRate;
+  const burnPRC = Math.round(burnINR * prcRate * 100) / 100;
   const totalPRC = totalINR * prcRate;
   
-  // Fetch dynamic PRC rate on mount
+  // Fetch dynamic PRC rate and burn rate on mount
   useEffect(() => {
     const fetchPrcRate = async () => {
       try {
@@ -113,8 +118,20 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
         console.error('Failed to fetch PRC rate:', err);
       }
     };
+    const fetchBurnRate = async () => {
+      try {
+        const res = await axios.get(`${API}/redemption/calculate-charges?amount_inr=100&user_id=${user.uid}`);
+        if (res.data?.burn_rate_percent !== undefined) {
+          setBurnRatePercent(res.data.burn_rate_percent);
+          setBurnPaymentType(res.data.burn_payment_type || 'cash');
+        }
+      } catch (err) {
+        console.error('Failed to fetch burn rate:', err);
+      }
+    };
     fetchPrcRate();
-  }, []);
+    fetchBurnRate();
+  }, [user.uid]);
 
   const handleRedeem = async () => {
     if (!selectedDenomination) {
@@ -276,10 +293,19 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                   <span className="text-gray-400">Admin Charges ({adminChargePercent}%)</span>
                   <span className="text-orange-400">+ ₹{adminChargeINR.toFixed(0)} = {adminChargePRC.toFixed(0)} PRC</span>
                 </div>
+                {burnINR > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Burn ({burnRatePercent}%{burnPaymentType === 'prc' ? ' - PRC Plan' : ''})</span>
+                    <span className="text-red-400">+ ₹{burnINR.toFixed(2)} = {burnPRC.toFixed(0)} PRC</span>
+                  </div>
+                )}
                 <div className="flex justify-between pt-2 border-t border-gray-700 font-semibold">
                   <span className="text-amber-400">Total to Pay</span>
                   <span className="text-amber-400">₹{totalINR.toFixed(0)} = {totalPRC.toFixed(0)} PRC</span>
                 </div>
+                {burnPaymentType === 'prc' && (
+                  <p className="text-xs text-red-400/70 mt-1">PRC subscribers: 5% burn rate. Cash subscribers pay only 1%.</p>
+                )}
               </div>
             </div>
           </div>

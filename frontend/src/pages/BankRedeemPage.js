@@ -63,6 +63,8 @@ const BankRedeemPage = ({ user: initialUser }) => {
   
   // Fees calculation
   const [fees, setFees] = useState(null);
+  const [burnRatePercent, setBurnRatePercent] = useState(1);
+  const [burnPaymentType, setBurnPaymentType] = useState('cash');
   
   // Request history
   const [requests, setRequests] = useState([]);
@@ -92,14 +94,21 @@ const BankRedeemPage = ({ user: initialUser }) => {
         }
         
         // Fetch fresh user data, config, and redeem limit
-        const [userRes, configRes, limitRes] = await Promise.all([
+        const [userRes, configRes, limitRes, burnRes] = await Promise.all([
           axios.get(`${API}/users/${userData.uid}`),
           axios.get(`${API}/bank-transfer/config`),
-          axios.get(`${API}/user/${userData.uid}/redeem-limit`).catch(() => ({ data: null }))
+          axios.get(`${API}/user/${userData.uid}/redeem-limit`).catch(() => ({ data: null })),
+          axios.get(`${API}/redemption/calculate-charges?amount_inr=100&user_id=${userData.uid}`).catch(() => ({ data: null }))
         ]);
         
         setUser(userRes.data);
         setConfig(configRes.data);
+        
+        // Set burn rate from backend
+        if (burnRes.data?.burn_rate_percent !== undefined) {
+          setBurnRatePercent(burnRes.data.burn_rate_percent);
+          setBurnPaymentType(burnRes.data.burn_payment_type || 'cash');
+        }
         
         // Set redeem limit info
         if (limitRes.data?.success) {
@@ -143,7 +152,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
     }
   }, [activeTab, loadRequests]);
 
-  // Calculate fees when amount changes
+  // Calculate fees when amount changes (including burn rate)
   useEffect(() => {
     if (!amount || isNaN(amount)) {
       setFees(null);
@@ -157,18 +166,23 @@ const BankRedeemPage = ({ user: initialUser }) => {
     }
     
     const adminFee = Math.round(amt * config.admin_fee_percent / 100);
-    const totalInr = amt + adminFee + config.transaction_fee;
+    const subtotalInr = amt + adminFee + config.transaction_fee;
+    const burnInr = Math.round(subtotalInr * burnRatePercent / 100 * 100) / 100;
+    const totalInr = subtotalInr + burnInr;
     const totalPrc = totalInr * config.prc_rate;
     
     setFees({
       withdrawal_amount: amt,
       admin_fee: adminFee,
       transaction_fee: config.transaction_fee,
+      burn_inr: burnInr,
+      burn_rate_percent: burnRatePercent,
+      burn_payment_type: burnPaymentType,
       total_inr: totalInr,
       total_prc: totalPrc,
       user_receives: amt
     });
-  }, [amount, config]);
+  }, [amount, config, burnRatePercent, burnPaymentType]);
 
   // Verify IFSC
   const verifyIFSC = async () => {
@@ -435,6 +449,12 @@ const BankRedeemPage = ({ user: initialUser }) => {
                     <span>Admin Fee ({config.admin_fee_percent}%)</span>
                     <span>₹{fees.admin_fee}</span>
                   </div>
+                  {fees.burn_inr > 0 && (
+                    <div className="flex justify-between text-red-400">
+                      <span>Burn ({fees.burn_rate_percent}%{fees.burn_payment_type === 'prc' ? ' - PRC Plan' : ''})</span>
+                      <span>₹{fees.burn_inr.toFixed(2)}</span>
+                    </div>
+                  )}
                   <hr className="border-slate-700" />
                   <div className="flex justify-between text-white font-medium">
                     <span>Total PRC Required</span>
@@ -444,6 +464,9 @@ const BankRedeemPage = ({ user: initialUser }) => {
                     <span>You Will Receive</span>
                     <span>₹{fees.user_receives.toLocaleString()}</span>
                   </div>
+                  {fees.burn_payment_type === 'prc' && (
+                    <p className="text-xs text-red-400/70 mt-1">PRC subscribers: 5% burn. Cash subscribers pay only 1%.</p>
+                  )}
                 </div>
               </Card>
             )}

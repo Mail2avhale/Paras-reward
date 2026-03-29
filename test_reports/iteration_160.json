@@ -1,0 +1,101 @@
+{
+  "iteration": 160,
+  "mode": "feature_verification",
+  "summary": "Burn Rate Unified Redeem APIs verification PASSED. All 10 tests passed. Both /api/redeem/calculate-charges and /api/redemption/calculate-charges correctly return burn rate fields (burn_inr, burn_rate_percent, burn_payment_type, burn_prc). Cash users get 1% burn, PRC users get 5% burn.",
+  "features_tested": {
+    "GET /api/redeem/calculate-charges?amount=1000&user_id=76b75808 (cash user)": "PASS - burn_rate_percent=1, burn_payment_type=cash, burn_inr=12.1",
+    "GET /api/redeem/calculate-charges?amount=1000&user_id=6c96a6cc (PRC user)": "PASS - burn_rate_percent=5, burn_payment_type=prc, burn_inr=60.5",
+    "GET /api/redemption/calculate-charges?amount_inr=1000&user_id=76b75808 (cash user)": "PASS - burn_rate_percent=1, burn_payment_type=cash",
+    "GET /api/redemption/calculate-charges?amount_inr=1000&user_id=6c96a6cc (PRC user)": "PASS - burn_rate_percent=5, burn_payment_type=prc",
+    "Burn formula verification (cash)": "PASS - Subtotal=1210, Burn=1%×1210=12.10, Total=1222.10",
+    "Burn formula verification (PRC)": "PASS - Subtotal=1210, Burn=5%×1210=60.50, Total=1270.50",
+    "burn_prc field in response": "PASS - burn_prc=133.1 (cash), burn_prc=665.5 (PRC)",
+    "PRC user subscription_payment_type=prc": "PASS - User 6c96a6cc confirmed as PRC subscriber",
+    "Cash user subscription_payment_type=cash": "PASS - User 76b75808 confirmed as cash subscriber",
+    "Default burn rate (no user_id)": "PASS - Defaults to 1% burn"
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_burn_rate_unified_redeem.py",
+    "/app/test_reports/pytest/burn_rate_unified_redeem_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "unified_redeem_v2.py get_user_burn_rate_redeem() correctly returns 1% for cash users and 5% for PRC users",
+    "unified_redeem_v2.py calculate_charges() correctly includes burn_inr, burn_rate_percent, burn_payment_type, burn_prc, subtotal_inr",
+    "server.py get_user_burn_rate() correctly checks subscription_payment_type field",
+    "server.py calculate_redemption_charges() correctly applies burn formula: Burn = burn_rate% × Subtotal",
+    "Both APIs return consistent burn rate fields for frontend display"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_burn_rate_unified_redeem.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)"
+  },
+  "test_credentials": {
+    "cash_user": {
+      "uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+      "mobile": "9970100782",
+      "subscription_payment_type": "cash",
+      "burn_rate": "1%"
+    },
+    "prc_user": {
+      "uid": "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
+      "mobile": "9421331342",
+      "subscription_payment_type": "prc",
+      "burn_rate": "5%"
+    }
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Burn rate APIs fully verified. /api/redeem/calculate-charges and /api/redemption/calculate-charges both return burn fields. Cash users (subscription_payment_type=cash) get 1% burn. PRC users (subscription_payment_type=prc) get 5% burn. Formula: Subtotal = Amount + ₹10 Processing + 20% Admin; Burn = burn_rate% × Subtotal; Total = Subtotal + Burn.",
+  "api_responses_verified": {
+    "GET /api/redeem/calculate-charges (cash user)": {
+      "amount_inr": 1000,
+      "platform_fee_inr": 10,
+      "admin_charge_inr": 200,
+      "burn_inr": 12.1,
+      "burn_rate_percent": 1,
+      "burn_payment_type": "cash",
+      "subtotal_inr": 1210,
+      "total_amount_inr": 1222.1,
+      "burn_prc": 133.1,
+      "prc_rate": 11
+    },
+    "GET /api/redeem/calculate-charges (PRC user)": {
+      "amount_inr": 1000,
+      "platform_fee_inr": 10,
+      "admin_charge_inr": 200,
+      "burn_inr": 60.5,
+      "burn_rate_percent": 5,
+      "burn_payment_type": "prc",
+      "subtotal_inr": 1210,
+      "total_amount_inr": 1270.5,
+      "burn_prc": 665.5,
+      "prc_rate": 11
+    },
+    "GET /api/redemption/calculate-charges (cash user)": {
+      "burn_rate_percent": 1,
+      "burn_payment_type": "cash",
+      "burn_inr": 12.1,
+      "subtotal_inr": 1210,
+      "total_inr": 1222.1
+    }
+  },
+  "formula_verification": {
+    "burn_calculation_1_percent": "Subtotal=1210, Burn=1%×1210=12.10 ✓",
+    "burn_calculation_5_percent": "Subtotal=1210, Burn=5%×1210=60.50 ✓",
+    "total_with_burn_cash": "1210 + 12.10 = 1222.10 ✓",
+    "total_with_burn_prc": "1210 + 60.50 = 1270.50 ✓"
+  }
+}

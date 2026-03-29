@@ -1349,7 +1349,7 @@ const RedeemPageV2 = ({ user }) => {
   
   const calculateCharges = async (amount) => {
     try {
-      const response = await axios.get(`${API}/redeem/calculate-charges?amount=${amount}`);
+      const response = await axios.get(`${API}/redeem/calculate-charges?amount=${amount}&user_id=${user.uid}`);
       setCharges(response.data.charges);
     } catch (error) {
       console.error('Error calculating charges:', error);
@@ -2635,10 +2635,19 @@ const RedeemPageV2 = ({ user }) => {
                         <span className="text-gray-400">Admin Charges (20%)</span>
                         <span className="text-orange-400">+₹{charges.admin_charge_inr} ({charges.admin_charge_prc} PRC)</span>
                       </div>
+                      {charges.burn_inr > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Burn ({charges.burn_rate_percent}%{charges.burn_payment_type === 'prc' ? ' - PRC Plan' : ''})</span>
+                          <span className="text-red-400">+₹{charges.burn_inr} ({charges.burn_prc} PRC)</span>
+                        </div>
+                      )}
                       <div className="flex justify-between pt-3 border-t border-gray-700">
                         <span className="text-amber-400 font-bold">Total</span>
                         <span className="text-xl font-bold text-amber-400">{charges.total_prc_required} PRC</span>
                       </div>
+                      {charges.burn_payment_type === 'prc' && (
+                        <p className="text-xs text-red-400/70 mt-1">PRC subscribers: 5% burn rate. Cash subscribers pay only 1%.</p>
+                      )}
                     </div>
                   </div>
                 )}
