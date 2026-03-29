@@ -1,53 +1,55 @@
-<analysis>**original_problem_statement**: The user is transitioning the platform to a Growth Economy System. Key requirements include a new dynamic mining formula (Base 500 + Team PRC), Subscription types (Cash = 100% speed/1% burn vs PRC = 70% speed/5% burn), a dynamic *cumulative* redeem limit based on network size (max 94.5%), and removing all old category-wise (Utility/Shop/Bank) redeem limits from the UI. 
+<analysis>**original_problem_statement**: The user is transitioning the platform to a Growth Economy System. Core requests included fixing a mathematical bug in the mining formula, adding active/inactive indicators on the referrals page, and implementing new dynamic PRC pricing for subscriptions and redemptions (incorporating a 20% admin fee and a variable burning rate: 5% for PRC subscriptions, 1% for Cash subscriptions). Currently, the user is facing a **CRITICAL production deployment blocker** where the application cannot connect to the production database.
 
-**User's preferred language**: Marathi mixed with technical English. (INSTRUCT NEXT AGENT: You MUST automatically detect the user's primary language and respond in Marathi mixed with technical English only).
+**User's preferred language**: (INSTRUCT NEXT AGENT: You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and respond in **Marathi mixed with technical English** only)
 
 **what currently exists?** 
-A React/FastAPI/MongoDB full-stack application. The backend calculates mining speed and cumulative redeem limits based on a Single-Leg network size. Subscriptions have dynamic burn rates (1% for Cash, 5% for PRC). The frontend has been cleaned up to remove legacy category limits and display unified redeem/mining statistics. 
+A React/FastAPI/MongoDB full-stack application featuring a Growth Economy. The mining formula cache logic is fixed. The referral page accurately displays active (green) vs inactive (red) users. Subscription and redemption pricing dynamically calculate based on the user's  (Cash = 1% burn/100% mining speed; PRC = 5% burn/70% mining speed). Redundant UI pricing breakdowns have been cleaned up. However, **Production deployment is currently broken** due to a MongoDB connection timeout/failure.
 
 **Last working item**: 
-    - **Last item agent was working**: Refining the  component UI. The user found the previous Available to Redeem math confusing and requested a clear Limit → Used → Balance visual layout, emphasizing that redemption comes from the actual PRC balance, not a separate available pool.
-    - **Status**: TESTING PENDING / USER VERIFICATION PENDING
-    - **Agent Testing Done**: N (The agent rewrote the file but ran out of context before taking a screenshot to verify the visual layout).
-    - **Which testing method agent to use?**: manual testing by screenshot tool (Take screenshots of the Dashboard and Redeem pages to verify the new UI layout).
-    - **User Testing Done**: N
+    - Last item agent was working: Debugging the production MongoDB connection string provided by the user. The agent ran a python script to test the user-provided MongoDB Atlas SRV string, but it failed with a  / Timeout error.
+    - Status: BLOCKED
+    - Agent Testing Done: Y (Tested the connection string via python script, it failed).
+    - Which testing method agent to use?: backend manual testing by python -c (to verify DB connection strings if provided again).
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:  
-  - Issue 1: Verify Updated Redeem Limit UI (P0)
-     - Attempted fixes: Rewrote  to strictly show Limit, Used amount, and actual Balance in a clearer format based on user-provided screenshots.
-     - Next debug checklist: Start frontend, navigate to Dashboard and , and use the screenshot tool to visually verify that the confusing Total Earned and separate Available metrics are replaced with the clear Limit/Used/Balance layout.
-     - Why fix this issue and what will be achieved with the fix?: Ensures user clarity on how much they can actually redeem based on their current balance and network tier.
-     - Status: TESTING PENDING
+  - Issue 1: Production Database Connection Failure (P0 - SEVERE)
+     - Attempted fixes: Agent ensured  files were removed from git tracking so they don't override production env vars. User provided their MongoDB connection string. Agent tested it, but it timed out.
+     - Next debug checklist: 
+        - The timeout () usually indicates that **MongoDB Atlas Network Access (IP Whitelisting)** is not configured correctly. The database is likely blocking external connections.
+        - Advise the user to go to MongoDB Atlas -> Network Access -> and add  (Allow Access from Anywhere) so the deployed app can connect.
+        - Verify if the  environment variable matches the actual database name in Atlas.
+     - Why fix this issue and what will be achieved with the fix?: 5000+ users are facing an outage. Fixing this restores production.
+     - Status: BLOCKED (Waiting on user to fix MongoDB Atlas network settings or provide correct string).
      - Is recurring issue? N
-     - Should Test frontend/backend/both after fix?: Frontend
-     - Blocked on other issue: None
+     - Should Test frontend/backend/both after fix?: Backend (Python DB connection test).
+     - Blocked on other issue: User action required on MongoDB Atlas.
 
 **In progress Task List**: 
-  - None active besides the UI verification mentioned above.
+  - None currently active besides the P0 deployment issue.
 
-**Upcoming and Future Tasks**:
+**Upcoming and Future Tasks**
     Upcoming Tasks:
-    - Razorpay Elite Pricing Update (P1): Update the Razorpay gateway pricing to the new ₹999 + 18% GST formula. (User explicitly requested this to be done on April 1, 2026).
+    - Razorpay Elite Pricing Update (P1): Update the Razorpay gateway pricing to the new ₹999 + 18% GST formula. (Requested for April 1, 2026. Note: Backend math was updated, but the actual Razorpay integration payload needs verification).
     
     Future Tasks:
-    - Refactor  (P3): Break down the massive 45,000+ line server file into smaller domain-specific modules inside .
-    - MongoDB → PostgreSQL migration (P4)
+    - Refactor  (P3): Break down the massive 45,000+ line server file into smaller domain-specific modules.
+    - MongoDB → PostgreSQL migration (P4).
 
 **Completed work in this session**
-- Updated Mining Formula (Base 500 + Team Bonus based on spreadsheet) (DONE)
-- Implemented Incremental Network Cap () (DONE)
-- Implemented Cumulative Redeem Limit (Tiers add up to max 94.5%) (DONE)
-- Fixed Login Bug caused by  vs  indexing collision for PIN auth (DONE)
-- Made PIN Input UI more compact (DONE)
-- Removed legacy category-wise (Utility/Shop/Bank) limits from Dashboard and Redeem pages (DONE)
-- Added Cash vs PRC Subscription Comparison Table to UI (DONE)
-- Implemented Dynamic Redeem Burn Rates (Cash Elite = 1%, PRC Elite = 5%) (DONE)
+- Fixed Mining Formula Math Logic (Replaced  with  to prevent stale cache reads) (DONE)
+- Removed formula breakdown from Mining page and added Active/Inactive dots to Direct Referrals list (DONE)
+- Implemented Dynamic Subscription & Redeem Burning Rules (Cash = 1%, PRC = 5%) (DONE)
+- Removed duplicate Fee Breakdown UI components from Bank Redeem and Unified Redeem pages (DONE)
+- Removed dead code from Redeem Limit formula (DONE)
+- Updated Network Capacity progress bar to use Active Network size instead of Total Network size (DONE)
+- Fixed  to ensure  files are not tracked, allowing production platform env vars to work properly (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-   - None
+   - None.
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: None
+  - Issue recurrence in previous fork: None. 
   - Recurrence count: 0
   - Status: RESOLVED
 
@@ -55,59 +57,70 @@ A React/FastAPI/MongoDB full-stack application. The backend calculates mining sp
 
 
 **Key Technical Concepts**
-- **Dynamic Burn Rate**: Elite users activating via Cash/Razorpay get a 1% burn rate on redemptions. Activating via PRC results in a 5% burn rate. Handled in .
-- **Cumulative Redeem Limit**: Network tiers are additive (e.g., tier 1 + tier 2 = total %). Max is 94.5%.
-- **Auth Sequence**: Login falls back sequentially. It checks  first, then . This is crucial because some legacy test users share the same 10-digit number across different fields.
+- **Burning Rules**: Determined by . 
+  -  (Razorpay/Manual): 100% mining speed, 1% burn rate.
+  - : 70% mining speed, 5% burn rate.
+- **Admin Fee**: Now a flat 20% on (Base + Processing) for subscriptions and redemptions.
+- **Network Capacity Bar**: Uses the formula . The cap dynamically increases based on direct referrals: .
+- **Environment Variables**:  must **never** be tracked in git. The platform injects this at deployment. 
 
 **key DB schema**
-  - : { prc_balance, subscription_payment_type (cash or prc), phone, mobile, pin_hash }
+  - : Relies heavily on  ('cash' or 'prc') to calculate burn rates and mining boost multipliers.
 
 **changes in tech stack**
   - None
 
 **All files of reference** 
--  (Rewritten at the end of the session to fix confusing UI).
--  (Contains the updated cumulative formulas and burn rates).
--  (Updated to fix login field collisions).
--  (Updated with comparison table).
+- 
+-  (Updated with dynamic burn rates)
+-  (Updated with active/inactive UI)
+-  &  (Updated  /  to accept dynamic burn rates).
 
 **Areas that need refactoring**: 
--  remains extremely large and needs modularization.
+-  (45k+ lines) must be modularized.
 
 **key api endpoints**
-- : Returns the cumulative dynamic redeem calculation.
-- : Returns base mining, network bonus, and active session data.
-- : Handles PIN auth with sequential phone/mobile lookup.
+- : Returns breakdown based on payment type.
+- : Accepts  to calculate accurate burn.
 
 **Critical Info for New Agent** 
-- **Subscription Payment Type**: The system now strictly differentiates between users who bought Elite via  (Razorpay/Admin) vs . This affects both their mining speed multiplier (100% vs 70%) and their redeem burn rate (1% vs 5%). 
-- **Terminology**: Never use Utility/Bank/Shopping limits. Everything is now a single unified Growth Network Limit. 
+- **DEPLOYMENT BLOCKER:** The user is highly stressed because 5000+ users are facing an outage. The deployed app cannot connect to their MongoDB Atlas database. 
+- You MUST explain to the user that the timeout error () from the connection string they provided almost certainly means their **MongoDB Atlas Network Access** is blocking the connection. They need to whitelist  in MongoDB Atlas. Do not waste time making code changes for this; it is an infrastructure/credential issue.
+- Be highly empathetic in Marathi regarding the deployment downtime.
 
 **documents and test reports created in this job** 
-  - /app/test_reports/iteration_151.json (Growth Economy Feature tests)
-  - /app/memory/PRD.md (Updated with latest completed items)
+  - /app/test_reports/iteration_155.json (Testing agent verification for Mining formula)
+  - /app/test_reports/iteration_156.json (Testing agent verification for Burning rules)
+  - /app/memory/PRD.md
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - *User*: Requested removal of confusing Total Available cards on Redeem pages, wanting Dashboard to show Total - Used = Available.
- - *Agent*: Updated Dashboard UI.
- - *User*: Shared screenshots stating the UI is still confusing. User needs clarity on Limit, Used, and Balance. Redeem comes from Balance, not total available.
- - *Agent*: Created/Overwrite  to implement the specific Limit -> Used -> Balance format. (Session ended before visual testing).
+ - *User*: Redeploy done but database connection issue.
+ - *Agent*: Fixed  to ensure  isn't pushed to repo.
+ - *User*: Deployment done but issue not resolved. 5000 users online!
+ - *Agent*: Realized  was still tracked in git. Removed it via .
+ - *User*: Checked deployment agent.
+ - *Agent*: Deployment agent passed. Told user to redeploy.
+ - *User*: Deployment done, still broken. Complained about wasted time/money.
+ - *Agent*: Explained that production env vars must be set in the platform deployment settings, not in code. Directed to support.
+ - *User*: Provided their MongoDB SRV string and asked Is this correct?
+ - *Agent*: Tested the string via bash. It timed out (), meaning it failed to connect. (Session ended before agent could reply to user).
 
 **Project Health Check:**
-- Broken: None.
-- Mocked: Dummy users exist for testing network counting ( is the primary test user).
+- Broken: Production Database Connection (Infrastructure/MongoDB Atlas issue, not codebase).
+- Mocked: Dummy test users exist in preview DB.
 
 **3rd Party Integrations** 
  • Razorpay (Payments) — requires User API Key
+ • MongoDB Atlas — currently failing to connect via user's provided string.
 
 **Testing status**
-  - Testing agent used after significant changes: YES (Iteration 151 verified backend math).
+  - Testing agent used after significant changes: YES (Iterations 155, 156)
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: NA
-  - Known regressions: None.
+  - Known regressions: None in code.
 
 **Credentials to test flow:**
-Check  (Use  / PIN  for testing the Growth Network logic).
+Check . 
 
 **What agent forgot to execute**
-The agent updated  based on the user's final feedback regarding UI confusion, but context ran out before taking a screenshot to verify the layout, and before calling the  tool for this specific UI refinement. Next agent MUST verify this UI change first.</analysis>
+The agent successfully completed all feature requests (Mining math, Burning rules, UI cleanups). However, right at the end, the user provided a MongoDB connection string that timed out when the agent tested it. The agent did not get a chance to reply to the user to explain *why* it failed (likely MongoDB Atlas IP whitelisting). The next agent must inform the user about MongoDB Atlas Network Access settings immediately.</analysis>
