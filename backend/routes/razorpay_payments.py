@@ -9,7 +9,13 @@ VERSION: 2.0 - With payment status verification from Razorpay API
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
-import razorpay
+try:
+    import razorpay
+    _HAS_RAZORPAY = True
+except ImportError:
+    razorpay = None
+    _HAS_RAZORPAY = False
+    print("[STARTUP] razorpay not installed - payment features disabled")
 import os
 import hmac
 import hashlib
@@ -26,7 +32,7 @@ RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
 RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET")
 
-if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
+if _HAS_RAZORPAY and RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
     razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 else:
     razorpay_client = None
