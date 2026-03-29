@@ -70,9 +70,9 @@ const SubscriptionPlans = ({ user }) => {
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [hasUnactivatedPayment, setHasUnactivatedPayment] = useState(false);
 
-  // PRC Rate for subscription (dynamic, 2x multiplier)
+  // PRC Rate for subscription (fetched from backend)
   const [prcRate, setPrcRate] = useState(10);
-  const PRC_MULTIPLIER = 2;
+  const [elitePrcPrice, setElitePrcPrice] = useState(null); // Full pricing from backend
 
   // New Pricing (March 2026) - ₹999 + 18% GST = ₹1178.82
   // No more special offers - standard GST pricing
@@ -123,7 +123,21 @@ const SubscriptionPlans = ({ user }) => {
           setPrcRate(rateRes.data.current_rate);
         }
       } catch (err) {
-        // console.log('Using default PRC rate');
+        // Admin endpoint may require auth, fallback to elite-pricing below
+      }
+      
+      // Fetch exact PRC subscription pricing from backend
+      try {
+        const prcPriceRes = await axios.get(`${API}/subscription/elite-pricing`);
+        if (prcPriceRes.data?.success) {
+          setElitePrcPrice(prcPriceRes.data);
+          // Also set PRC rate from this response (always available)
+          if (prcPriceRes.data?.pricing?.prc_rate) {
+            setPrcRate(prcPriceRes.data.pricing.prc_rate);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch elite PRC pricing:', err);
       }
       
       // Get gateway statuses from public settings
@@ -366,10 +380,20 @@ const SubscriptionPlans = ({ user }) => {
     return selectedPlan.pricing[selectedDuration] || selectedPlan.pricing.monthly;
   };
 
-  // Calculate PRC price for subscription (Price × 2 × prcRate)
+  // Calculate PRC price for subscription from backend pricing
   const getPRCPrice = () => {
+    // Use exact backend-calculated price
+    if (elitePrcPrice?.total_prc_required) {
+      return Math.round(elitePrcPrice.total_prc_required * 100) / 100;
+    }
+    if (elitePrcPrice?.pricing?.total_prc) {
+      return Math.round(elitePrcPrice.pricing.total_prc * 100) / 100;
+    }
+    // Fallback: manual calculation with correct formula
     const inrPrice = getPrice();
-    return inrPrice * PRC_MULTIPLIER * prcRate;
+    const processingFee = 10;
+    const adminCharge = inrPrice * 0.20; // 20% admin
+    return Math.round((inrPrice + processingFee + adminCharge) * prcRate);
   };
 
   // Handle PRC Payment for Subscription
@@ -1445,8 +1469,8 @@ const SubscriptionPlans = ({ user }) => {
               {/* PRC Rate Display with Breakdown */}
               <PRCRateDisplay 
                 amount={getPrice()}
-                processingFee={0}
-                adminChargePercent={100}
+                processingFee={10}
+                adminChargePercent={20}
                 showBreakdown={true}
                 showRateAlert={true}
                 serviceType="subscription"

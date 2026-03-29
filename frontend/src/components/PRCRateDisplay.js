@@ -35,23 +35,42 @@ const PRCRateDisplay = ({
 
   const fetchCurrentRate = async () => {
     try {
+      // Try admin endpoint first (if user has access)
       const response = await axios.get(`${API}/admin/prc-rate/current`);
       if (response.data.success) {
         setCurrentRate(response.data.current_rate || 10);
         setRateSource(response.data.source || 'default');
       }
     } catch (error) {
-      console.error('Error fetching PRC rate:', error);
-      setCurrentRate(10);
+      // Fallback to public economy endpoint
+      try {
+        const econRes = await axios.get(`${API}/prc-economy/current-rate`);
+        if (econRes.data?.success && econRes.data?.rate?.final_rate) {
+          setCurrentRate(econRes.data.rate.final_rate);
+          setRateSource('dynamic_economy');
+        }
+      } catch (err2) {
+        // Fallback to elite-pricing endpoint
+        try {
+          const priceRes = await axios.get(`${API}/subscription/elite-pricing`);
+          if (priceRes.data?.pricing?.prc_rate) {
+            setCurrentRate(priceRes.data.pricing.prc_rate);
+            setRateSource('elite_pricing');
+          }
+        } catch (err3) {
+          console.error('All PRC rate endpoints failed');
+          setCurrentRate(10);
+        }
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Calculate PRC values - admin on (amount + processing) to match backend
+  // Calculate PRC values - admin charge on amount only (matches backend formula)
   const amountInPRC = Math.round(amount * currentRate);
   const processingFeeInPRC = Math.round(processingFee * currentRate);
-  const adminChargeInPRC = Math.round((amountInPRC + processingFeeInPRC) * adminChargePercent / 100);
+  const adminChargeInPRC = Math.round(amount * adminChargePercent / 100 * currentRate);
   const totalBeforeBurn = amountInPRC + processingFeeInPRC + adminChargeInPRC;
   const burnPRC = Math.round(totalBeforeBurn * burnRate / 100);
   const totalPRC = totalBeforeBurn + burnPRC;
