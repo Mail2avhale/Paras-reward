@@ -14,5 +14,5 @@
 - Burn Rate: 5%
 
 ## Admin
-- Email: Admin@paras.com
+- Email: admin@test.com
 - PIN: 153759
