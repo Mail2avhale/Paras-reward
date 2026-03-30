@@ -37,6 +37,8 @@ const AdminDashboard = ({ user }) => {
   const [bulkFixing, setBulkFixing] = useState(false);
   const [bulkFixResult, setBulkFixResult] = useState(null);
   const [bulkFixJob, setBulkFixJob] = useState(null);
+  const [redeemLimits, setRedeemLimits] = useState(null);
+  const [redeemLoading, setRedeemLoading] = useState(false);
 
   // Check for running bulk fix job on load
   useEffect(() => {
@@ -150,10 +152,20 @@ const AdminDashboard = ({ user }) => {
 
   useEffect(() => {
     fetchDashboardData();
-    // Auto-refresh every 2 minutes
     const interval = setInterval(() => fetchDashboardData(true), 120000);
     return () => clearInterval(interval);
   }, []);
+
+  const fetchRedeemLimits = async () => {
+    setRedeemLoading(true);
+    try {
+      const res = await axios.get(`${API}/admin/redeem-limits-overview`);
+      setRedeemLimits(res.data);
+    } catch { }
+    setRedeemLoading(false);
+  };
+
+  useEffect(() => { fetchRedeemLimits(); }, []);
 
   // Memoize computed values
   const subscriptionStats = useMemo(() => ({
@@ -643,6 +655,94 @@ const AdminDashboard = ({ user }) => {
           <QuickActionCard icon={AlertTriangle} label="PRC Ctrl" color="orange" onClick={() => navigate('/admin/prc-economy')} />
           <QuickActionCard icon={Settings} label="Settings" color="gray" onClick={() => navigate('/admin/settings/system')} />
         </div>
+      </Card>
+
+      {/* Redeem Limits Overview */}
+      <Card className="p-5 bg-white border-slate-200 rounded-2xl shadow-sm" data-testid="redeem-limits-section">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+            <div className="p-2 bg-emerald-100 rounded-xl">
+              <Wallet className="w-5 h-5 text-emerald-600" />
+            </div>
+            Redeem Limits Overview
+          </h3>
+          <Button variant="ghost" size="sm" onClick={fetchRedeemLimits} disabled={redeemLoading} className="text-emerald-600 hover:bg-emerald-50 rounded-xl">
+            {redeemLoading ? 'Loading...' : 'Refresh'}
+          </Button>
+        </div>
+
+        {/* Aggregate Stats */}
+        {redeemLimits?.aggregate && (
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-4" data-testid="redeem-aggregate">
+            <div className="bg-slate-50 rounded-xl p-3 text-center">
+              <p className="text-lg font-bold text-slate-800">{redeemLimits.aggregate.total_users}</p>
+              <p className="text-[10px] text-slate-500">Users</p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-3 text-center">
+              <p className="text-lg font-bold text-blue-600">{(redeemLimits.aggregate.total_balance || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500">Total Balance</p>
+            </div>
+            <div className="bg-purple-50 rounded-xl p-3 text-center">
+              <p className="text-lg font-bold text-purple-600">{(redeemLimits.aggregate.total_earned || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500">Total Earned</p>
+            </div>
+            <div className="bg-emerald-50 rounded-xl p-3 text-center">
+              <p className="text-lg font-bold text-emerald-600">{(redeemLimits.aggregate.total_redeemable || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500">Redeemable</p>
+            </div>
+            <div className="bg-amber-50 rounded-xl p-3 text-center">
+              <p className="text-lg font-bold text-amber-600">{(redeemLimits.aggregate.total_redeemed || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500">Redeemed</p>
+            </div>
+            <div className="bg-cyan-50 rounded-xl p-3 text-center">
+              <p className="text-lg font-bold text-cyan-600">{(redeemLimits.aggregate.total_available || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500">Available</p>
+            </div>
+          </div>
+        )}
+
+        {/* User-wise Table */}
+        {redeemLimits?.users?.length > 0 && (
+          <div className="overflow-x-auto max-h-80 overflow-y-auto rounded-xl border border-slate-200" data-testid="redeem-users-table">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50 sticky top-0 z-10">
+                <tr className="text-slate-500 text-left">
+                  <th className="px-3 py-2 font-medium">User</th>
+                  <th className="px-3 py-2 font-medium text-right">Balance</th>
+                  <th className="px-3 py-2 font-medium text-right">Unlock %</th>
+                  <th className="px-3 py-2 font-medium text-right">Redeemable</th>
+                  <th className="px-3 py-2 font-medium text-right">Used</th>
+                  <th className="px-3 py-2 font-medium text-right">Available</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {redeemLimits.users.map((u) => (
+                  <tr key={u.uid} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-3 py-2">
+                      <p className="font-medium text-slate-800 truncate max-w-[120px]">{u.name || 'N/A'}</p>
+                      <p className="text-[10px] text-slate-400">{u.mobile || u.uid.slice(0, 8)}</p>
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-slate-700">{u.balance.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right">
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        u.unlock_percent >= 50 ? 'bg-emerald-100 text-emerald-700' :
+                        u.unlock_percent >= 20 ? 'bg-amber-100 text-amber-700' :
+                        'bg-slate-100 text-slate-600'
+                      }`}>{u.unlock_percent}%</span>
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-emerald-600">{u.redeemable.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right font-mono text-amber-600">{u.total_redeemed.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right font-mono font-bold text-cyan-600">{u.available.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {redeemLoading && !redeemLimits && (
+          <div className="text-center py-8 text-slate-400 text-sm">Loading redeem limits data...</div>
+        )}
       </Card>
 
       {/* KYC & Activity Section - BULKPE STYLE */}

@@ -20232,6 +20232,85 @@ async def admin_refund_transaction(request: Request):
     }
 
 
+@api_router.get("/admin/redeem-limits-overview")
+async def admin_redeem_limits_overview():
+    """
+    Admin endpoint: Get redeem limit overview for all users.
+    Returns aggregate totals + per-user breakdown.
+    """
+    try:
+        from routes.growth_economy import calculate_growth_level
+        
+        # Get all users with balance > 0
+        users = await db.users.find(
+            {"prc_balance": {"$gt": 0}},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile_number": 1, "prc_balance": 1, "subscription_plan": 1}
+        ).to_list(None)
+        
+        user_data = []
+        agg_total_earned = 0
+        agg_total_redeemable = 0
+        agg_total_redeemed = 0
+        agg_total_available = 0
+        agg_total_balance = 0
+        
+        for u in users:
+            uid = u["uid"]
+            try:
+                limit_info = await calculate_user_redeem_limit(uid)
+            except Exception:
+                limit_info = {"total_earned": 0, "unlock_percent": 0, "redeemable": 0, "total_redeemed": 0, "effective_available": 0, "network_size": 0}
+            
+            balance = float(u.get("prc_balance", 0) or 0)
+            total_earned = limit_info.get("total_earned", 0)
+            unlock_pct = limit_info.get("unlock_percent", 0)
+            redeemable = limit_info.get("redeemable", 0)
+            total_redeemed = limit_info.get("total_redeemed", 0)
+            available = limit_info.get("effective_available", 0)
+            network_size = limit_info.get("network_size", 0)
+            
+            user_data.append({
+                "uid": uid,
+                "name": u.get("name", ""),
+                "mobile": u.get("mobile_number", ""),
+                "plan": u.get("subscription_plan", "explorer"),
+                "balance": round(balance, 2),
+                "total_earned": round(total_earned, 2),
+                "unlock_percent": round(unlock_pct, 2),
+                "redeemable": round(redeemable, 2),
+                "total_redeemed": round(total_redeemed, 2),
+                "available": round(available, 2),
+                "network_size": network_size,
+            })
+            
+            agg_total_earned += total_earned
+            agg_total_redeemable += redeemable
+            agg_total_redeemed += total_redeemed
+            agg_total_available += available
+            agg_total_balance += balance
+        
+        # Sort by balance desc
+        user_data.sort(key=lambda x: x["balance"], reverse=True)
+        
+        return {
+            "aggregate": {
+                "total_users": len(user_data),
+                "total_balance": round(agg_total_balance, 2),
+                "total_earned": round(agg_total_earned, 2),
+                "total_redeemable": round(agg_total_redeemable, 2),
+                "total_redeemed": round(agg_total_redeemed, 2),
+                "total_available": round(agg_total_available, 2),
+            },
+            "users": user_data,
+        }
+    except Exception as e:
+        logging.error(f"Admin redeem limits overview error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @api_router.post("/admin/override-redeem-limit")
 async def admin_override_redeem_limit(request: Request):
     """
