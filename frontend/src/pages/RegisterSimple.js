@@ -159,7 +159,40 @@ const RegisterSimple = () => {
       navigate('/login');
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error(error.response?.data?.detail || 'Registration failed. Please try again.');
+      const detail = error.response?.data?.detail || '';
+      const status = error.response?.status;
+      
+      // Map backend errors to specific field errors for clear user feedback
+      const fieldErrors = {};
+      
+      if (detail.toLowerCase().includes('mobile number already registered')) {
+        fieldErrors.mobile = 'This mobile number is already registered. Please login instead.';
+      } else if (detail.toLowerCase().includes('mobile number must be')) {
+        fieldErrors.mobile = 'Please enter a valid 10-digit mobile number.';
+      } else if (detail.toLowerCase().includes('email already registered')) {
+        fieldErrors.email = 'This email is already registered. Please login instead.';
+      } else if (detail.toLowerCase().includes('invalid email')) {
+        fieldErrors.email = 'Please enter a valid email address.';
+      } else if (detail.toLowerCase().includes('pin must be')) {
+        fieldErrors.pin = 'PIN must be exactly 6 digits.';
+      } else if (detail.toLowerCase().includes('pin cannot be all same')) {
+        fieldErrors.pin = 'PIN cannot be all same digits (e.g., 111111).';
+      } else if (detail.toLowerCase().includes('full name')) {
+        fieldErrors.full_name = 'Full name must be at least 2 characters.';
+      } else if (detail.toLowerCase().includes('invalid referral')) {
+        fieldErrors.referral_code = 'Invalid referral code. Please check and try again.';
+      } else if (status === 403) {
+        fieldErrors.general = detail || 'Registrations are currently closed. Please try again later.';
+      }
+      
+      if (Object.keys(fieldErrors).length > 0) {
+        setErrors(fieldErrors);
+        // Show the most relevant error as toast
+        const firstError = Object.values(fieldErrors)[0];
+        toast.error(firstError);
+      } else {
+        toast.error(detail || 'Registration failed. Please check your details and try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -200,6 +233,13 @@ const RegisterSimple = () => {
 
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* General Error Banner */}
+          {errors.general && (
+            <div data-testid="register-general-error" className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{errors.general}</p>
+            </div>
+          )}
           {/* Full Name */}
           <div>
             <Label htmlFor="full_name">Full Name *</Label>

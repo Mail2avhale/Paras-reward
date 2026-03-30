@@ -148,17 +148,23 @@ async def simple_register(request: Request):
     if len(set(password)) == 1:
         raise HTTPException(status_code=400, detail="PIN cannot be all same digits (e.g., 111111)")
     
+    if not full_name or full_name.strip() == "":
+        raise HTTPException(status_code=400, detail="Full name is required")
+    
     if full_name and len(full_name) < 2:
         raise HTTPException(status_code=400, detail="Full name must be at least 2 characters")
     
-    if mobile:
-        mobile = mobile.replace(" ", "").replace("-", "")
-        if not mobile.isdigit() or len(mobile) != 10:
-            raise HTTPException(status_code=400, detail="Mobile number must be 10 digits")
-        
-        existing_mobile = await db.users.find_one({"mobile": mobile})
-        if existing_mobile:
-            raise HTTPException(status_code=400, detail="Mobile number already registered")
+    # Mobile is REQUIRED
+    if not mobile:
+        raise HTTPException(status_code=400, detail="Mobile number is required")
+    
+    mobile = mobile.replace(" ", "").replace("-", "")
+    if not mobile.isdigit() or len(mobile) != 10:
+        raise HTTPException(status_code=400, detail="Mobile number must be 10 digits")
+    
+    existing_mobile = await db.users.find_one({"mobile": mobile})
+    if existing_mobile:
+        raise HTTPException(status_code=400, detail="Mobile number already registered")
     
     if "@" not in email:
         raise HTTPException(status_code=400, detail="Invalid email format")
