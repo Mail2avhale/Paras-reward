@@ -1,0 +1,631 @@
+================================================================================
+                    PARAS REWARD - COMPLETE USER GUIDE
+                    ===================================
+                    From Registration to Redemption
+                    Everything You Need to Know
+================================================================================
+
+
+TABLE OF CONTENTS
+-----------------
+1. What is Paras Reward?
+2. Registration (Sign Up)
+3. Login
+4. Dashboard & Home
+5. Subscription Plans (Explorer vs Elite)
+6. Mining - How You Earn PRC Daily
+7. 3-Tier Network Cap - How Your Network Grows
+8. Referrals - Invite & Earn More
+9. Growth Network & Redeem Unlock System
+10. Profile & KYC Verification
+11. Redeem Options (How to Use Your PRC)
+    a. Gift Vouchers
+    b. Bank Transfer
+    c. Bill Payments & Recharges (BBPS)
+    d. Flash Sales
+12. Gift Subscription (Share Elite with Friends)
+13. PRC Economy - How PRC Value Works
+14. Charges & Fees Explained
+15. FAQ - Common Questions
+
+
+================================================================================
+1. WHAT IS PARAS REWARD?
+================================================================================
+
+Paras Reward is a rewards-based platform where users earn PRC (Paras Reward 
+Coins) daily through mining. The more you grow your network, the more you 
+earn. PRC can be redeemed for real value - gift vouchers, bill payments, 
+bank transfers, and more.
+
+Key Concept:
+- PRC = Paras Reward Coin (Digital reward currency)
+- 1 PRC has a dynamic INR value (changes based on ecosystem health)
+- You earn PRC every day through mining
+- You spend PRC on real services and products
+
+
+================================================================================
+2. REGISTRATION (SIGN UP)
+================================================================================
+
+How to Register:
+1. Open the Paras Reward app/website
+2. Click "Sign Up"
+3. Fill in the required details:
+   - Full Name (minimum 2 characters)
+   - Email Address (unique - one account per email)
+   - Mobile Number (10-digit Indian mobile, unique per account)
+   - 6-Digit PIN (your login password - cannot be all same digits like 111111)
+   - Referral Code (optional - if someone invited you)
+
+Important Notes:
+- Mobile number is REQUIRED and must be a valid 10-digit number
+- Each mobile number and email can only be used for ONE account
+- If you have a referral code, enter it during registration to be part of 
+  someone's network (this benefits both you and the referrer)
+- You start as an "Explorer" (free plan) after registration
+
+
+================================================================================
+3. LOGIN
+================================================================================
+
+How to Login:
+1. Open the app and click "Sign In"
+2. Enter your Email / Mobile Number / UID
+3. Click "Sign In"
+4. Enter your 6-Digit PIN (individual digit boxes)
+5. You're logged in!
+
+Features:
+- "Remember ID" option to save your login identifier
+- "Forgot PIN?" option to reset your PIN
+- Session-based login (stays logged in until you log out)
+
+
+================================================================================
+4. DASHBOARD & HOME
+================================================================================
+
+After login, your dashboard shows:
+- Your PRC Balance (total reward coins)
+- Mining Speed (100% for Cash Elite, 70% for PRC Elite)
+- Elite Plan status (Active/Expired with dates)
+- Profile completion percentage
+- Quick action buttons: Rewards, Invite, Redeem, Share
+
+Bottom Navigation:
+- Home: Dashboard
+- Rewards: Mining page
+- Invite Friends: Referral page
+- Profile: Your account settings
+
+
+================================================================================
+5. SUBSCRIPTION PLANS
+================================================================================
+
+There are 2 main plans:
+
++-------------------+----------------------------+----------------------------+
+|                   | EXPLORER (Free)            | ELITE (Paid)               |
++-------------------+----------------------------+----------------------------+
+| Cost              | FREE                       | Option 1: Rs.999 + 18% GST|
+|                   |                            | = Rs.1,178.82 (Razorpay)   |
+|                   |                            | Option 2: 16,477 PRC       |
+|                   |                            | (includes 5% burn)         |
++-------------------+----------------------------+----------------------------+
+| Mining            | Can START mining           | Can START and COLLECT      |
+|                   | (see your speed)           | mined PRC                  |
+|                   | CANNOT collect PRC         |                            |
++-------------------+----------------------------+----------------------------+
+| Mining Speed      | Shows 100% (demo only)     | Cash: 100% speed           |
+|                   |                            | PRC: 70% speed             |
++-------------------+----------------------------+----------------------------+
+| Burn Rate         | N/A                        | Cash: 1% burn              |
+| (on services)     |                            | PRC: 5% burn               |
++-------------------+----------------------------+----------------------------+
+| Duration          | Unlimited                  | 28 days from activation    |
++-------------------+----------------------------+----------------------------+
+| Redeem            | NOT available              | Available (Gift vouchers,  |
+|                   |                            | bank, bills, etc.)         |
++-------------------+----------------------------+----------------------------+
+
+Payment Methods for Elite:
+1. Razorpay (Cash/UPI/Card): Rs.999 + 18% GST = Rs.1,178.82
+   - Sets subscription_payment_type = "cash"
+   - Mining speed: 100%
+   - Burn rate on services: 1%
+
+2. PRC Payment: 16,477 PRC (includes 5% burn)
+   - Sets subscription_payment_type = "prc"
+   - Mining speed: 70%
+   - Burn rate on services: 5%
+
+Tip: Cash payment gives you BETTER mining speed (100% vs 70%) and 
+LOWER burn rates (1% vs 5%). PRC payment is for users with large PRC balance.
+
+
+================================================================================
+6. MINING - HOW YOU EARN PRC DAILY
+================================================================================
+
+Mining is how you earn PRC every day. Think of it as daily rewards.
+
+How Mining Works:
+1. Go to "Rewards" page
+2. Click "Start Mining" 
+3. Mining session runs for 24 hours
+4. Watch your PRC grow in real-time (per second)
+5. After session ends (or anytime), click "Collect" to add PRC to your balance
+6. A new session auto-starts after collection
+
+Mining Formula:
+- Base Mining: 500 PRC/day (your own mining, everyone gets this)
+- Network Bonus: Network_Size x PRC_per_user
+- Total Daily PRC = (500 + Network Bonus) x Speed Multiplier
+
+PRC Per User Formula (decreasing as network grows):
+  PRC_per_user = max(2.5, 5 x (21 - log2(N)) / 14)
+
+  Where N = your effective network size
+
+  Examples:
+  +----------------+---------------+
+  | Network Size   | PRC per User  |
+  +----------------+---------------+
+  |       2        |    7.14       |
+  |      10        |    6.10       |
+  |     100        |    4.62       |
+  |    1000        |    3.56       |
+  |    4000        |    2.86       |
+  |   16384        |    2.50       |
+  +----------------+---------------+
+
+Speed Multiplier:
+- Explorer: 100% (but CANNOT collect - demo only)
+- Elite (Cash/Razorpay): 100%
+- Elite (PRC payment): 70%
+
+Example Calculations:
+- Solo user (no network): 500 PRC/day
+- 10 active network: 500 + (10 x 6.10) = 561 PRC/day
+- 100 active network: 500 + (100 x 4.62) = 962 PRC/day
+- 1000 active network: 500 + (1000 x 3.56) = 4,060 PRC/day
+- 4000 active network: 500 + (4000 x 2.86) = 11,940 PRC/day
+
+Important: "Active" network members = Elite subscribers who are actively mining.
+Explorer users do NOT count in your network.
+
+
+================================================================================
+7. 3-TIER NETWORK CAP - HOW YOUR NETWORK GROWS
+================================================================================
+
+Your network doesn't give unlimited bonus. There's a smart 3-Tier cap system 
+that rewards team builders:
+
+FORMULA: Network Cap = min(6000, 800 + 16xD + 5xL1)
+
+Where:
+  D  = Your Direct Referrals (people YOU invited)
+  L1 = L1 Indirect Referrals (people YOUR referrals invited)
+
++--------+--------------------+------------------+---------------------------+
+| TIER   | RANGE              | HOW TO GROW      | DETAILS                   |
++--------+--------------------+------------------+---------------------------+
+| Tier 1 | 0 to 800           | Single Leg       | Everyone starts with 800  |
+| (Base) |                    | (auto)           | cap. No effort needed.    |
++--------+--------------------+------------------+---------------------------+
+| Tier 2 | 800 to 4000        | Direct Referrals | +16 cap per direct        |
+|        |                    | (you invite)     | referral you bring.       |
+|        |                    |                  | Need 200 directs for max. |
++--------+--------------------+------------------+---------------------------+
+| Tier 3 | 4000 to 6000       | L1 Indirect      | +5 cap per L1 indirect.   |
+|        |                    | (your referrals  | Need 400 L1 indirects     |
+|        |                    |  invite others)  | for max 6000.             |
++--------+--------------------+------------------+---------------------------+
+
+Examples:
++------------------+------------------+---------+
+| Direct Referrals | L1 Indirects     | Cap     |
++------------------+------------------+---------+
+|        0         |        0         |   800   |
+|       10         |        0         |   960   |
+|       50         |        0         | 1,600   |
+|      100         |        0         | 2,400   |
+|      200         |        0         | 4,000   |
+|      200         |      100         | 4,500   |
+|      200         |      200         | 5,000   |
+|      200         |      400         | 6,000   |  (Maximum!)
++------------------+------------------+---------+
+
+What this means:
+- Even without inviting anyone, you can benefit from up to 800 network members
+- Start inviting friends to unlock Tier 2 (up to 4000 cap)
+- When YOUR friends invite THEIR friends, you unlock Tier 3 (up to 6000 cap)
+- Maximum network benefit: 6000 active mining members in your tree
+
+
+================================================================================
+8. REFERRALS - INVITE & EARN MORE
+================================================================================
+
+How Referrals Work:
+1. Go to "Invite Friends" page
+2. Copy your unique referral link or referral code
+3. Share with friends via WhatsApp, SMS, or social media
+4. When they register using your code, they become your Direct Referral
+
+What You See on Referrals Page:
+- Your Referral Link & Code
+- Direct Referrals count (people you invited)
+- Network Size (total active members in your tree)
+- Network Capacity progress bar (shows how full your cap is)
+- List of your Direct Referrals with their status (Active/Inactive)
+
+Why Referrals Matter:
+1. Each direct referral adds +16 to your Network Cap (Tier 2)
+2. Their referrals add +5 to your cap (Tier 3 - L1 Indirects)
+3. More cap = more network members counted = more mining PRC/day
+4. Active Elite members in your network boost your daily earnings
+
+
+================================================================================
+9. GROWTH NETWORK & REDEEM UNLOCK SYSTEM
+================================================================================
+
+Your ability to redeem PRC is NOT 100% from day one. It unlocks gradually 
+based on your network size:
+
+Growth Level & Redeem Unlock:
++----------------+-------------------+-------------------------+
+| Network Size   | Tier Contribution | Cumulative Unlock %     |
++----------------+-------------------+-------------------------+
+|       2        |      3.5%         |       3.5%              |
+|       4        |      4.0%         |       7.5%              |
+|       8        |      4.5%         |      12.0%              |
+|      16        |      5.0%         |      17.0%              |
+|      32        |      5.5%         |      22.5%              |
+|      64        |      6.0%         |      28.5%              |
+|     128        |      6.5%         |      35.0%              |
+|     256        |      7.0%         |      42.0%              |
+|     512        |      7.5%         |      49.5%              |
+|   1,024        |      8.0%         |      57.5%              |
+|   2,048        |      8.5%         |      66.0%              |
+|   4,096        |      9.0%         |      75.0%              |
+|   8,192        |      9.5%         |      84.5%              |
+|  16,384        |     10.0%         |      94.5%              |
++----------------+-------------------+-------------------------+
+
+What this means:
+- With 16 active network members, you can redeem up to 17% of your PRC balance
+- With 128 members, you can redeem up to 35%
+- With 1024 members, you can redeem up to 57.5%
+- Maximum unlock: 94.5% (at 16,384+ network)
+
+This ensures the ecosystem grows sustainably. The more you build your 
+network, the more you can redeem.
+
+
+================================================================================
+10. PROFILE & KYC VERIFICATION
+================================================================================
+
+Profile Section:
+- View and edit your personal details
+- See your subscription status
+- Profile completion percentage
+- PRC Statement (transaction history)
+- Support tickets
+
+KYC (Know Your Customer):
+- Required for bank transfers
+- Two modes: Auto KYC and Manual KYC
+- Verify your identity for secure transactions
+- Must be completed before you can withdraw to bank
+
+Profile Completion:
+- Mobile Number verification
+- KYC Verification
+- Location details
+- Complete profile unlocks full features
+
+
+================================================================================
+11. REDEEM OPTIONS - HOW TO USE YOUR PRC
+================================================================================
+
+Once you have an Elite subscription and sufficient PRC balance, you can 
+redeem your PRC in multiple ways:
+
+--------------------------------------------------------------------------------
+11a. GIFT VOUCHERS
+--------------------------------------------------------------------------------
+
+Redeem PRC for gift vouchers (digital gift cards).
+
+Available Denominations:
+- Rs.100
+- Rs.500 (Popular)
+- Rs.1,000
+- Rs.5,000
+
+Charges on Gift Vouchers:
+- Voucher Value (in PRC at dynamic rate)
+- + Processing Fee: Rs.10 (converted to PRC)
+- + Admin Charges: 20% of voucher PRC value
+- + Burn: 1% (Cash Elite) or 5% (PRC Elite)
+
+Processing Time: Up to 48 hours after request submission.
+You receive a digital voucher code after admin approval.
+
+--------------------------------------------------------------------------------
+11b. BANK TRANSFER
+--------------------------------------------------------------------------------
+
+Transfer PRC value directly to your bank account.
+
+Requirements:
+- Elite subscription (active)
+- KYC verification completed
+- Valid bank account details (Account Number + IFSC Code)
+
+Limits:
+- Minimum withdrawal: Rs.200
+- Maximum withdrawal: Rs.10,000
+
+Charges:
+- Burn: 1% (Cash Elite) or 5% (PRC Elite)
+- Processing Fee: Rs.10
+- Admin Charges: 20%
+
+Process:
+1. Go to Bank Redeem page
+2. Enter withdrawal amount
+3. Enter bank account number and IFSC code
+4. IFSC gets auto-verified (shows bank name)
+5. Submit request
+6. Admin reviews and processes the transfer
+
+--------------------------------------------------------------------------------
+11c. BILL PAYMENTS & RECHARGES (BBPS Services)
+--------------------------------------------------------------------------------
+
+Pay real bills directly using your PRC balance! Powered by BBPS 
+(Bharat Bill Payment System).
+
+Available Services:
+
+RECHARGE:
+- Mobile Prepaid Recharge
+- Mobile Postpaid Bill
+- DTH Recharge
+
+UTILITY BILLS:
+- Electricity Bill
+- Gas Bill (PNG)
+- Water Bill
+- LPG Cylinder
+
+TELECOM:
+- Broadband
+- Landline
+- Cable TV
+
+FINANCIAL:
+- EMI Payment
+- Credit Card Bill
+- Insurance Premium
+- Loan Repayment
+
+TRANSPORT:
+- FASTag Recharge
+- Traffic Challan
+
+OTHERS:
+- Education Fees
+- Municipal Tax
+- Housing Society
+- Hospital Payment
+- OTT & Subscription (Netflix, etc.)
+- Municipal Corporation (Metro)
+
+How Bill Payment Works:
+1. Select the service (e.g., Electricity)
+2. Choose your operator/provider
+3. Enter your consumer/account number
+4. System fetches your pending bill (if available)
+5. Confirm payment
+6. PRC is deducted from your balance
+7. Bill is paid directly to the provider
+
+Charges on Bill Payments:
+- PRC equivalent of bill amount (at dynamic rate)
+- + Processing Fee: Rs.10
+- + Admin Charges: 20%
+- + Burn: 1% or 5% based on subscription type
+
+--------------------------------------------------------------------------------
+11d. FLASH SALES
+--------------------------------------------------------------------------------
+
+Special limited-time deals on products at discounted PRC prices.
+- Check the Flash Sales page regularly
+- Products available at special prices
+- First come, first served
+- Limited stock per sale
+
+
+================================================================================
+12. GIFT SUBSCRIPTION - SHARE ELITE WITH FRIENDS
+================================================================================
+
+As an Elite user, you can gift a 24-hour Elite subscription to your 
+direct referrals (L1 referrals).
+
+How it works:
+1. You must be an active Elite member
+2. Go to the Gift Subscription feature
+3. See your list of direct referrals
+4. Select a referral to gift
+5. They receive 24 hours of Elite access
+
+Why gift?
+- Your referral can start mining and COLLECTING PRC
+- They become an ACTIVE network member (counts in your mining bonus)
+- They experience Elite features, encouraging them to subscribe
+- Win-win: you earn more mining bonus, they earn PRC
+
+
+================================================================================
+13. PRC ECONOMY - HOW PRC VALUE WORKS
+================================================================================
+
+PRC has a dynamic value that changes based on ecosystem health.
+
+Current Rate: Check /api/prc-economy/current-rate (shown in app)
+
+The PRC-to-INR rate is determined by 5 ecosystem factors:
+1. Total PRC in circulation
+2. Active user count
+3. Transaction volume
+4. Redemption demand
+5. Network growth
+
+Important:
+- PRC rate is NOT fixed - it's dynamic
+- Higher ecosystem activity = better rate
+- All prices (subscriptions, services) adjust based on current rate
+- The app always shows you the current rate before any transaction
+
+Example:
+If PRC rate = 11 (1 INR = 11 PRC):
+- Rs.100 voucher = 1,100 PRC base value
+- Rs.1,000 bank transfer = 11,000 PRC base value
+(+ charges applied on top)
+
+
+================================================================================
+14. CHARGES & FEES EXPLAINED
+================================================================================
+
+Every redemption transaction has these components:
+
+1. BASE VALUE: The PRC equivalent of your desired INR amount
+   Formula: INR Amount x PRC Rate = Base PRC
+
+2. BURN (Ecosystem Health):
+   - Cash/Razorpay Elite: 1% burn
+   - PRC Elite: 5% burn
+   Purpose: Burns PRC from circulation to maintain value
+
+3. PROCESSING FEE: Rs.10 (converted to PRC at current rate)
+   Purpose: Covers transaction processing costs
+
+4. ADMIN CHARGES: 20% of base PRC
+   Purpose: Platform operational costs
+
+TOTAL PRC DEDUCTED = Base PRC + Burn + Processing Fee + Admin Charges
+YOU RECEIVE = INR equivalent of Base PRC
+
+Example (Cash Elite, PRC Rate = 11):
+You want to redeem Rs.1,000:
+- Base PRC: 1000 x 11 = 11,000 PRC
+- Burn (1%): 110 PRC
+- Processing (Rs.10): 110 PRC
+- Admin (20%): 2,200 PRC
+- TOTAL DEDUCTED: 13,420 PRC
+- YOU GET: Rs.1,000
+
+Same example (PRC Elite):
+- Base PRC: 11,000 PRC
+- Burn (5%): 550 PRC
+- Processing: 110 PRC
+- Admin (20%): 2,200 PRC
+- TOTAL DEDUCTED: 13,860 PRC
+- YOU GET: Rs.1,000
+
+
+================================================================================
+15. FAQ - COMMON QUESTIONS
+================================================================================
+
+Q: Can I earn PRC without inviting anyone?
+A: Yes! You earn 500 PRC/day base mining. But your network cap starts at 800,
+   so even without inviting, up to 800 active members below you in the single
+   leg tree can boost your earnings.
+
+Q: What is "Single Leg Tree"?
+A: All users are arranged in a single line based on joining date. Everyone who
+   joins AFTER you is below you in the tree. Your network = active users below
+   your position (up to your Network Cap).
+
+Q: What's the difference between Network Size and Network Cap?
+A: Network Size = actual active miners below you.
+   Network Cap = maximum that count toward your bonus.
+   Your effective bonus = min(Network Size, Network Cap).
+
+Q: I'm an Explorer. Can I still mine?
+A: Yes! You can start mining and see your earning speed. But you CANNOT collect
+   the mined PRC until you upgrade to Elite.
+
+Q: How do I maximize my earnings?
+A: 1. Get Elite subscription (Cash for best rates)
+   2. Mine daily (start session every 24 hours)
+   3. Invite friends (each adds +16 to your cap)
+   4. Help your friends invite others (+5 per L1 indirect)
+   5. Build to 200 direct + 400 L1 indirects = 6000 max cap
+
+Q: Can I have multiple accounts?
+A: No. One account per mobile number and email.
+
+Q: What happens when my Elite subscription expires?
+A: You become an Explorer. You can still mine but cannot collect or redeem.
+   Your network members also won't count you as active.
+
+Q: Is there a minimum PRC needed to start redeeming?
+A: Depends on the service. Gift vouchers start at Rs.100. Bank transfers 
+   require minimum Rs.200. Your Redeem Unlock % also limits how much you 
+   can redeem.
+
+Q: How long does bank transfer take?
+A: After admin approval, typically 1-3 business days.
+
+Q: Can I change from PRC Elite to Cash Elite?
+A: When your subscription expires, you can renew with any payment method.
+
+
+================================================================================
+                         QUICK REFERENCE CARD
+================================================================================
+
+EARNING PRC:
+  Base Mining:     500 PRC/day (everyone)
+  Network Bonus:   Up to ~15,000 PRC/day (with 6000 cap)
+  Speed:           Cash Elite = 100%, PRC Elite = 70%
+
+NETWORK CAP (max 6000):
+  Base:            800 (automatic)
+  Per Direct:      +16 (need 200 for max Tier 2)
+  Per L1 Indirect: +5  (need 400 for max Tier 3)
+
+SUBSCRIPTION:
+  Cash:    Rs.1,178.82 (Rs.999 + GST)  -> 100% speed, 1% burn
+  PRC:     16,477 PRC                   -> 70% speed, 5% burn
+
+REDEEM CHARGES:
+  Burn:       1% (Cash) or 5% (PRC)
+  Processing: Rs.10
+  Admin:      20%
+
+REDEEM OPTIONS:
+  Gift Vouchers:  Rs.100 / Rs.500 / Rs.1,000 / Rs.5,000
+  Bank Transfer:  Rs.200 to Rs.10,000
+  Bill Pay:       20+ BBPS services
+  Flash Sales:    Special deals
+
+================================================================================
+             PARAS REWARD - Earn. Grow. Redeem. Repeat.
+================================================================================
