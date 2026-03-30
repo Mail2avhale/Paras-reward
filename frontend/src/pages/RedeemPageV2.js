@@ -2653,29 +2653,6 @@ const RedeemPageV2 = ({ user }) => {
             {user?.uid && (
               <CategoryLimitsDisplay userId={user.uid} />
             )}
-            
-            {/* Charges Info */}
-            <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-3xl p-6 border border-blue-500/20">
-              <h3 className="font-bold text-blue-400 mb-3 flex items-center gap-2">
-                <Info className="h-5 w-5" />
-                Service Charges
-              </h3>
-              <ul className="text-xs text-blue-300 space-y-2">
-                <li className="flex justify-between">
-                  <span>Platform Fee</span>
-                  <span className="font-semibold">₹10 (flat)</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>Service Charges</span>
-                  <span className="font-semibold">20% of amount</span>
-                </li>
-                <li className="flex justify-between border-t border-blue-500/20 pt-2 mt-2">
-                  <span>Est. Redeem Value</span>
-                  <span className="font-semibold">~₹1 per 10 PRC*</span>
-                </li>
-              </ul>
-              <p className="text-[10px] text-blue-400/60 mt-2">*Subject to terms & availability</p>
-            </div>
           </div>
         </div>
       </div>
