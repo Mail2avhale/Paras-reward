@@ -44803,6 +44803,12 @@ from routes.support_chatbot import set_db as set_chatbot_db
 set_chatbot_db(db)
 api_router.include_router(support_chatbot_router)
 
+# Auto-Burning
+from routes.burning import router as burning_router
+from routes.burning import set_db as set_burning_db
+set_burning_db(db)
+api_router.include_router(burning_router)
+
 app.include_router(api_router)
 
 # Note: User lookup route is now defined BEFORE include_router (line ~43305)

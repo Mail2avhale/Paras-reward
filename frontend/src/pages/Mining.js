@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { InfoTooltip } from '@/components/InfoTooltip';
+import BurningIndicator from '@/components/BurningIndicator';
 // PRCBurnAlert removed - free users no longer collect PRC
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -979,6 +980,11 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
                 <p className="text-2xl font-semibold text-zinc-100 font-mono tabular-nums">{miningRate.toFixed(1)}</p>
                 <p className="text-emerald-500 text-sm">{globalT('perHour')}</p>
               </div>
+            </div>
+
+            {/* Burning Indicator - shows only when subscription expired */}
+            <div className="mt-4">
+              <BurningIndicator user={user} variant="full" />
             </div>
           </div>
         </motion.div>
