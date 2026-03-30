@@ -29,19 +29,10 @@ next-env.d.ts
 /build
 dist/
 
-# Environment files - MUST NOT be committed (breaks production deployment)
-.env
-*.env
-backend/.env
-frontend/.env
-admin-deploy/backend/.env
-admin-deploy/frontend/.env
-admin-frontend/.env
-frontend-admin/.env
-
 # Sensitive files
 *token.json*
 *credentials.json*
+memory/test_credentials.md
 
 # Logs and debug files
 npm-debug.log*
@@ -83,20 +74,3 @@ chainlit.md
 
 # Mobile development
 android-sdk/
-frontend/node_modules/.cache/default-development/14.pack
-frontend/node_modules/.cache/default-development/15.pack
-frontend/node_modules/.cache/default-development/6.pack
-frontend/node_modules/.cache/default-development/4.pack
-frontend/node_modules/.cache/default-development/1.pack
-frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/5.pack
-frontend/node_modules/.cache/default-development/3.pack
-frontend/node_modules/.cache/default-development/7.pack
-frontend/node_modules/.cache/default-development/8.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/10.pack
-frontend/node_modules/.cache/default-development/20.pack
-frontend/node_modules/.cache/default-development/19.pack

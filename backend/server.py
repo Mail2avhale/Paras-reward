@@ -666,8 +666,9 @@ try:
     db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
     print(f"[STARTUP] MongoDB client created OK - DB: {os.environ.get('DB_NAME', 'paras_reward_db')}")
 except Exception as e:
-    print(f"[STARTUP] MongoDB client creation failed: {e} - using fallback")
-    client = AsyncIOMotorClient('mongodb://localhost:27017', serverSelectionTimeoutMS=5000)
+    print(f"[STARTUP] MongoDB client creation failed: {e} - retrying with relaxed settings")
+    # Retry with minimal options instead of falling back to localhost
+    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=15000, connectTimeoutMS=15000)
     db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
 
 # ========== DATABASE CONNECTION HEALTH & AUTO-RECONNECT ==========
