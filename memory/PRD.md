@@ -56,7 +56,14 @@
 ## COMPLETED: Admin Redeem Limits Overview - 30 March 2026
 - Aggregated + user-wise redeem limit tracking on Admin Dashboard
 
+## COMPLETED: Chatbot Earning Projections (P1) - 30 March 2026
+- Users can ask "If I get X more referrals, what will be my daily earning?" in any language
+- Pre-computes projections for +5/+10/+25/+50/+100 referral scenarios using mining formulas
+- Injected as [PROJECTION_DATA] alongside [USER_DATA] into GPT-4o-mini system prompt
+- Responds in English, Marathi, Hindi, Hinglish with exact numbers (no vague answers)
+- File: `/app/backend/routes/support_chatbot.py` (compute_projections + updated system prompt)
+- Testing: iteration 168 (100% PASS - all projections verified, multilingual, PRC Collect regression OK)
+
 ## Upcoming
-- P1: Chatbot Earning Projections ("If I get 10 more referrals, what will be my daily earning?")
 - P2: server.py refactoring (45k+ lines)
 - Future: MongoDB to PostgreSQL migration
