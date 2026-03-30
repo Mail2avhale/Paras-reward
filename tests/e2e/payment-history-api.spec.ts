@@ -6,7 +6,7 @@ import { DMT_TEST_CREDENTIALS } from '../fixtures/helpers';
  * Iteration 105: User subscription page improvements
  */
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://burn-rates.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://cap-calculator-3tier.preview.emergentagent.com';
 const TEST_USER_ID = DMT_TEST_CREDENTIALS.userId;
 
 test.describe('Payment History API Integration', () => {

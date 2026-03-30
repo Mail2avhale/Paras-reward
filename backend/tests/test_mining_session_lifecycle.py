@@ -21,7 +21,7 @@ import os
 import time
 
 # Get BASE_URL from environment
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://burn-rates.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cap-calculator-3tier.preview.emergentagent.com').rstrip('/')
 
 # Test user credentials
 TEST_ELITE_USER_UID = "burn-test-1-e8c8c055"

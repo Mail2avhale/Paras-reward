@@ -7,9 +7,11 @@ Mining Formula:
 - Team Bonus: N × PRC_per_user(N)
 - PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
 
-Network Cap:
-- 0 direct referrals → 800 users cap
-- ≥1 direct referral → 4000 users cap
+3-Tier Network Cap:
+- Tier 1 (Base/Single Leg): 800 cap (everyone starts here)
+- Tier 2 (Direct Referrals): +16 per direct referral, up to 4000
+- Tier 3 (L1 Indirect Referrals): +5 per L1 indirect, up to 6000
+- Formula: min(6000, 800 + 16×D + 5×L1)
 
 Subscription Speed:
 - Explorer: Shows speed (demo), CANNOT collect
@@ -48,8 +50,11 @@ def set_helpers(helpers: dict):
 
 BASE_MINING_PRC = 500  # Base daily PRC (user's own mining)
 MIN_PRC_PER_USER = 2.5  # Minimum PRC per user at 16384 network
-NETWORK_CAP_NO_REFERRAL = 800  # Cap when 0 direct referrals
-NETWORK_CAP_WITH_REFERRAL = 4000  # Cap when ≥1 direct referral
+NETWORK_CAP_BASE = 800  # Tier 1: Base cap (single leg)
+NETWORK_CAP_DIRECT_MAX = 4000  # Tier 2: Max cap from direct referrals
+NETWORK_CAP_MAX = 6000  # Tier 3: Max cap from L1 indirect referrals
+CAP_PER_DIRECT = 16  # +16 cap per direct referral
+CAP_PER_L1_INDIRECT = 5  # +5 cap per L1 indirect referral
 SESSION_DURATION_HOURS = 24  # Mining session duration
 
 
@@ -80,19 +85,37 @@ def calculate_prc_per_user(network_size: int) -> float:
     return round(max(MIN_PRC_PER_USER, prc_per_user), 6)
 
 
-def calculate_network_cap(direct_referrals: int) -> int:
+def calculate_network_cap(direct_referrals: int, l1_indirect_referrals: int = 0) -> dict:
     """
-    Calculate maximum network capacity based on direct referrals
+    3-Tier Network Cap Formula:
     
-    Formula: NetworkCap = min(4000, 800 + 16 × D)
-    - 0 referrals → 800
-    - 1 referral → 816
-    - 2 referrals → 832
-    - ...
-    - 200 referrals → 4000 (cap)
+    Tier 1 (Base): 800 cap (everyone)
+    Tier 2 (Direct): +16 per direct referral → max 4000
+    Tier 3 (L1 Indirect): +5 per L1 indirect → max 6000
+    
+    Formula: min(6000, 800 + 16×D + 5×L1)
+    
+    Examples:
+    - 0 directs, 0 L1 → 800
+    - 10 directs, 0 L1 → 960
+    - 200 directs, 0 L1 → 4000 (Tier 2 capped)
+    - 200 directs, 400 L1 → 6000 (Tier 3 capped)
     """
-    cap = 800 + (16 * direct_referrals)
-    return min(4000, cap)
+    tier1 = NETWORK_CAP_BASE  # 800
+    tier2_bonus = CAP_PER_DIRECT * direct_referrals  # 16 × D
+    tier3_bonus = CAP_PER_L1_INDIRECT * l1_indirect_referrals  # 5 × L1
+    
+    raw_cap = tier1 + tier2_bonus + tier3_bonus
+    final_cap = min(NETWORK_CAP_MAX, raw_cap)
+    
+    return {
+        "cap": final_cap,
+        "tier1_base": tier1,
+        "tier2_bonus": min(tier2_bonus, NETWORK_CAP_DIRECT_MAX - NETWORK_CAP_BASE),
+        "tier3_bonus": min(tier3_bonus, NETWORK_CAP_MAX - NETWORK_CAP_DIRECT_MAX),
+        "direct_referrals": direct_referrals,
+        "l1_indirect_referrals": l1_indirect_referrals
+    }
 
 
 async def check_subscription_expiry(user: dict) -> dict:
@@ -191,6 +214,24 @@ async def get_network_size(user_id: str) -> int:
         return 0
 
 
+async def get_l1_indirect_count(user_id: str) -> int:
+    """
+    Count L1 Indirect Referrals = users referred by user's direct referrals.
+    Efficient: Only fetches UIDs, then counts.
+    """
+    try:
+        # Step 1: Get UIDs of direct referrals
+        direct_uids = await db.users.distinct("uid", {"referred_by": user_id})
+        if not direct_uids:
+            return 0
+        # Step 2: Count users referred by those direct referrals
+        l1_count = await db.users.count_documents({"referred_by": {"$in": direct_uids}})
+        return l1_count
+    except Exception as e:
+        logging.error(f"Error counting L1 indirects for {user_id}: {e}")
+        return 0
+
+
 async def calculate_mining_rate(user_id: str) -> dict:
     """
     Calculate user's mining rate based on Growth Economy formulas
@@ -201,20 +242,23 @@ async def calculate_mining_rate(user_id: str) -> dict:
     - total_rate: base + network
     - per_second_rate: total / 86400
     - boost_multiplier: subscription type multiplier
+    - 3-tier network cap breakdown
     """
     # Get user data
     user = await db.users.find_one({"uid": user_id}, {"_id": 0})
     if not user:
         return {"error": "User not found"}
     
-    # Get direct referrals count
-    direct_referrals = await db.users.count_documents({"referred_by": user_id})
+    # Get direct referrals count + L1 indirect count in parallel
+    direct_referrals, l1_indirect_referrals, network_size = await asyncio.gather(
+        db.users.count_documents({"referred_by": user_id}),
+        get_l1_indirect_count(user_id),
+        get_network_size(user_id)
+    )
     
-    # Get network size
-    network_size = await get_network_size(user_id)
-    
-    # Calculate network cap (binary: 0 refs=800, ≥1 ref=4000)
-    network_cap = calculate_network_cap(direct_referrals)
+    # Calculate 3-tier network cap
+    cap_info = calculate_network_cap(direct_referrals, l1_indirect_referrals)
+    network_cap = cap_info["cap"]
     
     # Limit network size to cap
     effective_network = min(network_size, network_cap)
@@ -247,8 +291,13 @@ async def calculate_mining_rate(user_id: str) -> dict:
         "network_rate": round(network_rate, 2),
         "prc_per_user": round(prc_per_user, 6),
         "network_size": effective_network,
+        "raw_network_size": network_size,
         "network_cap": network_cap,
         "direct_referrals": direct_referrals,
+        "l1_indirect_referrals": l1_indirect_referrals,
+        "cap_tier1_base": cap_info["tier1_base"],
+        "cap_tier2_bonus": cap_info["tier2_bonus"],
+        "cap_tier3_bonus": cap_info["tier3_bonus"],
         "boost_multiplier": boost_multiplier,
         "subscription_type": subscription_payment_type,
         "subscription_plan": subscription_plan,
@@ -343,6 +392,11 @@ async def get_mining_status(uid: str):
             "session_progress": round(session_progress, 2),
             "network_size": rate_info["network_size"],
             "network_cap": rate_info["network_cap"],
+            "direct_referrals": rate_info["direct_referrals"],
+            "l1_indirect_referrals": rate_info.get("l1_indirect_referrals", 0),
+            "cap_tier1_base": rate_info.get("cap_tier1_base", 800),
+            "cap_tier2_bonus": rate_info.get("cap_tier2_bonus", 0),
+            "cap_tier3_bonus": rate_info.get("cap_tier3_bonus", 0),
             "prc_per_user": rate_info["prc_per_user"],
             "subscription_type": rate_info["subscription_type"]
         }
@@ -572,17 +626,22 @@ async def get_rate_breakdown(uid: str):
         return {
             "formula": "PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14)",
             "daily_formula": "Daily PRC = 500 + (N × PRC_per_user)",
-            "network_cap_formula": "0 refs → 800, ≥1 ref → 4000",
+            "network_cap_formula": "min(6000, 800 + 16×D + 5×L1)",
             "base_rate": rate_info["base_rate"],
             "network_size": rate_info["network_size"],
+            "raw_network_size": rate_info.get("raw_network_size", rate_info["network_size"]),
             "network_cap": rate_info["network_cap"],
+            "cap_tier1_base": rate_info.get("cap_tier1_base", 800),
+            "cap_tier2_bonus": rate_info.get("cap_tier2_bonus", 0),
+            "cap_tier3_bonus": rate_info.get("cap_tier3_bonus", 0),
             "prc_per_user": rate_info["prc_per_user"],
             "network_rate": rate_info["network_rate"],
             "boost_multiplier": rate_info["boost_multiplier"],
             "subscription_type": rate_info["subscription_type"],
             "total_daily_rate": rate_info["total_daily_rate"],
             "final_rate": rate_info["per_second_rate"],
-            "direct_referrals": rate_info["direct_referrals"]
+            "direct_referrals": rate_info["direct_referrals"],
+            "l1_indirect_referrals": rate_info.get("l1_indirect_referrals", 0)
         }
     except HTTPException:
         raise

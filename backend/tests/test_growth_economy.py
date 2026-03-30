@@ -2,9 +2,9 @@
 Growth Economy System - Complete Test Suite
 Tests:
 1. Mining Speed Formula: R(U) = max(3, 8 - 0.5 × log₂(U))
-2. Network Cap Formula: min(4000, 800 + 16×D)
+2. 3-Tier Network Cap: min(6000, 800 + 16×D + 5×L1)
 3. Redeem Limits based on Growth Level
-4. Direct Referrals impact on capacity
+4. Direct + L1 Indirect Referrals impact on capacity
 """
 
 import math
@@ -21,10 +21,21 @@ def calculate_prc_per_user(network_size: int) -> float:
     prc_per_user = 8 - (0.5 * log_value)
     return max(3, round(prc_per_user, 4))
 
-def calculate_network_cap(direct_referrals: int) -> int:
-    """NetworkCap = min(4000, 800 + 16×D)"""
-    cap = 800 + (16 * direct_referrals)
-    return min(4000, cap)
+def calculate_network_cap(direct_referrals: int, l1_indirect_referrals: int = 0) -> dict:
+    """3-Tier: min(6000, 800 + 16×D + 5×L1)"""
+    tier1 = 800
+    tier2_bonus = 16 * direct_referrals
+    tier3_bonus = 5 * l1_indirect_referrals
+    raw_cap = tier1 + tier2_bonus + tier3_bonus
+    final_cap = min(6000, raw_cap)
+    return {
+        "cap": final_cap,
+        "tier1_base": tier1,
+        "tier2_bonus": min(tier2_bonus, 3200),
+        "tier3_bonus": min(tier3_bonus, 2000),
+        "direct_referrals": direct_referrals,
+        "l1_indirect_referrals": l1_indirect_referrals
+    }
 
 def calculate_daily_mining(network_size: int, base: int = 550) -> float:
     """Daily PRC = 550 + (U × R(U))"""
@@ -115,31 +126,52 @@ class TestDailyMining:
 # ==================== NETWORK CAP TESTS ====================
 
 class TestNetworkCap:
-    """Test Network Cap: min(4000, 800 + 16×D)"""
+    """Test 3-Tier Network Cap: min(6000, 800 + 16×D + 5×L1)"""
     
     def test_no_referrals(self):
-        """D=0: Cap = 800"""
-        assert calculate_network_cap(0) == 800
+        """D=0, L1=0: Cap = 800"""
+        assert calculate_network_cap(0)["cap"] == 800
         
     def test_10_referrals(self):
-        """D=10: Cap = 800 + 160 = 960"""
-        assert calculate_network_cap(10) == 960
+        """D=10, L1=0: Cap = 800 + 160 = 960"""
+        assert calculate_network_cap(10)["cap"] == 960
         
     def test_50_referrals(self):
-        """D=50: Cap = 800 + 800 = 1600"""
-        assert calculate_network_cap(50) == 1600
+        """D=50, L1=0: Cap = 800 + 800 = 1600"""
+        assert calculate_network_cap(50)["cap"] == 1600
         
     def test_100_referrals(self):
-        """D=100: Cap = 800 + 1600 = 2400"""
-        assert calculate_network_cap(100) == 2400
+        """D=100, L1=0: Cap = 800 + 1600 = 2400"""
+        assert calculate_network_cap(100)["cap"] == 2400
         
-    def test_200_referrals(self):
-        """D=200: Cap = 800 + 3200 = 4000 (max)"""
-        assert calculate_network_cap(200) == 4000
+    def test_200_referrals_tier2_max(self):
+        """D=200, L1=0: Cap = 800 + 3200 = 4000 (Tier 2 max)"""
+        assert calculate_network_cap(200)["cap"] == 4000
         
-    def test_500_referrals(self):
-        """D=500: Cap = min(4000, 8800) = 4000"""
-        assert calculate_network_cap(500) == 4000
+    def test_500_referrals_no_l1(self):
+        """D=500, L1=0: Cap = min(6000, 800+8000) = 6000"""
+        assert calculate_network_cap(500)["cap"] == 6000
+    
+    def test_tier3_l1_indirects(self):
+        """D=200, L1=100: Cap = 800 + 3200 + 500 = 4500"""
+        assert calculate_network_cap(200, 100)["cap"] == 4500
+    
+    def test_tier3_max(self):
+        """D=200, L1=400: Cap = 800 + 3200 + 2000 = 6000 (max)"""
+        assert calculate_network_cap(200, 400)["cap"] == 6000
+    
+    def test_tier3_overflow(self):
+        """D=300, L1=1000: Cap = min(6000, 800+4800+5000) = 6000"""
+        assert calculate_network_cap(300, 1000)["cap"] == 6000
+    
+    def test_cap_returns_dict(self):
+        """Verify cap returns dict with tier breakdown"""
+        result = calculate_network_cap(10, 20)
+        assert "cap" in result
+        assert "tier1_base" in result
+        assert "tier2_bonus" in result
+        assert "tier3_bonus" in result
+        assert result["tier1_base"] == 800
 
 
 # ==================== GROWTH LEVEL TESTS ====================
@@ -251,12 +283,12 @@ class TestCompleteScenarios:
         direct_referrals = 0
         network_size = 0
         
-        cap = calculate_network_cap(direct_referrals)
+        cap_info = calculate_network_cap(direct_referrals)
         daily_prc = calculate_daily_mining(network_size)
         level = calculate_growth_level(network_size)
         unlock = calculate_unlock_percent(network_size, 70)
         
-        assert cap == 800
+        assert cap_info["cap"] == 800
         assert daily_prc == 550
         assert level == 0
         assert unlock == 70  # Admin default
@@ -266,12 +298,12 @@ class TestCompleteScenarios:
         direct_referrals = 25
         network_size = 100
         
-        cap = calculate_network_cap(direct_referrals)
+        cap_info = calculate_network_cap(direct_referrals)
         daily_prc = calculate_daily_mining(network_size)
         level = calculate_growth_level(network_size)
         prc_per_user = calculate_prc_per_user(network_size)
         
-        assert cap == 1200  # 800 + 25*16
+        assert cap_info["cap"] == 1200  # 800 + 25*16
         assert level == 4  # 80 <= 100 < 160
         assert 4.5 <= prc_per_user <= 5.0
         
@@ -280,13 +312,18 @@ class TestCompleteScenarios:
         direct_referrals = 200
         network_size = 2000
         
-        cap = calculate_network_cap(direct_referrals)
+        cap_info = calculate_network_cap(direct_referrals)
         daily_prc = calculate_daily_mining(network_size)
         level = calculate_growth_level(network_size)
         
-        assert cap == 4000  # Max
+        assert cap_info["cap"] == 4000  # 800 + 3200 (no L1)
         assert level == 9  # Max
         assert daily_prc > 6000  # High earnings
+    
+    def test_power_user_with_l1(self):
+        """Power user with 200 directs + 400 L1 indirects"""
+        cap_info = calculate_network_cap(200, 400)
+        assert cap_info["cap"] == 6000  # Max tier 3
 
 
 # Run tests

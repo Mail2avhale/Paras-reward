@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://burn-rates.preview.emergentagent.com/setup
+   https://cap-calculator-3tier.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
