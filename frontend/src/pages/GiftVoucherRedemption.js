@@ -265,14 +265,13 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
       {/* Selected Info */}
       {selectedInfo && (
         <div className="px-5 mb-6">
-          {/* PRC Rate Alert */}
           <div className="mb-4">
             <PRCRateDisplay 
               amount={selectedInfo.value}
               processingFee={10}
               adminChargePercent={20}
-              showBreakdown={false}
-              showRateAlert={true}
+              burnRate={burnRatePercent || 0}
+              showBreakdown={true}
               serviceType="gift"
             />
           </div>
@@ -286,36 +285,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">{t('prcRequired')}:</span>
-                <span className="text-white">{selectedInfo.prc} PRC</span>
-              </div>
-              
-              {/* Charge Breakdown */}
-              <div className="mt-3 pt-3 border-t border-gray-800 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Voucher Amount</span>
-                  <span className="text-white">₹{voucherAmountINR} = {voucherAmountPRC.toFixed(0)} PRC</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Processing Fee</span>
-                  <span className="text-orange-400">+ ₹{processingFeeINR} = {processingFeePRC.toFixed(0)} PRC</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Admin Charges ({adminChargePercent}%)</span>
-                  <span className="text-orange-400">+ ₹{adminChargeINR.toFixed(0)} = {adminChargePRC.toFixed(0)} PRC</span>
-                </div>
-                {burnINR > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Burn ({burnRatePercent}%{burnPaymentType === 'prc' ? ' - PRC Plan' : ''})</span>
-                    <span className="text-red-400">+ ₹{burnINR.toFixed(2)} = {burnPRC.toFixed(0)} PRC</span>
-                  </div>
-                )}
-                <div className="flex justify-between pt-2 border-t border-gray-700 font-semibold">
-                  <span className="text-amber-400">Total to Pay</span>
-                  <span className="text-amber-400">₹{totalINR.toFixed(0)} = {totalPRC.toFixed(0)} PRC</span>
-                </div>
-                {burnPaymentType === 'prc' && (
-                  <p className="text-xs text-red-400/70 mt-1">PRC subscribers: 5% burn rate. Cash subscribers pay only 1%.</p>
-                )}
+                <span className="text-white">{totalPRC.toFixed(0)} PRC</span>
               </div>
             </div>
           </div>

@@ -113,63 +113,51 @@ const PRCRateDisplay = ({
         </div>
       </div>
 
-      {/* Breakdown Calculator */}
+      {/* Fee Breakdown */}
       {showBreakdown && amount > 0 && (
         <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
           <div className="flex items-center gap-2 mb-3">
-            <Info className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-medium text-blue-400">PRC Calculation Breakdown</span>
+            <Info className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm font-medium text-emerald-400">Fee Breakdown</span>
           </div>
           
           <div className="space-y-2 text-sm">
-            {/* Amount Row */}
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Amount (₹{amount})</span>
-              <span className="text-gray-300 font-mono">
-                ₹{amount} × {currentRate} = <span className="text-white font-bold">{amountInPRC.toLocaleString()} PRC</span>
-              </span>
+            <div className="flex justify-between text-gray-400">
+              <span>Amount</span>
+              <span className="text-white">₹{amount.toLocaleString()}</span>
             </div>
             
-            {/* Processing Fee Row */}
             {processingFee > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Processing Fee (₹{processingFee})</span>
-                <span className="text-gray-300 font-mono">
-                  ₹{processingFee} × {currentRate} = <span className="text-orange-400">+{processingFeeInPRC.toLocaleString()} PRC</span>
-                </span>
+              <div className="flex justify-between text-gray-400">
+                <span>Processing Fee</span>
+                <span>₹{processingFee}</span>
               </div>
             )}
             
-            {/* Admin Charge Row */}
             {adminChargePercent > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Admin Charge ({adminChargePercent}%)</span>
-                <span className="text-gray-300 font-mono">
-                  <span className="text-yellow-400">+{adminChargeInPRC.toLocaleString()} PRC</span>
-                </span>
+              <div className="flex justify-between text-gray-400">
+                <span>Admin Fee ({adminChargePercent}%)</span>
+                <span>₹{Math.round(amount * adminChargePercent / 100).toLocaleString()}</span>
               </div>
             )}
 
-            {/* Burning Row */}
             {burnRate > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Burning ({burnRate}%)</span>
-                <span className="text-gray-300 font-mono">
-                  <span className="text-red-400">+{burnPRC.toLocaleString()} PRC</span>
-                </span>
+              <div className="flex justify-between text-red-400">
+                <span>Burn ({burnRate}%)</span>
+                <span>₹{(Math.round(amount * adminChargePercent / 100 + amount + processingFee) * burnRate / 100).toFixed(2)}</span>
               </div>
             )}
             
-            {/* Divider */}
             <div className="border-t border-gray-600 my-2"></div>
             
-            {/* Total Row */}
-            <div className="flex justify-between items-center">
-              <span className="text-white font-semibold">Total PRC</span>
-              <span className="text-xl font-bold text-green-400">{totalPRC.toLocaleString()} PRC</span>
+            <div className="flex justify-between text-white font-medium">
+              <span>Total PRC Required</span>
+              <span className="text-amber-400 font-bold">{totalPRC.toLocaleString()} PRC</span>
             </div>
-
-            {/* REMOVED: Comparison with old rate - per user request */}
+            <div className="flex justify-between text-emerald-400 font-bold">
+              <span>You Will Receive</span>
+              <span>₹{amount.toLocaleString()}</span>
+            </div>
           </div>
         </div>
       )}

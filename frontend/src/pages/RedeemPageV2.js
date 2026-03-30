@@ -2608,57 +2608,17 @@ const RedeemPageV2 = ({ user }) => {
                 
                 {/* ============================================ */}
                 {/* ============================================ */}
-                {/* PRC RATE DISPLAY - Shows current rate & alert */}
+                {/* FEE BREAKDOWN via PRCRateDisplay */}
                 {/* ============================================ */}
                 {formData.amount && parseFloat(formData.amount) > 0 && (
                   <PRCRateDisplay 
                     amount={parseFloat(formData.amount) || 0}
                     processingFee={10}
                     adminChargePercent={20}
-                    showBreakdown={false}
-                    showRateAlert={true}
+                    burnRate={charges?.burn_rate_percent || 0}
+                    showBreakdown={true}
                     serviceType="redeem"
                   />
-                )}
-                
-                {/* ============================================ */}
-                {/* ============================================ */}
-                {/* CHARGES BREAKDOWN - Common for all services */}
-                {/* ============================================ */}
-                {charges && formData.amount && (
-                  <div className="animate-fadeIn bg-gradient-to-br from-gray-800/50 to-gray-800/30 rounded-2xl p-4 border border-gray-700/50">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Info className="h-4 w-4 text-amber-400" />
-                      <p className="text-xs text-amber-300 font-semibold">Charge Breakdown</p>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Amount</span>
-                        <span className="text-white">₹{charges.amount_inr} ({charges.amount_prc} PRC)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Platform Fee</span>
-                        <span className="text-orange-400">+₹{charges.platform_fee_inr} ({charges.platform_fee_prc} PRC)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Admin Charges (20%)</span>
-                        <span className="text-orange-400">+₹{charges.admin_charge_inr} ({charges.admin_charge_prc} PRC)</span>
-                      </div>
-                      {charges.burn_inr > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Burn ({charges.burn_rate_percent}%{charges.burn_payment_type === 'prc' ? ' - PRC Plan' : ''})</span>
-                          <span className="text-red-400">+₹{charges.burn_inr} ({charges.burn_prc} PRC)</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between pt-3 border-t border-gray-700">
-                        <span className="text-amber-400 font-bold">Total</span>
-                        <span className="text-xl font-bold text-amber-400">{charges.total_prc_required} PRC</span>
-                      </div>
-                      {charges.burn_payment_type === 'prc' && (
-                        <p className="text-xs text-red-400/70 mt-1">PRC subscribers: 5% burn rate. Cash subscribers pay only 1%.</p>
-                      )}
-                    </div>
-                  </div>
                 )}
                 
                 {/* Submit Button */}
