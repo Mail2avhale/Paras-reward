@@ -18,17 +18,22 @@
 
 ## COMPLETED: Registration Error Handling - 29 March 2026
 - **Backend**: Mobile number now REQUIRED (was optional). Full name now REQUIRED.
-- **Frontend**: Field-level errors with clear English messages:
-  - "This mobile number is already registered. Please login instead."
-  - "Mobile number is required" / "Please enter a valid 10-digit mobile number."
-  - "This email is already registered. Please login instead."
-  - "PIN cannot be all same digits (e.g., 111111)."
-  - "Full name must be at least 2 characters."
-  - General error banner for registration-closed (403)
+- **Frontend**: Field-level errors with clear English messages
 - Testing: iteration 164 (13/13 PASS)
+
+## COMPLETED: 3-Tier Network Cap Formula (P0) - 29 March 2026
+- **Tier 1 (Base)**: 800 cap (everyone starts here)
+- **Tier 2 (Direct Referrals)**: +16 per direct referral → max 4000
+- **Tier 3 (L1 Indirect Referrals)**: +5 per L1 indirect → max 6000
+- **Formula**: `min(6000, 800 + 16×D + 5×L1)`
+- L1 indirect = users referred by user's direct referrals
+- Updated files: `mining.py`, `growth_economy.py`, `test_growth_economy.py`
+- All 3 endpoints return tier breakdown: `l1_indirect_referrals`, `cap_tier1_base`, `cap_tier2_bonus`, `cap_tier3_bonus`
+- Testing: iteration 165 (28/28 PASS) + unit tests (41/41 PASS)
 
 ## Active Architecture
 - Mining: (500 + N×prc_per_user) × boost (Cash=1.0, PRC=0.70)
+- Network Cap: min(6000, 800 + 16×D + 5×L1)
 - Burn: Cash=1%, PRC=5% on ALL services (redeem + PRC subscription)
 - Razorpay: ₹999 + 18% GST = ₹1178.82
 - PRC sub: 16,477 PRC (with 5% burn, dynamic rate=11)
