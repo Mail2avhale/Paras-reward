@@ -188,6 +188,7 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
   const liveCounterRef = useRef(null);
   const progressRef = useRef(null);
   const sessionEndNotifiedRef = useRef(false);
+  const collectInProgressRef = useRef(false); // Prevents re-fetch from overwriting optimistic balance update
   
   // Get global translation function
   const { t: globalT } = useLanguage();
@@ -289,7 +290,16 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
       const data = userResponse.data;
       const statsData = statsResponse.data;
       
-      setUserData(data);
+      // Skip overwriting userData if a collect is in progress (optimistic update takes priority)
+      if (!collectInProgressRef.current) {
+        setUserData(data);
+      } else {
+        // Still update non-balance fields during collect
+        setUserData(prev => ({
+          ...data,
+          prc_balance: prev?.prc_balance ?? data.prc_balance
+        }));
+      }
       // Set lifetime earnings from redemption stats API for consistency
       setLifetimeEarnings(statsData.total_earned || 0);
       
@@ -304,7 +314,9 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
         return;
       }
       
-      setUserData(user);
+      if (!collectInProgressRef.current) {
+        setUserData(user);
+      }
       // Keep default rate (20.83) instead of 1.0
     } finally {
       clearTimeout(timeoutId);
@@ -482,6 +494,8 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
     // Haptic feedback on button press
     triggerHaptic('medium');
     
+    // Mark collecting in progress to prevent re-fetch from overwriting balance
+    collectInProgressRef.current = true;
     setIsCollecting(true);
     try {
       // Collect mining rewards - correct endpoint
@@ -533,11 +547,15 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
         sessionEndNotifiedRef.current = false;
       }
       
-      // Refresh user data after a brief delay to ensure full sync
-      setTimeout(() => fetchUserData(false), 1000);
+      // Allow re-fetches to update balance after 3 seconds (DB fully synced by then)
+      setTimeout(() => {
+        collectInProgressRef.current = false;
+        fetchUserData(false);
+      }, 3000);
       
     } catch (error) {
       console.error('Claim error:', error);
+      collectInProgressRef.current = false; // Clear on error
       const errorMsg = error.response?.data?.detail || 'Failed to collect rewards';
       smartToast.error(errorMsg);
     } finally {
