@@ -26,6 +26,30 @@ def set_helpers(*args, **kwargs):
 
 DEPRECATION_MESSAGE = "Referral bonus feature has been removed. Please contact support for more information."
 
+@router.get("/lookup/{code}")
+async def lookup_referral_code(code: str):
+    """Validate referral code and return referrer name for registration"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    code = code.strip().upper()
+    if not code:
+        raise HTTPException(status_code=404, detail="Invalid referral code")
+    
+    referrer = await db.users.find_one(
+        {"referral_code": code},
+        {"_id": 0, "name": 1, "referral_code": 1}
+    )
+    if not referrer:
+        raise HTTPException(status_code=404, detail="Invalid referral code")
+    
+    return {
+        "valid": True,
+        "referrer_name": referrer.get("name", ""),
+        "referral_code": referrer.get("referral_code", code)
+    }
+
+
 @router.get("/code/{uid}")
 async def get_referral_code_deprecated(uid: str):
     """Get user's referral code - kept for sharing purposes"""

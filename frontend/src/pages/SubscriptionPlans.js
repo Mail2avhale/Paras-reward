@@ -595,259 +595,6 @@ const SubscriptionPlans = ({ user }) => {
         </motion.div>
       )}
 
-      {/* Payment History Section */}
-      {currentStep === 1 && paymentAttempts.length > 0 && (
-        <div className="mx-5 mt-4" data-testid="payment-history-section">
-          <button
-            onClick={() => setShowPaymentHistory(!showPaymentHistory)}
-            className="w-full p-3 rounded-xl bg-gray-900/50 border border-gray-800 flex items-center justify-between"
-            data-testid="payment-history-toggle"
-          >
-            <div className="flex items-center gap-3">
-              <CreditCard className="w-5 h-5 text-gray-400" />
-              <span className="text-gray-300">Payment History</span>
-              <span className="px-2 py-0.5 bg-gray-800 rounded-full text-xs text-gray-400" data-testid="payment-history-count">
-                {paymentAttempts.length}
-              </span>
-              {paymentAttempts.some(p => p.status === 'failed' || p.status === 'error') && (
-                <span className="px-2 py-0.5 bg-red-500/20 rounded-full text-xs text-red-400" data-testid="payment-issues-badge">
-                  Issues
-                </span>
-              )}
-            </div>
-            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${showPaymentHistory ? 'rotate-90' : ''}`} />
-          </button>
-          
-          {/* Payment Attempts List */}
-          <AnimatePresence>
-            {showPaymentHistory && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="mt-3 space-y-2" data-testid="payment-attempts-list">
-                  {paymentAttempts.map((payment, index) => (
-                    <div 
-                      key={payment.order_id || index}
-                      data-testid={`payment-attempt-${payment.status}`}
-                      className={`p-3 rounded-xl border ${
-                        payment.status === 'paid' ? 'bg-green-500/10 border-green-500/30' :
-                        payment.status === 'failed' || payment.status === 'error' ? 'bg-red-500/10 border-red-500/30' :
-                        payment.status === 'created' ? 'bg-amber-500/10 border-amber-500/30' :
-                        'bg-gray-900/50 border-gray-800'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-lg ${
-                            payment.status === 'paid' ? 'text-green-400' :
-                            payment.status === 'failed' || payment.status === 'error' ? 'text-red-400' :
-                            payment.status === 'created' ? 'text-amber-400' :
-                            'text-gray-400'
-                          }`}>
-                            {payment.status === 'paid' ? '✅' :
-                             payment.status === 'failed' ? '❌' :
-                             payment.status === 'error' ? '⚠️' :
-                             payment.status === 'created' ? '⏳' :
-                             payment.status === 'cancelled' ? '🚫' : '•'}
-                          </span>
-                          <div>
-                            <p className="text-white font-medium">₹{payment.amount}</p>
-                            <p className="text-gray-400 text-xs">{payment.plan_name} - {payment.plan_type}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className={`text-xs px-2 py-1 rounded-lg ${
-                            payment.status === 'paid' ? 'bg-green-500/20 text-green-400' :
-                            payment.status === 'failed' || payment.status === 'error' ? 'bg-red-500/20 text-red-400' :
-                            payment.status === 'created' ? 'bg-amber-500/20 text-amber-400' :
-                            'bg-gray-700 text-gray-400'
-                          }`}>
-                            {payment.status === 'paid' ? 'Success' :
-                             payment.status === 'failed' ? 'Failed' :
-                             payment.status === 'error' ? 'Error' :
-                             payment.status === 'created' ? 'Pending' :
-                             payment.status === 'cancelled' ? 'Cancelled' : payment.status}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Show failure reason */}
-                      {(payment.status === 'failed' || payment.status === 'error') && payment.failure_reason && (
-                        <div className="mt-2 p-2 bg-red-500/10 rounded-lg" data-testid="payment-failure-reason">
-                          <p className="text-red-300 text-xs">{payment.failure_reason}</p>
-                        </div>
-                      )}
-                      
-                      {/* Status message */}
-                      {payment.status_message && (
-                        <p data-testid="payment-status-message" className={`mt-2 text-xs ${
-                          payment.status_color === 'green' ? 'text-green-400' :
-                          payment.status_color === 'red' ? 'text-red-400' :
-                          payment.status_color === 'yellow' ? 'text-amber-400' :
-                          payment.status_color === 'orange' ? 'text-orange-400' :
-                          'text-gray-400'
-                        }`}>
-                          {payment.status_message}
-                        </p>
-                      )}
-                      
-                      {/* Retry button for failed payments */}
-                      {(payment.status === 'failed' || payment.status === 'error') && (
-                        <button
-                          onClick={() => {
-                            // Find the plan and set it for retry
-                            const plan = plans.find(p => p.id === payment.plan_name?.toLowerCase());
-                            if (plan) {
-                              setSelectedPlan(plan);
-                              setSelectedDuration(payment.plan_type || 'monthly');
-                              setCurrentStep(2);
-                              setShowPaymentHistory(false);
-                              toast.info('Plan selected - proceed with payment');
-                            } else {
-                              toast.error('Plan not found - select a plan manually');
-                            }
-                          }}
-                          className="mt-3 w-full py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                          data-testid="payment-retry-button"
-                        >
-                          <Zap className="w-4 h-4" />
-                          Try Again
-                        </button>
-                      )}
-                      
-                      {/* Date */}
-                      <p className="mt-2 text-gray-500 text-xs">
-                        {payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-IN', {
-                          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                        }) : ''}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
-
-      {/* Subscription History Button */}
-      {currentStep === 1 && subscriptionHistory.length > 0 && (
-        <div className="mx-5 mt-4">
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="w-full p-3 rounded-xl bg-gray-900/50 border border-gray-800 flex items-center justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-gray-400" />
-              <span className="text-gray-300">Subscription History</span>
-              <span className="px-2 py-0.5 bg-gray-800 rounded-full text-xs text-gray-400">
-                {subscriptionHistory.length}
-              </span>
-            </div>
-            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${showHistory ? 'rotate-90' : ''}`} />
-          </button>
-          
-          {/* History List */}
-          <AnimatePresence>
-            {showHistory && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="mt-3 space-y-3">
-                  {subscriptionHistory.map((item, index) => (
-                    <motion.div
-                      key={item.id || index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={`p-4 rounded-xl border ${
-                        item.status === 'completed' || item.status === 'approved'
-                          ? 'bg-emerald-500/5 border-emerald-500/20'
-                          : item.status === 'pending'
-                          ? 'bg-amber-500/5 border-amber-500/20'
-                          : 'bg-gray-900/50 border-gray-800'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`font-semibold ${
-                              item.plan_name?.toLowerCase().includes('elite') ? 'text-amber-400' :
-                              item.plan_name?.toLowerCase().includes('startup') ? 'text-blue-400' :
-                              'text-white'
-                            }`}>
-                              {item.plan_name || 'Unknown Plan'}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              ({item.plan_type || 'monthly'})
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 text-sm text-gray-400">
-                            <span>₹{item.amount}</span>
-                            <span>•</span>
-                            <span>{item.payment_method}</span>
-                            {item.instant_activation && (
-                              <>
-                                <span>•</span>
-                                <span className="text-emerald-400 text-xs">⚡ Instant</span>
-                              </>
-                            )}
-                          </div>
-                          
-                          {item.created_at && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(item.created_at).toLocaleDateString('en-IN', {
-                                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                              })}
-                            </p>
-                          )}
-                        </div>
-                        
-                        <div className="text-right">
-                          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                            item.status === 'completed' || item.status === 'approved'
-                              ? 'bg-emerald-500/20 text-emerald-400'
-                              : item.status === 'pending'
-                              ? 'bg-amber-500/20 text-amber-400'
-                              : item.status === 'rejected'
-                              ? 'bg-red-500/20 text-red-400'
-                              : 'bg-gray-800 text-gray-400'
-                          }`}>
-                            {item.status === 'completed' ? '✅ Completed' :
-                             item.status === 'approved' ? '✅ Approved' :
-                             item.status === 'pending' ? '⏳ Pending' :
-                             item.status === 'rejected' ? '❌ Rejected' :
-                             item.status}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {item.payment_id && (
-                        <p className="text-[10px] text-gray-600 mt-2 font-mono">
-                          ID: {item.payment_id}
-                        </p>
-                      )}
-                      {item.utr_number && (
-                        <p className="text-[10px] text-gray-600 mt-1 font-mono">
-                          UTR: {item.utr_number}
-                        </p>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
-
       {/* Step 1: Select Plan */}
       {currentStep === 1 && (
         <div className="px-5 mt-6 space-y-6">
@@ -1120,6 +867,187 @@ const SubscriptionPlans = ({ user }) => {
               </div>
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {/* Combined Transaction History - Bottom of Step 1 */}
+      {currentStep === 1 && (paymentAttempts.length > 0 || subscriptionHistory.length > 0) && (
+        <div className="px-5 mt-6 mb-6" data-testid="transaction-history-section">
+          <button
+            onClick={() => { setShowHistory(!showHistory); setShowPaymentHistory(!showHistory); }}
+            className="w-full p-4 rounded-2xl bg-zinc-900/80 border border-zinc-700/50 flex items-center justify-between hover:bg-zinc-800/80 transition-colors"
+            data-testid="history-toggle"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-zinc-800 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-zinc-400" />
+              </div>
+              <div className="text-left">
+                <span className="text-zinc-200 font-medium text-sm">Transaction History</span>
+                <p className="text-zinc-500 text-xs">{paymentAttempts.length + subscriptionHistory.length} records</p>
+              </div>
+              {paymentAttempts.some(p => p.status === 'failed' || p.status === 'error') && (
+                <span className="px-2 py-0.5 bg-red-500/20 rounded-full text-[10px] text-red-400 font-medium" data-testid="payment-issues-badge">
+                  Issues
+                </span>
+              )}
+            </div>
+            <ChevronRight className={`w-5 h-5 text-zinc-500 transition-transform duration-200 ${showHistory ? 'rotate-90' : ''}`} />
+          </button>
+
+          <AnimatePresence>
+            {showHistory && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-3 space-y-2" data-testid="history-list">
+                  {/* Payment Attempts */}
+                  {paymentAttempts.length > 0 && paymentAttempts.map((payment, index) => (
+                    <div
+                      key={`pay-${payment.order_id || index}`}
+                      data-testid={`payment-attempt-${payment.status}`}
+                      className={`p-3 rounded-xl border ${
+                        payment.status === 'paid' ? 'bg-emerald-500/5 border-emerald-500/20' :
+                        payment.status === 'failed' || payment.status === 'error' ? 'bg-red-500/5 border-red-500/20' :
+                        payment.status === 'created' ? 'bg-amber-500/5 border-amber-500/20' :
+                        'bg-zinc-900/50 border-zinc-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            payment.status === 'paid' ? 'bg-emerald-500/20' :
+                            payment.status === 'failed' || payment.status === 'error' ? 'bg-red-500/20' :
+                            'bg-amber-500/20'
+                          }`}>
+                            <CreditCard className={`w-4 h-4 ${
+                              payment.status === 'paid' ? 'text-emerald-400' :
+                              payment.status === 'failed' || payment.status === 'error' ? 'text-red-400' :
+                              'text-amber-400'
+                            }`} />
+                          </div>
+                          <div>
+                            <p className="text-white text-sm font-medium">₹{payment.amount}</p>
+                            <p className="text-zinc-500 text-xs">{payment.plan_name} - {payment.plan_type}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-[10px] px-2 py-1 rounded-lg font-medium ${
+                            payment.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                            payment.status === 'failed' || payment.status === 'error' ? 'bg-red-500/20 text-red-400' :
+                            payment.status === 'created' ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-zinc-800 text-zinc-400'
+                          }`}>
+                            {payment.status === 'paid' ? 'Success' :
+                             payment.status === 'failed' ? 'Failed' :
+                             payment.status === 'error' ? 'Error' :
+                             payment.status === 'created' ? 'Pending' :
+                             payment.status === 'cancelled' ? 'Cancelled' : payment.status}
+                          </span>
+                          <p className="text-zinc-600 text-[10px] mt-1">
+                            {payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
+                          </p>
+                        </div>
+                      </div>
+
+                      {(payment.status === 'failed' || payment.status === 'error') && payment.failure_reason && (
+                        <p className="mt-2 text-red-300/70 text-xs bg-red-500/5 p-2 rounded-lg" data-testid="payment-failure-reason">{payment.failure_reason}</p>
+                      )}
+
+                      {payment.status_message && (
+                        <p data-testid="payment-status-message" className={`mt-1.5 text-[10px] ${
+                          payment.status_color === 'green' ? 'text-emerald-400' :
+                          payment.status_color === 'red' ? 'text-red-400' :
+                          'text-zinc-500'
+                        }`}>{payment.status_message}</p>
+                      )}
+
+                      {(payment.status === 'failed' || payment.status === 'error') && (
+                        <button
+                          onClick={() => {
+                            const plan = plans.find(p => p.id === payment.plan_name?.toLowerCase());
+                            if (plan) {
+                              setSelectedPlan(plan);
+                              setSelectedDuration(payment.plan_type || 'monthly');
+                              setCurrentStep(2);
+                              setShowHistory(false);
+                              toast.info('Plan selected - proceed with payment');
+                            } else {
+                              toast.error('Plan not found - select manually');
+                            }
+                          }}
+                          className="mt-2 w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                          data-testid="payment-retry-button"
+                        >
+                          <Zap className="w-3.5 h-3.5" /> Try Again
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Subscription History */}
+                  {subscriptionHistory.length > 0 && subscriptionHistory.map((item, index) => (
+                    <div
+                      key={`sub-${item.id || index}`}
+                      className={`p-3 rounded-xl border ${
+                        item.status === 'completed' || item.status === 'approved'
+                          ? 'bg-emerald-500/5 border-emerald-500/20'
+                          : item.status === 'pending'
+                          ? 'bg-amber-500/5 border-amber-500/20'
+                          : 'bg-zinc-900/50 border-zinc-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            item.status === 'completed' || item.status === 'approved' ? 'bg-emerald-500/20' :
+                            item.status === 'pending' ? 'bg-amber-500/20' : 'bg-zinc-800'
+                          }`}>
+                            <Crown className={`w-4 h-4 ${
+                              item.status === 'completed' || item.status === 'approved' ? 'text-emerald-400' :
+                              item.status === 'pending' ? 'text-amber-400' : 'text-zinc-400'
+                            }`} />
+                          </div>
+                          <div>
+                            <p className={`text-sm font-medium ${
+                              item.plan_name?.toLowerCase().includes('elite') ? 'text-amber-400' : 'text-white'
+                            }`}>{item.plan_name || 'Subscription'}</p>
+                            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                              <span>₹{item.amount}</span>
+                              <span>·</span>
+                              <span>{item.payment_method}</span>
+                              {item.instant_activation && <span className="text-emerald-400">⚡</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-[10px] px-2 py-1 rounded-lg font-medium ${
+                            item.status === 'completed' || item.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' :
+                            item.status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
+                            item.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                            'bg-zinc-800 text-zinc-400'
+                          }`}>
+                            {item.status === 'completed' ? 'Completed' :
+                             item.status === 'approved' ? 'Approved' :
+                             item.status === 'pending' ? 'Pending' :
+                             item.status === 'rejected' ? 'Rejected' : item.status}
+                          </span>
+                          <p className="text-zinc-600 text-[10px] mt-1">
+                            {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
+                          </p>
+                        </div>
+                      </div>
+                      {item.payment_id && <p className="text-[10px] text-zinc-600 mt-1.5 font-mono">ID: {item.payment_id}</p>}
+                      {item.utr_number && <p className="text-[10px] text-zinc-600 mt-0.5 font-mono">UTR: {item.utr_number}</p>}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
