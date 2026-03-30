@@ -190,9 +190,9 @@ const ReferralsEnhanced = ({ user }) => {
               {networkProgress.toFixed(0)}%
             </span>
           </div>
-          <div className="h-4 bg-gray-800 rounded-full overflow-hidden">
+          <div className="h-4 bg-gray-800/80 rounded-full overflow-hidden ring-1 ring-gray-700/50">
             <div 
-              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-emerald-500 via-cyan-400 to-blue-500 rounded-full transition-all duration-500"
               style={{ width: `${networkProgress}%` }}
             />
           </div>
