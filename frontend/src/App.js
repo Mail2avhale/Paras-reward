@@ -513,7 +513,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <TopBar user={user} onLogout={handleLogout} />
             <BottomNav />
             <Suspense fallback={null}>
-              <AIContextualHelp user={user} />
+              {/* Help component removed */}
             </Suspense>
           </>
         )}
