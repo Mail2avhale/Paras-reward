@@ -39,11 +39,6 @@ const RewardLoader = ({ message = 'Loading...', size = 'default' }) => {
             draggable={false}
           />
         </div>
-
-        {/* Sparkle dots */}
-        <div className="absolute -top-1 right-0 w-1.5 h-1.5 bg-yellow-300 rounded-full" style={{ animation: 'sparkle 1.8s ease-in-out infinite' }} />
-        <div className="absolute bottom-0 -left-1 w-1 h-1 bg-amber-300 rounded-full" style={{ animation: 'sparkle 1.8s ease-in-out infinite 0.6s' }} />
-        <div className="absolute -top-0.5 -left-1.5 w-1 h-1 bg-yellow-200 rounded-full" style={{ animation: 'sparkle 1.8s ease-in-out infinite 1.2s' }} />
       </div>
       
       {/* Loading text */}
@@ -62,10 +57,6 @@ const RewardLoader = ({ message = 'Loading...', size = 'default' }) => {
         @keyframes coinPulse {
           0%, 100% { transform: scale(1); opacity: 0.4; }
           50%      { transform: scale(1.4); opacity: 0.8; }
-        }
-        @keyframes sparkle {
-          0%, 100% { opacity: 0; transform: scale(0); }
-          50%      { opacity: 1; transform: scale(1.8); }
         }
         @keyframes textPulse {
           0%, 100% { opacity: 0.5; }
