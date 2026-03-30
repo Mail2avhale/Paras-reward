@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Razorpay Admin Subscriptions - API Integration Tests', () => {
-  const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://cap-calculator-3tier.preview.emergentagent.com';
+  const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://collect-state-debug.preview.emergentagent.com';
   
   test('GET /api/admin/razorpay-subscriptions returns orders and stats', async ({ request }) => {
     const response = await request.get(`${baseUrl}/api/admin/razorpay-subscriptions`);
@@ -139,7 +139,7 @@ test.describe('Razorpay Admin Subscriptions - API Integration Tests', () => {
 });
 
 test.describe('Payment History API Tests', () => {
-  const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://cap-calculator-3tier.preview.emergentagent.com';
+  const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://collect-state-debug.preview.emergentagent.com';
   const testUserId = '73b95483-f36b-4637-a5ee-d447300c6835';
 
   test('GET /api/razorpay/payment-history/{user_id}?include_all=true returns all payments with status_message', async ({ request }) => {
@@ -185,7 +185,7 @@ test.describe('Payment History API Tests', () => {
 });
 
 test.describe('Sync Pending API Tests', () => {
-  const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://cap-calculator-3tier.preview.emergentagent.com';
+  const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://collect-state-debug.preview.emergentagent.com';
 
   test('POST /api/admin/razorpay/sync-pending works correctly', async ({ request }) => {
     const response = await request.post(`${baseUrl}/api/admin/razorpay/sync-pending`);
@@ -230,7 +230,7 @@ test.describe('Sync Pending API Tests', () => {
 });
 
 test.describe('Razorpay Config API Tests', () => {
-  const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://cap-calculator-3tier.preview.emergentagent.com';
+  const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://collect-state-debug.preview.emergentagent.com';
 
   test('GET /api/razorpay/config returns gateway configuration', async ({ request }) => {
     const response = await request.get(`${baseUrl}/api/razorpay/config`);
@@ -246,7 +246,7 @@ test.describe('Razorpay Config API Tests', () => {
 });
 
 test.describe('Update Order Status API Tests', () => {
-  const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://cap-calculator-3tier.preview.emergentagent.com';
+  const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://collect-state-debug.preview.emergentagent.com';
 
   test('Update order status requires order_id and status', async ({ request }) => {
     // Missing order_id

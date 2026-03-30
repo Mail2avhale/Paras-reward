@@ -1,60 +1,63 @@
 <analysis>**original_problem_statement**: 
-The user previously requested specific economy rules for Subscriptions & Redemptions (Dynamic burn rates based on cash vs PRC payment). These were successfully implemented. The current and newest P0 Product Requirement is to implement a **3-Tier Network Cap Formula** for mining based on Direct and L1 Indirect referrals:
-1. **Tier 1 (Base/Single Leg)**: 0 to 800 Cap.
-2. **Tier 2 (Direct Referrals)**: Increases Cap from 800 up to 4000 (+16 cap per direct referral).
-3. **Tier 3 (L1 Indirect Referrals)**: Increases Cap from 4000 up to 6000 (+5 cap per L1 indirect referral).
+The initial P0 request was to implement a 3-Tier Network Cap Formula for mining. Following that, the user requested multiple features and fixes: a complete business plan text file for users, fixing a referral code bug, standardizing the Fee Breakdown UI across all redeem pages, removing a legacy contextual help button, implementing a new smart AI Chatbot using real user data, implementing a 3.33% daily auto-burn for users with expired subscriptions, and adding a Redeem Limits Overview to the Admin Dashboard. 
+**Current Request (Highest Priority)**: The user reported via video that the Collect Rewards button is not functioning properly. Upon clicking, the success message appears, but the PRC balance does not update on the UI.
 
-**User's preferred language**: (INSTRUCT NEXT AGENT: You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and respond in **Marathi mixed with technical English** only)
+**User's preferred language**: (INSTRUCT NEXT AGENT: You MUST respond in **Marathi mixed with technical English** only)
 
 **what currently exists?** 
-A React/FastAPI/MongoDB application. The application has highly optimized UI with parallel data fetching. The backend enforces strict economy rules: Cash subscribers get 100% mining speed and 1% redemption burn; PRC subscribers get 70% mining speed and 5% redemption burn. Pricing dynamically fetches the PRC rate from a public backend endpoint. All full-page loading spinners have been replaced with a custom optimized spinning Paras Ecoin animation.
+A React/FastAPI/MongoDB application with a sophisticated economy system. It includes a 3-Tier network cap, dynamic PRC pricing, a newly implemented smart AI Chatbot (GPT-4o-mini via Emergent LLM Key) that answers queries using real user data without exposing internal formulas, an auto-burn mechanism (3.33% daily) for expired subscriptions, and an Admin Dashboard with comprehensive redeem limit tracking.
 
 **Last working item**: 
-    - Last item agent was working: Implementing the newly requested 3-Tier Network Cap formula in . The agent explained the math to the user, the user approved it, and the agent had just started searching the codebase for existing L1 (Level 1 indirect) referral queries to use for the calculation before the session ended.
+    - Last item agent was working: Debugging the PRC COLLECT issue on the frontend (). The agent verified that the backend API () works correctly (it updates the balance and resets the session in the DB), but the frontend UI does not visually update the user's  state after the successful collection.
     - Status: IN PROGRESS
-    - Agent Testing Done: N
-    - Which testing method agent to use?: both (Backend testing agent for the math logic + manual curl/python-c for direct mathematical verification of the L1 cap logic).
+    - Agent Testing Done: N (Backend manual testing done, frontend fix pending)
+    - Which testing method agent to use?: Frontend testing agent or manual screenshot after fixing .
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:  
-  - Issue 1: Implement 3-Tier Network Cap Formula for Mining (P0 - Current Task)
-     - Attempted fixes: Agent mapped out the mathematical formula:  but did not write the backend code.
+  Issue 1: PRC Balance not updating on UI after Collection (P0)
+  
+  Issues Detail:
+  - Issue 1: 
+     - Attempted fixes: Investigated backend  via bash script and confirmed it accurately processes the collection and returns the new balance. Agent was just about to modify the  function in .
      - Next debug checklist: 
         1. Open .
-        2. Locate  and update it to accept both  and .
-        3. Write/utilize a database query to accurately count L1 Indirect Referrals (users referred by the user's direct referrals).
-        4. Apply the formula: .
-        5. Test the mining rate APIs to ensure the math accurately reflects the new Cap structure.
-     - Why fix this issue and what will be achieved with the fix?: This is the core growth engine requested by the user to incentivize team building up to a 6000 network cap.
+        2. Locate  function (around line 475).
+        3. Ensure that after a successful API response, the frontend state for  (and optionally  via context/props) is correctly updated with the  returned from the API, or trigger a full user profile re-fetch.
+     - Why fix this issue and what will be achieved with the fix?: Users are unable to see their collected rewards in their wallet, causing confusion and panic. Fixing this ensures UI syncs with the DB state.
      - Status: IN PROGRESS
      - Is recurring issue? N
-     - Should Test frontend/backend/both after fix?: Both (ensure UI updates to reflect 6000 max cap instead of 4000).
+     - Should Test frontend/backend/both after fix?: Frontend
      - Blocked on other issue: None
 
 **In progress Task List**: 
-  - None
+  None
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - None (User is dynamically generating tasks based on reviews).
+    - Enhancement: Add Earning Projections to Chatbot (If I get 10 more referrals, what will be my daily earning?). (P1)
     
     Future Tasks:
     - Refactor  (P2): Modularize the 45,000+ line monolith.
     - MongoDB → PostgreSQL migration (P3).
 
 **Completed work in this session**
-- Implemented Dynamic Burn Rates for Redemptions (1% Cash, 5% PRC) across Backend and Frontend UI Breakdowns (DONE)
-- Fixed Razorpay Elite Pricing to exactly ₹999 + 18% GST and ensured it sets  (DONE)
-- Fixed PRC Elite Pricing to include 5% Burn (Total: 16,477 PRC) and removed hardcoded  PRC rates across the entire frontend, wiring it to a dynamic public API (DONE)
-- Fixed Login bug where invalid users were allowed to proceed to Step 2 (DONE)
-- Enhanced Registration error handling to enforce Mobile Number and show clear English inline errors (DONE)
-- Replaced all standard CSS spinners on user pages with  featuring an optimized, spinning Paras Ecoin image (DONE)
+- Implemented 3-Tier Network Cap Formula [min(6000, 800 + 16×D + 5×L1)] (DONE)
+- Generated E2E Business Plan Text File () for users (DONE)
+- Fixed missing  backend endpoint and frontend form errors (DONE)
+- Merged Subscription & Payment history into a single Transaction History on the Subscription page (DONE)
+- Standardized Fee Breakdown across Bank, Gift, and Utility redeem pages by stripping duplicate charts (DONE)
+- Removed legacy  floating button globally (DONE)
+- Built  +  utilizing real user data (balance, cap, referrals) to answer queries contextually via Emergent LLM key (DONE)
+- Implemented Auto-Burning () - deducting 3.33% daily from PRC balance for users with expired/no active subscriptions (DONE)
+- Added Admin Redeem Limits Overview component and backend aggregation route (DONE)
+- Fixed Account Not Found login toast issue (reduced duration to 2.5s and fixed close button) (DONE)
 
 **Earlier issues found/mentioned but not fixed**
    - None
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: None. 
+  - Issue recurrence in previous fork: None
   - Recurrence count: 0
   - Status: RESOLVED
 
@@ -62,9 +65,9 @@ A React/FastAPI/MongoDB application. The application has highly optimized UI wit
 
 
 **Key Technical Concepts**
-- **Dynamic PRC Rate**: The PRC conversion rate is dynamic. NEVER hardcode . Always use  in the frontend or  in the backend.
-- **Payment Types**:  in the DB dictates economy logic (cash = 100% mining/1% burn; prc = 70% mining/5% burn).
-- **Network Cap Formula**: Dictates how much of a user's chronological downline actually contributes to their mining speed.
+- **AI Chatbot**: Injects live  (balance, speed, referrals) into the system prompt to provide highly contextual answers without revealing actual raw math formulas to the end-user.
+- **Auto-Burning System**: If  is not 'active', backend calculates time elapsed since last check and burns balance continuously at a 3.33% daily rate.
+- **User Record Dates**: Uses  (datetime object) and  (ISO string). Do not use .
 
 **key DB schema**
   - : 
@@ -73,57 +76,64 @@ A React/FastAPI/MongoDB application. The application has highly optimized UI wit
   - None
 
 **All files of reference** 
--  (Needs updating for the 3-Tier L1 cap)
--  (Custom UI Loader created this session)
--  (Optimized asset)
+-  (Currently contains the broken  frontend logic)
+-  &  (Created for AI Chatbot)
+-  &  (Created for 3.33% daily burn feature)
+-  (Created inside public path)
+-  (Updated for Admin Redeem Limits override)
 
 **Areas that need refactoring**: 
--  (Over 45,000 lines, very difficult to navigate).
+-  (Massive technical debt).
 
 **key api endpoints**
--  (Will need to reflect the new L1 Cap logic)
+-  (Target for current P0 UI issue)
+- 
+- 
 - 
 
 **Critical Info for New Agent** 
-- **DO NOT commit  files to git.** It will instantly break the production deployment.
-- When updating , ensure the DB query to calculate L1 Indirects (referrals of referrals) is efficient. Do not pull full user objects if you only need a count.
-- The  uses a  optimized version of the user's provided  image. Do not revert to standard CSS spinners.
+- Do NOT rewrite or overwrite the  file or  blindly. 
+- The admin authentication relies on  (Check ).
+- For the  bug, the backend handles the collection correctly. Focus exclusively on fixing the React state update in  so  updates visually immediately after successful extraction.
 
 **documents and test reports created in this job** 
   -  (Updated)
   -  (Updated)
-  -  through  (Extensive testing was done this session)
+  -  & 
+  - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - *User*: Spinner ya type करून दे Square नको फक्त सर्कल कसे आहे ते (Uploads image of Paras Ecoin).
- - *Agent*: Created  using an optimized spinning version of the provided image.
- - *User*: Side चे spirkling dots remove कर (Remove side sparkling dots).
- - *Agent*: Removed the sparkle animation.
- - *User*: मला नेटवर्क cap direct referral वरती कसे वाढते ते मला (Explain how network cap increases with direct referrals).
- - *Agent*: Explained current formula (800 base, +16 per direct, max 4000).
- - *User*: Requested new 3-tier cap: 0-800 single leg, 200-4000 direct, 400-6000 L1 indirect (+5 per L1). तुला समजले का? (Did you understand?)
- - *Agent*: Confirmed understanding and asked for approval.
- - *User*: हो बरोबर आहे. आणि यावरती mining speed कसा वाढेल ते मला समजून सांग (Yes correct. Explain how mining speed increases with this). Uploaded a spreadsheet screenshot.
- - *Agent*: Mapped the spreadsheet to the new 3-tier math and showed the exact PRC gains per tier.
- - *User*: हो implement कर . Backend L1 query तयार कर किंवा अगोदर आहे का ते पण पहा. (Yes implement it. Look for or create the backend L1 query).
- - *Agent*: Ran search commands looking for L1 query logic, but session ended before implementation.
+ - *User*: Quick tip संपूर्ण delete kar. Sampurn पेजेस वरून हटव (Uploads screenshot of AIContextualHelp).
+ - *Agent*: Removed AIContextualHelp floating button globally.
+ - *User*: chatbot अपडेट कर सर्व information साठी पण फॉर्म्युला कोणताही ओपन करायचा नाही... (Update chatbot for all info but don't disclose exact formulas).
+ - *Agent*: Implemented  using Emergent LLM key but realized it didn't have user-specific real data.
+ - *User*: आपण chatbot सर्व माहितीसाठी कसा तयार करू शकतो म्हणजे त्याने युजरच्या सर्व प्रश्नाची उत्तरे रिअल त्याचा डेटा पाहून करेक्ट द्यायला पाहिजे...
+ - *Agent*: Updated the chatbot backend to fetch and inject the user's real DB stats.
+ - *User*: Requested UI improvements for Chatbot button + proper multilingual welcome message.
+ - *Agent*: Styled the chatbot UI beautifully with emerald-cyan rings and fixed the language prompting.
+ - *User*: Important update: ज्या यूजरचे subcription expire झाले आहे. त्याचे available PRC MADHUN डेली 3.33 PRC BURING KRAYCHE... (Auto burn 3.33% daily for expired subs).
+ - *Agent*: Created the burning logic, history tracker, and frontend .
+ - *User*: ADMIN la ya पेज वरती युजरचे असलेले Redeem limit Used आणि available redeem सर्व युजरचे एकत्रित v युजर wise Krun दे (Add redeem limit overviews to Admin panel).
+ - *Agent*: Added Admin Redeem Limits section and tested successfully.
+ - *User*: PRC COLLECT होत नाही (PRC not collecting) - Uploads screen recording.
+ - *Agent*: Debugging backend and frontend  before session ended. 
 
 **Project Health Check:**
-- Broken: None. 
-- Mocked: Dummy users in the DB used for tree testing.
+- Broken:   state update is broken (Balance doesn't visually update).
+- Mocked: None
 
 **3rd Party Integrations** 
+ • OpenAI GPT-4o-mini (Chatbot) — uses Emergent LLM Key
  • Razorpay (Payments) — requires User API Key
- • MongoDB Atlas — uses Emergent System Keys (Do not override)
 
 **Testing status**
-  - Testing agent used after significant changes: YES (Heavily utilized across 6 iterations for Backend APIs and Frontend UI regressions).
+  - Testing agent used after significant changes: YES (Verified Admin Redeem Limits)
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: None
-  - Known regressions: None
+  - Test files created: , 
+  - Known regressions: Frontend state sync issue on  action.
 
 **Credentials to test flow:**
-Check . Primary test user: 9970100782 / 997010. Admin: Admin@paras.com / 153759.
+Check . Primary test user: 9970100782 / 997010. Admin: admin@test.com / 153759.
 
 **What agent forgot to execute**
-The agent confirmed the math for the new 3-Tier Network Cap (Base 800 -> Directs +16 -> L1 Indirects +5 = Max 6000) and was specifically instructed to implement it. The session ended while the agent was ing for existing L1 queries. The next agent must pick this up as the immediate P0 task by editing .</analysis>
+The agent confirmed the backend  correctly collects the balance, but ran out of time before applying the frontend fix in . The next agent must immediately update the  function to sync the UI balance ( or context update) with the  returned from the API.</analysis>

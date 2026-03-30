@@ -23,7 +23,7 @@ import os
 import math
 
 # Get base URL from environment
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cap-calculator-3tier.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://collect-state-debug.preview.emergentagent.com').rstrip('/')
 
 # Test user credentials
 TEST_USER_UID = "76b75808-47fa-48dd-ad7c-8074678e3607"  # Elite, cash payment type

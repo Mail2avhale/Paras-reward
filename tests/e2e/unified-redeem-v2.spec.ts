@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://cap-calculator-3tier.preview.emergentagent.com';
+const BASE_URL = 'https://collect-state-debug.preview.emergentagent.com';
 
 test.describe('Unified Redeem System v2 - API Tests', () => {
 
