@@ -112,11 +112,11 @@ const LoginNew = ({ onLogin }) => {
         setAnimatedFeedback({
           message: `❌ Account Not Found\n\n📧 "${loginData.identifier}" is not registered.\n\n👉 Please Sign Up to create an account.`,
           type: 'error',
-          duration: 5000
+          duration: 2500
         });
         setTimeout(() => {
           toast('Would you like to create an account?', {
-            duration: 6000,
+            duration: 3000,
             action: {
               label: 'Sign Up',
               onClick: () => navigate('/register')
@@ -144,7 +144,7 @@ const LoginNew = ({ onLogin }) => {
         setAnimatedFeedback({
           message: `❌ Account Not Found\n\n📧 "${loginData.identifier}" is not registered.\n\n👉 Please Sign Up to create an account.`,
           type: 'error',
-          duration: 5000
+          duration: 2500
         });
       } else {
         // Network/server error — do NOT allow login, show error
@@ -251,12 +251,12 @@ const LoginNew = ({ onLogin }) => {
         setAnimatedFeedback({
           message: `❌ Account Not Found\n\n📧 "${loginData.identifier}" is not registered.\n\n👉 Please Sign Up to create an account.`,
           type: 'error',
-          duration: 5000
+          duration: 2500
         });
         // Show signup prompt after 3 seconds
         setTimeout(() => {
           toast('Would you like to create an account?', {
-            duration: 6000,
+            duration: 3000,
             action: {
               label: 'Sign Up',
               onClick: () => navigate('/register')
@@ -555,7 +555,7 @@ const LoginNew = ({ onLogin }) => {
       {animatedFeedback && (
         <AnimatedFeedback
           {...animatedFeedback}
-          onComplete={() => setAnimatedFeedback(null)}
+          onClose={() => setAnimatedFeedback(null)}
         />
       )}
 
