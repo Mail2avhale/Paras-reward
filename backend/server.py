@@ -44796,6 +44796,11 @@ async def admin_user_lookup(identifier: str):
 
 # Include all API routes (must be after all route definitions and sub-routers)
 api_router.include_router(growth_economy_router)
+
+# Support Chatbot
+from routes.support_chatbot import router as support_chatbot_router
+api_router.include_router(support_chatbot_router)
+
 app.include_router(api_router)
 
 # Note: User lookup route is now defined BEFORE include_router (line ~43305)

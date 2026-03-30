@@ -12,7 +12,7 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 // Lazy load heavy components
-const AIContextualHelp = lazy(() => import("@/components/AIContextualHelp"));
+const SupportChatbot = lazy(() => import("@/components/SupportChatbot"));
 // HoliCelebration removed as per user request
 // import HoliCelebration from "@/components/HoliCelebration";
 
@@ -513,7 +513,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <TopBar user={user} onLogout={handleLogout} />
             <BottomNav />
             <Suspense fallback={null}>
-              {/* Help component removed */}
+              <SupportChatbot user={user} />
             </Suspense>
           </>
         )}
