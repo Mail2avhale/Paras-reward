@@ -1,6 +1,6 @@
 # PARAS REWARD - Product Requirements Document
 
-## LAST UPDATED - 29 March 2026
+## LAST UPDATED - 30 March 2026
 
 ## COMPLETED: Production 520 Error Fix (P0) - 29 March 2026
 ## COMPLETED: Single Leg Tree + Mining - 29 March 2026
@@ -39,6 +39,24 @@
 - PRC sub: 16,477 PRC (with 5% burn, dynamic rate=11)
 - PRC rate: Dynamic `/api/prc-economy/current-rate`
 
+## COMPLETED: PRC Collect Balance UI Bug Fix (P0) - 30 March 2026
+- **Bug**: "Collect Rewards" button showed success toast but Current Balance didn't update visually
+- **Root Cause**: Race condition - `onBalanceUpdate` triggered parent re-render → `fetchUserData(true)` re-ran via useEffect → overwrote the optimistic balance
+- **Fix**: Added `collectInProgressRef` to protect optimistic update for 3 seconds, preventing re-fetch from overwriting
+- **File**: `/app/frontend/src/pages/Mining.js` (lines 191, 293-310, 487-563)
+- Testing: iteration 167 (100% PASS - balance updates, persists, auto-session restart)
+
+## COMPLETED: Smart AI Chatbot (SupportChatbot) - 30 March 2026
+- Uses real user data (balance, cap, referrals) for contextual answers via GPT-4o-mini
+- Does not expose internal formulas to users
+
+## COMPLETED: Auto-Burning System (3.33% daily) - 30 March 2026
+- Deducts 3.33% daily from PRC balance for users with expired subscriptions
+
+## COMPLETED: Admin Redeem Limits Overview - 30 March 2026
+- Aggregated + user-wise redeem limit tracking on Admin Dashboard
+
 ## Upcoming
+- P1: Chatbot Earning Projections ("If I get 10 more referrals, what will be my daily earning?")
 - P2: server.py refactoring (45k+ lines)
 - Future: MongoDB to PostgreSQL migration
