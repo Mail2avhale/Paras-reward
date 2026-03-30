@@ -1,8 +1,9 @@
 """
 Paras Reward AI Support Chatbot
 - Answers user queries based on complete platform knowledge
+- Fetches REAL user data for personalized answers
 - NEVER reveals internal formulas, algorithms, or business logic
-- Gives tentative/approximate answers based on formulas
+- Gives real data-based answers without exposing math
 """
 import os
 import logging
@@ -13,7 +14,12 @@ from datetime import datetime, timezone
 
 router = APIRouter(prefix="/ai", tags=["AI Support Chatbot"])
 
-# Lazy import
+db = None
+
+def set_db(database):
+    global db
+    db = database
+
 try:
     from emergentintegrations.llm.chat import LlmChat, UserMessage
     _HAS_LLM = True
@@ -24,7 +30,6 @@ except ImportError:
 
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 
-# In-memory chat sessions
 _chat_sessions = {}
 
 SYSTEM_PROMPT = """You are Paras Reward's official AI support assistant. You help users understand the platform in a friendly, clear way. You speak in simple Hindi-English mix (Hinglish) when user writes in Hindi/Marathi, otherwise English.
@@ -32,108 +37,124 @@ SYSTEM_PROMPT = """You are Paras Reward's official AI support assistant. You hel
 IMPORTANT RULES:
 1. NEVER reveal any internal formula, algorithm, calculation logic, or business math.
 2. NEVER say things like "the formula is..." or "it's calculated as..." or show mathematical expressions.
-3. When asked about earnings, caps, or rates, give APPROXIMATE/TENTATIVE answers like "approximately", "around", "roughly".
-4. If someone directly asks for the formula, politely say "Our system automatically calculates your rewards based on your network activity. Check the Mining page for your current earnings!"
+3. When user asks about their data, USE the real data provided in [USER_DATA] block to give accurate, personalized answers.
+4. If someone directly asks for the formula, politely say "Our system automatically calculates your rewards based on your network activity."
+5. Always answer in context of the user's REAL data when available.
 
 PLATFORM KNOWLEDGE:
 
-REGISTRATION:
-- Required: Full Name, Email, Mobile (10-digit), 6-digit PIN, optional Referral Code
-- Each mobile & email can only register once
-- Referral code connects you to someone's network (benefits both)
-- After registration you are an "Explorer" (free plan)
+REGISTRATION: Required: Full Name, Email, Mobile (10-digit), 6-digit PIN, optional Referral Code. Each mobile & email only once. Start as "Explorer" (free).
 
-LOGIN:
-- Enter Email/Mobile/UID → Click Sign In → Enter 6-digit PIN
-- Session-based (stays logged in until logout)
+LOGIN: Email/Mobile/UID → Sign In → 6-digit PIN.
 
 SUBSCRIPTION PLANS:
-- Explorer (Free): Can start mining, see speed, but CANNOT collect PRC. No redemption.
-- Elite (Paid): Can mine AND collect PRC. Full access to redemptions.
-  - Cash/Razorpay payment: Rs.999 + 18% GST = Rs.1,178.82. Best mining speed (100%). Lower service fees (1% burn).
-  - PRC payment: Approximately 16,477 PRC. Mining speed is 70%. Service fees are 5% burn.
-  - Duration: 28 days from activation.
-- Cash payment gives better speed and lower fees - recommended for best results.
+- Explorer (Free): Can start mining, see speed, CANNOT collect PRC. No redemption.
+- Elite (Paid): Mine AND collect PRC. Full access.
+  - Cash/Razorpay: Rs.999 + 18% GST = Rs.1,178.82. 100% speed. 1% burn.
+  - PRC: ~16,477 PRC. 70% speed. 5% burn. Duration: 28 days.
 
 MINING:
-- Everyone earns a base amount of PRC daily just by mining.
-- Your network (active Elite members below you) adds bonus earnings.
-- Larger networks earn more, but the per-person bonus decreases slightly as network grows (to keep things balanced).
-- Mining sessions run for 24 hours. Start → Earn → Collect → Repeat.
-- Explorer users can see their potential earnings but cannot collect until they upgrade to Elite.
-- Cash Elite earns at full speed. PRC Elite earns at approximately 70% speed.
+- Base earning daily + network bonus from active Elite members below you.
+- Larger networks earn more, per-person bonus decreases slightly as network grows.
+- Sessions run 24 hours. Start → Earn → Collect → Repeat.
+- Explorer can see speed but cannot collect.
+- Cash Elite = full speed. PRC Elite = ~70% speed.
 
-NETWORK CAP (3-Tier System):
-- Everyone starts with a base network capacity.
-- Tier 1: Base capacity that everyone gets automatically.
-- Tier 2: Your capacity grows when YOU invite people directly (Direct Referrals).
-- Tier 3: Your capacity grows even more when YOUR referrals invite their friends (L1 Indirect Referrals).
-- Maximum possible capacity is 6000 active network members.
-- More referrals = higher cap = more earning potential.
-- To maximize: invite friends directly AND help them invite others.
+NETWORK CAP (3-Tier):
+- Tier 1: Base capacity everyone gets.
+- Tier 2: Grows with YOUR direct referrals.
+- Tier 3: Grows when YOUR referrals invite others (L1 Indirect).
+- Maximum: 6000 active network members.
 
-APPROXIMATE EARNINGS EXAMPLES (tentative, actual may vary):
-- Solo user (no network): Around 500 PRC/day
-- Small network (~10 active): Around 550-600 PRC/day
-- Medium network (~100 active): Around 900-1000 PRC/day
-- Large network (~1000 active): Around 4,000-4,500 PRC/day
-- Very large network (~4000+ active): Around 11,000-12,000 PRC/day
-These are approximate. Actual depends on your subscription type and network health.
+REDEEM OPTIONS (Elite required):
+1. Gift Vouchers: Rs.100/500/1000/5000.
+2. Bank Transfer: Min Rs.200, Max Rs.10,000. KYC required.
+3. Bill Payments (BBPS): 20+ services.
+4. Flash Sales: Special deals.
 
-REFERRALS:
-- Share your unique referral link/code with friends
-- When they register with your code, they become your Direct Referral
-- Direct referrals increase your network capacity (Tier 2)
-- When your referrals invite others, those are L1 Indirect Referrals (Tier 3)
-- More capacity = more of your network counts toward your bonus
+SERVICE CHARGES: Processing Fee Rs.10 + Admin 20% + Burn (1% Cash / 5% PRC).
 
-GROWTH NETWORK & REDEEM UNLOCK:
-- Redemption access unlocks gradually based on your network size
-- Small network: small percentage unlocked
-- As network grows, more percentage unlocks (up to ~95% for very large networks)
-- This ensures sustainable ecosystem growth
+GIFT SUBSCRIPTION: Elite users can gift 24hr Elite to direct referrals.
 
-PROFILE & KYC:
-- Complete your profile for full features
-- KYC verification required for bank transfers
-- Auto KYC and Manual KYC options available
+PRC ECONOMY: Dynamic rate, not fixed. Shown in app before transactions.
 
-REDEEM OPTIONS (Elite subscription required):
-1. Gift Vouchers: Digital gift cards (Rs.100, Rs.500, Rs.1,000, Rs.5,000). Processing ~48 hours.
-2. Bank Transfer: Direct to bank account. Min Rs.200, Max Rs.10,000. KYC required. 1-3 business days.
-3. Bill Payments (BBPS): Mobile recharge, electricity, gas, water, DTH, broadband, insurance, FASTag, and 20+ services.
-4. Flash Sales: Special limited-time product deals at discounted PRC prices.
-
-SERVICE CHARGES (on all redemptions):
-- Processing Fee: Rs.10 flat
-- Admin Fee: 20% of amount
-- Burn: 1% for Cash Elite, 5% for PRC Elite
-- The Fee Breakdown is shown before every transaction
-
-GIFT SUBSCRIPTION:
-- Elite users can gift 24-hour Elite access to their direct referrals
-- Helps your referrals start earning, which benefits your network too
-
-PRC ECONOMY:
-- PRC has a dynamic value (not fixed)
-- Rate shown in app before every transaction
-- Higher ecosystem activity tends to improve the rate
-
-GENERAL TIPS:
-- Start mining daily to accumulate PRC
-- Upgrade to Elite (Cash payment recommended) for best benefits
-- Invite friends to grow your network and earning capacity
-- Help your referrals invite others for Tier 3 bonus
-- Complete KYC early for bank transfer access
-- Check Flash Sales for special deals
-
-When answering:
+When answering with user data:
+- Use exact numbers from [USER_DATA] for balance, mining rate, network stats
+- Say "Your current..." or "You have..." with real numbers
+- For earnings, say "At your current rate, you earn approximately X PRC per day"
 - Be helpful, friendly, and concise
 - Use bullet points for clarity
-- Give approximate numbers when asked about earnings
-- Always direct users to check the app for exact current values
-- If unsure about something specific, say "Please check the app for the latest information" or "Contact support for detailed help"
 """
+
+
+async def get_user_context(uid: str) -> str:
+    """Fetch real user data for personalized chatbot responses"""
+    if db is None:
+        return ""
+    
+    try:
+        user = await db.users.find_one({"uid": uid}, {"_id": 0, "pin_hash": 0, "password": 0})
+        if not user:
+            return ""
+        
+        # Import mining functions
+        from routes.mining import calculate_mining_rate, get_l1_indirect_count
+        from routes.growth_economy import get_growth_network_stats, get_dynamic_prc_rate
+        
+        # Fetch all data in parallel
+        import asyncio
+        mining_data, network_stats, prc_rate = await asyncio.gather(
+            calculate_mining_rate(uid),
+            get_growth_network_stats(uid),
+            get_dynamic_prc_rate(),
+        )
+        
+        # Get subscription info
+        plan = user.get("subscription_plan", "explorer")
+        payment_type = user.get("subscription_payment_type", "cash")
+        is_elite = plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
+        sub_end = user.get("subscription_end_date", "")
+        
+        # Build context string
+        context = f"""
+[USER_DATA - Real-time data for this user]
+Name: {user.get('name', 'Unknown')}
+PRC Balance: {user.get('prc_balance', 0):.2f} PRC
+Current PRC Rate: 1 INR = {prc_rate} PRC
+INR Value of Balance: approximately Rs.{user.get('prc_balance', 0) / prc_rate:.0f}
+
+Subscription: {plan.title()} ({payment_type})
+Is Elite Active: {"Yes" if is_elite else "No"}
+Mining Speed: {mining_data.get('boost_multiplier', 1) * 100:.0f}%
+{"Subscription Expires: " + str(sub_end) if sub_end else ""}
+
+Mining Stats:
+- Base Earning: {mining_data.get('base_rate', 500)} PRC/day
+- Network Bonus: {mining_data.get('network_rate', 0)} PRC/day
+- Total Daily Earning: {mining_data.get('total_daily_rate', 500)} PRC/day
+- Per Hour: ~{mining_data.get('total_daily_rate', 500) / 24:.1f} PRC/hour
+
+Network Stats:
+- Direct Referrals: {network_stats.get('direct_referrals', 0)}
+- L1 Indirect Referrals: {network_stats.get('l1_indirect_referrals', 0)}
+- Active Network Size: {mining_data.get('network_size', 0)} members
+- Network Cap: {mining_data.get('network_cap', 800)} (max 6000)
+- Cap Tier 1 (Base): {mining_data.get('cap_tier1_base', 800)}
+- Cap Tier 2 (Direct bonus): +{mining_data.get('cap_tier2_bonus', 0)}
+- Cap Tier 3 (L1 bonus): +{mining_data.get('cap_tier3_bonus', 0)}
+- Raw Network (before cap): {mining_data.get('raw_network_size', 0)}
+
+Redeem Unlock: {network_stats.get('unlock_percent', 0):.1f}% of balance redeemable
+Redeemable Amount: ~{user.get('prc_balance', 0) * network_stats.get('unlock_percent', 0) / 100:.0f} PRC (~Rs.{user.get('prc_balance', 0) * network_stats.get('unlock_percent', 0) / 100 / prc_rate:.0f})
+
+{"Note: User is on Explorer plan - cannot collect mined PRC. Suggest upgrading to Elite." if not is_elite else ""}
+{"Note: User paid via PRC - mining speed 70%, burn rate 5%." if payment_type == "prc" and is_elite else ""}
+[END USER_DATA]
+"""
+        return context
+    except Exception as e:
+        logging.error(f"Error fetching user context for {uid}: {e}")
+        return ""
 
 
 class ChatRequest(BaseModel):
@@ -149,31 +170,35 @@ class ChatResponse(BaseModel):
 
 @router.post("/support-chat", response_model=ChatResponse)
 async def support_chat(req: ChatRequest):
-    """AI Support Chatbot - answers user queries about Paras Reward platform"""
+    """AI Support Chatbot with real user data"""
     if not _HAS_LLM or not EMERGENT_LLM_KEY:
         raise HTTPException(status_code=503, detail="AI service not available")
 
     session_id = req.session_id or f"chat_{req.uid}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
 
     try:
+        # Fetch real user data
+        user_context = await get_user_context(req.uid)
+        
         # Get or create chat session
         if session_id not in _chat_sessions:
+            system_msg = SYSTEM_PROMPT
+            if user_context:
+                system_msg += f"\n\n{user_context}"
+            
             chat = LlmChat(
                 api_key=EMERGENT_LLM_KEY,
                 session_id=session_id,
-                system_message=SYSTEM_PROMPT,
+                system_message=system_msg,
             )
-            _chat_sessions[session_id] = chat
+            _chat_sessions[session_id] = {"chat": chat, "uid": req.uid}
         else:
-            chat = _chat_sessions[session_id]
+            chat = _chat_sessions[session_id]["chat"]
 
-        # Send message and get response
+        # Send message
         response = await chat.send_message(UserMessage(text=req.message))
 
-        return ChatResponse(
-            response=response,
-            session_id=session_id,
-        )
+        return ChatResponse(response=response, session_id=session_id)
     except Exception as e:
         logging.error(f"Chatbot error for {req.uid}: {e}")
         raise HTTPException(status_code=500, detail="Unable to process your request. Please try again.")

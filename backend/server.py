@@ -44799,6 +44799,8 @@ api_router.include_router(growth_economy_router)
 
 # Support Chatbot
 from routes.support_chatbot import router as support_chatbot_router
+from routes.support_chatbot import set_db as set_chatbot_db
+set_chatbot_db(db)
 api_router.include_router(support_chatbot_router)
 
 app.include_router(api_router)
