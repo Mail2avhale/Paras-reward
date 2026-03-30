@@ -4,8 +4,10 @@ Paras Reward AI Support Chatbot
 - Fetches REAL user data for personalized answers
 - NEVER reveals internal formulas, algorithms, or business logic
 - Gives real data-based answers without exposing math
+- Earning Projections: "If I get X more referrals, what will I earn?"
 """
 import os
+import math
 import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -30,6 +32,54 @@ except ImportError:
 
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 
+# Mining constants (mirrored from mining.py)
+_BASE_MINING_PRC = 500
+_MIN_PRC_PER_USER = 2.5
+_NETWORK_CAP_BASE = 800
+_NETWORK_CAP_DIRECT_MAX = 4000
+_NETWORK_CAP_MAX = 6000
+_CAP_PER_DIRECT = 16
+_CAP_PER_L1_INDIRECT = 5
+
+
+def _project_prc_per_user(network_size: int) -> float:
+    if network_size <= 0:
+        return 0
+    if network_size == 1:
+        return 5 * (21 - math.log2(2)) / 14
+    log_val = math.log2(max(2, network_size))
+    return round(max(_MIN_PRC_PER_USER, 5 * (21 - log_val) / 14), 6)
+
+
+def _project_cap(direct: int, l1: int) -> int:
+    return min(_NETWORK_CAP_MAX, _NETWORK_CAP_BASE + _CAP_PER_DIRECT * direct + _CAP_PER_L1_INDIRECT * l1)
+
+
+def compute_projections(current_direct: int, current_l1: int, current_network: int, boost: float) -> list:
+    """Compute earning projections for various referral growth scenarios."""
+    scenarios = [5, 10, 25, 50, 100]
+    results = []
+    for extra in scenarios:
+        new_direct = current_direct + extra
+        # Assume each new referral brings ~1 L1 indirect on average
+        new_l1 = current_l1 + int(extra * 0.5)
+        new_cap = _project_cap(new_direct, new_l1)
+        # Assume ~30% of new referrals become active Elite miners
+        projected_active = min(current_network + int(extra * 0.3), new_cap)
+        prc_pu = _project_prc_per_user(projected_active)
+        network_bonus = projected_active * prc_pu
+        daily = round((_BASE_MINING_PRC + network_bonus) * boost, 2)
+        monthly = round(daily * 28, 2)
+        results.append({
+            "extra_referrals": extra,
+            "new_direct": new_direct,
+            "new_cap": new_cap,
+            "projected_active_network": projected_active,
+            "daily_earning": daily,
+            "monthly_earning_28d": monthly,
+        })
+    return results
+
 _chat_sessions = {}
 
 SYSTEM_PROMPT = """You are Paras Reward's official AI support assistant. You help users understand the platform clearly and friendly.
@@ -48,6 +98,17 @@ IMPORTANT RULES:
 3. When user asks about their data, USE the real data provided in [USER_DATA] block to give accurate, personalized answers.
 4. If someone directly asks for the formula, politely say "Our system automatically calculates your rewards based on your network activity."
 5. Always answer in context of the user's REAL data when available.
+
+EARNING PROJECTION RULES:
+- When user asks "what if I get X more referrals" or "how much will I earn with more referrals" or any projection/prediction question:
+  1. ALWAYS use the exact numbers from [PROJECTION_DATA]. Do NOT say "it depends" or be vague.
+  2. Pick the closest scenario. Example: if user asks about 10 referrals, use the "+10 referrals" row directly.
+  3. Present clearly: "If you bring 10 more referrals, your estimated daily earning would increase from [current] to approximately [projected] PRC/day — that's about [monthly] PRC in 28 days!"
+  4. ALWAYS compare with their CURRENT daily earning to highlight the growth difference.
+  5. These are estimates based on typical referral activity. Say "approximately" once but still give the numbers confidently.
+  6. NEVER reveal the projection math/formula. Just state the results naturally as system-calculated estimates.
+  7. If asked for a number not in the table (e.g., 15), interpolate between the nearest two scenarios and give approximate figure.
+  8. Be enthusiastic and encouraging about growth potential.
 
 PLATFORM KNOWLEDGE:
 
@@ -96,7 +157,7 @@ When answering with user data:
 
 
 async def get_user_context(uid: str) -> str:
-    """Fetch real user data for personalized chatbot responses"""
+    """Fetch real user data + earning projections for personalized chatbot responses"""
     if db is None:
         return ""
     
@@ -122,6 +183,25 @@ async def get_user_context(uid: str) -> str:
         payment_type = user.get("subscription_payment_type", "cash")
         is_elite = plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
         sub_end = user.get("subscription_end_date", "")
+        
+        # Compute earning projections
+        boost = mining_data.get("boost_multiplier", 1.0)
+        projections = compute_projections(
+            current_direct=mining_data.get("direct_referrals", 0),
+            current_l1=mining_data.get("l1_indirect_referrals", 0),
+            current_network=mining_data.get("network_size", 0),
+            boost=boost,
+        )
+        
+        # Format projection table
+        proj_lines = []
+        for p in projections:
+            proj_lines.append(
+                f"  +{p['extra_referrals']} referrals → {p['new_direct']} direct, cap {p['new_cap']}, "
+                f"~{p['projected_active_network']} active → {p['daily_earning']} PRC/day "
+                f"(~{p['monthly_earning_28d']} PRC in 28 days)"
+            )
+        projection_block = "\n".join(proj_lines)
         
         # Build context string
         context = f"""
@@ -158,6 +238,12 @@ Redeemable Amount: ~{user.get('prc_balance', 0) * network_stats.get('unlock_perc
 {"Note: User is on Explorer plan - cannot collect mined PRC. Suggest upgrading to Elite." if not is_elite else ""}
 {"Note: User paid via PRC - mining speed 70%, burn rate 5%." if payment_type == "prc" and is_elite else ""}
 [END USER_DATA]
+
+[PROJECTION_DATA - Earning projections if user brings more referrals]
+Current: {mining_data.get('direct_referrals', 0)} direct referrals, earning {mining_data.get('total_daily_rate', 500)} PRC/day
+Projections (estimated, assumes ~30% of new referrals become active Elite miners):
+{projection_block}
+[END PROJECTION_DATA]
 """
         return context
     except Exception as e:

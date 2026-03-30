@@ -1,0 +1,102 @@
+{
+  "iteration": 168,
+  "summary": "Earning Projection Calculator feature VERIFIED. All chatbot projection queries return exact expected values. Multilingual support (English/Marathi/Hindi) working correctly. PRC Collect regression test PASSED.",
+  "features_tested": {
+    "chatbot_projection_10_referrals": {
+      "status": "PASS",
+      "query": "If I get 10 more referrals, what will be my daily earning?",
+      "expected": "520.8 PRC/day",
+      "actual": "520.8 PRC/day (14,582.4 PRC in 28 days)",
+      "response_language": "English"
+    },
+    "chatbot_projection_25_referrals_marathi": {
+      "status": "PASS",
+      "query": "25 referrals मिळाले तर daily earning किती?",
+      "expected": "545.48 PRC/day",
+      "actual": "545.48 PRC/day (15273.44 PRC in 28 days)",
+      "response_language": "Marathi - Bot responded in Marathi as expected"
+    },
+    "chatbot_projection_50_referrals": {
+      "status": "PASS",
+      "query": "What if I bring 50 more referrals?",
+      "expected": "591.57 PRC/day",
+      "actual": "591.57 PRC/day (16563.96 PRC in 28 days)"
+    },
+    "chatbot_projection_100_referrals": {
+      "status": "PASS",
+      "query": "And what about 100 referrals?",
+      "expected": "672.43 PRC/day",
+      "actual": "672.43 PRC/day (18828.04 PRC in 28 days)"
+    },
+    "chatbot_balance_query": {
+      "status": "PASS",
+      "query": "What is my current PRC balance?",
+      "expected": "Real user balance",
+      "actual": "33,725.02 PRC (matches UI display)"
+    },
+    "chatbot_hindi_query": {
+      "status": "PASS",
+      "query": "अगर मुझे 10 और referrals मिलें तो मेरी daily earning कितनी होगी?",
+      "response": "Bot responded in Hindi with 520.8 PRC/day projection"
+    },
+    "chatbot_ui": {
+      "status": "PASS",
+      "floating_button": "data-testid='chatbot-open-btn' - Working",
+      "chat_window": "data-testid='chatbot-window' - Opens correctly",
+      "input_field": "data-testid='chatbot-input' - Working",
+      "send_button": "data-testid='chatbot-send-btn' - Working",
+      "close_button": "data-testid='chatbot-close-btn' - Working"
+    },
+    "prc_collect_regression": {
+      "status": "PASS",
+      "initial_balance": "33725.02 PRC",
+      "collected_amount": "17.81 PRC",
+      "new_balance": "33742.84 PRC",
+      "toast_message": "New session auto-started!",
+      "session_reset": "Timer reset to ~24 hours, earnings reset to 0"
+    }
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_chatbot_projections.py",
+    "/app/test_reports/pytest/chatbot_projections_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "compute_projections function (lines 58-81): Correctly calculates projections for +5/+10/+25/+50/+100 referral scenarios using mining formulas",
+    "get_user_context (lines 159-251): Properly injects [USER_DATA] and [PROJECTION_DATA] into system prompt",
+    "SYSTEM_PROMPT (lines 85-156): Clear instructions for multilingual responses and projection handling",
+    "SupportChatbot.js: All data-testid attributes present for testing (chatbot-open-btn, chatbot-window, chatbot-input, chatbot-send-btn, chatbot-close-btn)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_chatbot_projections.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)",
+    "frontend": "100% (all UI elements and flows verified)"
+  },
+  "test_credentials": {
+    "mobile": "9970100782",
+    "pin": "997010",
+    "uid": "76b75808-47fa-48dd-ad7c-8074678e3607"
+  },
+  "seed_data_creation": "None - used existing test user",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Earning Projection Calculator fully implemented and verified. Chatbot endpoint POST /api/ai/support-chat accepts {uid, message, session_id} and returns projections using pre-computed data. Test user has 0 direct referrals, so projections start from base 500 PRC/day. All projection values verified: +10→520.8, +25→545.48, +50→591.57, +100→672.43 PRC/day. Multilingual support working (English/Marathi/Hindi). PRC Collect bug fix from iteration_167 still working correctly.",
+  "projection_values_verified": {
+    "+5_referrals": "507.14 PRC/day",
+    "+10_referrals": "520.8 PRC/day",
+    "+25_referrals": "545.48 PRC/day",
+    "+50_referrals": "591.57 PRC/day",
+    "+100_referrals": "672.43 PRC/day"
+  }
+}
