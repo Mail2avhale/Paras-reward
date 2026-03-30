@@ -139,7 +139,7 @@ const LoginNew = ({ onLogin }) => {
       }
     } catch (error) {
       const status = error.response?.status;
-      if (status === 404) {
+      if (status === 404 || (error.response?.data?.user_exists === false)) {
         setIdStatus('invalid');
         setAnimatedFeedback({
           message: `❌ Account Not Found\n\n📧 "${loginData.identifier}" is not registered.\n\n👉 Please Sign Up to create an account.`,
@@ -147,12 +147,9 @@ const LoginNew = ({ onLogin }) => {
           duration: 5000
         });
       } else {
-        // Even if API fails, allow PIN entry (server will validate on login)
-        setIdStatus('valid');
-        setAuthType('pin');
-        setIdentifierChecked(true);
-        setStep(2);
-        setLoginData(prev => ({ ...prev, pin: '' }));
+        // Network/server error — do NOT allow login, show error
+        setIdStatus('invalid');
+        toast.error('Server error. Please try again.', { duration: 3000 });
       }
     } finally {
       setCheckingAuthType(false);

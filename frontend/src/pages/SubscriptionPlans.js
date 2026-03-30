@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import RewardLoader from '@/components/RewardLoader';
 import { 
   Crown, CheckCircle, Upload, ArrowLeft, Star, Zap, ShoppingBag, 
   Gift, Clock, Shield, CreditCard, ChevronRight, Calendar,
@@ -524,7 +525,7 @@ const SubscriptionPlans = ({ user }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        <RewardLoader message="Loading plans..." />
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import RewardLoader from '@/components/RewardLoader';
 import { 
   Users, Copy, Check, Share2, ArrowLeft, TrendingUp, 
   ChevronRight, UserCheck, Link2, RefreshCw
@@ -90,7 +91,7 @@ const ReferralsEnhanced = ({ user }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full"></div>
+        <RewardLoader message="Loading referrals..." />
       </div>
     );
   }

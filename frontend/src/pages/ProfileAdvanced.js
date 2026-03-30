@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
+import RewardLoader from '@/components/RewardLoader';
 import { 
   User, Lock, ArrowLeft, Eye, EyeOff, Camera, 
   Save, Phone, Mail, Crown, ChevronRight, 
@@ -552,7 +553,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        <RewardLoader message="Loading profile..." />
       </div>
     );
   }
