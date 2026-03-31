@@ -1,0 +1,123 @@
+{
+  "iteration": 170,
+  "summary": "Base Mining Rate Change (500→1000 PRC/day) VERIFIED. All features working correctly - Backend API returns base_rate=1000, Frontend displays '1000 + 0.00', Reward Rate shows 41.7/hour, Chatbot returns 1000 PRC/day, Collect Rewards working.",
+  "features_tested": {
+    "backend_mining_status_api": {
+      "status": "PASS",
+      "endpoint": "GET /api/mining/status/{uid}",
+      "verified_values": {
+        "base_rate": 1000,
+        "total_daily_rate": 1000.0,
+        "mining_rate_per_hour": 41.67,
+        "network_rate": 0,
+        "network_size": 0,
+        "boost_multiplier": 1.0
+      },
+      "description": "API correctly returns base_rate=1000 for user with network_size=0 (< 250 threshold)"
+    },
+    "backend_rate_breakdown_api": {
+      "status": "PASS",
+      "endpoint": "GET /api/mining/rate-breakdown/{uid}",
+      "verified_values": {
+        "base_rate": 1000,
+        "total_daily_rate": 1000.0,
+        "network_size": 0
+      },
+      "note": "daily_formula string still shows '500' but actual calculation is correct (1000)"
+    },
+    "frontend_daily_earning_rate": {
+      "status": "PASS",
+      "description": "Mining page displays '1000 + 0.00' as Daily Earning Rate",
+      "selector": "Daily Earning Rate section",
+      "screenshot": ".screenshots/mining_page_1000_rate.png"
+    },
+    "frontend_reward_rate": {
+      "status": "PASS",
+      "description": "Reward Rate shows '41.7 /hour' (1000/24 ≈ 41.67)",
+      "verified_value": "41.7"
+    },
+    "frontend_base_network_label": {
+      "status": "PASS",
+      "description": "'Base + Network PRC/day' label displayed correctly"
+    },
+    "mining_session_start": {
+      "status": "PASS",
+      "description": "Start Session button works, session starts with 24-hour timer",
+      "verified_elements": ["Session Active badge", "Time Remaining: 23:59:xx", "Session Progress: 0.0%"]
+    },
+    "mining_collect_rewards": {
+      "status": "PASS",
+      "endpoint": "POST /api/mining/collect/{uid}",
+      "description": "Collect Rewards works and updates balance",
+      "test_result": {
+        "collected_amount": 2.17,
+        "balance_before": 33742.84,
+        "balance_after": 33745.01,
+        "auto_started": true
+      }
+    },
+    "chatbot_daily_earning": {
+      "status": "PASS",
+      "endpoint": "POST /api/ai/support-chat",
+      "question": "what is my daily earning?",
+      "response_contains": "1000.0 PRC/day",
+      "description": "Chatbot correctly returns 1000 PRC/day for test user"
+    },
+    "chatbot_projection": {
+      "status": "PASS",
+      "endpoint": "POST /api/ai/support-chat",
+      "question": "if I get 10 more referrals, what will I earn?",
+      "response_contains": "1000.0 PRC to approximately 1020.8 PRC per day",
+      "description": "Chatbot projections use 1000 base rate correctly"
+    }
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/mining/rate-breakdown/{uid}",
+        "issue": "daily_formula string shows 'Daily PRC = 500 + (N × PRC_per_user)' but should show 1000",
+        "priority": "LOW",
+        "note": "Cosmetic only - actual calculation is correct"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/routes/mining.py",
+    "/app/backend/routes/support_chatbot.py",
+    "/app/frontend/src/pages/Mining.js"
+  ],
+  "action_items": [
+    "OPTIONAL: Update daily_formula string in /api/mining/rate-breakdown to show '1000' instead of '500'"
+  ],
+  "critical_code_review_comments": [
+    "mining.py Line 51: BASE_MINING_PRC = 1000 ✓",
+    "mining.py Line 52: BASE_MINING_THRESHOLD = 250 ✓",
+    "mining.py Line 272: Conditional base_rate calculation correct ✓",
+    "support_chatbot.py Line 36-37: Constants match mining.py ✓",
+    "support_chatbot.py Line 73: Projection uses correct threshold ✓",
+    "Mining.js Line 172: Default miningRate=41.67 (1000/24) ✓",
+    "Mining.js Line 916: Displays baseRate + networkRate correctly ✓"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (4/4 API tests passed)",
+    "frontend": "100% (5/5 UI tests passed)"
+  },
+  "test_credentials": {
+    "mobile": "9970100782",
+    "pin": "997010",
+    "uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+    "network_size": 0,
+    "expected_base_rate": 1000
+  },
+  "seed_data_creation": "None - used existing test user",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Base mining rate changed from 500 to 1000 PRC/day for users with network < 250. Test user has network_size=0 so gets 1000 base. All APIs and UI verified working. Chatbot feature uses /api/ai/support-chat endpoint (not /api/ai/chatbot which is deprecated). Mining page at /daily-rewards shows '1000 + 0.00' for Daily Earning Rate."
+}

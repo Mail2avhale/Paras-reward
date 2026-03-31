@@ -48,7 +48,8 @@ def set_helpers(helpers: dict):
 
 # ==================== MINING FORMULA CONSTANTS ====================
 
-BASE_MINING_PRC = 500  # Base daily PRC (user's own mining)
+BASE_MINING_PRC = 1000  # Base daily PRC (when network < 250)
+BASE_MINING_THRESHOLD = 250  # Network size threshold: base=1000 if < 250, base=0 if >= 250
 MIN_PRC_PER_USER = 2.5  # Minimum PRC per user at 16384 network
 NETWORK_CAP_BASE = 800  # Tier 1: Base cap (single leg)
 NETWORK_CAP_DIRECT_MAX = 4000  # Tier 2: Max cap from direct referrals
@@ -237,7 +238,7 @@ async def calculate_mining_rate(user_id: str) -> dict:
     Calculate user's mining rate based on Growth Economy formulas
     
     Returns:
-    - base_rate: 500 PRC/day (base)
+    - base_rate: 1000 PRC/day if network < 250, else 0
     - network_rate: N × PRC_per_user(N)
     - total_rate: base + network
     - per_second_rate: total / 86400
@@ -267,7 +268,8 @@ async def calculate_mining_rate(user_id: str) -> dict:
     prc_per_user = calculate_prc_per_user(effective_network)
     
     # Calculate rates
-    base_rate = BASE_MINING_PRC
+    # Base rule: 1000 PRC/day if network < 250, else 0 (only network bonus)
+    base_rate = BASE_MINING_PRC if effective_network < BASE_MINING_THRESHOLD else 0
     network_rate = effective_network * prc_per_user
     
     # Subscription multiplier:

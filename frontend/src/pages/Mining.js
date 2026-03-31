@@ -169,7 +169,7 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
   });
   const [sessionTimeRemaining, setSessionTimeRemaining] = useState(0);
   const [sessionPRC, setSessionPRC] = useState(0);
-  const [miningRate, setMiningRate] = useState(20.83); // Default to base rate (500/24)
+  const [miningRate, setMiningRate] = useState(41.67); // Default to base rate (1000/24)
   const [isStarting, setIsStarting] = useState(false);
   const [isCollecting, setIsCollecting] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState(null);
@@ -913,7 +913,7 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
                 <div className="mb-4 bg-zinc-800/50 rounded-2xl p-4 border border-zinc-700/50">
                   <p className="text-zinc-500 text-xs mb-1">Daily Earning Rate</p>
                   <p className="text-2xl font-bold text-amber-400 font-mono">
-                    {(baseRate || 500).toFixed(0)} + {(networkRate || 0).toFixed(2)}
+                    {(baseRate || 0).toFixed(0)} + {(networkRate || 0).toFixed(2)}
                   </p>
                   <p className="text-zinc-500 text-xs mt-1">Base + Network PRC/day</p>
                 </div>

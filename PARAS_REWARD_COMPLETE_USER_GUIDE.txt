@@ -162,9 +162,9 @@ How Mining Works:
 6. A new session auto-starts after collection
 
 Mining Formula:
-- Base Mining: 500 PRC/day (your own mining, everyone gets this)
+- Base Mining: 1000 PRC/day (when network < 250 active members, 0 when >= 250)
 - Network Bonus: Network_Size x PRC_per_user
-- Total Daily PRC = (500 + Network Bonus) x Speed Multiplier
+- Total Daily PRC = (Base + Network Bonus) x Speed Multiplier
 
 PRC Per User Formula (decreasing as network grows):
   PRC_per_user = max(2.5, 5 x (21 - log2(N)) / 14)
@@ -189,11 +189,13 @@ Speed Multiplier:
 - Elite (PRC payment): 100%
 
 Example Calculations:
-- Solo user (no network): 500 PRC/day
-- 10 active network: 500 + (10 x 6.10) = 561 PRC/day
-- 100 active network: 500 + (100 x 4.62) = 962 PRC/day
-- 1000 active network: 500 + (1000 x 3.56) = 4,060 PRC/day
-- 4000 active network: 500 + (4000 x 2.86) = 11,940 PRC/day
+- Solo user (no network): 1000 PRC/day (base)
+- 10 active network: 1000 + (10 x 6.10) = 1061 PRC/day
+- 100 active network: 1000 + (100 x 4.62) = 1462 PRC/day
+- 249 active network: 1000 + (249 x 4.14) = 2031 PRC/day
+- 250 active network: 0 + (250 x 4.14) = 1035 PRC/day (base stops, network takes over)
+- 1000 active network: 0 + (1000 x 3.56) = 3,560 PRC/day
+- 4000 active network: 0 + (4000 x 2.86) = 11,440 PRC/day
 
 Important: "Active" network members = Elite subscribers who are actively mining.
 Explorer users do NOT count in your network.
@@ -553,7 +555,7 @@ Same example (PRC Elite):
 ================================================================================
 
 Q: Can I earn PRC without inviting anyone?
-A: Yes! You earn 500 PRC/day base mining. But your network cap starts at 800,
+A: Yes! You earn 1000 PRC/day base mining while your network is under 250. But your network cap starts at 800,
    so even without inviting, up to 800 active members below you in the single
    leg tree can boost your earnings.
 
@@ -602,7 +604,7 @@ A: When your subscription expires, you can renew with any payment method.
 ================================================================================
 
 EARNING PRC:
-  Base Mining:     500 PRC/day (everyone)
+  Base Mining:     1000 PRC/day (network < 250), 0 PRC/day (network >= 250)
   Network Bonus:   Up to ~15,000 PRC/day (with 6000 cap)
   Speed:           Cash Elite = 100% + 30% POPCORN, PRC Elite = 100%
 

@@ -33,7 +33,8 @@ except ImportError:
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 
 # Mining constants (mirrored from mining.py)
-_BASE_MINING_PRC = 500
+_BASE_MINING_PRC = 1000
+_BASE_MINING_THRESHOLD = 250  # base=1000 if network < 250, base=0 if >= 250
 _MIN_PRC_PER_USER = 2.5
 _NETWORK_CAP_BASE = 800
 _NETWORK_CAP_DIRECT_MAX = 4000
@@ -68,7 +69,9 @@ def compute_projections(current_direct: int, current_l1: int, current_network: i
         projected_active = min(current_network + int(extra * 0.3), new_cap)
         prc_pu = _project_prc_per_user(projected_active)
         network_bonus = projected_active * prc_pu
-        daily = round((_BASE_MINING_PRC + network_bonus) * boost, 2)
+        # Base = 1000 if network < 250, else 0
+        base = _BASE_MINING_PRC if projected_active < _BASE_MINING_THRESHOLD else 0
+        daily = round((base + network_bonus) * boost, 2)
         monthly = round(daily * 28, 2)
         results.append({
             "extra_referrals": extra,
@@ -123,7 +126,8 @@ SUBSCRIPTION PLANS:
   - PRC: ~16,477 PRC. 70% speed. 5% burn. Duration: 28 days.
 
 MINING:
-- Base earning daily + network bonus from active Elite members below you.
+- Base earning: 1000 PRC/day when network has less than 250 active members. Once network reaches 250, base becomes 0 and only network bonus continues.
+- Network bonus from active Elite members below you continues regardless of base.
 - Larger networks earn more, per-person bonus decreases slightly as network grows.
 - Sessions run 24 hours. Start → Earn → Collect → Repeat.
 - Explorer can see speed but cannot collect.
