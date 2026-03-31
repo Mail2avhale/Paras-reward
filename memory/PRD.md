@@ -64,6 +64,13 @@
 - File: `/app/backend/routes/support_chatbot.py` (compute_projections + updated system prompt)
 - Testing: iteration 168 (100% PASS - all projections verified, multilingual, PRC Collect regression OK)
 
+## COMPLETED: Auto-Burn Background Cron Job - 31 March 2026
+- Added `run_auto_burn_all_expired()` in `burning.py` — runs via APScheduler at 5:30 AM & 5:30 PM UTC (11 AM & 11 PM IST)
+- Iterates ALL users with expired subscriptions, calculates elapsed time burn (3.33%/day), deducts from balance
+- First run initializes `burn_last_checked`, subsequent runs apply actual burns
+- Logs results to `burn_job_logs` + individual transactions to `prc_transactions`
+- Tested: 57 users burned, 4341 PRC total in 12h simulation
+
 ## Upcoming
 - P2: server.py refactoring (45k+ lines)
 - Future: MongoDB to PostgreSQL migration

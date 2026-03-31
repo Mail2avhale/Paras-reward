@@ -182,3 +182,115 @@ async def get_burning_history(uid: str, limit: int = 20):
         "total_burned": round(total_burned, 2),
         "count": len(burns),
     }
+
+
+async def run_auto_burn_all_expired():
+    """
+    Background cron job: Burns PRC for ALL users with expired subscriptions.
+    Runs every 12 hours via APScheduler.
+    """
+    if db is None:
+        logging.warning("[AUTO-BURN-JOB] DB not available, skipping")
+        return
+
+    now = datetime.now(timezone.utc)
+    logging.info(f"[AUTO-BURN-JOB] Starting auto-burn sweep at {now.isoformat()}")
+
+    # Find all users with balance > 0 who are NOT on active subscription
+    cursor = db.users.find(
+        {"prc_balance": {"$gt": 0.01}},
+        {"_id": 0, "uid": 1, "name": 1, "prc_balance": 1,
+         "subscription_plan": 1, "subscription_status": 1,
+         "subscription_expires": 1, "subscription_expiry": 1,
+         "subscription_end_date": 1, "burn_last_checked": 1}
+    )
+
+    users_burned = 0
+    total_prc_burned = 0.0
+    users_skipped = 0
+    errors = 0
+
+    async for user in cursor:
+        uid = user.get("uid")
+        if not uid:
+            continue
+
+        try:
+            # Check if subscription is active — skip active users
+            if is_subscription_active(user):
+                users_skipped += 1
+                continue
+
+            balance = user.get("prc_balance", 0)
+            if balance <= 0.01:
+                continue
+
+            last_checked = user.get("burn_last_checked")
+            burned_amount = 0.0
+
+            if last_checked:
+                if isinstance(last_checked, str):
+                    try:
+                        last_checked = datetime.fromisoformat(last_checked.replace("Z", "+00:00"))
+                    except Exception:
+                        last_checked = now
+
+                if last_checked.tzinfo is None:
+                    last_checked = last_checked.replace(tzinfo=timezone.utc)
+
+                elapsed_seconds = (now - last_checked).total_seconds()
+                if elapsed_seconds > 60:  # Only burn if >1 minute elapsed
+                    burned_amount = balance * BURN_PER_SECOND_FACTOR * elapsed_seconds
+                    burned_amount = min(burned_amount, balance)
+                    burned_amount = round(burned_amount, 6)
+            else:
+                # First encounter — just set the timestamp, burn starts next run
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {"burn_last_checked": now.isoformat()}}
+                )
+                continue
+
+            if burned_amount > 0.001:
+                new_balance = max(0, round(balance - burned_amount, 6))
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {
+                        "prc_balance": new_balance,
+                        "burn_last_checked": now.isoformat(),
+                    }}
+                )
+                await db.prc_transactions.insert_one({
+                    "uid": uid,
+                    "type": "auto_burn",
+                    "amount": -burned_amount,
+                    "balance_after": new_balance,
+                    "description": f"Auto-burn (Expired subscription) - {DAILY_BURN_PERCENT}%/day [cron]",
+                    "created_at": now.isoformat(),
+                    "burn_rate_percent": DAILY_BURN_PERCENT,
+                    "elapsed_seconds": (now - last_checked).total_seconds(),
+                })
+                users_burned += 1
+                total_prc_burned += burned_amount
+            else:
+                # Update timestamp even if burn amount is negligible
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {"burn_last_checked": now.isoformat()}}
+                )
+
+        except Exception as e:
+            errors += 1
+            logging.error(f"[AUTO-BURN-JOB] Error burning uid={uid}: {e}")
+
+    # Log summary
+    summary = {
+        "timestamp": now.isoformat(),
+        "users_burned": users_burned,
+        "total_prc_burned": round(total_prc_burned, 2),
+        "users_skipped_active": users_skipped,
+        "errors": errors,
+        "job_type": "cron_auto_burn",
+    }
+    await db.burn_job_logs.insert_one(summary)
+    logging.info(f"[AUTO-BURN-JOB] Complete: {users_burned} users burned, {total_prc_burned:.2f} PRC total, {users_skipped} active skipped, {errors} errors")

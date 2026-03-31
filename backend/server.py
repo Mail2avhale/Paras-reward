@@ -44885,7 +44885,7 @@ api_router.include_router(support_chatbot_router)
 
 # Auto-Burning
 from routes.burning import router as burning_router
-from routes.burning import set_db as set_burning_db
+from routes.burning import set_db as set_burning_db, run_auto_burn_all_expired
 set_burning_db(db)
 api_router.include_router(burning_router)
 
@@ -45437,6 +45437,16 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Auto-burn expired subscription users every 12 hours
+        # Burns 3.33%/day from PRC balance of users with expired subscriptions
+        scheduler.add_job(
+            run_auto_burn_all_expired,
+            CronTrigger(hour='5,17', minute=30),  # 5:30 AM and 5:30 PM UTC (11 AM and 11 PM IST)
+            id='auto_burn_expired_users',
+            name='Auto-burn PRC for expired subscriptions (3.33%/day)',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
@@ -45452,6 +45462,7 @@ async def startup_db():
         print("   - 🏦 Eko status update: Every 5 minutes")
         print("   - 💓 DB keep-alive ping: Every 2 minutes (prevents cold start)")
         print("   - 🚨 Emergency auto-pause: Every 5 minutes (200% spike detection)")
+        print("   - 🔥 Auto-burn expired subs: 5:30 AM & 5:30 PM UTC (3.33%/day)")
         
         # Trigger initial Razorpay sync 30 seconds after startup
         import asyncio
