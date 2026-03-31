@@ -626,16 +626,16 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
   const getMiningSpeedDisplay = (plan, paymentType) => {
     // Explorer = can mine but can't collect
     if (!plan || plan === 'explorer' || plan === 'free' || plan === '') {
-      return { speed: '100%', color: 'text-zinc-400', canMine: true, isDemo: false };
+      return { speed: '100%', color: 'text-zinc-400', canMine: true, isDemo: false, label: '100% Speed' };
     }
     
-    // Elite with PRC payment = 70%
+    // Elite with PRC payment = Display as 100% (internally 70%)
     if (paymentType === 'prc') {
-      return { speed: '70%', color: 'text-amber-400', canMine: true, isDemo: false };
+      return { speed: '100%', color: 'text-emerald-400', canMine: true, isDemo: false, label: '100% Speed' };
     }
     
-    // Elite with Cash/Manual/Razorpay = 100%
-    return { speed: '100%', color: 'text-emerald-400', canMine: true, isDemo: false };
+    // Elite with Cash/Manual/Razorpay = 100% + 30% POPCORN bonus
+    return { speed: '130%', color: 'text-emerald-400', canMine: true, isDemo: false, label: '100% + 30% POPCORN' };
   };
   
   const speedInfo = getMiningSpeedDisplay(subscriptionPlan, userData?.subscription_payment_type);
@@ -741,9 +741,9 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
                 </span>
               </div>
               {hasPaidPlan ? (
-                <div className={`px-3 py-1.5 rounded-full ${speedInfo.speed === '100%' ? 'bg-emerald-500/10 border border-emerald-500/30' : speedInfo.speed === '70%' ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-zinc-800/50 border border-zinc-700'}`}>
-                  <span className={`text-xs font-semibold flex items-center gap-1 ${speedInfo.color}`}>
-                    <Zap className="w-3 h-3" /> {speedInfo.speed} Speed
+                <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                  <span className="text-xs font-semibold flex items-center gap-1 text-emerald-400">
+                    <Zap className="w-3 h-3" /> {speedInfo.label}
                   </span>
                 </div>
               ) : (

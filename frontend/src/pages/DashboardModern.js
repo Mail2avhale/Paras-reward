@@ -688,11 +688,11 @@ const DashboardModern = ({ user, onLogout }) => {
                 </div>
                 <p className={`text-sm font-bold ${
                   stats.subscriptionPlan === 'elite' ? 
-                    (userData?.subscription_payment_type === 'prc' ? 'text-amber-400' : 'text-emerald-400') :
+                    'text-emerald-400' :
                   'text-gray-500'
                 }`}>
                   {stats.subscriptionPlan === 'elite' || stats.subscriptionPlan === 'growth' || stats.subscriptionPlan === 'vip' ? 
-                    (userData?.subscription_payment_type === 'prc' ? '70%' : '100%') : 
+                    (userData?.subscription_payment_type === 'prc' ? '100%' : '100% + 30%') : 
                     '0%'}
                 </p>
               </div>

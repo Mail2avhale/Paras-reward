@@ -804,7 +804,7 @@ const SubscriptionPlans = ({ user }) => {
               </div>
 
               {[
-                { feature: 'Mining Speed', cash: '100%', cashIcon: '⚡', prc: '70%', prcIcon: '⚠️', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
+                { feature: 'Mining Speed', cash: '100% + 30% POPCORN', cashIcon: '🍿', prc: '100%', prcIcon: '⚡', cashColor: 'text-emerald-400', prcColor: 'text-emerald-400' },
                 { feature: 'Daily Base Mining', cash: '500 PRC', cashIcon: '', prc: '350 PRC', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
                 { feature: 'Network Income', cash: 'Full', cashIcon: '', prc: 'Reduced', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
                 { feature: 'Earning Growth', cash: 'Fast', cashIcon: '🚀', prc: 'Slow', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-zinc-400' },

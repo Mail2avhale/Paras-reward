@@ -90,7 +90,7 @@ Features:
 
 After login, your dashboard shows:
 - Your PRC Balance (total reward coins)
-- Mining Speed (100% for Cash Elite, 70% for PRC Elite)
+- Mining Speed (100% for PRC Elite, 100% + 30% POPCORN Bonus for Cash Elite)
 - Elite Plan status (Active/Expired with dates)
 - Profile completion percentage
 - Quick action buttons: Rewards, Invite, Redeem, Share
@@ -120,8 +120,8 @@ There are 2 main plans:
 |                   | (see your speed)           | mined PRC                  |
 |                   | CANNOT collect PRC         |                            |
 +-------------------+----------------------------+----------------------------+
-| Mining Speed      | Shows 100% (demo only)     | Cash: 100% speed           |
-|                   |                            | PRC: 70% speed             |
+| Mining Speed      | Shows 100% (demo only)     | Cash: 100% + 30% POPCORN   |
+|                   |                            | PRC: 100% speed            |
 +-------------------+----------------------------+----------------------------+
 | Burn Rate         | N/A                        | Cash: 1% burn              |
 | (on services)     |                            | PRC: 5% burn               |
@@ -135,16 +135,16 @@ There are 2 main plans:
 Payment Methods for Elite:
 1. Razorpay (Cash/UPI/Card): Rs.999 + 18% GST = Rs.1,178.82
    - Sets subscription_payment_type = "cash"
-   - Mining speed: 100%
+   - Mining speed: 100% + 30% POPCORN Bonus
    - Burn rate on services: 1%
 
 2. PRC Payment: 16,477 PRC (includes 5% burn)
    - Sets subscription_payment_type = "prc"
-   - Mining speed: 70%
+   - Mining speed: 100%
    - Burn rate on services: 5%
 
-Tip: Cash payment gives you BETTER mining speed (100% vs 70%) and 
-LOWER burn rates (1% vs 5%). PRC payment is for users with large PRC balance.
+Tip: Cash payment gives you 100% speed PLUS 30% POPCORN Bonus and 
+LOWER burn rates (1% vs 5%). PRC payment gives full 100% speed for users with large PRC balance.
 
 
 ================================================================================
@@ -185,8 +185,8 @@ PRC Per User Formula (decreasing as network grows):
 
 Speed Multiplier:
 - Explorer: 100% (but CANNOT collect - demo only)
-- Elite (Cash/Razorpay): 100%
-- Elite (PRC payment): 70%
+- Elite (Cash/Razorpay): 100% + 30% POPCORN Bonus
+- Elite (PRC payment): 100%
 
 Example Calculations:
 - Solo user (no network): 500 PRC/day
@@ -604,7 +604,7 @@ A: When your subscription expires, you can renew with any payment method.
 EARNING PRC:
   Base Mining:     500 PRC/day (everyone)
   Network Bonus:   Up to ~15,000 PRC/day (with 6000 cap)
-  Speed:           Cash Elite = 100%, PRC Elite = 70%
+  Speed:           Cash Elite = 100% + 30% POPCORN, PRC Elite = 100%
 
 NETWORK CAP (max 6000):
   Base:            800 (automatic)
@@ -612,8 +612,8 @@ NETWORK CAP (max 6000):
   Per L1 Indirect: +5  (need 400 for max Tier 3)
 
 SUBSCRIPTION:
-  Cash:    Rs.1,178.82 (Rs.999 + GST)  -> 100% speed, 1% burn
-  PRC:     16,477 PRC                   -> 70% speed, 5% burn
+  Cash:    Rs.1,178.82 (Rs.999 + GST)  -> 100% + 30% POPCORN, 1% burn
+  PRC:     16,477 PRC                   -> 100% speed, 5% burn
 
 REDEEM CHARGES:
   Burn:       1% (Cash) or 5% (PRC)

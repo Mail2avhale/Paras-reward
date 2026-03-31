@@ -64,6 +64,12 @@
 - File: `/app/backend/routes/support_chatbot.py` (compute_projections + updated system prompt)
 - Testing: iteration 168 (100% PASS - all projections verified, multilingual, PRC Collect regression OK)
 
+## COMPLETED: Speed Display Rebranding (PRC 100% + Cash POPCORN) - 31 March 2026
+- PRC subscribers: Display changed from "70% Speed" to "100% Speed" (backend formula unchanged)
+- Cash subscribers: Display changed from "100% Speed" to "100% + 30% POPCORN" bonus (backend formula unchanged)
+- Updated across: Mining.js, DashboardModern.js, SubscriptionPlans.js comparison table, Chatbot system prompt, User Guide
+- Purpose: Reduce PRC user dissatisfaction while giving Cash users premium branding
+
 ## COMPLETED: Admin Auto-Burn Manual Trigger + Stats - 31 March 2026
 - Admin Dashboard "Auto-Burn (3.33%/day)" section with "Run Now" button
 - Shows: Total PRC Burned, Users Burned, Eligible Now, Burn Txns stats

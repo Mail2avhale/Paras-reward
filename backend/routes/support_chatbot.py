@@ -127,7 +127,7 @@ MINING:
 - Larger networks earn more, per-person bonus decreases slightly as network grows.
 - Sessions run 24 hours. Start → Earn → Collect → Repeat.
 - Explorer can see speed but cannot collect.
-- Cash Elite = full speed. PRC Elite = ~70% speed.
+- PRC Elite = 100% speed. Cash Elite = 100% speed + 30% POPCORN bonus (extra mining reward).
 
 NETWORK CAP (3-Tier):
 - Tier 1: Base capacity everyone gets.
@@ -213,7 +213,7 @@ INR Value of Balance: approximately Rs.{user.get('prc_balance', 0) / prc_rate:.0
 
 Subscription: {plan.title()} ({payment_type})
 Is Elite Active: {"Yes" if is_elite else "No"}
-Mining Speed: {mining_data.get('boost_multiplier', 1) * 100:.0f}%
+Mining Speed: {"100% + 30% POPCORN Bonus" if payment_type != "prc" and is_elite else "100%"}
 {"Subscription Expires: " + str(sub_end) if sub_end else ""}
 
 Mining Stats:
@@ -236,7 +236,8 @@ Redeem Unlock: {network_stats.get('unlock_percent', 0):.1f}% of balance redeemab
 Redeemable Amount: ~{user.get('prc_balance', 0) * network_stats.get('unlock_percent', 0) / 100:.0f} PRC (~Rs.{user.get('prc_balance', 0) * network_stats.get('unlock_percent', 0) / 100 / prc_rate:.0f})
 
 {"Note: User is on Explorer plan - cannot collect mined PRC. Suggest upgrading to Elite." if not is_elite else ""}
-{"Note: User paid via PRC - mining speed 70%, burn rate 5%." if payment_type == "prc" and is_elite else ""}
+{"Note: User paid via PRC - 100% mining speed, burn rate 5%." if payment_type == "prc" and is_elite else ""}
+{"Note: User paid via Cash - 100% mining speed + 30% POPCORN bonus, burn rate 1%." if payment_type != "prc" and is_elite else ""}
 [END USER_DATA]
 
 [PROJECTION_DATA - Earning projections if user brings more referrals]
