@@ -635,7 +635,7 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
     }
     
     // Elite with Cash/Manual/Razorpay = 100% + 30% POPCORN bonus
-    return { speed: '130%', color: 'text-emerald-400', canMine: true, isDemo: false, label: '100% + 30% POPCORN' };
+    return { speed: '130%', color: 'text-emerald-400', canMine: true, isDemo: false, label: '100% + 30%', hasPopcorn: true };
   };
   
   const speedInfo = getMiningSpeedDisplay(subscriptionPlan, userData?.subscription_payment_type);
@@ -744,6 +744,19 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
                 <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
                   <span className="text-xs font-semibold flex items-center gap-1 text-emerald-400">
                     <Zap className="w-3 h-3" /> {speedInfo.label}
+                    {speedInfo.hasPopcorn && (
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 ml-0.5" fill="none">
+                        <path d="M7 8C7 5.5 8.5 3 12 3C15.5 3 17 5.5 17 8" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M5.5 8C4.5 8 3 8.5 3 10.5C3 12 4 12.5 5 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M18.5 8C19.5 8 21 8.5 21 10.5C21 12 20 12.5 19 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M5 12.5L7 21H17L19 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M8 8C8 6.5 9.5 5 12 5C14.5 5 16 6.5 16 8C16 9.5 14.5 10.5 12 10.5C9.5 10.5 8 9.5 8 8Z" fill="#fbbf24" fillOpacity="0.3"/>
+                        <circle cx="10" cy="8" r="1.5" fill="#fbbf24"/>
+                        <circle cx="14" cy="8" r="1.5" fill="#fbbf24"/>
+                        <circle cx="12" cy="6.5" r="1.2" fill="#fbbf24"/>
+                        <path d="M9 13L10 19M15 13L14 19M12 12V20" stroke="#f59e0b" strokeWidth="0.8" strokeLinecap="round" opacity="0.5"/>
+                      </svg>
+                    )}
                   </span>
                 </div>
               ) : (
