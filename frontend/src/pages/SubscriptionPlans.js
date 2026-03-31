@@ -5,7 +5,8 @@ import RewardLoader from '@/components/RewardLoader';
 import { 
   Crown, CheckCircle, Upload, ArrowLeft, Star, Zap, ShoppingBag, 
   Gift, Clock, Shield, CreditCard, ChevronRight, Calendar,
-  AlertCircle, Check, Rocket, TrendingUp, Award, Users, Wallet
+  AlertCircle, Check, Rocket, TrendingUp, Award, Users, Wallet,
+  FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,6 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import ImageUpload from '@/components/ImageUpload';
 import { validateUTR, formatUTR } from '@/utils/indianValidation';
 import PRCRateDisplay, { PRCRateBadge } from '@/components/PRCRateDisplay';
+import InvoiceModal from '@/components/InvoiceModal';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -73,6 +75,7 @@ const SubscriptionPlans = ({ user }) => {
 
   // PRC Rate for subscription (fetched from backend)
   const [prcRate, setPrcRate] = useState(null);
+  const [invoicePayment, setInvoicePayment] = useState(null); // Payment to show invoice for
   const [elitePrcPrice, setElitePrcPrice] = useState(null); // Full pricing from backend
 
   // New Pricing (March 2026) - ₹999 + 18% GST = ₹1178.82
@@ -985,6 +988,16 @@ const SubscriptionPlans = ({ user }) => {
                           <Zap className="w-3.5 h-3.5" /> Try Again
                         </button>
                       )}
+
+                      {payment.status === 'paid' && (
+                        <button
+                          onClick={() => setInvoicePayment(payment)}
+                          className="mt-2 w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                          data-testid="view-invoice-btn"
+                        >
+                          <FileText className="w-3.5 h-3.5" /> View Invoice
+                        </button>
+                      )}
                     </div>
                   ))}
 
@@ -1042,6 +1055,15 @@ const SubscriptionPlans = ({ user }) => {
                       </div>
                       {item.payment_id && <p className="text-[10px] text-zinc-600 mt-1.5 font-mono">ID: {item.payment_id}</p>}
                       {item.utr_number && <p className="text-[10px] text-zinc-600 mt-0.5 font-mono">UTR: {item.utr_number}</p>}
+                      {(item.status === 'completed' || item.status === 'approved' || item.status === 'paid') && (
+                        <button
+                          onClick={() => setInvoicePayment(item)}
+                          className="mt-2 w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                          data-testid="view-invoice-btn-sub"
+                        >
+                          <FileText className="w-3.5 h-3.5" /> View Invoice
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1723,6 +1745,15 @@ const SubscriptionPlans = ({ user }) => {
             {t('backToDashboard')}
           </button>
         </div>
+      )}
+
+      {/* Invoice Modal */}
+      {invoicePayment && (
+        <InvoiceModal
+          payment={invoicePayment}
+          user={userData || user}
+          onClose={() => setInvoicePayment(null)}
+        />
       )}
     </div>
   );

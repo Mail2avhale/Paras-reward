@@ -895,23 +895,47 @@ async def get_payment_history(user_id: str, include_all: bool = False):
             {"_id": 0}
         ).sort("created_at", -1).to_list(50)
     
+    # Also include subscription_payments (PRC-based payments)
+    sub_payments = await db.subscription_payments.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    for sp in sub_payments:
+        # Normalize to match razorpay_orders shape for frontend
+        sp["order_id"] = sp.get("order_id", f"sub_{sp.get('created_at', '')}")
+        sp["amount"] = sp.get("inr_equivalent", sp.get("amount", 0))
+        if "status" not in sp:
+            sp["status"] = "paid"
+        sp["payment_method"] = sp.get("payment_method", "prc")
+        sp["source"] = "subscription_payments"
+    
+    # Merge and deduplicate (prefer razorpay_orders if same order_id exists)
+    existing_ids = {p.get("order_id") for p in payments}
+    for sp in sub_payments:
+        if sp.get("order_id") not in existing_ids:
+            payments.append(sp)
+    
+    # Sort merged list by created_at descending
+    payments.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
     # Add user-friendly status messages
     for p in payments:
         status = p.get("status", "created")
         if status == "paid":
-            p["status_message"] = "✅ Payment successful - Subscription activated"
+            p["status_message"] = "Payment successful - Subscription activated"
             p["status_color"] = "green"
         elif status == "created":
-            p["status_message"] = "⏳ Payment pending - Complete payment to activate"
+            p["status_message"] = "Payment pending - Complete payment to activate"
             p["status_color"] = "yellow"
         elif status == "failed":
-            p["status_message"] = f"❌ Payment failed - {p.get('failure_reason', 'Please try again')}"
+            p["status_message"] = f"Payment failed - {p.get('failure_reason', 'Please try again')}"
             p["status_color"] = "red"
         elif status == "error":
-            p["status_message"] = f"⚠️ Error occurred - {p.get('failure_reason', 'Contact support')}"
+            p["status_message"] = f"Error occurred - {p.get('failure_reason', 'Contact support')}"
             p["status_color"] = "orange"
         elif status == "cancelled":
-            p["status_message"] = "🚫 Payment cancelled"
+            p["status_message"] = "Payment cancelled"
             p["status_color"] = "gray"
         else:
             p["status_message"] = f"Status: {status}"
