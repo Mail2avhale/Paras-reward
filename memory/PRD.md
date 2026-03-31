@@ -64,6 +64,14 @@
 - File: `/app/backend/routes/support_chatbot.py` (compute_projections + updated system prompt)
 - Testing: iteration 168 (100% PASS - all projections verified, multilingual, PRC Collect regression OK)
 
+## COMPLETED: Daily Mining Base Rate Change (500→1000/0) - 31 March 2026
+- Base rate: 1000 PRC/day when network < 250, 0 PRC/day when >= 250 (only network bonus)
+- Backend: mining.py `BASE_MINING_PRC=1000, BASE_MINING_THRESHOLD=250`, conditional in `calculate_mining_rate()`
+- Chatbot projections updated to use new threshold logic
+- Frontend Mining.js default miningRate updated to 41.67 (1000/24)
+- User Guide updated with new examples and base rate info
+- Testing: iteration 170 (100% PASS - 9/9 backend + frontend tests)
+
 ## COMPLETED: Speed Display Rebranding (PRC 100% + Cash POPCORN) - 31 March 2026
 - PRC subscribers: Display changed from "70% Speed" to "100% Speed" (backend formula unchanged)
 - Cash subscribers: Display changed from "100% Speed" to "100% + 30% POPCORN" bonus (backend formula unchanged)

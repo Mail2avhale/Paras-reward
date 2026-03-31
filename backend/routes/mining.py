@@ -627,7 +627,7 @@ async def get_rate_breakdown(uid: str):
         
         return {
             "formula": "PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14)",
-            "daily_formula": "Daily PRC = 500 + (N × PRC_per_user)",
+            "daily_formula": f"Daily PRC = {1000 if effective_network < BASE_MINING_THRESHOLD else 0} + (N × PRC_per_user) [Base=1000 if network<250, else 0]",
             "network_cap_formula": "min(6000, 800 + 16×D + 5×L1)",
             "base_rate": rate_info["base_rate"],
             "network_size": rate_info["network_size"],
