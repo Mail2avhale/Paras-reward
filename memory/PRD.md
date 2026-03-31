@@ -102,6 +102,13 @@
 - Logs results to `burn_job_logs` + individual transactions to `prc_transactions`
 - Tested: 57 users burned, 4341 PRC total in 12h simulation
 
+## COMPLETED: Popcorn Icon UI Replacement - 31 March 2026
+- Replaced "POPCORN" text with custom SVG popcorn icon across all 3 pages
+- Pages updated: Mining.js (speed badge), DashboardModern.js (mining speed card), SubscriptionPlans.js (comparison table)
+- Icon: Yellow (#fbbf24) popcorn SVG, 16x16px, inline with text
+- Verified: All 3 pages render correctly with no layout issues
+
 ## Upcoming
+- P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)
 - Future: MongoDB to PostgreSQL migration

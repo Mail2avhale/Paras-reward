@@ -686,13 +686,13 @@ const DashboardModern = ({ user, onLogout }) => {
                 <div className="flex items-center gap-1 justify-end">
                   <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">MINING SPEED</p>
                 </div>
-                <p className={`text-sm font-bold ${
+                <p className={`text-sm font-bold flex items-center gap-1 ${
                   stats.subscriptionPlan === 'elite' ? 
                     'text-emerald-400' :
                   'text-gray-500'
                 }`}>
                   {stats.subscriptionPlan === 'elite' || stats.subscriptionPlan === 'growth' || stats.subscriptionPlan === 'vip' ? 
-                    (userData?.subscription_payment_type === 'prc' ? '100%' : '100% + 30%') : 
+                    (userData?.subscription_payment_type === 'prc' ? '100%' : <>100% + 30%<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 ml-0.5 inline-block" fill="none"><path d="M7 8C7 5.5 8.5 3 12 3C15.5 3 17 5.5 17 8" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/><path d="M5.5 8C4.5 8 3 8.5 3 10.5C3 12 4 12.5 5 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/><path d="M18.5 8C19.5 8 21 8.5 21 10.5C21 12 20 12.5 19 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/><path d="M5 12.5L7 21H17L19 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="10" cy="8" r="1.5" fill="#fbbf24"/><circle cx="14" cy="8" r="1.5" fill="#fbbf24"/><circle cx="12" cy="6.5" r="1.2" fill="#fbbf24"/></svg></>) : 
                     '0%'}
                 </p>
               </div>
