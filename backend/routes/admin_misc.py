@@ -263,17 +263,81 @@ async def smart_burn_check_and_run(request: Request):
 
 @router.post("/run-prc-burn")
 async def run_prc_burn_manual(request: Request):
-    """DEPRECATED - Burn module removed March 2026"""
-    return {"success": True, "deprecated": True, "message": "Burn module removed March 2026"}
+    """Manually trigger auto-burn for all expired subscription users"""
+    from routes.burning import run_auto_burn_all_expired
+    try:
+        await run_auto_burn_all_expired()
+        # Fetch latest job log
+        job = await db.burn_job_logs.find_one(
+            {"job_type": "cron_auto_burn"},
+            {"_id": 0},
+            sort=[("timestamp", -1)]
+        )
+        return {
+            "success": True,
+            "message": f"Auto-burn completed: {job.get('users_burned', 0)} users burned, {job.get('total_prc_burned', 0)} PRC total",
+            "result": job
+        }
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+@router.get("/burn-stats")
+async def get_burn_stats():
+    """Get auto-burn statistics for admin dashboard"""
+    # Latest job log
+    last_job = await db.burn_job_logs.find_one(
+        {"job_type": "cron_auto_burn"},
+        {"_id": 0},
+        sort=[("timestamp", -1)]
+    )
+    # Total burns all time
+    pipeline = [
+        {"$match": {"type": "auto_burn"}},
+        {"$group": {
+            "_id": None,
+            "total_burned": {"$sum": {"$abs": "$amount"}},
+            "total_transactions": {"$sum": 1},
+            "unique_users": {"$addToSet": "$uid"}
+        }}
+    ]
+    agg = await db.prc_transactions.aggregate(pipeline).to_list(1)
+    stats = agg[0] if agg else {}
+
+    # Recent burn transactions (last 10)
+    recent = await db.prc_transactions.find(
+        {"type": "auto_burn"},
+        {"_id": 0, "uid": 1, "amount": 1, "balance_after": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(10).to_list(10)
+
+    # Eligible users count (expired with balance)
+    eligible = await db.users.count_documents({
+        "prc_balance": {"$gt": 0.01},
+        "subscription_status": {"$ne": "active"}
+    })
+
+    return {
+        "success": True,
+        "last_job": last_job,
+        "all_time": {
+            "total_burned": round(stats.get("total_burned", 0), 2),
+            "total_transactions": stats.get("total_transactions", 0),
+            "unique_users": len(stats.get("unique_users", [])),
+        },
+        "eligible_users": eligible,
+        "recent_burns": recent,
+    }
 
 @router.get("/burn-settings")
 async def get_burn_settings():
-    """DEPRECATED - Burn module removed March 2026"""
+    """Get current burn configuration"""
     return {
         "success": True,
-        "deprecated": True,
-        "message": "Burn module removed March 2026",
-        "settings": {}
+        "settings": {
+            "daily_burn_percent": 3.33,
+            "burn_type": "auto_continuous",
+            "schedule": "Every 12 hours (5:30 AM & 5:30 PM UTC)",
+            "target": "Users with expired/no active subscriptions",
+        }
     }
 
 

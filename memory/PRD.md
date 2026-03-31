@@ -64,6 +64,14 @@
 - File: `/app/backend/routes/support_chatbot.py` (compute_projections + updated system prompt)
 - Testing: iteration 168 (100% PASS - all projections verified, multilingual, PRC Collect regression OK)
 
+## COMPLETED: Admin Auto-Burn Manual Trigger + Stats - 31 March 2026
+- Admin Dashboard "Auto-Burn (3.33%/day)" section with "Run Now" button
+- Shows: Total PRC Burned, Users Burned, Eligible Now, Burn Txns stats
+- Last Burn Job details: timestamp, users burned/skipped, PRC amount, errors
+- Recent Burns list with per-user amounts
+- Backend: `/api/admin/run-prc-burn` (POST) + `/api/admin/burn-stats` (GET)
+- Files: `AdminDashboard.js`, `admin_misc.py`
+
 ## COMPLETED: Invoice Display with Print Option (P0) - 31 March 2026
 - Invoice modal on Subscription page Payment History for all paid payments
 - Company: PARAS REWARD TECHNOLOGIES PVT LTD, GSTIN: 27AAQCP6686E1ZR, HSN: 998314

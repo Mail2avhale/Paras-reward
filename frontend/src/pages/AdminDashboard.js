@@ -39,6 +39,8 @@ const AdminDashboard = ({ user }) => {
   const [bulkFixJob, setBulkFixJob] = useState(null);
   const [redeemLimits, setRedeemLimits] = useState(null);
   const [redeemLoading, setRedeemLoading] = useState(false);
+  const [burnStats, setBurnStats] = useState(null);
+  const [burnRunning, setBurnRunning] = useState(false);
 
   // Check for running bulk fix job on load
   useEffect(() => {
@@ -166,6 +168,35 @@ const AdminDashboard = ({ user }) => {
   };
 
   useEffect(() => { fetchRedeemLimits(); }, []);
+
+  // Burn functions
+  const fetchBurnStats = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/burn-stats`);
+      setBurnStats(res.data);
+    } catch (err) {
+      console.error('Failed to fetch burn stats:', err);
+    }
+  };
+
+  const runAutoBurn = async () => {
+    setBurnRunning(true);
+    try {
+      const res = await axios.post(`${API}/admin/run-prc-burn`, {});
+      if (res.data.success) {
+        toast.success(res.data.message);
+        fetchBurnStats();
+      } else {
+        toast.error(res.data.message || 'Burn failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to run burn');
+    } finally {
+      setBurnRunning(false);
+    }
+  };
+
+  useEffect(() => { fetchBurnStats(); }, []);
 
   // Memoize computed values
   const subscriptionStats = useMemo(() => ({
@@ -794,6 +825,90 @@ const AdminDashboard = ({ user }) => {
       <div className="mt-6">
         <GSTSummaryWidget token={localStorage.getItem('token')} />
       </div>
+
+      {/* Auto-Burn Management Section */}
+      <Card className="bg-white rounded-2xl p-6 border border-red-100 shadow-sm" data-testid="admin-burn-section">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+              <Flame className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-[16px] font-bold text-slate-900">Auto-Burn (3.33%/day)</h3>
+              <p className="text-[12px] text-slate-500">Expired subscription users</p>
+            </div>
+          </div>
+          <Button
+            onClick={runAutoBurn}
+            disabled={burnRunning}
+            className="bg-red-600 hover:bg-red-700 text-white text-[13px] font-bold px-5 py-2.5 rounded-xl"
+            data-testid="run-burn-btn"
+          >
+            {burnRunning ? (
+              <><RefreshCw className="w-4 h-4 mr-1.5 animate-spin" /> Running...</>
+            ) : (
+              <><Flame className="w-4 h-4 mr-1.5" /> Run Now</>
+            )}
+          </Button>
+        </div>
+
+        {burnStats ? (
+          <div className="space-y-4">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-red-50 rounded-xl p-3.5 text-center">
+                <p className="text-[20px] font-bold text-red-700">{burnStats.all_time?.total_burned?.toLocaleString() || 0}</p>
+                <p className="text-[11px] text-red-600 font-semibold mt-0.5">Total PRC Burned</p>
+              </div>
+              <div className="bg-orange-50 rounded-xl p-3.5 text-center">
+                <p className="text-[20px] font-bold text-orange-700">{burnStats.all_time?.unique_users || 0}</p>
+                <p className="text-[11px] text-orange-600 font-semibold mt-0.5">Users Burned</p>
+              </div>
+              <div className="bg-amber-50 rounded-xl p-3.5 text-center">
+                <p className="text-[20px] font-bold text-amber-700">{burnStats.eligible_users || 0}</p>
+                <p className="text-[11px] text-amber-600 font-semibold mt-0.5">Eligible Now</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3.5 text-center">
+                <p className="text-[20px] font-bold text-slate-700">{burnStats.all_time?.total_transactions || 0}</p>
+                <p className="text-[11px] text-slate-600 font-semibold mt-0.5">Burn Txns</p>
+              </div>
+            </div>
+
+            {/* Last Job Info */}
+            {burnStats.last_job && (
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                <p className="text-[12px] font-bold text-slate-700 mb-2">Last Burn Job</p>
+                <div className="grid grid-cols-2 gap-2 text-[12px]">
+                  <div><span className="text-slate-500">Time:</span> <span className="font-semibold text-slate-800">{new Date(burnStats.last_job.timestamp).toLocaleString('en-IN')}</span></div>
+                  <div><span className="text-slate-500">Users:</span> <span className="font-semibold text-slate-800">{burnStats.last_job.users_burned} burned, {burnStats.last_job.users_skipped_active} skipped</span></div>
+                  <div><span className="text-slate-500">PRC Burned:</span> <span className="font-bold text-red-600">{burnStats.last_job.total_prc_burned?.toFixed(2)}</span></div>
+                  <div><span className="text-slate-500">Errors:</span> <span className={`font-semibold ${burnStats.last_job.errors > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{burnStats.last_job.errors}</span></div>
+                </div>
+              </div>
+            )}
+
+            {/* Recent Burns */}
+            {burnStats.recent_burns?.length > 0 && (
+              <div>
+                <p className="text-[12px] font-bold text-slate-700 mb-2">Recent Burns</p>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {burnStats.recent_burns.map((b, i) => (
+                    <div key={i} className="flex items-center justify-between py-1.5 px-3 bg-slate-50 rounded-lg text-[11px]">
+                      <span className="text-slate-600 font-mono truncate max-w-[120px]">{b.uid?.slice(0, 12)}...</span>
+                      <span className="text-red-600 font-bold">-{Math.abs(b.amount)?.toFixed(2)} PRC</span>
+                      <span className="text-slate-500">{b.balance_after?.toFixed(0)} left</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-[13px] text-slate-400">Loading burn stats...</p>
+          </div>
+        )}
+      </Card>
 
       {/* Login As User Dialog */}
       <AdminLoginAsUser 
