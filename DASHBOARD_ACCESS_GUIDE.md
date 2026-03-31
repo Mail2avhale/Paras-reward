@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://collect-state-debug.preview.emergentagent.com/setup
+   https://burn-dashboard.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

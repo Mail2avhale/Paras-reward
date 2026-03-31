@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://collect-state-debug.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://burn-dashboard.preview.emergentagent.com';
 
 // Test credentials
 const USER_MOBILE = '9421331342';

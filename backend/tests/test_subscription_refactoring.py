@@ -9,7 +9,7 @@ import requests
 import os
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://collect-state-debug.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://burn-dashboard.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 USER_MOBILE = "9970100782"
