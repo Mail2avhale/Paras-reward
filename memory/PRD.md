@@ -64,6 +64,15 @@
 - File: `/app/backend/routes/support_chatbot.py` (compute_projections + updated system prompt)
 - Testing: iteration 168 (100% PASS - all projections verified, multilingual, PRC Collect regression OK)
 
+## COMPLETED: Invoice Display with Print Option (P0) - 31 March 2026
+- Invoice modal on Subscription page Payment History for all paid payments
+- Company: PARAS REWARD TECHNOLOGIES PVT LTD, GSTIN: 27AAQCP6686E1ZR, HSN: 998314
+- Shows: Subtotal ₹999, CGST 9% ₹89.91, SGST 9% ₹89.91, Total ₹1178.82, PAID badge
+- Print option opens styled print window
+- Backend updated to merge razorpay_orders + subscription_payments in payment history
+- Files: `/app/frontend/src/components/InvoiceModal.js`, `SubscriptionPlans.js`, `razorpay_payments.py`
+- Testing: iteration 169 (100% PASS - 8/8 invoice + 1/1 regression)
+
 ## COMPLETED: Auto-Burn Background Cron Job - 31 March 2026
 - Added `run_auto_burn_all_expired()` in `burning.py` — runs via APScheduler at 5:30 AM & 5:30 PM UTC (11 AM & 11 PM IST)
 - Iterates ALL users with expired subscriptions, calculates elapsed time burn (3.33%/day), deducts from balance
