@@ -4124,6 +4124,21 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
     if bill_payments:
         total_redeemed += bill_payments[0].get("total", 0)
     
+    # PRC Subscription Payments
+    prc_subs = await db.subscription_payments.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "payment_method": "prc",
+                "status": {"$in": ["paid", "completed"]},
+                "created_at": {"$gte": cycle_start_str}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
+    ]).to_list(1)
+    if prc_subs:
+        total_redeemed += prc_subs[0].get("total", 0)
+    
     return total_redeemed
 
 
@@ -11660,6 +11675,23 @@ async def subscription_pay_with_prc(request: Request):
         
         # Use expected amount for accuracy
         prc_amount = expected_prc
+        
+        # CHECK REDEEM LIMIT before PRC subscription
+        try:
+            limit_info = await calculate_user_redeem_limit(user_id)
+            available = limit_info.get("effective_available", 0)
+            total_limit = limit_info.get("total_limit", 0)
+            total_redeemed = limit_info.get("total_redeemed", 0)
+            
+            if total_limit > 0 and prc_amount > available:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Redeem limit exceeded. Total Redeemable: {total_limit:.0f} PRC, Already Used: {total_redeemed:.0f} PRC, Available: {available:.0f} PRC. Required: {prc_amount:.0f} PRC."
+                )
+        except HTTPException:
+            raise
+        except Exception as limit_err:
+            logging.warning(f"[PRC-SUB] Redeem limit check error: {limit_err}")
         
         # Check PRC balance
         if current_balance < prc_amount:

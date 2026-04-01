@@ -120,12 +120,14 @@
 - **Files**: `mining.py` (check_subscription_expiry), `server.py` (get_user_data + dashboard)
 - **Testing**: 4/4 tests pass (mining status, user data, collect blocked, timezone-naive datetime handled)
 
-## COMPLETED: PRC Subscription Payment Type Overwrite Bug Fix - 1 April 2026
-- **Bug**: PRC subscription user ला "100% + 30%" (Cash speed) दिसत होतं "100%" ऐवजी
-- **Root Cause**: Razorpay auto-sync (server startup) blindly set `subscription_payment_type: "cash"`, overwriting PRC user's payment type
-- **Fix**: 2 auto-sync code paths modified to preserve existing "prc" payment type when user has active PRC subscription
-- **Files**: `server.py` (lines ~2170 auto_sync, ~2435 captured_sync)
-- **Note**: Production user 9970100782 needs manual DB fix: set `subscription_payment_type: "prc"`
+## COMPLETED: PRC Statement + Redeem Limit Fix - 1 April 2026
+- **Bug 1**: PRC subscription payment record PRC statement मध्ये दिसत नव्हता
+  - Root Cause: Transaction record `prc_amount` field वापरत होतं पण statement `amount` field read करतो
+  - Fix: `amount: -prc_amount` field added to transaction record + `subscription_prc` type added to TYPE_MAP + "Subscription" filter added
+- **Bug 2**: PRC subscription redeem limit मधून deduct होत नव्हतं
+  - Fix: `get_user_monthly_redemption_usage` मध्ये `subscription_payments` collection query added
+  - Fix: PRC subscription endpoint मध्ये redeem limit check added (uses `calculate_user_redeem_limit`)
+- **Files**: `server.py` (subscription_pay_with_prc, get_user_monthly_redemption_usage), `prc_statement.py` (TYPE_MAP, FILTER_CATEGORIES)
 
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
