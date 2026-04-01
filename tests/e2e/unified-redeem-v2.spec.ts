@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://burn-dashboard.preview.emergentagent.com';
+const BASE_URL = 'https://prc-audit-ledger.preview.emergentagent.com';
 
 test.describe('Unified Redeem System v2 - API Tests', () => {
 

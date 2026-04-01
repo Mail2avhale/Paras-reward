@@ -19,7 +19,7 @@ import math
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://burn-dashboard.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-audit-ledger.preview.emergentagent.com')
 
 # ==================== FORMULA VERIFICATION HELPERS ====================
 

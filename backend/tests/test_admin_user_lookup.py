@@ -16,7 +16,7 @@ import os
 # Get the API URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://burn-dashboard.preview.emergentagent.com'
+    BASE_URL = 'https://prc-audit-ledger.preview.emergentagent.com'
 
 
 class TestAdminUserLookupBugVerification:

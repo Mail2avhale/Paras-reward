@@ -19,7 +19,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://burn-dashboard.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-audit-ledger.preview.emergentagent.com').rstrip('/')
 
 # Test user credentials
 TEST_USER_UID = "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21"

@@ -1,130 +1,18 @@
-<analysis>**original_problem_statement**: 
-The initial P0 request was to fix a bug where the Collect Rewards button successfully collected PRC in the backend, but the frontend UI balance did not visually update. Subsequent requests included: fixing deployment build logs (blocking production), adding an AI Projection Calculator to the chatbot, creating a daily auto-burn background cron job for expired subscriptions, generating a printable GST Invoice modal in the user's payment history, creating a manual trigger for the burn job in the Admin panel, changing the base mining rate to 1000 PRC/day, and rebranding the mining speed display to 100% + 30% POPCORN for Cash users. 
-
-**User's preferred language**: (INSTRUCT NEXT AGENT: You MUST respond in **Marathi mixed with technical English** only)
-
-**what currently exists?** 
-A React/FastAPI/MongoDB application with a sophisticated growth economy system. It features a 3-tier network cap, an AI Support Chatbot capable of giving exact daily earning projections, a background cron job using APScheduler that auto-burns 3.33% daily from users with expired subscriptions, a fully-featured Admin Dashboard with manual job triggers, and a newly implemented printable GST Invoice generator for subscription payments. 
-
-**Last working item**: 
-    - Last item agent was working: The user requested to remove the word POPCORN from the mining speed UI and replace it with a nice icon instead. The agent performed a  across , , and  to insert a popcorn icon (SVG/emoji) but stopped before verifying the UI.
-    - Status: TESTING PENDING
-    - Agent Testing Done: N
-    - Which testing method agent to use? manual testing by screenshot tool to verify the new icon renders correctly and does not break the layout.
-    - User Testing Done: N
-
-**All Pending/In progress Issue list**:  
-  Issue 1: Verify Popcorn Icon UI Replacement (P0)
-  
-  Issues Detail:
-  - Issue 1: 
-     - Attempted fixes: Replaced the literal text POPCORN with an icon in , , and . The code was edited successfully but not visually tested.
-     - Next debug checklist: Take a screenshot of the  (Mining page) and  to ensure the new speed display () aligns correctly and looks professional. Fix any JSX/CSS styling if the SVG icon is misaligned.
-     - Why fix this issue and what will be achieved with the fix?: Finalizes the user's request for a cleaner, text-free UI for the bonus speed indicator. 
-     - Status: TESTING PENDING
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix?: Frontend
-     - Blocked on other issue: None
-
-**In progress Task List**: 
-  None
-
-**Upcoming and Future Tasks**
-    Upcoming Tasks:
-    - Enhancement: Add a Download as PDF option to the new  component so users can easily share invoices via WhatsApp/Email (P1).
-    
-    Future Tasks:
-    - Refactor  (P2): Modularize the 45,000+ line monolith.
-    - MongoDB → PostgreSQL migration (P3).
-
-**Completed work in this session**
-- Fixed PRC Collect UI balance update bug (resolved React state race condition in ) (DONE)
-- Fixed deployment blockers by un-ignoring  in  and removing hardcoded local MongoDB URLs (DONE)
-- Added Earning Projection Calculator to AI Chatbot to give exact future earning estimates based on referrals (DONE)
-- Created APScheduler background cron job () running at 5:30 AM & 5:30 PM UTC for 3.33% daily burns (DONE)
-- Built  with print functionality and integrated it into the Subscription Plans payment history (DONE)
-- Added manual Run Now Auto-Burn trigger and statistics section to  (DONE)
-- Changed Base Mining Rate to 1000 PRC/day (drops to 0 if network size >= 250) (DONE)
-- Rebranded Mining Speed UI: Cash Elite = 100% + 30% Bonus, PRC Elite = 100% (DONE)
-
-**Earlier issues found/mentioned but not fixed**
-   - None
-
-**Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: None
-  - Recurrence count: 0
-  - Status: RESOLVED
-
-**Code Architecture**
-
-
-**Key Technical Concepts**
-- **Cron Jobs**: Uses  initialized on Fastapi startup () to run background burn jobs twice a day without blocking the main event loop.
-- **Race Condition Prevention**:  () was implemented in  to temporarily block auto-polling from overwriting optimistic UI balance updates.
-- **Dynamic Base Rate**: Base mining is now conditional .
-
-**key DB schema**
-  - : 
-  - : Contains PRC-based subscriptions required for generating unified invoices alongside razorpay orders.
-
-**changes in tech stack**
-  - Added  to .
-
-**All files of reference** 
--  (Last modified for icon UI)
--  (Last modified for icon UI & Invoice)
--  (Last modified for icon UI)
--  (New file)
--  (Cron job logic)
-
-**Areas that need refactoring**: 
--  (Massive 45k+ line monolith file needs heavy modularization).
-
-**key api endpoints**
--  
-- 
-- 
-- 
-
-**Critical Info for New Agent** 
-- The agent was in the middle of replacing the text POPCORN with a visual icon for the Cash Elite mining speed perk. The string replacements were executed, but the agent did not verify if the UI looks good or if the SVG replacement caused any React syntax errors. **Your first step is to take screenshots of the frontend (Mining/Dashboard/Subscription pages) to ensure it works correctly and then finish the task.**
-- Do NOT rewrite or overwrite the  files.
-- The chatbot projection strictly calculates using the 1000 PRC base rate condition. 
-
-**documents and test reports created in this job** 
-  -  (Updated)
-  -  through 
-
-**Last 10 User Messages and any pending HUMAN messages** 
- - *User*: कालपासून किती inactive यूजर चे PRC बर्निंग झाले आहेत (How many inactive users burned since yesterday?)
- - *Agent*: Answered 0, explained it triggers on app open, and added a background cron job.
- - *User*: Requested an Invoice modal on the subscription page using a specific address and provided screenshots.
- - *Agent*: Created  and added it to the payment history section.
- - *User*: Asked how to run the burning job in the admin panel and if there's an option.
- - *Agent*: Added a Run Now auto-burn manual trigger and stats section to Admin Dashboard.
- - *User*: Requested rebranding the 70% speed UI for PRC users to 100%, and making Cash users 100% + 30% POPCORN 🍿 so users don't feel penalized.
- - *Agent*: Updated all UI, Chatbot, and Text guide references successfully.
- - *User*: Requested changing the daily mining base rate to 1000 PRC, which drops to 0 when the network hits 250 members.
- - *Agent*: Updated  logic, projection calculator, and UI.
- - *User*: Popcorn text chagle नाही वाटत ते text remove करून आयकॉन करून दे सगळीकडे (Popcorn text doesn't look good, remove the text and make it a nice icon everywhere).
- - *Agent*: Replaced text with an SVG icon in the code but did not finish testing. 
-
-**Project Health Check:**
-- Broken: None.
-- Mocked: None.
-
-**3rd Party Integrations** 
- • OpenAI GPT-4o-mini (Chatbot) — uses Emergent LLM Key
- • Razorpay (Payments) — requires User API Key
-
-**Testing status**
-  - Testing agent used after significant changes: YES (Highly utilized for bug fixes and features)
-  - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created:  to 
-  - Known regressions: None, but the last icon UI change was not verified.
-
-**Credentials to test flow:**
-Check . Primary test user: 9970100782 / 997010. Admin: admin@test.com / 153759.
-
-**What agent forgot to execute**
-The agent executed the file changes to replace the POPCORN text with an icon but completely forgot to test it visually using the screenshot tool or testing agent. The next agent must verify the UI layout for this specific change and then call the finish tool to wrap up the user's latest request.</analysis>
+<analysis>90a36f15-b3d4-452e-806f-bdabece1cc1dredeembill pay/app/backend/routes/prc_audit.pytransactionsmining/app/backend/routes/prc_audit.pytransactionsdaily_rewardsmininguidserver.pyInvoiceModal.jsserver.pymining.pysubscription_payment_type-prc_amountamount
+/app
+├── backend/
+│   ├── routes/
+│   │   ├── holidays.py               # New: Holiday logic
+│   │   ├── admin_dashboard.py        # Updated with precise PRC stats
+│   │   ├── manual_bank_transfer.py   # Updated with lifetime redeem enrichment
+│   │   ├── prc_audit.py              # New: In progress audit tool
+│   ├── server.py                     # Main monolith
+├── frontend/
+│   └── src/
+│       ├── components/
+│       │   ├── HolidayCalendar.js    # New: Dashboard calendar component
+│       ├── pages/
+│       │   ├── AdminHolidays.js      # New: Admin holiday management
+│       │   ├── Admin/
+│       │   │   └── AdminBankTransfers.js # Updated with advanced filters UI
+datetime.now(timezone.utc)create_redeem_requestexecute_eko_rechargeis_holidayusersuid, subscription_plan, subscription_expiry, subscription_payment_type, prc_balance, total_minedtransactionsuser_id, type, amount, prc_amount, timestampholidaysdate, name, type/app/backend/routes/prc_audit.py/app/frontend/src/pages/Admin/AdminBankTransfers.js/app/frontend/src/components/HolidayCalendar.js/app/frontend/src/pages/AdminHolidays.js/app/backend/routes/holidays.py/app/backend/server.pyserver.pyGET /api/user/{uid}GET /api/admin/statsGET /api/admin/requests90a36f15-b3d4-452e-806f-bdabece1cc1dprc_audit.pydatetime.now(timezone.utc)datetime.now()/app/memory/PRD.mdholidays.pyAdminBankTransfers.js/app/memory/test_credentials.md/app/backend/routes/prc_audit.py/app/backend/routes/prc_audit.py/app/backend/server.pytransactionsuserssubscription_payments</analysis>
