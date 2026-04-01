@@ -640,8 +640,11 @@ async def get_all_requests(
     search: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
-    sort_by: Optional[str] = Query(default="created_at", description="Sort by: created_at, amount, user_name"),
-    sort_order: Optional[str] = Query(default="asc", description="Sort order: asc or desc")
+    sort_by: Optional[str] = Query(default="created_at", description="Sort by: created_at, amount, user_name, total_redeemed"),
+    sort_order: Optional[str] = Query(default="asc", description="Sort order: asc or desc"),
+    redeem_min: Optional[float] = Query(default=None, description="Min lifetime redeemed filter"),
+    redeem_max: Optional[float] = Query(default=None, description="Max lifetime redeemed filter"),
+    never_redeemed: Optional[bool] = Query(default=None, description="Show only first-time redeemers"),
 ):
     """Get all bank transfer requests for admin with advanced filtering and sorting."""
     try:
@@ -725,6 +728,48 @@ async def get_all_requests(
                 else:
                     req["subscription_active"] = False
                     req["subscription_plan"] = "unknown"
+        
+        # Enrich: user's lifetime total redeemed from bank transfers (paid only)
+        user_ids = list(set(r.get("user_id") for r in requests if r.get("user_id")))
+        user_redeem_totals = {}
+        if user_ids:
+            redeem_pipeline = [
+                {"$match": {"user_id": {"$in": user_ids}, "status": "paid"}},
+                {"$group": {
+                    "_id": "$user_id",
+                    "total_redeemed_prc": {"$sum": {"$ifNull": ["$prc_deducted", 0]}},
+                    "total_redeemed_inr": {"$sum": {"$ifNull": ["$withdrawal_amount", 0]}},
+                    "redeem_count": {"$sum": 1}
+                }}
+            ]
+            redeem_results = await db.bank_transfer_requests.aggregate(redeem_pipeline).to_list(500)
+            for r in redeem_results:
+                user_redeem_totals[r["_id"]] = {
+                    "total_redeemed_prc": round(r.get("total_redeemed_prc", 0), 2),
+                    "total_redeemed_inr": round(r.get("total_redeemed_inr", 0), 2),
+                    "redeem_count": r.get("redeem_count", 0)
+                }
+        
+        for req in requests:
+            uid = req.get("user_id")
+            totals = user_redeem_totals.get(uid, {"total_redeemed_prc": 0, "total_redeemed_inr": 0, "redeem_count": 0})
+            req["user_total_redeemed_prc"] = totals["total_redeemed_prc"]
+            req["user_total_redeemed_inr"] = totals["total_redeemed_inr"]
+            req["user_redeem_count"] = totals["redeem_count"]
+            req["is_first_redeem"] = totals["redeem_count"] <= 1
+        
+        # Post-filter by redeem range
+        if redeem_min is not None:
+            requests = [r for r in requests if r.get("user_total_redeemed_prc", 0) >= redeem_min]
+        if redeem_max is not None:
+            requests = [r for r in requests if r.get("user_total_redeemed_prc", 0) <= redeem_max]
+        if never_redeemed:
+            requests = [r for r in requests if r.get("is_first_redeem", False)]
+        
+        # Sort by total_redeemed if requested
+        if sort_by == "total_redeemed":
+            reverse = sort_order == "desc"
+            requests.sort(key=lambda x: x.get("user_total_redeemed_prc", 0), reverse=reverse)
         
         total = await db.bank_transfer_requests.count_documents(query)
         

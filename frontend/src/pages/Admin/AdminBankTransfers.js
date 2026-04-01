@@ -81,8 +81,14 @@ const AdminBankTransfers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [sortBy, setSortBy] = useState('created_at'); // 'created_at', 'amount', 'user_name'
+  const [sortBy, setSortBy] = useState('created_at'); // 'created_at', 'amount', 'user_name', 'total_redeemed'
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' = oldest first
+  
+  // Advanced redeem filters
+  const [redeemMin, setRedeemMin] = useState('');
+  const [redeemMax, setRedeemMax] = useState('');
+  const [neverRedeemed, setNeverRedeemed] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -202,6 +208,11 @@ const AdminBankTransfers = () => {
       if (dateFrom) params.append('date_from', dateFrom);
       if (dateTo) params.append('date_to', dateTo);
       
+      // Advanced redeem filters
+      if (redeemMin) params.append('redeem_min', redeemMin);
+      if (redeemMax) params.append('redeem_max', redeemMax);
+      if (neverRedeemed) params.append('never_redeemed', 'true');
+      
       const res = await axios.get(`${API}/bank-transfer/admin/requests?${params}`);
       
       let data = res.data.requests || [];
@@ -216,7 +227,7 @@ const AdminBankTransfers = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, searchQuery, dateFrom, dateTo, sortBy, sortOrder]);
+  }, [page, statusFilter, searchQuery, dateFrom, dateTo, sortBy, sortOrder, redeemMin, redeemMax, neverRedeemed]);
 
   useEffect(() => {
     loadRequests();
@@ -462,6 +473,7 @@ const AdminBankTransfers = () => {
               <option value="created_at">Sort by: Date</option>
               <option value="amount">Sort by: Amount</option>
               <option value="user_name">Sort by: Name</option>
+              <option value="total_redeemed">Sort by: Total Redeemed</option>
             </select>
             
             {/* Sort Order */}
@@ -478,12 +490,86 @@ const AdminBankTransfers = () => {
             {/* Reset */}
             <Button
               variant="outline"
-              onClick={resetFilters}
+              onClick={() => {
+                resetFilters();
+                setRedeemMin('');
+                setRedeemMax('');
+                setNeverRedeemed(false);
+                setShowAdvancedFilters(false);
+              }}
               className="border-slate-300 text-slate-700"
             >
               Reset
             </Button>
+
+            {/* Advanced Filter Toggle */}
+            <Button
+              variant={showAdvancedFilters ? "default" : "outline"}
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={showAdvancedFilters ? "bg-blue-600 hover:bg-blue-700 text-white" : "border-slate-300 text-slate-700"}
+              data-testid="advanced-filter-toggle"
+            >
+              <Filter className="w-4 h-4 mr-1" />
+              Advanced
+            </Button>
           </div>
+          
+          {/* Advanced Redeem Filters */}
+          {showAdvancedFilters && (
+            <div className="mt-4 pt-4 border-t border-slate-200" data-testid="advanced-filters-panel">
+              <p className="text-sm font-semibold text-slate-700 mb-3">Redeem History Filters</p>
+              <div className="flex flex-wrap gap-4 items-end">
+                <div className="min-w-[140px]">
+                  <label className="text-xs text-slate-500 mb-1 block">Min Redeemed (PRC)</label>
+                  <Input
+                    data-testid="redeem-min-input"
+                    type="number"
+                    value={redeemMin}
+                    onChange={(e) => setRedeemMin(e.target.value)}
+                    placeholder="0"
+                    className="bg-white border-slate-300 text-slate-900"
+                  />
+                </div>
+                <div className="min-w-[140px]">
+                  <label className="text-xs text-slate-500 mb-1 block">Max Redeemed (PRC)</label>
+                  <Input
+                    data-testid="redeem-max-input"
+                    type="number"
+                    value={redeemMax}
+                    onChange={(e) => setRedeemMax(e.target.value)}
+                    placeholder="No limit"
+                    className="bg-white border-slate-300 text-slate-900"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    data-testid="never-redeemed-checkbox"
+                    type="checkbox"
+                    checked={neverRedeemed}
+                    onChange={(e) => setNeverRedeemed(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label className="text-sm text-slate-700 font-medium">First-time Redeemers Only</label>
+                </div>
+                <Button
+                  onClick={() => { setSortBy('total_redeemed'); setSortOrder('asc'); }}
+                  variant="outline"
+                  className={`border-slate-300 ${sortBy === 'total_redeemed' && sortOrder === 'asc' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'text-slate-700'}`}
+                  data-testid="sort-low-to-high"
+                >
+                  Low Redeemers First
+                </Button>
+                <Button
+                  onClick={() => { setSortBy('total_redeemed'); setSortOrder('desc'); }}
+                  variant="outline"
+                  className={`border-slate-300 ${sortBy === 'total_redeemed' && sortOrder === 'desc' ? 'bg-red-50 border-red-300 text-red-700' : 'text-slate-700'}`}
+                  data-testid="sort-high-to-low"
+                >
+                  High Redeemers First
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Requests Table */}
@@ -517,6 +603,7 @@ const AdminBankTransfers = () => {
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">Request ID</th>
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">User</th>
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">Amount</th>
+                      <th className="text-left p-4 text-slate-600 font-semibold text-sm">Lifetime Redeemed</th>
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">Bank Details</th>
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">Created / Processed</th>
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">Status</th>
@@ -555,6 +642,16 @@ const AdminBankTransfers = () => {
                         <td className="p-4">
                           <p className="text-emerald-600 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</p>
                           <p className="text-slate-500 text-xs">{req.prc_deducted?.toLocaleString()} PRC</p>
+                        </td>
+                        <td className="p-4" data-testid={`lifetime-redeemed-${req.request_id}`}>
+                          <p className={`font-bold text-sm ${req.user_total_redeemed_prc <= 0 ? 'text-blue-600' : req.user_total_redeemed_prc < 5000 ? 'text-emerald-600' : 'text-orange-500'}`}>
+                            {(req.user_total_redeemed_prc || 0).toLocaleString()} PRC
+                          </p>
+                          <p className="text-slate-500 text-xs">₹{(req.user_total_redeemed_inr || 0).toLocaleString()}</p>
+                          <p className="text-slate-400 text-[10px]">{req.user_redeem_count || 0} times</p>
+                          {req.is_first_redeem && (
+                            <span className="inline-block mt-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-semibold rounded">NEW</span>
+                          )}
                         </td>
                         <td className="p-4">
                           <div className="space-y-2 min-w-[280px]">
@@ -748,7 +845,7 @@ const AdminBankTransfers = () => {
                         </button>
                       </div>
                       {/* Amount */}
-                      <div className="flex items-center justify-between bg-emerald-50 -mx-3 px-3 py-2 rounded-b-lg border-t border-emerald-200">
+                      <div className="flex items-center justify-between bg-emerald-50 -mx-3 px-3 py-2 border-t border-emerald-200">
                         <div>
                           <span className="text-slate-500 text-xs">Amount: </span>
                           <span className="text-emerald-600 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</span>
@@ -759,6 +856,19 @@ const AdminBankTransfers = () => {
                         >
                           <Copy className="w-4 h-4 text-emerald-600" />
                         </button>
+                      </div>
+                      {/* Lifetime Redeemed */}
+                      <div className="flex items-center justify-between -mx-3 px-3 py-2 rounded-b-lg border-t border-slate-200">
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500 text-xs">Lifetime: </span>
+                          <span className={`font-semibold text-sm ${(req.user_total_redeemed_prc || 0) < 5000 ? 'text-emerald-600' : 'text-orange-500'}`}>
+                            {(req.user_total_redeemed_prc || 0).toLocaleString()} PRC
+                          </span>
+                          <span className="text-slate-400 text-xs">({req.user_redeem_count || 0}x)</span>
+                          {req.is_first_redeem && (
+                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-semibold rounded">NEW</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
