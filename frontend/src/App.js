@@ -249,6 +249,7 @@ const AdminBBPSDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackCh
 const AdminLedgerView = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminLedgerView"));
 const AdminPopupMessages = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminPopupMessages"));
 const AdminBankTransfers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBankTransfers"));
+const AdminHolidays = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminHolidays"));
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
 const BankRedeemPage = lazy(() => import("@/pages/BankRedeemPage"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
@@ -412,6 +413,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/settings" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=payment" replace /> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/security" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminSecurityDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/error-monitor" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminErrorMonitor user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/holidays" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminHolidays /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/settings/system" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=system" replace /> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/settings/web" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=web" replace /> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/settings/social" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=social" replace /> : <Navigate to="/dashboard" />} />

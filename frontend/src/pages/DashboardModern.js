@@ -15,6 +15,7 @@ import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/Pro
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
 import BurningIndicator from '@/components/BurningIndicator';
+import HolidayCalendar from '@/components/HolidayCalendar';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -1217,6 +1218,11 @@ const DashboardModern = ({ user, onLogout }) => {
         user={user}
         userData={userData}
       />
+
+      {/* Holiday Calendar */}
+      <div className="px-4 pb-24">
+        <HolidayCalendar />
+      </div>
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 z-50">

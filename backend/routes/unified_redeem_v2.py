@@ -948,6 +948,24 @@ async def create_redeem_request(request: RedeemRequestCreate):
         logging.error(f"[REDEEM] Emergency check error: {e}")
     
     # ═══════════════════════════════════════════════════════════════
+    # STEP 1.5: HOLIDAY CHECK - Block redeem on holidays
+    # ═══════════════════════════════════════════════════════════════
+    try:
+        from routes.holidays import is_holiday
+        holiday_check = await is_holiday()
+        if holiday_check.get("is_holiday"):
+            raise HTTPException(
+                status_code=503,
+                detail=f"Today is a holiday ({holiday_check['holiday_name']}). Redeem services are paused. Please try on the next working day."
+            )
+    except ImportError:
+        pass
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REDEEM] Holiday check error: {e}")
+    
+    # ═══════════════════════════════════════════════════════════════
     # STEP 2: GET USER
     # ═══════════════════════════════════════════════════════════════
     user = await db.users.find_one({"uid": request.user_id})

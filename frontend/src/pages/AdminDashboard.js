@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Users, Package, CreditCard, FileText, BarChart3, TrendingUp, 
   Store, Award, ShoppingCart, Bell, Settings, DollarSign, Truck, Activity,
-  Shield, Wallet, AlertTriangle, Crown, RefreshCw, ChevronRight,
+  Shield, Wallet, AlertTriangle, Crown, RefreshCw, ChevronRight, Calendar,
   UserCheck, Clock, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight,
   Zap, Gift, Star, Target, Percent, BadgeCheck, UserCog, Trophy, Flame
 } from 'lucide-react';
@@ -686,6 +686,7 @@ const AdminDashboard = ({ user }) => {
           <QuickActionCard icon={Wallet} label="Wallets" color="teal" onClick={() => navigate('/admin/company-wallets')} />
           <QuickActionCard icon={Shield} label="Security" color="red" onClick={() => navigate('/admin/security')} />
           <QuickActionCard icon={AlertTriangle} label="PRC Ctrl" color="orange" onClick={() => navigate('/admin/prc-economy')} />
+          <QuickActionCard icon={Calendar} label="Holidays" color="pink" onClick={() => navigate('/admin/holidays')} />
           <QuickActionCard icon={Settings} label="Settings" color="gray" onClick={() => navigate('/admin/settings/system')} />
         </div>
       </Card>
