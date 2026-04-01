@@ -137,6 +137,14 @@
   - Fix: PRC subscription endpoint मध्ये redeem limit check added (uses `calculate_user_redeem_limit`)
 - **Files**: `server.py` (subscription_pay_with_prc, get_user_monthly_redemption_usage), `prc_statement.py` (TYPE_MAP, FILTER_CATEGORIES)
 
+## COMPLETED: PRC Audit Endpoint (P0) - 1 April 2026
+- Admin can audit any user's complete PRC ledger from joining date
+- Endpoint: `GET /api/admin/audit/prc/{uid}` (admin auth required)
+- Fetches ALL credits (mining, referrals, refunds, admin credits, ledger) and ALL debits (bills, bank withdrawals, vouchers, PRC subs, DMT, burns, unified redeems)
+- Returns: chronological entries with running balance, category summary, calculated vs actual balance, discrepancy detection
+- File: `/app/backend/routes/prc_audit.py`, registered in `server.py`
+- Testing: Verified via curl — correct 200 response for valid users, 404 for missing users, admin-only access
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)

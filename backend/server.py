@@ -86,6 +86,7 @@ from routes.admin_ledger import router as admin_ledger_router, set_db as set_adm
 from routes.admin_ledger_view import router as admin_ledger_view_router, set_db as set_admin_ledger_view_db
 from routes.admin_tasks import router as admin_tasks_router
 from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
+from routes.prc_audit import router as prc_audit_router, set_db as set_prc_audit_db
 from routes.holidays import router as holidays_router, set_db as set_holidays_db, set_cache as set_holidays_cache, seed_holidays, is_holiday
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers
 # DMT V1, V3 and Fund Transfer routes REMOVED - Eko API not working
@@ -44782,8 +44783,10 @@ api_router.include_router(admin_tasks_router)
 # PRC Statement Router (User-facing Redeem/Refund Statement)
 set_prc_statement_db(db)
 set_holidays_db(db)
+set_prc_audit_db(db)
 api_router.include_router(prc_statement_router)
 api_router.include_router(holidays_router)
+api_router.include_router(prc_audit_router)
 
 # Admin Popup Messages Router
 set_admin_popup_db(db)
