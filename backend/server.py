@@ -7832,6 +7832,40 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     )
     kyc_status = user.get("kyc_status", "not_submitted")
     
+    # CHECK SUBSCRIPTION EXPIRY in dashboard too
+    if subscription_plan and subscription_plan.lower() not in ["explorer", "free", ""]:
+        expiry_val = user.get("subscription_expiry") or user.get("subscription_expires")
+        if expiry_val:
+            try:
+                if isinstance(expiry_val, str):
+                    expiry_dt = datetime.fromisoformat(str(expiry_val).replace('Z', '+00:00'))
+                elif isinstance(expiry_val, datetime):
+                    expiry_dt = expiry_val
+                else:
+                    expiry_dt = None
+                
+                if expiry_dt:
+                    if expiry_dt.tzinfo is None:
+                        expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                    
+                    if now > expiry_dt:
+                        logging.info(f"[DASHBOARD EXPIRY] User {uid} plan '{subscription_plan}' expired, setting to explorer")
+                        await db.users.update_one(
+                            {"uid": uid},
+                            {"$set": {
+                                "subscription_plan": "explorer",
+                                "subscription_expired": True,
+                                "subscription_expired_at": now.isoformat()
+                            }}
+                        )
+                        subscription_plan = "explorer"
+                        user["subscription_expired"] = True
+                        if cache:
+                            await cache.delete(f"user_data:{uid}")
+                            await cache.delete(f"user:dashboard:{uid}")
+            except Exception as e:
+                logging.error(f"[DASHBOARD EXPIRY] Error: {e}")
+    
     # Build response
     result = {
         "user": {
@@ -8042,6 +8076,47 @@ async def get_user_data(uid: str, request: Request):
     user["subscription_plan"] = subscription_plan
     if subscription_expiry:
         user["subscription_expiry"] = subscription_expiry
+    
+    # CHECK SUBSCRIPTION EXPIRY: If user has active paid plan, verify it hasn't expired
+    if subscription_plan and subscription_plan.lower() not in ["explorer", "free", ""]:
+        expiry_val = user.get("subscription_expiry") or user.get("subscription_expires")
+        if expiry_val:
+            try:
+                if isinstance(expiry_val, str):
+                    expiry_dt = datetime.fromisoformat(str(expiry_val).replace('Z', '+00:00'))
+                elif isinstance(expiry_val, datetime):
+                    expiry_dt = expiry_val
+                else:
+                    expiry_dt = None
+                
+                if expiry_dt:
+                    # Ensure timezone-aware comparison
+                    if expiry_dt.tzinfo is None:
+                        expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                    
+                    now_check = datetime.now(timezone.utc)
+                    if now_check > expiry_dt:
+                        # Subscription expired — downgrade to explorer
+                        logging.info(f"[SUBSCRIPTION EXPIRY] User {uid} plan '{subscription_plan}' expired at {expiry_val}, setting to explorer")
+                        await db.users.update_one(
+                            {"uid": uid},
+                            {"$set": {
+                                "subscription_plan": "explorer",
+                                "subscription_expired": True,
+                                "subscription_expired_at": now_check.isoformat()
+                            }}
+                        )
+                        user["subscription_plan"] = "explorer"
+                        user["subscription_expired"] = True
+                        user["subscription_expired_at"] = now_check.isoformat()
+                        subscription_plan = "explorer"
+                        
+                        # Invalidate cache
+                        if cache:
+                            await cache.delete(f"user_data:{uid}")
+                            await cache.delete(f"user:dashboard:{uid}")
+            except Exception as e:
+                logging.error(f"[SUBSCRIPTION EXPIRY] Error checking expiry for {uid}: {e}")
     
     # If user has a paid subscription but no start date, use created_at as fallback
     if not subscription_start and subscription_plan in ["startup", "growth", "elite"]:

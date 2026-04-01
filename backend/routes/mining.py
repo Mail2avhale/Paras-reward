@@ -144,6 +144,10 @@ async def check_subscription_expiry(user: dict) -> dict:
         else:
             return user
         
+        # Ensure timezone-aware comparison (MongoDB datetimes can be naive)
+        if expiry_dt.tzinfo is None:
+            expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+        
         now = datetime.now(timezone.utc)
         if now > expiry_dt:
             # Subscription expired → set to explorer

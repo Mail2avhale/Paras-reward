@@ -108,6 +108,18 @@
 - Icon: Yellow (#fbbf24) popcorn SVG, 16x16px, inline with text
 - Verified: All 3 pages render correctly with no layout issues
 
+## COMPLETED: Subscription Expiry Bug Fix (P0 Critical) - 1 April 2026
+- **Bug**: Expired subscriptions were NOT auto-downgrading to "explorer", allowing continued mining & collection
+- **Root Cause 1**: `get_user_data` and dashboard endpoints never checked subscription expiry — only mining endpoints did
+- **Root Cause 2**: `check_subscription_expiry` in mining.py had timezone comparison bug — MongoDB stores naive datetimes, but comparison was against timezone-aware `datetime.now(timezone.utc)`, causing silent TypeError (caught by try/except)
+- **Fix**: 
+  - Added timezone-naive handling (`expiry_dt.replace(tzinfo=timezone.utc)`) in `mining.py`
+  - Added subscription expiry check in `get_user_data` endpoint (server.py line ~8046)
+  - Added subscription expiry check in dashboard endpoint (server.py line ~7835)
+  - All 3 code paths now correctly downgrade expired users to "explorer" and block collection
+- **Files**: `mining.py` (check_subscription_expiry), `server.py` (get_user_data + dashboard)
+- **Testing**: 4/4 tests pass (mining status, user data, collect blocked, timezone-naive datetime handled)
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)
