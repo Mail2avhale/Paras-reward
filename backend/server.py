@@ -11774,10 +11774,12 @@ async def subscription_pay_with_prc(request: Request):
         await db.transactions.insert_one({
             "user_id": user_id,
             "type": "subscription_prc",
+            "amount": -prc_amount,
             "prc_amount": prc_amount,
             "inr_value": pricing["base_with_gst_inr"],
             "description": f"Elite Subscription ({duration_days} days) - ₹{pricing['base_inr']} + GST + Fees",
             "timestamp": now,
+            "created_at": now.isoformat(),
             "status": "completed"
         })
         

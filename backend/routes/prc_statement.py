@@ -34,11 +34,12 @@ TYPE_MAP = {
     "admin_credit": "Admin Credit", "admin_debit": "Admin Debit", "admin_adjustment": "Admin",
     "test_credit": "Admin Credit", "test_debit": "Admin Debit",
     "subscription": "Subscription", "subscription_payment": "Subscription", "elite_activation": "Subscription",
+    "subscription_prc": "Subscription",
     "redeem": "Redeem", "retry_debit": "Redeem",
     "dmt_transfer": "Redeem",
 }
 
-FILTER_CATEGORIES = ["All", "Reward", "Recharge", "Bill Pay", "Redeem", "Bank Redeem", "Voucher Redeem", "Refund", "Burn", "Admin"]
+FILTER_CATEGORIES = ["All", "Reward", "Recharge", "Bill Pay", "Redeem", "Bank Redeem", "Voucher Redeem", "Subscription", "Refund", "Burn", "Admin"]
 
 
 def classify_type(raw_type: str) -> str:
