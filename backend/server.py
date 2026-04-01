@@ -17672,7 +17672,7 @@ async def get_admin_stats():
     
     # Batch 3: Aggregation pipelines (parallel)
     agg_results = await asyncio.gather(
-        # Total PRC in circulation
+        # Total PRC in circulation (current balance)
         db.users.aggregate([
             {"$group": {"_id": None, "total_prc": {"$sum": "$prc_balance"}}}
         ]).to_list(1),
@@ -17689,14 +17689,24 @@ async def get_admin_stats():
         # Subscription payments
         db.subscription_payments.count_documents({"status": "pending"}),
         db.subscription_payments.count_documents({"status": "approved"}),
+        # TOTAL PRC MINED (all-time)
+        db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_mined", 0]}}}}
+        ]).to_list(1),
+        # TOTAL PRC BURNED (all-time)
+        db.burn_logs.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": {"$ifNull": ["$amount", 0]}}}}}
+        ]).to_list(1),
     )
     
-    prc_result, vip_fees_result, revenue_result, pending_sub_payments, approved_sub_payments = agg_results
+    prc_result, vip_fees_result, revenue_result, pending_sub_payments, approved_sub_payments, total_mined_result, total_burned_result = agg_results
     
     total_prc_in_circulation = prc_result[0]["total_prc"] if prc_result else 0
     total_vip_fees = vip_fees_result[0]["total"] if vip_fees_result else 0
     total_revenue_inr = revenue_result[0]["total_cash"] if revenue_result else 0
     total_revenue_prc = revenue_result[0]["total_prc"] if revenue_result else 0
+    total_prc_mined = total_mined_result[0]["total"] if total_mined_result else 0
+    total_prc_burned = total_burned_result[0]["total"] if total_burned_result else 0
     
     # Simplified withdrawal stats (parallel)
     withdrawal_counts = await asyncio.gather(
@@ -17706,7 +17716,7 @@ async def get_admin_stats():
     pending_cashback_withdrawals, pending_profit_withdrawals = withdrawal_counts
     total_pending_withdrawals = pending_cashback_withdrawals + pending_profit_withdrawals
     
-    # Calculate PRC redeemed (simplified - use single aggregation)
+    # Calculate PRC redeemed (COMPLETE — all collections)
     prc_redeemed_results = await asyncio.gather(
         db.orders.aggregate([
             {"$match": {"status": {"$in": ["completed", "delivered"]}}},
@@ -17719,6 +17729,31 @@ async def get_admin_stats():
         db.gift_voucher_requests.aggregate([
             {"$match": {"status": {"$in": ["completed", "approved"]}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
+        ]).to_list(1),
+        # Bank withdrawals
+        db.bank_withdrawal_requests.aggregate([
+            {"$match": {"status": {"$in": ["completed", "approved"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", {"$ifNull": ["$total_prc_deducted", 0]}]}}}}
+        ]).to_list(1),
+        # Bank transfers
+        db.bank_transfer_requests.aggregate([
+            {"$match": {"status": {"$in": ["completed", "approved"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+        ]).to_list(1),
+        # PRC subscriptions
+        db.subscription_payments.aggregate([
+            {"$match": {"payment_method": "prc", "status": {"$in": ["paid", "completed"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
+        ]).to_list(1),
+        # DMT transactions
+        db.dmt_transactions.aggregate([
+            {"$match": {"status": {"$in": ["completed", "approved", "success"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+        ]).to_list(1),
+        # Unified redemptions
+        db.unified_redemptions.aggregate([
+            {"$match": {"status": {"$in": ["completed", "approved", "success"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1),
     )
     
@@ -17789,6 +17824,9 @@ async def get_admin_stats():
             "vip_fees": total_vip_fees
         },
         "prc_redeemed": round(total_prc_redeemed, 2),
+        "prc_mined": round(total_prc_mined, 2),
+        "prc_burned": round(total_prc_burned, 2),
+        "prc_available_for_redeem": round(max(0, total_prc_in_circulation - total_prc_redeemed), 2),
         "recent_vip_payments": recent_vip_payments
     }
     

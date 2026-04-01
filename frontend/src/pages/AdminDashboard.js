@@ -479,9 +479,9 @@ const AdminDashboard = ({ user }) => {
         />
         <HeroStatCard
           icon={DollarSign}
-          label="Total PRC"
-          value={(stats?.total_prc || 0).toLocaleString()}
-          subValue={`₹${((stats?.total_prc || 0) / 10).toLocaleString()} value`}
+          label="Total PRC Mined"
+          value={(stats?.prc?.total_mined || 0).toLocaleString()}
+          subValue={`₹${((stats?.prc?.total_mined || 0) / 10).toLocaleString()} value`}
           color="emerald"
           onClick={() => navigate('/admin/prc-analytics')}
         />
@@ -661,10 +661,12 @@ const AdminDashboard = ({ user }) => {
             </Button>
           </div>
           
-          <div className="grid grid-cols-3 gap-3">
-            <MiniStatCard value={(stats?.total_prc || 0).toFixed(0)} label="In Circulation" color="emerald" />
-            <MiniStatCard value={(stats?.prc_redeemed || 0).toFixed(0)} label="Redeemed" color="blue" />
-            <MiniStatCard value={stats?.withdrawals?.pending_count || 0} label="Pending W/D" color="amber" />
+          <div className="grid grid-cols-5 gap-3">
+            <MiniStatCard value={(stats?.prc?.total_mined || 0).toLocaleString(undefined, {maximumFractionDigits: 0})} label="Total Mined" color="emerald" />
+            <MiniStatCard value={(stats?.prc?.total_circulation || 0).toLocaleString(undefined, {maximumFractionDigits: 0})} label="In Circulation" color="blue" />
+            <MiniStatCard value={(stats?.prc?.total_redeemed || 0).toLocaleString(undefined, {maximumFractionDigits: 0})} label="Total Redeemed" color="purple" />
+            <MiniStatCard value={(stats?.prc?.total_burned || 0).toLocaleString(undefined, {maximumFractionDigits: 0})} label="Total Burned" color="red" />
+            <MiniStatCard value={(stats?.prc?.available_for_redeem || 0).toLocaleString(undefined, {maximumFractionDigits: 0})} label="Available Redeem" color="amber" />
           </div>
         </Card>
       </div>

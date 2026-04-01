@@ -125,6 +125,64 @@ async def get_admin_stats():
                 ]
             }),  # 13: active_mining
             
+            # TOTAL PRC MINED (all-time)
+            db.users.aggregate([
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_mined", 0]}}}}
+            ]).to_list(1),  # 14: total_mined
+            
+            # TOTAL PRC BURNED (all-time from burn_logs)
+            db.burn_logs.aggregate([
+                {"$group": {"_id": None, "total": {"$sum": {"$abs": {"$ifNull": ["$amount", 0]}}}}}
+            ]).to_list(1),  # 15: total_burned
+            
+            # TOTAL PRC REDEEMED - Orders
+            db.orders.aggregate([
+                {"$match": {"status": {"$in": ["completed", "delivered"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", 0]}}}}
+            ]).to_list(1),  # 16: redeemed_orders
+            
+            # TOTAL PRC REDEEMED - Bill Payments
+            db.bill_payment_requests.aggregate([
+                {"$match": {"status": {"$in": ["completed", "approved"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
+            ]).to_list(1),  # 17: redeemed_bills
+            
+            # TOTAL PRC REDEEMED - Gift Vouchers
+            db.gift_voucher_requests.aggregate([
+                {"$match": {"status": {"$in": ["completed", "approved"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
+            ]).to_list(1),  # 18: redeemed_vouchers
+            
+            # TOTAL PRC REDEEMED - Bank Withdrawals
+            db.bank_withdrawal_requests.aggregate([
+                {"$match": {"status": {"$in": ["completed", "approved"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", {"$ifNull": ["$total_prc_deducted", 0]}]}}}}
+            ]).to_list(1),  # 19: redeemed_bank
+            
+            # TOTAL PRC REDEEMED - Bank Transfers
+            db.bank_transfer_requests.aggregate([
+                {"$match": {"status": {"$in": ["completed", "approved", "paid"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$total_prc_deducted", 0]}]}}}}
+            ]).to_list(1),  # 20: redeemed_bank_transfer
+            
+            # TOTAL PRC REDEEMED - PRC Subscriptions
+            db.subscription_payments.aggregate([
+                {"$match": {"payment_method": "prc", "status": {"$in": ["paid", "completed"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
+            ]).to_list(1),  # 21: redeemed_prc_subs
+            
+            # TOTAL PRC REDEEMED - DMT Transactions
+            db.dmt_transactions.aggregate([
+                {"$match": {"status": {"$in": ["completed", "approved", "success"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+            ]).to_list(1),  # 22: redeemed_dmt
+            
+            # TOTAL PRC REDEEMED - Unified Redemptions
+            db.unified_redemptions.aggregate([
+                {"$match": {"status": {"$in": ["completed", "approved", "success"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+            ]).to_list(1),  # 23: redeemed_unified
+            
             return_exceptions=True
         )
         
@@ -144,6 +202,20 @@ async def get_admin_stats():
         elite_count = results[12] if not isinstance(results[12], Exception) else 0
         active_mining = results[13] if not isinstance(results[13], Exception) else 0
         inactive_mining = total_users - active_mining
+        
+        # New PRC Economy stats
+        total_mined_agg = results[14] if not isinstance(results[14], Exception) else []
+        total_burned_agg = results[15] if not isinstance(results[15], Exception) else []
+        
+        total_prc_mined = round(total_mined_agg[0]["total"], 2) if total_mined_agg else 0
+        total_prc_burned = round(total_burned_agg[0]["total"], 2) if total_burned_agg else 0
+        
+        # Complete PRC Redeemed (all collections summed)
+        def safe_agg(idx):
+            r = results[idx] if not isinstance(results[idx], Exception) else []
+            return round(r[0]["total"], 2) if r else 0
+        
+        total_prc_redeemed = sum([safe_agg(i) for i in range(16, 24)])
         
         # Calculate total PRC circulation
         total_prc_value = round(total_prc[0]["total"], 4) if total_prc else 0
@@ -172,7 +244,11 @@ async def get_admin_stats():
                 "pending": pending_orders
             },
             "prc": {
-                "total_circulation": total_prc_value
+                "total_circulation": total_prc_value,
+                "total_mined": total_prc_mined,
+                "total_redeemed": total_prc_redeemed,
+                "total_burned": total_prc_burned,
+                "available_for_redeem": round(max(0, total_prc_value), 2)
             },
             "total_prc": total_prc_value,
             "generated_at": now.isoformat()

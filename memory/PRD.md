@@ -120,7 +120,15 @@
 - **Files**: `mining.py` (check_subscription_expiry), `server.py` (get_user_data + dashboard)
 - **Testing**: 4/4 tests pass (mining status, user data, collect blocked, timezone-naive datetime handled)
 
-## COMPLETED: PRC Statement + Redeem Limit Fix - 1 April 2026
+## COMPLETED: Admin Dashboard PRC Economy Stats - 1 April 2026
+- **Hero Card**: "Total PRC" → "Total PRC Mined" (all-time sum of users.total_mined)
+- **PRC Economy Section**: Expanded from 3 to 5 exact figures:
+  - Total Mined (all-time from users.total_mined)
+  - In Circulation (current prc_balance sum)
+  - Total Redeemed (COMPLETE: orders + bills + vouchers + bank withdrawals + bank transfers + PRC subs + DMT + unified)
+  - Total Burned (from burn_logs)
+  - Available for Redeem
+- **Files**: `admin_dashboard.py` (backend stats), `AdminDashboard.js` (frontend UI)
 - **Bug 1**: PRC subscription payment record PRC statement मध्ये दिसत नव्हता
   - Root Cause: Transaction record `prc_amount` field वापरत होतं पण statement `amount` field read करतो
   - Fix: `amount: -prc_amount` field added to transaction record + `subscription_prc` type added to TYPE_MAP + "Subscription" filter added
