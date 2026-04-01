@@ -2168,6 +2168,13 @@ async def auto_sync_razorpay_payments():
                         expiry_date = now + timedelta(days=total_days)
                         
                         # Update user subscription (set BOTH expiry fields)
+                        # Preserve existing subscription_payment_type if user has active PRC subscription
+                        existing_payment_type = user.get("subscription_payment_type", "cash")
+                        new_payment_type = "cash"  # Razorpay = cash
+                        # If user already has active subscription (remaining_days > 0) and paid via PRC, preserve it
+                        if remaining_days > 0 and existing_payment_type == "prc":
+                            new_payment_type = "prc"
+                        
                         await db.users.update_one(
                             {"uid": user_id},
                             {
@@ -2183,7 +2190,7 @@ async def auto_sync_razorpay_payments():
                                     "previous_plan": old_plan,
                                     "previous_remaining_days_added": remaining_days,
                                     "activated_via": "auto_sync",
-                                    "subscription_payment_type": "cash"
+                                    "subscription_payment_type": new_payment_type
                                 },
                                 "$unset": {"_auto_sync_claiming": ""}
                             }
@@ -2425,6 +2432,12 @@ async def auto_sync_captured_from_razorpay():
                 )
                 
                 # Update user
+                # Preserve existing subscription_payment_type if user has active PRC subscription
+                existing_ptype = user.get("subscription_payment_type", "cash")
+                captured_payment_type = "cash"
+                if remaining_days > 0 and existing_ptype == "prc":
+                    captured_payment_type = "prc"
+                
                 await db.users.update_one(
                     {"uid": user_id},
                     {
@@ -2441,7 +2454,7 @@ async def auto_sync_captured_from_razorpay():
                             "last_payment_amount": amount,
                             "last_payment_date": now.isoformat(),
                             "activated_via": "captured_sync",
-                            "subscription_payment_type": "cash"
+                            "subscription_payment_type": captured_payment_type
                         },
                         "$unset": {"_captured_sync_claiming": ""}
                     }

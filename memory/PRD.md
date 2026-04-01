@@ -120,6 +120,13 @@
 - **Files**: `mining.py` (check_subscription_expiry), `server.py` (get_user_data + dashboard)
 - **Testing**: 4/4 tests pass (mining status, user data, collect blocked, timezone-naive datetime handled)
 
+## COMPLETED: PRC Subscription Payment Type Overwrite Bug Fix - 1 April 2026
+- **Bug**: PRC subscription user ला "100% + 30%" (Cash speed) दिसत होतं "100%" ऐवजी
+- **Root Cause**: Razorpay auto-sync (server startup) blindly set `subscription_payment_type: "cash"`, overwriting PRC user's payment type
+- **Fix**: 2 auto-sync code paths modified to preserve existing "prc" payment type when user has active PRC subscription
+- **Files**: `server.py` (lines ~2170 auto_sync, ~2435 captured_sync)
+- **Note**: Production user 9970100782 needs manual DB fix: set `subscription_payment_type: "prc"`
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)
