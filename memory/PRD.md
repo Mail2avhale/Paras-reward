@@ -142,8 +142,9 @@
 - Endpoint: `GET /api/admin/audit/prc/{uid}` (admin auth required)
 - Fetches ALL credits (mining, referrals, refunds, admin credits, ledger) and ALL debits (bills, bank withdrawals, vouchers, PRC subs, DMT, burns, unified redeems)
 - Returns: chronological entries with running balance, category summary, calculated vs actual balance, discrepancy detection
-- File: `/app/backend/routes/prc_audit.py`, registered in `server.py`
-- Testing: Verified via curl — correct 200 response for valid users, 404 for missing users, admin-only access
+- **Integrated into User 360 page** as "PRC Audit" tab with Run Audit button, summary cards, category breakdown, and scrollable ledger
+- Files: `/app/backend/routes/prc_audit.py`, `/app/frontend/src/pages/AdminUser360New.js`
+- Testing: Backend curl verified + Frontend screenshot verified (audit data renders correctly)
 
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js

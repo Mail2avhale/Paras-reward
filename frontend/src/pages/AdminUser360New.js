@@ -292,6 +292,10 @@ const AdminUser360New = ({ user: adminUser }) => {
   const [diagnoseData, setDiagnoseData] = useState(null);
   const [diagnoseLoading, setDiagnoseLoading] = useState(false);
   
+  // PRC Audit State
+  const [auditData, setAuditData] = useState(null);
+  const [auditLoading, setAuditLoading] = useState(false);
+  
   // Subscription Form
   const [subscriptionForm, setSubscriptionForm] = useState({
     plan: 'explorer',
@@ -318,6 +322,7 @@ const AdminUser360New = ({ user: adminUser }) => {
     setLoading(true);
     setError(null);
     setUserData(null);
+    setAuditData(null);
     
     try {
       // Try new endpoint first, fallback to old
@@ -606,6 +611,22 @@ const AdminUser360New = ({ user: adminUser }) => {
     setKycReason('');
   };
   
+  // PRC Audit
+  const fetchAudit = async () => {
+    if (!userData?.user?.uid) return;
+    setAuditLoading(true);
+    try {
+      const response = await axios.get(`${API}/admin/audit/prc/${userData.user.uid}`, {
+        headers: { Authorization: `Bearer ${adminUser?.token}` }
+      });
+      setAuditData(response.data);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Audit fetch failed');
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
   // Calculate Risk Score
   const getRiskScore = () => {
     if (!userData) return { score: 0, level: 'low', color: 'green' };
@@ -941,6 +962,7 @@ const AdminUser360New = ({ user: adminUser }) => {
                     { id: 'redeem', label: 'Redemptions', icon: Receipt, count: userData.redeem_requests?.length || 0 },
                     { id: 'referrals', label: 'Referrals', icon: Users, count: userData.referral?.total_referrals || 0 },
                     { id: 'subscriptions', label: 'Sub History', icon: Crown, count: userData.subscription_history?.length || 0 },
+                    { id: 'audit', label: 'PRC Audit', icon: FileText },
                     { id: 'logins', label: 'Logins', icon: Activity, count: userData.login_history?.length || 0 },
                     { id: 'kyc', label: 'KYC Data', icon: Shield }
                   ].map(tab => (
@@ -1055,6 +1077,111 @@ const AdminUser360New = ({ user: adminUser }) => {
                             </div>
                           </div>
                         ))
+                      )}
+                    </div>
+                  )}
+                  
+                  {activeTab === 'audit' && (
+                    <div className="space-y-4">
+                      {!auditData && !auditLoading && (
+                        <div className="text-center py-8">
+                          <FileText className="h-10 w-10 mx-auto text-slate-400 mb-3" />
+                          <p className="text-slate-500 mb-3">Complete PRC credit/debit audit from joining date</p>
+                          <Button onClick={fetchAudit} className="bg-purple-600 hover:bg-purple-700" data-testid="run-prc-audit-btn">
+                            <FileText className="h-4 w-4 mr-2" />Run PRC Audit
+                          </Button>
+                        </div>
+                      )}
+                      {auditLoading && (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="h-6 w-6 animate-spin text-purple-400 mr-2" />
+                          <span className="text-slate-500">Audit चालू आहे...</span>
+                        </div>
+                      )}
+                      {auditData && !auditLoading && (
+                        <>
+                          {/* Summary Cards */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                              <p className="text-xs text-slate-500">Total Credits</p>
+                              <p className="text-lg font-bold text-green-600">+{formatNumber(auditData.summary?.total_credits?.toFixed(2))}</p>
+                            </div>
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
+                              <p className="text-xs text-slate-500">Total Debits</p>
+                              <p className="text-lg font-bold text-red-600">-{formatNumber(auditData.summary?.total_debits?.toFixed(2))}</p>
+                            </div>
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                              <p className="text-xs text-slate-500">Calculated Balance</p>
+                              <p className="text-lg font-bold text-blue-600">{formatNumber(auditData.summary?.calculated_balance?.toFixed(2))}</p>
+                            </div>
+                            <div className={`p-3 rounded-lg text-center border ${Math.abs(auditData.summary?.discrepancy || 0) < 1 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                              <p className="text-xs text-slate-500">Discrepancy</p>
+                              <p className={`text-lg font-bold ${Math.abs(auditData.summary?.discrepancy || 0) < 1 ? 'text-green-600' : 'text-red-600'}`}>
+                                {auditData.summary?.discrepancy?.toFixed(2)} PRC
+                              </p>
+                              <span className={`text-xs px-2 py-0.5 rounded ${Math.abs(auditData.summary?.discrepancy || 0) < 1 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                {auditData.summary?.discrepancy_note}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Actual Balance vs Calculated */}
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+                            <span className="text-sm text-slate-600">DB मधील Actual Balance:</span>
+                            <span className="text-lg font-bold text-amber-600">{formatNumber(auditData.summary?.actual_balance?.toFixed(2))} PRC</span>
+                          </div>
+
+                          {/* Category Summary */}
+                          {auditData.category_summary && Object.keys(auditData.category_summary).length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-slate-700 mb-2">Category-wise Breakdown</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {Object.entries(auditData.category_summary).map(([cat, vals]) => (
+                                  <div key={cat} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-sm">
+                                    <span className="text-slate-600 font-medium">{cat}</span>
+                                    <div className="flex items-center gap-3">
+                                      {vals.credit > 0 && <span className="text-green-600">+{vals.credit.toFixed(2)}</span>}
+                                      {vals.debit > 0 && <span className="text-red-600">-{vals.debit.toFixed(2)}</span>}
+                                      <span className="text-slate-400 text-xs">x{vals.count}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Ledger Entries */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-sm font-semibold text-slate-700">Ledger ({auditData.summary?.total_entries || 0} entries)</h4>
+                              <Button size="sm" variant="outline" onClick={fetchAudit} className="border-slate-300 text-slate-600">
+                                <RefreshCw className="h-3 w-3 mr-1" />Refresh
+                              </Button>
+                            </div>
+                            <div className="space-y-1 max-h-80 overflow-y-auto">
+                              {auditData.entries?.map((entry, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-100 rounded text-xs">
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${entry.type === 'CREDIT' ? 'bg-green-100' : 'bg-red-100'}`}>
+                                      {entry.type === 'CREDIT' ? <TrendingUp className="h-3 w-3 text-green-600" /> : <TrendingDown className="h-3 w-3 text-red-600" />}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-slate-700 font-medium truncate">{entry.category}</p>
+                                      <p className="text-slate-400 truncate">{entry.description}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right flex-shrink-0 ml-2">
+                                    <p className={`font-bold ${entry.type === 'CREDIT' ? 'text-green-600' : 'text-red-600'}`}>
+                                      {entry.type === 'CREDIT' ? '+' : '-'}{entry.amount?.toFixed(2)}
+                                    </p>
+                                    <p className="text-slate-400">Bal: {entry.running_balance?.toFixed(2)}</p>
+                                    <p className="text-slate-300">{entry.date?.slice(0, 10)}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
                       )}
                     </div>
                   )}
