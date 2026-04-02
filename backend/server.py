@@ -5799,10 +5799,10 @@ async def check_auth_type(identifier: str):
     """Check if user should use PIN or Password login - PIN ONLY MODE (password disabled)"""
     normalized_identifier = identifier.lower().strip()
     
-    # Find user - OPTIMIZED: Use equality instead of regex for better index usage
-    # Try exact email match first (most common), then mobile, then uid
+    # Find user - OPTIMIZED: case-insensitive email match
+    # Try email match first (most common), then mobile, then uid
     user = await db.users.find_one(
-        {"email": normalized_identifier},
+        {"email": {"$regex": f"^{normalized_identifier}$", "$options": "i"}},
         {"_id": 0, "pin_migrated": 1, "email": 1, "pin": 1}
     )
     
