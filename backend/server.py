@@ -1424,6 +1424,28 @@ async def validate_session(request: Request):
         if not uid or not session_token:
             return {"valid": False, "reason": "missing_credentials"}
         
+        # Check if this is an admin impersonation session
+        if session_token.startswith("IMP_"):
+            imp_session = await db.admin_impersonation_sessions.find_one(
+                {"token": session_token, "target_uid": uid, "is_active": True},
+                {"_id": 0, "expires_at": 1}
+            )
+            if not imp_session:
+                return {"valid": False, "reason": "session_expired", "message": "Impersonation session expired or invalid."}
+            # Check expiry
+            expires_at = imp_session.get("expires_at", "")
+            if expires_at:
+                from dateutil.parser import parse as parse_date
+                exp_dt = parse_date(expires_at) if isinstance(expires_at, str) else expires_at
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) > exp_dt:
+                    await db.admin_impersonation_sessions.update_one(
+                        {"token": session_token}, {"$set": {"is_active": False}}
+                    )
+                    return {"valid": False, "reason": "session_expired", "message": "Impersonation session expired."}
+            return {"valid": True, "reason": "impersonation_active"}
+        
         # Find user and check session token
         user = await db.users.find_one(
             {"uid": uid},

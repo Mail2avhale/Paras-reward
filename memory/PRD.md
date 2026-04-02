@@ -153,6 +153,13 @@
 - Seed function now upserts correct dates on every restart
 - File: `/app/backend/routes/holidays.py`
 
+## COMPLETED: Admin Login-As-User Dual Logout Bug Fix - 1 April 2026
+- **Bug**: Admin impersonation would overwrite user's session_token (logging out real user) AND overwrite admin's localStorage (logging out admin)
+- **Backend Fix**: Removed `session_token` overwrite on user document; impersonation sessions validated separately via `admin_impersonation_sessions` collection
+- **Session Validation Fix**: Added IMP_ token check in `/api/auth/validate-session` — both user's original session AND impersonation session can be active simultaneously
+- **Frontend Fix**: Admin's localStorage backup/restore — admin session preserved when opening impersonation window
+- Files: `admin_misc.py`, `server.py`, `AdminLoginAsUser.js`
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)

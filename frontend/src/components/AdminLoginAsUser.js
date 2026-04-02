@@ -82,17 +82,32 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
           admin_name: adminUser?.name
         };
         
-        // Open in new window
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          // Set localStorage in new window context
-          newWindow.localStorage.setItem('paras_user', JSON.stringify(impersonationData));
-          newWindow.localStorage.setItem('paras_impersonation', 'true');
-          newWindow.location.href = '/dashboard';
-        } else {
-          // Fallback - copy to clipboard
+        // Save current admin session BEFORE opening new window
+        const adminSessionBackup = localStorage.getItem('paras_user');
+        
+        // Set impersonation user data (will be read by new window on load)
+        localStorage.setItem('paras_user', JSON.stringify(impersonationData));
+        localStorage.setItem('paras_impersonation', 'true');
+        
+        // Open new window - it will read the impersonation data from localStorage
+        const newWindow = window.open('/dashboard', '_blank');
+        
+        // Immediately restore admin session in current window (within 300ms)
+        setTimeout(() => {
+          if (adminSessionBackup) {
+            localStorage.setItem('paras_user', adminSessionBackup);
+          }
+          localStorage.removeItem('paras_impersonation');
+        }, 300);
+        
+        if (!newWindow) {
+          // Popup blocked - restore admin session and inform user
+          if (adminSessionBackup) {
+            localStorage.setItem('paras_user', adminSessionBackup);
+          }
+          localStorage.removeItem('paras_impersonation');
           navigator.clipboard.writeText(response.data.session_token);
-          toast.info('Pop-up blocked! Token copied to clipboard. Paste in new tab.');
+          toast.info('Pop-up blocked! Token copied to clipboard.');
         }
         
         // Close dialog after 2 seconds

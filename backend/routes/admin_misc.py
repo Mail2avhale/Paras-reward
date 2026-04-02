@@ -636,15 +636,8 @@ async def admin_login_as_user(request: Request):
     
     await db.admin_impersonation_sessions.insert_one(session_record)
     
-    # Update user's session token temporarily
-    await db.users.update_one(
-        {"uid": target_user.get("uid")},
-        {"$set": {
-            "session_token": impersonation_token,
-            "session_expires_at": expires_at.isoformat(),
-            "impersonated_by": admin_uid
-        }}
-    )
+    # NOTE: Do NOT overwrite user's session_token - that would log out the real user
+    # Impersonation sessions are validated separately via admin_impersonation_sessions collection
     
     # Log admin action
     if log_admin_action:
