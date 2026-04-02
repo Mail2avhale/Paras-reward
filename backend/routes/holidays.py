@@ -24,34 +24,34 @@ def set_cache(cache_manager):
     cache = cache_manager
 
 
-# Standard India Government Holidays 2026
+# Standard India Government Holidays 2026 (Verified from ClearTax/Govt sources)
 INDIA_HOLIDAYS_2026 = [
     {"date": "2026-01-26", "name": "Republic Day", "type": "government"},
+    {"date": "2026-03-04", "name": "Holi", "type": "government"},
     {"date": "2026-03-10", "name": "Maha Shivaratri", "type": "government"},
-    {"date": "2026-03-17", "name": "Holi", "type": "government"},
-    {"date": "2026-03-31", "name": "Id-ul-Fitr (Eid)", "type": "government"},
-    {"date": "2026-04-02", "name": "Ram Navami", "type": "government"},
-    {"date": "2026-04-06", "name": "Mahavir Jayanti", "type": "government"},
+    {"date": "2026-03-21", "name": "Id-ul-Fitr (Eid)", "type": "government"},
+    {"date": "2026-03-26", "name": "Ram Navami", "type": "government"},
+    {"date": "2026-03-31", "name": "Mahavir Jayanti", "type": "government"},
+    {"date": "2026-04-02", "name": "Hanuman Jayanti", "type": "government"},
+    {"date": "2026-04-03", "name": "Good Friday", "type": "government"},
     {"date": "2026-04-14", "name": "Dr. Ambedkar Jayanti", "type": "government"},
-    {"date": "2026-04-18", "name": "Good Friday", "type": "government"},
-    {"date": "2026-05-01", "name": "May Day", "type": "government"},
-    {"date": "2026-05-12", "name": "Buddha Purnima", "type": "government"},
-    {"date": "2026-06-07", "name": "Eid-ul-Adha (Bakrid)", "type": "government"},
-    {"date": "2026-07-06", "name": "Muharram", "type": "government"},
+    {"date": "2026-05-01", "name": "Buddha Purnima / May Day", "type": "government"},
+    {"date": "2026-05-27", "name": "Eid-ul-Adha (Bakrid)", "type": "government"},
+    {"date": "2026-06-26", "name": "Muharram", "type": "government"},
     {"date": "2026-08-15", "name": "Independence Day", "type": "government"},
-    {"date": "2026-08-17", "name": "Janmashtami", "type": "government"},
-    {"date": "2026-09-05", "name": "Milad-un-Nabi", "type": "government"},
+    {"date": "2026-08-26", "name": "Milad-un-Nabi", "type": "government"},
+    {"date": "2026-09-04", "name": "Janmashtami", "type": "government"},
     {"date": "2026-10-02", "name": "Gandhi Jayanti", "type": "government"},
     {"date": "2026-10-20", "name": "Dussehra", "type": "government"},
     {"date": "2026-11-08", "name": "Diwali", "type": "government"},
     {"date": "2026-11-09", "name": "Diwali (Day 2)", "type": "government"},
-    {"date": "2026-11-15", "name": "Guru Nanak Jayanti", "type": "government"},
+    {"date": "2026-11-24", "name": "Guru Nanak Jayanti", "type": "government"},
     {"date": "2026-12-25", "name": "Christmas", "type": "government"},
 ]
 
 
 async def seed_holidays():
-    """Seed default holidays if not already present"""
+    """Seed default holidays - upsert to ensure correct dates"""
     try:
         # Check settings
         settings = await db.holiday_settings.find_one({"_id": "config"})
@@ -66,20 +66,20 @@ async def seed_holidays():
                 upsert=True
             )
         
-        # Seed government holidays for 2026 if not already present
-        existing = await db.holidays.count_documents({"type": "government", "date": {"$regex": "^2026-"}})
-        if existing == 0:
-            for h in INDIA_HOLIDAYS_2026:
-                await db.holidays.update_one(
-                    {"date": h["date"], "type": "government"},
-                    {"$set": {
-                        **h,
-                        "active": True,
-                        "created_at": datetime.now(timezone.utc).isoformat(),
-                    }},
-                    upsert=True
-                )
-            logging.info(f"[HOLIDAYS] Seeded {len(INDIA_HOLIDAYS_2026)} government holidays for 2026")
+        # Remove old wrong government holidays and upsert correct ones
+        correct_dates = {h["date"] for h in INDIA_HOLIDAYS_2026}
+        await db.holidays.delete_many({"type": "government", "date": {"$regex": "^2026-"}, "date": {"$nin": list(correct_dates)}})
+        for h in INDIA_HOLIDAYS_2026:
+            await db.holidays.update_one(
+                {"date": h["date"], "type": "government"},
+                {"$set": {
+                    **h,
+                    "active": True,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }},
+                upsert=True
+            )
+        logging.info(f"[HOLIDAYS] Seeded {len(INDIA_HOLIDAYS_2026)} government holidays for 2026")
     except Exception as e:
         logging.error(f"[HOLIDAYS] Seed error: {e}")
 

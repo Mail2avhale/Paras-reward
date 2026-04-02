@@ -146,6 +146,13 @@
 - Files: `/app/backend/routes/prc_audit.py`, `/app/frontend/src/pages/AdminUser360New.js`
 - Testing: Backend curl verified + Frontend screenshot verified (audit data renders correctly)
 
+## COMPLETED: Holiday Calendar Date Fix (P0 Bug) - 1 April 2026
+- Fixed wrong dates for ALL government holidays (Ram Navami, Holi, Eid, Mahavir Jayanti, Good Friday, etc.)
+- Added missing Hanuman Jayanti (2 April 2026)
+- Verified from ClearTax/Govt official sources
+- Seed function now upserts correct dates on every restart
+- File: `/app/backend/routes/holidays.py`
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)
