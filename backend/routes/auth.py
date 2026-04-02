@@ -25,6 +25,7 @@ import secrets
 import string
 import uuid
 import os
+import re
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
@@ -586,12 +587,12 @@ async def login(request: Request):
         logging.warning(f"[LOGIN DEBUG] USER DB LOCKED: {identifier}")
         raise HTTPException(status_code=429, detail=db_lockout_msg)
     
-    normalized_identifier = identifier.lower() if '@' in identifier else identifier
+    normalized_identifier = identifier.lower().strip() if '@' in identifier else identifier.strip()
     
-    # OPTIMIZED: Use sequential equality checks instead of slow $regex $or query
-    # Try email first, then phone, then mobile, then uid
+    # OPTIMIZED: Use sequential equality checks
+    # Email lookup must be case-insensitive (user may type different case than stored)
     user = await db.users.find_one(
-        {"email": normalized_identifier},
+        {"email": {"$regex": f"^{re.escape(normalized_identifier)}$", "$options": "i"}},
         {"_id": 0, "profile_picture": 0}
     )
     

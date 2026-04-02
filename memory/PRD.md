@@ -160,6 +160,12 @@
 - **Frontend Fix**: Admin's localStorage backup/restore — admin session preserved when opening impersonation window
 - Files: `admin_misc.py`, `server.py`, `AdminLoginAsUser.js`
 
+## COMPLETED: Login "Account Not Found" Bug Fix - 2 April 2026
+- **Bug**: User enters correct email → PIN screen दिसतो → PIN enter केल्यावर "Account Not Found" error
+- **Root Cause**: `check_auth_type` (step 1) used case-insensitive regex email match, but `login` (step 2) used exact match. If DB stored email with different case, step 2 would fail.
+- **Fix**: Made `login` function in `routes/auth.py` also use case-insensitive regex (`$regex` with `$options: "i"`) for email lookup, with `re.escape()` for security
+- File: `routes/auth.py` (line ~593)
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)
