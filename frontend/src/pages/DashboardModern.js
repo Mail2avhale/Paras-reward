@@ -1085,7 +1085,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 <div className="relative z-10">
                   {/* Clean PRC Redeem Card */}
                   {(() => {
-                    const prcRate = stats.prcRate || 11;
+                    const prcRate = stats.prcRate || 10;
                     const rl = stats.redeemLimit || {};
                     const balance = stats.prcBalance || 0;
                     const rawAvailable = rl.available != null ? rl.available : (rl.effective_available || 0);

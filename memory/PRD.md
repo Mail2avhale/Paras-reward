@@ -181,6 +181,13 @@
 - **Effect**: Self-correcting economy — spend more → balance drops → limit drops → prevents overspending
 - File: `server.py` line ~15938 (1 line change in `calculate_user_redeem_limit`)
 
+## COMPLETED: PRC Dynamic Rate Inconsistency Bug Fix - 3 April 2026
+- **Bug**: Different users seeing different PRC rates (11 vs 13) on production
+- **Root Cause**: 3 separate `get_dynamic_prc_rate` functions with own in-memory caches per worker process → different workers calculated independently → different cached rates
+- **Fix**: All rate functions now read from `system_settings.prc_dynamic_rate` in MongoDB (single source of truth shared across all workers). Only recalculates if DB rate older than 5 min.
+- **Frontend**: Fixed hardcoded fallback from 11 to 10 (consistent with backend)
+- Files: `server.py`, `growth_economy.py`, `unified_redeem_v2.py`, `DashboardModern.js`
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)

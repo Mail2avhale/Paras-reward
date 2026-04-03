@@ -161,36 +161,33 @@ ADMIN_CHARGE_PERCENT = 20  # 20% of transaction amount
 # Dynamic PRC Rate helper function
 async def get_dynamic_prc_rate():
     """
-    Get dynamic PRC rate from Token Economy system.
-    Import from server.py to ensure consistency.
+    Get dynamic PRC rate - reads from DB single source of truth.
+    All workers share the same DB-cached rate.
     """
     try:
-        # Import the main function from server
-        import sys
-        sys.path.insert(0, '/app/backend')
-        from server import get_dynamic_prc_rate as main_get_rate
-        return await main_get_rate()
+        # Read from DB (shared across all workers)
+        saved_rate = await db.system_settings.find_one(
+            {"type": "prc_dynamic_rate"},
+            {"_id": 0, "final_rate": 1, "updated_at": 1}
+        )
+        if saved_rate and saved_rate.get("final_rate"):
+            updated_at = saved_rate.get("updated_at")
+            if updated_at:
+                if hasattr(updated_at, 'timestamp'):
+                    age = (datetime.now(timezone.utc) - updated_at.replace(tzinfo=timezone.utc if updated_at.tzinfo is None else updated_at.tzinfo)).total_seconds()
+                else:
+                    age = (datetime.now(timezone.utc) - datetime.fromisoformat(str(updated_at).replace('Z', '+00:00'))).total_seconds()
+                if age < 300:
+                    return int(saved_rate["final_rate"])
+        
+        # Recalculate if stale
+        from routes.prc_economy import calculate_dynamic_prc_rate
+        rate_data = await calculate_dynamic_prc_rate(db)
+        if rate_data and isinstance(rate_data, dict):
+            return int(rate_data.get("final_rate", 10))
     except Exception as e:
-        logging.error(f"Error importing rate function: {e}")
-        # Fallback: check database directly
-        try:
-            # Check manual override
-            override = await db.app_settings.find_one({"key": "prc_rate_manual_override"})
-            if override and override.get("enabled"):
-                rate = override.get("rate")
-                if rate and rate > 0:
-                    return int(rate)
-            
-            # Check economy rate
-            from routes.prc_economy import calculate_dynamic_prc_rate
-            rate_data = await calculate_dynamic_prc_rate(db)
-            if rate_data:
-                if isinstance(rate_data, dict):
-                    return int(rate_data.get("final_rate", 10))
-                return int(rate_data)
-        except Exception as ex:
-            logging.error(f"Fallback rate fetch failed: {ex}")
-    return 10  # Default fallback
+        logging.error(f"Error getting PRC rate: {e}")
+    return 10
 
 # Status Flow
 STATUS_PENDING = "pending"

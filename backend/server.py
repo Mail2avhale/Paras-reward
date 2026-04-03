@@ -5210,14 +5210,15 @@ async def calculate_bill_payment_prc(amount_inr: float):
 
 async def get_dynamic_prc_rate():
     """
-    Get dynamic PRC rate from Token Economy system.
-    Auto-calculates based on 5 factors: Supply, Redeem, Burn, User, Utility
-    Falls back to database setting or default 10 if economy calculation fails.
+    Get dynamic PRC rate - SINGLE SOURCE OF TRUTH.
+    
+    Reads from database (system_settings.prc_dynamic_rate) which is shared
+    across all workers. Only recalculates if saved rate is stale (>5 min).
     
     PRIORITY:
     1. Manual override (if set and not expired)
-    2. Dynamic economy calculation
-    3. Database setting
+    2. Database-cached dynamic rate (shared across workers)
+    3. Fresh calculation (if DB rate is stale, saves result to DB)
     4. Default 10
     
     Returns: int (final rate value, e.g., 11 means 11 PRC = ₹1)
@@ -5229,50 +5230,57 @@ async def get_dynamic_prc_rate():
             override_rate = override.get("rate")
             expires_at = override.get("expires_at")
             
-            # Check if override is still valid
             if expires_at:
                 try:
                     expiry = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
                     if expiry > datetime.now(timezone.utc):
-                        logging.info(f"[PRC RATE] Using manual override: {override_rate}")
                         return int(override_rate)
                 except:
                     pass
             else:
-                # No expiry = permanent override
-                logging.info(f"[PRC RATE] Using manual override (no expiry): {override_rate}")
                 return int(override_rate)
     except Exception as e:
         logging.warning(f"[PRC RATE] Override check failed: {e}")
     
     try:
-        # PRIORITY 2: Import economy module
-        from routes.prc_economy import calculate_dynamic_prc_rate
-        
-        # Get auto-calculated rate from economy system
-        rate_data = await calculate_dynamic_prc_rate(db)
-        logging.info(f"[PRC RATE] Economy returned: type={type(rate_data)}, final_rate={rate_data.get('final_rate') if isinstance(rate_data, dict) else rate_data}")
-        
-        if rate_data:
-            if isinstance(rate_data, dict):
-                final_rate = rate_data.get("final_rate", 10)
-                return int(final_rate)
-            else:
-                return int(rate_data)
+        # PRIORITY 2: Read from database (shared across all workers)
+        saved_rate = await db.system_settings.find_one(
+            {"type": "prc_dynamic_rate"},
+            {"_id": 0, "final_rate": 1, "updated_at": 1}
+        )
+        if saved_rate and saved_rate.get("final_rate"):
+            updated_at = saved_rate.get("updated_at")
+            if updated_at:
+                if hasattr(updated_at, 'timestamp'):
+                    age_seconds = (datetime.now(timezone.utc) - updated_at.replace(tzinfo=timezone.utc if updated_at.tzinfo is None else updated_at.tzinfo)).total_seconds()
+                else:
+                    age_seconds = (datetime.now(timezone.utc) - datetime.fromisoformat(str(updated_at).replace('Z', '+00:00'))).total_seconds()
+                
+                if age_seconds < 300:  # 5 minutes - use cached DB rate
+                    return int(saved_rate["final_rate"])
     except Exception as e:
-        logging.warning(f"[PRC RATE] Economy rate calculation failed, using fallback: {e}")
+        logging.warning(f"[PRC RATE] DB rate read failed: {e}")
     
-    # PRIORITY 3: Check database settings
+    try:
+        # PRIORITY 3: Recalculate and save to DB (for all workers to share)
+        from routes.prc_economy import calculate_dynamic_prc_rate
+        rate_data = await calculate_dynamic_prc_rate(db)
+        
+        if rate_data and isinstance(rate_data, dict):
+            return int(rate_data.get("final_rate", 10))
+        elif rate_data:
+            return int(rate_data)
+    except Exception as e:
+        logging.warning(f"[PRC RATE] Economy calculation failed: {e}")
+    
+    # PRIORITY 4: Database setting fallback
     try:
         rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
         if rate_setting and rate_setting.get("value"):
             return int(rate_setting.get("value"))
-        settings = await db.settings.find_one({})
-        if settings and settings.get("prc_to_inr_rate"):
-            return int(settings.get("prc_to_inr_rate"))
     except:
         pass
-    return 10  # Ultimate fallback
+    return 10
 
 async def get_redemption_charge_settings():
     """

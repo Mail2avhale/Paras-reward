@@ -92,49 +92,39 @@ class GrowthNetworkStats(BaseModel):
 
 async def get_dynamic_prc_rate() -> float:
     """
-    Get dynamic PRC rate from database/economy system.
-    Returns: PRC per INR (e.g., 2.0 means 2 PRC = ₹1)
+    Get dynamic PRC rate - delegates to server.py's single source of truth.
+    Returns: PRC per INR (e.g., 12.0 means 12 PRC = ₹1)
     """
     try:
-        # Check for manual override first
-        override = await db.app_settings.find_one({"key": "prc_rate_manual_override"})
-        if override and override.get("enabled"):
-            rate = override.get("rate", 2)
-            expires_at = override.get("expires_at")
-            if expires_at:
-                try:
-                    expiry = datetime.fromisoformat(str(expires_at).replace('Z', '+00:00'))
-                    if expiry > datetime.now(timezone.utc):
-                        return float(rate)
-                except Exception:
-                    pass
-            else:
-                return float(rate)
+        # Read from DB (shared across all workers) - same logic as server.py
+        saved_rate = await db.system_settings.find_one(
+            {"type": "prc_dynamic_rate"},
+            {"_id": 0, "final_rate": 1, "updated_at": 1}
+        )
+        if saved_rate and saved_rate.get("final_rate"):
+            updated_at = saved_rate.get("updated_at")
+            if updated_at:
+                if hasattr(updated_at, 'timestamp'):
+                    age = (datetime.now(timezone.utc) - updated_at.replace(tzinfo=timezone.utc if updated_at.tzinfo is None else updated_at.tzinfo)).total_seconds()
+                else:
+                    age = (datetime.now(timezone.utc) - datetime.fromisoformat(str(updated_at).replace('Z', '+00:00'))).total_seconds()
+                if age < 300:
+                    return float(saved_rate["final_rate"])
         
-        # Try economy calculation
-        try:
-            from routes.prc_economy import calculate_dynamic_prc_rate
-            rate_data = await calculate_dynamic_prc_rate(db)
-            if rate_data:
-                if isinstance(rate_data, dict):
-                    return float(rate_data.get("final_rate", 2))
-                return float(rate_data)
-        except Exception as e:
-            logging.warning(f"Economy rate calculation failed: {e}")
+        # Recalculate if stale
+        from routes.prc_economy import calculate_dynamic_prc_rate
+        rate_data = await calculate_dynamic_prc_rate(db)
+        if rate_data and isinstance(rate_data, dict):
+            return float(rate_data.get("final_rate", 10))
         
-        # Database setting fallback
+        # DB fallback
         rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
         if rate_setting and rate_setting.get("value"):
             return float(rate_setting.get("value"))
-        
-        settings = await db.settings.find_one({})
-        if settings and settings.get("prc_to_inr_rate"):
-            return float(settings.get("prc_to_inr_rate"))
-            
     except Exception as e:
         logging.error(f"Error getting PRC rate: {e}")
     
-    return 2.0  # Default fallback
+    return 10.0
 
 
 async def get_economy_settings() -> dict:
