@@ -1,0 +1,129 @@
+{
+  "iteration": 172,
+  "summary": "PRC Rate Consistency Bug Fix - VERIFIED. All 11 backend tests pass. Frontend code review confirms fixes are in place. Backend elite-pricing endpoint returns correct total_prc (16477.05 at rate 11). PRCRateDisplay formula matches backend. User 360 shows Total Redeemed in PRC format. Activate Elite button has confirmation dialog with remaining days.",
+  "features_tested": {
+    "backend_elite_pricing_endpoint": {
+      "status": "PASS",
+      "endpoint": "GET /api/subscription/elite-pricing",
+      "verified_values": {
+        "prc_rate": 11,
+        "base_with_gst_inr": 1178.82,
+        "base_prc": 12967.02,
+        "processing_fee_prc": 110,
+        "admin_charges_prc": 2615.4,
+        "burn_prc": 784.62,
+        "total_prc": 16477.05
+      },
+      "formula_verified": "admin = 20% of (base_prc + processing_prc), burn = 5% of (base + processing + admin)",
+      "tests_passed": 4
+    },
+    "backend_prc_rate_endpoint": {
+      "status": "PASS",
+      "endpoint": "GET /api/prc-economy/current-rate",
+      "verified_values": {
+        "final_rate": 11,
+        "base_rate": 10
+      },
+      "tests_passed": 3
+    },
+    "backend_user360_total_redeemed": {
+      "status": "PASS",
+      "endpoint": "GET /api/admin/user360/full/{uid}",
+      "verified": "stats.total_redeemed returns numeric PRC value (not INR with ₹)",
+      "sample_value": "16777.05 PRC",
+      "tests_passed": 2
+    },
+    "frontend_prc_rate_display_formula": {
+      "status": "PASS",
+      "file": "/app/frontend/src/components/PRCRateDisplay.js",
+      "lines": "78-86",
+      "formula": "adminChargeInPRC = subtotalPRC * adminChargePercent / 100 where subtotalPRC = amountInPRC + processingFeeInPRC",
+      "matches_backend": true
+    },
+    "frontend_get_prc_price_fallback": {
+      "status": "PASS",
+      "file": "/app/frontend/src/pages/SubscriptionPlans.js",
+      "lines": "388-405",
+      "formula": "admin = 20% of (baseGST + processingFee), burn = 5%",
+      "matches_backend": true
+    },
+    "frontend_handle_prc_payment_refresh": {
+      "status": "PASS",
+      "file": "/app/frontend/src/pages/SubscriptionPlans.js",
+      "lines": "425-459",
+      "behavior": "Calls refreshElitePricing() before submitting payment to get fresh pricing",
+      "verified": true
+    },
+    "frontend_user360_total_redeemed_format": {
+      "status": "PASS",
+      "file": "/app/frontend/src/pages/AdminUser360New.js",
+      "line": 854,
+      "format": "{formatNumber((userData.stats?.total_redeemed || 0).toFixed(2))} PRC",
+      "shows_prc_not_inr": true
+    },
+    "frontend_activate_elite_confirmation_dialog": {
+      "status": "PASS",
+      "file": "/app/frontend/src/pages/AdminUser360New.js",
+      "lines": "980-1003",
+      "features": [
+        "Calculates remaining days from current subscription",
+        "Shows confirmation dialog with remaining days info",
+        "Shows new expiry date after adding 28 days"
+      ]
+    }
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_prc_rate_consistency.py",
+    "/app/test_reports/pytest/prc_rate_consistency_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PRCRateDisplay.js Lines 78-86: Admin charge formula correctly includes processingFee in base: admin = 20% of (amount + processing)",
+    "SubscriptionPlans.js Lines 388-405: getPRCPrice() fallback formula matches backend exactly",
+    "SubscriptionPlans.js Lines 425-459: handlePRCPayment calls refreshElitePricing() before payment to avoid stale rate",
+    "AdminUser360New.js Line 854: Total Redeemed shows 'X.XX PRC' format (not ₹X)",
+    "AdminUser360New.js Lines 980-1003: Activate Elite confirmation dialog shows remaining subscription days"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_prc_rate_consistency.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 tests passed)",
+    "frontend": "100% (Code review verified all fixes)"
+  },
+  "test_credentials": {
+    "admin_email": "admin@test.com",
+    "admin_pin": "153759",
+    "test_user_mobile": "9970100782",
+    "test_user_pin": "997010",
+    "prc_test_user_uid": "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21"
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "PRC rate consistency bug is fixed. Backend elite-pricing returns total_prc=16477.05 at rate 11. Frontend PRCRateDisplay and getPRCPrice() formulas match backend. User 360 Total Redeemed shows PRC format. Activate Elite button shows confirmation with remaining days. All three PRC values (Required, Fee Breakdown Total, Pay button) should now show the same amount.",
+  "verified_prc_formula": {
+    "at_rate_11": {
+      "base_inr": 999,
+      "gst_inr": 179.82,
+      "base_with_gst_inr": 1178.82,
+      "processing_fee_inr": 10,
+      "base_prc": 12967.02,
+      "processing_prc": 110,
+      "subtotal_prc": 13077.02,
+      "admin_prc_20_percent": 2615.40,
+      "subtotal_before_burn": 15692.42,
+      "burn_prc_5_percent": 784.62,
+      "total_prc": 16477.05
+    }
+  }
+}

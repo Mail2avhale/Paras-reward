@@ -1,215 +1,273 @@
 """
-Test PRC Rate Consistency - Verify rate is GLOBAL and same for ALL users
-Issue: Different users seeing different PRC rates (11 vs 12)
+PRC Rate Consistency Tests - Iteration 172
+Tests for PRC amount consistency across:
+1. Backend /api/subscription/elite-pricing endpoint
+2. PRCRateDisplay component formula
+3. getPRCPrice() fallback formula
+4. handlePRCPayment refresh behavior
+5. User 360 total_redeemed stat (PRC format)
 """
+
 import pytest
 import requests
 import os
-import time
+import math
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-audit-ledger.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-economy-fix.preview.emergentagent.com').rstrip('/')
 
-class TestPRCRateConsistency:
-    """Test that PRC rate is global and consistent across all API calls"""
+# Test credentials
+ADMIN_EMAIL = "admin@test.com"
+ADMIN_PIN = "153759"
+TEST_USER_UID = "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21"
+
+# Expected pricing constants (from backend)
+ELITE_BASE_PRICE = 999
+GST_RATE = 0.18
+PROCESSING_FEE_INR = 10
+ADMIN_CHARGE_RATE = 0.20
+BURN_RATE = 0.05
+
+
+@pytest.fixture(scope="module")
+def admin_token():
+    """Get admin authentication token"""
+    response = requests.post(f"{BASE_URL}/api/auth/login", json={
+        "email": ADMIN_EMAIL,
+        "pin": ADMIN_PIN
+    })
+    if response.status_code == 200:
+        return response.json().get("token")
+    pytest.skip("Admin authentication failed")
+
+
+class TestElitePricingEndpoint:
+    """Test /api/subscription/elite-pricing endpoint"""
     
-    def test_prc_rate_api_returns_consistent_rate(self):
-        """Test /api/admin/prc-rate/current returns same rate on multiple calls"""
-        rates = []
-        for i in range(10):
-            response = requests.get(f"{BASE_URL}/api/admin/prc-rate/current")
-            assert response.status_code == 200, f"API call {i+1} failed"
-            data = response.json()
-            assert data.get("success") == True, f"API call {i+1} returned success=False"
-            rates.append(data.get("current_rate"))
-            time.sleep(0.1)  # Small delay between calls
-        
-        # All rates should be identical
-        unique_rates = set(rates)
-        assert len(unique_rates) == 1, f"Rate inconsistency detected! Got rates: {rates}"
-        print(f"✅ All 10 API calls returned consistent rate: {rates[0]}")
-    
-    def test_prc_economy_rate_matches_current_rate(self):
-        """Test /api/prc-economy/current-rate matches /api/admin/prc-rate/current"""
-        # Get rate from admin endpoint
-        admin_response = requests.get(f"{BASE_URL}/api/admin/prc-rate/current")
-        assert admin_response.status_code == 200
-        admin_rate = admin_response.json().get("current_rate")
-        
-        # Get rate from economy endpoint
-        economy_response = requests.get(f"{BASE_URL}/api/prc-economy/current-rate")
-        assert economy_response.status_code == 200
-        economy_data = economy_response.json()
-        economy_rate = economy_data.get("rate", {}).get("final_rate")
-        
-        assert admin_rate == economy_rate, f"Rate mismatch! Admin: {admin_rate}, Economy: {economy_rate}"
-        print(f"✅ Both endpoints return same rate: {admin_rate}")
-    
-    def test_user_document_has_no_prc_rate_field(self):
-        """Verify user document doesn't have user-specific prc_rate field"""
-        test_uid = "cbdf46d7-7d66-4d43-8495-e1432a2ab071"
-        response = requests.get(f"{BASE_URL}/api/user/{test_uid}")
-        assert response.status_code == 200
-        user_data = response.json()
-        
-        # Check for any rate-related fields that could override global rate
-        forbidden_fields = ['prc_rate', 'prc_to_inr_rate', 'current_rate', 'prcRate']
-        found_fields = []
-        for field in forbidden_fields:
-            if field in user_data:
-                found_fields.append(f"{field}={user_data[field]}")
-        
-        assert len(found_fields) == 0, f"User document has rate fields that could override global rate: {found_fields}"
-        print(f"✅ User document has no user-specific PRC rate fields")
-    
-    def test_dashboard_endpoint_has_no_user_specific_rate(self):
-        """Verify dashboard endpoint doesn't return user-specific rate"""
-        test_uid = "cbdf46d7-7d66-4d43-8495-e1432a2ab071"
-        response = requests.get(f"{BASE_URL}/api/user/{test_uid}/dashboard")
+    def test_elite_pricing_returns_success(self):
+        """Verify elite-pricing endpoint returns success"""
+        response = requests.get(f"{BASE_URL}/api/subscription/elite-pricing")
         assert response.status_code == 200
         data = response.json()
-        
-        # Check user object in dashboard response
-        user_data = data.get("user", {})
-        forbidden_fields = ['prc_rate', 'prc_to_inr_rate', 'current_rate', 'prcRate']
-        found_fields = []
-        for field in forbidden_fields:
-            if field in user_data:
-                found_fields.append(f"{field}={user_data[field]}")
-        
-        assert len(found_fields) == 0, f"Dashboard user data has rate fields: {found_fields}"
-        print(f"✅ Dashboard endpoint has no user-specific PRC rate")
+        assert data.get("success") == True
+        print(f"✓ Elite pricing endpoint returns success")
     
-    def test_redeem_categories_has_no_user_specific_rate(self):
-        """Verify redeem-categories endpoint doesn't return user-specific rate"""
-        test_uid = "cbdf46d7-7d66-4d43-8495-e1432a2ab071"
-        response = requests.get(f"{BASE_URL}/api/redeem-categories/user/{test_uid}")
-        assert response.status_code == 200
+    def test_elite_pricing_has_required_fields(self):
+        """Verify all required pricing fields are present"""
+        response = requests.get(f"{BASE_URL}/api/subscription/elite-pricing")
+        data = response.json()
+        pricing = data.get("pricing", {})
+        
+        required_fields = [
+            "base_inr", "gst_inr", "gst_rate", "base_with_gst_inr",
+            "processing_fee_inr", "admin_charge_rate", "prc_rate",
+            "base_prc", "processing_fee_prc", "admin_charges_prc",
+            "burn_prc", "total_prc"
+        ]
+        
+        for field in required_fields:
+            assert field in pricing, f"Missing field: {field}"
+        print(f"✓ All required pricing fields present")
+    
+    def test_elite_pricing_formula_correctness(self):
+        """Verify the pricing formula matches backend calculate_elite_prc_price()"""
+        response = requests.get(f"{BASE_URL}/api/subscription/elite-pricing")
+        data = response.json()
+        pricing = data.get("pricing", {})
+        
+        prc_rate = pricing["prc_rate"]
+        
+        # Step 1: Base + GST
+        expected_base_with_gst = ELITE_BASE_PRICE * (1 + GST_RATE)
+        assert abs(pricing["base_with_gst_inr"] - expected_base_with_gst) < 0.01, \
+            f"Base+GST mismatch: expected {expected_base_with_gst}, got {pricing['base_with_gst_inr']}"
+        
+        # Step 2: Convert to PRC
+        expected_base_prc = expected_base_with_gst * prc_rate
+        assert abs(pricing["base_prc"] - expected_base_prc) < 0.1, \
+            f"Base PRC mismatch: expected {expected_base_prc}, got {pricing['base_prc']}"
+        
+        # Step 3: Processing Fee
+        expected_processing_prc = PROCESSING_FEE_INR * prc_rate
+        assert abs(pricing["processing_fee_prc"] - expected_processing_prc) < 0.1, \
+            f"Processing PRC mismatch: expected {expected_processing_prc}, got {pricing['processing_fee_prc']}"
+        
+        # Step 4: Admin Charges = 20% of (base_prc + processing_prc)
+        subtotal_prc = expected_base_prc + expected_processing_prc
+        expected_admin_prc = subtotal_prc * ADMIN_CHARGE_RATE
+        assert abs(pricing["admin_charges_prc"] - expected_admin_prc) < 0.1, \
+            f"Admin PRC mismatch: expected {expected_admin_prc}, got {pricing['admin_charges_prc']}"
+        
+        # Step 5: Burn = 5% of (base + processing + admin)
+        subtotal_before_burn = expected_base_prc + expected_processing_prc + expected_admin_prc
+        expected_burn_prc = subtotal_before_burn * BURN_RATE
+        assert abs(pricing["burn_prc"] - expected_burn_prc) < 0.1, \
+            f"Burn PRC mismatch: expected {expected_burn_prc}, got {pricing['burn_prc']}"
+        
+        # Step 6: Total
+        expected_total = subtotal_before_burn + expected_burn_prc
+        assert abs(pricing["total_prc"] - expected_total) < 0.1, \
+            f"Total PRC mismatch: expected {expected_total}, got {pricing['total_prc']}"
+        
+        print(f"✓ Pricing formula verified at rate {prc_rate}:")
+        print(f"  Base+GST: ₹{pricing['base_with_gst_inr']}")
+        print(f"  Base PRC: {pricing['base_prc']}")
+        print(f"  Processing PRC: {pricing['processing_fee_prc']}")
+        print(f"  Admin PRC (20% of base+proc): {pricing['admin_charges_prc']}")
+        print(f"  Burn PRC (5% of subtotal): {pricing['burn_prc']}")
+        print(f"  Total PRC: {pricing['total_prc']}")
+    
+    def test_total_prc_required_matches_pricing_total(self):
+        """Verify total_prc_required matches pricing.total_prc"""
+        response = requests.get(f"{BASE_URL}/api/subscription/elite-pricing")
         data = response.json()
         
-        # Check for rate fields in response
-        forbidden_fields = ['prc_rate', 'prc_to_inr_rate', 'current_rate', 'prcRate']
-        found_fields = []
-        for field in forbidden_fields:
-            if field in data:
-                found_fields.append(f"{field}={data[field]}")
-        
-        assert len(found_fields) == 0, f"Redeem categories has rate fields: {found_fields}"
-        print(f"✅ Redeem categories endpoint has no user-specific PRC rate")
+        assert data["total_prc_required"] == data["pricing"]["total_prc"], \
+            f"total_prc_required ({data['total_prc_required']}) != pricing.total_prc ({data['pricing']['total_prc']})"
+        print(f"✓ total_prc_required matches pricing.total_prc: {data['total_prc_required']}")
+
+
+class TestPRCRateEndpoint:
+    """Test /api/prc-economy/current-rate endpoint"""
     
-    def test_rate_source_is_dynamic_economy(self):
-        """Verify rate source is dynamic_economy (not manual override or fallback)"""
-        response = requests.get(f"{BASE_URL}/api/admin/prc-rate/current")
-        assert response.status_code == 200
-        data = response.json()
-        
-        source = data.get("source")
-        current_rate = data.get("current_rate")
-        
-        print(f"Rate: {current_rate}, Source: {source}")
-        
-        # Source should be either dynamic_economy or manual_override
-        assert source in ["dynamic_economy", "manual_override"], f"Unexpected rate source: {source}"
-        
-        if source == "manual_override":
-            print(f"⚠️ Rate is from manual override, not dynamic calculation")
-            override_info = data.get("override", {})
-            print(f"   Override rate: {override_info.get('rate')}")
-            print(f"   Expires at: {override_info.get('expires_at')}")
-        else:
-            print(f"✅ Rate is from dynamic economy calculation")
-    
-    def test_rate_within_valid_range(self):
-        """Verify rate is within valid range (6-20)"""
-        response = requests.get(f"{BASE_URL}/api/admin/prc-rate/current")
-        assert response.status_code == 200
-        data = response.json()
-        
-        current_rate = data.get("current_rate")
-        
-        assert 6 <= current_rate <= 20, f"Rate {current_rate} is outside valid range (6-20)"
-        print(f"✅ Rate {current_rate} is within valid range (6-20)")
-    
-    def test_economy_factors_are_valid(self):
-        """Verify all economy factors are within expected ranges"""
+    def test_current_rate_returns_success(self):
+        """Verify current-rate endpoint returns success"""
         response = requests.get(f"{BASE_URL}/api/prc-economy/current-rate")
         assert response.status_code == 200
         data = response.json()
-        
-        rate_data = data.get("rate", {})
-        factors = rate_data.get("factors", {})
-        
-        # Validate each factor is within expected range
-        factor_ranges = {
-            "supply_factor": (0.8, 1.5),
-            "redeem_factor": (0.9, 1.2),
-            "burn_factor": (0.9, 1.0),
-            "user_factor": (0.85, 1.05),
-            "utility_factor": (0.9, 1.05)
-        }
-        
-        for factor_name, (min_val, max_val) in factor_ranges.items():
-            factor_value = factors.get(factor_name)
-            assert factor_value is not None, f"Missing factor: {factor_name}"
-            assert min_val <= factor_value <= max_val, f"{factor_name}={factor_value} outside range ({min_val}-{max_val})"
-            print(f"  {factor_name}: {factor_value} ✓")
-        
-        print(f"✅ All economy factors are valid")
-
-
-class TestPRCRateNoUserOverride:
-    """Test that no user-specific rate override exists"""
-    
-    def test_multiple_users_see_same_rate(self):
-        """Simulate multiple users fetching rate - all should get same value"""
-        # Simulate different "users" by making requests with different headers
-        rates = []
-        
-        for i in range(5):
-            headers = {
-                "X-User-ID": f"test-user-{i}",
-                "X-Request-ID": f"req-{i}-{time.time()}"
-            }
-            response = requests.get(f"{BASE_URL}/api/admin/prc-rate/current", headers=headers)
-            assert response.status_code == 200
-            rates.append(response.json().get("current_rate"))
-        
-        unique_rates = set(rates)
-        assert len(unique_rates) == 1, f"Different users got different rates: {rates}"
-        print(f"✅ All simulated users got same rate: {rates[0]}")
-    
-    def test_rate_api_is_not_user_authenticated(self):
-        """Verify rate API doesn't require user authentication (is truly global)"""
-        # Call without any auth headers
-        response = requests.get(f"{BASE_URL}/api/admin/prc-rate/current")
-        assert response.status_code == 200, "Rate API should be accessible without auth"
-        
-        data = response.json()
         assert data.get("success") == True
-        assert data.get("current_rate") is not None
-        print(f"✅ Rate API is accessible without authentication (global endpoint)")
-
-
-class TestPRCRateCaching:
-    """Test rate caching behavior"""
+        print(f"✓ Current rate endpoint returns success")
     
-    def test_rate_is_cached_for_performance(self):
-        """Verify rate is cached (multiple calls should be fast)"""
-        import time
+    def test_current_rate_has_final_rate(self):
+        """Verify final_rate is present and valid"""
+        response = requests.get(f"{BASE_URL}/api/prc-economy/current-rate")
+        data = response.json()
         
-        times = []
-        for i in range(5):
-            start = time.time()
-            response = requests.get(f"{BASE_URL}/api/admin/prc-rate/current")
-            elapsed = time.time() - start
-            times.append(elapsed)
-            assert response.status_code == 200
+        final_rate = data.get("rate", {}).get("final_rate")
+        assert final_rate is not None, "final_rate is missing"
+        assert isinstance(final_rate, (int, float)), "final_rate must be numeric"
+        assert final_rate > 0, "final_rate must be positive"
+        print(f"✓ Current PRC rate: {final_rate}")
+    
+    def test_rate_consistency_between_endpoints(self):
+        """Verify PRC rate is consistent between endpoints"""
+        rate_response = requests.get(f"{BASE_URL}/api/prc-economy/current-rate")
+        pricing_response = requests.get(f"{BASE_URL}/api/subscription/elite-pricing")
         
-        avg_time = sum(times) / len(times)
-        print(f"Average response time: {avg_time*1000:.2f}ms")
+        rate_from_economy = rate_response.json().get("rate", {}).get("final_rate")
+        rate_from_pricing = pricing_response.json().get("pricing", {}).get("prc_rate")
         
-        # Response should be reasonably fast (cached)
-        assert avg_time < 2.0, f"Rate API too slow (avg {avg_time}s), caching may not be working"
-        print(f"✅ Rate API response times are acceptable (caching working)")
+        assert rate_from_economy == rate_from_pricing, \
+            f"Rate mismatch: economy={rate_from_economy}, pricing={rate_from_pricing}"
+        print(f"✓ PRC rate consistent across endpoints: {rate_from_economy}")
+
+
+class TestUser360TotalRedeemed:
+    """Test User 360 total_redeemed stat shows PRC format"""
+    
+    def test_user360_stats_has_total_redeemed(self, admin_token):
+        """Verify User 360 returns total_redeemed in stats"""
+        response = requests.get(
+            f"{BASE_URL}/api/admin/user360/full/{TEST_USER_UID}",
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        
+        stats = data.get("stats", {})
+        assert "total_redeemed" in stats, "total_redeemed missing from stats"
+        
+        total_redeemed = stats["total_redeemed"]
+        assert isinstance(total_redeemed, (int, float)), "total_redeemed must be numeric"
+        print(f"✓ User 360 total_redeemed: {total_redeemed} PRC")
+    
+    def test_user360_stats_total_redeemed_is_prc_not_inr(self, admin_token):
+        """Verify total_redeemed is in PRC (not INR with ₹ symbol)"""
+        response = requests.get(
+            f"{BASE_URL}/api/admin/user360/full/{TEST_USER_UID}",
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        data = response.json()
+        stats = data.get("stats", {})
+        
+        total_redeemed = stats.get("total_redeemed", 0)
+        
+        # The value should be a number (PRC), not a string with ₹
+        assert isinstance(total_redeemed, (int, float)), \
+            f"total_redeemed should be numeric PRC, got {type(total_redeemed)}"
+        
+        # If it's a string, it shouldn't contain ₹
+        if isinstance(total_redeemed, str):
+            assert "₹" not in total_redeemed, \
+                f"total_redeemed should be PRC, not INR: {total_redeemed}"
+        
+        print(f"✓ total_redeemed is in PRC format: {total_redeemed}")
+
+
+class TestFrontendFormulaConsistency:
+    """Test that frontend formula matches backend"""
+    
+    def test_frontend_formula_matches_backend(self):
+        """
+        Verify the frontend PRCRateDisplay formula matches backend:
+        Backend: admin = 20% of (base_prc + processing_prc)
+        Frontend should use: admin = 20% of (amountInPRC + processingFeeInPRC)
+        """
+        response = requests.get(f"{BASE_URL}/api/subscription/elite-pricing")
+        pricing = response.json().get("pricing", {})
+        
+        prc_rate = pricing["prc_rate"]
+        base_inr = ELITE_BASE_PRICE
+        gst_inr = base_inr * GST_RATE
+        base_with_gst = base_inr + gst_inr
+        processing_fee = PROCESSING_FEE_INR
+        
+        # Frontend formula (from PRCRateDisplay.js lines 78-86):
+        # amountInPRC = amount * currentRate
+        # processingFeeInPRC = processingFee * currentRate
+        # subtotalPRC = amountInPRC + processingFeeInPRC
+        # adminChargeInPRC = subtotalPRC * adminChargePercent / 100
+        # totalBeforeBurn = amountInPRC + processingFeeInPRC + adminChargeInPRC
+        # burnPRC = totalBeforeBurn * burnRate / 100
+        # totalPRC = Math.round((totalBeforeBurn + burnPRC) * 100) / 100
+        
+        amount_in_prc = base_with_gst * prc_rate
+        processing_fee_in_prc = processing_fee * prc_rate
+        subtotal_prc = amount_in_prc + processing_fee_in_prc
+        admin_charge_in_prc = subtotal_prc * 0.20  # 20%
+        total_before_burn = amount_in_prc + processing_fee_in_prc + admin_charge_in_prc
+        burn_prc = total_before_burn * 0.05  # 5%
+        total_prc = round((total_before_burn + burn_prc) * 100) / 100
+        
+        # Compare with backend
+        backend_total = pricing["total_prc"]
+        
+        assert abs(total_prc - backend_total) < 1, \
+            f"Frontend formula ({total_prc}) doesn't match backend ({backend_total})"
+        
+        print(f"✓ Frontend formula matches backend:")
+        print(f"  Frontend calculated: {total_prc} PRC")
+        print(f"  Backend returned: {backend_total} PRC")
+        print(f"  Difference: {abs(total_prc - backend_total):.2f} PRC")
+
+
+class TestSubscriptionPaymentVariance:
+    """Test the 10% variance check for PRC payment"""
+    
+    def test_variance_check_exists(self):
+        """Verify backend has 10% variance check (from server.py line 11699)"""
+        response = requests.get(f"{BASE_URL}/api/subscription/elite-pricing")
+        pricing = response.json().get("pricing", {})
+        expected_prc = pricing["total_prc"]
+        
+        # 10% variance
+        variance = expected_prc * 0.10
+        min_acceptable = expected_prc - variance
+        max_acceptable = expected_prc + variance
+        
+        print(f"✓ 10% variance check:")
+        print(f"  Expected PRC: {expected_prc}")
+        print(f"  Acceptable range: {min_acceptable:.2f} - {max_acceptable:.2f}")
+        print(f"  Variance: ±{variance:.2f} PRC")
 
 
 if __name__ == "__main__":

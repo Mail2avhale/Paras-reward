@@ -146,10 +146,11 @@ async def get_user_full_360(uid: str):
         ]).to_list(1)
         stats["total_mined"] = safe_float(mined_result[0]["total"]) if mined_result else 0
         
-        # Total redeemed
-        redeemed_result = await db.redeem_requests.aggregate([
-            {"$match": {"user_id": uid, "status": {"$in": ["completed", "COMPLETED", "success", "SUCCESS"]}}},
-            {"$group": {"_id": None, "total": {"$sum": "$amount_inr"}}}
+        # Total redeemed — comprehensive: all negative transactions (excluding burns)
+        burn_types = ["prc_burn", "admin_burn", "hourly_burn", "daily_burn", "burn", "auto_burn", "burn_overcorrection_fix"]
+        redeemed_result = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "amount": {"$lt": 0}, "type": {"$nin": burn_types}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
         ]).to_list(1)
         stats["total_redeemed"] = safe_float(redeemed_result[0]["total"]) if redeemed_result else 0
         

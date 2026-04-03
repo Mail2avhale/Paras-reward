@@ -16,7 +16,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://prc-audit-ledger.preview.emergentagent.com';
+const BASE_URL = 'https://prc-economy-fix.preview.emergentagent.com';
 
 // Test data
 const TEST_CREDENTIALS = {

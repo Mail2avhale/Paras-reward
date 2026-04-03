@@ -341,9 +341,14 @@ const AdminUser360New = ({ user: adminUser }) => {
         });
       }
       
-      setUserData(response.data);
-      setAdminNotes(response.data.user?.admin_notes || '');
-      toast.success(`Loaded: ${response.data.user?.name || response.data.user?.email}`);
+      const data = response.data;
+      // Normalize transactions: primary endpoint returns dict, fallback returns array
+      if (data.transactions && !Array.isArray(data.transactions)) {
+        data.transactions = data.transactions.prc_ledger || [];
+      }
+      setUserData(data);
+      setAdminNotes(data.user?.admin_notes || '');
+      toast.success(`Loaded: ${data.user?.name || data.user?.email}`);
       
     } catch (err) {
       console.error('Search error:', err);
@@ -362,8 +367,12 @@ const AdminUser360New = ({ user: adminUser }) => {
       const response = await axios.get(`${API}/admin/user-360?query=${encodeURIComponent(userData.user.uid)}`, {
         headers: { Authorization: `Bearer ${adminUser?.token}` }
       });
-      setUserData(response.data);
-      setAdminNotes(response.data.user?.admin_notes || '');
+      const data = response.data;
+      if (data.transactions && !Array.isArray(data.transactions)) {
+        data.transactions = data.transactions.prc_ledger || [];
+      }
+      setUserData(data);
+      setAdminNotes(data.user?.admin_notes || '');
     } catch (error) {
       console.error('Refresh error:', error);
     }
@@ -842,7 +851,7 @@ const AdminUser360New = ({ user: adminUser }) => {
               {/* Stats Row */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <StatCard icon={Coins} label="Total Mined" value={`${formatNumber((userData.stats?.total_mined || 0).toFixed(2))} PRC`} color="green" />
-                <StatCard icon={TrendingUp} label="Total Redeemed" value={`₹${formatNumber((userData.stats?.total_redeemed || 0).toFixed(0))}`} color="blue" />
+                <StatCard icon={TrendingDown} label="Total Redeemed" value={`${formatNumber((userData.stats?.total_redeemed || 0).toFixed(2))} PRC`} color="blue" />
                 <StatCard icon={Gift} label="Referral Bonus" value={`${formatNumber((userData.stats?.total_referral_bonus || 0).toFixed(2))} PRC`} color="purple" />
                 <StatCard icon={Users} label="Total Referrals" value={userData.referral?.total_referrals || 0} color="cyan" />
                 {/* Risk Score */}
@@ -968,7 +977,30 @@ const AdminUser360New = ({ user: adminUser }) => {
                       className="w-full bg-purple-600 hover:bg-purple-700"
                       disabled={actionLoading}
                       onClick={async () => {
-                        if (!window.confirm(`Activate Elite subscription for ${userData?.user?.name}? PRC will be deducted from their balance.`)) return;
+                        // Calculate remaining days from current subscription
+                        const user = userData?.user;
+                        const expiryStr = user?.subscription_expiry || user?.subscription_expires;
+                        let remainingDays = 0;
+                        let expiryDate = null;
+                        if (expiryStr) {
+                          expiryDate = new Date(expiryStr);
+                          const now = new Date();
+                          if (expiryDate > now) {
+                            remainingDays = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+                          }
+                        }
+                        const newTotalDays = 28 + remainingDays;
+                        const newExpiry = new Date(Date.now() + newTotalDays * 24 * 60 * 60 * 1000);
+                        const newExpiryStr = newExpiry.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                        let confirmMsg;
+                        if (remainingDays > 0) {
+                          confirmMsg = `User "${user?.name}" has ${remainingDays} remaining days on current plan (expires ${expiryDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}).\n\nActivating will add 28 days to existing expiry.\nNew expiry: ${newExpiryStr} (total ${newTotalDays} days).\n\nPRC will be deducted from user balance.\n\nConfirm activation?`;
+                        } else {
+                          confirmMsg = `Activate Elite subscription for "${user?.name}"?\n\nDuration: 28 days\nNew expiry: ${newExpiryStr}\nPRC will be deducted from user balance.\n\nConfirm activation?`;
+                        }
+
+                        if (!window.confirm(confirmMsg)) return;
                         setActionLoading(true);
                         try {
                           const res = await axios.post(`${API}/admin/activate-prc-subscription`, {

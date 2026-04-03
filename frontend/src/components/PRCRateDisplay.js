@@ -75,13 +75,15 @@ const PRCRateDisplay = ({
     setLoading(false);
   };
 
-  // Calculate PRC values - admin charge on amount only (matches backend formula)
-  const amountInPRC = Math.round(amount * currentRate);
-  const processingFeeInPRC = Math.round(processingFee * currentRate);
-  const adminChargeInPRC = Math.round(amount * adminChargePercent / 100 * currentRate);
+  // Calculate PRC values — must match backend calculate_elite_prc_price() exactly
+  // Backend: admin_charges = 20% of (base_prc + processing_prc), burn = 5% of (base + processing + admin)
+  const amountInPRC = amount * currentRate;
+  const processingFeeInPRC = processingFee * currentRate;
+  const subtotalPRC = amountInPRC + processingFeeInPRC;
+  const adminChargeInPRC = subtotalPRC * adminChargePercent / 100;
   const totalBeforeBurn = amountInPRC + processingFeeInPRC + adminChargeInPRC;
-  const burnPRC = Math.round(totalBeforeBurn * burnRate / 100);
-  const totalPRC = totalBeforeBurn + burnPRC;
+  const burnPRC = totalBeforeBurn * burnRate / 100;
+  const totalPRC = Math.round((totalBeforeBurn + burnPRC) * 100) / 100;
 
   if (loading) {
     return (
@@ -137,14 +139,14 @@ const PRCRateDisplay = ({
             {adminChargePercent > 0 && (
               <div className="flex justify-between text-gray-400">
                 <span>Admin Fee ({adminChargePercent}%)</span>
-                <span>₹{Math.round(amount * adminChargePercent / 100).toLocaleString()}</span>
+                <span>₹{Math.round((amount + processingFee) * adminChargePercent / 100).toLocaleString()}</span>
               </div>
             )}
 
             {burnRate > 0 && (
               <div className="flex justify-between text-red-400">
                 <span>Burn ({burnRate}%)</span>
-                <span>₹{(Math.round(amount * adminChargePercent / 100 + amount + processingFee) * burnRate / 100).toFixed(2)}</span>
+                <span>₹{((amount + processingFee + (amount + processingFee) * adminChargePercent / 100) * burnRate / 100).toFixed(2)}</span>
               </div>
             )}
             

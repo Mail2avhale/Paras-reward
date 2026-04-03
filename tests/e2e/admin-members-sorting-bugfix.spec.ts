@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://prc-audit-ledger.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://prc-economy-fix.preview.emergentagent.com';
 
 test.describe('Admin Members List - Sorting Bug Fix Verification', () => {
   /**

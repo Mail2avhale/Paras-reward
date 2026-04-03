@@ -386,32 +386,57 @@ const SubscriptionPlans = ({ user }) => {
 
   // Calculate PRC price for subscription from backend pricing
   const getPRCPrice = () => {
-    // Use exact backend-calculated price
-    if (elitePrcPrice?.total_prc_required) {
-      return Math.round(elitePrcPrice.total_prc_required * 100) / 100;
-    }
+    // Use exact backend-calculated price (freshest available)
     if (elitePrcPrice?.pricing?.total_prc) {
       return Math.round(elitePrcPrice.pricing.total_prc * 100) / 100;
     }
-    // Fallback: manual calculation with correct formula
+    if (elitePrcPrice?.total_prc_required) {
+      return Math.round(elitePrcPrice.total_prc_required * 100) / 100;
+    }
+    // Fallback: manual calculation matching backend formula exactly
+    // Backend: admin = 20% of (base+GST + processing), burn = 5% of (base+GST + processing + admin)
     const inrPrice = getPrice();
     const processingFee = 10;
-    const adminCharge = inrPrice * 0.20; // 20% admin
-    return Math.round((inrPrice + processingFee + adminCharge) * prcRate);
+    const subtotalINR = inrPrice + processingFee;
+    const adminCharge = subtotalINR * 0.20;
+    const totalBeforeBurn = subtotalINR + adminCharge;
+    const burn = totalBeforeBurn * 0.05;
+    return Math.round((totalBeforeBurn + burn) * prcRate * 100) / 100;
+  };
+
+  // Refresh elite PRC pricing from backend (ensures fresh rate)
+  const refreshElitePricing = async () => {
+    try {
+      const res = await axios.get(`${API}/subscription/elite-pricing`);
+      if (res.data?.success) {
+        setElitePrcPrice(res.data);
+        if (res.data?.pricing?.prc_rate) {
+          setPrcRate(res.data.pricing.prc_rate);
+        }
+        return res.data.pricing?.total_prc || null;
+      }
+    } catch (err) {
+      console.error('Failed to refresh elite pricing:', err);
+    }
+    return null;
   };
 
   // Handle PRC Payment for Subscription
   const handlePRCPayment = async () => {
-    const prcRequired = getPRCPrice();
-    const availableLimit = redeemLimit?.effective_remaining || redeemLimit?.remaining_limit || redeemLimit?.remaining || 0;
-    
-    if (availableLimit < prcRequired) {
-      toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${prcRequired.toLocaleString()} PRC`);
-      return;
-    }
-    
     setPrcPaymentLoading(true);
     try {
+      // Always refresh pricing from backend right before payment to avoid stale rate
+      const freshTotal = await refreshElitePricing();
+      const prcRequired = freshTotal || getPRCPrice();
+
+      const availableLimit = redeemLimit?.effective_remaining || redeemLimit?.remaining_limit || redeemLimit?.remaining || 0;
+      
+      if (availableLimit < prcRequired) {
+        toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${prcRequired.toLocaleString()} PRC`);
+        setPrcPaymentLoading(false);
+        return;
+      }
+
       const response = await axios.post(`${API}/subscription/pay-with-prc`, {
         user_id: user.uid,
         plan_name: selectedPlan.id,
@@ -423,8 +448,6 @@ const SubscriptionPlans = ({ user }) => {
         toast.success('Subscription activated with PRC!');
         setPaymentSuccess(true);
         setCurrentStep(4);
-        
-        // Refresh data
         fetchData();
       }
     } catch (error) {

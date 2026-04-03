@@ -19998,11 +19998,10 @@ async def get_user_360_view(query: str, request: Request):
             {"_id": 0, "type": 1, "amount": 1, "description": 1, "reason": 1, "created_at": 1, "timestamp": 1, "balance_after": 1}
         ).sort("created_at", -1).limit(200).to_list(200)
         
-        # Format ledger entries
+        # Format ledger entries — preserve original type for display
         for entry in prc_ledger:
             amount = entry.get("amount", 0) or 0
-            entry["type"] = "credit" if amount > 0 else "debit"
-            entry["amount"] = abs(amount)
+            entry["direction"] = "credit" if amount > 0 else "debit"
         
         transactions["prc_ledger"] = prc_ledger
     except Exception as e:
