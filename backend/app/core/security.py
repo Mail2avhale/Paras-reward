@@ -95,8 +95,8 @@ def verify_pin(pin: str, pin_hash: str, salt: str = "") -> bool:
 
 def generate_otp() -> str:
     """Generate a 6-digit OTP."""
-    import random
-    return str(random.randint(100000, 999999))
+    import secrets
+    return str(secrets.randbelow(900000) + 100000)
 
 
 def mask_mobile(mobile: str) -> str:

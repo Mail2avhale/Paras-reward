@@ -1853,7 +1853,7 @@ async def migrate_user_to_pin(identifier: str, new_pin: str = None):
     
     # Generate PIN if not provided
     if not new_pin:
-        new_pin = str(random.randint(100000, 999999))
+        new_pin = str(secrets.randbelow(900000) + 100000)
     
     # Validate PIN
     if not new_pin.isdigit() or len(new_pin) != 6:
@@ -20792,7 +20792,7 @@ async def run_bulk_fix_background(job_id: str, batch_size: int = 50):
     Background task to fix all users in batches.
     Updates job status in database as it progresses.
     """
-    import random, string
+    import secrets, string
     
     try:
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -20919,7 +20919,7 @@ async def run_bulk_fix_background(job_id: str, batch_size: int = 50):
                     
                     # 6. Referral code
                     if not user.get("referral_code"):
-                        new_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                        new_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
                         await db.users.update_one({"uid": uid}, {"$set": {"referral_code": new_code}})
                         results["issues_fixed"] += 1
                         user_fixed = True
@@ -21375,7 +21375,7 @@ async def admin_bulk_diagnose_all_users(
                 if not user.get("referral_code"):
                     user_issues.append("Missing referral code")
                     if not dry_run:
-                        new_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                        new_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
                         await db.users.update_one({"uid": uid}, {"$set": {"referral_code": new_code}})
                         user_fixes.append(f"✅ Referral: {new_code}")
                         results["fixes_by_category"]["referral_code"] += 1
@@ -21774,8 +21774,8 @@ async def admin_diagnose_user(uid: str, auto_fix: bool = True):
             "fix_action": "generate_referral_code"
         })
         if auto_fix:
-            import random, string
-            new_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            import secrets, string
+            new_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
             await db.users.update_one({"uid": uid}, {"$set": {"referral_code": new_code}})
             auto_fixed.append(f"✅ Generated referral code: {new_code}")
     
@@ -22137,9 +22137,9 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
     
     # ========== 6. Generate referral code if missing ==========
     if not user.get("referral_code"):
-        import random
+        import secrets
         import string
-        new_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        new_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
         await db.users.update_one({"uid": uid}, {"$set": {"referral_code": new_code}})
         fixed_issues.append(f"Generated referral code: {new_code}")
     
@@ -22541,8 +22541,8 @@ async def user_360_quick_action(request: Request):
         temp_pin = data.get("temp_pin", "")
         if not temp_pin:
             # Generate a random 6-digit PIN
-            import random
-            temp_pin = str(random.randint(100000, 999999))
+            import secrets
+            temp_pin = str(secrets.randbelow(900000) + 100000)
         
         # Validate PIN is 6 digits
         if not temp_pin.isdigit() or len(temp_pin) != 6:

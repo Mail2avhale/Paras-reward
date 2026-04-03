@@ -337,7 +337,7 @@ async def ban_user(uid: str, request: Request):
 @router.post("/users/{uid}/reset-pin")
 async def admin_reset_user_pin(uid: str, request: Request):
     """Admin reset user's PIN to random 6-digit PIN"""
-    import random
+    import secrets
     
     data = await request.json()
     admin_id = data.get("admin_id")
@@ -348,7 +348,7 @@ async def admin_reset_user_pin(uid: str, request: Request):
     
     # Generate random 6-digit PIN (avoiding weak patterns)
     while True:
-        new_pin = str(random.randint(100000, 999999))
+        new_pin = str(secrets.randbelow(900000) + 100000)
         # Ensure not all same digits
         if len(set(new_pin)) > 1:
             break

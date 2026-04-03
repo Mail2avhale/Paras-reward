@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import DOMPurify from 'dompurify';
 import { 
   ArrowLeft, CreditCard, CheckCircle, Clock, XCircle, 
   TrendingUp, Users, IndianRupee, RefreshCw, Search,
@@ -215,9 +216,9 @@ const AdminRazorpaySubscriptions = ({ user }) => {
           </div>
           <div class="info-box">
             <h3>Bill To</h3>
-            <p><strong>${invoiceData?.customer?.name}</strong></p>
-            <p>${invoiceData?.customer?.email || ''}</p>
-            <p>${invoiceData?.customer?.mobile || ''}</p>
+            <p><strong>${DOMPurify.sanitize(invoiceData?.customer?.name || '')}</strong></p>
+            <p>${DOMPurify.sanitize(invoiceData?.customer?.email || '')}</p>
+            <p>${DOMPurify.sanitize(invoiceData?.customer?.mobile || '')}</p>
           </div>
         </div>
         
@@ -234,8 +235,8 @@ const AdminRazorpaySubscriptions = ({ user }) => {
           <tbody>
             ${invoiceData?.items?.map(item => `
               <tr>
-                <td>${item.description}</td>
-                <td>${item.hsn_code}</td>
+                <td>${DOMPurify.sanitize(item.description || '')}</td>
+                <td>${DOMPurify.sanitize(item.hsn_code || '')}</td>
                 <td>${item.quantity}</td>
                 <td>₹${item.unit_price?.toFixed(2)}</td>
                 <td>₹${item.amount?.toFixed(2)}</td>

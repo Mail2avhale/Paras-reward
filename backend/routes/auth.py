@@ -1131,7 +1131,7 @@ async def forgot_pin_send_email_otp(request_data: ForgotPinEmailRequest, request
     """Send OTP to user's email for PIN reset
     SECURITY: Rate limited to prevent abuse
     """
-    import random
+    import secrets
     
     email = request_data.email.strip().lower()
     
@@ -1159,7 +1159,7 @@ async def forgot_pin_send_email_otp(request_data: ForgotPinEmailRequest, request
         raise HTTPException(status_code=404, detail="Email not registered")
     
     # Generate 6-digit OTP
-    otp = str(random.randint(100000, 999999))
+    otp = str(secrets.randbelow(900000) + 100000)
     otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
     
     # Store OTP in database

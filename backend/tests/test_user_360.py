@@ -11,8 +11,8 @@ from datetime import datetime
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-economy-fix.preview.emergentagent.com')
 
 # Test credentials
-ADMIN_EMAIL = "admin@paras.com"
-ADMIN_PASSWORD = "admin123"
+ADMIN_EMAIL = os.environ.get("TEST_ADMIN_EMAIL", "admin@test.com")
+ADMIN_PASSWORD = os.environ.get("TEST_ADMIN_PASSWORD", "153759")
 TEST_USER_EMAIL = "demo_startup@test.com"
 
 

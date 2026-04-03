@@ -643,7 +643,7 @@ async def activate_bbps_service(service_code: str = "53"):
         
         logging.info(f"[BBPS ACTIVATE] Activating service {service_code}")
         
-        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.put(url, headers=headers, data=data)
         
         logging.info(f"[BBPS ACTIVATE] Status: {response.status_code}")
@@ -716,7 +716,7 @@ async def get_eko_wallet_balance():
         
         logging.info(f"[EKO BALANCE] Checking wallet balance")
         
-        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(url, headers=headers, params=params)
         
         logging.info(f"[EKO BALANCE] HTTP Status: {response.status_code}")

@@ -143,7 +143,7 @@ async def verify_pan_lite(pan_number: str, name: str, dob: str, client_ref_id: O
     logging.info(f"[EKO-PAN] Calling {url} with PAN: {pan_number[:5]}*****")
     
     try:
-        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, json=payload, headers=headers)
             
             logging.info(f"[EKO-PAN] Response status: {response.status_code}")
@@ -305,7 +305,7 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
     logging.info(f"[EKO-AADHAAR-OTP] URL: {url}")
     
     try:
-        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, json=payload, headers=headers)
             
             logging.info(f"[EKO-AADHAAR-OTP] Response status: {response.status_code}")
@@ -392,7 +392,7 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, access_key: str = No
     logging.info(f"[EKO-AADHAAR-VERIFY] Verifying OTP for: XXXX-XXXX-{aadhaar_clean[-4:]}")
     
     try:
-        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, json=payload, headers=headers)
             
             logging.info(f"[EKO-AADHAAR-VERIFY] Response status: {response.status_code}")

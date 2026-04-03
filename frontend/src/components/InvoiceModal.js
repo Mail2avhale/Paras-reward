@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { X, Printer, Download } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 const COMPANY = {
   name: 'PARAS REWARD',
@@ -96,7 +97,7 @@ const InvoiceModal = ({ payment, user, onClose }) => {
         </style>
       </head>
       <body>
-        ${content.innerHTML}
+        ${DOMPurify.sanitize(content.innerHTML)}
       </body>
       </html>
     `);

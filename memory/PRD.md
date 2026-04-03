@@ -255,3 +255,13 @@
 - MODIFIED: `/app/backend/routes/admin_misc.py` (upcoming plan logic in admin_activate_prc_subscription)
 - MODIFIED: `/app/frontend/src/pages/AdminUser360New.js` (Subscription tab, Edit/Cancel modals)
 - MODIFIED: `/app/frontend/src/pages/DashboardModern.js` (Upcoming Plan card)
+
+
+## COMPLETED: Code Quality & Security Fixes - 3 April 2026
+### Security Fixes
+- Removed `verify=False` from `eko_kyc_service.py` (3) and `bbps_services.py` (2) — SSL MITM prevention
+- Added DOMPurify for XSS in `BlogArticle.js`, `InvoiceModal.js`, `AdminRazorpaySubscriptions.js`
+- Replaced `random.randint/choices` with `secrets` module for PIN/OTP/referral code generation
+- Replaced hardcoded test credentials with `os.environ.get()` in test files
+### Deferred (P2)
+- 218 React hook deps, 83 array index keys, component splits, localStorage, complex function refactoring

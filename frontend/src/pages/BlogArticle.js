@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Clock, User, Calendar, Share2 } from 'lucide-react';
 import { blogArticles } from '@/data/blogData';
 import Footer from '@/components/Footer';
+import DOMPurify from 'dompurify';
 
 const BlogArticle = () => {
   const { slug } = useParams();
@@ -87,7 +88,7 @@ const BlogArticle = () => {
           <Card className="p-8 sm:p-12 bg-white shadow-xl mb-12">
             <div 
               className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-purple-600 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-ol:text-gray-700"
-              dangerouslySetInnerHTML={{ __html: article.content }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
             />
           </Card>
 
