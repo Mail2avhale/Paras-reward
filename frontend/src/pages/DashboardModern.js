@@ -1103,7 +1103,7 @@ const DashboardModern = ({ user, onLogout }) => {
                             <p className="text-white/60 text-sm">PRC</p>
                           </div>
                           {isNegative ? (
-                            <p className="text-red-300 text-xs mt-0.5">Subscription मुळे negative — mining ने recover होईल</p>
+                            <p className="text-red-300 text-xs mt-0.5">Negative due to subscription — will recover with mining</p>
                           ) : (
                             <p className="text-emerald-300 text-sm font-semibold">≈ ₹{Math.floor(availablePRC / prcRate).toLocaleString()}</p>
                           )}

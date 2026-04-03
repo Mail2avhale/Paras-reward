@@ -746,7 +746,7 @@ function App() {
     
     if (showMessage) {
       if (reason === 'session_expired') {
-        toast.error("तुम्ही दुसऱ्या device वर login केले आहे. कृपया पुन्हा login करा.", { duration: 5000 });
+        toast.error("You have logged in on another device. Please login again.", { duration: 5000 });
       } else {
         toast.success("Logged out successfully");
       }

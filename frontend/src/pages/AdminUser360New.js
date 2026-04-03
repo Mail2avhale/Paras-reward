@@ -1095,7 +1095,7 @@ const AdminUser360New = ({ user: adminUser }) => {
                       {auditLoading && (
                         <div className="flex items-center justify-center py-12">
                           <Loader2 className="h-6 w-6 animate-spin text-purple-400 mr-2" />
-                          <span className="text-slate-500">Audit चालू आहे...</span>
+                          <span className="text-slate-500">Running audit...</span>
                         </div>
                       )}
                       {auditData && !auditLoading && (
@@ -1127,7 +1127,7 @@ const AdminUser360New = ({ user: adminUser }) => {
 
                           {/* Actual Balance vs Calculated */}
                           <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
-                            <span className="text-sm text-slate-600">DB मधील Actual Balance:</span>
+                            <span className="text-sm text-slate-600">Actual Balance in DB:</span>
                             <span className="text-lg font-bold text-amber-600">{formatNumber(auditData.summary?.actual_balance?.toFixed(2))} PRC</span>
                           </div>
 
@@ -1315,7 +1315,7 @@ const AdminUser360New = ({ user: adminUser }) => {
           {selectedRole === 'manager' && (
             <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-sm">
               <p className="flex items-center gap-2 mb-2"><Shield className="h-4 w-4" />Manager has restricted admin access</p>
-              <p className="text-xs text-slate-500">Role change केल्यानंतर, User 360 मधून "Manage Permissions" button वापरून permissions set करा</p>
+              <p className="text-xs text-slate-500">After role change, use "Manage Permissions" button in User 360 to set permissions</p>
             </div>
           )}
           <div className="flex gap-3">

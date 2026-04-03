@@ -12873,7 +12873,7 @@ async def get_subscription_pricing_reference():
             "Amount ₹299 = Startup Monthly",
             "Amount ₹549 = Growth Monthly", 
             "Amount ₹799 = Elite Monthly",
-            "Screenshot मधील amount आणि claimed plan match करा",
+            "Verify that the amount in screenshot matches the claimed plan",
             "UTR number verify करा"
         ]
     }
