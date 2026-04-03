@@ -195,6 +195,26 @@
 - Frontend: User360 "Admin Actions" section with both features
 - Files: `admin_misc.py`, `AdminUser360New.js`
 
+## COMPLETED: Admin PRC Subscription Carry-Forward Confirmation - 3 April 2026
+- **Bug**: Admin activating PRC subscription for user with active plan showed unexpected long expiry (remaining + 28 days). No confirmation shown.
+- **Fix**: Added English confirmation dialog (`window.confirm`) showing remaining days, new expiry, and total days before proceeding.
+- File: `AdminUser360New.js` (Activate Elite button onClick handler)
+
+## COMPLETED: Total Redeemed ₹0 Bug Fix - 3 April 2026
+- **Bug**: Total Redeemed stat showed ₹0 in Admin User 360 View
+- **Root Cause**: Fallback endpoint (`admin_user360.py`) only queried `redeem_requests.amount_inr`, missing subscription_prc, gift vouchers, etc.
+- **Fix**: Changed to comprehensive aggregation on `transactions` collection (all negative txns excluding burns). Changed display from ₹ to PRC.
+- Files: `admin_user360.py`, `AdminUser360New.js`
+
+## COMPLETED: PRC Amount Mismatch Bug Fix (Subscription Page) - 3 April 2026
+- **Bug**: Three different PRC amounts shown: "Required" (stale 16,477), "Total PRC Required" in Fee Breakdown (19,446), Backend expected (19,473)
+- **Root Cause 1**: `PRCRateDisplay` admin charge = 20% of `amount` only. Backend = 20% of `(amount + processingFee)`.
+- **Root Cause 2**: `getPRCPrice()` used stale pricing from page load (rate changes between load and payment).
+- **Root Cause 3**: Intermediate `Math.round()` per step vs backend's single final round.
+- **Fix**: PRCRateDisplay and getPRCPrice formulas now match backend exactly. handlePRCPayment re-fetches fresh pricing before submitting.
+- Files: `PRCRateDisplay.js`, `SubscriptionPlans.js`
+
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)
