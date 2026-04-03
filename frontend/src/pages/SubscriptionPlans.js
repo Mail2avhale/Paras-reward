@@ -445,7 +445,11 @@ const SubscriptionPlans = ({ user }) => {
       });
       
       if (response.data.success) {
-        toast.success('Subscription activated with PRC!');
+        if (response.data.is_upcoming) {
+          toast.success(`Plan queued! Starts: ${response.data.subscription?.scheduled_start || 'after current plan'}`);
+        } else {
+          toast.success('Subscription activated with PRC!');
+        }
         setPaymentSuccess(true);
         setCurrentStep(4);
         fetchData();

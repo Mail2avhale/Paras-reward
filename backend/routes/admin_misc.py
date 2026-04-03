@@ -967,11 +967,12 @@ async def admin_activate_prc_subscription(request: Request):
                 detail=f"Insufficient PRC Balance. User has {current_balance:,.0f} PRC, but {prc_amount:,.0f} PRC is required."
             )
 
-        # Calculate duration
+        # Calculate duration and check for upcoming plan
         duration_days = 28
         now = datetime.now(timezone.utc)
         current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
-        remaining_days = 0
+        has_active_plan = False
+        expiry_dt = None
 
         if current_expiry:
             try:
@@ -982,12 +983,19 @@ async def admin_activate_prc_subscription(request: Request):
                 if expiry_dt.tzinfo is None:
                     expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
                 if expiry_dt > now:
-                    remaining_days = (expiry_dt - now).days
+                    has_active_plan = True
             except:
                 pass
 
-        total_days = duration_days + remaining_days
-        new_expiry = (now + timedelta(days=total_days)).isoformat()
+        is_upcoming = has_active_plan
+        import uuid as _uuid
+        payment_id = str(_uuid.uuid4())
+
+        if is_upcoming:
+            scheduled_start = expiry_dt.isoformat()
+            scheduled_end = (expiry_dt + timedelta(days=duration_days)).isoformat()
+        else:
+            new_expiry = (now + timedelta(days=duration_days)).isoformat()
 
         # Deduct PRC
         result = await db.users.update_one(
@@ -997,25 +1005,25 @@ async def admin_activate_prc_subscription(request: Request):
         if result.modified_count == 0:
             raise HTTPException(status_code=400, detail="Could not deduct PRC. Please try again.")
 
-        # Update subscription
-        try:
-            await db.users.update_one(
-                {"uid": target_uid},
-                {"$set": {
-                    "subscription_plan": "elite",
-                    "subscription_expiry": new_expiry,
-                    "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
-                    "subscription_start": now.isoformat(),
-                    "membership_type": "vip",
-                    "subscription_status": "active",
-                    "subscription_payment_type": "prc",
-                    "last_prc_subscription": now.isoformat()
-                }}
-            )
-        except Exception as e:
-            # Refund PRC
-            await db.users.update_one({"uid": target_uid}, {"$inc": {"prc_balance": prc_amount}})
-            raise HTTPException(status_code=500, detail=f"Subscription activation failed. PRC refunded. Error: {e}")
+        # Update subscription (only for immediate activation)
+        if not is_upcoming:
+            try:
+                await db.users.update_one(
+                    {"uid": target_uid},
+                    {"$set": {
+                        "subscription_plan": "elite",
+                        "subscription_expiry": new_expiry,
+                        "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
+                        "subscription_start": now.isoformat(),
+                        "membership_type": "vip",
+                        "subscription_status": "active",
+                        "subscription_payment_type": "prc",
+                        "last_prc_subscription": now.isoformat()
+                    }}
+                )
+            except Exception as e:
+                await db.users.update_one({"uid": target_uid}, {"$inc": {"prc_balance": prc_amount}})
+                raise HTTPException(status_code=500, detail=f"Subscription activation failed. PRC refunded. Error: {e}")
 
         # Credit company wallets
         try:
@@ -1025,6 +1033,7 @@ async def admin_activate_prc_subscription(request: Request):
 
         # Record payment
         payment_record = {
+            "payment_id": payment_id,
             "user_id": target_uid,
             "user_name": user_name,
             "plan_name": plan_name,
@@ -1038,24 +1047,31 @@ async def admin_activate_prc_subscription(request: Request):
                 "total_prc": pricing["total_prc"]
             },
             "inr_equivalent": pricing["base_with_gst_inr"],
-            "status": "paid",
+            "status": "upcoming" if is_upcoming else "paid",
             "created_at": now.isoformat(),
-            "subscription_expiry": new_expiry,
             "duration_days": duration_days,
-            "total_days": total_days,
             "activated_by_admin": admin_uid,
             "admin_name": admin.get("name", "Admin")
         }
+
+        if is_upcoming:
+            payment_record["scheduled_start"] = scheduled_start
+            payment_record["scheduled_end"] = scheduled_end
+        else:
+            payment_record["subscription_start"] = now.isoformat()
+            payment_record["subscription_expiry"] = new_expiry
+
         await db.subscription_payments.insert_one(payment_record)
 
         # Transaction for PRC statement
+        desc_suffix = "(Upcoming - queued by Admin)" if is_upcoming else "- Activated by Admin"
         await db.transactions.insert_one({
             "user_id": target_uid,
             "type": "subscription_prc",
             "amount": -prc_amount,
             "prc_amount": prc_amount,
             "inr_value": pricing["base_with_gst_inr"],
-            "description": f"Elite Subscription ({duration_days} days) - Activated by Admin",
+            "description": f"Elite Subscription ({duration_days} days) {desc_suffix}",
             "timestamp": now,
             "created_at": now.isoformat(),
             "status": "completed",
@@ -1071,23 +1087,45 @@ async def admin_activate_prc_subscription(request: Request):
             pass
 
         if log_admin_action:
-            await log_admin_action(admin_uid, "admin_prc_subscription", {
+            action_detail = {
                 "target_uid": target_uid, "target_name": user_name,
-                "prc_amount": round(prc_amount, 2), "plan": plan_name, "expiry": new_expiry[:10]
-            })
+                "prc_amount": round(prc_amount, 2), "plan": plan_name,
+                "is_upcoming": is_upcoming,
+            }
+            if is_upcoming:
+                action_detail["scheduled_start"] = scheduled_start[:10]
+            else:
+                action_detail["expiry"] = new_expiry[:10]
+            await log_admin_action(admin_uid, "admin_prc_subscription", action_detail)
 
         new_balance = current_balance - prc_amount
-        return {
-            "success": True,
-            "message": f"Elite subscription activated for {user_name}",
-            "subscription": {
-                "plan": "elite",
-                "prc_paid": round(prc_amount, 2),
-                "expiry": new_expiry[:10],
-                "total_days": total_days,
-                "remaining_balance": round(new_balance, 2)
+        if is_upcoming:
+            return {
+                "success": True,
+                "message": f"Elite subscription queued for {user_name}. Starts after current plan expires.",
+                "is_upcoming": True,
+                "subscription": {
+                    "plan": "elite",
+                    "prc_paid": round(prc_amount, 2),
+                    "scheduled_start": scheduled_start[:10],
+                    "scheduled_end": scheduled_end[:10],
+                    "duration_days": duration_days,
+                    "remaining_balance": round(new_balance, 2)
+                }
             }
-        }
+        else:
+            return {
+                "success": True,
+                "message": f"Elite subscription activated for {user_name}",
+                "is_upcoming": False,
+                "subscription": {
+                    "plan": "elite",
+                    "prc_paid": round(prc_amount, 2),
+                    "expiry": new_expiry[:10],
+                    "duration_days": duration_days,
+                    "remaining_balance": round(new_balance, 2)
+                }
+            }
     except HTTPException:
         raise
     except Exception as e:

@@ -93,6 +93,7 @@ from routes.mining import router as mining_router, set_db as set_mining_db, set_
 from routes.gst_invoice import router as invoice_router, set_db as set_invoice_db
 from routes.eko_callback import router as eko_callback_router, set_db as set_eko_callback_db
 from routes.growth_economy import router as growth_economy_router, set_db as set_growth_economy_db
+from routes.admin_subscription import router as admin_subscription_router
 
 # ========== SECURITY CONFIGURATION ==========
 # SECURITY: Use stable JWT secret from env, fallback to fixed secret for consistency
@@ -8171,6 +8172,23 @@ async def get_user_data(uid: str, request: Request):
                         user["subscription_expired_at"] = now_check.isoformat()
                         subscription_plan = "explorer"
                         
+                        # Check for upcoming plan to auto-activate
+                        try:
+                            from routes.admin_subscription import check_and_activate_upcoming
+                            activation = await check_and_activate_upcoming(uid)
+                            if activation:
+                                # Refresh user data after activation
+                                updated_user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0, "profile_picture": 0})
+                                if updated_user:
+                                    user["subscription_plan"] = updated_user.get("subscription_plan", "explorer")
+                                    user["subscription_expiry"] = updated_user.get("subscription_expiry")
+                                    user["subscription_start"] = updated_user.get("subscription_start")
+                                    user["subscription_status"] = "active"
+                                    subscription_plan = user["subscription_plan"]
+                                    logging.info(f"[UPCOMING-SUB] Auto-activated upcoming plan for {uid}: {subscription_plan}")
+                        except Exception as upcoming_err:
+                            logging.error(f"[UPCOMING-SUB] Error activating upcoming: {upcoming_err}")
+                        
                         # Invalidate cache
                         if cache:
                             await cache.delete(f"user_data:{uid}")
@@ -8184,6 +8202,20 @@ async def get_user_data(uid: str, request: Request):
     
     if subscription_start:
         user["subscription_start"] = subscription_start
+    
+    # Fetch upcoming plans count for user dashboard
+    try:
+        upcoming_count = await db.subscription_payments.count_documents({"user_id": uid, "status": "upcoming"})
+        if upcoming_count > 0:
+            upcoming_plan = await db.subscription_payments.find_one(
+                {"user_id": uid, "status": "upcoming"},
+                {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1, "duration_days": 1},
+                sort=[("scheduled_start", 1)]
+            )
+            user["upcoming_plan"] = upcoming_plan
+            user["upcoming_plans_count"] = upcoming_count
+    except Exception:
+        pass
     
     # Cache the result for 2 minutes
     await cache.set(cache_key, user, ttl=120)
@@ -11725,9 +11757,10 @@ async def subscription_pay_with_prc(request: Request):
         duration_days = 28
         now = datetime.now(timezone.utc)
         
-        # Check current subscription expiry and extend if active
+        # Check if user has active subscription
         current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
-        remaining_days = 0
+        has_active_plan = False
+        expiry_dt = None
         
         if current_expiry:
             try:
@@ -11735,17 +11768,27 @@ async def subscription_pay_with_prc(request: Request):
                     expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
                 else:
                     expiry_dt = current_expiry
-                
                 if expiry_dt.tzinfo is None:
                     expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-                
                 if expiry_dt > now:
-                    remaining_days = (expiry_dt - now).days
+                    has_active_plan = True
             except:
                 pass
         
-        total_days = duration_days + remaining_days
-        new_expiry = (now + timedelta(days=total_days)).isoformat()
+        # Determine if this should be an upcoming plan or immediate activation
+        is_upcoming = has_active_plan
+        
+        if is_upcoming:
+            # Queue as upcoming: starts after current plan expires
+            import uuid as _uuid
+            payment_id = str(_uuid.uuid4())
+            scheduled_start = expiry_dt.isoformat()
+            scheduled_end = (expiry_dt + timedelta(days=duration_days)).isoformat()
+        else:
+            # Immediate activation
+            import uuid as _uuid
+            payment_id = str(_uuid.uuid4())
+            new_expiry = (now + timedelta(days=duration_days)).isoformat()
         
         # DEDUCT PRC
         try:
@@ -11761,38 +11804,38 @@ async def subscription_pay_with_prc(request: Request):
             logging.error(f"[PRC-SUB] PRC deduction failed: {deduct_err}")
             raise HTTPException(status_code=500, detail="Payment processing failed. Please try again.")
         
-        # UPDATE SUBSCRIPTION
-        try:
-            await db.users.update_one(
-                {"uid": user_id},
-                {
-                    "$set": {
-                        "subscription_plan": "elite",
-                        "subscription_expiry": new_expiry,
-                        "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
-                        "subscription_start": now.isoformat(),
-                        "membership_type": "vip",
-                        "subscription_status": "active",
-                        "subscription_payment_type": "prc",
-                        "last_prc_subscription": now.isoformat()
+        if not is_upcoming:
+            # IMMEDIATE ACTIVATION
+            try:
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {
+                        "$set": {
+                            "subscription_plan": "elite",
+                            "subscription_expiry": new_expiry,
+                            "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
+                            "subscription_start": now.isoformat(),
+                            "membership_type": "vip",
+                            "subscription_status": "active",
+                            "subscription_payment_type": "prc",
+                            "last_prc_subscription": now.isoformat()
+                        }
                     }
-                }
-            )
-        except Exception as update_err:
-            # CRITICAL: Refund PRC if subscription update fails
-            logging.error(f"[PRC-SUB] Subscription update failed, refunding PRC: {update_err}")
-            await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": prc_amount}})
-            raise HTTPException(status_code=500, detail="Subscription activation failed. PRC has been refunded.")
+                )
+            except Exception as update_err:
+                logging.error(f"[PRC-SUB] Subscription update failed, refunding PRC: {update_err}")
+                await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": prc_amount}})
+                raise HTTPException(status_code=500, detail="Subscription activation failed. PRC has been refunded.")
         
-        # CREDIT COMPANY WALLETS (New Feature - 1 April 2026)
+        # CREDIT COMPANY WALLETS
         try:
             await credit_company_wallets_for_subscription(user_id, pricing, user_name)
         except Exception as wallet_err:
             logging.error(f"[PRC-SUB] Company wallet credit failed: {wallet_err}")
-            # Don't fail the subscription for this
         
-        # RECORD PAYMENT with detailed breakdown
+        # RECORD PAYMENT
         payment_record = {
+            "payment_id": payment_id,
             "user_id": user_id,
             "user_name": user_name,
             "plan_name": plan_name,
@@ -11800,7 +11843,6 @@ async def subscription_pay_with_prc(request: Request):
             "payment_method": "prc",
             "prc_amount": round(prc_amount, 2),
             "prc_rate_used": prc_rate,
-            # NEW: Detailed breakdown (1 April 2026)
             "pricing_breakdown": {
                 "base_inr": pricing["base_inr"],
                 "gst_inr": pricing["gst_inr"],
@@ -11814,23 +11856,29 @@ async def subscription_pay_with_prc(request: Request):
                 "total_prc": pricing["total_prc"]
             },
             "inr_equivalent": pricing["base_with_gst_inr"],
-            "status": "paid",
+            "status": "upcoming" if is_upcoming else "paid",
             "created_at": now.isoformat(),
-            "subscription_expiry": new_expiry,
             "duration_days": duration_days,
-            "remaining_days_added": remaining_days,
-            "total_days": total_days
         }
+        
+        if is_upcoming:
+            payment_record["scheduled_start"] = scheduled_start
+            payment_record["scheduled_end"] = scheduled_end
+        else:
+            payment_record["subscription_start"] = now.isoformat()
+            payment_record["subscription_expiry"] = new_expiry
+        
         await db.subscription_payments.insert_one(payment_record)
         
         # Log to transactions
+        desc_suffix = "(Upcoming - starts after current plan)" if is_upcoming else f"- ₹{pricing['base_inr']} + GST + Fees"
         await db.transactions.insert_one({
             "user_id": user_id,
             "type": "subscription_prc",
             "amount": -prc_amount,
             "prc_amount": prc_amount,
             "inr_value": pricing["base_with_gst_inr"],
-            "description": f"Elite Subscription ({duration_days} days) - ₹{pricing['base_inr']} + GST + Fees",
+            "description": f"Elite Subscription ({duration_days} days) {desc_suffix}",
             "timestamp": now,
             "created_at": now.isoformat(),
             "status": "completed"
@@ -11844,28 +11892,52 @@ async def subscription_pay_with_prc(request: Request):
         
         # Log activity and notification
         try:
-            await log_activity(user_id=user_id, action_type="subscription_prc_payment",
-                description=f"Paid {prc_amount:.0f} PRC for Elite subscription", metadata=payment_record)
-            await create_notification(user_id=user_id, title="Elite Subscription Activated!",
-                message=f"Your Elite plan is active until {new_expiry[:10]}. Paid {prc_amount:,.0f} PRC (₹{pricing['base_inr']} + GST + Fees).",
-                notification_type="subscription")
+            if is_upcoming:
+                notify_msg = f"Your Elite plan has been queued! It will activate on {scheduled_start[:10]}. Paid {prc_amount:,.0f} PRC."
+                await log_activity(user_id=user_id, action_type="subscription_prc_upcoming",
+                    description=f"Paid {prc_amount:.0f} PRC for upcoming Elite subscription", metadata=payment_record)
+            else:
+                notify_msg = f"Your Elite plan is active until {new_expiry[:10]}. Paid {prc_amount:,.0f} PRC (₹{pricing['base_inr']} + GST + Fees)."
+                await log_activity(user_id=user_id, action_type="subscription_prc_payment",
+                    description=f"Paid {prc_amount:.0f} PRC for Elite subscription", metadata=payment_record)
+            await create_notification(user_id=user_id, 
+                title="Elite Subscription Queued!" if is_upcoming else "Elite Subscription Activated!",
+                message=notify_msg, notification_type="subscription")
         except:
             pass
         
-        logging.info(f"[PRC-SUB] SUCCESS: {user_name} ({user_id}) bought Elite for {prc_amount:.0f} PRC, expires {new_expiry[:10]}")
+        if is_upcoming:
+            logging.info(f"[PRC-SUB] UPCOMING: {user_name} ({user_id}) queued Elite for {prc_amount:.0f} PRC, starts {scheduled_start[:10]}")
+        else:
+            logging.info(f"[PRC-SUB] SUCCESS: {user_name} ({user_id}) bought Elite for {prc_amount:.0f} PRC, expires {new_expiry[:10]}")
         
-        return {
-            "success": True,
-            "message": "Elite subscription activated successfully!",
-            "subscription": {
-                "plan": "elite",
-                "expiry": new_expiry,
-                "prc_paid": round(prc_amount, 2),
-                "days_added": duration_days,
-                "total_days": total_days,
-                "pricing_breakdown": pricing
+        if is_upcoming:
+            return {
+                "success": True,
+                "message": "Elite subscription queued! It will activate after your current plan expires.",
+                "is_upcoming": True,
+                "subscription": {
+                    "plan": "elite",
+                    "scheduled_start": scheduled_start[:10],
+                    "scheduled_end": scheduled_end[:10],
+                    "prc_paid": round(prc_amount, 2),
+                    "duration_days": duration_days,
+                    "pricing_breakdown": pricing
+                }
             }
-        }
+        else:
+            return {
+                "success": True,
+                "message": "Elite subscription activated successfully!",
+                "is_upcoming": False,
+                "subscription": {
+                    "plan": "elite",
+                    "expiry": new_expiry[:10],
+                    "prc_paid": round(prc_amount, 2),
+                    "duration_days": duration_days,
+                    "pricing_breakdown": pricing
+                }
+            }
         
     except HTTPException:
         raise
@@ -44716,6 +44788,7 @@ set_admin_misc_db(db)
 set_admin_misc_helpers({'log_admin_action': log_admin_action, 'hash_password': hash_password})
 api_router.include_router(admin_misc_router)
 
+api_router.include_router(admin_subscription_router)
 # Include bank redeem router (NEW - Bank Account Withdrawal)
 set_bank_redeem_db(db)
 set_bank_redeem_cache(cache)

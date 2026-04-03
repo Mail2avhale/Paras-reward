@@ -93,6 +93,8 @@ const DashboardModern = ({ user, onLogout }) => {
     subscriptionPlan: user?.subscription_plan || 'explorer',
     subscriptionExpiry: user?.subscription_expiry || null,
     subscriptionStart: user?.subscription_start || user?.vip_activation_date || null,
+    upcomingPlan: user?.upcoming_plan || null,
+    upcomingPlansCount: user?.upcoming_plans_count || 0,
     prcRate: 10, // Default PRC rate
     categoryLimits: { utility: { remaining: 0 }, shopping: { remaining: 0 }, bank: { remaining: 0 } }
   });
@@ -213,6 +215,8 @@ const DashboardModern = ({ user, onLogout }) => {
           subscriptionPlan: fetchedUserData.subscription_plan || 'explorer',
           subscriptionExpiry: fetchedUserData.subscription_expiry || null,
           subscriptionStart: fetchedUserData.subscription_start || fetchedUserData.vip_activation_date || null,
+          upcomingPlan: fetchedUserData.upcoming_plan || null,
+          upcomingPlansCount: fetchedUserData.upcoming_plans_count || 0,
           prcRate: prcRate,
           redeemLimit: redeemLimit
         });
@@ -800,6 +804,29 @@ const DashboardModern = ({ user, onLogout }) => {
               >
                 {t('planExpiresSoonRenew')}
               </button>
+            )}
+
+            {/* Upcoming Plan Card */}
+            {stats.upcomingPlan && (
+              <div className="mt-3 p-3 rounded-lg border" style={{
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(217,119,6,0.05) 100%)',
+                borderColor: 'rgba(245,158,11,0.3)'
+              }} data-testid="upcoming-plan-card">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span className="text-amber-600 font-semibold text-sm">Upcoming Plan</span>
+                  {stats.upcomingPlansCount > 1 && (
+                    <span className="text-xs bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full">+{stats.upcomingPlansCount - 1} more</span>
+                  )}
+                </div>
+                <p className="text-slate-600 text-xs">
+                  <span className="capitalize font-medium">{stats.upcomingPlan.plan_name}</span>
+                  {' — '}
+                  Starts {stats.upcomingPlan.scheduled_start ? new Date(stats.upcomingPlan.scheduled_start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'after current plan'}
+                  {' · '}
+                  {stats.upcomingPlan.duration_days || 28} days
+                </p>
+              </div>
             )}
           </motion.div>
         </div>

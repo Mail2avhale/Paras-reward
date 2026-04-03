@@ -13,7 +13,7 @@ import {
   CheckCircle, XCircle, AlertTriangle, Activity, RefreshCw, FileText,
   Loader2, ArrowLeft, Copy, Ban, Wallet, Receipt, BadgeCheck, Zap,
   Plus, Minus, History, Send, Key, UserX, Trash2, Edit, ShoppingBag,
-  Link, Unlink, X, Check, Eye, EyeOff, Settings, Lock, Network, Play, Pause
+  Link, Unlink, X, Check, Eye, EyeOff, Settings, Lock, Network, Play, Pause, Pencil
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -269,6 +269,20 @@ const AdminUser360New = ({ user: adminUser }) => {
   const [showKYCAction, setShowKYCAction] = useState(false);
   const [showPermissions, setShowPermissions] = useState(false);
   
+  // Subscription Management State
+  const [subDetails, setSubDetails] = useState(null);
+  const [subDetailsLoading, setSubDetailsLoading] = useState(false);
+  const [showSubEdit, setShowSubEdit] = useState(false);
+  const [showSubCancel, setShowSubCancel] = useState(false);
+  const [subEditAction, setSubEditAction] = useState('extend_days');
+  const [subEditDays, setSubEditDays] = useState('7');
+  const [subEditDate, setSubEditDate] = useState('');
+  const [subEditNote, setSubEditNote] = useState('');
+  const [subCancelTarget, setSubCancelTarget] = useState('current');
+  const [subCancelRefundType, setSubCancelRefundType] = useState('none');
+  const [subCancelNote, setSubCancelNote] = useState('');
+  const [subCancelPaymentId, setSubCancelPaymentId] = useState('');
+  
   // Form States
   const [selectedRole, setSelectedRole] = useState('user');
   const [balanceAmount, setBalanceAmount] = useState('');
@@ -309,6 +323,70 @@ const AdminUser360New = ({ user: adminUser }) => {
   // KYC Action
   const [kycAction, setKycAction] = useState('');
   const [kycReason, setKycReason] = useState('');
+
+  // Fetch subscription details
+  const fetchSubDetails = useCallback(async (uid) => {
+    if (!uid) return;
+    setSubDetailsLoading(true);
+    try {
+      const res = await axios.get(`${API}/admin/subscription/${uid}/details`, {
+        headers: { Authorization: `Bearer ${adminUser?.token}` }
+      });
+      if (res.data?.success) setSubDetails(res.data);
+    } catch (err) {
+      toast.error('Failed to load subscription details');
+    } finally { setSubDetailsLoading(false); }
+  }, [adminUser?.token]);
+
+  // Edit subscription
+  const handleSubEdit = async () => {
+    if (!subEditNote.trim()) { toast.error('Note is required'); return; }
+    setActionLoading(true);
+    try {
+      const payload = { admin_uid: adminUser?.uid, action: subEditAction, note: subEditNote };
+      if (subEditAction === 'extend_days') payload.days = parseInt(subEditDays);
+      if (subEditAction === 'set_expiry') payload.new_expiry = subEditDate;
+      const res = await axios.post(`${API}/admin/subscription/${userData?.user?.uid}/edit`, payload, {
+        headers: { Authorization: `Bearer ${adminUser?.token}` }
+      });
+      if (res.data?.success) {
+        toast.success(res.data.message);
+        setShowSubEdit(false);
+        setSubEditNote('');
+        fetchSubDetails(userData?.user?.uid);
+        handleSearch();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Edit failed');
+    } finally { setActionLoading(false); }
+  };
+
+  // Cancel subscription
+  const handleSubCancel = async () => {
+    if (!subCancelNote.trim()) { toast.error('Note is required'); return; }
+    setActionLoading(true);
+    try {
+      const payload = {
+        admin_uid: adminUser?.uid,
+        target: subCancelTarget,
+        refund_type: subCancelRefundType,
+        note: subCancelNote,
+        payment_id: subCancelPaymentId || undefined,
+      };
+      const res = await axios.post(`${API}/admin/subscription/${userData?.user?.uid}/cancel`, payload, {
+        headers: { Authorization: `Bearer ${adminUser?.token}` }
+      });
+      if (res.data?.success) {
+        toast.success(res.data.message);
+        setShowSubCancel(false);
+        setSubCancelNote('');
+        fetchSubDetails(userData?.user?.uid);
+        handleSearch();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Cancel failed');
+    } finally { setActionLoading(false); }
+  };
 
   // ========== API FUNCTIONS ==========
   
@@ -977,7 +1055,6 @@ const AdminUser360New = ({ user: adminUser }) => {
                       className="w-full bg-purple-600 hover:bg-purple-700"
                       disabled={actionLoading}
                       onClick={async () => {
-                        // Calculate remaining days from current subscription
                         const user = userData?.user;
                         const expiryStr = user?.subscription_expiry || user?.subscription_expires;
                         let remainingDays = 0;
@@ -989,15 +1066,14 @@ const AdminUser360New = ({ user: adminUser }) => {
                             remainingDays = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
                           }
                         }
-                        const newTotalDays = 28 + remainingDays;
-                        const newExpiry = new Date(Date.now() + newTotalDays * 24 * 60 * 60 * 1000);
-                        const newExpiryStr = newExpiry.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
                         let confirmMsg;
                         if (remainingDays > 0) {
-                          confirmMsg = `User "${user?.name}" has ${remainingDays} remaining days on current plan (expires ${expiryDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}).\n\nActivating will add 28 days to existing expiry.\nNew expiry: ${newExpiryStr} (total ${newTotalDays} days).\n\nPRC will be deducted from user balance.\n\nConfirm activation?`;
+                          const upcomingEnd = new Date(expiryDate.getTime() + 28 * 24 * 60 * 60 * 1000);
+                          confirmMsg = `User "${user?.name}" has ${remainingDays} remaining days on current plan (expires ${expiryDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}).\n\nThis will create an UPCOMING plan (28 days) that starts after current plan expires.\nUpcoming plan ends: ${upcomingEnd.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}.\n\nPRC will be deducted now from user balance.\n\nConfirm?`;
                         } else {
-                          confirmMsg = `Activate Elite subscription for "${user?.name}"?\n\nDuration: 28 days\nNew expiry: ${newExpiryStr}\nPRC will be deducted from user balance.\n\nConfirm activation?`;
+                          const newExpiry = new Date(Date.now() + 28 * 24 * 60 * 60 * 1000);
+                          confirmMsg = `Activate Elite subscription for "${user?.name}"?\n\nDuration: 28 days\nExpiry: ${newExpiry.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}\nPRC will be deducted from user balance.\n\nConfirm?`;
                         }
 
                         if (!window.confirm(confirmMsg)) return;
@@ -1009,8 +1085,14 @@ const AdminUser360New = ({ user: adminUser }) => {
                             plan_name: 'elite'
                           }, { headers: { Authorization: `Bearer ${adminUser?.token}` } });
                           if (res.data.success) {
-                            toast.success(`Subscription activated! PRC Paid: ${res.data.subscription.prc_paid}, Expiry: ${res.data.subscription.expiry}`);
+                            const sub = res.data.subscription;
+                            if (res.data.is_upcoming) {
+                              toast.success(`Upcoming plan queued! PRC Paid: ${sub.prc_paid}, Starts: ${sub.scheduled_start}`);
+                            } else {
+                              toast.success(`Subscription activated! PRC Paid: ${sub.prc_paid}, Expiry: ${sub.expiry}`);
+                            }
                             handleSearch();
+                            if (subDetails) fetchSubDetails(userData?.user?.uid);
                           }
                         } catch (err) {
                           toast.error(err.response?.data?.detail || 'Failed to activate subscription');
@@ -1073,7 +1155,7 @@ const AdminUser360New = ({ user: adminUser }) => {
                     { id: 'transactions', label: 'Transactions', icon: Coins, count: userData.transactions?.length || 0 },
                     { id: 'redeem', label: 'Redemptions', icon: Receipt, count: userData.redeem_requests?.length || 0 },
                     { id: 'referrals', label: 'Referrals', icon: Users, count: userData.referral?.total_referrals || 0 },
-                    { id: 'subscriptions', label: 'Sub History', icon: Crown, count: userData.subscription_history?.length || 0 },
+                    { id: 'subscriptions', label: 'Subscription', icon: Crown, count: subDetails ? (subDetails.upcoming_plans?.length || 0) + (subDetails.current_plan ? 1 : 0) : (userData.subscription_history?.length || 0) },
                     { id: 'audit', label: 'PRC Audit', icon: FileText },
                     { id: 'logins', label: 'Logins', icon: Activity, count: userData.login_history?.length || 0 },
                     { id: 'kyc', label: 'KYC Data', icon: Shield }
@@ -1173,22 +1255,202 @@ const AdminUser360New = ({ user: adminUser }) => {
                   )}
                   
                   {activeTab === 'subscriptions' && (
-                    <div className="space-y-2">
-                      {!userData.subscription_history?.length ? (
-                        <p className="text-slate-500 text-center py-8">No subscription history</p>
-                      ) : (
-                        userData.subscription_history.map((sub, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg">
-                            <div>
-                              <p className="text-slate-800 font-medium capitalize">{sub.plan || sub.subscription_plan}</p>
-                              <p className="text-slate-500 text-xs">{formatDate(sub.created_at || sub.start_date)}</p>
+                    <div className="space-y-4" data-testid="subscription-management-tab">
+                      {/* Load Details Button */}
+                      {!subDetails && !subDetailsLoading && (
+                        <div className="text-center py-6">
+                          <Crown className="h-10 w-10 mx-auto text-amber-400 mb-3" />
+                          <p className="text-slate-500 mb-3">Load full subscription details</p>
+                          <Button onClick={() => fetchSubDetails(userData?.user?.uid)} className="bg-purple-600 hover:bg-purple-700" data-testid="load-sub-details-btn">
+                            <Crown className="h-4 w-4 mr-2" />Load Subscription Details
+                          </Button>
+                        </div>
+                      )}
+                      {subDetailsLoading && (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="h-6 w-6 animate-spin text-purple-400 mr-2" />
+                          <span className="text-slate-500">Loading...</span>
+                        </div>
+                      )}
+                      {subDetails && !subDetailsLoading && (
+                        <>
+                          {/* Current Plan */}
+                          <div className="p-4 bg-white rounded-xl border border-slate-200">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                                <Crown className="h-4 w-4 text-amber-500" /> Current Plan
+                              </h4>
+                              {subDetails.current_plan && (
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" onClick={() => setShowSubEdit(true)} data-testid="edit-sub-btn">
+                                    <Pencil className="h-3 w-3 mr-1" />Edit
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => { setSubCancelTarget('current'); setShowSubCancel(true); }} data-testid="cancel-sub-btn">
+                                    <XCircle className="h-3 w-3 mr-1" />Cancel
+                                  </Button>
+                                </div>
+                              )}
                             </div>
-                            <div className="text-right">
-                              <p className="text-slate-500 text-sm">Expires: {formatDate(sub.expiry || sub.end_date)}</p>
-                              <span className={`px-2 py-0.5 rounded text-xs ${sub.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-slate-500'}`}>{sub.status || 'completed'}</span>
+                            {subDetails.current_plan ? (
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="p-3 bg-green-50 rounded-lg text-center">
+                                  <p className="text-xs text-slate-500">Plan</p>
+                                  <p className="font-bold text-green-600 capitalize">{subDetails.current_plan.plan_name}</p>
+                                  <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-600">Active</span>
+                                </div>
+                                <div className="p-3 bg-blue-50 rounded-lg text-center">
+                                  <p className="text-xs text-slate-500">Start Date</p>
+                                  <p className="font-semibold text-blue-600">{subDetails.current_plan.start_date ? new Date(subDetails.current_plan.start_date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '—'}</p>
+                                </div>
+                                <div className="p-3 bg-amber-50 rounded-lg text-center">
+                                  <p className="text-xs text-slate-500">End Date</p>
+                                  <p className="font-semibold text-amber-600">{subDetails.current_plan.end_date ? new Date(subDetails.current_plan.end_date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '—'}</p>
+                                </div>
+                                <div className="p-3 bg-purple-50 rounded-lg text-center">
+                                  <p className="text-xs text-slate-500">Remaining</p>
+                                  <p className={`font-bold text-lg ${subDetails.current_plan.remaining_days <= 7 ? 'text-red-500' : 'text-purple-600'}`}>{subDetails.current_plan.remaining_days} days</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-slate-500 text-center py-4">No active plan (Explorer/Free)</p>
+                            )}
+                          </div>
+
+                          {/* Upcoming Plans */}
+                          {subDetails.upcoming_plans?.length > 0 && (
+                            <div className="p-4 bg-white rounded-xl border border-amber-200">
+                              <h4 className="font-semibold text-slate-800 flex items-center gap-2 mb-3">
+                                <Clock className="h-4 w-4 text-amber-500" /> Upcoming Plans ({subDetails.upcoming_plans.length})
+                              </h4>
+                              <div className="space-y-2">
+                                {subDetails.upcoming_plans.map((up, idx) => (
+                                  <div key={idx} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
+                                    <div>
+                                      <p className="font-medium text-slate-800 capitalize">{up.plan_name} <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-600">Upcoming</span></p>
+                                      <p className="text-xs text-slate-500">Starts: {up.scheduled_start ? new Date(up.scheduled_start).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '—'} | {up.duration_days} days | {up.prc_amount?.toLocaleString()} PRC</p>
+                                    </div>
+                                    <Button size="sm" variant="outline" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => { setSubCancelTarget('upcoming'); setSubCancelPaymentId(up.payment_id); setSubCancelRefundType('full'); setShowSubCancel(true); }}>
+                                      <XCircle className="h-3 w-3 mr-1" />Cancel & Refund
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Payment History */}
+                          <div className="p-4 bg-white rounded-xl border border-slate-200">
+                            <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                              <Receipt className="h-4 w-4 text-slate-500" /> Payment History
+                            </h4>
+                            {!subDetails.history?.length ? (
+                              <p className="text-slate-500 text-center py-4">No payment history</p>
+                            ) : (
+                              <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {subDetails.history.map((h, idx) => (
+                                  <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                    <div>
+                                      <p className="text-slate-800 font-medium capitalize">{h.plan_name}</p>
+                                      <p className="text-slate-500 text-xs">
+                                        {h.start_date ? new Date(h.start_date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'2-digit'}) : '?'}
+                                        {' → '}
+                                        {h.end_date ? new Date(h.end_date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'2-digit'}) : '?'}
+                                        {h.activated_by_admin && ' (Admin)'}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-sm font-medium">{h.prc_amount ? `${h.prc_amount.toLocaleString()} PRC` : `₹${h.inr_equivalent || 0}`}</p>
+                                      <span className={`px-2 py-0.5 rounded text-xs ${
+                                        h.status === 'paid' ? 'bg-green-500/20 text-green-600' :
+                                        h.status === 'expired' ? 'bg-gray-500/20 text-slate-500' :
+                                        h.status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
+                                        h.status === 'refunded' ? 'bg-blue-500/20 text-blue-500' :
+                                        'bg-gray-500/20 text-slate-500'
+                                      }`}>{h.status}{h.refund_amount ? ` (${h.refund_type}: ${h.refund_amount} PRC)` : ''}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {/* Edit Subscription Modal */}
+                      {showSubEdit && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSubEdit(false)}>
+                          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+                            <h3 className="text-lg font-bold text-slate-800 mb-4">Edit Subscription</h3>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-sm text-slate-600">Action</label>
+                                <select value={subEditAction} onChange={e => setSubEditAction(e.target.value)} className="w-full mt-1 p-2 border rounded-lg">
+                                  <option value="extend_days">Extend by Days</option>
+                                  <option value="set_expiry">Set Specific Expiry Date</option>
+                                </select>
+                              </div>
+                              {subEditAction === 'extend_days' && (
+                                <div>
+                                  <label className="text-sm text-slate-600">Days to Add</label>
+                                  <div className="flex gap-2 mt-1">
+                                    {[7, 14, 28, 60].map(d => (
+                                      <button key={d} onClick={() => setSubEditDays(String(d))} className={`px-3 py-1 rounded-lg text-sm ${subEditDays === String(d) ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'}`}>+{d}d</button>
+                                    ))}
+                                    <input type="number" value={subEditDays} onChange={e => setSubEditDays(e.target.value)} className="w-20 p-1 border rounded-lg text-center" min="1" max="365" />
+                                  </div>
+                                </div>
+                              )}
+                              {subEditAction === 'set_expiry' && (
+                                <div>
+                                  <label className="text-sm text-slate-600">New Expiry Date</label>
+                                  <input type="date" value={subEditDate} onChange={e => setSubEditDate(e.target.value)} className="w-full mt-1 p-2 border rounded-lg" />
+                                </div>
+                              )}
+                              <div>
+                                <label className="text-sm text-slate-600">Reason (Required)</label>
+                                <textarea value={subEditNote} onChange={e => setSubEditNote(e.target.value)} className="w-full mt-1 p-2 border rounded-lg" rows={2} placeholder="Admin note..." />
+                              </div>
+                              <div className="flex gap-2 pt-2">
+                                <Button className="flex-1 bg-purple-600 hover:bg-purple-700" onClick={handleSubEdit} disabled={actionLoading}>
+                                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
+                                </Button>
+                                <Button variant="outline" onClick={() => setShowSubEdit(false)}>Cancel</Button>
+                              </div>
                             </div>
                           </div>
-                        ))
+                        </div>
+                      )}
+
+                      {/* Cancel Subscription Modal */}
+                      {showSubCancel && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSubCancel(false)}>
+                          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+                            <h3 className="text-lg font-bold text-red-600 mb-4">Cancel Subscription</h3>
+                            <p className="text-slate-600 mb-4">
+                              {subCancelTarget === 'upcoming' ? 'Cancel upcoming plan and refund full PRC.' : 'Cancel current active plan.'}
+                            </p>
+                            {subCancelTarget === 'current' && (
+                              <div className="mb-4">
+                                <label className="text-sm text-slate-600">Refund Type</label>
+                                <select value={subCancelRefundType} onChange={e => setSubCancelRefundType(e.target.value)} className="w-full mt-1 p-2 border rounded-lg">
+                                  <option value="none">No Refund</option>
+                                  <option value="prorated">Pro-rated Refund (remaining days)</option>
+                                  <option value="full">Full Refund</option>
+                                </select>
+                              </div>
+                            )}
+                            <div className="mb-4">
+                              <label className="text-sm text-slate-600">Reason (Required)</label>
+                              <textarea value={subCancelNote} onChange={e => setSubCancelNote(e.target.value)} className="w-full mt-1 p-2 border rounded-lg" rows={2} placeholder="Reason for cancellation..." />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button className="flex-1 bg-red-600 hover:bg-red-700 text-white" onClick={handleSubCancel} disabled={actionLoading}>
+                                {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Cancel'}
+                              </Button>
+                              <Button variant="outline" onClick={() => setShowSubCancel(false)}>Back</Button>
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}
