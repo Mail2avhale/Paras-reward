@@ -166,6 +166,15 @@
 - **Fix**: Made `login` function in `routes/auth.py` also use case-insensitive regex (`$regex` with `$options: "i"`) for email lookup, with `re.escape()` for security
 - File: `routes/auth.py` (line ~593)
 
+## COMPLETED: PRC Subscription Bypasses Redeem Limit - 2 April 2026
+- **Feature**: Subscription PRC payment now only checks `prc_balance`, bypasses redeem limit
+- **Redeem Balance Goes Negative**: After subscription, `available = redeemable - total_redeemed` can be negative (e.g., -799)
+- **Natural Recovery**: Mining/earning increases total_earned → redeemable increases → negative recovers to positive
+- **Bank/Bill Pay Still Blocked**: `effective_available = max(0, available)` — redeem limit still enforced for bank/bill pay
+- **Dashboard UI**: Shows negative redeem balance in red with "Subscription मुळे negative — mining ने recover होईल" message
+- **PRC Statement**: Simple entry "Elite Subscription -999 PRC" (no split details)
+- Files: `server.py` (subscription_pay_with_prc, calculate_user_redeem_limit), `DashboardModern.js`
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)

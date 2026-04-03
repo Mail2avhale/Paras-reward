@@ -1088,7 +1088,9 @@ const DashboardModern = ({ user, onLogout }) => {
                     const prcRate = stats.prcRate || 11;
                     const rl = stats.redeemLimit || {};
                     const balance = stats.prcBalance || 0;
-                    const availablePRC = rl.effective_available || 0;
+                    const rawAvailable = rl.available != null ? rl.available : (rl.effective_available || 0);
+                    const availablePRC = rawAvailable;
+                    const isNegative = availablePRC < 0;
                     const unlockPct = rl.redeem_limit_percent || rl.unlock_percent || 0;
                     
                     return (
@@ -1097,10 +1099,14 @@ const DashboardModern = ({ user, onLogout }) => {
                         <div className="mb-3">
                           <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Available to Redeem</p>
                           <div className="flex items-baseline gap-2">
-                            <p className="text-white text-3xl font-bold">{availablePRC.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                            <p className={`text-3xl font-bold ${isNegative ? 'text-red-400' : 'text-white'}`}>{isNegative ? '' : ''}{Math.abs(availablePRC).toLocaleString(undefined, {maximumFractionDigits: 0})}{isNegative ? ' (-)' : ''}</p>
                             <p className="text-white/60 text-sm">PRC</p>
                           </div>
-                          <p className="text-emerald-300 text-sm font-semibold">≈ ₹{Math.floor(availablePRC / prcRate).toLocaleString()}</p>
+                          {isNegative ? (
+                            <p className="text-red-300 text-xs mt-0.5">Subscription मुळे negative — mining ने recover होईल</p>
+                          ) : (
+                            <p className="text-emerald-300 text-sm font-semibold">≈ ₹{Math.floor(availablePRC / prcRate).toLocaleString()}</p>
+                          )}
                         </div>
 
                         {/* Balance + Unlock % */}

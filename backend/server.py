@@ -11700,22 +11700,11 @@ async def subscription_pay_with_prc(request: Request):
         # Use expected amount for accuracy
         prc_amount = expected_prc
         
-        # CHECK REDEEM LIMIT before PRC subscription
-        try:
-            limit_info = await calculate_user_redeem_limit(user_id)
-            available = limit_info.get("effective_available", 0)
-            total_limit = limit_info.get("total_limit", 0)
-            total_redeemed = limit_info.get("total_redeemed", 0)
-            
-            if total_limit > 0 and prc_amount > available:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Redeem limit exceeded. Total Redeemable: {total_limit:.0f} PRC, Already Used: {total_redeemed:.0f} PRC, Available: {available:.0f} PRC. Required: {prc_amount:.0f} PRC."
-                )
-        except HTTPException:
-            raise
-        except Exception as limit_err:
-            logging.warning(f"[PRC-SUB] Redeem limit check error: {limit_err}")
+        # SUBSCRIPTION: Skip redeem limit check - only check PRC balance
+        # Subscription is allowed even if redeem balance is insufficient
+        # This will make redeem balance go negative, which recovers naturally via mining/earning
+        # Bank redeem / bill pay still respect redeem limits
+        logging.info(f"[PRC-SUB] Subscription bypasses redeem limit check. PRC Balance: {current_balance}, Required: {prc_amount}")
         
         # Check PRC balance
         if current_balance < prc_amount:
@@ -15955,11 +15944,11 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         # Redeemable PRC = Total Earned × Unlock%
         redeemable = total_earned * (redeem_limit_percent / 100)
         
-        # Available = Redeemable - Already Used
-        available = max(0, redeemable - total_redeemed)
+        # Available = Redeemable - Already Used (can be negative after PRC subscription)
+        available = redeemable - total_redeemed
         
-        # Cannot exceed current balance
-        effective_available = min(available, current_balance)
+        # Effective available for bank/bill pay (never negative, capped at balance)
+        effective_available = min(max(0, available), current_balance)
         
         return {
             "total_earned": round(total_earned, 2),
