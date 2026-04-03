@@ -3783,7 +3783,7 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
                 if request_date.tzinfo is None:
                     request_date = request_date.replace(tzinfo=timezone.utc)
                 
-                cooldown_end = request_date + timedelta(days=7)
+                cooldown_end = request_date + timedelta(days=1)
                 
                 if now < cooldown_end:
                     days_left = (cooldown_end - now).days
@@ -3846,7 +3846,7 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
                 if request_date.tzinfo is None:
                     request_date = request_date.replace(tzinfo=timezone.utc)
                 
-                cooldown_end = request_date + timedelta(days=7)
+                cooldown_end = request_date + timedelta(days=1)
                 
                 if now < cooldown_end:
                     days_left = (cooldown_end - now).days
