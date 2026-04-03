@@ -219,3 +219,39 @@
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)
 - Future: MongoDB to PostgreSQL migration
+
+
+## COMPLETED: Admin Subscription Management + Upcoming Plan Concept - 3 April 2026
+### Subscription Details (User 360 Tab)
+- **New Tab**: "Subscription" in User 360 data tabs
+- Shows Current Plan: plan name, start date, end date, remaining days, status badge
+- Shows Upcoming Plans: queued plans with cancel & refund button
+- Shows Payment History: all past subscription payments with status badges
+- **Edit Button**: Extend days (+7/14/28/60/custom) or set specific expiry date. Requires note.
+- **Cancel Button**: Cancel current or upcoming plan. Refund options: Full / Pro-rated / None. Requires note.
+- All actions logged to `admin_actions` collection for audit trail
+
+### Upcoming Plan Concept
+- When user/admin pays for subscription while active plan exists, plan is QUEUED as "upcoming"
+- PRC deducted immediately, but plan starts AFTER current plan expires
+- Auto-activation: When current plan expires, upcoming plan auto-activates on next dashboard/login access
+- Backend: `subscription_payments` collection with `status: "upcoming"`, `scheduled_start`, `scheduled_end`
+- Modified: `subscription_pay_with_prc()` in server.py and `admin_activate_prc_subscription()` in admin_misc.py
+
+### User Dashboard Upcoming Plan Card
+- Shows upcoming plan info (plan name, scheduled start, duration) on user dashboard
+- Renders conditionally when `stats.upcomingPlan` exists
+- `data-testid="upcoming-plan-card"`
+
+### Backend Endpoints
+- `GET /api/admin/subscription/{uid}/details` — Full subscription info
+- `POST /api/admin/subscription/{uid}/edit` — Edit (extend_days / set_expiry)
+- `POST /api/admin/subscription/{uid}/cancel` — Cancel + refund
+- `GET /api/admin/subscription/user/{uid}/info` — User-facing subscription info (auto-activates upcoming)
+
+### Files Modified/Created
+- NEW: `/app/backend/routes/admin_subscription.py`
+- MODIFIED: `/app/backend/server.py` (upcoming plan logic in subscription_pay_with_prc, auto-activation on /me, prc_ledger fix)
+- MODIFIED: `/app/backend/routes/admin_misc.py` (upcoming plan logic in admin_activate_prc_subscription)
+- MODIFIED: `/app/frontend/src/pages/AdminUser360New.js` (Subscription tab, Edit/Cancel modals)
+- MODIFIED: `/app/frontend/src/pages/DashboardModern.js` (Upcoming Plan card)
