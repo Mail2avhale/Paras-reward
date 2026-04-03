@@ -188,6 +188,13 @@
 - **Frontend**: Fixed hardcoded fallback from 11 to 10 (consistent with backend)
 - Files: `server.py`, `growth_economy.py`, `unified_redeem_v2.py`, `DashboardModern.js`
 
+## COMPLETED: Admin PRC Subscription & Redeem Actions - 3 April 2026
+- **Admin Activate PRC Subscription**: Admin can activate Elite subscription for any user using their PRC balance. Bypasses cooldown. Shows in PRC statement as "Activated by Admin".
+- **Admin Redeem to Bank**: Admin can create bank redeem request for any user. Respects available redeem limit. Shows in PRC statement.
+- Backend: `POST /api/admin/activate-prc-subscription`, `POST /api/admin/create-redeem-request`
+- Frontend: User360 "Admin Actions" section with both features
+- Files: `admin_misc.py`, `AdminUser360New.js`
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)

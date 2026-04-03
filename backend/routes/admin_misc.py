@@ -919,3 +919,310 @@ async def clear_user_cooldown(phone_or_uid: str, request: Request):
         "note": "User can now make new requests"
     }
 
+
+
+# ==============================
+# ADMIN: Activate PRC Subscription for User
+# ==============================
+@router.post("/activate-prc-subscription")
+async def admin_activate_prc_subscription(request: Request):
+    """
+    Admin activates subscription for a user using their PRC balance.
+    Bypasses: cooldown, holiday check.
+    Respects: PRC balance check.
+    Shows in PRC statement.
+    """
+    try:
+        data = await request.json()
+        admin_uid = data.get("admin_uid")
+        target_uid = data.get("target_uid")
+        plan_name = data.get("plan_name", "elite")
+
+        if not admin_uid or not target_uid:
+            raise HTTPException(status_code=400, detail="admin_uid and target_uid are required")
+
+        # Verify admin
+        admin = await db.users.find_one({"uid": admin_uid})
+        if not admin or admin.get("role") not in ["admin", "super_admin", "manager"]:
+            raise HTTPException(status_code=403, detail="Admin access required")
+
+        # Get target user
+        user = await db.users.find_one({"uid": target_uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user_name = user.get("name", "User")
+        current_balance = float(user.get("prc_balance", 0) or 0)
+
+        # Calculate pricing
+        from server import calculate_elite_prc_price, get_dynamic_prc_rate, credit_company_wallets_for_subscription
+        pricing = await calculate_elite_prc_price()
+        prc_amount = pricing["total_prc"]
+        prc_rate = pricing["prc_rate"]
+
+        # Check PRC balance
+        if current_balance < prc_amount:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient PRC Balance. User has {current_balance:,.0f} PRC, but {prc_amount:,.0f} PRC is required."
+            )
+
+        # Calculate duration
+        duration_days = 28
+        now = datetime.now(timezone.utc)
+        current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        remaining_days = 0
+
+        if current_expiry:
+            try:
+                if isinstance(current_expiry, str):
+                    expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+                else:
+                    expiry_dt = current_expiry
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                if expiry_dt > now:
+                    remaining_days = (expiry_dt - now).days
+            except:
+                pass
+
+        total_days = duration_days + remaining_days
+        new_expiry = (now + timedelta(days=total_days)).isoformat()
+
+        # Deduct PRC
+        result = await db.users.update_one(
+            {"uid": target_uid, "prc_balance": {"$gte": prc_amount}},
+            {"$inc": {"prc_balance": -prc_amount}}
+        )
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Could not deduct PRC. Please try again.")
+
+        # Update subscription
+        try:
+            await db.users.update_one(
+                {"uid": target_uid},
+                {"$set": {
+                    "subscription_plan": "elite",
+                    "subscription_expiry": new_expiry,
+                    "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
+                    "subscription_start": now.isoformat(),
+                    "membership_type": "vip",
+                    "subscription_status": "active",
+                    "subscription_payment_type": "prc",
+                    "last_prc_subscription": now.isoformat()
+                }}
+            )
+        except Exception as e:
+            # Refund PRC
+            await db.users.update_one({"uid": target_uid}, {"$inc": {"prc_balance": prc_amount}})
+            raise HTTPException(status_code=500, detail=f"Subscription activation failed. PRC refunded. Error: {e}")
+
+        # Credit company wallets
+        try:
+            await credit_company_wallets_for_subscription(target_uid, pricing, user_name)
+        except Exception as e:
+            logging.error(f"[ADMIN-PRC-SUB] Wallet credit failed: {e}")
+
+        # Record payment
+        payment_record = {
+            "user_id": target_uid,
+            "user_name": user_name,
+            "plan_name": plan_name,
+            "plan_type": "monthly",
+            "payment_method": "prc",
+            "prc_amount": round(prc_amount, 2),
+            "prc_rate_used": prc_rate,
+            "pricing_breakdown": {
+                "base_inr": pricing["base_inr"],
+                "gst_inr": pricing["gst_inr"],
+                "total_prc": pricing["total_prc"]
+            },
+            "inr_equivalent": pricing["base_with_gst_inr"],
+            "status": "paid",
+            "created_at": now.isoformat(),
+            "subscription_expiry": new_expiry,
+            "duration_days": duration_days,
+            "total_days": total_days,
+            "activated_by_admin": admin_uid,
+            "admin_name": admin.get("name", "Admin")
+        }
+        await db.subscription_payments.insert_one(payment_record)
+
+        # Transaction for PRC statement
+        await db.transactions.insert_one({
+            "user_id": target_uid,
+            "type": "subscription_prc",
+            "amount": -prc_amount,
+            "prc_amount": prc_amount,
+            "inr_value": pricing["base_with_gst_inr"],
+            "description": f"Elite Subscription ({duration_days} days) - Activated by Admin",
+            "timestamp": now,
+            "created_at": now.isoformat(),
+            "status": "completed",
+            "admin_action": True,
+            "admin_uid": admin_uid
+        })
+
+        # Record service usage for cooldown
+        try:
+            from server import record_service_usage
+            await record_service_usage(target_uid, "subscription", {"plan_name": plan_name, "prc_amount": prc_amount, "admin_activated": True})
+        except:
+            pass
+
+        if log_admin_action:
+            await log_admin_action(admin_uid, "admin_prc_subscription", {
+                "target_uid": target_uid, "target_name": user_name,
+                "prc_amount": round(prc_amount, 2), "plan": plan_name, "expiry": new_expiry[:10]
+            })
+
+        new_balance = current_balance - prc_amount
+        return {
+            "success": True,
+            "message": f"Elite subscription activated for {user_name}",
+            "subscription": {
+                "plan": "elite",
+                "prc_paid": round(prc_amount, 2),
+                "expiry": new_expiry[:10],
+                "total_days": total_days,
+                "remaining_balance": round(new_balance, 2)
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN-PRC-SUB] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==============================
+# ADMIN: Create Redeem to Bank Request for User
+# ==============================
+@router.post("/create-redeem-request")
+async def admin_create_redeem_request(request: Request):
+    """
+    Admin creates a bank redeem request for a user.
+    Bypasses: cooldown, holiday, KYC check.
+    Respects: available redeem limit, PRC balance.
+    Shows in PRC statement.
+    """
+    try:
+        data = await request.json()
+        admin_uid = data.get("admin_uid")
+        target_uid = data.get("target_uid")
+        amount = float(data.get("amount", 0))
+        bank_name = data.get("bank_name", "")
+        account_number = data.get("account_number", "")
+        ifsc_code = data.get("ifsc_code", "")
+
+        if not admin_uid or not target_uid or amount <= 0:
+            raise HTTPException(status_code=400, detail="admin_uid, target_uid, and amount (>0) are required")
+
+        if not account_number or not ifsc_code:
+            raise HTTPException(status_code=400, detail="Bank account number and IFSC code are required")
+
+        # Verify admin
+        admin = await db.users.find_one({"uid": admin_uid})
+        if not admin or admin.get("role") not in ["admin", "super_admin", "manager"]:
+            raise HTTPException(status_code=403, detail="Admin access required")
+
+        # Get target user
+        user = await db.users.find_one({"uid": target_uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user_name = user.get("name", "User")
+        current_balance = float(user.get("prc_balance", 0) or 0)
+
+        # Check redeem limit
+        from server import calculate_user_redeem_limit, get_dynamic_prc_rate
+        limit_info = await calculate_user_redeem_limit(target_uid)
+        effective_available = limit_info.get("effective_available", 0)
+
+        if amount > effective_available:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Amount exceeds available redeem limit. Available: {effective_available:,.2f} PRC, Requested: {amount:,.2f} PRC"
+            )
+
+        # Check PRC balance
+        if amount > current_balance:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient PRC balance. Balance: {current_balance:,.2f} PRC, Requested: {amount:,.2f} PRC"
+            )
+
+        prc_rate = await get_dynamic_prc_rate()
+        inr_value = round(amount / prc_rate, 2) if prc_rate > 0 else 0
+        now = datetime.now(timezone.utc)
+        request_id = f"ADMIN-RDM-{uuid.uuid4().hex[:8].upper()}"
+
+        # Deduct PRC
+        result = await db.users.update_one(
+            {"uid": target_uid, "prc_balance": {"$gte": amount}},
+            {"$inc": {"prc_balance": -amount}}
+        )
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Could not deduct PRC. Please try again.")
+
+        # Create redeem request
+        redeem_record = {
+            "request_id": request_id,
+            "user_id": target_uid,
+            "user_name": user_name,
+            "user_mobile": user.get("mobile", ""),
+            "amount": amount,
+            "prc_rate": prc_rate,
+            "inr_value": inr_value,
+            "bank_name": bank_name,
+            "account_number": account_number,
+            "ifsc_code": ifsc_code,
+            "service_type": "bank_transfer",
+            "status": "pending",
+            "created_at": now.isoformat(),
+            "created_by_admin": admin_uid,
+            "admin_name": admin.get("name", "Admin"),
+            "notes": f"Created by admin on behalf of user"
+        }
+        await db.redeem_requests.insert_one(redeem_record)
+
+        # Transaction for PRC statement
+        await db.transactions.insert_one({
+            "user_id": target_uid,
+            "type": "bank_redeem",
+            "amount": -amount,
+            "prc_amount": amount,
+            "inr_value": inr_value,
+            "description": f"Bank Transfer ({request_id}) - Created by Admin",
+            "timestamp": now,
+            "created_at": now.isoformat(),
+            "status": "pending",
+            "request_id": request_id,
+            "admin_action": True,
+            "admin_uid": admin_uid
+        })
+
+        if log_admin_action:
+            await log_admin_action(admin_uid, "admin_create_redeem", {
+                "target_uid": target_uid, "target_name": user_name,
+                "amount": amount, "inr_value": inr_value, "request_id": request_id
+            })
+
+        new_balance = current_balance - amount
+        return {
+            "success": True,
+            "message": f"Redeem request created for {user_name}",
+            "redeem": {
+                "request_id": request_id,
+                "amount": amount,
+                "inr_value": inr_value,
+                "prc_rate": prc_rate,
+                "status": "pending",
+                "remaining_balance": round(new_balance, 2)
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN-REDEEM] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

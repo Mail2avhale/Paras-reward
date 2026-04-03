@@ -8,7 +8,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import ManagerPermissions from '../components/ManagerPermissions';
 import {
-  Search, User, Mail, Phone, MapPin, Calendar, Shield, Crown,
+  Search, User, Mail, Phone, MapPin, Calendar, Shield, Crown, Banknote,
   Coins, TrendingUp, TrendingDown, Users, Gift, CreditCard, Clock,
   CheckCircle, XCircle, AlertTriangle, Activity, RefreshCw, FileText,
   Loader2, ArrowLeft, Copy, Ban, Wallet, Receipt, BadgeCheck, Zap,
@@ -951,6 +951,86 @@ const AdminUser360New = ({ user: adminUser }) => {
                   <Button onClick={handleSaveNotes} disabled={actionLoading} className="bg-blue-600 hover:bg-blue-700">
                     Save
                   </Button>
+                </div>
+              </Card>
+              
+              {/* Admin Actions: PRC Subscription & Redeem */}
+              <Card className="bg-white border-slate-200 p-4">
+                <h3 className="text-sm font-semibold text-slate-500 mb-3">Admin Actions</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Activate PRC Subscription */}
+                  <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                    <p className="text-sm font-semibold text-purple-700 mb-2">Activate PRC Subscription</p>
+                    <p className="text-xs text-slate-500 mb-2">Deducts PRC from user balance. Bypasses cooldown.</p>
+                    <Button
+                      data-testid="admin-activate-sub-btn"
+                      size="sm"
+                      className="w-full bg-purple-600 hover:bg-purple-700"
+                      disabled={actionLoading}
+                      onClick={async () => {
+                        if (!window.confirm(`Activate Elite subscription for ${userData?.user?.name}? PRC will be deducted from their balance.`)) return;
+                        setActionLoading(true);
+                        try {
+                          const res = await axios.post(`${API}/admin/activate-prc-subscription`, {
+                            admin_uid: adminUser?.uid,
+                            target_uid: userData?.user?.uid,
+                            plan_name: 'elite'
+                          }, { headers: { Authorization: `Bearer ${adminUser?.token}` } });
+                          if (res.data.success) {
+                            toast.success(`Subscription activated! PRC Paid: ${res.data.subscription.prc_paid}, Expiry: ${res.data.subscription.expiry}`);
+                            handleSearch();
+                          }
+                        } catch (err) {
+                          toast.error(err.response?.data?.detail || 'Failed to activate subscription');
+                        } finally { setActionLoading(false); }
+                      }}
+                    >
+                      <Crown className="h-4 w-4 mr-1" /> Activate Elite (PRC)
+                    </Button>
+                  </div>
+
+                  {/* Create Redeem to Bank */}
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm font-semibold text-green-700 mb-2">Redeem to Bank</p>
+                    <p className="text-xs text-slate-500 mb-1">Available Limit: {userData?.redeem_limit?.effective_available?.toFixed(0) || 0} PRC</p>
+                    <div className="flex gap-2 mb-2">
+                      <input id="admin-redeem-amount" type="number" placeholder="PRC Amount" className="flex-1 p-1.5 text-sm border border-slate-300 rounded" data-testid="admin-redeem-amount" />
+                    </div>
+                    <div className="flex gap-2 mb-2">
+                      <input id="admin-redeem-account" type="text" placeholder="Account No." className="flex-1 p-1.5 text-sm border border-slate-300 rounded" data-testid="admin-redeem-account" />
+                      <input id="admin-redeem-ifsc" type="text" placeholder="IFSC" className="w-28 p-1.5 text-sm border border-slate-300 rounded" data-testid="admin-redeem-ifsc" />
+                    </div>
+                    <Button
+                      data-testid="admin-create-redeem-btn"
+                      size="sm"
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      disabled={actionLoading}
+                      onClick={async () => {
+                        const amount = parseFloat(document.getElementById('admin-redeem-amount')?.value);
+                        const account = document.getElementById('admin-redeem-account')?.value;
+                        const ifsc = document.getElementById('admin-redeem-ifsc')?.value;
+                        if (!amount || amount <= 0) { toast.error('Enter valid amount'); return; }
+                        if (!account || !ifsc) { toast.error('Enter account number and IFSC'); return; }
+                        if (!window.confirm(`Create bank redeem of ${amount} PRC for ${userData?.user?.name}?`)) return;
+                        setActionLoading(true);
+                        try {
+                          const res = await axios.post(`${API}/admin/create-redeem-request`, {
+                            admin_uid: adminUser?.uid,
+                            target_uid: userData?.user?.uid,
+                            amount, account_number: account, ifsc_code: ifsc, bank_name: 'Admin Created'
+                          }, { headers: { Authorization: `Bearer ${adminUser?.token}` } });
+                          if (res.data.success) {
+                            toast.success(`Redeem request created! ID: ${res.data.redeem.request_id}, INR: ₹${res.data.redeem.inr_value}`);
+                            handleSearch();
+                          }
+                        } catch (err) {
+                          toast.error(err.response?.data?.detail || 'Failed to create redeem request');
+                        } finally { setActionLoading(false); }
+                      }}
+                    >
+                      <Banknote className="h-4 w-4 mr-1" /> Create Redeem Request
+                    </Button>
+                  </div>
                 </div>
               </Card>
               
