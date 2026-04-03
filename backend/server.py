@@ -15934,8 +15934,8 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         # Total used PRC (all time)
         total_redeemed = await get_user_all_time_redeemed(user_id)
         
-        # Total earned = what user has now + what they already spent
-        total_earned = current_balance + total_redeemed
+        # Total earned = current PRC balance only (redeemed PRC should not inflate limit)
+        total_earned = current_balance
         
         # Get unlock % from growth network: 3 + 0.5 × log₂(N), max 10%
         network_size = await get_network_size(user_id)

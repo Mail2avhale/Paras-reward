@@ -175,6 +175,12 @@
 - **PRC Statement**: Simple entry "Elite Subscription -999 PRC" (no split details)
 - Files: `server.py` (subscription_pay_with_prc, calculate_user_redeem_limit), `DashboardModern.js`
 
+## COMPLETED: Redeem Limit Formula Fix — Total Earned = Balance Only - 2 April 2026
+- **Change**: `total_earned = current_balance` (previously `current_balance + total_redeemed`)
+- **Reason**: Redeemed PRC should not inflate redeem limit — only current balance determines earning capacity
+- **Effect**: Self-correcting economy — spend more → balance drops → limit drops → prevents overspending
+- File: `server.py` line ~15938 (1 line change in `calculate_user_redeem_limit`)
+
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)
