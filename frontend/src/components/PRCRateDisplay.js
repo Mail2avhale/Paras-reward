@@ -119,8 +119,8 @@ const PRCRateDisplay = ({
       {showBreakdown && amount > 0 && (
         <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
           <div className="flex items-center gap-2 mb-3">
-            <Info className="w-4 h-4 text-emerald-400" />
-            <span className="text-sm font-medium text-emerald-400">Fee Breakdown</span>
+            <Info className="w-4 h-4 text-yellow-300" />
+            <span className="text-sm font-medium text-yellow-300">Fee Breakdown</span>
           </div>
           
           <div className="space-y-2 text-sm">
@@ -156,7 +156,7 @@ const PRCRateDisplay = ({
               <span>Total PRC Required</span>
               <span className="text-amber-400 font-bold">{totalPRC.toLocaleString()} PRC</span>
             </div>
-            <div className="flex justify-between text-emerald-400 font-bold">
+            <div className="flex justify-between text-yellow-300 font-bold">
               <span>You Will Receive</span>
               <span>₹{amount.toLocaleString()}</span>
             </div>

@@ -1465,20 +1465,21 @@ const SubscriptionPlans = ({ user }) => {
                 serviceType="subscription"
               />
 
-              {/* PRC Balance Info */}
-              <div className="p-4 bg-gray-800/50 rounded-2xl">
+              {/* PRC Balance Info — Ultra Violet */}
+              <div className="p-4 rounded-2xl border border-purple-500/30" style={{ background: 'linear-gradient(145deg, #2e1065 0%, #4c1d95 50%, #1e1b4b 100%)' }}>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-400 text-sm">Available Redeem Limit</span>
-                  <span className={`font-bold ${(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0) >= getPRCPrice() ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Available Redeem Limit</span>
+                  <span className={`font-extrabold ${(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0) >= getPRCPrice() ? 'text-yellow-300' : 'text-red-300'}`}>
                     {(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0).toLocaleString()} PRC
                   </span>
                 </div>
+                <div className="border-t border-white/20 my-2"></div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Required</span>
-                  <span className="text-purple-400 font-bold">{getPRCPrice().toLocaleString()} PRC</span>
+                  <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Required</span>
+                  <span className="text-yellow-300 font-extrabold">{getPRCPrice().toLocaleString()} PRC</span>
                 </div>
                 {(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0) < getPRCPrice() && (
-                  <p className="text-red-400 text-xs mt-2">⚠️ Insufficient redeem limit. Mine more PRC or use another payment method.</p>
+                  <p className="text-red-300 text-xs mt-2 font-medium">Insufficient redeem limit. Mine more PRC or use another payment method.</p>
                 )}
               </div>
 

@@ -308,7 +308,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-6">
+      <div className="px-4 py-6" style={{ background: 'linear-gradient(145deg, #2e1065 0%, #4c1d95 50%, #5b21b6 100%)' }}>
         <div className="max-w-lg mx-auto">
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/80 hover:text-white mb-4">
             <ArrowLeft className="w-5 h-5" />
@@ -349,7 +349,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
             onClick={() => setActiveTab('new')}
             className={`flex-1 py-3 rounded-xl font-medium transition-all ${
               activeTab === 'new' 
-                ? 'bg-emerald-500 text-white' 
+                ? 'bg-purple-600 text-white' 
                 : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
             }`}
           >
@@ -361,7 +361,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
             onClick={() => setActiveTab('history')}
             className={`flex-1 py-3 rounded-xl font-medium transition-all ${
               activeTab === 'history' 
-                ? 'bg-emerald-500 text-white' 
+                ? 'bg-purple-600 text-white' 
                 : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
             }`}
           >
