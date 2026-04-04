@@ -1110,34 +1110,53 @@ const DashboardModern = ({ user, onLogout }) => {
                 </div>
                 
                 <div className="relative z-10">
-                  {/* Clean PRC Redeem Card */}
+                  {/* Clean PRC Redeem Card - Available/Used/Balance Breakdown */}
                   {(() => {
                     const prcRate = stats.prcRate || 10;
                     const rl = stats.redeemLimit || {};
                     const balance = stats.prcBalance || 0;
-                    const rawAvailable = rl.available != null ? rl.available : (rl.effective_available || 0);
-                    const availablePRC = rawAvailable;
-                    const isNegative = availablePRC < 0;
+                    const totalLimit = rl.total_limit || rl.total_earned || 0;
+                    const totalUsed = rl.total_redeemed || 0;
+                    const remaining = rl.effective_remaining != null ? rl.effective_remaining : (rl.available || 0);
+                    const isNegative = remaining < 0;
                     const unlockPct = rl.redeem_limit_percent || rl.unlock_percent || 0;
                     
                     return (
                       <>
-                        {/* Available to Redeem - Main Focus */}
-                        <div className="mb-3">
-                          <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Available to Redeem</p>
-                          <div className="flex items-baseline gap-2">
-                            <p className={`text-3xl font-bold ${isNegative ? 'text-red-400' : 'text-white'}`}>{isNegative ? '' : ''}{Math.abs(availablePRC).toLocaleString(undefined, {maximumFractionDigits: 0})}{isNegative ? ' (-)' : ''}</p>
-                            <p className="text-white/60 text-sm">PRC</p>
+                        {/* Breakdown: Available - Used = Balance */}
+                        <div className="mb-3 space-y-2" data-testid="redeem-breakdown-card">
+                          {/* Total Limit (Available) */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-white/50 text-xs uppercase tracking-wider">Total Limit</span>
+                            <span className="text-white font-bold text-base">{totalLimit.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-white/50 text-xs font-normal">PRC</span></span>
                           </div>
-                          {isNegative ? (
-                            <p className="text-red-300 text-xs mt-0.5">Negative due to subscription — will recover with mining</p>
-                          ) : (
-                            <p className="text-emerald-300 text-sm font-semibold">≈ ₹{Math.floor(availablePRC / prcRate).toLocaleString()}</p>
+                          {/* Used (Redeemed) */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-white/50 text-xs uppercase tracking-wider">Used</span>
+                            <span className="text-red-400 font-bold text-base">- {totalUsed.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-red-400/60 text-xs font-normal">PRC</span></span>
+                          </div>
+                          {/* Divider */}
+                          <div className="border-t border-white/20 my-1"></div>
+                          {/* Remaining Balance */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-white/70 text-xs uppercase tracking-wider font-semibold">Remaining</span>
+                            <div className="text-right">
+                              <span className={`font-bold text-xl ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>
+                                {isNegative ? '-' : ''}{Math.abs(remaining).toLocaleString(undefined, {maximumFractionDigits: 0})}
+                                <span className={`text-xs font-normal ml-1 ${isNegative ? 'text-red-400/60' : 'text-emerald-400/60'}`}>PRC</span>
+                              </span>
+                              {!isNegative && remaining > 0 && (
+                                <p className="text-emerald-300/70 text-xs">≈ ₹{Math.floor(remaining / prcRate).toLocaleString()}</p>
+                              )}
+                            </div>
+                          </div>
+                          {isNegative && (
+                            <p className="text-red-300/80 text-[10px] mt-0.5">Negative due to subscription — will recover with mining</p>
                           )}
                         </div>
 
-                        {/* Balance + Unlock % */}
-                        <div className="grid grid-cols-2 gap-2 mb-3">
+                        {/* Balance + Unlock % + Rate */}
+                        <div className="grid grid-cols-3 gap-2 mb-3">
                           <div className="bg-white/10 backdrop-blur rounded-xl p-2.5">
                             <p className="text-white/50 text-[10px] uppercase">PRC Balance</p>
                             <p className="text-white text-sm font-bold">{balance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
@@ -1146,17 +1165,18 @@ const DashboardModern = ({ user, onLogout }) => {
                             <p className="text-white/50 text-[10px] uppercase">Unlock</p>
                             <p className="text-amber-400 text-sm font-bold">{unlockPct}%</p>
                           </div>
+                          <div className="bg-white/10 backdrop-blur rounded-xl p-2.5">
+                            <p className="text-white/50 text-[10px] uppercase">Rate</p>
+                            <p className="text-white text-sm font-bold">{prcRate} PRC = ₹1</p>
+                          </div>
                         </div>
 
-                        {/* Rate + Redeem */}
-                        <div className="flex items-center justify-between bg-white/10 backdrop-blur rounded-xl p-2.5">
-                          <p className="text-white text-sm font-bold">{prcRate} PRC = ₹1</p>
-                          <div 
-                            onClick={() => navigate('/redeem')}
-                            className="bg-emerald-500/30 hover:bg-emerald-500/40 rounded-lg px-4 py-2 cursor-pointer transition-colors"
-                          >
-                            <p className="text-emerald-200 text-xs font-semibold">Redeem →</p>
-                          </div>
+                        {/* Redeem Button */}
+                        <div 
+                          onClick={() => navigate('/redeem')}
+                          className="w-full bg-emerald-500/25 hover:bg-emerald-500/35 backdrop-blur border border-emerald-400/20 rounded-xl py-2.5 cursor-pointer transition-colors text-center"
+                        >
+                          <p className="text-emerald-200 text-sm font-semibold">Redeem →</p>
                         </div>
                       </>
                     );
