@@ -3047,7 +3047,7 @@ async def audit_paid_requests(
         
         # Bill Payments Audit
         if collection in ["all", "bill_payments"]:
-            query = {"status": {"$in": ["approved", "completed", "paid"]}}
+            query = {"status": {"$in": ["approved", "APPROVED", "completed", "COMPLETED", "paid", "PAID", "Paid", "pending", "PENDING", "success", "SUCCESS", "processing", "PROCESSING", "delivered", "DELIVERED"]}}
             if date_filter:
                 query["created_at"] = date_filter
             
@@ -3072,7 +3072,7 @@ async def audit_paid_requests(
         
         # Bank Withdrawals Audit
         if collection in ["all", "bank_withdrawals"]:
-            query = {"status": {"$in": ["approved", "completed", "paid"]}}
+            query = {"status": {"$in": ["approved", "APPROVED", "completed", "COMPLETED", "paid", "PAID", "Paid", "pending", "PENDING", "success", "SUCCESS", "processing", "PROCESSING", "delivered", "DELIVERED"]}}
             if date_filter:
                 query["created_at"] = date_filter
             
@@ -3096,7 +3096,7 @@ async def audit_paid_requests(
         
         # BBPS/Redeem Requests Audit
         if collection in ["all", "redeem_requests"]:
-            query = {"status": {"$in": ["completed"]}, "eko_tid": {"$exists": True}}
+            query = {"status": {"$in": ["completed", "COMPLETED", "Completed", "approved", "APPROVED", "paid", "PAID", "Paid", "success", "SUCCESS", "pending", "PENDING"]}, "eko_tid": {"$exists": True}}
             if date_filter:
                 query["created_at"] = date_filter
             

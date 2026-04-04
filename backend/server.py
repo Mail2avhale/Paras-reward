@@ -4155,7 +4155,7 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
             "$match": {
                 "user_id": user_id,
                 "payment_method": "prc",
-                "status": {"$in": ["paid", "completed"]},
+                "status": {"$in": ["paid", "PAID", "Paid", "completed", "COMPLETED", "Completed"]},
                 "created_at": {"$gte": cycle_start_str}
             }
         },
@@ -8380,24 +8380,32 @@ async def get_user_redemption_stats(uid: str, request: Request):
             except:
                 return 0
         
+        # Valid statuses for "Used" calculation
+        valid_redeemed_statuses = [
+            "completed", "COMPLETED", "Completed", "success", "SUCCESS", "Success",
+            "approved", "APPROVED", "Approved", "paid", "PAID", "Paid",
+            "pending", "PENDING", "Pending", "processing", "PROCESSING", "Processing",
+            "delivered", "DELIVERED", "Delivered"
+        ]
+        
         # Define all pipelines
         bp_pipeline = [
-            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
+            {"$match": {"user_id": uid, "status": {"$in": valid_redeemed_statuses}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]
         
         gv_pipeline = [
-            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
+            {"$match": {"user_id": uid, "status": {"$in": valid_redeemed_statuses}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]
         
         bank_pipeline = [
-            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "pending", "processing"]}}},
+            {"$match": {"user_id": uid, "status": {"$in": valid_redeemed_statuses}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
         ]
         
         loan_pipeline = [
-            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed"]}}},
+            {"$match": {"user_id": uid, "status": {"$in": valid_redeemed_statuses}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
         ]
         
@@ -8430,7 +8438,7 @@ async def get_user_redemption_stats(uid: str, request: Request):
         earnings_result = results[5] if not isinstance(results[5], Exception) else []
         
         # ========== 1. ORDERS REDEMPTION ==========
-        orders_redeemed = sum(order.get("total_prc", order.get("prc_amount", 0)) for order in all_orders if order.get("status") not in ["cancelled", "refunded"])
+        orders_redeemed = sum(order.get("total_prc", order.get("prc_amount", 0)) for order in all_orders if order.get("status", "").lower() not in ["cancelled", "refunded", "failed", "error", "rejected"])
         total_prc_redeemed += orders_redeemed
         total_cashback = sum(order.get("cashback_amount", 0) for order in all_orders if order.get("status") == "delivered")
         total_orders = len(all_orders)
@@ -10657,7 +10665,7 @@ async def get_paid_users_wallet_summary():
         
         # 2. Bill Payments
         bill_payments = await db.bill_payments.aggregate([
-            {"$match": {"status": "approved"}},
+            {"$match": {"status": {"$in": valid_redeemed}}},
             {"$lookup": {
                 "from": "users",
                 "localField": "user_id",
@@ -10672,7 +10680,7 @@ async def get_paid_users_wallet_summary():
         
         # 3. Gift Vouchers
         vouchers = await db.gift_voucher_requests.aggregate([
-            {"$match": {"status": "approved"}},
+            {"$match": {"status": {"$in": valid_redeemed}}},
             {"$lookup": {
                 "from": "users",
                 "localField": "user_id",
@@ -10687,7 +10695,7 @@ async def get_paid_users_wallet_summary():
         
         # 4. Marketplace Orders
         orders = await db.marketplace_orders.aggregate([
-            {"$match": {"status": {"$in": ["approved", "delivered", "completed"]}}},
+            {"$match": {"status": {"$in": valid_redeemed}}},
             {"$lookup": {
                 "from": "users",
                 "localField": "user_id",
@@ -12373,7 +12381,7 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
         
         # Batch count previous payments using aggregation
         prev_payments_pipeline = [
-            {"$match": {"user_id": {"$in": user_ids}, "status": {"$in": ["approved", "completed"]}}},
+            {"$match": {"user_id": {"$in": user_ids}, "status": {"$in": ["approved", "completed", "paid", "APPROVED", "COMPLETED", "PAID"]}}},
             {"$group": {"_id": "$user_id", "count": {"$sum": 1}}}
         ]
         prev_payments_result = await db.vip_payments.aggregate(prev_payments_pipeline).to_list(100)
@@ -16218,9 +16226,14 @@ async def get_user_total_redeemed(user_id: str) -> float:
     try:
         total_redeemed = 0
         
-        # Valid statuses (count these)
-        valid = ["approved", "success", "completed", "pending", "processing", "paid"]
-        skip = ["refunded", "rejected", "failed", "cancelled"]
+        # Valid statuses (count these) — ALL case variants for consistency
+        valid = [
+            "approved", "APPROVED", "Approved", "success", "SUCCESS", "Success",
+            "completed", "COMPLETED", "Completed", "pending", "PENDING", "Pending",
+            "processing", "PROCESSING", "Processing", "paid", "PAID", "Paid",
+            "delivered", "DELIVERED", "Delivered"
+        ]
+        skip = ["refunded", "rejected", "failed", "cancelled", "retry_failed", "error"]
         
         # 1. Bill payments (BBPS)
         bill_payments = await db.bill_payment_requests.find({
@@ -16303,7 +16316,7 @@ async def get_user_total_redeemed(user_id: str) -> float:
         prc_subscriptions = await db.subscription_payments.find({
             "user_id": user_id,
             "payment_method": "prc",
-            "status": {"$in": ["paid", "success", "completed"]}
+            "status": {"$in": ["paid", "PAID", "Paid", "success", "SUCCESS", "completed", "COMPLETED"]}
         }).to_list(5000)
         
         for sub in prc_subscriptions:
@@ -17589,17 +17602,17 @@ async def get_public_stats():
             ]).to_list(1),
             # Bill payments
             db.bill_payment_requests.aggregate([
-                {"$match": {"status": {"$in": ["approved", "completed", "processing"]}}},
+                {"$match": {"status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
             ]).to_list(1),
             # Gift vouchers
             db.gift_voucher_requests.aggregate([
-                {"$match": {"status": {"$in": ["approved", "completed", "processing"]}}},
+                {"$match": {"status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
             ]).to_list(1),
             # Orders
             db.orders.aggregate([
-                {"$match": {"status": {"$in": ["completed", "delivered"]}}},
+                {"$match": {"status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", "$total_prc_price"]}}}}
             ]).to_list(1),
             return_exceptions=True
@@ -17813,43 +17826,44 @@ async def get_admin_stats():
     pending_cashback_withdrawals, pending_profit_withdrawals = withdrawal_counts
     total_pending_withdrawals = pending_cashback_withdrawals + pending_profit_withdrawals
     
-    # Calculate PRC redeemed (COMPLETE — all collections)
+    # Calculate PRC redeemed (COMPLETE — all collections with consistent status filter)
+    valid_redeemed = ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "Success", "approved", "APPROVED", "Approved", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "Processing", "delivered", "DELIVERED", "Delivered"]
     prc_redeemed_results = await asyncio.gather(
         db.orders.aggregate([
-            {"$match": {"status": {"$in": ["completed", "delivered"]}}},
+            {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", 0]}}}}
         ]).to_list(1),
         db.bill_payment_requests.aggregate([
-            {"$match": {"status": {"$in": ["completed", "approved"]}}},
+            {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
         ]).to_list(1),
         db.gift_voucher_requests.aggregate([
-            {"$match": {"status": {"$in": ["completed", "approved"]}}},
+            {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
         ]).to_list(1),
         # Bank withdrawals
         db.bank_withdrawal_requests.aggregate([
-            {"$match": {"status": {"$in": ["completed", "approved"]}}},
+            {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", {"$ifNull": ["$total_prc_deducted", 0]}]}}}}
         ]).to_list(1),
         # Bank transfers
         db.bank_transfer_requests.aggregate([
-            {"$match": {"status": {"$in": ["completed", "approved"]}}},
+            {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1),
         # PRC subscriptions
         db.subscription_payments.aggregate([
-            {"$match": {"payment_method": "prc", "status": {"$in": ["paid", "completed"]}}},
+            {"$match": {"payment_method": "prc", "status": {"$in": ["paid", "PAID", "Paid", "completed", "COMPLETED", "Completed"]}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
         ]).to_list(1),
         # DMT transactions
         db.dmt_transactions.aggregate([
-            {"$match": {"status": {"$in": ["completed", "approved", "success"]}}},
+            {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1),
         # Unified redemptions
         db.unified_redemptions.aggregate([
-            {"$match": {"status": {"$in": ["completed", "approved", "success"]}}},
+            {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1),
     )
@@ -18732,28 +18746,29 @@ async def get_all_users(
         user.pop("reset_token", None)
         user["_id"] = str(user["_id"])
         
-        # Calculate total PRC redeemed for this user - only count approved/completed requests
+        # Calculate total PRC redeemed for this user — consistent status filter
         uid = user.get("uid")
+        valid_redeemed_s = ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "Success", "approved", "APPROVED", "Approved", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "Processing", "delivered", "DELIVERED", "Delivered"]
         if uid:
             total_redeemed = 0
             
-            # From orders (only completed/delivered)
+            # From orders
             orders = await db.orders.find(
-                {"user_id": uid, "status": {"$in": ["completed", "delivered"]}}, 
+                {"user_id": uid, "status": {"$in": valid_redeemed_s}}, 
                 {"total_prc": 1, "prc_amount": 1}
             ).to_list(500)
             total_redeemed += sum(o.get("total_prc", 0) or o.get("prc_amount", 0) for o in orders)
             
-            # From bill payments (only approved/completed/processing - NOT pending/rejected)
+            # From bill payments
             bill_payments = await db.bill_payment_requests.find(
-                {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}, 
+                {"user_id": uid, "status": {"$in": valid_redeemed_s}}, 
                 {"total_prc_deducted": 1}
             ).to_list(500)
             total_redeemed += sum(bp.get("total_prc_deducted", 0) for bp in bill_payments)
             
-            # From gift vouchers (only approved/completed/processing - NOT pending/rejected)
+            # From gift vouchers
             gift_vouchers = await db.gift_voucher_requests.find(
-                {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}, 
+                {"user_id": uid, "status": {"$in": valid_redeemed_s}}, 
                 {"total_prc_deducted": 1}
             ).to_list(500)
             total_redeemed += sum(gv.get("total_prc_deducted", 0) for gv in gift_vouchers)
@@ -20151,10 +20166,12 @@ async def get_user_360_view(query: str, request: Request):
     # ========== REDEEM BREAKDOWN BY SERVICE ==========
     redeem_breakdown = {}
     
+    valid_redeem_status = ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "Success", "approved", "APPROVED", "Approved", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "Processing", "delivered", "DELIVERED", "Delivered"]
+    
     try:
         # BBPS/Bill Payments
         bbps_total = await db.redeem_requests.aggregate([
-            {"$match": {"user_id": uid, "status": {"$in": ["completed", "success", "paid"]}}},
+            {"$match": {"user_id": uid, "status": {"$in": valid_redeem_status}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1)
         if bbps_total and bbps_total[0].get("total", 0) > 0:
@@ -20165,7 +20182,7 @@ async def get_user_360_view(query: str, request: Request):
     try:
         # Gift Vouchers
         voucher_total = await db.gift_voucher_requests.aggregate([
-            {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered", "success"]}}},
+            {"$match": {"user_id": uid, "status": {"$in": valid_redeem_status}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_used", 0]}]}}}}
         ]).to_list(1)
         if voucher_total and voucher_total[0].get("total", 0) > 0:
@@ -20176,7 +20193,7 @@ async def get_user_360_view(query: str, request: Request):
     try:
         # Bank Transfers/Withdrawals
         bank_total = await db.bank_transfer_requests.aggregate([
-            {"$match": {"user_id": uid, "status": {"$in": ["completed", "paid", "success"]}}},
+            {"$match": {"user_id": uid, "status": {"$in": valid_redeem_status}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1)
         if bank_total and bank_total[0].get("total", 0) > 0:
@@ -20187,7 +20204,7 @@ async def get_user_360_view(query: str, request: Request):
     try:
         # DMT (Money Transfer)
         dmt_total = await db.dmt_requests.aggregate([
-            {"$match": {"user_id": uid, "status": {"$in": ["completed", "success"]}}},
+            {"$match": {"user_id": uid, "status": {"$in": valid_redeem_status}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1)
         if dmt_total and dmt_total[0].get("total", 0) > 0:
@@ -20198,7 +20215,7 @@ async def get_user_360_view(query: str, request: Request):
     try:
         # Shop/Orders
         shop_total = await db.orders.aggregate([
-            {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered", "shipped"]}}},
+            {"$match": {"user_id": uid, "status": {"$in": valid_redeem_status}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1)
         if shop_total and shop_total[0].get("total", 0) > 0:

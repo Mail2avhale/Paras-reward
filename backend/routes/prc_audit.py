@@ -179,7 +179,7 @@ async def full_prc_audit(uid: str, limit: int = Query(default=500, le=2000)):
         
         # 2d. PRC Subscriptions
         prc_subs = await db.subscription_payments.find(
-            {"user_id": uid, "payment_method": "prc", "status": {"$in": ["paid", "completed"]}},
+            {"user_id": uid, "payment_method": "prc", "status": {"$in": ["paid", "PAID", "Paid", "completed", "COMPLETED", "Completed"]}},
             {"_id": 0}
         ).sort("created_at", 1).to_list(limit)
         for s in prc_subs:
