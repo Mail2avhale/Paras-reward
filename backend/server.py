@@ -8094,26 +8094,53 @@ async def get_user_data(uid: str, request: Request):
     # This can happen if payment was approved but user data wasn't synced properly
     # PERFORMANCE: Only run this check if subscription looks incorrect AND not cached
     if (subscription_plan == "explorer" or not subscription_expiry):
-        # Check for approved subscription payment
+        # Check for approved subscription payment from VIP or PRC
         # OPTIMIZED: Add timeout and limit to prevent slow queries
         try:
+            # Check vip_payments (Razorpay/INR payments)
             latest_payment = await db.vip_payments.find_one(
                 {"user_id": uid, "status": "approved"},
                 sort=[("approved_at", -1)],
                 max_time_ms=3000  # 3 second timeout
             )
             
+            # Also check subscription_payments (PRC payments)
+            if not latest_payment:
+                latest_prc_payment = await db.subscription_payments.find_one(
+                    {"user_id": uid, "status": {"$in": ["paid", "Paid", "PAID"]}, "payment_method": "prc"},
+                    sort=[("created_at", -1)],
+                    max_time_ms=3000
+                )
+                if latest_prc_payment:
+                    latest_payment = latest_prc_payment
+            
             if latest_payment:
                 # Get plan and expiry from approved payment
-                payment_plan = latest_payment.get("subscription_plan", "startup")
-                payment_expiry = latest_payment.get("subscription_end") or latest_payment.get("new_expiry")
-                payment_start = latest_payment.get("subscription_start") or latest_payment.get("approved_at") or latest_payment.get("vip_activated_at")
+                payment_plan = latest_payment.get("subscription_plan") or latest_payment.get("plan_name") or "elite"
+                if payment_plan not in ["elite", "startup", "premium"]:
+                    payment_plan = "elite"
+                payment_expiry = (
+                    latest_payment.get("subscription_end") or 
+                    latest_payment.get("new_expiry") or 
+                    latest_payment.get("subscription_expiry")
+                )
+                payment_start = (
+                    latest_payment.get("subscription_start") or 
+                    latest_payment.get("approved_at") or 
+                    latest_payment.get("vip_activated_at") or
+                    latest_payment.get("created_at")
+                )
                 
                 # Check if payment expiry is still valid
                 now = datetime.now(timezone.utc)
                 if payment_expiry:
                     try:
-                        expiry_dt = datetime.fromisoformat(str(payment_expiry).replace('Z', '+00:00'))
+                        if isinstance(payment_expiry, datetime):
+                            expiry_dt = payment_expiry
+                        else:
+                            expiry_dt = datetime.fromisoformat(str(payment_expiry).replace('Z', '+00:00'))
+                        if expiry_dt.tzinfo is None:
+                            expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
                         if expiry_dt > now:
                             # Valid subscription from payment - sync to user
                             subscription_plan = payment_plan
@@ -8126,16 +8153,22 @@ async def get_user_data(uid: str, request: Request):
                                 {"$set": {
                                     "subscription_plan": payment_plan,
                                     "subscription_expiry": payment_expiry,
-                                    "vip_activated_at": payment_start,
-                                    "membership_type": "vip"
+                                    "subscription_start": payment_start,
+                                    "membership_type": "vip",
+                                    "subscription_status": "active",
+                                    "subscription_expired": False
                                 }}
                             )
-                            print(f"[SYNC] Updated user {uid} subscription from approved payment: {payment_plan}")
+                            print(f"[SYNC] Updated user {uid} subscription from payment: {payment_plan}, expiry: {payment_expiry}")
+                            # Invalidate cache
+                            if cache:
+                                await cache.delete(f"user_data:{uid}")
+                                await cache.delete(f"user:dashboard:{uid}")
                     except Exception as e:
                         print(f"[SYNC] Error parsing payment expiry: {e}")
         except Exception as e:
-            # If vip_payments query times out, just skip sync
-            print(f"[SYNC] VIP payment check skipped due to timeout: {e}")
+            # If payment query times out, just skip sync
+            print(f"[SYNC] Payment check skipped due to timeout: {e}")
     
     # Update user dict with correct values
     user["subscription_plan"] = subscription_plan
@@ -11830,6 +11863,7 @@ async def subscription_pay_with_prc(request: Request):
                             "membership_type": "vip",
                             "subscription_status": "active",
                             "subscription_payment_type": "prc",
+                            "subscription_expired": False,
                             "last_prc_subscription": now.isoformat()
                         }
                     }
@@ -11838,6 +11872,11 @@ async def subscription_pay_with_prc(request: Request):
                 logging.error(f"[PRC-SUB] Subscription update failed, refunding PRC: {update_err}")
                 await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": prc_amount}})
                 raise HTTPException(status_code=500, detail="Subscription activation failed. PRC has been refunded.")
+            
+            # Invalidate user cache after subscription activation
+            if cache:
+                await cache.delete(f"user_data:{user_id}")
+                await cache.delete(f"user:dashboard:{user_id}")
         
         # CREDIT COMPANY WALLETS
         try:

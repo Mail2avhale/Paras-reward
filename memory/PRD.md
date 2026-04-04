@@ -2,53 +2,52 @@
 
 ## LAST UPDATED - 4 April 2026
 
+## COMPLETED: Subscription Activation Desync Bug Fix (P0 Critical) - 4 April 2026
+### Production Bug: User pays PRC for Elite → sees "Explorer" on login
+**Root Cause 1 — Cache not invalidated:**
+- `subscription_pay_with_prc` and `admin_activate_prc_subscription` did NOT clear user cache after activation
+- User continued seeing stale cached "explorer" data for up to 2 minutes
+- FIX: Added `cache.delete(f"user_data:{uid}")` + `cache.delete(f"user:dashboard:{uid}")` after activation
+
+**Root Cause 2 — SYNC FIX only checked vip_payments:**
+- `get_user_data` (line ~8096) has a SYNC FIX that auto-restores subscription if user is "explorer" but has valid payment
+- This ONLY checked `vip_payments` collection (Razorpay/INR payments)
+- PRC subscriptions are stored in `subscription_payments` — never checked!
+- FIX: Added `subscription_payments` check with `payment_method: "prc"` in SYNC FIX
+
+**Root Cause 3 — subscription_expired flag not cleared:**
+- When previous subscription expired, `subscription_expired: True` was set on user document
+- New subscription activation did NOT reset this to False
+- Some code paths checked this flag and treated user as expired
+- FIX: Added `subscription_expired: False` to both activation functions
+
+### Files Fixed:
+- `server.py` — `subscription_pay_with_prc`: cache invalidation + subscription_expired: False
+- `server.py` — `get_user_data` SYNC FIX: subscription_payments check added
+- `routes/admin_misc.py` — `admin_activate_prc_subscription`: subscription_expired: False
+
 ## COMPLETED: Redeem Limit Status Filter Bug Fix (P0 Critical) - 4 April 2026
 ### Phase 1 (Core Fix)
 - `server.py` `get_user_all_time_redeemed`: Added `pending`, removed `max(txn_total, total_redeemed)`, orders $nin→$in
 - `admin_user360.py`: Uses centralized function via `set_redeemed_fn`
 
-### Phase 2 (Comprehensive — ALL files across codebase)
-Files fixed with consistent valid statuses:
-1. `server.py` — `get_user_all_time_redeemed` (core), `get_user_total_redeemed` (debug), `get_user_redemption_stats`, `get_paid_users_wallet_summary`, User360 redeem breakdown, admin stats, user listing, weekly cooldowns
-2. `routes/users.py` — User stats total_redeemed
-3. `routes/admin_user360.py` — Centralized via `set_redeemed_fn`
-4. `routes/admin_dashboard.py` — All 8 global aggregation queries
-5. `routes/prc_audit.py` — All 6 debit collection queries  
-6. `routes/bank_redeem.py` — Cooldown check (added `paid` variants)
-7. `routes/admin_misc.py` — Blocking status checks
-8. `routes/unified_redeem_v2.py` — Admin audit queries
-9. `utils/redeem_validations.py` — Monthly category limit check
-
-### Two standardized status categories:
-- **VALID_REDEEMED** (Used amount calculation): completed, success, approved, paid, pending, processing, delivered (+ ALL case variants)
-- **COOLDOWN_ONLY** (blocking/cooldown): Same minus pending/processing
-
-### Remaining (low priority, not calculation):
-- Admin charts (24350-24474): reporting only
-- Display/listing endpoints (14166-14281): intentional status grouping
-- Product order fulfillment (30564-45099): business logic
-- Utility scripts: maintenance
+### Phase 2 (Comprehensive — ALL files)
+- 15+ locations across 9 files fixed with consistent valid statuses
+- Two standardized categories: VALID_REDEEMED (includes pending) + COOLDOWN_ONLY (excludes pending)
 
 ## Earlier Completed Work (Summary)
 - Production 520 Error Fix, Single Leg Tree + Mining, Growth Network UI (29 Mar)
 - Economy Rules, Razorpay + PRC Pricing, Login Bug Fix (29 Mar)
-- RewardLoader Spinners, Registration Error Handling (29 Mar)
-- 3-Tier Network Cap Formula, PRC Collect Balance UI Bug Fix (29-30 Mar)
-- Smart AI Chatbot, Auto-Burning System, Admin Redeem Limits Overview (30 Mar)
-- Chatbot Earning Projections, Daily Mining Base Rate Change (30-31 Mar)
-- Speed Display Rebranding, Admin Auto-Burn Manual Trigger (31 Mar)
-- Invoice Display with Print, Auto-Burn Background Cron Job (31 Mar)
-- Popcorn Icon UI Replacement (31 Mar)
-- Subscription Expiry Bug Fix, Admin Dashboard PRC Economy Stats (1 Apr)
-- PRC Audit Endpoint, Holiday Calendar Date Fix (1 Apr)
-- Admin Login-As-User Dual Logout Bug Fix (1 Apr)
-- Login "Account Not Found" Bug Fix (2 Apr)
-- PRC Subscription Bypasses Redeem Limit (2 Apr)
-- Redeem Limit Formula Fix — Total Earned = Balance Only (2 Apr)
-- PRC Dynamic Rate Inconsistency Bug Fix (3 Apr)
-- Admin PRC Subscription & Redeem Actions (3 Apr)
-- Admin Subscription Management + Upcoming Plan Concept (3 Apr)
-- Code Quality & Security Fixes (3 Apr)
+- RewardLoader Spinners, Registration Error Handling, 3-Tier Network Cap (29 Mar)
+- PRC Collect Balance UI Bug, Smart AI Chatbot, Auto-Burning System (30 Mar)
+- Admin Redeem Limits, Chatbot Earning Projections (30 Mar)
+- Daily Mining Base Rate Change, Speed Display Rebranding (31 Mar)
+- Admin Auto-Burn, Invoice Display, Auto-Burn Cron Job (31 Mar)
+- Popcorn Icon, Subscription Expiry Bug Fix, PRC Economy Stats (31 Mar - 1 Apr)
+- PRC Audit, Holiday Calendar Fix, Admin Login-As-User Fix (1 Apr)
+- Login "Account Not Found" Fix, PRC Sub Bypasses Redeem (2 Apr)
+- Redeem Limit Formula, PRC Rate Inconsistency Fix (2-3 Apr)
+- Admin PRC Actions, Subscription Management, Code Quality & Security (3 Apr)
 
 ## Active Architecture
 - Mining: (500 + N×prc_per_user) × boost (Cash=1.0, PRC=0.70)

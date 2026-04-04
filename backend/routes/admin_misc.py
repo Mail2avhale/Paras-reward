@@ -1018,6 +1018,7 @@ async def admin_activate_prc_subscription(request: Request):
                         "membership_type": "vip",
                         "subscription_status": "active",
                         "subscription_payment_type": "prc",
+                        "subscription_expired": False,
                         "last_prc_subscription": now.isoformat()
                     }}
                 )
