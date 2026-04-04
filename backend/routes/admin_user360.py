@@ -17,10 +17,15 @@ router = APIRouter(prefix="/admin/user360", tags=["Admin User 360"])
 
 # Database reference (set by server.py)
 db = None
+_get_all_time_redeemed = None
 
 def set_db(database):
     global db
     db = database
+
+def set_redeemed_fn(fn):
+    global _get_all_time_redeemed
+    _get_all_time_redeemed = fn
 
 
 # ========== HELPER FUNCTIONS ==========
@@ -146,13 +151,26 @@ async def get_user_full_360(uid: str):
         ]).to_list(1)
         stats["total_mined"] = safe_float(mined_result[0]["total"]) if mined_result else 0
         
-        # Total redeemed — comprehensive: all negative transactions (excluding burns)
-        burn_types = ["prc_burn", "admin_burn", "hourly_burn", "daily_burn", "burn", "auto_burn", "burn_overcorrection_fix"]
-        redeemed_result = await db.transactions.aggregate([
-            {"$match": {"user_id": uid, "amount": {"$lt": 0}, "type": {"$nin": burn_types}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
-        ]).to_list(1)
-        stats["total_redeemed"] = safe_float(redeemed_result[0]["total"]) if redeemed_result else 0
+        # Total redeemed — use centralized status-filtered function
+        if _get_all_time_redeemed:
+            stats["total_redeemed"] = safe_float(await _get_all_time_redeemed(uid))
+        else:
+            # Fallback: query individual collections with status filter
+            valid_statuses = [
+                "completed", "COMPLETED", "Completed",
+                "success", "SUCCESS", "Success",
+                "approved", "APPROVED", "Approved",
+                "paid", "PAID", "Paid",
+                "pending", "PENDING", "Pending",
+                "processing", "PROCESSING", "Processing",
+                "delivered", "DELIVERED", "Delivered"
+            ]
+            burn_types = ["prc_burn", "admin_burn", "hourly_burn", "daily_burn", "burn", "auto_burn", "burn_overcorrection_fix"]
+            redeemed_result = await db.transactions.aggregate([
+                {"$match": {"user_id": uid, "amount": {"$lt": 0}, "type": {"$nin": burn_types}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+            ]).to_list(1)
+            stats["total_redeemed"] = safe_float(redeemed_result[0]["total"]) if redeemed_result else 0
         
         # Referral bonus
         ref_result = await db.transactions.aggregate([

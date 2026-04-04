@@ -19,7 +19,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-economy-fix.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://used-status-filter.preview.emergentagent.com')
 
 # Test Users from credentials
 CASH_USER_UID = "76b75808-47fa-48dd-ad7c-8074678e3607"  # Cash payment type, 1% burn

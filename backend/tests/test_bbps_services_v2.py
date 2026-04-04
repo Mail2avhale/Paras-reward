@@ -12,7 +12,7 @@ import requests
 import os
 
 # Get API URL from environment
-API_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://prc-economy-fix.preview.emergentagent.com")
+API_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://used-status-filter.preview.emergentagent.com")
 
 
 class TestSenderNameSanitization:

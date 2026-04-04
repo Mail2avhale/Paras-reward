@@ -56,7 +56,7 @@ from routes.admin_delivery import router as admin_delivery_router, set_db as set
 from routes.admin_system import router as admin_system_router, set_db as set_admin_system_db, set_cache as set_admin_system_cache, set_helpers as set_admin_system_helpers
 from routes.admin_finance import router as admin_finance_router, set_db as set_admin_finance_db, set_cache as set_admin_finance_cache
 from routes.admin_users import router as admin_users_router, set_db as set_admin_users_db, set_cache as set_admin_users_cache, set_helpers as set_admin_users_helpers
-from routes.admin_user360 import router as admin_user360_router, set_db as set_admin_user360_db
+from routes.admin_user360 import router as admin_user360_router, set_db as set_admin_user360_db, set_redeemed_fn as set_admin_user360_redeemed_fn
 from routes.admin_failed_transactions import router as admin_failed_txn_router, set_db as set_admin_failed_txn_db
 from routes.admin_fraud import router as admin_fraud_router, set_db as set_admin_fraud_db, set_helpers as set_admin_fraud_helpers
 from routes.admin_reports import router as admin_reports_router, set_db as set_admin_reports_db, set_cache as set_admin_reports_cache
@@ -4192,12 +4192,15 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         "burn", "auto_burn", "burn_overcorrection_fix"
     ]
     
-    # All possible SUCCESS statuses (both cases for compatibility)
+    # All possible VALID statuses for "Used" calculation (both cases for compatibility)
+    # Per user requirement: Only count Completed, Approved, Pending (and equivalent statuses)
+    # EXCLUDED: failed, retry_failed, refunded, rejected, cancelled, error
     success_statuses = [
         "completed", "COMPLETED", "Completed",
         "success", "SUCCESS", "Success",
         "approved", "APPROVED", "Approved",
         "paid", "PAID", "Paid",
+        "pending", "PENDING", "Pending",
         "processing", "PROCESSING", "Processing",
         "delivered", "DELIVERED", "Delivered"
     ]
@@ -4381,7 +4384,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
     # ─────────────────────────────────────────────────────────────────────
     orders_total = await safe_sum(
         "orders",
-        {"user_id": user_id, "status": {"$nin": ["cancelled", "refunded", "failed", "CANCELLED", "REFUNDED", "FAILED"]}},
+        {"user_id": user_id, "status": {"$in": success_statuses}},
         ["total_prc", "prc_amount", "prc_used", "amount"]
     )
     total_redeemed += orders_total
@@ -4428,12 +4431,13 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
     
     # ═══════════════════════════════════════════════════════════════════════
     # FINAL CALCULATION
-    # Return MAX of transactions total OR individual collections total
-    # This handles cases where data might be in one place but not the other
+    # Use ONLY the status-filtered collections total (total_redeemed)
+    # SOURCE 1 (txn_total) is excluded because it has no status filtering
+    # and would count failed/refunded transaction debits incorrectly
     # ═══════════════════════════════════════════════════════════════════════
-    final_total = max(txn_total, total_redeemed)
+    final_total = total_redeemed
     
-    logging.debug(f"[REDEEMED] User {user_id}: txn_total={txn_total}, collections_total={total_redeemed}, final={final_total}")
+    logging.debug(f"[REDEEMED] User {user_id}: txn_total={txn_total} (excluded), collections_total={total_redeemed}, final={final_total}")
     
     return round(final_total, 2)
 
@@ -44734,6 +44738,7 @@ api_router.include_router(admin_users_router)
 
 # Include admin user 360 router (NEW - Restructured)
 set_admin_user360_db(db)
+set_admin_user360_redeemed_fn(get_user_all_time_redeemed)
 api_router.include_router(admin_user360_router)
 
 # Include admin failed transactions router (NEW - March 2026)
