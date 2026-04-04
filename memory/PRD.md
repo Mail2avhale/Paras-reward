@@ -1,6 +1,6 @@
 # PARAS REWARD - Product Requirements Document
 
-## LAST UPDATED - 30 March 2026
+## LAST UPDATED - 4 April 2026
 
 ## COMPLETED: Production 520 Error Fix (P0) - 29 March 2026
 ## COMPLETED: Single Leg Tree + Mining - 29 March 2026
@@ -214,13 +214,6 @@
 - **Fix**: PRCRateDisplay and getPRCPrice formulas now match backend exactly. handlePRCPayment re-fetches fresh pricing before submitting.
 - Files: `PRCRateDisplay.js`, `SubscriptionPlans.js`
 
-
-## Upcoming
-- P1: Invoice PDF Download option for InvoiceModal.js
-- P2: server.py refactoring (45k+ lines)
-- Future: MongoDB to PostgreSQL migration
-
-
 ## COMPLETED: Admin Subscription Management + Upcoming Plan Concept - 3 April 2026
 ### Subscription Details (User 360 Tab)
 - **New Tab**: "Subscription" in User 360 data tabs
@@ -256,7 +249,6 @@
 - MODIFIED: `/app/frontend/src/pages/AdminUser360New.js` (Subscription tab, Edit/Cancel modals)
 - MODIFIED: `/app/frontend/src/pages/DashboardModern.js` (Upcoming Plan card)
 
-
 ## COMPLETED: Code Quality & Security Fixes - 3 April 2026
 ### Security Fixes
 - Removed `verify=False` from `eko_kyc_service.py` (3) and `bbps_services.py` (2) — SSL MITM prevention
@@ -265,3 +257,28 @@
 - Replaced hardcoded test credentials with `os.environ.get()` in test files
 ### Deferred (P2)
 - 218 React hook deps, 83 array index keys, component splits, localStorage, complex function refactoring
+
+## COMPLETED: Redeem Limit "Used" Calculation Bug Fix (P0 Critical) - 4 April 2026
+- **Bug**: Failed and refunded redeem requests were incorrectly counted as "Used" in the user's redeem limit
+- **Root Cause 1**: `success_statuses` in `get_user_all_time_redeemed` was missing `pending/Pending/PENDING` — user explicitly requires Pending to count as Used
+- **Root Cause 2**: `max(txn_total, total_redeemed)` logic picked the higher of unfiltered `transactions` collection total vs. status-filtered collections total, bypassing all status filtering when transactions had more data
+- **Root Cause 3**: `orders` collection used `$nin` (exclusion list) instead of `$in` (inclusion list), potentially missing new invalid statuses
+- **Fix**:
+  - Added `pending/PENDING/Pending` to `success_statuses` array
+  - Replaced `max(txn_total, total_redeemed)` with just `total_redeemed` (status-filtered collections only)
+  - Changed `orders` collection to use `$in: success_statuses` instead of `$nin`
+  - Fixed `admin_user360.py` to use centralized `get_user_all_time_redeemed` via `set_redeemed_fn` pattern
+- **Verified**: 
+  - Bug user (cbdf46d7): 18788 PRC `retry_failed` correctly excluded
+  - PRC user (6c96a6cc): 9240 PRC `failed` correctly excluded
+  - `pending` bank_transfer_requests now correctly included
+- **Files**: `server.py` (get_user_all_time_redeemed), `admin_user360.py` (set_redeemed_fn)
+- **Testing**: iteration 174 (100% PASS - 10/10 backend + frontend verified)
+
+
+## Upcoming
+- P1: Invoice PDF Download option for InvoiceModal.js
+- P2: server.py refactoring (45k+ lines)
+- P2: 218 React hook dependency warnings fix
+- P2: Large frontend component files split
+- Future: MongoDB to PostgreSQL migration
