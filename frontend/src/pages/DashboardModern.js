@@ -1087,30 +1087,16 @@ const DashboardModern = ({ user, onLogout }) => {
         if (isPaidPlan && isKycVerified) {
           return (
             <div className="px-5 mb-4">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+              <div
                 className="relative overflow-hidden rounded-2xl p-5"
                 style={{
-                  background: 'linear-gradient(145deg, #064e3b 0%, #047857 30%, #065f46 70%, #022c22 100%)',
-                  boxShadow: '0 15px 40px -10px rgba(16, 185, 129, 0.4)'
+                  background: 'linear-gradient(145deg, #2e1065 0%, #4c1d95 40%, #5b21b6 70%, #1e1b4b 100%)',
+                  boxShadow: '0 15px 40px -10px rgba(139, 92, 246, 0.35)'
                 }}
                 data-testid="prc-balance-card"
               >
-                {/* Background decorations */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl"></div>
-                <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-green-400/20 rounded-full blur-2xl"></div>
-                
-                {/* Floating coins animation */}
-                <div className="absolute top-4 right-8 animate-bounce" style={{ animationDelay: '0s' }}>
-                  <span className="text-2xl">💰</span>
-                </div>
-                <div className="absolute top-10 right-20 animate-bounce" style={{ animationDelay: '0.3s' }}>
-                  <span className="text-lg">🪙</span>
-                </div>
-                
                 <div className="relative z-10">
-                  {/* Clean PRC Redeem Card - Available/Used/Balance Breakdown */}
+                  {/* PRC Redeem Card - Available/Used/Balance Breakdown */}
                   {(() => {
                     const prcRate = stats.prcRate || 10;
                     const rl = stats.redeemLimit || {};
@@ -1123,66 +1109,62 @@ const DashboardModern = ({ user, onLogout }) => {
                     
                     return (
                       <>
-                        {/* Breakdown: Available - Used = Balance */}
-                        <div className="mb-3 space-y-2" data-testid="redeem-breakdown-card">
-                          {/* Total Limit (Available) */}
+                        {/* Breakdown: Total Limit - Used = Remaining */}
+                        <div className="mb-4 space-y-2.5" data-testid="redeem-breakdown-card">
                           <div className="flex items-center justify-between">
-                            <span className="text-white/50 text-xs uppercase tracking-wider">Total Limit</span>
-                            <span className="text-white font-bold text-base">{totalLimit.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-white/50 text-xs font-normal">PRC</span></span>
+                            <span className="text-white/70 text-xs font-bold uppercase tracking-wider">Total Limit</span>
+                            <span className="text-white font-extrabold text-lg">{totalLimit.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-white/60 text-xs font-semibold">PRC</span></span>
                           </div>
-                          {/* Used (Redeemed) */}
                           <div className="flex items-center justify-between">
-                            <span className="text-white/50 text-xs uppercase tracking-wider">Used</span>
-                            <span className="text-red-400 font-bold text-base">- {totalUsed.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-red-400/60 text-xs font-normal">PRC</span></span>
+                            <span className="text-white/70 text-xs font-bold uppercase tracking-wider">Used</span>
+                            <span className="text-red-300 font-extrabold text-lg">- {totalUsed.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-red-300/60 text-xs font-semibold">PRC</span></span>
                           </div>
-                          {/* Divider */}
-                          <div className="border-t border-white/20 my-1"></div>
-                          {/* Remaining Balance */}
+                          <div className="border-t border-white/30"></div>
                           <div className="flex items-center justify-between">
-                            <span className="text-white/70 text-xs uppercase tracking-wider font-semibold">Remaining</span>
+                            <span className="text-white text-xs font-extrabold uppercase tracking-wider">Remaining</span>
                             <div className="text-right">
-                              <span className={`font-bold text-xl ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>
+                              <span className={`font-extrabold text-2xl ${isNegative ? 'text-red-300' : 'text-yellow-300'}`}>
                                 {isNegative ? '-' : ''}{Math.abs(remaining).toLocaleString(undefined, {maximumFractionDigits: 0})}
-                                <span className={`text-xs font-normal ml-1 ${isNegative ? 'text-red-400/60' : 'text-emerald-400/60'}`}>PRC</span>
+                                <span className={`text-xs font-semibold ml-1 ${isNegative ? 'text-red-300/70' : 'text-yellow-300/70'}`}>PRC</span>
                               </span>
                               {!isNegative && remaining > 0 && (
-                                <p className="text-emerald-300/70 text-xs">≈ ₹{Math.floor(remaining / prcRate).toLocaleString()}</p>
+                                <p className="text-yellow-200/80 text-xs font-semibold">≈ ₹{Math.floor(remaining / prcRate).toLocaleString()}</p>
                               )}
                             </div>
                           </div>
                           {isNegative && (
-                            <p className="text-red-300/80 text-[10px] mt-0.5">Negative due to subscription — will recover with mining</p>
+                            <p className="text-red-200/80 text-[10px] font-medium">Negative due to subscription — will recover with mining</p>
                           )}
                         </div>
 
                         {/* Balance + Unlock % + Rate */}
                         <div className="grid grid-cols-3 gap-2 mb-3">
-                          <div className="bg-white/10 backdrop-blur rounded-xl p-2.5">
-                            <p className="text-white/50 text-[10px] uppercase">PRC Balance</p>
-                            <p className="text-white text-sm font-bold">{balance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                          <div className="bg-white/10 rounded-xl p-2.5">
+                            <p className="text-white/60 text-[10px] font-bold uppercase">PRC Balance</p>
+                            <p className="text-white text-sm font-extrabold">{balance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
                           </div>
-                          <div className="bg-white/10 backdrop-blur rounded-xl p-2.5">
-                            <p className="text-white/50 text-[10px] uppercase">Unlock</p>
-                            <p className="text-amber-400 text-sm font-bold">{unlockPct}%</p>
+                          <div className="bg-white/10 rounded-xl p-2.5">
+                            <p className="text-white/60 text-[10px] font-bold uppercase">Unlock</p>
+                            <p className="text-yellow-300 text-sm font-extrabold">{unlockPct}%</p>
                           </div>
-                          <div className="bg-white/10 backdrop-blur rounded-xl p-2.5">
-                            <p className="text-white/50 text-[10px] uppercase">Rate</p>
-                            <p className="text-white text-sm font-bold">{prcRate} PRC = ₹1</p>
+                          <div className="bg-white/10 rounded-xl p-2.5">
+                            <p className="text-white/60 text-[10px] font-bold uppercase">Rate</p>
+                            <p className="text-white text-sm font-extrabold">{prcRate} PRC = ₹1</p>
                           </div>
                         </div>
 
                         {/* Redeem Button */}
                         <div 
                           onClick={() => navigate('/redeem')}
-                          className="w-full bg-emerald-500/25 hover:bg-emerald-500/35 backdrop-blur border border-emerald-400/20 rounded-xl py-2.5 cursor-pointer transition-colors text-center"
+                          className="w-full bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-xl py-2.5 cursor-pointer transition-colors text-center"
                         >
-                          <p className="text-emerald-200 text-sm font-semibold">Redeem →</p>
+                          <p className="text-yellow-200 text-sm font-bold">Redeem →</p>
                         </div>
                       </>
                     );
                   })()}
                 </div>
-              </motion.div>
+              </div>
             </div>
           );
         }
