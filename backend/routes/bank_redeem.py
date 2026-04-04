@@ -229,7 +229,7 @@ async def get_last_request_date(user_id: str, collection: str, request_type: str
     # Only count COMPLETED/APPROVED requests for cooldown - anything else should NOT block users
     query = {
         "user_id": user_id, 
-        "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]}
+        "status": {"$in": ["completed", "success", "approved", "paid", "delivered", "COMPLETED", "SUCCESS", "APPROVED", "PAID", "Paid", "DELIVERED"]}
     }
     if request_type:
         query["request_type"] = request_type

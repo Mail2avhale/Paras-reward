@@ -246,7 +246,7 @@ async def validate_category_limit(user_id: str, category: str, amount_inr: float
             "$match": {
                 "user_id": user_id,
                 "created_at": {"$gte": month_start.isoformat()},
-                "status": {"$in": ["completed", "approved", "success"]},
+                "status": {"$in": ["completed", "approved", "success", "pending", "paid", "processing", "delivered"]},
                 "service_type": service_filter
             }
         },

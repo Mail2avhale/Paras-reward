@@ -137,49 +137,49 @@ async def get_admin_stats():
             
             # TOTAL PRC REDEEMED - Orders
             db.orders.aggregate([
-                {"$match": {"status": {"$in": ["completed", "delivered"]}}},
+                {"$match": {"status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED", "Delivered"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", 0]}}}}
             ]).to_list(1),  # 16: redeemed_orders
             
             # TOTAL PRC REDEEMED - Bill Payments
             db.bill_payment_requests.aggregate([
-                {"$match": {"status": {"$in": ["completed", "approved"]}}},
+                {"$match": {"status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED", "Delivered"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
             ]).to_list(1),  # 17: redeemed_bills
             
             # TOTAL PRC REDEEMED - Gift Vouchers
             db.gift_voucher_requests.aggregate([
-                {"$match": {"status": {"$in": ["completed", "approved"]}}},
+                {"$match": {"status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED", "Delivered"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
             ]).to_list(1),  # 18: redeemed_vouchers
             
             # TOTAL PRC REDEEMED - Bank Withdrawals
             db.bank_withdrawal_requests.aggregate([
-                {"$match": {"status": {"$in": ["completed", "approved"]}}},
+                {"$match": {"status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED", "Delivered"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", {"$ifNull": ["$total_prc_deducted", 0]}]}}}}
             ]).to_list(1),  # 19: redeemed_bank
             
             # TOTAL PRC REDEEMED - Bank Transfers
             db.bank_transfer_requests.aggregate([
-                {"$match": {"status": {"$in": ["completed", "approved", "paid"]}}},
+                {"$match": {"status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED", "Delivered"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$total_prc_deducted", 0]}]}}}}
             ]).to_list(1),  # 20: redeemed_bank_transfer
             
             # TOTAL PRC REDEEMED - PRC Subscriptions
             db.subscription_payments.aggregate([
-                {"$match": {"payment_method": "prc", "status": {"$in": ["paid", "completed"]}}},
+                {"$match": {"payment_method": "prc", "status": {"$in": ["paid", "PAID", "Paid", "completed", "COMPLETED", "Completed"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
             ]).to_list(1),  # 21: redeemed_prc_subs
             
             # TOTAL PRC REDEEMED - DMT Transactions
             db.dmt_transactions.aggregate([
-                {"$match": {"status": {"$in": ["completed", "approved", "success"]}}},
+                {"$match": {"status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED", "Delivered"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
             ]).to_list(1),  # 22: redeemed_dmt
             
             # TOTAL PRC REDEEMED - Unified Redemptions
             db.unified_redemptions.aggregate([
-                {"$match": {"status": {"$in": ["completed", "approved", "success"]}}},
+                {"$match": {"status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED", "Delivered"]}}},
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
             ]).to_list(1),  # 23: redeemed_unified
             

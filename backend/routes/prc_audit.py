@@ -143,7 +143,7 @@ async def full_prc_audit(uid: str, limit: int = Query(default=500, le=2000)):
         
         # 2b. Bank Withdrawals
         bank_wd = await db.bank_transfer_requests.find(
-            {"user_id": uid, "status": {"$in": ["paid", "completed", "pending", "approved"]}},
+            {"user_id": uid, "status": {"$in": ["completed", "COMPLETED", "Completed", "approved", "APPROVED", "Approved", "pending", "PENDING", "Pending", "paid", "PAID", "Paid", "processing", "PROCESSING", "success", "SUCCESS", "delivered", "DELIVERED"]}},
             {"_id": 0}
         ).sort("created_at", 1).to_list(limit)
         for b in bank_wd:
@@ -197,7 +197,7 @@ async def full_prc_audit(uid: str, limit: int = Query(default=500, le=2000)):
         
         # 2e. DMT Transactions
         dmt = await db.dmt_transactions.find(
-            {"user_id": uid, "status": {"$in": ["completed", "success"]}},
+            {"user_id": uid, "status": {"$in": ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "delivered", "DELIVERED"]}},
             {"_id": 0}
         ).sort("created_at", 1).to_list(limit)
         for d in dmt:
@@ -215,7 +215,7 @@ async def full_prc_audit(uid: str, limit: int = Query(default=500, le=2000)):
         
         # 2f. Unified Redemptions
         unified = await db.unified_redemptions.find(
-            {"user_id": uid, "status": {"$in": ["completed", "approved", "success", "pending"]}},
+            {"user_id": uid, "status": {"$in": ["completed", "COMPLETED", "Completed", "approved", "APPROVED", "Approved", "pending", "PENDING", "Pending", "paid", "PAID", "Paid", "processing", "PROCESSING", "success", "SUCCESS", "delivered", "DELIVERED"]}},
             {"_id": 0}
         ).sort("created_at", 1).to_list(limit)
         for u in unified:

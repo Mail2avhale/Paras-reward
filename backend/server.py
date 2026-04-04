@@ -3719,7 +3719,7 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         bill_payment_request = await db.bill_payment_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
-            "status": {"$in": ["completed", "success", "COMPLETED", "SUCCESS", "approved", "APPROVED"]},
+            "status": {"$in": ["completed", "success", "COMPLETED", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid"]},
             # CRITICAL: Exclude refunded/failed transactions
             "prc_refunded": {"$ne": True}
         }, {"_id": 0, "request_type": 1, "service_type": 1, "created_at": 1, "request_id": 1, "status": 1}, sort=[("created_at", -1)])
@@ -3728,7 +3728,7 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         bbps_request = await db.redeem_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
-            "status": {"$in": ["completed", "success", "COMPLETED", "SUCCESS"]},
+            "status": {"$in": ["completed", "success", "COMPLETED", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid"]},
             # CRITICAL: Exclude refunded/failed transactions
             "prc_refunded": {"$ne": True},
             # Only count if eko_status indicates success OR it's an approved manual transaction
@@ -3742,7 +3742,7 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         gift_request = await db.gift_voucher_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
-            "status": {"$in": ["completed", "success", "approved", "delivered", "COMPLETED", "SUCCESS", "APPROVED", "DELIVERED"]}
+            "status": {"$in": ["completed", "success", "approved", "delivered", "paid", "COMPLETED", "SUCCESS", "APPROVED", "DELIVERED", "PAID", "Paid"]}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
         # Find the most recent BBPS-category service from all collections
@@ -3813,14 +3813,14 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         bank_request = await db.bank_transfer_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
-            "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]}
+            "status": {"$in": ["completed", "success", "approved", "paid", "COMPLETED", "SUCCESS", "APPROVED", "PAID", "Paid"]}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
         # Also check old bank withdrawal requests
         old_bank_request = await db.bank_withdrawal_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
-            "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]}
+            "status": {"$in": ["completed", "success", "approved", "paid", "COMPLETED", "SUCCESS", "APPROVED", "PAID", "Paid"]}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
         # Find most recent bank service

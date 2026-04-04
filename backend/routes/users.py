@@ -648,27 +648,35 @@ async def get_user_redeemed_stats(uid: str):
         raise HTTPException(status_code=404, detail="User not found")
     
     # Use standardized PRC aggregation field for all collections
+    # Valid statuses for "Used" calculation (excludes failed/refunded/cancelled)
+    valid_statuses = [
+        "completed", "COMPLETED", "Completed", "success", "SUCCESS", "Success",
+        "approved", "APPROVED", "Approved", "paid", "PAID", "Paid",
+        "pending", "PENDING", "Pending", "processing", "PROCESSING", "Processing",
+        "delivered", "DELIVERED", "Delivered"
+    ]
+    
     # Get bill payment totals
     bp_total = await db.bill_payment_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "success"]}}},
+        {"$match": {"user_id": uid, "status": {"$in": valid_statuses}}},
         {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
     ]).to_list(1)
     
     # Get gift voucher totals
     gv_total = await db.gift_voucher_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "success"]}}},
+        {"$match": {"user_id": uid, "status": {"$in": valid_statuses}}},
         {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
     ]).to_list(1)
     
     # Get marketplace order totals
     orders_total = await db.orders.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered"]}}},
+        {"$match": {"user_id": uid, "status": {"$in": valid_statuses}}},
         {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
     ]).to_list(1)
     
     # Get bank withdrawal totals
     bank_total = await db.redeem_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "success"]}}},
+        {"$match": {"user_id": uid, "status": {"$in": valid_statuses}}},
         {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
     ]).to_list(1)
     

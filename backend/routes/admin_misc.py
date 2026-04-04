@@ -830,9 +830,9 @@ async def check_user_cooldown(phone_or_uid: str):
     }, {"_id": 0}).sort("created_at", -1).to_list(10)
     
     # Check which requests would actually trigger cooldown (only completed/success)
-    blocking_bbps = [r for r in redeem_requests if r.get("status", "").lower() in ["completed", "success", "approved"]]
-    blocking_gift = [r for r in gift_requests if r.get("status", "").lower() in ["completed", "success", "approved", "delivered"]]
-    blocking_bank = [r for r in bank_requests if r.get("status", "").lower() in ["completed", "success", "approved"]]
+    blocking_bbps = [r for r in redeem_requests if r.get("status", "").lower() in ["completed", "success", "approved", "paid"]]
+    blocking_gift = [r for r in gift_requests if r.get("status", "").lower() in ["completed", "success", "approved", "delivered", "paid"]]
+    blocking_bank = [r for r in bank_requests if r.get("status", "").lower() in ["completed", "success", "approved", "paid"]]
     
     return {
         "success": True,
