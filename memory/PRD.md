@@ -1,99 +1,73 @@
 # PARAS REWARD - Product Requirements Document
 
-## LAST UPDATED - 4 April 2026
+## LAST UPDATED - 5 April 2026
+
+## COMPLETED: Transaction Record Audit & Admin Management (P0) - 5 April 2026
+
+### Deep Investigation Results
+Traced ALL `prc_balance` modifications across 25+ locations in 15+ files. Found 4 missing transaction records:
+
+| Entry Type | Issue | Fix |
+|---|---|---|
+| Daily Streak First Login | 5 PRC awarded, NO transaction | Added `transactions.insert_one()` |
+| EKO Callback DMT Refund | PRC refunded, NO transaction | Added `transactions.insert_one()` with type=dmt_refund |
+| Gift Subscription | 600 PRC deducted, only embedded array | Added `transactions.insert_one()` with type=gift_subscription |
+| Fix Negative Balance | Balance reset to 0, only audit_log | Added `transactions.insert_one()` with type=admin_adjustment |
+
+### PRC Statement (Wallet) — Missing Source Fixed
+- **Before**: Read from 3 collections (prc_ledger, transactions, ledger)
+- **After**: Reads from 4 collections (+prc_transactions for auto-burn & admin credits)
+- All 4 sources now filter `deleted: {$ne: True}` for soft-delete support
+- Added 7 new type mappings: daily_streak, achievement, admin_refund, order_refund, gift_subscription, subscription_refund, dmt_refund
+
+### Admin Transaction Management API (NEW)
+- `GET /api/admin/transactions/{user_id}` — List all transactions across 4 collections with pagination & type filter
+- `PUT /api/admin/transactions/{txn_id}` — Edit amount/description/type with audit log + edit_history
+- `DELETE /api/admin/transactions/{txn_id}` — Soft-delete (marks deleted=true, preserves in DB)
+- `POST /api/admin/transactions/{txn_id}/refund` — Refund debit transactions, validates not-already-refunded
+- `POST /api/admin/transactions/{txn_id}/restore` — Restore soft-deleted transactions
+
+### Files Created/Modified
+- NEW: `routes/admin_transactions.py` — Full CRUD + Refund + Restore
+- Modified: `routes/prc_statement.py` — 4th source (prc_transactions), soft-delete filter, 7 new TYPE_MAP entries
+- Modified: `routes/eko_callback.py` — DMT refund transaction record
+- Modified: `routes/gift_subscription.py` — Gift subscription transaction record
+- Modified: `server.py` — First login bonus transaction, negative balance fix transaction, router registration
 
 ## COMPLETED: Core Formula System Audit & Refactor (P0) - 4 April 2026
 
 ### 1. Subscription Active/Inactive — Consolidated
-- `is_subscription_active()` now single source of truth in `utils/helpers.py`
-- `burning.py` imports from helpers.py (removed duplicate 50+ line function)
-- Rule order: Explorer/free check FIRST → status check → expiry check → paid plan + no expiry → expired flag
-- Ensures data inconsistencies (explorer + status=active) are handled correctly
+- Single source of truth in `utils/helpers.py`
+- `burning.py` imports from helpers.py (removed 50+ line duplicate)
+- Rule: Explorer check FIRST → status → expiry → paid plan + no expiry → expired flag
 
 ### 2. Mining Formula — Fixed & Synchronized
-- **BASE_MINING = 1000 PRC/day** (user confirmed)
-- Fixed `growth_economy.py` DEFAULT_BASE_MINING from 500 → 1000
-- Added `DEFAULT_BASE_MINING_THRESHOLD = 250` to growth_economy.py (was missing)
-- Now both `mining.py` and `growth_economy.py` use same logic: base=1000 if network<250, else 0
-- Fixed undefined variable bug in `/mining/rate-breakdown` endpoint
-- DB economy_settings updated to base_mining=1000
+- BASE_MINING = 1000 PRC/day (user confirmed)
+- Fixed growth_economy.py DEFAULT_BASE_MINING 500→1000
+- Added DEFAULT_BASE_MINING_THRESHOLD=250 to growth_economy.py
+- DB economy_settings updated
 
 ### 3. Redeem Formula — Critical Fix
-- **OLD (buggy)**: `total_earned = current_balance` → burned users get decreasing limits daily
-- **NEW (correct)**: `total_earned = total_mined - total_redeemed`
-- Reconciliation: `total_mined = max(total_mined_prc, total_mined, current_balance + total_redeemed)`
-  - Handles users with missing/inaccurate total_mined fields
-  - Backward compatible: for users without tracking, ≈ current_balance
-  - Going forward: actual total_mined grows via mining collect
-- Removed ~140 lines of dead/unreachable code (old plan-based formula)
-- `available = max(0, ...)` prevents negative limits
-- Added `total_mined` field to redeem-limit API response
+- OLD: `total_earned = current_balance` → negative drift from auto-burn
+- NEW: `total_earned = total_mined - total_redeemed` with reconciliation fallback
+- Removed 140 lines dead code
+- `max(0)` prevents negative limits
 
 ### 4. Network Formula — Verified Clean
-- 3-Tier Cap: min(6000, 800 + 16×D + 5×L1) — consistent across mining.py and growth_economy.py
-- PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14) — consistent
-- No hardcoded overrides found
-
-### 5. PRC Dynamic — Verified Clean
-- 5-factor calculation in `prc_economy.py` (supply, demand, redeem pressure, time, manual override)
-- Rate stored in `system_settings` collection, cached 5 minutes
-- Fallback: DB app_settings → default 10 PRC = ₹1
-- No hardcoded rate overrides found
+### 5. PRC Dynamic — Verified Clean (5-factor in prc_economy.py)
 
 ### 6. Mining Collect — Dual Field Fix
-- `mining.py` collect now increments BOTH `total_mined_prc` AND `total_mined`
-- Ensures redeem limit formula has accurate data going forward
-
-### Files Modified
-- `routes/burning.py` — removed local is_subscription_active, import from helpers.py
-- `utils/helpers.py` — added explorer/free check as Rule 1
-- `routes/mining.py` — dual field increment, fixed rate-breakdown bug
-- `routes/growth_economy.py` — BASE_MINING=1000, added THRESHOLD=250
-- `server.py` — calculate_user_redeem_limit rewritten with total_mined formula, removed dead code
-
-## COMPLETED: Bulletproof Active/Inactive Detection + Redeem Limit Fix - 4 April 2026
-
-### Burning System — Bulletproof Active Detection
-**Problem:** Elite users with missing `subscription_status`/`subscription_expiry` fields were treated as inactive → burned daily → balance dropping → redeem limit going negative daily
-**Fix:** Now centralized in `utils/helpers.py`
-
-### Mining SYNC FIX — check_subscription_expiry in mining.py
-- If user is "explorer" but has active `subscription_payments` record → AUTO-RESTORE to elite
-
-### Redeem Limit Formula
-```
-total_mined     = max(total_mined_prc, total_mined, current_balance + total_redeemed)
-total_earned    = max(0, total_mined - total_redeemed)
-redeemable      = total_earned × unlock%
-available       = max(0, redeemable - total_redeemed)
-effective       = min(available, current_balance)
-```
-
-## COMPLETED: Subscription Activation Desync Bug Fix (P0) - 4 April 2026
-- Cache invalidation after subscription activation
-- SYNC FIX checks both vip_payments AND subscription_payments
-- `subscription_expired: False` set during activation
-
-## COMPLETED: Redeem Limit Status Filter Bug Fix (P0) - 4 April 2026  
-- 15+ locations across 9 files fixed with consistent valid statuses
+- Now increments both `total_mined_prc` AND `total_mined`
 
 ## Earlier Completed Work (Summary)
-- Production 520 Error Fix, Single Leg Tree + Mining, Growth Network UI (29 Mar)
-- Economy Rules, Razorpay + PRC Pricing, Login Bug Fix (29 Mar)
-- RewardLoader Spinners, Registration Error Handling, 3-Tier Network Cap (29 Mar)
-- PRC Collect Balance UI Bug, Smart AI Chatbot, Auto-Burning System (30 Mar)
-- Admin Redeem Limits, Chatbot Earning Projections (30 Mar)
-- Daily Mining Base Rate Change, Speed Display Rebranding (31 Mar)
-- Admin Auto-Burn, Invoice Display, Auto-Burn Cron Job (31 Mar)
-- Popcorn Icon, Subscription Expiry Bug Fix, PRC Economy Stats (31 Mar - 1 Apr)
-- PRC Audit, Holiday Calendar Fix, Admin Login-As-User Fix (1 Apr)
-- Login "Account Not Found" Fix, PRC Sub Bypasses Redeem (2 Apr)
-- Redeem Limit Formula, PRC Rate Inconsistency Fix (2-3 Apr)
-- Admin PRC Actions, Subscription Management, Code Quality & Security (3 Apr)
+- Redeem Limit Status Filter Fix (15+ files, 9 locations)
+- Subscription Activation Desync Bug Fix
+- Bulletproof Active/Inactive Detection + Wrongful Burning Fix
+- Production fixes, Growth Network, Mining, Economy, Admin features (29 Mar - 3 Apr)
 
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
-- P2: server.py refactoring (45k+ lines)
-- P2: 218 React hook dependency warnings fix
+- P2: server.py refactoring (45k+ lines monolith)
+- P2: 218 React hook dependency warnings
 - P2: Split large frontend components
 - P3: MongoDB → PostgreSQL migration
