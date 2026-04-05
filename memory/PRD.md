@@ -2,38 +2,46 @@
 
 ## LAST UPDATED - 4 April 2026
 
-## COMPLETED: Subscription Activation Desync Bug Fix (P0 Critical) - 4 April 2026
-### Production Bug: User pays PRC for Elite → sees "Explorer" on login
-**Root Cause 1 — Cache not invalidated:**
-- `subscription_pay_with_prc` and `admin_activate_prc_subscription` did NOT clear user cache after activation
-- User continued seeing stale cached "explorer" data for up to 2 minutes
-- FIX: Added `cache.delete(f"user_data:{uid}")` + `cache.delete(f"user:dashboard:{uid}")` after activation
+## COMPLETED: Bulletproof Active/Inactive Detection + Redeem Limit Fix - 4 April 2026
 
-**Root Cause 2 — SYNC FIX only checked vip_payments:**
-- `get_user_data` (line ~8096) has a SYNC FIX that auto-restores subscription if user is "explorer" but has valid payment
-- This ONLY checked `vip_payments` collection (Razorpay/INR payments)
-- PRC subscriptions are stored in `subscription_payments` — never checked!
-- FIX: Added `subscription_payments` check with `payment_method: "prc"` in SYNC FIX
+### Burning System — Bulletproof Active Detection
+**Problem:** Elite users with missing `subscription_status`/`subscription_expiry` fields were treated as inactive → burned daily → balance dropping → redeem limit going negative daily
+**Fix — `is_subscription_active()` in burning.py:**
+1. `subscription_plan = explorer/free` → NOT active (burn)
+2. `subscription_status = "active"` → ACTIVE (no burn)
+3. Any expiry date in future → ACTIVE (no burn)
+4. **NEW: Paid plan (elite/vip/growth) + NO expiry data → ASSUME ACTIVE** (safe default, missing data ≠ expired)
+5. Paid plan + expiry in past + subscription_expired=True → NOT active (burn)
 
-**Root Cause 3 — subscription_expired flag not cleared:**
-- When previous subscription expired, `subscription_expired: True` was set on user document
-- New subscription activation did NOT reset this to False
-- Some code paths checked this flag and treated user as expired
-- FIX: Added `subscription_expired: False` to both activation functions
+### Mining SYNC FIX — check_subscription_expiry in mining.py
+- If user is "explorer" but has active `subscription_payments` record → AUTO-RESTORE to elite
+- Sets subscription_plan, subscription_status, subscription_expired, membership_type
+- Invalidates cache after restoration
 
-### Files Fixed:
-- `server.py` — `subscription_pay_with_prc`: cache invalidation + subscription_expired: False
-- `server.py` — `get_user_data` SYNC FIX: subscription_payments check added
-- `routes/admin_misc.py` — `admin_activate_prc_subscription`: subscription_expired: False
+### Redeem Limit Formula
+```
+total_earned  = current_balance
+redeemable    = total_earned × unlock%
+available     = max(0, redeemable - total_redeemed)   ← NEVER negative
+effective     = min(available, current_balance)
+```
+- Available capped at 0 — users see 0 instead of -45000
+- Active users don't get burned → balance stable → limit stable
+- Users who've over-redeemed → available = 0 until mining recovers
 
-## COMPLETED: Redeem Limit Status Filter Bug Fix (P0 Critical) - 4 April 2026
-### Phase 1 (Core Fix)
-- `server.py` `get_user_all_time_redeemed`: Added `pending`, removed `max(txn_total, total_redeemed)`, orders $nin→$in
-- `admin_user360.py`: Uses centralized function via `set_redeemed_fn`
+### Files Modified
+- `routes/burning.py` — `is_subscription_active()` bulletproof
+- `routes/mining.py` — `check_subscription_expiry()` with subscription_payments SYNC FIX
+- `server.py` — `calculate_user_redeem_limit()` max(0) cap
 
-### Phase 2 (Comprehensive — ALL files)
+## COMPLETED: Subscription Activation Desync Bug Fix (P0) - 4 April 2026
+- Cache invalidation after subscription activation
+- SYNC FIX checks both vip_payments AND subscription_payments
+- `subscription_expired: False` set during activation
+
+## COMPLETED: Redeem Limit Status Filter Bug Fix (P0) - 4 April 2026  
 - 15+ locations across 9 files fixed with consistent valid statuses
-- Two standardized categories: VALID_REDEEMED (includes pending) + COOLDOWN_ONLY (excludes pending)
+- pending/PENDING/Pending added, max() logic removed, orders $nin→$in
 
 ## Earlier Completed Work (Summary)
 - Production 520 Error Fix, Single Leg Tree + Mining, Growth Network UI (29 Mar)
@@ -49,15 +57,8 @@
 - Redeem Limit Formula, PRC Rate Inconsistency Fix (2-3 Apr)
 - Admin PRC Actions, Subscription Management, Code Quality & Security (3 Apr)
 
-## Active Architecture
-- Mining: (500 + N×prc_per_user) × boost (Cash=1.0, PRC=0.70)
-- Network Cap: min(6000, 800 + 16×D + 5×L1)
-- Burn: Cash=1%, PRC=5% on ALL services
-- PRC rate: Dynamic `/api/prc-economy/current-rate`
-
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P2: server.py refactoring (45k+ lines)
 - P2: 218 React hook dependency warnings fix
-- P2: Large frontend component files split
 - P3: MongoDB → PostgreSQL migration
