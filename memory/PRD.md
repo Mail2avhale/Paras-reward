@@ -2,68 +2,62 @@
 
 ## LAST UPDATED - 5 April 2026
 
-## COMPLETED: Transaction Record Audit & Admin Management (P0) - 5 April 2026
+## COMPLETED: Admin Transaction Manager UI + Debit/Credit Fix - 5 April 2026
 
-### Deep Investigation Results
-Traced ALL `prc_balance` modifications across 25+ locations in 15+ files. Found 4 missing transaction records:
+### Admin Transaction Manager Frontend UI (NEW)
+- **Route**: `/admin/transaction-manager`
+- **Sidebar**: Added under main menu after "Failed Transactions"
+- **Features**:
+  - Search by User UID with type filter dropdown
+  - Transaction table: Date, Type (color-coded badge), Description, Amount (green/red), Source collection, Status, Actions
+  - View detail modal: Shows all fields + edit history
+  - Edit modal: Change description/amount with required reason
+  - Delete: Soft-delete with confirmation (shows "Deleted" status, can be restored)
+  - Refund: Only for debit (negative) non-refunded transactions
+  - Restore: Undo soft-deleted transactions
+  - Pagination with page navigation
 
-| Entry Type | Issue | Fix |
-|---|---|---|
-| Daily Streak First Login | 5 PRC awarded, NO transaction | Added `transactions.insert_one()` |
-| EKO Callback DMT Refund | PRC refunded, NO transaction | Added `transactions.insert_one()` with type=dmt_refund |
-| Gift Subscription | 600 PRC deducted, only embedded array | Added `transactions.insert_one()` with type=gift_subscription |
-| Fix Negative Balance | Balance reset to 0, only audit_log | Added `transactions.insert_one()` with type=admin_adjustment |
-
-### PRC Statement (Wallet) — Missing Source Fixed
-- **Before**: Read from 3 collections (prc_ledger, transactions, ledger)
-- **After**: Reads from 4 collections (+prc_transactions for auto-burn & admin credits)
-- All 4 sources now filter `deleted: {$ne: True}` for soft-delete support
-- Added 7 new type mappings: daily_streak, achievement, admin_refund, order_refund, gift_subscription, subscription_refund, dmt_refund
-
-### Admin Transaction Management API (NEW)
-- `GET /api/admin/transactions/{user_id}` — List all transactions across 4 collections with pagination & type filter
-- `PUT /api/admin/transactions/{txn_id}` — Edit amount/description/type with audit log + edit_history
-- `DELETE /api/admin/transactions/{txn_id}` — Soft-delete (marks deleted=true, preserves in DB)
-- `POST /api/admin/transactions/{txn_id}/refund` — Refund debit transactions, validates not-already-refunded
-- `POST /api/admin/transactions/{txn_id}/restore` — Restore soft-deleted transactions
+### Debit/Credit Classification Fix (Critical Bug)
+- **Bug**: `is_credit = entry_type == "credit" or amount > 0` — `or` operator caused entries with `entry_type="debit"` but positive `amount` to show as CREDIT
+- **Fix**: New `determine_credit()` function: entry_type field takes priority, falls back to amount sign
+- **Verified**: 27/27 burn entries → DEBIT, 22/22 reward entries → CREDIT, 1/1 subscription → DEBIT
 
 ### Files Created/Modified
-- NEW: `routes/admin_transactions.py` — Full CRUD + Refund + Restore
-- Modified: `routes/prc_statement.py` — 4th source (prc_transactions), soft-delete filter, 7 new TYPE_MAP entries
-- Modified: `routes/eko_callback.py` — DMT refund transaction record
-- Modified: `routes/gift_subscription.py` — Gift subscription transaction record
-- Modified: `server.py` — First login bonus transaction, negative balance fix transaction, router registration
+- NEW: `/app/frontend/src/pages/AdminTransactionManager.js`
+- Modified: `/app/frontend/src/App.js` — Route + lazy import
+- Modified: `/app/frontend/src/components/layouts/AdminLayout.js` — Sidebar menu + permission
+- Modified: `/app/backend/routes/prc_statement.py` — `determine_credit()` function, all 4 sources updated
 
-## COMPLETED: Core Formula System Audit & Refactor (P0) - 4 April 2026
+## COMPLETED: Transaction Record Audit & Admin Management - 5 April 2026
 
-### 1. Subscription Active/Inactive — Consolidated
-- Single source of truth in `utils/helpers.py`
-- `burning.py` imports from helpers.py (removed 50+ line duplicate)
-- Rule: Explorer check FIRST → status → expiry → paid plan + no expiry → expired flag
+### Deep Investigation Results
+4 missing transaction records found and fixed:
+- Daily Streak First Login (5 PRC, no record)
+- EKO Callback DMT Refund (PRC refunded, no record)
+- Gift Subscription (600 PRC deducted, embedded array only)
+- Fix Negative Balance (balance reset, audit_log only)
 
-### 2. Mining Formula — Fixed & Synchronized
-- BASE_MINING = 1000 PRC/day (user confirmed)
-- Fixed growth_economy.py DEFAULT_BASE_MINING 500→1000
-- Added DEFAULT_BASE_MINING_THRESHOLD=250 to growth_economy.py
-- DB economy_settings updated
+### PRC Statement — 4th Source Added
+- Added `prc_transactions` collection (auto-burn, admin credits now visible)
+- Soft-delete filter on all 4 sources
+- 7 new TYPE_MAP entries
 
-### 3. Redeem Formula — Critical Fix
-- OLD: `total_earned = current_balance` → negative drift from auto-burn
-- NEW: `total_earned = total_mined - total_redeemed` with reconciliation fallback
-- Removed 140 lines dead code
-- `max(0)` prevents negative limits
+### Admin Transaction Management API
+- GET, PUT, DELETE, POST /refund, POST /restore — all with audit logging
 
-### 4. Network Formula — Verified Clean
-### 5. PRC Dynamic — Verified Clean (5-factor in prc_economy.py)
+## COMPLETED: Core Formula System Audit & Refactor - 4 April 2026
+1. Subscription Active/Inactive — Consolidated in helpers.py
+2. Mining Formula — BASE_MINING=1000, threshold=250 synced
+3. Redeem Formula — `total_earned = total_mined - total_redeemed` with reconciliation
+4. Network Formula — Verified clean
+5. PRC Dynamic — Verified clean (5-factor)
+6. Mining Collect — Dual field (total_mined + total_mined_prc)
 
-### 6. Mining Collect — Dual Field Fix
-- Now increments both `total_mined_prc` AND `total_mined`
-
-## Earlier Completed Work (Summary)
-- Redeem Limit Status Filter Fix (15+ files, 9 locations)
+## Earlier Completed Work
+- Redeem Limit Status Filter Fix (15+ files)
 - Subscription Activation Desync Bug Fix
 - Bulletproof Active/Inactive Detection + Wrongful Burning Fix
-- Production fixes, Growth Network, Mining, Economy, Admin features (29 Mar - 3 Apr)
+- All production fixes from 29 Mar - 3 Apr
 
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js
