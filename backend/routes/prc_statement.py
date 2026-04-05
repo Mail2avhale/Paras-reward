@@ -241,3 +241,165 @@ async def get_prc_statement(
     except Exception as e:
         logging.error(f"[PRC-STATEMENT] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/usage-history/{uid}")
+async def get_prc_usage_history(uid: str):
+    """
+    Date-wise PRC usage (debit) history with narration + monthly graph data.
+    Returns ALL debit transactions from joining date, grouped by month.
+    """
+    try:
+        # Get user join date
+        user = await db.users.find_one({"uid": uid}, {"_id": 0, "created_at": 1, "registered_at": 1, "createdAt": 1, "prc_balance": 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        join_date = user.get("created_at") or user.get("registered_at") or user.get("createdAt")
+        if isinstance(join_date, str):
+            try:
+                join_date = datetime.fromisoformat(join_date.replace("Z", "+00:00"))
+            except:
+                join_date = datetime.now(timezone.utc)
+        
+        # Collect ALL debit entries from all 4 collections
+        all_debits = []
+        seen_ids = set()
+        
+        # Helper to process documents
+        def process_doc(doc, source):
+            entry_type = doc.get("entry_type")
+            amount = doc.get("amount", 0)
+            
+            # Determine if debit
+            if entry_type:
+                is_debit = entry_type == "debit"
+            else:
+                is_debit = amount < 0
+            
+            if not is_debit:
+                return None
+            
+            txn_id = doc.get("transaction_id") or doc.get("txn_id") or ""
+            if txn_id and txn_id in seen_ids:
+                return None
+            if txn_id:
+                seen_ids.add(txn_id)
+            
+            dt_raw = doc.get("created_at") or doc.get("timestamp") or doc.get("date")
+            if not dt_raw:
+                return None
+            
+            if isinstance(dt_raw, str):
+                try:
+                    dt = datetime.fromisoformat(dt_raw.replace("Z", "+00:00"))
+                except:
+                    return None
+            elif isinstance(dt_raw, datetime):
+                dt = dt_raw
+            else:
+                return None
+            
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            
+            abs_amount = abs(amount) if amount else abs(doc.get("debit", 0) or doc.get("prc_amount", 0))
+            if abs_amount == 0:
+                return None
+            
+            raw_type = (doc.get("type") or doc.get("transaction_type") or "").lower()
+            display_type = classify_type(raw_type)
+            narration = doc.get("description") or doc.get("narration") or build_narration("", display_type)
+            
+            return {
+                "date": dt.isoformat(),
+                "date_ts": dt.timestamp(),
+                "month_key": dt.strftime("%Y-%m"),
+                "day_key": dt.strftime("%Y-%m-%d"),
+                "type": display_type,
+                "raw_type": raw_type,
+                "amount": round(abs_amount, 2),
+                "narration": narration,
+                "txn_id": txn_id,
+                "source": source
+            }
+        
+        # Query all 4 collections
+        for coll_name in ["prc_ledger", "transactions", "prc_transactions", "ledger"]:
+            docs = await db[coll_name].find(
+                {"user_id": uid, "deleted": {"$ne": True}}, {"_id": 0}
+            ).to_list(10000)
+            for doc in docs:
+                entry = process_doc(doc, coll_name)
+                if entry:
+                    all_debits.append(entry)
+        
+        # Sort by date (newest first)
+        all_debits.sort(key=lambda x: x["date_ts"], reverse=True)
+        
+        # Monthly aggregation for graph
+        monthly_data = {}
+        type_totals = {}
+        total_used = 0
+        
+        for d in all_debits:
+            mk = d["month_key"]
+            if mk not in monthly_data:
+                monthly_data[mk] = {"month": mk, "total": 0, "count": 0, "types": {}}
+            monthly_data[mk]["total"] += d["amount"]
+            monthly_data[mk]["count"] += 1
+            
+            t = d["type"]
+            monthly_data[mk]["types"][t] = monthly_data[mk]["types"].get(t, 0) + d["amount"]
+            type_totals[t] = type_totals.get(t, 0) + d["amount"]
+            total_used += d["amount"]
+        
+        # Sort monthly data chronologically
+        graph_data = sorted(
+            [{"month": k, "total": round(v["total"], 2), "count": v["count"], "types": {tk: round(tv, 2) for tk, tv in v["types"].items()}}
+             for k, v in monthly_data.items()],
+            key=lambda x: x["month"]
+        )
+        
+        # Daily grouping for detailed view
+        daily_groups = {}
+        for d in all_debits:
+            dk = d["day_key"]
+            if dk not in daily_groups:
+                daily_groups[dk] = {"date": dk, "total": 0, "entries": []}
+            daily_groups[dk]["total"] += d["amount"]
+            daily_groups[dk]["entries"].append({
+                "time": d["date"],
+                "amount": d["amount"],
+                "type": d["type"],
+                "narration": d["narration"],
+                "txn_id": d["txn_id"]
+            })
+        
+        daily_list = sorted(
+            [{"date": k, "total": round(v["total"], 2), "entries": v["entries"]}
+             for k, v in daily_groups.items()],
+            key=lambda x: x["date"], reverse=True
+        )
+        
+        return {
+            "success": True,
+            "user_id": uid,
+            "join_date": join_date.isoformat() if join_date else None,
+            "current_balance": round(float(user.get("prc_balance", 0)), 2),
+            "summary": {
+                "total_used": round(total_used, 2),
+                "total_transactions": len(all_debits),
+                "by_type": {k: round(v, 2) for k, v in sorted(type_totals.items(), key=lambda x: -x[1])},
+                "months_active": len(graph_data)
+            },
+            "graph_data": graph_data,
+            "daily_breakdown": daily_list
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[PRC USAGE HISTORY] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
