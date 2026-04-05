@@ -11,6 +11,114 @@ import secrets
 import string
 
 
+# =============== PRC DYNAMIC RATE — SINGLE SOURCE OF TRUTH ===============
+# ALL modules MUST use this function instead of local rate lookups.
+# Priority: Manual Override → system_settings cache → Recalculate → Default 10
+
+PRC_INR_RATE_DEFAULT = 10  # 10 PRC = ₹1 (base reference)
+_rate_cache = {}
+_RATE_CACHE_TTL = 300  # 5 minutes
+
+async def get_prc_rate(database) -> int:
+    """
+    SINGLE SOURCE OF TRUTH for PRC dynamic rate.
+    
+    Priority:
+    1. Manual override (app_settings.prc_rate_manual_override) — if enabled and not expired
+    2. Cached dynamic rate (system_settings.prc_dynamic_rate) — if < 5 min old
+    3. Fresh calculation via prc_economy.calculate_dynamic_prc_rate — saves result to DB
+    4. Default: 10
+    
+    Returns: int (e.g., 11 means 11 PRC = 1 INR)
+    """
+    import logging
+    
+    # Priority 1: Manual override
+    try:
+        override = await database.app_settings.find_one({"key": "prc_rate_manual_override"})
+        if override and override.get("enabled"):
+            override_rate = override.get("rate")
+            expires_at = override.get("expires_at")
+            if expires_at:
+                try:
+                    expiry = datetime.fromisoformat(str(expires_at).replace('Z', '+00:00'))
+                    if expiry > datetime.now(timezone.utc):
+                        return int(override_rate)
+                except Exception:
+                    pass
+            elif override_rate and override_rate > 0:
+                return int(override_rate)
+    except Exception as e:
+        logging.warning(f"[PRC RATE] Override check failed: {e}")
+    
+    # Priority 2: Cached DB rate (shared across all workers)
+    try:
+        saved = await database.system_settings.find_one(
+            {"type": "prc_dynamic_rate"},
+            {"_id": 0, "final_rate": 1, "updated_at": 1, "calculated_at": 1}
+        )
+        if saved and saved.get("final_rate"):
+            updated = saved.get("updated_at") or saved.get("calculated_at")
+            if updated:
+                if isinstance(updated, str):
+                    updated = datetime.fromisoformat(updated.replace('Z', '+00:00'))
+                if updated.tzinfo is None:
+                    updated = updated.replace(tzinfo=timezone.utc)
+                age = (datetime.now(timezone.utc) - updated).total_seconds()
+                if age < _RATE_CACHE_TTL:
+                    return int(saved["final_rate"])
+    except Exception as e:
+        logging.warning(f"[PRC RATE] DB cache read failed: {e}")
+    
+    # Priority 3: Recalculate fresh
+    try:
+        from routes.prc_economy import calculate_dynamic_prc_rate
+        rate_data = await calculate_dynamic_prc_rate(database)
+        if rate_data:
+            if isinstance(rate_data, dict):
+                return int(rate_data.get("final_rate", PRC_INR_RATE_DEFAULT))
+            return int(rate_data)
+    except Exception as e:
+        logging.warning(f"[PRC RATE] Economy calculation failed: {e}")
+    
+    # Priority 4: Any stored rate (even stale)
+    try:
+        saved = await database.system_settings.find_one(
+            {"type": "prc_dynamic_rate"}, {"_id": 0, "final_rate": 1}
+        )
+        if saved and saved.get("final_rate"):
+            return int(saved["final_rate"])
+    except Exception:
+        pass
+    
+    return PRC_INR_RATE_DEFAULT
+
+
+def get_prc_rate_sync(database_sync=None) -> int:
+    """
+    Synchronous version for non-async contexts.
+    Reads from system_settings only (no recalculation).
+    """
+    import logging
+    try:
+        if database_sync is None:
+            from pymongo import MongoClient
+            import os
+            client = MongoClient(os.environ.get("MONGO_URL"))
+            database_sync = client[os.environ.get("DB_NAME", "test_database")]
+        
+        stored = database_sync.system_settings.find_one(
+            {"type": "prc_dynamic_rate"}, {"_id": 0, "final_rate": 1}
+        )
+        if stored and stored.get("final_rate"):
+            return int(stored["final_rate"])
+    except Exception as e:
+        logging.error(f"[PRC RATE SYNC] Failed: {e}")
+    
+    return PRC_INR_RATE_DEFAULT
+
+
+
 def generate_referral_code(length: int = 8) -> str:
     """Generate a random referral code"""
     return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(length))

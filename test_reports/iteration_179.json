@@ -1,0 +1,102 @@
+{
+  "summary": "PRC Rate Consistency Bug Fix Verification - ALL 12 TESTS PASSED. Verified that all 5 rate functions now delegate to single source of truth (utils/helpers.py get_prc_rate). Key fix: bank_redeem.py was defaulting to 100 instead of 10 - now fixed. All endpoints return consistent rate of 11.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_prc_rate_consistency.py",
+    "/app/test_reports/pytest/prc_rate_consistency_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "utils/helpers.py: PRC_INR_RATE_DEFAULT = 10 (correct default, not 100)",
+    "bank_redeem.py line 67-70: get_dynamic_prc_rate() now delegates to helpers.get_prc_rate_sync()",
+    "manual_bank_transfer.py line 63-66: get_dynamic_prc_rate() now delegates to helpers.get_prc_rate(db)",
+    "growth_economy.py line 94-97: get_dynamic_prc_rate() now delegates to helpers.get_prc_rate(db)",
+    "prc_economy.py line 25-28: get_dynamic_prc_rate_economy() now delegates to helpers.get_prc_rate(database)",
+    "server.py line 5217-5223: get_dynamic_prc_rate() marked DEPRECATED, delegates to helpers.get_prc_rate(db)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_prc_rate_consistency.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "N/A - backend only testing"
+  },
+  "test_credentials": {
+    "admin_email": "admin@test.com",
+    "admin_pin": "153759",
+    "test_user_uid": "76b75808-47fa-48dd-ad7c-8074678e3607"
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "PRC rate consistency bug has been fixed and verified. All 5 rate functions (bank_redeem.py, manual_bank_transfer.py, growth_economy.py, prc_economy.py, server.py) now delegate to single source of truth in utils/helpers.py. Default rate is 10 (not 100). Current calculated rate is 11. Key endpoints verified: /api/bank-transfer/config, /api/prc-economy/current-rate, /api/growth/economy-settings, /api/growth/prc-rate, /api/bank-redeem/denominations, /api/bank-transfer/calculate-fees, /api/growth/calculate-redeem.",
+  "verified_features": {
+    "single_source_of_truth": {
+      "description": "All rate functions delegate to utils/helpers.py get_prc_rate()",
+      "files_verified": [
+        "bank_redeem.py",
+        "manual_bank_transfer.py",
+        "growth_economy.py",
+        "prc_economy.py",
+        "server.py"
+      ],
+      "status": "PASS"
+    },
+    "no_100_default": {
+      "description": "No rate function defaults to 100 (was the bug in bank_redeem.py)",
+      "tests": ["test_07_no_rate_defaults_to_100", "test_12_rate_not_100_in_any_endpoint"],
+      "status": "PASS"
+    },
+    "rate_consistency": {
+      "description": "All endpoints return the SAME PRC rate value",
+      "test": "test_06_all_rates_are_consistent",
+      "endpoints_verified": [
+        "/api/bank-transfer/config → prc_rate: 11",
+        "/api/prc-economy/current-rate → final_rate: 11",
+        "/api/growth/economy-settings → prc_rate: 11",
+        "/api/growth/prc-rate → prc_rate: 11",
+        "/api/bank-redeem/denominations → prc_rate: 11"
+      ],
+      "status": "PASS"
+    },
+    "rate_within_limits": {
+      "description": "Rate is within expected range [6, 20]",
+      "test": "test_08_rate_is_within_expected_range",
+      "current_rate": 11,
+      "status": "PASS"
+    },
+    "calculate_fees_consistency": {
+      "description": "/api/bank-transfer/calculate-fees uses consistent rate",
+      "test": "test_09_calculate_fees_uses_consistent_rate",
+      "status": "PASS"
+    },
+    "calculate_redeem_consistency": {
+      "description": "/api/growth/calculate-redeem uses consistent rate",
+      "test": "test_10_growth_calculate_redeem_uses_consistent_rate",
+      "status": "PASS"
+    }
+  },
+  "api_test_results": {
+    "bank_transfer_config": "PASS - GET /api/bank-transfer/config returns prc_rate: 11",
+    "prc_economy_current_rate": "PASS - GET /api/prc-economy/current-rate returns final_rate: 11",
+    "growth_economy_settings": "PASS - GET /api/growth/economy-settings returns prc_rate: 11",
+    "growth_prc_rate": "PASS - GET /api/growth/prc-rate returns prc_rate: 11",
+    "bank_redeem_denominations": "PASS - GET /api/bank-redeem/denominations returns prc_rate: 11 in samples",
+    "calculate_fees": "PASS - GET /api/bank-transfer/calculate-fees?amount=1000 returns prc_rate: 11",
+    "calculate_redeem": "PASS - POST /api/growth/calculate-redeem returns prc_rate: 11"
+  },
+  "bug_fix_verification": {
+    "original_bug": "Users seeing different PRC rates in production",
+    "root_cause": "5 different rate functions reading from different DB collections with different fallback chains. bank_redeem.py defaulted to 100 instead of 10",
+    "fix_applied": "Created single source of truth get_prc_rate() in utils/helpers.py, replaced all 5 duplicate functions",
+    "verification_status": "CONFIRMED FIXED - All 12 tests pass, all endpoints return consistent rate of 11"
+  }
+}

@@ -92,40 +92,9 @@ class GrowthNetworkStats(BaseModel):
 # ==================== HELPER FUNCTIONS ====================
 
 async def get_dynamic_prc_rate() -> float:
-    """
-    Get dynamic PRC rate - delegates to server.py's single source of truth.
-    Returns: PRC per INR (e.g., 12.0 means 12 PRC = ₹1)
-    """
-    try:
-        # Read from DB (shared across all workers) - same logic as server.py
-        saved_rate = await db.system_settings.find_one(
-            {"type": "prc_dynamic_rate"},
-            {"_id": 0, "final_rate": 1, "updated_at": 1}
-        )
-        if saved_rate and saved_rate.get("final_rate"):
-            updated_at = saved_rate.get("updated_at")
-            if updated_at:
-                if hasattr(updated_at, 'timestamp'):
-                    age = (datetime.now(timezone.utc) - updated_at.replace(tzinfo=timezone.utc if updated_at.tzinfo is None else updated_at.tzinfo)).total_seconds()
-                else:
-                    age = (datetime.now(timezone.utc) - datetime.fromisoformat(str(updated_at).replace('Z', '+00:00'))).total_seconds()
-                if age < 300:
-                    return float(saved_rate["final_rate"])
-        
-        # Recalculate if stale
-        from routes.prc_economy import calculate_dynamic_prc_rate
-        rate_data = await calculate_dynamic_prc_rate(db)
-        if rate_data and isinstance(rate_data, dict):
-            return float(rate_data.get("final_rate", 10))
-        
-        # DB fallback
-        rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
-        if rate_setting and rate_setting.get("value"):
-            return float(rate_setting.get("value"))
-    except Exception as e:
-        logging.error(f"Error getting PRC rate: {e}")
-    
-    return 10.0
+    """Get dynamic PRC rate - delegates to single source of truth."""
+    from utils.helpers import get_prc_rate
+    return float(await get_prc_rate(db))
 
 
 async def get_economy_settings() -> dict:
