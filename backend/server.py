@@ -21231,6 +21231,14 @@ async def admin_bulk_diagnose_all_users(
                             user["prc_balance"] = new_balance
                             user_prc_refunded += prc_amount
                             results["fixes_by_category"]["prc_refund_voucher"] += 1
+                            
+                            await db.transactions.insert_one({
+                                "transaction_id": f"BULK-V-{fv.get('request_id', '')[:8]}",
+                                "user_id": uid, "type": "bulk_refund", "amount": prc_amount,
+                                "description": f"Bulk fix refund (Failed voucher)",
+                                "balance_after": new_balance,
+                                "timestamp": timestamp
+                            })
                         results["issues_fixed"] += 1
                 
                 # ========== 5. FAILED BANK TRANSFERS ==========
@@ -21258,6 +21266,14 @@ async def admin_bulk_diagnose_all_users(
                             user["prc_balance"] = new_balance
                             user_prc_refunded += prc_amount
                             results["fixes_by_category"]["prc_refund_bank"] += 1
+                            
+                            await db.transactions.insert_one({
+                                "transaction_id": f"BULK-B-{fb.get('request_id', '')[:8]}",
+                                "user_id": uid, "type": "bulk_refund", "amount": prc_amount,
+                                "description": f"Bulk fix refund (Failed bank transfer)",
+                                "balance_after": new_balance,
+                                "timestamp": timestamp
+                            })
                         results["issues_fixed"] += 1
                 
                 # ========== 6. PRC BALANCE RESTORATION ==========
@@ -21272,6 +21288,15 @@ async def admin_bulk_diagnose_all_users(
                             user_fixes.append(f"✅ Restored {restore_amount} PRC")
                             user["prc_balance"] = restore_amount
                             results["fixes_by_category"]["balance_restore"] += 1
+                            
+                            await db.transactions.insert_one({
+                                "transaction_id": f"BULK-R-{uid[:8]}",
+                                "user_id": uid, "type": "admin_bulk_restore", "amount": restore_amount,
+                                "description": f"Bulk fix PRC balance restoration",
+                                "balance_before": prc_balance,
+                                "balance_after": restore_amount,
+                                "timestamp": timestamp
+                            })
                         results["issues_fixed"] += 1
                 
                 # ========== 7. LOGIN LOCKOUT ==========
@@ -21625,8 +21650,17 @@ async def admin_diagnose_user(uid: str, auto_fix: bool = True):
                     {"$set": {"prc_refunded": True, "refunded_at": timestamp}}
                 )
                 
+                # Record transaction for PRC statement
+                await db.transactions.insert_one({
+                    "transaction_id": f"DIAG-V-{fv.get('request_id', '')[:8]}",
+                    "user_id": uid, "type": "admin_refund", "amount": prc_amount,
+                    "description": f"Auto-diagnose refund (Failed voucher)",
+                    "balance_before": current_balance, "balance_after": new_balance,
+                    "created_at": timestamp
+                })
+                
                 prc_refunded += prc_amount
-                auto_fixed.append(f"✅ Refunded {prc_amount} PRC for failed voucher")
+                auto_fixed.append(f"Refunded {prc_amount} PRC for failed voucher")
                 user["prc_balance"] = new_balance
     
     # ========== 4. PRC BALANCE ISSUES ==========
@@ -21655,7 +21689,17 @@ async def admin_diagnose_user(uid: str, auto_fix: bool = True):
                 if auto_fix:
                     restore_amount = restore_log.get("before", 0)
                     await db.users.update_one({"uid": uid}, {"$set": {"prc_balance": restore_amount}})
-                    auto_fixed.append(f"✅ Restored {restore_amount} PRC from backup")
+                    
+                    # Record transaction for PRC statement
+                    await db.transactions.insert_one({
+                        "transaction_id": f"DIAG-R-{uid[:8]}",
+                        "user_id": uid, "type": "admin_bulk_restore", "amount": restore_amount - prc_balance,
+                        "description": f"Auto-diagnose PRC balance restoration",
+                        "balance_before": prc_balance, "balance_after": restore_amount,
+                        "created_at": timestamp
+                    })
+                    
+                    auto_fixed.append(f"Restored {restore_amount} PRC from backup")
                     user["prc_balance"] = restore_amount
     
     # ========== 5. LOGIN LOCKOUT ==========
@@ -37871,6 +37915,10 @@ async def daily_checkin(user_id: str):
         # Award 5 PRC for first login
         await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": 5}})
         
+        # Get updated balance for accurate balance_after
+        updated_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
+        new_balance = float(updated_user.get("prc_balance", 0)) if updated_user else 0
+        
         # Record transaction for first login bonus
         await db.transactions.insert_one({
             "transaction_id": str(uuid.uuid4()),
@@ -37879,7 +37927,7 @@ async def daily_checkin(user_id: str):
             "wallet_type": "prc",
             "amount": 5,
             "description": "First login bonus",
-            "balance_after": 0,
+            "balance_after": round(new_balance, 2),
             "created_at": datetime.now(timezone.utc).isoformat()
         })
         
@@ -37933,6 +37981,10 @@ async def daily_checkin(user_id: str):
     # Award PRC
     await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": reward_prc}})
     
+    # Get updated balance for accurate balance_after
+    updated_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
+    streak_new_balance = float(updated_user.get("prc_balance", 0)) if updated_user else 0
+    
     # Create transaction
     await db.transactions.insert_one({
         "transaction_id": str(uuid.uuid4()),
@@ -37941,7 +37993,7 @@ async def daily_checkin(user_id: str):
         "wallet_type": "prc",
         "amount": reward_prc,
         "description": f"Daily login streak: Day {new_streak}",
-        "balance_after": 0,  # Will be updated
+        "balance_after": round(streak_new_balance, 2),
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     

@@ -185,6 +185,11 @@ async def _handle_failed_transaction(client_ref_id: str, callback_data: dict):
             # Record refund transaction
             from datetime import timezone as tz
             import uuid as _uuid
+            
+            # Get updated balance
+            updated_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
+            eko_new_balance = float(updated_user.get("prc_balance", 0)) if updated_user else 0
+            
             await db.transactions.insert_one({
                 "transaction_id": f"EKO-REF-{_uuid.uuid4()}",
                 "user_id": user_id,
@@ -192,6 +197,7 @@ async def _handle_failed_transaction(client_ref_id: str, callback_data: dict):
                 "amount": prc_amount,
                 "description": f"DMT transaction failed - auto refund ({client_ref_id})",
                 "reference_id": client_ref_id,
+                "balance_after": round(eko_new_balance, 2),
                 "created_at": datetime.now(tz.utc).isoformat()
             })
             
