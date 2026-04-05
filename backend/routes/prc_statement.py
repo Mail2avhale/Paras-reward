@@ -296,6 +296,7 @@ async def get_prc_usage_history(uid: str):
         ]
         
         all_entries = []
+        seen_fingerprints = set()  # Dedup: same amount + same minute = single entry
         
         for coll_name, category, extra_match, amt_fields, dt_fields, desc_fields in service_sources:
             try:
@@ -309,7 +310,7 @@ async def get_prc_usage_history(uid: str):
                     for af in amt_fields:
                         val = doc.get(af)
                         if val and float(val) > 0:
-                            amount = float(val)
+                            amount = round(float(val), 2)
                             break
                     if amount <= 0:
                         continue
@@ -324,6 +325,13 @@ async def get_prc_usage_history(uid: str):
                                 break
                     if not dt:
                         continue
+                    
+                    # Deduplication: fingerprint = amount + timestamp (minute precision)
+                    fp = f"{amount}_{dt.strftime('%Y%m%d%H%M')}"
+                    if fp in seen_fingerprints:
+                        logging.debug(f"[USAGE-HISTORY] DEDUP: Skipping {coll_name} → {fp}")
+                        continue
+                    seen_fingerprints.add(fp)
                     
                     # Build narration
                     narration = ""
@@ -341,7 +349,7 @@ async def get_prc_usage_history(uid: str):
                         "month_key": dt.strftime("%Y-%m"),
                         "day_key": dt.strftime("%Y-%m-%d"),
                         "category": category,
-                        "amount": round(amount, 2),
+                        "amount": amount,
                         "narration": narration,
                         "status": doc.get("status", ""),
                         "source": coll_name

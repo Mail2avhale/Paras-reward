@@ -4170,32 +4170,16 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
 
 async def get_user_all_time_redeemed(user_id: str) -> float:
     """
-    Get user's ALL TIME total PRC redeemed/used across ALL services from JOINING DATE.
+    Get user's ALL TIME total PRC redeemed/used across ALL services.
     
-    COMPREHENSIVE CALCULATION includes:
-    1. transactions collection (negative amounts excluding burns)
-    2. Gift Vouchers
-    3. Utility (BBPS, recharges, electricity, etc.)
-    4. PRC Subscription purchases
-    5. Bank Withdrawals / DMT
-    6. All OLD/discontinued services
+    DEDUPLICATION: Same transaction may exist in multiple collections.
+    Each entry is fingerprinted (amount + timestamp rounded to nearest minute)
+    to prevent double-counting.
     
-    Types EXCLUDED: prc_burn, admin_burn, hourly_burn (these are not user redemptions)
-    
-    IMPORTANT: Status checks include BOTH uppercase and lowercase versions
-    as different systems may use different casing (COMPLETED vs completed)
+    Types EXCLUDED: prc_burn, admin_burn, hourly_burn (not user redemptions)
+    Status INCLUDED: completed, success, approved, paid, pending, processing, delivered
     """
-    total_redeemed = 0
     
-    # EXCLUDE these burn types (burns are deflationary, not user spending)
-    burn_types = [
-        "prc_burn", "admin_burn", "hourly_burn", "daily_burn", 
-        "burn", "auto_burn", "burn_overcorrection_fix"
-    ]
-    
-    # All possible VALID statuses for "Used" calculation (both cases for compatibility)
-    # Per user requirement: Only count Completed, Approved, Pending (and equivalent statuses)
-    # EXCLUDED: failed, retry_failed, refunded, rejected, cancelled, error
     success_statuses = [
         "completed", "COMPLETED", "Completed",
         "success", "SUCCESS", "Success",
@@ -4206,241 +4190,87 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         "delivered", "DELIVERED", "Delivered"
     ]
     
-    # ═══════════════════════════════════════════════════════════════════════
-    # SOURCE 1: transactions collection - all negative amounts except burns
-    # This is the PRIMARY source for most recent transactions
-    # ═══════════════════════════════════════════════════════════════════════
-    txn_debits = await db.transactions.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "amount": {"$lt": 0},
-                "type": {"$nin": burn_types}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
-    ]).to_list(1)
+    # Service collections grouped by category
+    # Format: (collection, amount_fields, date_fields, extra_match)
+    service_sources = [
+        # Subscription (PRC purchases only)
+        ("subscription_payments", ["prc_amount", "inr_equivalent", "amount"], ["created_at", "timestamp", "approved_at"], {"payment_method": "prc"}),
+        ("vip_payments", ["prc_amount", "prc_used", "amount"], ["created_at", "timestamp", "approved_at"], {"payment_method": "prc"}),
+        # Bank Redeem / Withdrawals
+        ("bank_transfer_requests", ["total_prc_deducted", "prc_deducted", "total_prc", "prc_amount"], ["created_at", "timestamp"], {}),
+        ("redeem_requests", ["total_prc_deducted", "prc_amount", "total_prc", "amount_inr", "amount"], ["created_at", "timestamp"], {}),
+        ("bank_withdrawal_requests", ["total_prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], {}),
+        ("bank_redeem_requests", ["prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], {}),
+        ("bank_transfers", ["prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], {}),
+        ("dmt_transactions", ["prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], {}),
+        ("dmt_logs", ["prc_deducted", "prc_amount", "amount"], ["created_at", "timestamp"], {}),
+        # Bill Pay / BBPS
+        ("bill_payment_requests", ["prc_used", "total_prc_deducted", "prc_amount", "amount"], ["created_at", "timestamp"], {}),
+        ("bill_payments", ["prc_used", "total_prc_deducted", "prc_amount"], ["created_at", "timestamp"], {}),
+        ("payment_requests", ["total_prc_deducted", "prc_amount", "prc_used"], ["created_at", "timestamp"], {}),
+        # Recharge
+        ("recharge_requests", ["prc_used", "prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], {}),
+        # Gift Vouchers
+        ("gift_voucher_requests", ["total_prc_deducted", "prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], {}),
+        # Shopping / Orders
+        ("orders", ["total_prc", "prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], {}),
+        # Unified
+        ("unified_redemptions", ["prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], {}),
+        # Loan
+        ("loan_payments", ["prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], {}),
+        # Legacy
+        ("chatbot_withdrawal_requests", ["prc_amount", "amount", "total_prc"], ["created_at", "timestamp"], {}),
+    ]
     
-    txn_total = 0
-    if txn_debits and txn_debits[0].get("total"):
-        txn_total = txn_debits[0].get("total", 0)
+    seen_fingerprints = set()
+    total = 0
     
-    # ═══════════════════════════════════════════════════════════════════════
-    # SOURCE 2: Individual service collections (for legacy/direct entries)
-    # Check ALL collections to ensure nothing is missed
-    # ═══════════════════════════════════════════════════════════════════════
-    
-    # Helper function for safe aggregation
-    async def safe_sum(collection_name, match_query, sum_fields):
-        """Safely aggregate sum from a collection"""
+    for coll_name, amt_fields, dt_fields, extra_match in service_sources:
         try:
-            # Build $ifNull chain for multiple possible field names
-            if isinstance(sum_fields, list):
-                sum_expr = sum_fields[0]
-                for field in sum_fields[1:]:
-                    sum_expr = {"$ifNull": [f"${field}", sum_expr]}
-                sum_expr = {"$ifNull": [f"${sum_fields[0]}", sum_expr]}
-            else:
-                sum_expr = f"${sum_fields}"
+            query = {"user_id": user_id, "status": {"$in": success_statuses}}
+            query.update(extra_match)
+            docs = await db[coll_name].find(query, {"_id": 0}).to_list(5000)
             
-            # Actually build correct nested ifNull
-            if isinstance(sum_fields, list) and len(sum_fields) > 1:
-                sum_expr = f"${sum_fields[-1]}"
-                for field in reversed(sum_fields[:-1]):
-                    sum_expr = {"$ifNull": [f"${field}", sum_expr]}
-            elif isinstance(sum_fields, list):
-                sum_expr = f"${sum_fields[0]}"
-            else:
-                sum_expr = f"${sum_fields}"
+            for doc in docs:
+                # Extract amount
+                amount = 0
+                for af in amt_fields:
+                    val = doc.get(af)
+                    if val and float(val) > 0:
+                        amount = round(float(val), 2)
+                        break
+                if amount <= 0:
+                    continue
                 
-            result = await db[collection_name].aggregate([
-                {"$match": match_query},
-                {"$group": {"_id": None, "total": {"$sum": sum_expr}}}
-            ]).to_list(1)
-            return result[0].get("total", 0) if result else 0
+                # Extract date for fingerprint
+                dt_str = ""
+                for df in dt_fields:
+                    raw = doc.get(df)
+                    if raw:
+                        if isinstance(raw, datetime):
+                            dt_str = raw.strftime("%Y%m%d%H%M")
+                        elif isinstance(raw, str):
+                            dt_str = raw[:16].replace("-", "").replace(":", "").replace("T", "")
+                        if dt_str:
+                            break
+                
+                # Create fingerprint: amount + timestamp (rounded to minute)
+                # This deduplicates same transaction across multiple collections
+                fingerprint = f"{amount}_{dt_str}"
+                
+                if fingerprint in seen_fingerprints:
+                    logging.debug(f"[REDEEMED] DEDUP: Skipping {coll_name} → {fingerprint}")
+                    continue
+                
+                seen_fingerprints.add(fingerprint)
+                total += amount
+                
         except Exception as e:
-            logging.debug(f"[REDEEMED] Error querying {collection_name}: {e}")
-            return 0
+            logging.debug(f"[REDEEMED] Error querying {coll_name}: {e}")
+            continue
     
-    # ─────────────────────────────────────────────────────────────────────
-    # 1. GIFT VOUCHERS
-    # ─────────────────────────────────────────────────────────────────────
-    gift_voucher_total = await safe_sum(
-        "gift_voucher_requests",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["total_prc_deducted", "prc_amount", "prc_used", "amount"]
-    )
-    total_redeemed += gift_voucher_total
-    
-    # ─────────────────────────────────────────────────────────────────────
-    # 2. UTILITY - BBPS/Instant Bill Payments (Electricity, Gas, Water, etc.)
-    # ─────────────────────────────────────────────────────────────────────
-    bbps_total = await safe_sum(
-        "bill_payment_requests",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["prc_used", "total_prc_deducted", "prc_amount", "amount"]
-    )
-    total_redeemed += bbps_total
-    
-    # Legacy bill_payments collection
-    bill_payments_total = await safe_sum(
-        "bill_payments",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["prc_used", "total_prc_deducted", "prc_amount"]
-    )
-    total_redeemed += bill_payments_total
-    
-    # Legacy payment_requests collection
-    payment_requests_total = await safe_sum(
-        "payment_requests",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["total_prc_deducted", "prc_amount", "prc_used"]
-    )
-    total_redeemed += payment_requests_total
-    
-    # ─────────────────────────────────────────────────────────────────────
-    # 3. PRC SUBSCRIPTION PURCHASES (counts as Utility)
-    # ─────────────────────────────────────────────────────────────────────
-    # subscription_payments - PRC used to buy subscriptions
-    subscription_prc_total = await safe_sum(
-        "subscription_payments",
-        {"user_id": user_id, "payment_method": "prc", "status": {"$in": success_statuses}},
-        ["prc_amount", "inr_equivalent", "amount"]
-    )
-    total_redeemed += subscription_prc_total
-    
-    # vip_payments with PRC
-    vip_prc_total = await safe_sum(
-        "vip_payments",
-        {"user_id": user_id, "payment_method": "prc", "status": {"$in": success_statuses}},
-        ["prc_amount", "prc_used", "amount"]
-    )
-    total_redeemed += vip_prc_total
-    
-    # ─────────────────────────────────────────────────────────────────────
-    # 4. BANK WITHDRAWALS / TRANSFERS
-    # ─────────────────────────────────────────────────────────────────────
-    # redeem_requests - main collection for bank transfers
-    redeem_requests_total = await safe_sum(
-        "redeem_requests",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["total_prc_deducted", "prc_amount", "total_prc", "amount_inr", "amount"]
-    )
-    total_redeemed += redeem_requests_total
-    
-    # bank_withdrawal_requests
-    bank_withdrawal_total = await safe_sum(
-        "bank_withdrawal_requests",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["total_prc_deducted", "prc_amount", "total_prc", "amount"]
-    )
-    total_redeemed += bank_withdrawal_total
-    
-    # bank_redeem_requests
-    bank_redeem_total = await safe_sum(
-        "bank_redeem_requests",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["prc_amount", "total_prc_deducted", "amount"]
-    )
-    total_redeemed += bank_redeem_total
-    
-    # bank_transfers
-    bank_transfers_total = await safe_sum(
-        "bank_transfers",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["prc_amount", "total_prc_deducted", "amount"]
-    )
-    total_redeemed += bank_transfers_total
-    
-    # ─────────────────────────────────────────────────────────────────────
-    # 4.5 bank_transfer_requests (CRITICAL - from manual_bank_transfer route!)
-    # ─────────────────────────────────────────────────────────────────────
-    bank_transfer_reqs_total = await safe_sum(
-        "bank_transfer_requests",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["total_prc_deducted", "prc_deducted", "total_prc", "prc_amount"]
-    )
-    total_redeemed += bank_transfer_reqs_total
-    
-    # ─────────────────────────────────────────────────────────────────────
-    # 5. DMT (Direct Money Transfer) - Old service
-    # ─────────────────────────────────────────────────────────────────────
-    dmt_total = await safe_sum(
-        "dmt_transactions",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["prc_deducted", "prc_amount", "total_prc", "amount"]
-    )
-    total_redeemed += dmt_total
-    
-    # dmt_logs (alternative DMT collection)
-    dmt_logs_total = await safe_sum(
-        "dmt_logs",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["prc_deducted", "prc_amount", "amount"]
-    )
-    total_redeemed += dmt_logs_total
-    
-    # ─────────────────────────────────────────────────────────────────────
-    # 6. MARKETPLACE ORDERS / SHOPPING
-    # ─────────────────────────────────────────────────────────────────────
-    orders_total = await safe_sum(
-        "orders",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["total_prc", "prc_amount", "prc_used", "amount"]
-    )
-    total_redeemed += orders_total
-    
-    # ─────────────────────────────────────────────────────────────────────
-    # 7. RECHARGE REQUESTS (Mobile, DTH, etc.) - Legacy
-    # ─────────────────────────────────────────────────────────────────────
-    recharge_total = await safe_sum(
-        "recharge_requests",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["prc_used", "prc_amount", "total_prc_deducted", "amount"]
-    )
-    total_redeemed += recharge_total
-    
-    # ─────────────────────────────────────────────────────────────────────
-    # 8. LOAN EMI PAYMENTS
-    # ─────────────────────────────────────────────────────────────────────
-    loan_total = await safe_sum(
-        "loan_payments",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["prc_amount", "prc_used", "amount"]
-    )
-    total_redeemed += loan_total
-    
-    # ─────────────────────────────────────────────────────────────────────
-    # 9. UNIFIED REDEMPTIONS (newer unified collection)
-    # ─────────────────────────────────────────────────────────────────────
-    unified_total = await safe_sum(
-        "unified_redemptions",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["prc_deducted", "prc_amount", "total_prc", "amount"]
-    )
-    total_redeemed += unified_total
-    
-    # ─────────────────────────────────────────────────────────────────────
-    # 10. CHATBOT WITHDRAWAL REQUESTS (Old/Deprecated)
-    # ─────────────────────────────────────────────────────────────────────
-    chatbot_total = await safe_sum(
-        "chatbot_withdrawal_requests",
-        {"user_id": user_id, "status": {"$in": success_statuses}},
-        ["prc_amount", "amount", "total_prc"]
-    )
-    total_redeemed += chatbot_total
-    
-    # ═══════════════════════════════════════════════════════════════════════
-    # FINAL CALCULATION
-    # Use ONLY the status-filtered collections total (total_redeemed)
-    # SOURCE 1 (txn_total) is excluded because it has no status filtering
-    # and would count failed/refunded transaction debits incorrectly
-    # ═══════════════════════════════════════════════════════════════════════
-    final_total = total_redeemed
-    
-    logging.debug(f"[REDEEMED] User {user_id}: txn_total={txn_total} (excluded), collections_total={total_redeemed}, final={final_total}")
-    
-    return round(final_total, 2)
+    logging.debug(f"[REDEEMED] User {user_id}: unique_entries={len(seen_fingerprints)}, total={total}")
+    return round(total, 2)
 
 
 async def calculate_carry_forward_limit(user: dict, base_monthly_limit: float) -> dict:
