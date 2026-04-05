@@ -499,7 +499,7 @@ async def get_denominations():
         },
         "samples": samples,
         "admin_charge_percent": ADMIN_CHARGE_PERCENT,
-        "weekly_limit": 1,
+        "daily_limit": 1,
         "note": "One withdrawal request allowed per 24 hours"
     }
 
