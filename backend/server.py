@@ -16035,12 +16035,16 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
     Dynamic Redeem Limit based on Growth Network size.
     
-    Formula:
-    - Total Earned PRC = Current Balance + All Time Redeemed
+    Formula (User-defined):
+    - total_mined = max(total_mined_prc, total_mined, current_balance + total_redeemed) [reconciled]
+    - total_earned = total_mined - total_redeemed
     - Unlock % = Cumulative tier-based (max 94.5%)
-    - Redeemable PRC = Total Earned × (Unlock% / 100)
-    - Used = All Time Redeemed
-    - Available = Redeemable - Used (capped at current balance)
+    - Redeemable PRC = total_earned × (Unlock% / 100)
+    - Available = max(0, Redeemable - total_redeemed)
+    - Effective Available = min(Available, current_balance)
+    
+    NOTE: total_earned does NOT use current_balance directly to avoid
+    auto-burn (3.33%/day) causing negative drift in limits.
     """
     try:
         from routes.growth_economy import get_user_unlock_percent, get_network_size, calculate_growth_level
@@ -16065,10 +16069,21 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         # Total used PRC (all time)
         total_redeemed = await get_user_all_time_redeemed(user_id)
         
-        # Total earned = current PRC balance only (redeemed PRC should not inflate limit)
-        total_earned = current_balance
+        # Reconcile total_mined from multiple fields:
+        # - total_mined_prc: incremented by mining.py collect endpoint
+        # - total_mined: incremented by legacy server.py mining (deprecated)
+        # - Fallback: current_balance + total_redeemed (for users missing both fields)
+        raw_total_mined_prc = float(user.get("total_mined_prc", 0) or 0)
+        raw_total_mined = float(user.get("total_mined", 0) or 0)
+        fallback_total_mined = current_balance + total_redeemed
         
-        # Get unlock % from growth network: 3 + 0.5 × log₂(N), max 10%
+        # Use the highest value (most accurate representation of all-time mining)
+        reconciled_total_mined = max(raw_total_mined_prc, raw_total_mined, fallback_total_mined)
+        
+        # User-defined formula: total_earned = total_mined - total_redeemed
+        total_earned = max(0, reconciled_total_mined - total_redeemed)
+        
+        # Get unlock % from growth network
         network_size = await get_network_size(user_id)
         redeem_limit_percent = calculate_growth_level(network_size)
         
@@ -16083,6 +16098,7 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         
         return {
             "total_earned": round(total_earned, 2),
+            "total_mined": round(reconciled_total_mined, 2),
             "unlock_percent": redeem_limit_percent,
             "redeem_limit_percent": redeem_limit_percent,
             "redeemable": round(redeemable, 2),
@@ -16110,145 +16126,6 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
             "growth_level": 0,
             "total_limit": 0,
             "unlimited": False
-        }
-    try:
-        # Plan prices for formula: Plan × 5 × 10
-        PLAN_PRICES = {
-            "elite": 799,
-            "growth": 499,
-            "startup": 299,
-            "explorer": 0,
-            "free": 0,
-            "": 0
-        }
-        MULTIPLIER = 5
-        PRC_FACTOR = 10
-        REFERRAL_BONUS_PERCENT = 20  # 20% per active referral
-        
-        # Get user's data
-        user = await db.users.find_one({"uid": user_id})
-        if not user:
-            return {
-                "plan": "explorer",
-                "plan_price": 0,
-                "base_limit": 0,
-                "monthly_limit": 0,
-                "months_active": 1,
-                "active_referrals": 0,
-                "referral_percentage_increase": 0,
-                "total_limit": 0,
-                "carry_forward_enabled": True
-            }
-        
-        # Get user's subscription plan
-        plan = (user.get("subscription_plan") or "explorer").lower()
-        if plan not in PLAN_PRICES:
-            plan = "explorer"
-        
-        plan_price = PLAN_PRICES.get(plan, 0)
-        
-        # Calculate base monthly limit: Plan × 5 × 10
-        base_monthly_limit = plan_price * MULTIPLIER * PRC_FACTOR
-        
-        # Calculate months since USER JOINED
-        user_created = user.get("created_at") or user.get("registered_at") or user.get("createdAt")
-        now = datetime.now(timezone.utc)
-        
-        if user_created:
-            if isinstance(user_created, str):
-                try:
-                    user_created = datetime.fromisoformat(user_created.replace('Z', '+00:00'))
-                except:
-                    user_created = now
-            if user_created.tzinfo is None:
-                user_created = user_created.replace(tzinfo=timezone.utc)
-        else:
-            user_created = now.replace(day=1)
-        
-        # Calculate months difference (at least 1 month)
-        months_diff = (now.year - user_created.year) * 12 + (now.month - user_created.month)
-        months_active = max(1, months_diff + 1)
-        
-        referral_code = user.get("referral_code", "")
-        user_uid = user.get("uid", user_id)
-        
-        # Count ACTIVE direct referrals (referred users with active subscription)
-        # Note: In production, referred_by can be either UID or referral_code
-        active_referral_count = 0
-        total_referral_count = 0
-        
-        # Search by both UID and referral_code
-        referred_users = await db.users.find({
-            "$or": [
-                {"referred_by": referral_code} if referral_code else {"referred_by": "___none___"},
-                {"referred_by": user_uid}
-            ]
-        }).to_list(1000)
-            
-        total_referral_count = len(referred_users)
-        
-        for referred_user in referred_users:
-            is_active = False
-            
-            # Check subscription expiry
-            sub_expiry = referred_user.get("subscription_expires") or referred_user.get("subscription_expiry") or referred_user.get("vip_expiry") or referred_user.get("valid_till")
-            if sub_expiry:
-                try:
-                    if isinstance(sub_expiry, str):
-                        exp_date = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
-                    else:
-                        exp_date = sub_expiry
-                    if exp_date.tzinfo is None:
-                        exp_date = exp_date.replace(tzinfo=timezone.utc)
-                    
-                    if exp_date > now:
-                        is_active = True
-                except:
-                    pass
-            
-            # Also check plan or membership flags
-            ref_plan = (referred_user.get("subscription_plan") or "").lower()
-            if ref_plan in ["elite", "growth", "startup"]:
-                is_active = True
-            if referred_user.get("is_premium") or referred_user.get("membership_type") == "vip":
-                is_active = True
-            
-            if is_active:
-                active_referral_count += 1
-        
-        # Calculate referral bonus: 20% per active referral
-        referral_percentage_increase = active_referral_count * REFERRAL_BONUS_PERCENT
-        
-        # Monthly limit with referral bonus
-        monthly_limit_with_bonus = base_monthly_limit * (1 + referral_percentage_increase / 100)
-        
-        # Total limit = Months × Monthly Limit (carry forward from joining)
-        total_limit = months_active * monthly_limit_with_bonus
-        
-        return {
-            "plan": plan,
-            "plan_price": plan_price,
-            "base_limit": base_monthly_limit,
-            "monthly_limit": round(monthly_limit_with_bonus, 2),
-            "months_active": months_active,
-            "total_referrals": total_referral_count,
-            "active_referrals": active_referral_count,
-            "referral_percentage_increase": referral_percentage_increase,
-            "total_limit": round(total_limit, 2),
-            "carry_forward_enabled": True,
-            "formula": f"{plan_price} × 5 × 10 = {base_monthly_limit} + {referral_percentage_increase}% referral bonus"
-        }
-    except Exception as e:
-        logging.error(f"Error calculating redeem limit: {e}")
-        return {
-            "base_limit": BASE_REDEEM_LIMIT,
-            "monthly_limit": BASE_REDEEM_LIMIT,
-            "monthly_limit_with_bonus": BASE_REDEEM_LIMIT,
-            "months_active": 1,
-            "active_referrals": 0,
-            "referral_percentage_increase": 0,
-            "total_limit": BASE_REDEEM_LIMIT,
-            "carry_forward_enabled": True
         }
 
 
@@ -16594,6 +16471,7 @@ async def get_user_redeem_limit(user_id: str, request: Request):
                 "network_size": limit_info.get("network_size", 0),
                 "growth_level": limit_info.get("growth_level", 0),
                 "total_earned": limit_info.get("total_earned", 0),
+                "total_mined": limit_info.get("total_mined", 0),
                 "redeemable": limit_info.get("redeemable", 0),
                 "total_limit": limit_info.get("total_limit", 0),
                 "total_redeemed": limit_info.get("total_redeemed", 0),

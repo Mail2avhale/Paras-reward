@@ -32,7 +32,8 @@ def set_db(database):
 
 # ==================== CONSTANTS ====================
 
-DEFAULT_BASE_MINING = 500  # Base daily PRC (user's own mining)
+DEFAULT_BASE_MINING = 1000  # Base daily PRC (user's own mining) — matches mining.py
+DEFAULT_BASE_MINING_THRESHOLD = 250  # Network size threshold: base=1000 if < 250, base=0 if >= 250
 DEFAULT_NETWORK_CAP_BASE = 800  # Tier 1: Base cap
 DEFAULT_NETWORK_CAP_DIRECT_MAX = 4000  # Tier 2: Max from directs
 DEFAULT_NETWORK_CAP_MAX = 6000  # Tier 3: Max from L1 indirects
@@ -281,8 +282,8 @@ async def calculate_mining_speed(user_id: str) -> dict:
     # Calculate network mining
     network_mining = effective_network * prc_per_user
     
-    # Base mining
-    base_mining = settings["base_mining"]
+    # Base mining: 1000 PRC/day if network < 250, else 0 (only network bonus)
+    base_mining = settings["base_mining"] if effective_network < DEFAULT_BASE_MINING_THRESHOLD else 0
     
     # Subscription speed based on payment method
     plan = user.get("subscription_plan", "")

@@ -1,0 +1,77 @@
+{
+  "summary": "Formula Audit Tests - All 16 tests PASSED. Verified all 5 core formulas: 1) Subscription active/inactive (burning.py imports from helpers.py), 2) Mining formula (BASE_MINING_PRC=1000), 3) Redeem formula (total_mined based), 4) Network formula (threshold=250), 5) PRC dynamic rate. All endpoints working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_formula_audit.py",
+    "/app/test_reports/pytest/formula_audit_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "burning.py line 13: Correctly imports is_subscription_active from utils/helpers.py (consolidated)",
+    "mining.py line 51-52: BASE_MINING_PRC=1000, BASE_MINING_THRESHOLD=250 (correct values)",
+    "mining.py line 321: base_rate logic correct - 1000 if network<250, else 0",
+    "mining.py line 619-621: collect endpoint increments BOTH total_mined_prc AND total_mined",
+    "growth_economy.py line 35-36: DEFAULT_BASE_MINING=1000, DEFAULT_BASE_MINING_THRESHOLD=250 (matches mining.py)",
+    "server.py line 16034-16112: calculate_user_redeem_limit uses reconciled total_mined formula with fallback",
+    "server.py line 16081: reconciled_total_mined = max(total_mined_prc, total_mined, balance+redeemed)",
+    "server.py line 16084: total_earned = max(0, total_mined - total_redeemed) - never negative"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_formula_audit.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+  "test_credentials": {
+    "cash_user_uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+    "cash_user_mobile": "9970100782",
+    "prc_user_uid": "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
+    "prc_user_mobile": "9421331342"
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Formula audit complete. All 5 core formulas verified: 1) burning.py uses centralized is_subscription_active from helpers.py, 2) mining.py BASE_MINING_PRC=1000 with threshold=250, 3) growth_economy.py DEFAULT_BASE_MINING=1000 matching mining.py, 4) redeem limit uses total_mined formula with reconciliation, 5) mining collect increments both total_mined and total_mined_prc. Cash user has total_mined=50137.61, total_redeemed=48646.52, total_earned=1491.09. PRC user has total_mined=90864.69, total_redeemed=34369.47, total_earned=56495.22.",
+  "verified_formulas": {
+    "subscription_active": {
+      "location": "utils/helpers.py is_subscription_active()",
+      "imported_by": "burning.py line 13",
+      "status": "PASS"
+    },
+    "mining_base_rate": {
+      "value": 1000,
+      "threshold": 250,
+      "logic": "base=1000 if network<250, else base=0",
+      "locations": ["mining.py line 51-52", "growth_economy.py line 35-36"],
+      "status": "PASS"
+    },
+    "redeem_formula": {
+      "total_mined": "max(total_mined_prc, total_mined, balance+redeemed)",
+      "total_earned": "max(0, total_mined - total_redeemed)",
+      "location": "server.py line 16034-16112",
+      "status": "PASS"
+    },
+    "mining_collect_increments": {
+      "fields": ["total_mined_prc", "total_mined"],
+      "location": "mining.py line 619-621",
+      "status": "PASS"
+    }
+  },
+  "api_test_results": {
+    "mining_status": "PASS - returns base_rate=1000 or 0 based on threshold",
+    "growth_mining_speed": "PASS - returns base_mining=1000 with threshold logic",
+    "burning_status": "PASS - correctly detects active subscriptions",
+    "redeem_limit": "PASS - returns total_mined field, formula correct",
+    "rate_breakdown": "PASS - endpoint works without errors",
+    "economy_settings": "PASS - shows base_mining=1000"
+  }
+}
