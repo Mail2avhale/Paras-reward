@@ -1,0 +1,93 @@
+{
+  "summary": "Usage History Bug Fix Verification - ALL TESTS PASSED. Backend (12/12 passed) and Frontend (all flows verified). The usage-history API now returns ONLY service categories (no Burns, Admin debits, or Other). The total_used from usage-history MATCHES total_redeemed from redeem-limit API exactly (48,646.52 PRC for primary user, 34,369.47 PRC for PRC user).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Usage History Chart",
+        "issues": ["Console warning: Chart width/height -1 - may need minWidth/minHeight props on Recharts component (non-blocking, chart renders correctly)"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_usage_history_redeem_match.py",
+    "/app/test_reports/pytest/usage_history_redeem_match_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "usage-history API correctly queries 17 service-specific collections (recharge_requests, bank_transfers, subscription_payments, etc.)",
+    "Burns and admin transactions are properly excluded from usage-history",
+    "by_category field contains only service categories: Subscription, Gift Cards, Bank Redeem, Bill Pay, Shopping, Redeem, Loan EMI",
+    "total_used from usage-history MATCHES total_redeemed from redeem-limit API exactly"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_usage_history_redeem_match.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+  "test_credentials": {
+    "primary_user_mobile": "9970100782",
+    "primary_user_pin": "997010",
+    "primary_user_uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+    "prc_user_uid": "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21"
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Usage history bug fix verified. The usage-history API now correctly returns ONLY service categories (Mobile Recharge, Bank Redeem, Gift Cards, Subscription, Bill Pay, Shopping, Redeem, Loan EMI) - NO Burns, Admin debits, or Other categories. The total_used from usage-history matches total_redeemed from redeem-limit exactly. Frontend shows 'Redeem Used Details' title, Total Redeemed card, Redeem Breakdown with category icons and progress bars, Monthly Redeem Usage chart, and expandable Date-wise Redeem Details.",
+  "verified_features": {
+    "backend_apis": {
+      "health_check": "PASS - GET /api/health returns 200 with status=healthy",
+      "usage_history_returns_200": "PASS - GET /api/prc-statement/usage-history/{uid} returns 200",
+      "usage_history_no_burns": "PASS - by_category contains only service categories (no Burns/Admin/Other)",
+      "usage_history_required_fields": "PASS - summary, graph_data, daily_breakdown all present",
+      "redeem_limit_returns_200": "PASS - GET /api/user/{uid}/redeem-limit returns 200",
+      "primary_user_totals_match": "PASS - usage-history total_used (48646.52) == redeem-limit total_redeemed (48646.52)",
+      "prc_user_totals_match": "PASS - usage-history total_used (34369.47) == redeem-limit total_redeemed (34369.47)",
+      "graph_data_structure": "PASS - month, total, count fields present",
+      "daily_breakdown_structure": "PASS - date, total, entries with time/amount/category/narration",
+      "invalid_user_404": "PASS - Returns 404 for non-existent user"
+    },
+    "frontend_flows": {
+      "login_flow": "PASS - Mobile + PIN authentication works",
+      "dashboard_loads": "PASS - Shows user balance (1512.02 PRC) and ELITE plan",
+      "used_prc_link": "PASS - data-testid='used-prc-link' found, text shows 'Used ›- 48,647 PRC'",
+      "navigation_to_usage_history": "PASS - Clicking 'Used >' navigates to /usage-history",
+      "page_title": "PASS - Title is 'Redeem Used Details'",
+      "total_redeemed_card": "PASS - Shows 48,646.52 PRC (matches API)",
+      "redeem_breakdown": "PASS - Shows only service categories with icons and progress bars",
+      "monthly_chart": "PASS - Monthly Redeem Usage chart renders (Mar '26, Apr '26 bars visible)",
+      "daily_breakdown": "PASS - Date-wise Redeem Details with 4 expandable date rows"
+    }
+  },
+  "api_test_results": {
+    "test_health_endpoint_returns_200": "PASS",
+    "test_usage_history_returns_200": "PASS",
+    "test_usage_history_has_required_fields": "PASS",
+    "test_usage_history_no_burns_or_admin": "PASS",
+    "test_usage_history_prc_user_no_burns": "PASS",
+    "test_redeem_limit_returns_200": "PASS",
+    "test_redeem_limit_has_total_redeemed": "PASS",
+    "test_primary_user_totals_match": "PASS",
+    "test_prc_user_totals_match": "PASS",
+    "test_graph_data_structure": "PASS",
+    "test_daily_breakdown_structure": "PASS",
+    "test_usage_history_invalid_user_returns_404": "PASS"
+  },
+  "bug_fix_validation": {
+    "original_issue": "Dashboard USED showed 39,047 PRC but Usage History page showed 71,288 PRC (included burns)",
+    "fix_applied": "usage-history API rewritten to query service-specific collections only, excluding burns and admin transactions",
+    "validation_result": "PASS - usage-history total_used now matches redeem-limit total_redeemed exactly",
+    "categories_verified": {
+      "allowed": ["Subscription", "Gift Cards", "Bank Redeem", "Bill Pay", "Shopping", "Redeem", "Loan EMI", "Mobile Recharge"],
+      "excluded": ["Burn", "Admin", "Admin Credit", "Admin Debit", "Other", "Reward", "Refund"]
+    }
+  }
+}

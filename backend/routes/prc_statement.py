@@ -246,11 +246,11 @@ async def get_prc_statement(
 @router.get("/usage-history/{uid}")
 async def get_prc_usage_history(uid: str):
     """
-    Date-wise PRC usage (debit) history with narration + monthly graph data.
-    Returns ALL debit transactions from joining date, grouped by month.
+    Date-wise PRC REDEEM usage history (services only, NO burns).
+    Returns ONLY actual service usage: Mobile Recharge, Bank Redeem, Gift Cards,
+    Subscription, Bill Pay, etc. — matching the dashboard 'USED' total exactly.
     """
     try:
-        # Get user join date
         user = await db.users.find_one({"uid": uid}, {"_id": 0, "created_at": 1, "registered_at": 1, "createdAt": 1, "prc_balance": 1})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -259,121 +259,136 @@ async def get_prc_usage_history(uid: str):
         if isinstance(join_date, str):
             try:
                 join_date = datetime.fromisoformat(join_date.replace("Z", "+00:00"))
-            except:
+            except Exception:
                 join_date = datetime.now(timezone.utc)
         
-        # Collect ALL debit entries from all 4 collections
-        all_debits = []
-        seen_ids = set()
+        # Same statuses as calculate_total_redeemed() in server.py
+        success_statuses = [
+            "completed", "COMPLETED", "Completed",
+            "success", "SUCCESS", "Success",
+            "approved", "APPROVED", "Approved",
+            "paid", "PAID", "Paid",
+            "pending", "PENDING", "Pending",
+            "processing", "PROCESSING", "Processing",
+            "delivered", "DELIVERED", "Delivered"
+        ]
         
-        # Helper to process documents
-        def process_doc(doc, source):
-            entry_type = doc.get("entry_type")
-            amount = doc.get("amount", 0)
-            
-            # Determine if debit
-            if entry_type:
-                is_debit = entry_type == "debit"
-            else:
-                is_debit = amount < 0
-            
-            if not is_debit:
-                return None
-            
-            txn_id = doc.get("transaction_id") or doc.get("txn_id") or ""
-            if txn_id and txn_id in seen_ids:
-                return None
-            if txn_id:
-                seen_ids.add(txn_id)
-            
-            dt_raw = doc.get("created_at") or doc.get("timestamp") or doc.get("date")
-            if not dt_raw:
-                return None
-            
-            if isinstance(dt_raw, str):
-                try:
-                    dt = datetime.fromisoformat(dt_raw.replace("Z", "+00:00"))
-                except:
-                    return None
-            elif isinstance(dt_raw, datetime):
-                dt = dt_raw
-            else:
-                return None
-            
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            
-            abs_amount = abs(amount) if amount else abs(doc.get("debit", 0) or doc.get("prc_amount", 0))
-            if abs_amount == 0:
-                return None
-            
-            raw_type = (doc.get("type") or doc.get("transaction_type") or "").lower()
-            display_type = classify_type(raw_type)
-            narration = doc.get("description") or doc.get("narration") or build_narration("", display_type)
-            
-            return {
-                "date": dt.isoformat(),
-                "date_ts": dt.timestamp(),
-                "month_key": dt.strftime("%Y-%m"),
-                "day_key": dt.strftime("%Y-%m-%d"),
-                "type": display_type,
-                "raw_type": raw_type,
-                "amount": round(abs_amount, 2),
-                "narration": narration,
-                "txn_id": txn_id,
-                "source": source
-            }
+        # Service collection definitions matching calculate_total_redeemed()
+        # Format: (collection, category, match_extra, amount_fields, date_fields, desc_fields)
+        service_sources = [
+            ("recharge_requests", "Mobile Recharge", {}, ["prc_used", "prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], ["operator_name", "description"]),
+            ("bill_payment_requests", "Bill Pay", {}, ["prc_used", "total_prc_deducted", "prc_amount", "amount"], ["created_at", "timestamp"], ["operator_name", "description", "service_type"]),
+            ("bill_payments", "Bill Pay", {}, ["prc_used", "total_prc_deducted", "prc_amount"], ["created_at", "timestamp"], ["operator_name", "description"]),
+            ("payment_requests", "Bill Pay", {}, ["total_prc_deducted", "prc_amount", "prc_used"], ["created_at", "timestamp"], ["description"]),
+            ("gift_voucher_requests", "Gift Cards", {}, ["total_prc_deducted", "prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], ["denomination", "description"]),
+            ("redeem_requests", "Bank Redeem", {}, ["total_prc_deducted", "prc_amount", "total_prc", "amount_inr", "amount"], ["created_at", "timestamp"], ["description", "bank_name"]),
+            ("bank_withdrawal_requests", "Bank Redeem", {}, ["total_prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], ["description", "bank_name"]),
+            ("bank_redeem_requests", "Bank Redeem", {}, ["prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], ["description", "bank_name"]),
+            ("bank_transfers", "Bank Redeem", {}, ["prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], ["description", "bank_name"]),
+            ("bank_transfer_requests", "Bank Redeem", {}, ["total_prc_deducted", "prc_deducted", "total_prc", "prc_amount"], ["created_at", "timestamp"], ["description", "bank_name"]),
+            ("subscription_payments", "Subscription", {"payment_method": "prc"}, ["prc_amount", "inr_equivalent", "amount"], ["created_at", "timestamp", "approved_at"], ["plan_name", "subscription_plan", "description"]),
+            ("vip_payments", "Subscription", {"payment_method": "prc"}, ["prc_amount", "prc_used", "amount"], ["created_at", "timestamp", "approved_at"], ["plan_name", "description"]),
+            ("dmt_transactions", "Bank Redeem", {}, ["prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], ["description", "beneficiary_name"]),
+            ("dmt_logs", "Bank Redeem", {}, ["prc_deducted", "prc_amount", "amount"], ["created_at", "timestamp"], ["description"]),
+            ("orders", "Shopping", {}, ["total_prc", "prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], ["description", "product_name"]),
+            ("unified_redemptions", "Redeem", {}, ["prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], ["description", "service_type"]),
+            ("loan_payments", "Loan EMI", {}, ["prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], ["description"]),
+        ]
         
-        # Query all 4 collections
-        for coll_name in ["prc_ledger", "transactions", "prc_transactions", "ledger"]:
-            docs = await db[coll_name].find(
-                {"user_id": uid, "deleted": {"$ne": True}}, {"_id": 0}
-            ).to_list(10000)
-            for doc in docs:
-                entry = process_doc(doc, coll_name)
-                if entry:
-                    all_debits.append(entry)
+        all_entries = []
         
-        # Sort by date (newest first)
-        all_debits.sort(key=lambda x: x["date_ts"], reverse=True)
+        for coll_name, category, extra_match, amt_fields, dt_fields, desc_fields in service_sources:
+            try:
+                query = {"user_id": uid, "status": {"$in": success_statuses}}
+                query.update(extra_match)
+                docs = await db[coll_name].find(query, {"_id": 0}).to_list(5000)
+                
+                for doc in docs:
+                    # Extract amount
+                    amount = 0
+                    for af in amt_fields:
+                        val = doc.get(af)
+                        if val and float(val) > 0:
+                            amount = float(val)
+                            break
+                    if amount <= 0:
+                        continue
+                    
+                    # Extract date
+                    dt = None
+                    for df in dt_fields:
+                        raw = doc.get(df)
+                        if raw:
+                            dt = parse_date(raw)
+                            if dt:
+                                break
+                    if not dt:
+                        continue
+                    
+                    # Build narration
+                    narration = ""
+                    for dfield in desc_fields:
+                        val = doc.get(dfield)
+                        if val and isinstance(val, str) and len(val) > 1:
+                            narration = val
+                            break
+                    if not narration:
+                        narration = f"{category}"
+                    
+                    all_entries.append({
+                        "date": dt.isoformat(),
+                        "date_ts": dt.timestamp(),
+                        "month_key": dt.strftime("%Y-%m"),
+                        "day_key": dt.strftime("%Y-%m-%d"),
+                        "category": category,
+                        "amount": round(amount, 2),
+                        "narration": narration,
+                        "status": doc.get("status", ""),
+                        "source": coll_name
+                    })
+            except Exception as e:
+                logging.debug(f"[USAGE-HISTORY] Error querying {coll_name}: {e}")
+                continue
+        
+        # Sort newest first
+        all_entries.sort(key=lambda x: x["date_ts"], reverse=True)
+        
+        # Aggregate by category
+        category_totals = {}
+        total_used = 0
+        for entry in all_entries:
+            cat = entry["category"]
+            category_totals[cat] = category_totals.get(cat, 0) + entry["amount"]
+            total_used += entry["amount"]
         
         # Monthly aggregation for graph
         monthly_data = {}
-        type_totals = {}
-        total_used = 0
-        
-        for d in all_debits:
-            mk = d["month_key"]
+        for entry in all_entries:
+            mk = entry["month_key"]
             if mk not in monthly_data:
-                monthly_data[mk] = {"month": mk, "total": 0, "count": 0, "types": {}}
-            monthly_data[mk]["total"] += d["amount"]
+                monthly_data[mk] = {"month": mk, "total": 0, "count": 0}
+            monthly_data[mk]["total"] += entry["amount"]
             monthly_data[mk]["count"] += 1
-            
-            t = d["type"]
-            monthly_data[mk]["types"][t] = monthly_data[mk]["types"].get(t, 0) + d["amount"]
-            type_totals[t] = type_totals.get(t, 0) + d["amount"]
-            total_used += d["amount"]
         
-        # Sort monthly data chronologically
         graph_data = sorted(
-            [{"month": k, "total": round(v["total"], 2), "count": v["count"], "types": {tk: round(tv, 2) for tk, tv in v["types"].items()}}
+            [{"month": k, "total": round(v["total"], 2), "count": v["count"]}
              for k, v in monthly_data.items()],
             key=lambda x: x["month"]
         )
         
-        # Daily grouping for detailed view
+        # Daily grouping
         daily_groups = {}
-        for d in all_debits:
-            dk = d["day_key"]
+        for entry in all_entries:
+            dk = entry["day_key"]
             if dk not in daily_groups:
                 daily_groups[dk] = {"date": dk, "total": 0, "entries": []}
-            daily_groups[dk]["total"] += d["amount"]
+            daily_groups[dk]["total"] += entry["amount"]
             daily_groups[dk]["entries"].append({
-                "time": d["date"],
-                "amount": d["amount"],
-                "type": d["type"],
-                "narration": d["narration"],
-                "txn_id": d["txn_id"]
+                "time": entry["date"],
+                "amount": entry["amount"],
+                "category": entry["category"],
+                "narration": entry["narration"],
+                "status": entry["status"]
             })
         
         daily_list = sorted(
@@ -386,11 +401,10 @@ async def get_prc_usage_history(uid: str):
             "success": True,
             "user_id": uid,
             "join_date": join_date.isoformat() if join_date else None,
-            "current_balance": round(float(user.get("prc_balance", 0)), 2),
             "summary": {
                 "total_used": round(total_used, 2),
-                "total_transactions": len(all_debits),
-                "by_type": {k: round(v, 2) for k, v in sorted(type_totals.items(), key=lambda x: -x[1])},
+                "total_transactions": len(all_entries),
+                "by_category": {k: round(v, 2) for k, v in sorted(category_totals.items(), key=lambda x: -x[1])},
                 "months_active": len(graph_data)
             },
             "graph_data": graph_data,
