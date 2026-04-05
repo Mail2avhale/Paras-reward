@@ -1115,8 +1115,8 @@ const DashboardModern = ({ user, onLogout }) => {
                             <span className="text-white/70 text-xs font-bold uppercase tracking-wider">Total Limit</span>
                             <span className="text-white font-extrabold text-lg">{totalLimit.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-white/60 text-xs font-semibold">PRC</span></span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/70 text-xs font-bold uppercase tracking-wider">Used</span>
+                          <div className="flex items-center justify-between cursor-pointer hover:bg-white/5 rounded-lg px-1 -mx-1 py-0.5 transition-colors" onClick={() => navigate('/usage-history')} data-testid="used-prc-link">
+                            <span className="text-white/70 text-xs font-bold uppercase tracking-wider underline decoration-dotted underline-offset-2">Used ›</span>
                             <span className="text-red-300 font-extrabold text-lg">- {totalUsed.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-red-300/60 text-xs font-semibold">PRC</span></span>
                           </div>
                           <div className="border-t border-white/30"></div>
