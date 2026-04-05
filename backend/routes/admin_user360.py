@@ -3,15 +3,13 @@ Admin User 360° View - Restructured & Optimized
 Complete user profile, transactions, referrals, and activity view
 """
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
-from datetime import datetime, timezone, timedelta
+from typing import Optional, Any
+from datetime import datetime, timezone
 import logging
 import re
 import uuid
-import random
-import bcrypt
 
 router = APIRouter(prefix="/admin/user360", tags=["Admin User 360"])
 
@@ -376,9 +374,9 @@ async def perform_user_action(uid: str, request: UserActionRequest):
     
     # Reset PIN - Generate new random 6-digit PIN
     elif request.action == "reset_pin":
-        import random
+        import secrets as _secrets
         import bcrypt
-        new_pin = str(random.randint(100000, 999999))
+        new_pin = str(_secrets.randbelow(900000) + 100000)
         hashed_pin = bcrypt.hashpw(new_pin.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         update_data["hashed_pin"] = hashed_pin
         update_data["pin_hash"] = hashed_pin  # Backward compatibility

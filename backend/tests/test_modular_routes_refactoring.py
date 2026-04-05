@@ -23,7 +23,7 @@ BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
 # Test user credentials - will create fresh user for testing
 TEST_EMAIL = f"test_modular_{uuid.uuid4().hex[:8]}@test.com"
-TEST_PASSWORD = "123456"
+TEST_PASSWORD = os.environ.get("TEST_PASSWORD", "123456")
 TEST_MOBILE = f"9987{str(uuid.uuid4().int)[:6]}"
 TEST_USER_UID = None  # Will be set after registration
 

@@ -4784,70 +4784,6 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
     Always returns (False, "feature_removed") for backwards compatibility
     """
     return False, "feature_removed"
-    is_elite = subscription_plan == "elite"
-    
-    if not is_elite:
-        return False, "not_elite_plan"
-    
-    # ========== CONDITION 2: Subscription NOT Expired ==========
-    subscription_expiry = user_data.get("subscription_expiry")
-    is_subscription_active = False
-    
-    if subscription_expiry:
-        try:
-            if isinstance(subscription_expiry, str):
-                expiry_dt = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
-            elif isinstance(subscription_expiry, datetime):
-                expiry_dt = subscription_expiry
-            else:
-                expiry_dt = None
-            
-            if expiry_dt:
-                if expiry_dt.tzinfo is None:
-                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-                
-                is_subscription_active = expiry_dt > now
-        except Exception as e:
-            logging.warning(f"Error parsing subscription_expiry for {user_uid}: {e}")
-            is_subscription_active = False
-    
-    if not is_subscription_active:
-        return False, "elite_but_subscription_expired"
-    
-    # ========== CONDITION 3: Real-time Mining Active ==========
-    mining_active = user_data.get("mining_active")
-    is_mining_flag = mining_active is True or mining_active == "true" or mining_active == True
-    
-    if not is_mining_flag:
-        return False, "elite_active_but_mining_not_started"
-    
-    # Check mining session end time (real-time check)
-    session_end = user_data.get("mining_session_end")
-    is_session_active = False
-    
-    if session_end:
-        try:
-            if isinstance(session_end, str):
-                session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-            elif isinstance(session_end, datetime):
-                session_end_dt = session_end
-            else:
-                session_end_dt = None
-            
-            if session_end_dt:
-                if session_end_dt.tzinfo is None:
-                    session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                
-                is_session_active = session_end_dt > now
-        except Exception as e:
-            logging.warning(f"Error parsing mining_session_end for {user_uid}: {e}")
-            is_session_active = False
-    
-    if not is_session_active:
-        return False, "elite_active_but_mining_session_expired"
-    
-    # ========== ALL CONDITIONS MET ==========
-    return True, "elite_active_subscription_and_realtime_mining"
 
 
 async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
@@ -4911,12 +4847,14 @@ async def log_transaction(
     transaction_type: str,
     amount: float,
     description: str,
-    metadata: Dict = {},
+    metadata: Optional[Dict] = None,
     related_id: Optional[str] = None,
     related_type: Optional[str] = None,
     skip_balance_update: bool = False  # NEW: Skip balance update if already handled externally
 ) -> str:
     """Log a transaction and optionally update user balance using atomic operations"""
+    if metadata is None:
+        metadata = {}
     
     # Determine balance field
     balance_field = f"{wallet_type}_balance"
@@ -5039,7 +4977,7 @@ async def log_activity(
     user_id: str,
     action_type: str,
     description: str,
-    metadata: Dict = {},
+    metadata: Optional[Dict] = None,
     ip_address: Optional[str] = None
 ):
     """
@@ -5053,6 +4991,8 @@ async def log_activity(
     - Admin: user_role_changed, kyc_approved, kyc_rejected, product_created
     - Profile: profile_updated, kyc_submitted
     """
+    if metadata is None:
+        metadata = {}
     try:
         # Get user details
         user = await db.users.find_one({"uid": user_id})
@@ -5665,22 +5605,6 @@ async def calculate_mining_rate(uid: str):
 
 async def update_mined_coins(uid: str):
     """DEPRECATED: Mining feature removed"""
-    return 0
-    elapsed_minutes = (current_time - mining_start).total_seconds() / 60
-    
-    if elapsed_minutes > 0:
-        rate_per_minute, _, _, _ = await calculate_mining_rate(uid)
-        mined_amount = elapsed_minutes * rate_per_minute
-        
-        # Update user balance
-        await db.users.update_one(
-            {"uid": uid},
-            {
-                "$inc": {"prc_balance": mined_amount, "total_mined": mined_amount},
-                "$set": {"mining_start_time": current_time.isoformat()}
-            }
-        )
-        return mined_amount
     return 0
 
 # ========== BIRTHDAY CHECK ==========
@@ -10632,6 +10556,7 @@ async def get_paid_users_wallet_summary():
         bank_redeemed_prc = bank_redeems[0]["total"] if bank_redeems else 0
         
         # 2. Bill Payments
+        valid_redeemed = ["approved", "completed", "paid"]
         bill_payments = await db.bill_payments.aggregate([
             {"$match": {"status": {"$in": valid_redeemed}}},
             {"$lookup": {
@@ -11870,11 +11795,7 @@ async def subscription_pay_with_prc(request: Request):
             "status": "completed"
         })
         
-        # Record service usage for cooldown
-        try:
-            await record_service_usage(user_id, "subscription", {"plan_name": plan_name, "prc_amount": prc_amount})
-        except:
-            pass
+        # Record service usage for cooldown (removed - function no longer exists)
         
         # Log activity and notification
         try:
@@ -20946,7 +20867,6 @@ async def admin_bulk_diagnose_all_users(
     
     ⚠️ SET dry_run=false TO ACTUALLY FIX ISSUES
     """
-    import random, string
     
     # Limit to prevent timeout on large databases
     limit = min(limit, 200)
@@ -24204,17 +24124,17 @@ async def get_comprehensive_analytics(
     year_start = today_start.replace(month=1, day=1)
     
     # PRC Rate - DYNAMIC from database
-    def get_prc_rate_sync():
+    async def get_prc_rate_async():
         try:
-            settings = sync_db.dmt_settings.find_one({"_id": "dmt_config"})
+            settings = await db.dmt_settings.find_one({"_id": "dmt_config"})
             if settings:
                 rate = settings.get("prc_to_inr_rate", 100)
                 return 1 / rate  # Convert to INR per PRC (e.g., 100 PRC = 1 INR means 1 PRC = 0.01 INR)
             return 0.01  # Default: 1 PRC = ₹0.01
-        except:
+        except Exception:
             return 0.01
     
-    PRC_TO_INR_RATE = get_prc_rate_sync()
+    PRC_TO_INR_RATE = await get_prc_rate_async()
     
     # ===== 1. PRC CIRCULATION STATS =====
     prc_circulation = await asyncio.gather(
@@ -27188,8 +27108,6 @@ async def update_social_media_settings(settings: SocialMediaSettings):
 # ========== SCRATCH CARD GAME REMOVED ==========
 # Scratch card feature has been removed from the platform
 
-import random
-
 # ========== ADMIN PRC ANALYTICS ENDPOINTS ==========
 
 @api_router.get("/admin/prc-analytics")
@@ -27485,6 +27403,8 @@ async def get_detailed_prc_analytics(period: str = "month"):
                     "amount": round(amount, 2)
                 })
         
+        total_user_count = await db.users.count_documents({})
+        
         return {
             "period": period,
             "summary": {
@@ -27502,10 +27422,10 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 "vip_revenue_change": calc_change(vip_revenue_current, vip_revenue_prev)
             },
             "users": {
-                "total": len(users),
+                "total": total_user_count,
                 "vip": vip_user_count,
-                "free": len(users) - vip_user_count,
-                "avg_balance": round(total_in_circulation / len(users), 2) if users else 0
+                "free": max(0, total_user_count - vip_user_count),
+                "avg_balance": round(total_in_circulation / max(1, total_user_count), 2)
             },
             "chart_data": chart_data,
             "usage_breakdown": sorted(usage_breakdown, key=lambda x: x["amount"], reverse=True),
@@ -32087,6 +32007,9 @@ async def process_bill_payment_request(request: Request):
         from routes.eko_common import make_eko_request, EKO_INITIATOR_ID
         import asyncio
         
+        EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
+        EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "20810200")
+        
         # Eko Operator ID mapping (operator_name -> eko_operator_id)
         # Updated with actual Eko API operator IDs
         EKO_OPERATOR_MAP = {
@@ -33171,114 +33094,6 @@ async def bulk_reject_all_pending_requests(request: Request):
         "timestamp": now.isoformat()
     }
 
-
-    
-    # Validate denomination
-    valid_denominations = [10, 50, 100, 500, 1000, 5000]
-    if denomination not in valid_denominations:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Invalid denomination. Must be one of: {', '.join(map(str, valid_denominations))}"
-        )
-    
-    # Get user
-    user = await db.users.find_one({"uid": user_id})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # VIP membership and expiry check
-    access_check = await check_vip_service_access(user_id, "gift voucher redemption")
-    if not access_check["allowed"]:
-        raise HTTPException(status_code=403, detail=access_check["reason"])
-    
-    user_role = user.get("role", "user")
-    
-    # Calculate PRC required (100 INR = 1000 PRC, so 10 INR = 100 PRC)
-    prc_required = denomination * 10
-    
-    # Calculate service charge (with burn rate based on user's subscription type)
-    service_charge = await get_gift_voucher_service_charge(prc_required, user_id=user_id)
-    
-    # Total PRC to deduct
-    total_prc = prc_required + service_charge
-    
-    # ===== REDEMPTION LIMIT CHECK =====
-    redeem_check = await check_redemption_allowed(user, total_prc)
-    if not redeem_check["allowed"]:
-        raise HTTPException(status_code=403, detail=redeem_check["reason"])
-    # ===================================
-    
-    # ===== WEEKLY SERVICE LIMIT CHECK (VIP Tier Based) =====
-    weekly_check = await check_weekly_service_limit(user, "gift_voucher")
-    if not weekly_check["allowed"]:
-        raise HTTPException(status_code=429, detail=weekly_check["reason"])
-    # ======================================================
-    
-    # Check if user has enough PRC
-    user_prc_balance = user.get("prc_balance", 0)
-    if user_prc_balance < total_prc:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Insufficient PRC. Required: {total_prc:.2f} PRC (₹{denomination} voucher + service charge), Available: {user_prc_balance:.2f} PRC"
-        )
-    
-    # Create request
-    voucher_request = {
-        "request_id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "user_name": user.get("name", "Unknown"),
-        "user_email": user.get("email"),
-        "user_mobile": user.get("mobile"),
-        "user_role": user_role,
-        "denomination": denomination,
-        "prc_required": prc_required,
-        "service_charge_amount": service_charge,
-        "total_prc_deducted": total_prc,
-        "status": "pending",
-        "voucher_code": None,
-        "voucher_details": None,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "processed_at": None,
-        "admin_notes": None,
-        "processed_by": None
-    }
-    
-    # Atomic PRC deduction with balance check to prevent negative balance
-    result = await db.users.update_one(
-        {"uid": user_id, "prc_balance": {"$gte": total_prc}},  # Only update if sufficient balance
-        {"$inc": {"prc_balance": -total_prc}}
-    )
-    
-    if result.modified_count == 0:
-        raise HTTPException(status_code=400, detail="Insufficient PRC balance (concurrent transaction detected)")
-    
-    # Log transaction (skip_balance_update=True because we already deducted above)
-    await log_transaction(
-        user_id=user_id,
-        wallet_type="prc",
-        transaction_type="gift_voucher_request",
-        amount=total_prc,
-        description=f"PhonePe gift voucher request: ₹{denomination} (Request ID: {voucher_request['request_id'][:8]})",
-        metadata={
-            "request_id": voucher_request["request_id"],
-            "denomination": denomination,
-            "prc_required": prc_required,
-            "service_charge": service_charge
-        },
-        skip_balance_update=True  # Balance already updated atomically above
-    )
-    
-    # Save request
-    await db.gift_voucher_requests.insert_one(voucher_request)
-    
-    return {
-        "message": "Gift voucher request created successfully",
-        "request_id": voucher_request["request_id"],
-        "denomination": denomination,
-        "prc_deducted": total_prc,
-        "status": "pending",
-        "note": "PRC has been deducted. Admin will process your voucher request shortly."
-    }
 
 @api_router.get("/gift-voucher/requests/{user_id}")
 async def get_user_gift_voucher_requests(user_id: str):
@@ -34425,7 +34240,7 @@ async def get_referral_live_activity(limit: int = 10):
             {"_id": 0, "name": 1, "referral_count": 1, "created_at": 1}
         ).sort("created_at", -1).limit(20).to_list(20)
         
-        import random
+        import secrets as _secrets
         
         for user in users_with_referrals:
             ref_count = user.get("referral_count", 0)
@@ -34442,7 +34257,7 @@ async def get_referral_live_activity(limit: int = 10):
             
             if achieved_milestone:
                 activities.append({
-                    "id": f"milestone_{random.randint(1000, 9999)}",
+                    "id": f"milestone_{_secrets.randbelow(9000) + 1000}",
                     "type": "milestone",
                     "user_name": display_name,
                     "milestone": achieved_milestone,
@@ -34460,7 +34275,7 @@ async def get_referral_live_activity(limit: int = 10):
             display_name = name.split()[0][:3] + "***" if name else "User"
             
             activities.append({
-                "id": f"join_{random.randint(1000, 9999)}",
+                "id": f"join_{_secrets.randbelow(9000) + 1000}",
                 "type": "referral_join",
                 "user_name": display_name,
                 "timestamp": ref_user.get("created_at", datetime.now(timezone.utc).isoformat())
@@ -36396,9 +36211,9 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
     
     # If no transaction history, generate from mining data
     if not earnings:
-        # Get mining status with referral breakdown
+        # get_mining_status is deprecated - return empty fallback
         try:
-            mining_status = await get_mining_status(user_id)
+            mining_status = {}
             breakdown = mining_status.get("referral_breakdown", {})
             
             # Generate sample data based on current rates
@@ -40604,9 +40419,10 @@ async def get_live_activity_feed():
                     "growth": ["leveled up to Growth! 📈", "unlocked Growth power! 🔥", "joined Growth elite! 🌟"],
                     "elite": ["achieved Elite status! 👑", "joined the Elite club! 💎", "unlocked Elite rewards! 🏆"]
                 }
-                import random
+                import secrets as _secrets
                 plan_lower = sub.get("subscription_plan", "startup").lower()
-                message = random.choice(sub_messages.get(plan_lower, ["upgraded their plan! ⭐"]))
+                _choices = sub_messages.get(plan_lower, ["upgraded their plan! ⭐"])
+                message = _choices[_secrets.randbelow(len(_choices))]
                 
                 activities.append({
                     "city": city,
@@ -40644,8 +40460,9 @@ async def get_live_activity_feed():
                 "came through a friend! 👥"
             ]
             
-            import random
-            message = random.choice(referral_messages if is_referral else join_messages)
+            import secrets as _secrets
+            _msg_pool = referral_messages if is_referral else join_messages
+            message = _msg_pool[_secrets.randbelow(len(_msg_pool))]
             
             activities.append({
                 "city": city,
@@ -40675,14 +40492,14 @@ async def get_live_activity_feed():
                     f"redeemed for {bill_type}! ✅",
                     f"cleared {bill_type} with PRC! 🎯"
                 ]
-                import random
+                import secrets as _secrets
                 
                 activities.append({
                     "city": city,
                     "name": name,
                     "action": "redeem",
                     "icon": "💳",
-                    "text": random.choice(bill_messages),
+                    "text": bill_messages[_secrets.randbelow(len(bill_messages))],
                     "time_ago": _get_time_ago(bill.get("approved_at") or bill.get("created_at")),
                     "color": "emerald"
                 })
@@ -40754,14 +40571,14 @@ async def get_live_activity_feed():
                     f"earned {amount:.1f} PRC mining! 💰",
                     f"collected {amount:.1f} PRC! ✨"
                 ]
-                import random
+                import secrets as _secrets
                 
                 activities.append({
                     "city": city,
                     "name": name,
                     "action": "mining",
                     "icon": "⛏️",
-                    "text": random.choice(mining_messages),
+                    "text": mining_messages[_secrets.randbelow(len(mining_messages))],
                     "time_ago": _get_time_ago(txn.get("timestamp")),
                     "color": "yellow"
                 })
@@ -40789,15 +40606,19 @@ async def get_live_activity_feed():
                 })
         
         # ========== SHUFFLE & PRIORITIZE ==========
-        import random
+        import secrets as _secrets
         
         # Separate by priority
         high_priority = [a for a in activities if a.get("highlight")]
         normal_priority = [a for a in activities if not a.get("highlight")]
         
-        # Shuffle within categories
-        random.shuffle(high_priority)
-        random.shuffle(normal_priority)
+        # Shuffle within categories using secrets for unpredictability
+        for i in range(len(high_priority) - 1, 0, -1):
+            j = _secrets.randbelow(i + 1)
+            high_priority[i], high_priority[j] = high_priority[j], high_priority[i]
+        for i in range(len(normal_priority) - 1, 0, -1):
+            j = _secrets.randbelow(i + 1)
+            normal_priority[i], normal_priority[j] = normal_priority[j], normal_priority[i]
         
         # Interleave: 1 high priority every 3-4 normal
         final_activities = []
@@ -42476,13 +42297,7 @@ def get_prc_ledger_rate():
         from routes.prc_economy import get_dynamic_rate_sync
         rate = get_dynamic_rate_sync()  # e.g., 10 means 10 PRC = ₹1
         return 1 / rate  # Convert to INR per PRC (e.g., 1 PRC = ₹0.1)
-    except ImportError:
-        settings = sync_db.dmt_settings.find_one({"_id": "dmt_config"})
-        if settings:
-            rate = settings.get("prc_to_inr_rate", 100)
-            return 1 / rate
-        return 0.01
-    except:
+    except (ImportError, Exception):
         return 0.01
 
 PRC_TO_INR_RATE = 0.01  # Default, actual calculated dynamically

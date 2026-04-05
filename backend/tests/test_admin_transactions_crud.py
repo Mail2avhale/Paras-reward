@@ -13,10 +13,10 @@ from datetime import datetime
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
 # Test credentials from test_credentials.md
-TEST_USER_UID = "76b75808-47fa-48dd-ad7c-8074678e3607"
-TEST_USER_MOBILE = "9970100782"
-ADMIN_EMAIL = "admin@test.com"
-ADMIN_PASSWORD = "153759"
+TEST_USER_UID = os.environ.get("TEST_USER_UID", "76b75808-47fa-48dd-ad7c-8074678e3607")
+TEST_USER_MOBILE = os.environ.get("TEST_USER_MOBILE", "9970100782")
+ADMIN_EMAIL = os.environ.get("TEST_ADMIN_EMAIL", "admin@test.com")
+ADMIN_PASSWORD = os.environ.get("TEST_ADMIN_PASSWORD", "153759")
 
 # Transaction that was already refunded - DO NOT refund again
 ALREADY_REFUNDED_TXN = "BURN-76b75808-1774368000"

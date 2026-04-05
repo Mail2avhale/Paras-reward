@@ -20,7 +20,7 @@ const generateInvoiceNumber = (payment) => {
   // Generate a clean alphanumeric suffix from the order/payment id
   const rawId = payment.order_id || payment.payment_id || '';
   const cleaned = rawId.replace(/[^A-Za-z0-9]/g, '');
-  const suffix = cleaned.length >= 6 ? cleaned.slice(-6).toUpperCase() : Math.random().toString(36).substr(2, 6).toUpperCase();
+  const suffix = cleaned.length >= 6 ? cleaned.slice(-6).toUpperCase() : crypto.randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase();
   return `PR-${y}${m}${d}-${suffix}`;
 };
 

@@ -23,7 +23,7 @@ import uuid
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://formula-audit-fix.preview.emergentagent.com')
 
 TEST_USER_EMAIL = "testuser@test.com"
-TEST_USER_PASSWORD = "test123"
+TEST_USER_PASSWORD = os.environ.get("TEST_USER_PASSWORD", "test123")
 ADMIN_EMAIL = os.environ.get("TEST_ADMIN_EMAIL", "admin@test.com")
 ADMIN_PASSWORD = os.environ.get("TEST_ADMIN_PASSWORD", "153759")
 

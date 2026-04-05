@@ -4,8 +4,8 @@ PARAS REWARD - Common Utilities
 Helper functions used across the application
 """
 
-from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any
+from datetime import datetime, timezone
+from typing import Optional, Any, Callable
 import hashlib
 import secrets
 import string
@@ -18,6 +18,14 @@ import string
 PRC_INR_RATE_DEFAULT = 10  # 10 PRC = ₹1 (base reference)
 _rate_cache = {}
 _RATE_CACHE_TTL = 300  # 5 minutes
+
+# Callback registry to break circular import: helpers ↔ prc_economy
+_rate_calculator: Optional[Callable] = None
+
+def register_rate_calculator(fn: Callable):
+    """Register the PRC rate calculation function (called by prc_economy on init)."""
+    global _rate_calculator
+    _rate_calculator = fn
 
 async def get_prc_rate(database) -> int:
     """
@@ -70,10 +78,13 @@ async def get_prc_rate(database) -> int:
     except Exception as e:
         logging.warning(f"[PRC RATE] DB cache read failed: {e}")
     
-    # Priority 3: Recalculate fresh
+    # Priority 3: Recalculate fresh (uses registered callback to avoid circular import)
     try:
-        from routes.prc_economy import calculate_dynamic_prc_rate
-        rate_data = await calculate_dynamic_prc_rate(database)
+        calculator = _rate_calculator
+        if calculator is None:
+            from routes.prc_economy import calculate_dynamic_prc_rate
+            calculator = calculate_dynamic_prc_rate
+        rate_data = await calculator(database)
         if rate_data:
             if isinstance(rate_data, dict):
                 return int(rate_data.get("final_rate", PRC_INR_RATE_DEFAULT))
@@ -167,7 +178,7 @@ def is_subscription_active(user: dict) -> bool:
         if isinstance(expiry, str):
             try:
                 expiry_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
-            except:
+            except Exception:
                 continue
         else:
             expiry_date = expiry
@@ -183,7 +194,7 @@ def is_subscription_active(user: dict) -> bool:
         return True
     
     # Rule 5: Explicitly expired
-    if user.get('subscription_expired') == True:
+    if user.get('subscription_expired') is True:
         return False
     
     return False

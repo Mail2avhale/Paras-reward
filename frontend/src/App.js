@@ -644,7 +644,9 @@ function App() {
           role: finalRole
         };
         setUser(updatedUser);
-        localStorage.setItem("paras_user", JSON.stringify(updatedUser));
+        // Strip sensitive fields before persisting to localStorage
+        const { hashed_pin: _hp, pin_hash: _ph, password: _pw, ...safeData } = updatedUser;
+        localStorage.setItem("paras_user", JSON.stringify(safeData));
         // console.log('[REFRESH] Final user role set to:', finalRole);
         return updatedUser;
       }
@@ -720,7 +722,9 @@ function App() {
       localStorage.setItem("paras_session_token", userData.session_token);
     }
     setUser(userData);
-    localStorage.setItem("paras_user", JSON.stringify(userData));
+    // Strip sensitive fields before persisting to localStorage
+    const { hashed_pin, pin_hash, password, ...safeUserData } = userData;
+    localStorage.setItem("paras_user", JSON.stringify(safeUserData));
     
     // console.log('[LOGIN] User saved to state and localStorage with role:', userData.role);
     

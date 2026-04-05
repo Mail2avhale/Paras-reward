@@ -27,6 +27,9 @@ async def get_dynamic_prc_rate_economy(database):
     from utils.helpers import get_prc_rate
     return await get_prc_rate(database)
 
+# Register rate calculator callback to break circular import
+from utils.helpers import register_rate_calculator as _register_rate_calc
+
 # Price Safety Limits (Section 13)
 MINIMUM_RATE = 6   # Minimum: 6 PRC = ₹1 (most valuable)
 MAXIMUM_RATE = 20  # Maximum: 20 PRC = ₹1 (least valuable)
@@ -354,6 +357,9 @@ def get_dynamic_rate_sync() -> int:
     """
     from utils.helpers import get_prc_rate_sync
     return get_prc_rate_sync()
+
+# Register the calculator callback so helpers.py never needs to import this module
+_register_rate_calc(calculate_dynamic_prc_rate)
 
 
 async def save_calculated_rate(db, rate_data: Dict):
