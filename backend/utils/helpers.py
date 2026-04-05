@@ -27,24 +27,49 @@ def get_current_time() -> datetime:
 
 
 def is_subscription_active(user: dict) -> bool:
-    """Check if user has active paid subscription"""
+    """
+    BULLETPROOF check if user has active paid subscription.
+    Rules:
+    1. subscription_status == "active" → True
+    2. Any expiry date in future → True
+    3. Paid plan (elite/vip/growth) + NO expiry data → ASSUME True (safe default)
+    4. Otherwise → False
+    """
     now = datetime.now(timezone.utc)
     
-    # Check subscription_expiry
-    expiry = user.get('subscription_expiry') or user.get('subscription_expires') or user.get('vip_expiry')
-    if expiry:
+    # Rule 1: Explicit active status
+    if user.get('subscription_status') == 'active':
+        return True
+    
+    # Rule 2: Check expiry dates
+    has_expiry = False
+    for field in ['subscription_expiry', 'subscription_expires', 'vip_expiry', 'subscription_end_date']:
+        expiry = user.get(field)
+        if not expiry:
+            continue
+        has_expiry = True
         if isinstance(expiry, str):
             try:
                 expiry_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
             except:
-                return False
+                continue
         else:
             expiry_date = expiry
         
         if expiry_date.tzinfo is None:
             expiry_date = expiry_date.replace(tzinfo=timezone.utc)
         
-        return now < expiry_date
+        if now < expiry_date:
+            return True
+    
+    # Rule 3: Paid plan + no expiry → assume active
+    plan = user.get('subscription_plan', 'explorer').lower()
+    if not has_expiry and plan in ['elite', 'vip', 'startup', 'growth', 'pro', 'premium']:
+        return True
+    
+    # Rule 4: Explicitly expired
+    if user.get('subscription_expired') == True:
+        return False
     
     return False
 

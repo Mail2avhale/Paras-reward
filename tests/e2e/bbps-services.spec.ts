@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { waitForAppReady, dismissToasts } from '../fixtures/helpers';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://used-status-filter.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://formula-audit-fix.preview.emergentagent.com';
 
 test.describe('BBPS Services - Operator Loading Tests', () => {
   test.beforeEach(async ({ page }) => {

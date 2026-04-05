@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://used-status-filter.preview.emergentagent.com/setup
+   https://formula-audit-fix.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

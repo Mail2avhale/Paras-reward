@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
  * 4. API endpoints working correctly
  */
 
-const BASE_URL = 'https://used-status-filter.preview.emergentagent.com';
+const BASE_URL = 'https://formula-audit-fix.preview.emergentagent.com';
 
 test.describe('Feature Removal - Route Redirects', () => {
   
