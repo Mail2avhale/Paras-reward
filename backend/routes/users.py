@@ -632,8 +632,7 @@ async def get_user_today_stats(uid: str):
 
 @router.get("/user/stats/redeemed/{uid}")
 async def get_user_redeemed_stats(uid: str):
-    """Get user's total redeemed PRC statistics - CACHED 5 min"""
-    # Cache key for redeemed stats
+    """Get user's total redeemed PRC statistics - uses centralized deduped function"""
     cache_key = f"user:stats:redeemed:{uid}"
     
     if cache:
@@ -641,60 +640,18 @@ async def get_user_redeemed_stats(uid: str):
         if cached:
             return cached
     
-    from utils.prc_fields import PRC_AGGREGATION_FIELD
-    
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Use standardized PRC aggregation field for all collections
-    # Valid statuses for "Used" calculation (excludes failed/refunded/cancelled)
-    valid_statuses = [
-        "completed", "COMPLETED", "Completed", "success", "SUCCESS", "Success",
-        "approved", "APPROVED", "Approved", "paid", "PAID", "Paid",
-        "pending", "PENDING", "Pending", "processing", "PROCESSING", "Processing",
-        "delivered", "DELIVERED", "Delivered"
-    ]
-    
-    # Get bill payment totals
-    bp_total = await db.bill_payment_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": valid_statuses}}},
-        {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
-    ]).to_list(1)
-    
-    # Get gift voucher totals
-    gv_total = await db.gift_voucher_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": valid_statuses}}},
-        {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
-    ]).to_list(1)
-    
-    # Get marketplace order totals
-    orders_total = await db.orders.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": valid_statuses}}},
-        {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
-    ]).to_list(1)
-    
-    # Get bank withdrawal totals
-    bank_total = await db.redeem_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": valid_statuses}}},
-        {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
-    ]).to_list(1)
+    # Use the centralized deduped function (single source of truth)
+    from server import get_user_all_time_redeemed
+    total = await get_user_all_time_redeemed(uid)
     
     result = {
-        "bill_payments": round(bp_total[0]["total"] if bp_total else 0, 2),
-        "gift_vouchers": round(gv_total[0]["total"] if gv_total else 0, 2),
-        "marketplace": round(orders_total[0]["total"] if orders_total else 0, 2),
-        "bank_withdrawals": round(bank_total[0]["total"] if bank_total else 0, 2),
-        "total_redeemed": round(
-            (bp_total[0]["total"] if bp_total else 0) +
-            (gv_total[0]["total"] if gv_total else 0) +
-            (orders_total[0]["total"] if orders_total else 0) +
-            (bank_total[0]["total"] if bank_total else 0),
-            2
-        )
+        "total_redeemed": round(total, 2)
     }
     
-    # Cache for 5 minutes
     if cache:
         await cache.set(cache_key, result, ttl=300)
     
@@ -757,6 +714,10 @@ async def get_user_dashboard_combined(uid: str):
         user.get("vip_activated_at")
     )
     
+    # Calculate total_redeemed dynamically (deduped, single source of truth)
+    from server import get_user_all_time_redeemed
+    calculated_total_redeemed = await get_user_all_time_redeemed(uid)
+    
     result = {
         "user": {
             "uid": uid,
@@ -765,7 +726,7 @@ async def get_user_dashboard_combined(uid: str):
             "mobile": user.get("mobile", ""),
             "prc_balance": round(user.get("prc_balance", 0), 4),
             "total_mined": round(user.get("total_mined", 0), 4),
-            "total_redeemed": round(user.get("total_redeemed", 0), 2),
+            "total_redeemed": round(calculated_total_redeemed, 2),
             "referral_count": referral_count,
             "referral_code": user.get("referral_code", ""),
             "subscription_plan": subscription_plan,

@@ -8089,85 +8089,32 @@ async def get_user_redemption_stats(uid: str, request: Request):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        total_prc_redeemed = 0
+        # Use centralized deduped function for total_prc_redeemed (single source of truth)
+        total_prc_redeemed = await get_user_all_time_redeemed(uid)
         
-        # PERFORMANCE FIX: Run all aggregations in parallel
-        import asyncio
-        
-        # ========== PARALLEL FETCH ALL DATA ==========
-        async def safe_aggregate(collection, pipeline):
-            try:
-                result = await collection.aggregate(pipeline).to_list(1)
-                return result[0].get("total", 0) if result else 0
-            except:
-                return 0
-        
-        # Valid statuses for "Used" calculation
-        valid_redeemed_statuses = [
-            "completed", "COMPLETED", "Completed", "success", "SUCCESS", "Success",
-            "approved", "APPROVED", "Approved", "paid", "PAID", "Paid",
-            "pending", "PENDING", "Pending", "processing", "PROCESSING", "Processing",
-            "delivered", "DELIVERED", "Delivered"
-        ]
-        
-        # Define all pipelines
-        bp_pipeline = [
-            {"$match": {"user_id": uid, "status": {"$in": valid_redeemed_statuses}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
-        ]
-        
-        gv_pipeline = [
-            {"$match": {"user_id": uid, "status": {"$in": valid_redeemed_statuses}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
-        ]
-        
-        bank_pipeline = [
-            {"$match": {"user_id": uid, "status": {"$in": valid_redeemed_statuses}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
-        ]
-        
-        loan_pipeline = [
-            {"$match": {"user_id": uid, "status": {"$in": valid_redeemed_statuses}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
-        ]
-        
+        # Earnings from transactions collection
         credit_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", "prc_rain_gain", "profit_share"]
         earnings_pipeline = [
             {"$match": {"user_id": uid, "type": {"$in": credit_types}}},
             {"$group": {"_id": "$type", "total": {"$sum": "$amount"}}}
         ]
         
-        # Run ALL in parallel
-        results = await asyncio.gather(
+        # Orders for count/cashback info (separate from redeem total)
+        orders_result, earnings_result = await asyncio.gather(
             db.orders.find(
                 {"user_id": uid},
                 {"_id": 0, "total_prc": 1, "prc_amount": 1, "cashback_amount": 1, "status": 1}
             ).to_list(1000),
-            safe_aggregate(db.bill_payment_requests, bp_pipeline),
-            safe_aggregate(db.gift_voucher_requests, gv_pipeline),
-            safe_aggregate(db.bank_withdrawal_requests, bank_pipeline),
-            safe_aggregate(db.loan_payments, loan_pipeline),
             db.transactions.aggregate(earnings_pipeline).to_list(100),
             return_exceptions=True
         )
         
-        # Process results
-        all_orders = results[0] if not isinstance(results[0], Exception) else []
-        bp_total = results[1] if isinstance(results[1], (int, float)) else 0
-        gv_total = results[2] if isinstance(results[2], (int, float)) else 0
-        bank_total = results[3] if isinstance(results[3], (int, float)) else 0
-        loan_total = results[4] if isinstance(results[4], (int, float)) else 0
-        earnings_result = results[5] if not isinstance(results[5], Exception) else []
+        all_orders = orders_result if not isinstance(orders_result, Exception) else []
+        earnings_result = earnings_result if not isinstance(earnings_result, Exception) else []
         
-        # ========== 1. ORDERS REDEMPTION ==========
-        orders_redeemed = sum(order.get("total_prc", order.get("prc_amount", 0)) for order in all_orders if order.get("status", "").lower() not in ["cancelled", "refunded", "failed", "error", "rejected"])
-        total_prc_redeemed += orders_redeemed
         total_cashback = sum(order.get("cashback_amount", 0) for order in all_orders if order.get("status") == "delivered")
         total_orders = len(all_orders)
         delivered_orders = len([o for o in all_orders if o.get("status") == "delivered"])
-        
-        # ========== 2-5. ADD ALL AGGREGATION RESULTS ==========
-        total_prc_redeemed += bp_total + gv_total + bank_total + loan_total
         
         # ========== EARNINGS STATS ==========
         # Build earnings breakdown
@@ -15819,156 +15766,9 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
 async def get_user_total_redeemed(user_id: str) -> float:
     """
     Get total PRC redeemed by user across ALL services (all-time).
-    
-    Uses centralized prc_fields helper to handle legacy field variations.
-    Standard field: total_prc_deducted
-    Legacy fields: prc_used, prc_deducted, prc_amount, total_prc
+    Delegates to centralized get_user_all_time_redeemed() with deduplication.
     """
-    from utils.prc_fields import get_prc_amount
-    
-    try:
-        total_redeemed = 0
-        
-        # Valid statuses (count these) — ALL case variants for consistency
-        valid = [
-            "approved", "APPROVED", "Approved", "success", "SUCCESS", "Success",
-            "completed", "COMPLETED", "Completed", "pending", "PENDING", "Pending",
-            "processing", "PROCESSING", "Processing", "paid", "PAID", "Paid",
-            "delivered", "DELIVERED", "Delivered"
-        ]
-        skip = ["refunded", "rejected", "failed", "cancelled", "retry_failed", "error"]
-        
-        # 1. Bill payments (BBPS)
-        bill_payments = await db.bill_payment_requests.find({
-            "user_id": user_id,
-            "status": {"$in": valid}
-        }).to_list(5000)
-        
-        for bp in bill_payments:
-            if bp.get("status") not in skip:
-                total_redeemed += get_prc_amount(bp)
-        
-        # 2. Bank withdrawals
-        bank_withdrawals = await db.bank_withdrawal_requests.find({
-            "user_id": user_id,
-            "status": {"$in": valid}
-        }).to_list(5000)
-        
-        for bw in bank_withdrawals:
-            if bw.get("status") not in skip:
-                total_redeemed += get_prc_amount(bw)
-        
-        # 3. Bank transfer requests (manual bank transfers)
-        bank_transfers = await db.bank_transfer_requests.find({
-            "user_id": user_id,
-            "status": {"$in": valid}
-        }).to_list(5000)
-        
-        for bt in bank_transfers:
-            if bt.get("status") not in skip:
-                total_redeemed += get_prc_amount(bt)
-        
-        # 3b. Bank redeem requests (another collection name used in production)
-        bank_redeems = await db.bank_redeem_requests.find({
-            "user_id": user_id,
-            "status": {"$in": valid}
-        }).to_list(5000)
-        
-        for br in bank_redeems:
-            if br.get("status") not in skip:
-                total_redeemed += get_prc_amount(br)
-        
-        # 4. DMT transactions
-        dmt_txns = await db.dmt_transactions.find({
-            "user_id": user_id,
-            "status": {"$in": ["success", "pending", "processing"]}
-        }).to_list(5000)
-        
-        for dmt in dmt_txns:
-            total_redeemed += get_prc_amount(dmt)
-        
-        # 5. Gift vouchers (check both collection names)
-        gift_vouchers = await db.gift_voucher_orders.find({
-            "user_id": user_id,
-            "status": {"$in": ["success", "completed", "pending", "processing", "approved"]}
-        }).to_list(5000)
-        
-        # Also check gift_voucher_requests collection (legacy name)
-        gift_voucher_reqs = await db.gift_voucher_requests.find({
-            "user_id": user_id,
-            "status": {"$in": ["success", "completed", "pending", "processing", "approved"]}
-        }).to_list(5000)
-        
-        for gv in gift_vouchers:
-            total_redeemed += get_prc_amount(gv)
-        
-        for gv in gift_voucher_reqs:
-            total_redeemed += get_prc_amount(gv)
-        
-        # 5c. Generic redeem_requests collection
-        redeem_requests = await db.redeem_requests.find({
-            "user_id": user_id,
-            "status": {"$in": ["success", "SUCCESS", "completed", "pending", "processing", "approved"]}
-        }).to_list(5000)
-        
-        for rr in redeem_requests:
-            if rr.get("status") not in skip:
-                total_redeemed += get_prc_amount(rr)
-        
-        # 6. PRC Subscription Payments
-        prc_subscriptions = await db.subscription_payments.find({
-            "user_id": user_id,
-            "payment_method": "prc",
-            "status": {"$in": ["paid", "PAID", "Paid", "success", "SUCCESS", "completed", "COMPLETED"]}
-        }).to_list(5000)
-        
-        for sub in prc_subscriptions:
-            total_redeemed += get_prc_amount(sub)
-        
-        # 7. Product Orders (marketplace purchases)
-        product_orders = await db.orders.find({
-            "user_id": user_id,
-            "status": {"$in": ["completed", "delivered", "paid", "pending", "processing", "out_for_delivery", "verified"]}
-        }).to_list(5000)
-        
-        for order in product_orders:
-            if order.get("status") not in ["cancelled", "refunded"]:
-                total_redeemed += get_prc_amount(order)
-        
-        # 8. Redeem transactions from transactions collection (avoid double counting)
-        # Note: transactions collection uses "uid" not "user_id"
-        redeem_txns = await db.transactions.find({
-            "$or": [{"user_id": user_id}, {"uid": user_id}],
-            "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher", "bill_payment_request", "subscription_prc", "order"]}
-        }).to_list(5000)
-        
-        # Build set of already-counted references
-        counted_refs = set()
-        for bp in bill_payments:
-            counted_refs.add(bp.get("request_id", ""))
-        for bw in bank_withdrawals:
-            counted_refs.add(bw.get("request_id", ""))
-        for bt in bank_transfers:
-            counted_refs.add(bt.get("request_id", ""))
-        for dmt in dmt_txns:
-            counted_refs.add(dmt.get("txn_id", ""))
-        for sub in prc_subscriptions:
-            counted_refs.add(f"sub_prc_{sub.get('user_id')}_{sub.get('created_at', '')}")
-        for order in product_orders:
-            counted_refs.add(order.get("order_id", ""))
-        for gv in gift_vouchers:
-            counted_refs.add(gv.get("request_id", "") or gv.get("order_id", ""))
-        
-        for txn in redeem_txns:
-            ref = txn.get("reference_id", "") or txn.get("txn_id", "") or txn.get("request_id", "")
-            if ref and ref not in counted_refs:
-                prc = float(txn.get("amount_prc", 0) or txn.get("amount", 0) or txn.get("prc_amount", 0) or 0)
-                total_redeemed += abs(prc)
-        
-        return round(total_redeemed, 2)
-    except Exception as e:
-        logging.error(f"Error getting total redeemed for {user_id}: {e}")
-        return 0
+    return await get_user_all_time_redeemed(user_id)
 
 
 
