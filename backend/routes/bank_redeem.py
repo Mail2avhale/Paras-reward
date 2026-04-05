@@ -1,7 +1,7 @@
 """
 Bank Account Redeem Routes - PRC to Bank withdrawal
 Users can save bank details and request PRC withdrawal to bank account
-- Weekly limit: 1 request per week
+- Cooldown: 24 hours from last request
 - Fixed denominations: 100, 500, 1000, 5000, 10000, 25000
 - Processing fees + 20% admin charges
 - Eko DMT Integration for instant bank transfers
@@ -205,9 +205,9 @@ async def get_last_request_date(user_id: str, collection: str, request_type: str
     
     Returns:
     - last_request: datetime of last request
-    - next_eligible: datetime when user can request again (last + 7 days)
+    - next_eligible: datetime when user can request again (last + 24 hours)
     - days_remaining: days until next eligible
-    - can_request: True if 7 days have passed
+    - can_request: True if 24 hours have passed
     
     NOTE: Only counts COMPLETED/APPROVED requests. Failed/pending/processing requests don't start cooldown.
     """
@@ -242,25 +242,28 @@ async def get_last_request_date(user_id: str, collection: str, request_type: str
     else:
         last_date = last_date_str
     
-    # Calculate next eligible date (7 days from last request)
-    next_eligible = last_date + timedelta(days=7)
+    # Calculate next eligible date (24 hours from last request)
+    next_eligible = last_date + timedelta(hours=24)
     now = datetime.now(timezone.utc)
     
-    days_remaining = (next_eligible - now).days
+    remaining_seconds = (next_eligible - now).total_seconds()
     can_request = now >= next_eligible
+    
+    hours_remaining = max(0, int(remaining_seconds // 3600)) if not can_request else 0
     
     return {
         "has_request": True,
         "can_request": can_request,
         "last_request": last_date.isoformat(),
         "next_eligible": next_eligible.isoformat(),
-        "days_remaining": max(0, days_remaining + 1) if not can_request else 0,
+        "hours_remaining": hours_remaining,
+        "days_remaining": 0,
         "request_id": last_request.get("request_id")
     }
 
 
 async def check_loan_emi_this_week(user_id: str) -> dict:
-    """Check if user has done loan_emi in last 7 days (rolling window)"""
+    """Check if user has done loan_emi in last 24 hours"""
     result = await get_last_request_date(user_id, "bill_payment_requests", "loan_emi")
     
     return {
@@ -497,7 +500,7 @@ async def get_denominations():
         "samples": samples,
         "admin_charge_percent": ADMIN_CHARGE_PERCENT,
         "weekly_limit": 1,
-        "note": "One withdrawal request allowed per week"
+        "note": "One withdrawal request allowed per 24 hours"
     }
 
 
@@ -506,10 +509,9 @@ async def check_withdrawal_eligibility(user_id: str):
     """
     Check if user can make a withdrawal request
     
-    NEW: 7-day rolling window from last request date
-    OLD: Monday to Sunday week
+    24-hour cooldown from last request time
     
-    Rule: Only 1 of (Bank Redeem / Pay EMI / PRC Vault Redeem) allowed per 7 days
+    Rule: Only 1 of (Bank Redeem / Pay EMI / PRC Vault Redeem) allowed per 24 hours
     """
     user = await db.users.find_one({"uid": user_id})
     if not user:
@@ -531,38 +533,38 @@ async def check_withdrawal_eligibility(user_id: str):
             "message": "KYC verification required for bank withdrawals"
         }
     
-    # Check 1: Loan EMI in last 7 days
+    # Check 1: Loan EMI in last 24 hours
     emi_check = await get_last_request_date(user_id, "bill_payment_requests", "loan_emi")
     if emi_check["has_request"] and not emi_check["can_request"]:
         return {
             "eligible": False,
             "reason": "emi_done_recently",
-            "message": f"7-day limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault Redeem allowed per 7 days. You did Pay EMI recently. Try again after {emi_check['next_eligible'][:10]} ({emi_check['days_remaining']} days remaining).",
+            "message": f"24-hour limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault Redeem allowed per 24 hours. You did Pay EMI recently. Try again after {emi_check.get('hours_remaining', 0)} hours.",
             "next_eligible_date": emi_check["next_eligible"],
-            "days_remaining": emi_check["days_remaining"]
+            "hours_remaining": emi_check.get("hours_remaining", 0)
         }
     
-    # Check 2: Bank Withdrawal in last 7 days
+    # Check 2: Bank Withdrawal in last 24 hours
     bank_check = await get_last_request_date(user_id, "bank_withdrawal_requests")
     if bank_check["has_request"] and not bank_check["can_request"]:
         return {
             "eligible": False,
             "reason": "bank_redeem_recently",
-            "message": f"7-day limit: Only 1 Bank Redeem allowed per 7 days. Try again after {bank_check['next_eligible'][:10]} ({bank_check['days_remaining']} days remaining).",
+            "message": f"24-hour limit: Only 1 Bank Redeem allowed per 24 hours. Try again after {bank_check.get('hours_remaining', 0)} hours.",
             "next_eligible_date": bank_check["next_eligible"],
-            "days_remaining": bank_check["days_remaining"],
+            "hours_remaining": bank_check.get("hours_remaining", 0),
             "existing_request": {
                 "request_id": bank_check.get("request_id")
             }
         }
     
-    # Check 3: PRC Vault (RD) Redeem in last 7 days
+    # Check 3: PRC Vault (RD) Redeem in last 24 hours
     rd_check = await get_last_request_date(user_id, "bank_redeem_requests", "rd_redeem")
     if rd_check["has_request"] and not rd_check["can_request"]:
         return {
             "eligible": False,
             "reason": "rd_redeem_recently",
-            "message": f"7-day limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault Redeem allowed per 7 days. You did PRC Vault Redeem recently. Try again after {rd_check['next_eligible'][:10]} ({rd_check['days_remaining']} days remaining)."
+            "message": f"24-hour limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault Redeem allowed per 24 hours. You did PRC Vault Redeem recently. Try again after {rd_check.get('hours_remaining', 0)} hours."
         }
     
     # NOTE: Referral requirement removed as per user request (March 2026)
@@ -654,28 +656,28 @@ async def create_withdrawal_request(user_id: str, request: Request):
     if user.get("kyc_status") != "verified":
         raise HTTPException(status_code=400, detail="KYC verification required for withdrawals")
     
-    # Check 1: Loan EMI in last 7 days
+    # Check 1: Loan EMI in last 24 hours
     emi_check = await get_last_request_date(user_id, "bill_payment_requests", "loan_emi")
     if emi_check["has_request"] and not emi_check["can_request"]:
         raise HTTPException(
             status_code=429, 
-            detail=f"7-day limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault allowed per 7 days. You did Pay EMI recently. Try again after {emi_check['next_eligible'][:10]} ({emi_check['days_remaining']} days remaining)."
+            detail=f"24-hour limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault allowed per 24 hours. You did Pay EMI recently. Try again after {emi_check.get('hours_remaining', 0)} hours."
         )
     
-    # Check 2: Bank Withdrawal in last 7 days
+    # Check 2: Bank Withdrawal in last 24 hours
     bank_check = await get_last_request_date(user_id, "bank_withdrawal_requests")
     if bank_check["has_request"] and not bank_check["can_request"]:
         raise HTTPException(
             status_code=429, 
-            detail=f"7-day limit: Only 1 Bank Redeem allowed per 7 days. Try again after {bank_check['next_eligible'][:10]} ({bank_check['days_remaining']} days remaining)."
+            detail=f"24-hour limit: Only 1 Bank Redeem allowed per 24 hours. Try again after {bank_check.get('hours_remaining', 0)} hours."
         )
     
-    # Check 3: PRC Vault (RD) Redeem in last 7 days
+    # Check 3: PRC Vault (RD) Redeem in last 24 hours
     rd_check = await get_last_request_date(user_id, "bank_redeem_requests", "rd_redeem")
     if rd_check["has_request"] and not rd_check["can_request"]:
         raise HTTPException(
             status_code=429, 
-            detail=f"7-day limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault allowed per 7 days. You did PRC Vault Redeem recently. Try again after {rd_check['next_eligible'][:10]} ({rd_check['days_remaining']} days remaining)."
+            detail=f"24-hour limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault allowed per 24 hours. You did PRC Vault Redeem recently. Try again after {rd_check.get('hours_remaining', 0)} hours."
         )
     
     # NOTE: Referral requirement removed as per user request (March 2026)

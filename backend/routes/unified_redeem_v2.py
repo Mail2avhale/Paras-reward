@@ -919,7 +919,7 @@ async def create_redeem_request(request: RedeemRequestCreate):
     5. Subscription expiry check (must not be expired)
     6. PRC balance check
     7. Category limit check (40/30/30)
-    8. Weekly service limit check (1 per 7 days)
+    8. Service cooldown check (1 per 24 hours)
     9. Global redeem limit check
     10. Service-specific validations
     """
@@ -1077,7 +1077,7 @@ async def create_redeem_request(request: RedeemRequestCreate):
             raise HTTPException(status_code=400, detail="Minimum FASTag recharge amount is ₹100")
     
     # ═══════════════════════════════════════════════════════════════
-    # STEP 8: WEEKLY ONE SERVICE LIMIT CHECK (Before calculating charges)
+    # STEP 8: 24-HOUR SERVICE COOLDOWN CHECK (Before calculating charges)
     # ═══════════════════════════════════════════════════════════════
     if check_weekly_one_service_func:
         try:
@@ -1085,7 +1085,7 @@ async def create_redeem_request(request: RedeemRequestCreate):
             if not weekly_check.get("allowed"):
                 raise HTTPException(
                     status_code=403,
-                    detail=weekly_check.get("reason_en", weekly_check.get("reason", "Weekly service limit reached. You can only use 1 service per week."))
+                    detail=weekly_check.get("reason_en", weekly_check.get("reason", "24-hour cooldown active. You can only use 1 service per 24 hours."))
                 )
         except HTTPException:
             raise

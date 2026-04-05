@@ -222,8 +222,8 @@ async def get_config():
         "admin_fee_percent": ADMIN_FEE_PERCENT,
         "min_withdrawal": MIN_WITHDRAWAL,
         "max_withdrawal": MAX_WITHDRAWAL,
-        "cycle_days": 28,
-        "note": f"1 INR = {prc_rate} PRC | 1 redeem per 28-day cycle"
+        "cooldown_hours": 24,
+        "note": f"1 INR = {prc_rate} PRC | 1 redeem per 24 hours"
     }
 
 @router.get("/calculate-fees")
@@ -283,8 +283,8 @@ async def create_redeem_request(request: RedeemRequest):
             raise HTTPException(status_code=404, detail="User not found")
         
         # ═══════════════════════════════════════════════════════════════════════
-        # 2.5. CHECK SUBSCRIPTION ACTIVE + 28-DAY CYCLE REDEEM LIMIT
-        # Rule: 1 redeem per 28-day subscription cycle
+        # 2.5. CHECK SUBSCRIPTION ACTIVE + 24-HOUR COOLDOWN
+        # Rule: 1 redeem per 24 hours from last request time
         # ═══════════════════════════════════════════════════════════════════════
         now = datetime.now(timezone.utc)
         
@@ -317,84 +317,68 @@ async def create_redeem_request(request: RedeemRequest):
             except Exception as e:
                 logging.warning(f"[BANK-TRANSFER] Expiry parse error for {user_id}: {e}")
         
-        # CHECK C: 28-day subscription cycle - only 1 redeem per cycle
-        CYCLE_DAYS = 28
-        sub_start = (
-            user.get("subscription_start_date") or 
-            user.get("subscription_start") or 
-            user.get("subscription_created_at") or 
-            user.get("vip_activated_at")
-        )
+        # CHECK C: 24-hour cooldown from last request time
+        COOLDOWN_HOURS_BANK = 24
+        cooldown_cutoff = (now - timedelta(hours=COOLDOWN_HOURS_BANK)).isoformat()
         
-        if sub_start:
-            try:
-                if isinstance(sub_start, str):
-                    sub_start_dt = datetime.fromisoformat(sub_start.replace('Z', '+00:00'))
-                else:
-                    sub_start_dt = sub_start
-                if sub_start_dt.tzinfo is None:
-                    sub_start_dt = sub_start_dt.replace(tzinfo=timezone.utc)
-                
-                # Calculate current cycle
-                days_since_start = (now - sub_start_dt).total_seconds() / 86400
-                current_cycle_num = int(days_since_start // CYCLE_DAYS)
-                current_cycle_start = sub_start_dt + timedelta(days=current_cycle_num * CYCLE_DAYS)
-                current_cycle_end = current_cycle_start + timedelta(days=CYCLE_DAYS)
-                cycle_start_iso = current_cycle_start.isoformat()
-            except Exception as e:
-                logging.warning(f"[BANK-TRANSFER] Cycle calc error for {user_id}: {e}")
-                cycle_start_iso = (now - timedelta(days=CYCLE_DAYS)).isoformat()
-                current_cycle_end = now + timedelta(days=CYCLE_DAYS)
-        else:
-            # No subscription start date — fallback: 28-day rolling window
-            cycle_start_iso = (now - timedelta(days=CYCLE_DAYS)).isoformat()
-            current_cycle_end = now + timedelta(days=CYCLE_DAYS)
-        
-        # Check ALL collections for a redeem in current cycle
         failed_statuses = [
             "rejected", "failed", "cancelled", 
             "Failed", "FAILED", "Rejected", "REJECTED", 
             "Cancelled", "CANCELLED"
         ]
         
-        cycle_redeem_found = False
+        last_request_date = None
         
         # Check bank_transfer_requests
-        bt_in_cycle = await db.bank_transfer_requests.find_one({
+        bt_recent = await db.bank_transfer_requests.find_one({
             "user_id": user_id,
-            "created_at": {"$gte": cycle_start_iso},
+            "created_at": {"$gte": cooldown_cutoff},
             "status": {"$nin": failed_statuses}
-        })
-        if bt_in_cycle:
-            cycle_redeem_found = True
+        }, sort=[("created_at", -1)])
+        if bt_recent:
+            last_request_date = bt_recent.get("created_at")
         
         # Check bank_withdrawal_requests (legacy)
-        if not cycle_redeem_found:
-            bw_in_cycle = await db.bank_withdrawal_requests.find_one({
+        if not last_request_date:
+            bw_recent = await db.bank_withdrawal_requests.find_one({
                 "user_id": user_id,
-                "created_at": {"$gte": cycle_start_iso},
+                "created_at": {"$gte": cooldown_cutoff},
                 "status": {"$nin": failed_statuses}
-            })
-            if bw_in_cycle:
-                cycle_redeem_found = True
+            }, sort=[("created_at", -1)])
+            if bw_recent:
+                last_request_date = bw_recent.get("created_at")
         
         # Check redeem_requests (unified)
-        if not cycle_redeem_found:
-            rr_in_cycle = await db.redeem_requests.find_one({
+        if not last_request_date:
+            rr_recent = await db.redeem_requests.find_one({
                 "user_id": user_id,
                 "service_type": {"$in": ["bank_transfer", "bank_withdrawal", "bank_redeem", "bank", "prc_to_bank"]},
-                "created_at": {"$gte": cycle_start_iso},
+                "created_at": {"$gte": cooldown_cutoff},
                 "status": {"$nin": failed_statuses}
-            })
-            if rr_in_cycle:
-                cycle_redeem_found = True
+            }, sort=[("created_at", -1)])
+            if rr_recent:
+                last_request_date = rr_recent.get("created_at")
         
-        if cycle_redeem_found:
-            remaining_days = max(0, (current_cycle_end - now).days)
-            raise HTTPException(
-                status_code=429,
-                detail=f"You can redeem once per subscription cycle (28 days). Next redeem available after {remaining_days} days when your next cycle starts."
-            )
+        if last_request_date:
+            try:
+                if isinstance(last_request_date, str):
+                    last_dt = datetime.fromisoformat(last_request_date.replace('Z', '+00:00'))
+                else:
+                    last_dt = last_request_date
+                if last_dt.tzinfo is None:
+                    last_dt = last_dt.replace(tzinfo=timezone.utc)
+                cooldown_end = last_dt + timedelta(hours=COOLDOWN_HOURS_BANK)
+                remaining_seconds = (cooldown_end - now).total_seconds()
+                remaining_hours = int(remaining_seconds // 3600)
+                remaining_mins = int((remaining_seconds % 3600) // 60)
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"You can redeem once per 24 hours. Next redeem available after {remaining_hours}h {remaining_mins}m."
+                )
+            except HTTPException:
+                raise
+            except Exception as e:
+                logging.warning(f"[BANK-TRANSFER] Cooldown parse error for {user_id}: {e}")
         
         # 3. Check KYC
         if user.get("kyc_status") != "verified":

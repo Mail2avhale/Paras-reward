@@ -3545,8 +3545,8 @@ WEEKLY_SERVICE_LIMITS = {
         "gas_bill": 999,         # Unlimited
         "lpg_booking": 999,      # Unlimited
         "credit_card_payment": 999, # Unlimited
-        "loan_emi": 1,           # Only 1 per week (EMI or Bank)
-        "bank_redeem": 1,        # Only 1 per week (EMI or Bank)
+        "loan_emi": 999,           # Governed by 24-hour cooldown
+        "bank_redeem": 999,        # Governed by 24-hour cooldown
         "gift_voucher": 999,     # Unlimited
         "shopping": 999          # Unlimited
     },
@@ -3557,8 +3557,8 @@ WEEKLY_SERVICE_LIMITS = {
         "gas_bill": 999,
         "lpg_booking": 999,
         "credit_card_payment": 999,
-        "loan_emi": 1,           # Only 1 per week
-        "bank_redeem": 1,        # Only 1 per week
+        "loan_emi": 999,           # Governed by 24-hour cooldown
+        "bank_redeem": 999,        # Governed by 24-hour cooldown
         "gift_voucher": 999,
         "shopping": 999
     },
@@ -3569,8 +3569,8 @@ WEEKLY_SERVICE_LIMITS = {
         "gas_bill": 999,
         "lpg_booking": 999,
         "credit_card_payment": 999,
-        "loan_emi": 1,           # Only 1 per week
-        "bank_redeem": 1,        # Only 1 per week
+        "loan_emi": 999,           # Governed by 24-hour cooldown
+        "bank_redeem": 999,        # Governed by 24-hour cooldown
         "gift_voucher": 999,
         "shopping": 999
     },
@@ -3581,8 +3581,8 @@ WEEKLY_SERVICE_LIMITS = {
         "gas_bill": 999,
         "lpg_booking": 999,
         "credit_card_payment": 999,
-        "loan_emi": 1,           # Only 1 per week
-        "bank_redeem": 1,        # Only 1 per week
+        "loan_emi": 999,           # Governed by 24-hour cooldown
+        "bank_redeem": 999,        # Governed by 24-hour cooldown
         "gift_voucher": 999,
         "shopping": 999
     }
@@ -3649,23 +3649,23 @@ def get_current_week_bounds():
 
 async def check_weekly_one_service_limit(user_id: str, requested_service: str) -> dict:
     """
-    WEEKLY SERVICE LIMIT - NEW LOGIC:
+    SERVICE COOLDOWN LIMIT:
     
-    1. BBPS Services (any ONE per week from request date):
+    1. BBPS Services (any ONE per 24 hours from request time):
        - mobile_recharge, electricity_bill, dth_recharge, credit_card_payment, loan_emi, gift_voucher
-       - User can use ONE of these per week
-       - Cooldown: 7 days from the request date
+       - User can use ONE of these per 24 hours
+       - Cooldown: 24 hours from the request date
     
-    2. PRC to Bank Transfer (ONE per week, separate from BBPS):
+    2. PRC to Bank Transfer (ONE per 24 hours, separate from BBPS):
        - bank_transfer
-       - User can use ONE per week
-       - Cooldown: 7 days from the request date
+       - User can use ONE per 24 hours
+       - Cooldown: 24 hours from the request date
     
-    So user can do: 1 BBPS service + 1 Bank Transfer per week (both independent)
+    So user can do: 1 BBPS service + 1 Bank Transfer per 24 hours (both independent)
     """
     now = datetime.now(timezone.utc)
-    seven_days_ago = now - timedelta(days=7)
-    seven_days_ago_str = seven_days_ago.isoformat()
+    twenty_four_hours_ago = now - timedelta(hours=24)
+    cutoff_str = twenty_four_hours_ago.isoformat()
     
     # Define service categories - MUST match SERVICE_TYPES from unified_redeem_v2.py
     BBPS_SERVICES = [
@@ -3712,14 +3712,14 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
     
     # ========== CHECK BBPS LIMIT (if requesting BBPS service) ==========
     if is_bbps_request:
-        # Find most recent BBPS request in last 7 days
+        # Find most recent BBPS request in last 24 hours
         # CRITICAL: Only count TRULY SUCCESSFUL requests - failed/refunded/processing/pending should NOT block users
         # This allows users to retry if their previous transaction failed or is stuck
         
         # Check bill_payment_requests collection (where mobile recharge, DTH, etc. are stored)
         bill_payment_request = await db.bill_payment_requests.find_one({
             "user_id": user_id,
-            "created_at": {"$gte": seven_days_ago_str},
+            "created_at": {"$gte": cutoff_str},
             "status": {"$in": ["completed", "success", "COMPLETED", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid"]},
             # CRITICAL: Exclude refunded/failed transactions
             "prc_refunded": {"$ne": True}
@@ -3728,7 +3728,7 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         # Also check redeem_requests collection (for other BBPS services)
         bbps_request = await db.redeem_requests.find_one({
             "user_id": user_id,
-            "created_at": {"$gte": seven_days_ago_str},
+            "created_at": {"$gte": cutoff_str},
             "status": {"$in": ["completed", "success", "COMPLETED", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid"]},
             # CRITICAL: Exclude refunded/failed transactions
             "prc_refunded": {"$ne": True},
@@ -3742,7 +3742,7 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         # Also check gift voucher requests
         gift_request = await db.gift_voucher_requests.find_one({
             "user_id": user_id,
-            "created_at": {"$gte": seven_days_ago_str},
+            "created_at": {"$gte": cutoff_str},
             "status": {"$in": ["completed", "success", "approved", "delivered", "paid", "COMPLETED", "SUCCESS", "APPROVED", "DELIVERED", "PAID", "Paid"]}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
@@ -3813,14 +3813,14 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         # NOTE: Only count COMPLETED/SUCCESS requests - failed/processing/pending should NOT block users
         bank_request = await db.bank_transfer_requests.find_one({
             "user_id": user_id,
-            "created_at": {"$gte": seven_days_ago_str},
+            "created_at": {"$gte": cutoff_str},
             "status": {"$in": ["completed", "success", "approved", "paid", "COMPLETED", "SUCCESS", "APPROVED", "PAID", "Paid"]}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
         # Also check old bank withdrawal requests
         old_bank_request = await db.bank_withdrawal_requests.find_one({
             "user_id": user_id,
-            "created_at": {"$gte": seven_days_ago_str},
+            "created_at": {"$gte": cutoff_str},
             "status": {"$in": ["completed", "success", "approved", "paid", "COMPLETED", "SUCCESS", "APPROVED", "PAID", "Paid"]}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
@@ -3875,45 +3875,47 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         "allowed": True,
         "reason": "OK",
         "requested_service": requested_service,
-        "message": "You can use this service. Limit: 1 BBPS service + 1 Bank Transfer per week (7 days cooldown each)."
+        "message": "You can use this service. Limit: 1 BBPS service + 1 Bank Transfer per 24 hours (24-hour cooldown each)."
     }
 
 
 async def check_weekly_emi_or_bank_redeem(user_id: str) -> dict:
     """
-    STRICT RULE: User can do ONLY ONE of these per week:
+    STRICT RULE: User can do ONLY ONE of these per 24 hours:
     - Pay EMI (loan_emi)
     - Redeem to Bank (bank withdrawal)
     
-    If either is done, the other is blocked for that week.
+    If either is done within 24 hours, the other is blocked.
     """
-    monday, sunday, next_monday = get_current_week_bounds()
-    monday_str = monday.isoformat()
+    now = datetime.now(timezone.utc)
+    cutoff = (now - timedelta(hours=24)).isoformat()
     
-    # Check for loan_emi this week
+    # Check for loan_emi in last 24 hours
     loan_emi_request = await db.bill_payment_requests.find_one({
         "user_id": user_id,
         "request_type": "loan_emi",
-        "created_at": {"$gte": monday_str},
+        "created_at": {"$gte": cutoff},
         "status": {"$nin": ["rejected", "cancelled"]}
     })
     
-    # Check for bank withdrawal this week
+    # Check for bank withdrawal in last 24 hours
     bank_redeem_request = await db.bank_withdrawal_requests.find_one({
         "user_id": user_id,
-        "created_at": {"$gte": monday_str},
+        "created_at": {"$gte": cutoff},
         "status": {"$nin": ["rejected", "cancelled"]}
     })
     
     has_loan_emi = loan_emi_request is not None
     has_bank_redeem = bank_redeem_request is not None
     
+    next_available = (now + timedelta(hours=24)).isoformat()
+    
     return {
         "has_loan_emi": has_loan_emi,
         "has_bank_redeem": has_bank_redeem,
         "loan_emi_request": loan_emi_request,
         "bank_redeem_request": bank_redeem_request,
-        "next_monday": next_monday.isoformat(),
+        "next_available": next_available,
         "can_do_loan_emi": not has_bank_redeem and not has_loan_emi,
         "can_do_bank_redeem": not has_loan_emi and not has_bank_redeem
     }
@@ -31236,36 +31238,36 @@ async def create_bill_payment_request(request: Request):
         raise HTTPException(status_code=403, detail=redeem_check["reason"])
     # ===================================
     
-    # ===== STRICT: EMI OR BANK REDEEM - ONLY ONE PER WEEK =====
+    # ===== STRICT: EMI OR BANK REDEEM - ONLY ONE PER 24 HOURS =====
     if request_type == "loan_emi":
-        # Check if user has done any other withdrawal this week
-        monday, sunday, next_monday = get_current_week_bounds()
-        monday_str = monday.isoformat()
+        # Check if user has done any other withdrawal in last 24 hours
+        now = datetime.now(timezone.utc)
+        cutoff_24h = (now - timedelta(hours=24)).isoformat()
         
         # Check bank redeem
         emi_bank_check = await check_weekly_emi_or_bank_redeem(user_id)
         if emi_bank_check["has_bank_redeem"]:
             raise HTTPException(
                 status_code=429, 
-                detail=f"Weekly limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per week. You have already done Bank Redeem this week. Try again from Monday ({emi_bank_check['next_monday'][:10]})."
+                detail=f"24-hour limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per 24 hours. You have already done Bank Redeem recently."
             )
         if emi_bank_check["has_loan_emi"]:
             raise HTTPException(
                 status_code=429, 
-                detail=f"Weekly limit: Only 1 Pay EMI allowed per week. Try again from Monday ({emi_bank_check['next_monday'][:10]})."
+                detail=f"24-hour limit: Only 1 Pay EMI allowed per 24 hours."
             )
         
-        # Check RD (PRC Savings Vault) redeem this week
+        # Check RD (PRC Savings Vault) redeem in last 24 hours
         rd_redeem_request = await db.bank_redeem_requests.find_one({
             "user_id": user_id,
             "request_type": "rd_redeem",
-            "created_at": {"$gte": monday_str},
+            "created_at": {"$gte": cutoff_24h},
             "status": {"$nin": ["rejected", "cancelled"]}
         })
         if rd_redeem_request:
             raise HTTPException(
                 status_code=429, 
-                detail=f"Weekly limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per week. You have already done PRC Savings Vault Redeem this week. Try again from Monday ({next_monday.isoformat()[:10]})."
+                detail=f"24-hour limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per 24 hours. You have already done PRC Savings Vault Redeem recently."
             )
     # =========================================================
     
