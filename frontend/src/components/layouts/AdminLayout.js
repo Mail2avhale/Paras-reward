@@ -163,6 +163,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },
+    { id: 'transaction-manager', label: 'Transaction Manager', icon: FileText, path: '/admin/transaction-manager' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
     { id: 'performance-report', label: 'Admin Performance', icon: Award, path: '/admin/performance-report' },
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
@@ -264,6 +265,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/prc-economy': 'prc-economy',
     '/admin/data-backup': 'data-backup',
     '/admin/settings-hub': 'settings-hub',
+    '/admin/transaction-manager': 'transaction-manager',
   };
 
   useEffect(() => {

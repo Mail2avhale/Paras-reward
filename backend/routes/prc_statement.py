@@ -49,6 +49,19 @@ def classify_type(raw_type: str) -> str:
     return TYPE_MAP.get(raw_type.lower().strip(), "Other")
 
 
+def determine_credit(doc: dict) -> bool:
+    """
+    Determine if a transaction is credit or debit.
+    Priority: entry_type field > amount sign.
+    - If entry_type exists → use it (credit=True, debit=False)
+    - If entry_type absent → positive amount = credit, negative = debit
+    """
+    entry_type = doc.get("entry_type")
+    if entry_type:
+        return entry_type == "credit"
+    return doc.get("amount", 0) > 0
+
+
 def parse_date(val) -> Optional[datetime]:
     if not val:
         return None
@@ -99,7 +112,7 @@ async def get_prc_statement(
             txn_id = doc.get("txn_id", "")
             display_type = classify_type(doc.get("type", ""))
             amount = abs(doc.get("amount", 0))
-            is_credit = doc.get("entry_type") == "credit" or doc.get("amount", 0) > 0
+            is_credit = determine_credit(doc)
             all_entries.append({
                 "date": dt.isoformat(), "date_ts": dt.timestamp(),
                 "type": display_type,
@@ -124,7 +137,7 @@ async def get_prc_statement(
             if amount == 0:
                 continue
             display_type = classify_type(doc.get("type", ""))
-            is_credit = doc.get("amount", 0) > 0
+            is_credit = determine_credit(doc)
             all_entries.append({
                 "date": dt.isoformat(), "date_ts": dt.timestamp(),
                 "type": display_type,
@@ -149,7 +162,7 @@ async def get_prc_statement(
                 continue
             raw_type = doc.get("type", "") or doc.get("transaction_type", "")
             display_type = classify_type(raw_type)
-            is_credit = doc.get("amount", 0) > 0 or doc.get("entry_type") == "credit"
+            is_credit = determine_credit(doc)
             all_entries.append({
                 "date": dt.isoformat(), "date_ts": dt.timestamp(),
                 "type": display_type,
@@ -175,7 +188,7 @@ async def get_prc_statement(
                 continue
             raw_type = doc.get("txn_type", "") or doc.get("type", "")
             display_type = classify_type(raw_type)
-            is_credit = doc.get("entry_type") == "credit" or doc.get("amount", 0) > 0
+            is_credit = determine_credit(doc)
             all_entries.append({
                 "date": dt.isoformat(), "date_ts": dt.timestamp(),
                 "type": display_type,

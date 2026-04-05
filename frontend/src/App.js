@@ -187,6 +187,7 @@ const AdminLiquidity = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkN
 const AdminCompanyWallets = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCompanyWallets"));
 const AdminCashBankBook = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCashBankBook"));
 const AdminPRCLedger = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCLedger"));
+const AdminTransactionManager = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminTransactionManager"));
 const AdminFinancialReports = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFinancialReports"));
 const AdminCapitalManagement = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCapitalManagement"));
 const AdminTrialBalance = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminTrialBalance"));
@@ -426,6 +427,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/accounting" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminAccountingDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/cash-bank-book" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminCashBankBook user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/prc-ledger" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPRCLedger user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/transaction-manager" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminTransactionManager user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/financial-reports" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminFinancialReports user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/capital-management" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminCapitalManagement user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/trial-balance" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminTrialBalance user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
