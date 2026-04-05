@@ -1,0 +1,89 @@
+{
+  "summary": "Deduplication Refactoring Verification - ALL TESTS PASSED. Backend (19/19 passed). The centralized get_user_all_time_redeemed() function is correctly used across 5 endpoints (redemption-stats, dashboard, stats/redeemed, usage-history). Total_redeemed values are 100% consistent: Primary user shows 48,646.52 PRC and PRC user shows 34,369.47 PRC across ALL endpoints.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_dedup_refactoring.py",
+    "/app/test_reports/pytest/dedup_refactoring_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "get_user_all_time_redeemed() function at server.py:4171 uses fingerprint-based deduplication (amount + timestamp minute) to prevent double-counting",
+    "5 endpoints correctly use the centralized function: redemption-stats (line 8093), dashboard (line 7632), users.py profile (line 649), users.py dashboard (line 719), usage-history (prc_statement.py)",
+    "All endpoints return identical total_redeemed values for the same user - deduplication working correctly",
+    "No 500 errors on any of the refactored endpoints"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_dedup_refactoring.py"
+  ],
+  "success_rate": {
+    "backend": "100% (19/19 passed)",
+    "frontend": "Login flow verified, dashboard loads correctly"
+  },
+  "test_credentials": {
+    "primary_user_mobile": "9970100782",
+    "primary_user_pin": "997010",
+    "primary_user_uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+    "prc_user_uid": "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21"
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Deduplication refactoring verified. The get_user_all_time_redeemed() function in server.py:4171 is the single source of truth for calculating total PRC redeemed. It uses fingerprint-based deduplication (amount + timestamp rounded to minute) to prevent double-counting across overlapping MongoDB collections. All 5 endpoints (redemption-stats, dashboard in server.py, dashboard in users.py, stats/redeemed in users.py, usage-history) now use this centralized function and return consistent values.",
+  "verified_features": {
+    "backend_apis": {
+      "health_check": "PASS - GET /api/health returns 200",
+      "redemption_stats_returns_200": "PASS - No 500 errors",
+      "redemption_stats_has_total_prc_redeemed": "PASS - Field present and numeric",
+      "dashboard_returns_200": "PASS - No 500 errors",
+      "dashboard_has_total_redeemed": "PASS - user.total_redeemed field present",
+      "stats_redeemed_returns_200": "PASS - No 500 errors",
+      "stats_redeemed_has_total_redeemed": "PASS - Field present and numeric",
+      "usage_history_returns_200": "PASS - No 500 errors",
+      "usage_history_no_burns": "PASS - Only service categories returned",
+      "primary_user_consistency": "PASS - All 4 endpoints return 48646.52 PRC",
+      "prc_user_consistency": "PASS - All 4 endpoints return 34369.47 PRC",
+      "invalid_user_404": "PASS - Returns 404 for non-existent user"
+    },
+    "frontend_flows": {
+      "login_flow": "PASS - Mobile + PIN authentication works",
+      "dashboard_loads": "PASS - Shows user balance (1512.02 PRC) and ELITE plan"
+    }
+  },
+  "api_consistency_verification": {
+    "primary_user_uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+    "primary_user_values": {
+      "redemption_stats_total_prc_redeemed": 48646.52,
+      "dashboard_user_total_redeemed": 48646.52,
+      "stats_redeemed_total_redeemed": 48646.52,
+      "usage_history_summary_total_used": 48646.52
+    },
+    "prc_user_uid": "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
+    "prc_user_values": {
+      "redemption_stats_total_prc_redeemed": 34369.47,
+      "dashboard_user_total_redeemed": 34369.47,
+      "stats_redeemed_total_redeemed": 34369.47,
+      "usage_history_summary_total_used": 34369.47
+    },
+    "consistency_result": "100% MATCH - All endpoints return identical values"
+  },
+  "deduplication_function_details": {
+    "location": "server.py:4171",
+    "function_name": "get_user_all_time_redeemed(user_id: str)",
+    "dedup_method": "Fingerprint-based: {amount}_{timestamp_minute}",
+    "collections_queried": [
+      "subscription_payments", "vip_payments", "bank_transfer_requests", "redeem_requests",
+      "bank_withdrawal_requests", "bank_redeem_requests", "bank_transfers", "dmt_transactions",
+      "dmt_logs", "bill_payment_requests", "bill_payments", "payment_requests", "recharge_requests",
+      "gift_voucher_requests", "orders", "unified_redemptions", "loan_payments", "chatbot_withdrawal_requests"
+    ],
+    "excluded_types": ["prc_burn", "admin_burn", "hourly_burn"]
+  }
+}
