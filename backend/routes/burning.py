@@ -24,21 +24,33 @@ BURN_PER_SECOND_FACTOR = DAILY_BURN_PERCENT / 100 / 86400  # per-second rate
 
 
 def is_subscription_active(user: dict) -> bool:
-    """Check if user has active Elite subscription"""
+    """
+    BULLETPROOF check if user has active Elite subscription.
+    Rules:
+    1. If subscription_plan is "explorer" or empty → NOT active
+    2. If subscription_status == "active" → ACTIVE
+    3. If any expiry date is in the future → ACTIVE
+    4. If plan is elite/vip/etc BUT no expiry AND no status → ASSUME ACTIVE (missing data shouldn't trigger burn)
+    5. If plan is elite/vip AND expiry is in the past → EXPIRED (not active)
+    """
     plan = user.get("subscription_plan", "explorer").lower()
-    if plan not in ["elite", "vip", "startup", "growth", "pro"]:
+    
+    # Rule 1: Explorer = not active
+    if plan in ["explorer", "free", "", "none"]:
         return False
     
-    # Check subscription_status first
+    # Rule 2: Explicit active status
     if user.get("subscription_status") == "active":
         return True
     
-    # Check expiry dates (multiple field names used in DB)
+    # Rule 3: Check expiry dates
     now = datetime.now(timezone.utc)
+    has_expiry = False
     for field in ["subscription_expires", "subscription_expiry", "subscription_end_date"]:
         end_date = user.get(field)
         if not end_date:
             continue
+        has_expiry = True
         if isinstance(end_date, str):
             try:
                 end_date = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
@@ -48,6 +60,15 @@ def is_subscription_active(user: dict) -> bool:
             end_date = end_date.replace(tzinfo=timezone.utc)
         if end_date > now:
             return True
+    
+    # Rule 4: Paid plan but NO expiry data → assume active (defensive)
+    if not has_expiry and plan in ["elite", "vip", "startup", "growth", "pro", "premium"]:
+        return True
+    
+    # Rule 5: Paid plan with expiry in the past → expired
+    # Also check subscription_expired flag
+    if user.get("subscription_expired") == True:
+        return False
     
     return False
 

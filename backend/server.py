@@ -16075,11 +16075,11 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         # Redeemable PRC = Total Earned × Unlock%
         redeemable = total_earned * (redeem_limit_percent / 100)
         
-        # Available = Redeemable - Already Used (can be negative after PRC subscription)
-        available = redeemable - total_redeemed
+        # Available = Redeemable - Already Used (NEVER negative — cap at 0)
+        available = max(0, redeemable - total_redeemed)
         
-        # Effective available for bank/bill pay (never negative, capped at balance)
-        effective_available = min(max(0, available), current_balance)
+        # Effective available for bank/bill pay (capped at current balance)
+        effective_available = min(available, current_balance)
         
         return {
             "total_earned": round(total_earned, 2),

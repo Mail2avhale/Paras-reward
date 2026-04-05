@@ -122,19 +122,64 @@ def calculate_network_cap(direct_referrals: int, l1_indirect_referrals: int = 0)
 async def check_subscription_expiry(user: dict) -> dict:
     """
     Check if user's subscription has expired.
-    If expired, auto-set to explorer and return updated user dict.
-    Returns the (possibly updated) user dict.
+    If expired, check for upcoming plans to auto-activate.
+    If no upcoming plan, auto-set to explorer.
+    Also restores subscription if user is explorer but has active payment.
     """
     if not user:
         return user
     
+    uid = user.get("uid")
     plan = user.get("subscription_plan", "explorer")
+    
+    # SYNC FIX: If user is explorer, check subscription_payments for active subscription
     if plan.lower() in ["explorer", "free", ""]:
-        return user  # Already explorer, nothing to check
+        try:
+            active_payment = await db.subscription_payments.find_one(
+                {"user_id": uid, "status": {"$in": ["paid", "Paid", "PAID"]}},
+                {"_id": 0, "subscription_end": 1, "new_expiry": 1, "subscription_expiry": 1, "plan_name": 1},
+                sort=[("created_at", -1)]
+            )
+            if active_payment:
+                payment_expiry = active_payment.get("subscription_end") or active_payment.get("new_expiry") or active_payment.get("subscription_expiry")
+                if payment_expiry:
+                    now = datetime.now(timezone.utc)
+                    if isinstance(payment_expiry, str):
+                        exp_dt = datetime.fromisoformat(payment_expiry.replace('Z', '+00:00'))
+                    else:
+                        exp_dt = payment_expiry
+                    if exp_dt.tzinfo is None:
+                        exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                    if exp_dt > now:
+                        # Active payment found! Restore subscription
+                        payment_plan = active_payment.get("plan_name", "elite")
+                        if payment_plan not in ["elite", "startup", "premium"]:
+                            payment_plan = "elite"
+                        await db.users.update_one(
+                            {"uid": uid},
+                            {"$set": {
+                                "subscription_plan": payment_plan,
+                                "subscription_expiry": payment_expiry if isinstance(payment_expiry, str) else payment_expiry.isoformat(),
+                                "subscription_status": "active",
+                                "subscription_expired": False,
+                                "membership_type": "vip"
+                            }}
+                        )
+                        user["subscription_plan"] = payment_plan
+                        user["subscription_expired"] = False
+                        user["subscription_status"] = "active"
+                        logging.info(f"[SUBSCRIPTION-SYNC] Restored {uid} to {payment_plan} from payment record")
+                        if cache:
+                            await cache.delete(f"user_data:{uid}")
+                            await cache.delete(f"user:dashboard:{uid}")
+                        return user
+        except Exception as e:
+            logging.error(f"[SUBSCRIPTION-SYNC] Error checking payments for {uid}: {e}")
+        return user  # Still explorer
     
     expiry = user.get("subscription_expiry") or user.get("subscription_expires")
     if not expiry:
-        return user  # No expiry set
+        return user  # No expiry set, keep current plan
     
     try:
         if isinstance(expiry, str):
@@ -151,14 +196,14 @@ async def check_subscription_expiry(user: dict) -> dict:
         now = datetime.now(timezone.utc)
         if now > expiry_dt:
             # Subscription expired → set to explorer
-            uid = user.get("uid")
             logging.info(f"[SUBSCRIPTION] Expired for {uid}, setting to explorer")
             await db.users.update_one(
                 {"uid": uid},
                 {"$set": {
                     "subscription_plan": "explorer",
                     "subscription_expired": True,
-                    "subscription_expired_at": now.isoformat()
+                    "subscription_expired_at": now.isoformat(),
+                    "subscription_status": "expired"
                 }}
             )
             user["subscription_plan"] = "explorer"
