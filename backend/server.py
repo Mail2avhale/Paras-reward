@@ -15891,16 +15891,17 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
     Dynamic Redeem Limit based on Growth Network size.
     
-    Formula (User-defined):
+    Formula (User-defined, updated 5 Apr 2026):
     - total_mined = max(total_mined_prc, total_mined, current_balance + total_redeemed) [reconciled]
     - total_earned = total_mined - total_redeemed
     - Unlock % = Cumulative tier-based (max 94.5%)
-    - Redeemable PRC = total_earned × (Unlock% / 100)
-    - Available = max(0, Redeemable - total_redeemed)
+    - TOTAL LIMIT = total_mined × (Unlock% / 100)     ← based on total_mined, NOT total_earned
+    - Available = max(0, TOTAL LIMIT - total_redeemed)
     - Effective Available = min(Available, current_balance)
     
-    NOTE: total_earned does NOT use current_balance directly to avoid
-    auto-burn (3.33%/day) causing negative drift in limits.
+    KEY CHANGE: TOTAL LIMIT is now based on total_mined (only grows) instead of
+    total_earned (shrinks with redemption). This prevents the "shrinking limit" problem
+    where redeeming PRC would reduce the user's future limit.
     """
     try:
         from routes.growth_economy import get_user_unlock_percent, get_network_size, calculate_growth_level
@@ -15936,17 +15937,17 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         # Use the highest value (most accurate representation of all-time mining)
         reconciled_total_mined = max(raw_total_mined_prc, raw_total_mined, fallback_total_mined)
         
-        # User-defined formula: total_earned = total_mined - total_redeemed
+        # total_earned = total_mined - total_redeemed (for display purposes)
         total_earned = max(0, reconciled_total_mined - total_redeemed)
         
         # Get unlock % from growth network
         network_size = await get_network_size(user_id)
         redeem_limit_percent = calculate_growth_level(network_size)
         
-        # Redeemable PRC = Total Earned × Unlock%
-        redeemable = total_earned * (redeem_limit_percent / 100)
+        # TOTAL LIMIT = total_mined × Unlock% (based on total_mined, not total_earned)
+        redeemable = reconciled_total_mined * (redeem_limit_percent / 100)
         
-        # Available = Redeemable - Already Used (NEVER negative — cap at 0)
+        # Available = TOTAL LIMIT - Already Used (NEVER negative — cap at 0)
         available = max(0, redeemable - total_redeemed)
         
         # Effective available for bank/bill pay (capped at current balance)
