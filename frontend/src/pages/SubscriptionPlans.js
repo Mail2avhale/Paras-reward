@@ -429,10 +429,12 @@ const SubscriptionPlans = ({ user }) => {
       const freshTotal = await refreshElitePricing();
       const prcRequired = freshTotal || getPRCPrice();
 
-      const availableLimit = redeemLimit?.effective_remaining || redeemLimit?.remaining_limit || redeemLimit?.remaining || 0;
+      // SUBSCRIPTION: Only check PRC balance, NOT redeem limit
+      // Backend explicitly skips redeem limit for subscriptions
+      const userPrcBalance = user?.prc_balance || 0;
       
-      if (availableLimit < prcRequired) {
-        toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${prcRequired.toLocaleString()} PRC`);
+      if (userPrcBalance < prcRequired) {
+        toast.error(`Insufficient PRC Balance. Available: ${userPrcBalance.toLocaleString()} PRC, Required: ${prcRequired.toLocaleString()} PRC`);
         setPrcPaymentLoading(false);
         return;
       }
@@ -1298,7 +1300,7 @@ const SubscriptionPlans = ({ user }) => {
             </button>
             )}
 
-            {/* Pay with PRC - From Redeem Limit */}
+            {/* Pay with PRC - From PRC Balance */}
             {prcEnabled && (
             <button
               onClick={() => setPaymentMethod('prc')}
@@ -1328,7 +1330,7 @@ const SubscriptionPlans = ({ user }) => {
                     {getPRCPrice().toLocaleString()} PRC
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Available: {(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0).toLocaleString()} PRC
+                    Balance: {(user?.prc_balance || 0).toLocaleString()} PRC
                   </p>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -1445,7 +1447,7 @@ const SubscriptionPlans = ({ user }) => {
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-purple-400" />
-                    Deducted from your Available Redeem Limit
+                    Deducted from your PRC Balance
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-purple-400" />
@@ -1468,9 +1470,9 @@ const SubscriptionPlans = ({ user }) => {
               {/* PRC Balance Info — Ultra Violet */}
               <div className="p-4 rounded-2xl border border-purple-500/30" style={{ background: 'linear-gradient(145deg, #2e1065 0%, #4c1d95 50%, #1e1b4b 100%)' }}>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Available Redeem Limit</span>
-                  <span className={`font-extrabold ${(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0) >= getPRCPrice() ? 'text-yellow-300' : 'text-red-300'}`}>
-                    {(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0).toLocaleString()} PRC
+                  <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Your PRC Balance</span>
+                  <span className={`font-extrabold ${(user?.prc_balance || 0) >= getPRCPrice() ? 'text-yellow-300' : 'text-red-300'}`}>
+                    {(user?.prc_balance || 0).toLocaleString()} PRC
                   </span>
                 </div>
                 <div className="border-t border-white/20 my-2"></div>
@@ -1478,14 +1480,14 @@ const SubscriptionPlans = ({ user }) => {
                   <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Required</span>
                   <span className="text-yellow-300 font-extrabold">{getPRCPrice().toLocaleString()} PRC</span>
                 </div>
-                {(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0) < getPRCPrice() && (
-                  <p className="text-red-300 text-xs mt-2 font-medium">Insufficient redeem limit. Mine more PRC or use another payment method.</p>
+                {(user?.prc_balance || 0) < getPRCPrice() && (
+                  <p className="text-red-300 text-xs mt-2 font-medium">Insufficient PRC balance. Mine more PRC or use another payment method.</p>
                 )}
               </div>
 
               <button
                 onClick={handlePRCPayment}
-                disabled={prcPaymentLoading || (redeemLimit?.remaining_limit || redeemLimit?.remaining || 0) < getPRCPrice()}
+                disabled={prcPaymentLoading || (user?.prc_balance || 0) < getPRCPrice()}
                 className="w-full py-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {prcPaymentLoading ? (
