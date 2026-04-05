@@ -53,6 +53,22 @@ const BBPSServices = ({ user }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [transaction, setTransaction] = useState(null);
   const [pollingTxId, setPollingTxId] = useState(null);
+  const [prcRate, setPrcRate] = useState(null);
+  
+  // Fetch PRC rate once on mount
+  useEffect(() => {
+    const fetchRate = async () => {
+      try {
+        const res = await axios.get(`${API}/prc-economy/current-rate`);
+        if (res.data?.success && res.data?.rate?.final_rate) {
+          setPrcRate(res.data.rate.final_rate);
+        }
+      } catch (err) {
+        console.error('PRC rate fetch failed');
+      }
+    };
+    fetchRate();
+  }, []);
   
   // Fetch operators for category
   const fetchOperators = useCallback(async (category) => {
@@ -544,6 +560,7 @@ const BBPSServices = ({ user }) => {
                     showBreakdown={true}
                     showRateAlert={true}
                     serviceType="bbps"
+                    rateOverride={prcRate}
                   />
                 </div>
               )}
