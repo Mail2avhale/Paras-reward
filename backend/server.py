@@ -58,6 +58,7 @@ from routes.admin_finance import router as admin_finance_router, set_db as set_a
 from routes.admin_users import router as admin_users_router, set_db as set_admin_users_db, set_cache as set_admin_users_cache, set_helpers as set_admin_users_helpers
 from routes.admin_user360 import router as admin_user360_router, set_db as set_admin_user360_db, set_redeemed_fn as set_admin_user360_redeemed_fn
 from routes.admin_failed_transactions import router as admin_failed_txn_router, set_db as set_admin_failed_txn_db
+from routes.admin_transactions import router as admin_txn_router, set_db as set_admin_txn_db
 from routes.admin_fraud import router as admin_fraud_router, set_db as set_admin_fraud_db, set_helpers as set_admin_fraud_helpers
 from routes.admin_reports import router as admin_reports_router, set_db as set_admin_reports_db, set_cache as set_admin_reports_cache
 from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db
@@ -25573,6 +25574,18 @@ async def fix_negative_balances():
             {"$set": {"prc_balance": 0}}
         )
         
+        # Log the fix in transactions (for PRC statement visibility)
+        await db.transactions.insert_one({
+            "transaction_id": f"NEGFIX-{str(uuid.uuid4())}",
+            "user_id": user["uid"],
+            "type": "admin_adjustment",
+            "amount": -old_balance,
+            "description": f"Auto-fix negative PRC balance ({round(old_balance, 2)} → 0)",
+            "balance_before": old_balance,
+            "balance_after": 0,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
         # Log the fix
         await db.audit_logs.insert_one({
             "log_id": str(uuid.uuid4()),
@@ -37858,6 +37871,18 @@ async def daily_checkin(user_id: str):
         # Award 5 PRC for first login
         await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": 5}})
         
+        # Record transaction for first login bonus
+        await db.transactions.insert_one({
+            "transaction_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "type": "daily_streak",
+            "wallet_type": "prc",
+            "amount": 5,
+            "description": "First login bonus",
+            "balance_after": 0,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
         return {
             "current_streak": 1,
             "reward_prc": 5,
@@ -44678,6 +44703,8 @@ api_router.include_router(admin_user360_router)
 # Include admin failed transactions router (NEW - March 2026)
 set_admin_failed_txn_db(db)
 api_router.include_router(admin_failed_txn_router)
+set_admin_txn_db(db)
+api_router.include_router(admin_txn_router)
 
 # Include admin fraud router (refactored)
 set_admin_fraud_db(db)

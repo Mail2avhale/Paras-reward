@@ -182,6 +182,19 @@ async def _handle_failed_transaction(client_ref_id: str, callback_data: dict):
                 }
             )
             
+            # Record refund transaction
+            from datetime import timezone as tz
+            import uuid as _uuid
+            await db.transactions.insert_one({
+                "transaction_id": f"EKO-REF-{_uuid.uuid4()}",
+                "user_id": user_id,
+                "type": "dmt_refund",
+                "amount": prc_amount,
+                "description": f"DMT transaction failed - auto refund ({client_ref_id})",
+                "reference_id": client_ref_id,
+                "created_at": datetime.now(tz.utc).isoformat()
+            })
+            
             logging.info(f"[EKO CALLBACK] Refunded {prc_amount} PRC to user {user_id}")
             
     except Exception as e:

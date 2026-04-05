@@ -21,7 +21,7 @@ def set_db(database, cache_client=None):
 TYPE_MAP = {
     "mining": "Reward", "mining_started": "Reward", "mining_collect": "Reward",
     "mining_reward": "Reward", "growth_reward": "Reward", "daily_reward": "Reward", "reward": "Reward",
-    "credit": "Reward",
+    "credit": "Reward", "daily_streak": "Reward", "achievement": "Reward",
     "recharge": "Recharge", "mobile_recharge": "Recharge", "dth_recharge": "Recharge",
     "bill_payment": "Bill Pay", "electricity": "Bill Pay", "bill_pay": "Bill Pay", "bbps": "Bill Pay",
     "voucher": "Voucher Redeem", "gift_voucher": "Voucher Redeem", "gift_card": "Voucher Redeem",
@@ -29,12 +29,13 @@ TYPE_MAP = {
     "refund": "Refund", "reversal": "Refund",
     "withdrawal_refund": "Refund", "withdrawal_cancelled_refund": "Refund",
     "withdrawal_bulk_cancel_refund": "Refund", "withdrawal_selected_cancel_refund": "Refund",
-    "dmt_refund": "Refund",
+    "dmt_refund": "Refund", "admin_refund": "Refund", "order_refund": "Refund",
     "prc_burn": "Burn", "burn": "Burn", "hourly_burn": "Burn",
     "admin_credit": "Admin Credit", "admin_debit": "Admin Debit", "admin_adjustment": "Admin",
     "test_credit": "Admin Credit", "test_debit": "Admin Debit",
     "subscription": "Subscription", "subscription_payment": "Subscription", "elite_activation": "Subscription",
-    "subscription_prc": "Subscription",
+    "subscription_prc": "Subscription", "subscription_refund": "Subscription",
+    "gift_subscription": "Subscription",
     "redeem": "Redeem", "retry_debit": "Redeem",
     "dmt_transfer": "Redeem",
 }
@@ -91,7 +92,7 @@ async def get_prc_statement(
         seen_txn_ids = set()
 
         # 1. prc_ledger (primary)
-        for doc in await db.prc_ledger.find({"user_id": uid}, {"_id": 0}).to_list(5000):
+        for doc in await db.prc_ledger.find({"user_id": uid, "deleted": {"$ne": True}}, {"_id": 0}).to_list(5000):
             dt = parse_date(doc.get("timestamp") or doc.get("created_at"))
             if not dt:
                 continue
@@ -112,7 +113,7 @@ async def get_prc_statement(
                 seen_txn_ids.add(txn_id)
 
         # 2. transactions (burn, etc.)
-        for doc in await db.transactions.find({"user_id": uid}, {"_id": 0}).to_list(5000):
+        for doc in await db.transactions.find({"user_id": uid, "deleted": {"$ne": True}}, {"_id": 0}).to_list(5000):
             txn_id = doc.get("transaction_id", "")
             if txn_id in seen_txn_ids:
                 continue
@@ -135,8 +136,34 @@ async def get_prc_statement(
             })
             seen_txn_ids.add(txn_id)
 
-        # 3. ledger
-        for doc in await db.ledger.find({"user_id": uid}, {"_id": 0}).to_list(5000):
+        # 3. prc_transactions (auto-burn, admin credits/debits)
+        for doc in await db.prc_transactions.find({"user_id": uid, "deleted": {"$ne": True}}, {"_id": 0}).to_list(5000):
+            txn_id = doc.get("transaction_id", "") or doc.get("txn_id", "")
+            if txn_id in seen_txn_ids:
+                continue
+            dt = parse_date(doc.get("created_at") or doc.get("timestamp"))
+            if not dt:
+                continue
+            amount = abs(doc.get("amount", 0))
+            if amount == 0:
+                continue
+            raw_type = doc.get("type", "") or doc.get("transaction_type", "")
+            display_type = classify_type(raw_type)
+            is_credit = doc.get("amount", 0) > 0 or doc.get("entry_type") == "credit"
+            all_entries.append({
+                "date": dt.isoformat(), "date_ts": dt.timestamp(),
+                "type": display_type,
+                "narration": build_narration(doc.get("description", ""), display_type),
+                "credit": round(amount, 2) if is_credit else 0,
+                "debit": round(amount, 2) if not is_credit else 0,
+                "balance": round(doc.get("balance_after", 0), 2),
+                "txn_id": txn_id
+            })
+            if txn_id:
+                seen_txn_ids.add(txn_id)
+
+        # 4. ledger
+        for doc in await db.ledger.find({"user_id": uid, "deleted": {"$ne": True}}, {"_id": 0}).to_list(5000):
             txn_id = doc.get("txn_id", "")
             if txn_id in seen_txn_ids:
                 continue

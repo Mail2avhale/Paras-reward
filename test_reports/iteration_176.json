@@ -1,0 +1,92 @@
+{
+  "summary": "Admin Transactions CRUD API Tests - All 28 tests PASSED. Verified: 1) Admin GET /api/admin/transactions/{user_id} returns transactions from all 4 collections with pagination and type filtering, 2) Admin PUT edit with audit log, 3) Admin DELETE soft-delete, 4) Admin POST restore, 5) Admin POST refund validation (already refunded, credit txn rejection), 6) PRC Statement reads from 4 collections (prc_ledger, transactions, prc_transactions, ledger), 7) PRC Statement filters soft-deleted transactions, 8) TYPE_MAP includes all required types (daily_streak, achievement, admin_refund, order_refund, gift_subscription, subscription_refund, dmt_refund).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_transactions_crud.py",
+    "/app/test_reports/pytest/admin_transactions_crud_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "admin_transactions.py: Correctly searches all 4 collections (transactions, prc_transactions, prc_ledger, ledger)",
+    "admin_transactions.py: Edit endpoint creates audit log in audit_logs collection with old/new values",
+    "admin_transactions.py: Delete is soft-delete (sets deleted=true, not actual removal)",
+    "admin_transactions.py: Refund validates: 1) not already refunded, 2) amount < 0 (debit only), 3) user exists",
+    "admin_transactions.py: Refund creates new transaction record with type=admin_refund",
+    "prc_statement.py line 95,116,140,166: All 4 collection queries filter deleted: {$ne: True}",
+    "prc_statement.py TYPE_MAP line 21-41: Includes all required types (daily_streak, achievement, admin_refund, order_refund, gift_subscription, subscription_refund, dmt_refund)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_transactions_crud.py"
+  ],
+  "success_rate": {
+    "backend": "100% (28/28 tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+  "test_credentials": {
+    "test_user_uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+    "test_user_mobile": "9970100782",
+    "admin_email": "admin@test.com",
+    "admin_password": "153759"
+  },
+  "seed_data_creation": "None - used existing test user and transactions",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Admin transactions CRUD API fully tested. All endpoints working: GET (with pagination/filter), PUT (edit with audit), DELETE (soft-delete), POST /refund (validates already refunded, credit txn), POST /restore. PRC Statement reads from 4 collections and filters soft-deleted. TYPE_MAP includes all required types. The transaction BURN-76b75808-1774368000 was previously refunded - do not refund again.",
+  "verified_features": {
+    "admin_get_transactions": {
+      "endpoint": "GET /api/admin/transactions/{user_id}",
+      "features": ["pagination (min limit=10)", "type filter", "_source_collection field"],
+      "status": "PASS"
+    },
+    "admin_edit_transaction": {
+      "endpoint": "PUT /api/admin/transactions/{txn_id}",
+      "features": ["edit description/amount/type", "audit log", "edit_history array"],
+      "status": "PASS"
+    },
+    "admin_delete_transaction": {
+      "endpoint": "DELETE /api/admin/transactions/{txn_id}",
+      "features": ["soft-delete (deleted=true)", "audit log"],
+      "status": "PASS"
+    },
+    "admin_restore_transaction": {
+      "endpoint": "POST /api/admin/transactions/{txn_id}/restore",
+      "features": ["restore soft-deleted", "validates deleted=true"],
+      "status": "PASS"
+    },
+    "admin_refund_transaction": {
+      "endpoint": "POST /api/admin/transactions/{txn_id}/refund",
+      "features": ["validates not already refunded", "validates debit only", "creates refund record"],
+      "status": "PASS"
+    },
+    "prc_statement_multi_collection": {
+      "endpoint": "GET /api/prc-statement/{uid}",
+      "collections": ["prc_ledger", "transactions", "prc_transactions", "ledger"],
+      "soft_delete_filter": "deleted: {$ne: True}",
+      "status": "PASS"
+    },
+    "type_map_coverage": {
+      "required_types": ["daily_streak", "achievement", "admin_refund", "order_refund", "gift_subscription", "subscription_refund", "dmt_refund"],
+      "status": "PASS - all types present in TYPE_MAP"
+    }
+  },
+  "api_test_results": {
+    "admin_login": "PASS - JWT token returned",
+    "admin_get_transactions": "PASS - returns transactions with _source_collection",
+    "admin_edit": "PASS - updates description with audit log",
+    "admin_delete": "PASS - soft-delete sets deleted=true",
+    "admin_restore": "PASS - restores deleted transaction",
+    "admin_refund_validation": "PASS - rejects already refunded and credit transactions",
+    "prc_statement": "PASS - returns entries from multiple collections",
+    "prc_statement_filter": "PASS - filter by type works",
+    "prc_statement_pagination": "PASS - pagination works",
+    "auth_middleware": "PASS - admin endpoints require authentication"
+  }
+}

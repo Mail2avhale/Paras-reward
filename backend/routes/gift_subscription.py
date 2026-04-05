@@ -295,6 +295,19 @@ async def send_gift_subscription(request: GiftSubscriptionRequest):
         "status": "active"
     })
     
+    # Record in transactions collection (for PRC statement visibility)
+    import uuid as _uuid
+    await db.transactions.insert_one({
+        "transaction_id": f"GIFT-{_uuid.uuid4()}",
+        "user_id": request.parent_uid,
+        "type": "gift_subscription",
+        "amount": -GIFT_PRC_COST,
+        "description": f"Gift Elite subscription to {child.get('name', 'Unknown')} ({GIFT_DURATION_HOURS}hr)",
+        "reference_id": gift_id,
+        "balance_after": new_parent_prc,
+        "created_at": now.isoformat()
+    })
+    
     logging.info(f"[Gift] {request.parent_uid} gifted 24hr Elite to {request.child_uid}")
     
     return {
