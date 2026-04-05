@@ -1465,6 +1465,7 @@ const SubscriptionPlans = ({ user }) => {
                 showBreakdown={true}
                 showRateAlert={true}
                 serviceType="subscription"
+                rateOverride={prcRate}
               />
 
               {/* PRC Balance Info — Ultra Violet */}

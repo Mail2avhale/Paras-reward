@@ -2,20 +2,23 @@
 
 ## LAST UPDATED - 6 April 2026
 
-## COMPLETED: PRC Subscription Activation Bug Fix (P0) - 6 April 2026
+## COMPLETED: PRC Rate Consistency Fix + INR Conversion (P0) - 6 April 2026
 ### Bug Report
-Users reported PRC subscription activation not working.
+PRC rate was showing differently on different pages (e.g., 12 on Dashboard, 11 on Bank Transfer). Users lost trust.
 ### Root Cause
-Frontend `SubscriptionPlans.js` was checking **Redeem Limit** instead of **PRC Balance** before calling `/subscription/pay-with-prc` API. Backend explicitly skips redeem limit for subscriptions (only checks PRC balance), but frontend was blocking users with low redeem limit even if they had enough PRC.
+Multiple independent API calls fetched dynamic PRC rate at different times. Rate changes between calls caused desync.
 ### Fix Applied
-- Changed all `redeemLimit` references to `user.prc_balance` in payment validation, UI display, and button disabled state
-- Labels changed: "Available Redeem Limit" → "Your PRC Balance", "Insufficient redeem limit" → "Insufficient PRC balance"
-- Testing: 9/9 backend + 5/5 frontend passed (iteration_185)
+- `PRCRateDisplay` component: Added `rateOverride` prop — parent pages pass their own rate, component skips independent fetch
+- Dashboard combined API: Now includes `prc_rate` in response (single source of truth)
+- Added PRC to INR conversion (≈ ₹X) next to: Total Limit, Used, Remaining, PRC Balance on Dashboard
+- Files: PRCRateDisplay.js, DashboardModern.js, BankRedeemPage.js, RedeemPageV2.js, SubscriptionPlans.js, GiftVoucherRedemption.js, server.py
+- Testing: 10/10 backend + Frontend all passed (iteration_186)
+
+## COMPLETED: PRC Subscription Activation Bug Fix (P0) - 6 April 2026
+- Frontend was checking Redeem Limit instead of PRC Balance for subscription purchase. Fixed.
 
 ## COMPLETED: 24-Hour Cooldown Fix (P0) - 6 April 2026
-- Replaced ALL redeem cooldown periods with 24 hours from last request time (was 28-day cycle + 7-day limit)
-- Files: manual_bank_transfer.py, bank_redeem.py, server.py, unified_redeem_v2.py
-- Testing: 17/17 passed (iteration_184)
+- Bank redeem cooldown 28 days → 24 hours from last request time
 
 ## COMPLETED: Deduplication Refactoring Verification (P0) - 6 April 2026
 ## COMPLETED: Double-Count Deduplication Fix (P0) - 5 April 2026

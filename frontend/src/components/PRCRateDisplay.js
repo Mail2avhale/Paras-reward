@@ -24,15 +24,24 @@ const PRCRateDisplay = ({
   adminChargePercent = 20,
   burnRate = 0,
   showBreakdown = true,
-  serviceType = 'general'
+  showRateAlert = false,
+  serviceType = 'general',
+  rateOverride = null
 }) => {
-  const [currentRate, setCurrentRate] = useState(null);
-  const [rateSource, setRateSource] = useState('default');
-  const [loading, setLoading] = useState(true);
+  const [currentRate, setCurrentRate] = useState(rateOverride);
+  const [rateSource, setRateSource] = useState(rateOverride ? 'parent' : 'default');
+  const [loading, setLoading] = useState(!rateOverride);
 
   useEffect(() => {
+    // If parent provides rate, use it directly — no independent fetch
+    if (rateOverride) {
+      setCurrentRate(rateOverride);
+      setRateSource('parent');
+      setLoading(false);
+      return;
+    }
     fetchCurrentRate();
-  }, []);
+  }, [rateOverride]);
 
   const fetchCurrentRate = async () => {
     try {
@@ -156,6 +165,12 @@ const PRCRateDisplay = ({
               <span>Total PRC Required</span>
               <span className="text-amber-400 font-bold">{totalPRC.toLocaleString()} PRC</span>
             </div>
+            {currentRate > 0 && (
+              <div className="flex justify-between text-gray-400 text-xs">
+                <span>INR Equivalent</span>
+                <span>≈ ₹{Math.floor(totalPRC / currentRate).toLocaleString()}</span>
+              </div>
+            )}
             <div className="flex justify-between text-yellow-300 font-bold">
               <span>You Will Receive</span>
               <span>₹{amount.toLocaleString()}</span>
@@ -170,11 +185,16 @@ const PRCRateDisplay = ({
 /**
  * Compact PRC Rate Badge - For showing just the current rate
  */
-export const PRCRateBadge = () => {
-  const [currentRate, setCurrentRate] = useState(null);
-  const [loading, setLoading] = useState(true);
+export const PRCRateBadge = ({ rateOverride = null }) => {
+  const [currentRate, setCurrentRate] = useState(rateOverride);
+  const [loading, setLoading] = useState(!rateOverride);
 
   useEffect(() => {
+    if (rateOverride) {
+      setCurrentRate(rateOverride);
+      setLoading(false);
+      return;
+    }
     const fetchRate = async () => {
       try {
         const response = await axios.get(`${API}/prc-economy/current-rate`);
@@ -193,7 +213,7 @@ export const PRCRateBadge = () => {
       }
     };
     fetchRate();
-  }, []);
+  }, [rateOverride]);
 
   if (loading) return null;
 

@@ -158,14 +158,17 @@ const DashboardModern = ({ user, onLogout }) => {
             mining_start_time: miningData.session_start
           });
           
-          // Fetch PRC rate and redeem limit in parallel
-          const [rateRes, redeemLimitRes] = await Promise.allSettled([
-            axios.get(`${API}/prc-economy/current-rate`),
-            axios.get(`${API}/user/${user.uid}/redeem-limit`)
-          ]);
+          // Use PRC rate from combined response (single source of truth)
+          const prcRate = combinedRes.data.prc_rate || null;
           
-          const prcRate = rateRes.status === 'fulfilled' ? (rateRes.value.data?.rate?.final_rate || null) : null;
-          const redeemLimit = redeemLimitRes.status === 'fulfilled' ? (redeemLimitRes.value.data?.limit || {}) : {};
+          // Fetch redeem limit separately (lightweight)
+          let redeemLimit = {};
+          try {
+            const redeemLimitRes = await axios.get(`${API}/user/${user.uid}/redeem-limit`);
+            redeemLimit = redeemLimitRes.data?.limit || {};
+          } catch (e) {
+            // Non-critical, continue
+          }
           
           setStats({
             prcBalance: userData.prc_balance || 0,
@@ -1113,11 +1116,17 @@ const DashboardModern = ({ user, onLogout }) => {
                         <div className="mb-4 space-y-2.5" data-testid="redeem-breakdown-card">
                           <div className="flex items-center justify-between">
                             <span className="text-white/70 text-xs font-bold uppercase tracking-wider">Total Limit</span>
-                            <span className="text-white font-extrabold text-lg">{totalLimit.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-white/60 text-xs font-semibold">PRC</span></span>
+                            <div className="text-right">
+                              <span className="text-white font-extrabold text-lg">{totalLimit.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-white/60 text-xs font-semibold">PRC</span></span>
+                              {prcRate > 0 && <p className="text-white/50 text-[10px] font-medium">≈ ₹{Math.floor(totalLimit / prcRate).toLocaleString()}</p>}
+                            </div>
                           </div>
                           <div className="flex items-center justify-between cursor-pointer hover:bg-white/5 rounded-lg px-1 -mx-1 py-0.5 transition-colors" onClick={() => navigate('/usage-history')} data-testid="used-prc-link">
                             <span className="text-white/70 text-xs font-bold uppercase tracking-wider underline decoration-dotted underline-offset-2">Used ›</span>
-                            <span className="text-red-300 font-extrabold text-lg">- {totalUsed.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-red-300/60 text-xs font-semibold">PRC</span></span>
+                            <div className="text-right">
+                              <span className="text-red-300 font-extrabold text-lg">- {totalUsed.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-red-300/60 text-xs font-semibold">PRC</span></span>
+                              {prcRate > 0 && <p className="text-red-300/50 text-[10px] font-medium">≈ ₹{Math.floor(totalUsed / prcRate).toLocaleString()}</p>}
+                            </div>
                           </div>
                           <div className="border-t border-white/30"></div>
                           <div className="flex items-center justify-between">
@@ -1127,7 +1136,7 @@ const DashboardModern = ({ user, onLogout }) => {
                                 {isNegative ? '-' : ''}{Math.abs(remaining).toLocaleString(undefined, {maximumFractionDigits: 0})}
                                 <span className={`text-xs font-semibold ml-1 ${isNegative ? 'text-red-300/70' : 'text-yellow-300/70'}`}>PRC</span>
                               </span>
-                              {!isNegative && remaining > 0 && (
+                              {!isNegative && remaining > 0 && prcRate > 0 && (
                                 <p className="text-yellow-200/80 text-xs font-semibold">≈ ₹{Math.floor(remaining / prcRate).toLocaleString()}</p>
                               )}
                             </div>
@@ -1142,6 +1151,7 @@ const DashboardModern = ({ user, onLogout }) => {
                           <div className="bg-white/10 rounded-xl p-2.5">
                             <p className="text-white/60 text-[10px] font-bold uppercase">PRC Balance</p>
                             <p className="text-white text-sm font-extrabold">{balance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                            {prcRate > 0 && <p className="text-white/40 text-[9px] font-medium">≈ ₹{Math.floor(balance / prcRate).toLocaleString()}</p>}
                           </div>
                           <div className="bg-white/10 rounded-xl p-2.5">
                             <p className="text-white/60 text-[10px] font-bold uppercase">Unlock</p>

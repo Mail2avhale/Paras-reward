@@ -2618,6 +2618,7 @@ const RedeemPageV2 = ({ user }) => {
                     burnRate={charges?.burn_rate_percent || 0}
                     showBreakdown={true}
                     serviceType="redeem"
+                    rateOverride={prcRate}
                   />
                 )}
                 

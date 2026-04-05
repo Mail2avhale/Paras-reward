@@ -7623,6 +7623,15 @@ async def get_user_dashboard_combined(uid: str, request: Request):
                 logging.error(f"[DASHBOARD EXPIRY] Error: {e}")
     
     # Build response
+    # Include PRC rate in dashboard response (single source of truth)
+    prc_rate = None
+    try:
+        from utils.helpers import get_prc_rate
+        prc_rate_val = await get_prc_rate(db)
+        prc_rate = prc_rate_val if prc_rate_val else None
+    except Exception as e:
+        logging.warning(f"[DASHBOARD] PRC rate fetch failed: {e}")
+    
     result = {
         "user": {
             "uid": uid,
@@ -7653,6 +7662,7 @@ async def get_user_dashboard_combined(uid: str, request: Request):
             "mined_this_session": round(mined_this_session, 4),
             "session_start": user.get("mining_start_time")
         },
+        "prc_rate": prc_rate,
         "recent_activity": recent_activity,
         "cached_at": now.isoformat()
     }

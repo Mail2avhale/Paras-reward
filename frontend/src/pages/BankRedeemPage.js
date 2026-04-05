@@ -427,6 +427,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
                 burnRate={fees?.burn_rate_percent || 0}
                 showBreakdown={true}
                 serviceType="bank"
+                rateOverride={config.prc_rate}
               />
             )}
 

@@ -273,6 +273,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
               burnRate={burnRatePercent || 0}
               showBreakdown={true}
               serviceType="gift"
+              rateOverride={prcRate}
             />
           </div>
           
