@@ -2,50 +2,35 @@
 
 ## LAST UPDATED - 5 April 2026
 
-## COMPLETED: PRC Dynamic Rate Inconsistency Bug Fix (P0) - 5 April 2026
+## COMPLETED: PRC Usage History Page (P0) - 5 April 2026
 
-### Bug Description
-Users seeing different PRC rates in production. Critical economy bug.
+### Feature Description
+Users can click "Used >" on the Dashboard PRC balance card to view date-wise PRC usage history with narrations and a monthly usage graph from their joining date.
 
-### Root Cause (Deep Investigation)
-**5 different rate functions** reading from **different DB collections** with **different fallback chains**:
-
-| Function | Location | Default | Bug |
-|---|---|---|---|
-| `get_dynamic_prc_rate()` | server.py | 10 | Multiple fallback sources |
-| `get_config()` | manual_bank_transfer.py | 10 | Own calculation logic |
-| `get_dynamic_prc_rate()` | manual_bank_transfer.py | 10 | Own fallback chain |
-| `get_dynamic_prc_rate()` | bank_redeem.py | **100** | **CRITICAL: 10x wrong default!** |
-| `get_dynamic_rate_sync()` | prc_economy.py | 10 | Creates new MongoClient per call |
-| `get_dynamic_prc_rate()` | growth_economy.py | 10 | Own cache + calculation |
-
-Additional issues:
-- `system_settings.prc_dynamic_rate.updated_at` was 3+ weeks stale
-- `get_dynamic_rate_sync()` created new MongoClient connection per call (expensive)
-- Different collections used as fallbacks: `app_settings`, `system_settings`, `dmt_settings`, `economy_settings`
-
-### Fix Applied
-**Single Source of Truth**: `utils/helpers.py` → `get_prc_rate(db)` and `get_prc_rate_sync()`
-
-Priority chain:
-1. Manual override (`app_settings.prc_rate_manual_override`) — if enabled, not expired
-2. Cached rate (`system_settings.prc_dynamic_rate`) — if < 5 min old
-3. Fresh calculation (`prc_economy.calculate_dynamic_prc_rate`) — saves to DB
-4. Any stored rate (even stale) — last resort before default
-5. Default: 10
-
-All 6 duplicate functions now delegate to this single function.
+### Implementation
+- **Backend**: `GET /api/prc-statement/usage-history/{uid}` — Aggregates debits from 4 collections (prc_ledger, transactions, prc_transactions, ledger), returns summary, monthly graph data, and daily breakdown
+- **Frontend**: `PRCUsageHistory.js` — Recharts bar chart, type breakdown, expandable date-wise entries
+- **Navigation**: Dashboard "Used >" link (data-testid='used-prc-link') → `/usage-history` route
+- **Route protection**: Redirects to `/login` if unauthenticated
 
 ### Files Modified
-- NEW: `utils/helpers.py` — `get_prc_rate()`, `get_prc_rate_sync()` 
-- `server.py` — `get_dynamic_prc_rate()` → delegates to helpers (marked DEPRECATED)
-- `bank_redeem.py` — **Fixed 100 default!** Now delegates to helpers
-- `manual_bank_transfer.py` — Both rate functions + `/config` endpoint delegate to helpers
-- `growth_economy.py` — `get_dynamic_prc_rate()` delegates to helpers
-- `prc_economy.py` — Both `get_dynamic_prc_rate_economy()` and `get_dynamic_rate_sync()` delegate to helpers
+- `App.js` — Added lazy import + route for `/usage-history`
+- `DashboardModern.js` — Made "Used" text clickable with navigation
+- `PRCUsageHistory.js` — Full page component (already created by previous agent)
+- `prc_statement.py` — Backend endpoint (already created by previous agent)
 
 ### Verification
-12/12 tests passed. All 7 rate endpoints return consistent value of 11.
+- Backend: 13/13 tests passed (iteration 180)
+- Frontend: All UI components verified (login, navigation, chart, expand/collapse, route protection)
+
+## COMPLETED: PRC Dynamic Rate Inconsistency Bug Fix (P0) - 5 April 2026
+
+### Root Cause
+5 different rate functions reading from different DB collections with different fallback chains. One had 100 default (10x wrong).
+
+### Fix
+Single Source of Truth: `utils/helpers.py` → `get_prc_rate(db)` and `get_prc_rate_sync()`
+All 6 duplicate functions delegate to this single function. 12/12 tests passed.
 
 ## COMPLETED: Deep Transaction Investigation (100% Coverage) - 5 April 2026
 - 30+ prc_balance modification points traced, 11 gaps fixed
