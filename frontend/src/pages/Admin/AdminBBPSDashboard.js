@@ -274,13 +274,13 @@ const AdminBBPSDashboard = () => {
       </div>
 
       {/* EKO Wallet Balance Banner */}
-      <div className="mb-6 bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-4 flex items-center justify-between border border-slate-700" data-testid="eko-wallet-banner">
+      <div className="mb-6 bg-gradient-to-r from-blue-900 to-blue-700 rounded-xl p-4 flex items-center justify-between border border-blue-600" data-testid="eko-wallet-banner">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-            <Landmark className="h-6 w-6 text-emerald-400" />
+          <div className="w-12 h-12 rounded-xl bg-blue-400/20 flex items-center justify-center">
+            <Landmark className="h-6 w-6 text-blue-300" />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">EKO Wallet Balance</p>
+            <p className="text-blue-200 text-xs font-semibold uppercase tracking-wider">EKO Wallet Balance</p>
             {ekoWallet.loading ? (
               <div className="flex items-center gap-2 mt-1">
                 <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
@@ -299,7 +299,7 @@ const AdminBBPSDashboard = () => {
           onClick={fetchEkoBalance}
           disabled={ekoWallet.loading}
           size="sm"
-          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="bg-blue-500 hover:bg-blue-400 text-white"
           data-testid="refresh-eko-balance-btn"
         >
           <RefreshCw className={`h-4 w-4 mr-1 ${ekoWallet.loading ? 'animate-spin' : ''}`} />
