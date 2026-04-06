@@ -96,6 +96,7 @@ const AdminBBPSDashboard = () => {
       
       if (filters.status) params.append('status', filters.status);
       if (filters.service_type) params.append('service_type', filters.service_type);
+      if (filters.search) params.append('search', filters.search);
       if (filters.from_date) params.append('from_date', filters.from_date);
       if (filters.to_date) params.append('to_date', filters.to_date);
       
@@ -727,6 +728,20 @@ const AdminBBPSDashboard = () => {
       {/* Filters */}
       <Card className="bg-white/50 border-slate-200 p-4 mb-6">
         <div className="flex flex-wrap gap-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              type="text"
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === 'Enter') { setPagination(prev => ({ ...prev, page: 1 })); fetchRequests(); } }}
+              className="h-10 w-64 pl-9 bg-white border-slate-200 text-slate-800"
+              placeholder="Search mobile, TID, request ID..."
+              data-testid="bbps-search-input"
+            />
+          </div>
+          
           {/* Status Filter */}
           <select
             value={filters.status}

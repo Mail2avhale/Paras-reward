@@ -2269,6 +2269,7 @@ async def get_bbps_requests(
     status: str = None,
     service_type: str = None,
     user_id: str = None,
+    search: str = None,
     from_date: str = None,
     to_date: str = None,
     page: int = 1,
@@ -2276,18 +2277,22 @@ async def get_bbps_requests(
 ):
     """
     Admin: Get all BBPS instant requests with full details
-    
-    Query params:
-    - status: pending, processing, completed, failed, rejected
-    - service_type: mobile_recharge, dth, electricity, gas, emi, water, etc.
-    - user_id: Filter by specific user
-    - from_date, to_date: Date range filter (ISO format)
-    - page, limit: Pagination
-    
-    Returns all request details including Eko response
     """
     # Build query
     query = {}
+    
+    # Search by mobile, TID, request_id, client_ref_id
+    if search and search.strip():
+        s = search.strip()
+        query["$or"] = [
+            {"request_id": {"$regex": s, "$options": "i"}},
+            {"eko_tid": s},
+            {"client_ref_id": {"$regex": s, "$options": "i"}},
+            {"details.mobile_number": s},
+            {"details.consumer_number": s},
+            {"user_mobile": s},
+            {"user_name": {"$regex": s, "$options": "i"}}
+        ]
     
     # Filter by status
     if status:
