@@ -37,10 +37,15 @@ from datetime import datetime, timezone, timedelta
 
 # Database reference (set by main server)
 db = None
+check_redeem_limit_func = None
 
 def set_db(database):
     global db
     db = database
+
+def set_redeem_limit_check(func):
+    global check_redeem_limit_func
+    check_redeem_limit_func = func
 
 # Cooldown check for BBPS services (24 hours)
 async def check_bbps_cooldown(user_id: str) -> dict:
@@ -1235,6 +1240,21 @@ async def pay_bill(data: PayBillRequest):
                 "message": f"Please wait {cooldown['wait_hours']:.0f} hours before making another bill payment.",
                 "data": None
             }
+    
+    # ===== CHECK REDEEM LIMIT =====
+    if data.user_id and check_redeem_limit_func and data.amount:
+        try:
+            limit_check = await check_redeem_limit_func(data.user_id, float(data.amount))
+            if not limit_check.get("allowed"):
+                limit_info = limit_check.get("limit_info", {})
+                return {
+                    "success": False,
+                    "status": 403,
+                    "message": f"Redeem limit exceeded. Your limit: {limit_info.get('total_limit', 0):,.0f} PRC, Used: {limit_info.get('total_redeemed', 0):,.0f} PRC, Remaining: {limit_info.get('remaining_limit', 0):,.0f} PRC",
+                    "data": None
+                }
+        except Exception as e:
+            logging.error(f"[BBPS PAY] Redeem limit check error: {e}")
     
     if not validate_bbps_config():
         return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
