@@ -2587,3 +2587,136 @@ async def export_failed_transactions(date: str = None):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+# ==================== EKO REFUND API (Wallet Refund) ====================
+# Ref: https://developers.eko.in/v1/reference/initiate-refund
+# Flow: 1) Resend OTP → 2) Customer shares OTP → 3) Verify OTP & Refund
+
+@router.post("/refund/resend-otp/{tid}")
+async def resend_refund_otp(tid: str):
+    """
+    Step 1: Resend refund OTP to customer.
+    
+    When a transaction fails, EKO auto-sends OTP to customer.
+    Use this endpoint to resend if customer didn't receive it.
+    
+    Args:
+        tid: EKO Transaction ID (numeric)
+    
+    Ref: https://developers.eko.in/v1/reference/resend-refund-otp-1
+    """
+    try:
+        timestamp = str(round(time.time() * 1000))
+        encoded_key = base64.b64encode(AUTH_KEY.encode())
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key, timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        headers = {
+            "developer_key": DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        
+        url = f"{BASE_URL}/v1/transactions/{tid}/refund/otp"
+        body = {"initiator_id": INITIATOR_ID}
+        
+        logging.info(f"[EKO REFUND] Resending OTP for TID: {tid}")
+        
+        async with httpx.AsyncClient(verify=False, timeout=30) as client:
+            response = await client.post(url, headers=headers, data=body)
+        
+        result = response.json()
+        logging.info(f"[EKO REFUND] OTP Response: {response.status_code} | {json.dumps(result)[:300]}")
+        
+        return {
+            "success": result.get("status") == 0,
+            "tid": tid,
+            "message": result.get("message", "OTP sent to customer"),
+            "otp_ref": result.get("data", {}).get("otp"),
+            "raw_response": result
+        }
+        
+    except Exception as e:
+        logging.error(f"[EKO REFUND] OTP Error for TID {tid}: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/refund/verify/{tid}")
+async def verify_refund_otp(tid: str, otp: str, state: int = 1):
+    """
+    Step 2: Verify OTP and complete refund.
+    
+    Customer provides OTP → call this to confirm refund.
+    EKO will refund eValue back to merchant wallet.
+    
+    Args:
+        tid: EKO Transaction ID
+        otp: OTP received by customer
+        state: Default 1 (always pass 1)
+    
+    Ref: https://developers.eko.in/v1/reference/initiate-refund
+    """
+    try:
+        timestamp = str(round(time.time() * 1000))
+        encoded_key = base64.b64encode(AUTH_KEY.encode())
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key, timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        headers = {
+            "developer_key": DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        
+        url = f"{BASE_URL}/v1/transactions/{tid}/refund"
+        body = {
+            "initiator_id": INITIATOR_ID,
+            "otp": str(otp),
+            "state": str(state),
+            "user_code": USER_CODE
+        }
+        
+        logging.info(f"[EKO REFUND] Verifying OTP for TID: {tid}")
+        
+        async with httpx.AsyncClient(verify=False, timeout=30) as client:
+            response = await client.post(url, headers=headers, data=body)
+        
+        result = response.json()
+        logging.info(f"[EKO REFUND] Verify Response: {response.status_code} | {json.dumps(result)[:500]}")
+        
+        refund_data = result.get("data", {})
+        success = result.get("status") == 0
+        
+        # Log refund in DB
+        if db is not None:
+            await db.eko_refund_logs.insert_one({
+                "tid": tid,
+                "otp_verified": success,
+                "refund_tid": refund_data.get("refund_tid"),
+                "refunded_amount": refund_data.get("refunded_amount") or refund_data.get("amount"),
+                "new_balance": refund_data.get("balance"),
+                "message": result.get("message"),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "raw_response": result
+            })
+        
+        return {
+            "success": success,
+            "tid": tid,
+            "refund_tid": refund_data.get("refund_tid"),
+            "refunded_amount": refund_data.get("refunded_amount") or refund_data.get("amount"),
+            "new_balance": refund_data.get("balance"),
+            "commission_reversed": refund_data.get("commission_reverse"),
+            "message": result.get("message", "Refund processed" if success else "Refund failed"),
+            "raw_response": result
+        }
+        
+    except Exception as e:
+        logging.error(f"[EKO REFUND] Verify Error for TID {tid}: {e}")
+        return {"success": False, "error": str(e)}
+

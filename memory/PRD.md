@@ -2,33 +2,34 @@
 
 ## LAST UPDATED - 7 April 2026
 
+## COMPLETED: EKO Refund API Integration (P0) - 7 April 2026
+- POST `/api/bbps/refund/resend-otp/{tid}` — Resend refund OTP to customer
+- POST `/api/bbps/refund/verify/{tid}?otp=XXXX` — Verify OTP & refund to EKO wallet
+- Admin BBPS Dashboard: "Send Refund OTP" → Enter OTP → "Verify & Refund" flow
+- Refund logs stored in `eko_refund_logs` collection
+
+## COMPLETED: 4 Critical EKO Bugs Fixed (P0) - 7 April 2026
+- eko_common.py: Timestamp SECONDS→MILLISECONDS, header request-hash→request_hash, default form_data True→False
+- Hardcoded source_ip (34.44.149.98) replaced with EKO_SOURCE_IP env var across 5 files
+- .pyc cache cleared
+
 ## COMPLETED: EKO Transaction Callback Webhook (P0) - 7 April 2026
-- POST `/api/bbps/callback/status` — EKO pushes status updates for pending/failed transactions
-- Auto-updates DB (pending→completed, pending→failed with PRC refund, refunded status)
-- Audit log: all callbacks stored in `eko_callbacks` collection
-- Admin endpoint: GET `/api/bbps/callback/logs` for debugging
-- User needs to configure this URL in EKO dashboard
+- POST `/api/bbps/callback/status` — EKO webhook for status updates
+- Auto-updates DB, auto PRC refund on failure
+- GET `/api/bbps/callback/logs` for audit
 
 ## COMPLETED: EKO Wallet Balance + Refund Check (P0) - 7 April 2026
-- EKO Wallet Balance banner on Admin BBPS Dashboard (real-time from EKO API)
-- "Check EKO Wallet Refund Status" button for failed transactions (TID + client_ref_id lookup)
-- GET `/api/bbps/status-by-ref/{client_ref_id}` — status inquiry when TID is N/A
-- GET `/api/bbps/admin/check-eko-refund/{request_id}` — admin refund verification
+- Wallet balance banner (blue gradient) on Admin BBPS Dashboard
+- "Check EKO Wallet Refund Status" button + "Copy for EKO Support" button
+- Failed Transactions Excel export
 
 ## COMPLETED: Admin User 360 Redeem Limits Display (P0) - 7 April 2026
-- Backend returns redeem_limit (total_limit, total_redeemed, effective_available)
-- Frontend displays 3 color-coded cards: REDEEM LIMIT, USED LIMIT, BAL LIMIT
-- Testing: 100% passed (iteration_187)
-
 ## COMPLETED: Double Recharge Race Condition Fix (P0) - 6 April 2026
 ## COMPLETED: PRC Rate Consistency + INR Conversion (P0) - 6 April 2026
 ## COMPLETED: PRC Subscription Activation Bug Fix (P0) - 6 April 2026
 ## COMPLETED: 24-Hour Cooldown Fix (P0) - 6 April 2026
-## COMPLETED: Deduplication Refactoring Verification (P0) - 6 April 2026
 ## COMPLETED: Redeem Limit Enforcement on All Endpoints (P0) - 6 April 2026
 ## COMPLETED: EKO User Code + Source IP Fix (P0) - 6 April 2026
-## COMPLETED: Admin BBPS Refund Button (P0) - 6 April 2026
-## COMPLETED: Subscription Cooldown 7 Days (P1) - 6 April 2026
 
 ## Upcoming
 - P1: Invoice PDF Download option for InvoiceModal.js

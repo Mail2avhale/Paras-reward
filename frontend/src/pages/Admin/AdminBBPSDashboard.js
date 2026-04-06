@@ -123,6 +123,10 @@ const AdminBBPSDashboard = () => {
       if (response.data.success) {
         setSelectedRequest(response.data);
         setShowDetailModal(true);
+        setEkoRefundStep(null);
+        setEkoRefundOtp('');
+        setEkoRefundResponse(null);
+        setEkoRefundResult(null);
       }
     } catch (error) {
       toast.error('Failed to load request details');
@@ -139,6 +143,55 @@ const AdminBBPSDashboard = () => {
   const [refundLoading, setRefundLoading] = useState(false);
   const [ekoCheckLoading, setEkoCheckLoading] = useState(false);
   const [ekoRefundResult, setEkoRefundResult] = useState(null);
+  
+  // EKO Wallet Refund (OTP flow)
+  const [ekoRefundStep, setEkoRefundStep] = useState(null); // null | 'otp_sent' | 'verifying' | 'done'
+  const [ekoRefundOtp, setEkoRefundOtp] = useState('');
+  const [ekoRefundResponse, setEkoRefundResponse] = useState(null);
+  const [ekoRefundLoading, setEkoRefundLoading] = useState(false);
+
+  const handleResendRefundOtp = async (tid) => {
+    setEkoRefundLoading(true);
+    setEkoRefundResponse(null);
+    try {
+      const response = await axios.post(`${API}/bbps/refund/resend-otp/${tid}`);
+      if (response.data.success) {
+        setEkoRefundStep('otp_sent');
+        toast.success('Refund OTP sent to customer!');
+      } else {
+        toast.error(response.data.message || 'Failed to send OTP');
+      }
+      setEkoRefundResponse(response.data);
+    } catch (error) {
+      toast.error('Failed to send refund OTP');
+      setEkoRefundResponse({ success: false, error: error.response?.data?.detail || 'Failed' });
+    } finally {
+      setEkoRefundLoading(false);
+    }
+  };
+
+  const handleVerifyRefundOtp = async (tid) => {
+    if (!ekoRefundOtp.trim()) {
+      toast.error('Please enter OTP');
+      return;
+    }
+    setEkoRefundLoading(true);
+    try {
+      const response = await axios.post(`${API}/bbps/refund/verify/${tid}?otp=${ekoRefundOtp}&state=1`);
+      setEkoRefundResponse(response.data);
+      if (response.data.success) {
+        setEkoRefundStep('done');
+        toast.success(`Refund successful! ₹${response.data.refunded_amount} credited to EKO wallet`);
+      } else {
+        toast.error(response.data.message || 'Refund verification failed');
+      }
+    } catch (error) {
+      toast.error('Refund verification failed');
+      setEkoRefundResponse({ success: false, error: error.response?.data?.detail || 'Failed' });
+    } finally {
+      setEkoRefundLoading(false);
+    }
+  };
   
   const handleCheckEkoRefund = async (requestId) => {
     setEkoCheckLoading(true);
@@ -828,6 +881,80 @@ const AdminBBPSDashboard = () => {
                 )}
                 
                 {/* Refund Button for non-completed, non-refunded requests */}
+                
+                {/* EKO Wallet Refund via OTP */}
+                {(selectedRequest.request?.status === 'failed' || selectedRequest.request?.status === 'FAILED') && 
+                 selectedRequest.eko_details?.tid && 
+                 selectedRequest.eko_details?.tid !== 'N/A' && (
+                  <div className="bg-amber-50 border border-amber-300 rounded-xl p-4" data-testid="eko-wallet-refund-section">
+                    <p className="text-xs text-amber-700 mb-2 font-semibold">EKO Wallet Refund (OTP Flow)</p>
+                    <p className="text-sm text-slate-600 mb-3">
+                      EKO TID: <strong className="font-mono">{selectedRequest.eko_details?.tid}</strong> — 
+                      Customer ला OTP पाठवा, OTP verify करा, EKO wallet ला refund मिळेल.
+                    </p>
+                    
+                    {ekoRefundStep === 'done' ? (
+                      <div className="bg-green-50 border border-green-300 rounded-lg p-3">
+                        <p className="text-green-700 font-semibold">Refund Successful!</p>
+                        {ekoRefundResponse?.refunded_amount && (
+                          <p className="text-sm text-green-600">Amount: ₹{ekoRefundResponse.refunded_amount}</p>
+                        )}
+                        {ekoRefundResponse?.new_balance && (
+                          <p className="text-sm text-green-600">New Balance: ₹{ekoRefundResponse.new_balance}</p>
+                        )}
+                      </div>
+                    ) : ekoRefundStep === 'otp_sent' ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-amber-700">OTP sent to customer. Enter OTP below:</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={ekoRefundOtp}
+                            onChange={(e) => setEkoRefundOtp(e.target.value)}
+                            placeholder="Enter OTP"
+                            className="flex-1 px-3 py-2 border border-amber-300 rounded-lg text-sm font-mono"
+                            data-testid="eko-refund-otp-input"
+                          />
+                          <Button
+                            onClick={() => handleVerifyRefundOtp(selectedRequest.eko_details?.tid)}
+                            disabled={ekoRefundLoading}
+                            className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                            data-testid="eko-verify-otp-btn"
+                          >
+                            {ekoRefundLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify & Refund'}
+                          </Button>
+                        </div>
+                        <Button
+                          onClick={() => handleResendRefundOtp(selectedRequest.eko_details?.tid)}
+                          disabled={ekoRefundLoading}
+                          size="sm"
+                          variant="outline"
+                          className="text-amber-700 border-amber-400"
+                        >
+                          Resend OTP
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={() => handleResendRefundOtp(selectedRequest.eko_details?.tid)}
+                        disabled={ekoRefundLoading}
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold"
+                        data-testid="eko-send-refund-otp-btn"
+                      >
+                        {ekoRefundLoading ? (
+                          <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending OTP...</>
+                        ) : (
+                          'Send Refund OTP to Customer'
+                        )}
+                      </Button>
+                    )}
+                    
+                    {ekoRefundResponse?.message && ekoRefundStep !== 'done' && (
+                      <p className="text-xs text-slate-500 mt-2">EKO: {ekoRefundResponse.message}</p>
+                    )}
+                  </div>
+                )}
+
                 {selectedRequest.request?.status !== 'completed' && 
                  selectedRequest.request?.status !== 'COMPLETED' &&
                  !selectedRequest.refund_info?.refunded &&
