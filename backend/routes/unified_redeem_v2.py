@@ -2394,6 +2394,7 @@ async def get_bbps_request_details(request_id: str):
         "user": user,
         "eko_details": {
             "tid": request_doc.get("eko_tid"),
+            "client_ref_id": request_doc.get("client_ref_id") or request_doc.get("eko_client_ref_id"),
             "utr": request_doc.get("utr_number"),
             "status": request_doc.get("eko_status"),
             "message": request_doc.get("eko_message"),

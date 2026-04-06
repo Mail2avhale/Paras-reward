@@ -565,6 +565,16 @@ const AdminBBPSDashboard = () => {
                               <Copy className="h-3 w-3" />
                             </button>
                           </div>
+                        ) : req.client_ref_id ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-blue-400" title="Client Ref ID">{req.client_ref_id}</span>
+                            <button
+                              onClick={() => copyToClipboard(req.client_ref_id)}
+                              className="text-slate-500 hover:text-slate-800"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </button>
+                          </div>
                         ) : (
                           <span className="text-sm text-slate-500">-</span>
                         )}
@@ -697,7 +707,11 @@ const AdminBBPSDashboard = () => {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-slate-500">TID:</span>
-                      <span className="text-green-400 font-mono">{selectedRequest.eko_details?.tid || 'N/A'}</span>
+                      <span className="text-green-600 font-mono">{selectedRequest.eko_details?.tid || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Client Ref ID:</span>
+                      <span className="text-blue-600 font-mono">{selectedRequest.eko_details?.client_ref_id || selectedRequest.request?.client_ref_id || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">UTR:</span>
@@ -712,6 +726,28 @@ const AdminBBPSDashboard = () => {
                       <span className="text-slate-800">{selectedRequest.eko_details?.message || 'N/A'}</span>
                     </div>
                   </div>
+                  
+                  {/* Copy for EKO Support */}
+                  <Button
+                    onClick={() => {
+                      const tid = selectedRequest.eko_details?.tid || 'N/A';
+                      const clientRef = selectedRequest.eko_details?.client_ref_id || selectedRequest.request?.client_ref_id || 'N/A';
+                      const amount = selectedRequest.request?.amount || 'N/A';
+                      const date = selectedRequest.request?.created_at ? new Date(selectedRequest.request.created_at).toLocaleString('en-IN') : 'N/A';
+                      const status = selectedRequest.request?.status || 'N/A';
+                      const reqId = selectedRequest.request?.request_id || 'N/A';
+                      const consumer = selectedRequest.request?.details?.consumer_number || selectedRequest.request?.details?.mobile_number || 'N/A';
+                      const operator = selectedRequest.request?.details?.operator_id || selectedRequest.request?.details?.operator || 'N/A';
+                      const text = `EKO Support Details:\nTID: ${tid}\nClient Ref ID: ${clientRef}\nRequest ID: ${reqId}\nAmount: ₹${amount}\nDate: ${date}\nStatus: ${status}\nConsumer/Mobile: ${consumer}\nOperator ID: ${operator}`;
+                      navigator.clipboard.writeText(text);
+                      toast.success('EKO Support details copied!');
+                    }}
+                    size="sm"
+                    className="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                    data-testid="copy-eko-support-btn"
+                  >
+                    <Copy className="h-4 w-4 mr-2" /> Copy for EKO Support
+                  </Button>
                 </div>
                 
                 {/* Refund Info */}
