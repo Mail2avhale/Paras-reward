@@ -118,6 +118,32 @@ const AdminBBPSDashboard = () => {
     toast.success('Copied to clipboard!');
   };
 
+  // Refund PRC for stuck/pending request
+  const [refundLoading, setRefundLoading] = useState(false);
+  const handleRefund = async (requestId, reason = "Stuck/Pending transaction - Admin refund") => {
+    if (!window.confirm(`Confirm PRC refund for request ${requestId}?\nReason: ${reason}`)) return;
+    
+    setRefundLoading(true);
+    try {
+      const response = await axios.post(`${API}/redeem/admin/manual-refund/${requestId}`, null, {
+        params: { admin_id: "admin", reason }
+      });
+      if (response.data.success) {
+        toast.success(`${response.data.refund_amount} PRC refunded successfully!`);
+        // Refresh the request details
+        viewRequestDetails(requestId);
+        // Refresh the list
+        fetchRequests();
+      } else {
+        toast.error(response.data.message || 'Refund failed');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Refund failed. Please try again.');
+    } finally {
+      setRefundLoading(false);
+    }
+  };
+
   // Format date
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
@@ -472,14 +498,32 @@ const AdminBBPSDashboard = () => {
                         <span className="text-xs text-slate-500">{formatDate(req.created_at)}</span>
                       </td>
                       <td className="p-3">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => viewRequestDetails(req.request_id)}
-                          className="h-8 px-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => viewRequestDetails(req.request_id)}
+                            className="h-8 px-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20"
+                            data-testid={`view-btn-${req.request_id}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {(req.status === 'pending' || req.status === 'PENDING' || req.status === 'failed' || req.status === 'FAILED') && !req.prc_refunded && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRefund(req.request_id, `Stuck ${req.status} transaction - No EKO TID`)}
+                              className="h-8 px-2 text-orange-400 hover:text-orange-300 hover:bg-orange-500/20"
+                              disabled={refundLoading}
+                              data-testid={`refund-btn-${req.request_id}`}
+                            >
+                              <RefreshCw className={`h-4 w-4 ${refundLoading ? 'animate-spin' : ''}`} />
+                            </Button>
+                          )}
+                          {req.prc_refunded && (
+                            <span className="text-[10px] text-green-500 font-semibold px-1">Refunded</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -602,6 +646,35 @@ const AdminBBPSDashboard = () => {
                     <p className="text-lg font-bold text-orange-400">
                       {selectedRequest.refund_info.amount} PRC Refunded
                     </p>
+                  </div>
+                )}
+                
+                {/* Refund Button for non-completed, non-refunded requests */}
+                {selectedRequest.request?.status !== 'completed' && 
+                 selectedRequest.request?.status !== 'COMPLETED' &&
+                 !selectedRequest.refund_info?.refunded &&
+                 !selectedRequest.request?.prc_refunded && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <p className="text-xs text-red-600 mb-3 font-semibold">Admin Action: Refund PRC</p>
+                    <p className="text-sm text-slate-600 mb-3">
+                      This request is <strong>{selectedRequest.request?.status?.toUpperCase()}</strong> with no EKO transaction. 
+                      PRC ({selectedRequest.request?.total_prc_deducted?.toLocaleString() || 'N/A'} PRC) was deducted but service was not delivered.
+                    </p>
+                    <Button
+                      onClick={() => handleRefund(
+                        selectedRequest.request?.request_id, 
+                        `Stuck ${selectedRequest.request?.status} - EKO TID: ${selectedRequest.eko_details?.tid || 'None'}`
+                      )}
+                      disabled={refundLoading}
+                      className="w-full bg-red-500 hover:bg-red-600 text-white font-bold"
+                      data-testid="modal-refund-btn"
+                    >
+                      {refundLoading ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processing Refund...</>
+                      ) : (
+                        <><RefreshCw className="h-4 w-4 mr-2" /> Refund {selectedRequest.request?.total_prc_deducted?.toLocaleString() || ''} PRC</>
+                      )}
+                    </Button>
                   </div>
                 )}
                 
