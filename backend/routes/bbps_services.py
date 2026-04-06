@@ -2620,16 +2620,26 @@ async def resend_refund_otp(tid: str):
             "Content-Type": "application/x-www-form-urlencoded",
         }
         
+        # Production uses /ekoicici/ base path (same as other APIs)
         url = f"{BASE_URL}/v1/transactions/{tid}/refund/otp"
         body = {"initiator_id": INITIATOR_ID}
         
-        logging.info(f"[EKO REFUND] Resending OTP for TID: {tid}")
+        logging.info(f"[EKO REFUND] Resending OTP for TID: {tid}, URL: {url}")
         
-        async with httpx.AsyncClient(verify=False, timeout=30) as client:
-            response = await client.post(url, headers=headers, data=body)
+        import requests as sync_requests
+        response = sync_requests.post(url, headers=headers, data=body, timeout=30, verify=False)
         
-        result = response.json()
-        logging.info(f"[EKO REFUND] OTP Response: {response.status_code} | {json.dumps(result)[:300]}")
+        logging.info(f"[EKO REFUND] OTP HTTP: {response.status_code} | Body: {response.text[:500]}")
+        
+        if response.status_code == 404:
+            return {"success": False, "tid": tid, "message": "EKO endpoint not found. Check TID format.", "http_status": 404}
+        
+        try:
+            result = response.json()
+        except Exception:
+            return {"success": False, "tid": tid, "message": f"EKO returned non-JSON: HTTP {response.status_code}", "raw": response.text[:300]}
+        
+        logging.info(f"[EKO REFUND] OTP Response: {json.dumps(result)[:300]}")
         
         return {
             "success": result.get("status") == 0,
@@ -2673,7 +2683,8 @@ async def verify_refund_otp(tid: str, otp: str, state: int = 1):
             "Content-Type": "application/x-www-form-urlencoded",
         }
         
-        url = f"{BASE_URL}/v1/transactions/{tid}/refund"
+        # Production uses /ekoicici/ base path (same as other APIs)
+        url = f"{BASE_URL}/v2/transactions/{tid}/refund"
         body = {
             "initiator_id": INITIATOR_ID,
             "otp": str(otp),
@@ -2681,13 +2692,22 @@ async def verify_refund_otp(tid: str, otp: str, state: int = 1):
             "user_code": USER_CODE
         }
         
-        logging.info(f"[EKO REFUND] Verifying OTP for TID: {tid}")
+        logging.info(f"[EKO REFUND] Verifying OTP for TID: {tid}, URL: {url}")
         
-        async with httpx.AsyncClient(verify=False, timeout=30) as client:
-            response = await client.post(url, headers=headers, data=body)
+        import requests as sync_requests
+        response = sync_requests.post(url, headers=headers, data=body, timeout=30, verify=False)
         
-        result = response.json()
-        logging.info(f"[EKO REFUND] Verify Response: {response.status_code} | {json.dumps(result)[:500]}")
+        logging.info(f"[EKO REFUND] Verify HTTP: {response.status_code} | Body: {response.text[:500]}")
+        
+        if response.status_code == 404:
+            return {"success": False, "tid": tid, "message": "EKO endpoint not found.", "http_status": 404}
+        
+        try:
+            result = response.json()
+        except Exception:
+            return {"success": False, "tid": tid, "message": f"EKO returned non-JSON: HTTP {response.status_code}", "raw": response.text[:300]}
+        
+        logging.info(f"[EKO REFUND] Verify Response: {json.dumps(result)[:500]}")
         
         refund_data = result.get("data", {})
         success = result.get("status") == 0
