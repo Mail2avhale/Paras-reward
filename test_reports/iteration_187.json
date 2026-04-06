@@ -1,0 +1,52 @@
+{
+  "summary": "Admin User 360 Redeem Limits Feature - ALL TESTS PASSED. Backend returns redeem_limit object with all required fields. Frontend displays 3 colored cards (REDEEM LIMIT, USED LIMIT, BAL LIMIT) with correct data-testid attributes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_user360_redeem_limits.py",
+    "/app/test_reports/pytest/admin_user360_redeem_limits_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "✅ Backend admin_user360.py lines 262-273: redeem_limit_data calculated using _calculate_redeem_limit function",
+    "✅ Backend server.py line 44195: set_admin_user360_limit_fn(calculate_user_redeem_limit) properly wired",
+    "✅ Frontend AdminUser360New.js lines 953-974: 3 redeem limit cards displayed with correct data-testid attributes",
+    "✅ All required fields present: total_limit, total_redeemed, effective_available, unlock_percent, total_earned, total_mined"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_user360_redeem_limits.py - Created new test file for redeem limits feature"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7 passed)",
+    "frontend": "100% (All redeem limit cards found and displaying correctly)"
+  },
+  "test_credentials": {
+    "admin_mobile": "9999999999",
+    "admin_pin": "153759",
+    "test_user_mobile": "9970100782",
+    "test_user_uid": "cbdf46d7-7d66-4d43-8495-e1432a2ab071"
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Admin User 360 Redeem Limits feature fully verified. The /api/admin/user360/full/{uid} endpoint returns redeem_limit object with fields: total_limit, total_redeemed, effective_available, unlock_percent, total_earned, total_mined. Frontend displays 3 colored cards with data-testid: redeem-limit-row, redeem-total-limit, redeem-used-limit, redeem-bal-limit. Note: test_credentials.md has outdated UID for mobile 9970100782 - actual UID is cbdf46d7-7d66-4d43-8495-e1432a2ab071.",
+  "verified_features": {
+    "health_check": "PASS - GET /api/health returns 200",
+    "admin_login": "PASS - POST /api/auth/login with admin credentials works",
+    "user360_search": "PASS - GET /api/admin/user360/search?q=9970100782 returns user data",
+    "user360_full_endpoint": "PASS - GET /api/admin/user360/full/{uid} returns redeem_limit object",
+    "redeem_limit_fields": "PASS - All required fields present: total_limit, total_redeemed, effective_available, unlock_percent, total_earned, total_mined",
+    "redeem_limit_values_consistent": "PASS - Values are logically consistent (non-negative, unlock_percent 0-100)",
+    "frontend_redeem_limit_row": "PASS - data-testid='redeem-limit-row' found",
+    "frontend_redeem_total_limit": "PASS - data-testid='redeem-total-limit' displays '0 PRC'",
+    "frontend_redeem_used_limit": "PASS - data-testid='redeem-used-limit' displays '109609 PRC'",
+    "frontend_redeem_bal_limit": "PASS - data-testid='redeem-bal-limit' displays '0 PRC'"
+  }
+}
