@@ -571,8 +571,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
               <div className="text-sm text-blue-300">
                 <p className="font-medium mb-1">Redeem Policy</p>
                 <p className="text-blue-300/80">
-                  You can redeem once per subscription cycle (28 days). 
-                  Next redeem will be available after your next cycle. 
+                  You can redeem once every 24 hours. 
                   Processing takes 3-7 working days.
                 </p>
               </div>
