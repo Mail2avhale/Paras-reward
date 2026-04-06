@@ -91,6 +91,7 @@ EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "")
 EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "")
 EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "")
 EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "")
+EKO_SOURCE_IP = os.environ.get("EKO_SOURCE_IP", "34.44.149.98")
 
 # ==================== AUTO-RETRY DISABLED ====================
 # Retry functionality has been removed. Failed transactions are refunded immediately.
@@ -468,7 +469,7 @@ async def execute_eko_bbps(request_doc: dict, service_type: str) -> dict:
         url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
         
         body = {
-            "source_ip": "34.44.149.98",
+            "source_ip": EKO_SOURCE_IP,
             "user_code": user_code,
             "amount": amount,
             "client_ref_id": client_ref_id,

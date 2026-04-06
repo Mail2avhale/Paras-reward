@@ -65,12 +65,12 @@ def get_eko_headers(timestamp: str, include_request_hash: bool = False,
     if include_request_hash:
         uc = user_code or EKO_USER_CODE
         request_hash = generate_request_hash(timestamp, utility_acc_no, amount, uc)
-        headers["request-hash"] = request_hash
+        headers["request_hash"] = request_hash
     
     return headers
 
 
-async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None, form_data: bool = True) -> dict:
+async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None, form_data: bool = False) -> dict:
     """
     Make authenticated request to Eko API
     
@@ -86,7 +86,7 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     if not EKO_BASE_URL or not EKO_DEVELOPER_KEY or not EKO_AUTHENTICATOR_KEY:
         raise HTTPException(status_code=500, detail="Eko API credentials not configured")
     
-    timestamp = str(int(time.time()))
+    timestamp = str(round(time.time() * 1000))  # MILLISECONDS as per EKO docs
     
     # Build URL with initiator_id
     url = f"{EKO_BASE_URL}{endpoint}"

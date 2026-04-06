@@ -31702,6 +31702,7 @@ async def process_bill_payment_request(request: Request):
         
         EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
         EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "")
+        EKO_SOURCE_IP = os.environ.get("EKO_SOURCE_IP", "34.44.149.98")
         
         # Eko Operator ID mapping (operator_name -> eko_operator_id)
         # Updated with actual Eko API operator IDs
@@ -31946,7 +31947,7 @@ async def process_bill_payment_request(request: Request):
                             "sender_name": sender_name,
                             "user_code": EKO_USER_CODE,
                             "latlong": "19.0760,72.8777",
-                            "source_ip": "34.44.149.98"
+                            "source_ip": EKO_SOURCE_IP
                         }
                     )
                     
@@ -32286,7 +32287,7 @@ async def process_bill_payment_request(request: Request):
                             "sender_name": sender_name,
                             "user_code": EKO_INITIATOR_ID,
                             "latlong": "19.0760,72.8777",
-                            "source_ip": "34.44.149.98"
+                            "source_ip": EKO_SOURCE_IP
                         }
                     )
                     
