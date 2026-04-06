@@ -2401,3 +2401,188 @@ async def get_callback_logs(limit: int = 50, skip: int = 0):
     except Exception as e:
         logging.error(f"[CALLBACK LOGS] Error: {e}")
         return {"success": False, "error": str(e)}
+
+
+
+# ==================== FAILED TRANSACTIONS EXPORT (EXCEL) ====================
+
+@router.get("/admin/export-failed")
+async def export_failed_transactions(date: str = None):
+    """
+    Admin endpoint: Export failed transactions as Excel file.
+    
+    Args:
+        date: Date in YYYY-MM-DD format (defaults to today)
+    
+    Returns: Excel file download with columns:
+        Request ID, Client Ref ID, EKO TID, User Name, Mobile,
+        Service Type, Amount (INR), Consumer/Account, Operator,
+        Status, EKO Message, PRC Refunded, Date/Time
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    from fastapi.responses import StreamingResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    import io
+    
+    if not date:
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Query failed transactions from both collections
+    failed_statuses = ["failed", "FAILED", "retry_failed"]
+    
+    # redeem_requests (unified flow - primary)
+    redeem_docs = await db.redeem_requests.find(
+        {
+            "status": {"$in": failed_statuses},
+            "created_at": {"$regex": f"^{date}"}
+        },
+        {"_id": 0, "status_history": 0, "eko_response": 0}
+    ).sort("created_at", -1).to_list(1000)
+    
+    # bill_payment_requests (legacy flow)
+    bill_docs = await db.bill_payment_requests.find(
+        {
+            "status": {"$in": failed_statuses},
+            "created_at": {"$regex": f"^{date}"}
+        },
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    
+    all_docs = []
+    for doc in redeem_docs:
+        details = doc.get("details", {})
+        all_docs.append({
+            "request_id": doc.get("request_id", ""),
+            "client_ref_id": doc.get("client_ref_id", ""),
+            "eko_tid": doc.get("eko_tid") or "N/A",
+            "user_name": doc.get("user_name", ""),
+            "user_mobile": doc.get("user_mobile", ""),
+            "service_type": doc.get("service_type", ""),
+            "amount_inr": doc.get("amount_inr") or doc.get("amount", 0),
+            "consumer_number": details.get("consumer_number") or details.get("mobile_number") or details.get("loan_account") or "",
+            "operator": details.get("operator") or details.get("operator_id") or "",
+            "cycle_number": details.get("cycle_number") or "",
+            "status": doc.get("status", ""),
+            "eko_message": doc.get("eko_message") or doc.get("error_message") or "",
+            "prc_deducted": doc.get("total_prc_deducted", 0),
+            "prc_refunded": "Yes" if doc.get("prc_refunded") else "No",
+            "refund_amount": doc.get("refund_amount", 0),
+            "created_at": doc.get("created_at", ""),
+            "source": "redeem_requests"
+        })
+    
+    for doc in bill_docs:
+        details = doc.get("details", {})
+        all_docs.append({
+            "request_id": doc.get("request_id", ""),
+            "client_ref_id": doc.get("client_ref_id", ""),
+            "eko_tid": doc.get("eko_tid") or "N/A",
+            "user_name": doc.get("user_name", ""),
+            "user_mobile": doc.get("user_mobile", ""),
+            "service_type": doc.get("request_type", ""),
+            "amount_inr": doc.get("amount_inr", 0),
+            "consumer_number": details.get("consumer_number") or details.get("phone_number") or "",
+            "operator": details.get("operator") or "",
+            "cycle_number": details.get("cycle_number") or "",
+            "status": doc.get("status", ""),
+            "eko_message": doc.get("eko_message") or doc.get("admin_notes") or "",
+            "prc_deducted": doc.get("total_prc_deducted", 0),
+            "prc_refunded": "Yes" if doc.get("prc_refunded") else "No",
+            "refund_amount": doc.get("refund_amount", 0),
+            "created_at": doc.get("created_at", ""),
+            "source": "bill_payment_requests"
+        })
+    
+    # Create Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Failed Transactions {date}"
+    
+    # Header styling
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    header_fill = PatternFill(start_color="C0392B", end_color="C0392B", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    thin_border = Border(
+        left=Side(style="thin"), right=Side(style="thin"),
+        top=Side(style="thin"), bottom=Side(style="thin")
+    )
+    
+    headers = [
+        "Sr No", "Request ID", "Client Ref ID", "EKO TID",
+        "User Name", "Mobile", "Service Type",
+        "Amount (INR)", "Consumer/Account No", "Operator", "Cycle No",
+        "Status", "EKO Error Message",
+        "PRC Deducted", "PRC Refunded", "Refund Amount",
+        "Date & Time"
+    ]
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = thin_border
+    
+    # Data rows
+    data_alignment = Alignment(vertical="center", wrap_text=True)
+    for idx, doc in enumerate(all_docs, 1):
+        row = idx + 1
+        values = [
+            idx,
+            doc["request_id"],
+            doc["client_ref_id"],
+            doc["eko_tid"],
+            doc["user_name"],
+            doc["user_mobile"],
+            doc["service_type"],
+            doc["amount_inr"],
+            doc["consumer_number"],
+            doc["operator"],
+            doc["cycle_number"],
+            doc["status"],
+            doc["eko_message"],
+            doc["prc_deducted"],
+            doc["prc_refunded"],
+            doc["refund_amount"],
+            doc["created_at"]
+        ]
+        for col, value in enumerate(values, 1):
+            cell = ws.cell(row=row, column=col, value=value)
+            cell.alignment = data_alignment
+            cell.border = thin_border
+    
+    # Auto-width columns
+    for col in ws.columns:
+        max_length = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+        ws.column_dimensions[col_letter].width = min(max_length + 4, 40)
+    
+    # Summary row
+    summary_row = len(all_docs) + 3
+    ws.cell(row=summary_row, column=1, value="Summary:").font = Font(bold=True, size=12)
+    ws.cell(row=summary_row + 1, column=1, value=f"Total Failed: {len(all_docs)}")
+    total_inr = sum(float(d.get("amount_inr", 0) or 0) for d in all_docs)
+    ws.cell(row=summary_row + 2, column=1, value=f"Total Amount (INR): ₹{total_inr:,.2f}")
+    total_prc = sum(float(d.get("prc_deducted", 0) or 0) for d in all_docs)
+    ws.cell(row=summary_row + 3, column=1, value=f"Total PRC Deducted: {total_prc:,.2f}")
+    refunded_count = sum(1 for d in all_docs if d["prc_refunded"] == "Yes")
+    ws.cell(row=summary_row + 4, column=1, value=f"PRC Refunded Count: {refunded_count}/{len(all_docs)}")
+    
+    # Save to buffer
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"failed_transactions_{date}.xlsx"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

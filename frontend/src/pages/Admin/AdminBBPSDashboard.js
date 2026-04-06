@@ -235,14 +235,42 @@ const AdminBBPSDashboard = () => {
           </h1>
           <p className="text-slate-500 text-sm mt-1">Monitor all instant BBPS transactions</p>
         </div>
-        <Button
-          onClick={fetchRequests}
-          disabled={loading}
-          className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={async () => {
+              try {
+                const today = new Date().toISOString().split('T')[0];
+                const response = await axios.get(`${API}/bbps/admin/export-failed?date=${today}`, {
+                  responseType: 'blob'
+                });
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `failed_transactions_${today}.xlsx`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+                toast.success('Excel downloaded!');
+              } catch (error) {
+                toast.error('Download failed');
+              }
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+            data-testid="download-failed-btn"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Failed Transactions Excel
+          </Button>
+          <Button
+            onClick={fetchRequests}
+            disabled={loading}
+            className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* EKO Wallet Balance Banner */}
