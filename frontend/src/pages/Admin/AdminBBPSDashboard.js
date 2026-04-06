@@ -390,24 +390,24 @@ const AdminBBPSDashboard = () => {
       </div>
 
       {/* EKO Wallet Balance Banner */}
-      <div className="mb-6 bg-gradient-to-r from-blue-900 to-blue-700 rounded-xl p-4 flex items-center justify-between border border-blue-600" data-testid="eko-wallet-banner">
+      <div className="mb-6 bg-slate-800 rounded-xl p-5 flex items-center justify-between border border-slate-700 shadow-lg" data-testid="eko-wallet-banner">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-            <Landmark className="h-6 w-6 text-white" />
+          <div className="w-14 h-14 rounded-xl bg-emerald-500 flex items-center justify-center shadow">
+            <Landmark className="h-7 w-7 text-white" />
           </div>
           <div>
-            <p className="text-white text-xs font-semibold uppercase tracking-wider">EKO Wallet Balance</p>
+            <p className="text-slate-300 text-xs font-semibold uppercase tracking-wider mb-1">EKO Wallet Balance</p>
             {ekoWallet.loading ? (
-              <div className="flex items-center gap-2 mt-1">
-                <Loader2 className="h-4 w-4 animate-spin text-white" />
-                <span className="text-white text-sm">Loading...</span>
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+                <span className="text-slate-300 text-sm">Loading...</span>
               </div>
             ) : ekoWallet.balance !== null ? (
-              <p className="text-2xl font-bold text-white" data-testid="eko-wallet-balance">
+              <p className="text-3xl font-bold text-emerald-400" data-testid="eko-wallet-balance">
                 ₹{Number(ekoWallet.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </p>
             ) : (
-              <p className="text-sm text-red-300" data-testid="eko-wallet-error">{ekoWallet.error || 'Unable to fetch balance'}</p>
+              <p className="text-base font-semibold text-yellow-400" data-testid="eko-wallet-error">{ekoWallet.error || 'Unable to fetch balance'}</p>
             )}
           </div>
         </div>
@@ -415,7 +415,7 @@ const AdminBBPSDashboard = () => {
           onClick={fetchEkoBalance}
           disabled={ekoWallet.loading}
           size="sm"
-          className="bg-blue-500 hover:bg-blue-400 text-white"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
           data-testid="refresh-eko-balance-btn"
         >
           <RefreshCw className={`h-4 w-4 mr-1 ${ekoWallet.loading ? 'animate-spin' : ''}`} />
@@ -597,27 +597,27 @@ const AdminBBPSDashboard = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         {/* Total */}
-        <Card className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border-blue-500/30 p-4">
+        <Card className="bg-blue-50 border-blue-200 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/30 flex items-center justify-center">
-              <Activity className="h-5 w-5 text-blue-400" />
+            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
+              <Activity className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-slate-500 text-xs">Total</p>
+              <p className="text-blue-700 text-xs font-medium">Total</p>
               <p className="text-xl font-bold text-slate-800">{pagination.total}</p>
             </div>
           </div>
         </Card>
         
         {/* Completed */}
-        <Card className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500/30 p-4">
+        <Card className="bg-green-50 border-green-200 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-green-500/30 flex items-center justify-center">
-              <CheckCircle className="h-5 w-5 text-green-400" />
+            <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center">
+              <CheckCircle className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-slate-500 text-xs">Success</p>
-              <p className="text-xl font-bold text-green-400">
+              <p className="text-green-700 text-xs font-medium">Success</p>
+              <p className="text-xl font-bold text-green-700">
                 {stats.by_status?.completed?.count || 0}
               </p>
             </div>
@@ -625,14 +625,14 @@ const AdminBBPSDashboard = () => {
         </Card>
         
         {/* Failed */}
-        <Card className="bg-gradient-to-br from-red-500/20 to-rose-500/20 border-red-500/30 p-4">
+        <Card className="bg-red-50 border-red-200 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-500/30 flex items-center justify-center">
-              <XCircle className="h-5 w-5 text-red-400" />
+            <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center">
+              <XCircle className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-slate-500 text-xs">Failed</p>
-              <p className="text-xl font-bold text-red-400">
+              <p className="text-red-700 text-xs font-medium">Failed</p>
+              <p className="text-xl font-bold text-red-700">
                 {stats.by_status?.failed?.count || 0}
               </p>
             </div>
@@ -640,14 +640,14 @@ const AdminBBPSDashboard = () => {
         </Card>
         
         {/* Pending */}
-        <Card className="bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border-yellow-500/30 p-4">
+        <Card className="bg-yellow-50 border-yellow-200 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-yellow-500/30 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-yellow-400" />
+            <div className="w-10 h-10 rounded-xl bg-yellow-500 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-slate-500 text-xs">Pending</p>
-              <p className="text-xl font-bold text-yellow-400">
+              <p className="text-yellow-700 text-xs font-medium">Pending</p>
+              <p className="text-xl font-bold text-yellow-700">
                 {stats.by_status?.pending?.count || 0}
               </p>
             </div>
@@ -655,14 +655,14 @@ const AdminBBPSDashboard = () => {
         </Card>
         
         {/* Total Amount */}
-        <Card className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-purple-500/30 p-4">
+        <Card className="bg-purple-50 border-purple-200 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/30 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-purple-400" />
+            <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-slate-500 text-xs">Total Amount</p>
-              <p className="text-lg font-bold text-purple-400">
+              <p className="text-purple-700 text-xs font-medium">Total Amount</p>
+              <p className="text-lg font-bold text-purple-700">
                 ₹{(stats.total_amount || 0).toLocaleString()}
               </p>
             </div>

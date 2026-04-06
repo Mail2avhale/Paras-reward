@@ -2773,7 +2773,8 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
         header_row = None
         for row_idx, row in enumerate(ws.iter_rows(min_row=1, max_row=5, values_only=False), 1):
             row_vals = [str(cell.value or "").strip().lower() for cell in row]
-            if "transaction id" in row_vals or "tid" in row_vals:
+            # Match on any of these known Eko header patterns
+            if any(kw in " ".join(row_vals) for kw in ["eko transaction id", "transaction id", "client reference id"]):
                 headers = row_vals
                 header_row = row_idx
                 break
@@ -2784,23 +2785,28 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
             headers = [str(v or "").strip().lower() for v in first_row]
             header_row = 1
         
-        # Map column indices
+        # Map column indices - MATCH actual Eko Excel headers
         col_map = {}
         for idx, h in enumerate(headers):
-            if "transaction id" in h and "client" not in h:
+            h_clean = h.strip().lower()
+            if h_clean in ["eko transaction id", "transaction id"] and "client" not in h_clean:
                 col_map["eko_tid"] = idx
-            elif "client" in h and "ref" in h:
+            elif "client" in h_clean and "ref" in h_clean:
                 col_map["client_ref_id"] = idx
-            elif h == "amount":
+            elif h_clean in ["amount", "amount(rs.)", "amount (rs.)", "amount(rs)"]:
                 col_map["amount"] = idx
-            elif h == "status":
+            elif h_clean == "status":
                 col_map["status"] = idx
-            elif "customer" in h and "id" in h:
+            elif h_clean in ["cellnumber", "cell number", "customer id", "customer_id", "mobile"]:
                 col_map["customer_id"] = idx
-            elif "operator" in h:
+            elif h_clean in ["operator", "operator name", "operator_name"]:
                 col_map["operator"] = idx
-            elif "date" in h or "timestamp" in h:
+            elif h_clean in ["date", "timestamp", "transaction date", "transaction_date"]:
                 col_map["date"] = idx
+            elif h_clean in ["description"]:
+                col_map["description"] = idx
+            elif h_clean in ["activity"]:
+                col_map["activity"] = idx
         
         logging.info(f"[RECONCILE] Excel headers: {headers}")
         logging.info(f"[RECONCILE] Column mapping: {col_map}")
