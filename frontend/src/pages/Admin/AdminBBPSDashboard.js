@@ -883,17 +883,49 @@ const AdminBBPSDashboard = () => {
                 {/* Refund Button for non-completed, non-refunded requests */}
                 
                 {/* EKO Wallet Refund via OTP */}
-                {(selectedRequest.request?.status === 'failed' || selectedRequest.request?.status === 'FAILED') && 
-                 selectedRequest.eko_details?.tid && 
-                 selectedRequest.eko_details?.tid !== 'N/A' && (
+                {(selectedRequest.request?.status === 'failed' || selectedRequest.request?.status === 'FAILED') && (
                   <div className="bg-amber-50 border border-amber-300 rounded-xl p-4" data-testid="eko-wallet-refund-section">
                     <p className="text-xs text-amber-700 mb-2 font-semibold">EKO Wallet Refund (OTP Flow)</p>
-                    <p className="text-sm text-slate-600 mb-3">
-                      EKO TID: <strong className="font-mono">{selectedRequest.eko_details?.tid}</strong> — 
-                      Customer ला OTP पाठवा, OTP verify करा, EKO wallet ला refund मिळेल.
-                    </p>
                     
-                    {ekoRefundStep === 'done' ? (
+                    {/* If no TID, allow manual entry */}
+                    {(!selectedRequest.eko_details?.tid || selectedRequest.eko_details?.tid === 'N/A') && ekoRefundStep !== 'manual_tid' && ekoRefundStep !== 'otp_sent' && ekoRefundStep !== 'done' ? (
+                      <div>
+                        <p className="text-sm text-slate-600 mb-3">
+                          TID available नाही. EKO Dashboard वरून TID मिळवा आणि manually enter करा.
+                        </p>
+                        <Button
+                          onClick={() => setEkoRefundStep('manual_tid')}
+                          className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold"
+                        >
+                          Enter TID Manually
+                        </Button>
+                      </div>
+                    ) : ekoRefundStep === 'manual_tid' ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-amber-700">EKO Transaction ID enter करा:</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={ekoRefundOtp}
+                            onChange={(e) => setEkoRefundOtp(e.target.value)}
+                            placeholder="Enter EKO TID"
+                            className="flex-1 px-3 py-2 border border-amber-300 rounded-lg text-sm font-mono"
+                            data-testid="eko-manual-tid-input"
+                          />
+                          <Button
+                            onClick={() => {
+                              if (!ekoRefundOtp.trim()) { toast.error('TID enter करा'); return; }
+                              handleResendRefundOtp(ekoRefundOtp.trim());
+                              setEkoRefundOtp('');
+                            }}
+                            disabled={ekoRefundLoading}
+                            className="bg-amber-500 hover:bg-amber-600 text-white font-bold"
+                          >
+                            {ekoRefundLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send OTP'}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : ekoRefundStep === 'done' ? (
                       <div className="bg-green-50 border border-green-300 rounded-lg p-3">
                         <p className="text-green-700 font-semibold">Refund Successful!</p>
                         {ekoRefundResponse?.refunded_amount && (
@@ -916,7 +948,7 @@ const AdminBBPSDashboard = () => {
                             data-testid="eko-refund-otp-input"
                           />
                           <Button
-                            onClick={() => handleVerifyRefundOtp(selectedRequest.eko_details?.tid)}
+                            onClick={() => handleVerifyRefundOtp(ekoRefundResponse?.tid || selectedRequest.eko_details?.tid)}
                             disabled={ekoRefundLoading}
                             className="bg-green-600 hover:bg-green-700 text-white font-bold"
                             data-testid="eko-verify-otp-btn"
@@ -925,7 +957,7 @@ const AdminBBPSDashboard = () => {
                           </Button>
                         </div>
                         <Button
-                          onClick={() => handleResendRefundOtp(selectedRequest.eko_details?.tid)}
+                          onClick={() => handleResendRefundOtp(ekoRefundResponse?.tid || selectedRequest.eko_details?.tid)}
                           disabled={ekoRefundLoading}
                           size="sm"
                           variant="outline"
@@ -935,18 +967,24 @@ const AdminBBPSDashboard = () => {
                         </Button>
                       </div>
                     ) : (
-                      <Button
-                        onClick={() => handleResendRefundOtp(selectedRequest.eko_details?.tid)}
-                        disabled={ekoRefundLoading}
-                        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold"
-                        data-testid="eko-send-refund-otp-btn"
-                      >
-                        {ekoRefundLoading ? (
-                          <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending OTP...</>
-                        ) : (
-                          'Send Refund OTP to Customer'
-                        )}
-                      </Button>
+                      <div>
+                        <p className="text-sm text-slate-600 mb-3">
+                          EKO TID: <strong className="font-mono">{selectedRequest.eko_details?.tid}</strong> — 
+                          Customer ला OTP पाठवा, verify करा, wallet refund मिळेल.
+                        </p>
+                        <Button
+                          onClick={() => handleResendRefundOtp(selectedRequest.eko_details?.tid)}
+                          disabled={ekoRefundLoading}
+                          className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold"
+                          data-testid="eko-send-refund-otp-btn"
+                        >
+                          {ekoRefundLoading ? (
+                            <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending OTP...</>
+                          ) : (
+                            'Send Refund OTP to Customer'
+                          )}
+                        </Button>
+                      </div>
                     )}
                     
                     {ekoRefundResponse?.message && ekoRefundStep !== 'done' && (
