@@ -908,7 +908,7 @@ def get_user_plan(user: dict) -> str:
 
 # ========== SERVICE COOLDOWN SYSTEM ==========
 COOLDOWN_HOURS = {
-    "subscription": 15 * 24,  # 15 days = 360 hours
+    "subscription": 7 * 24,   # 7 days = 168 hours
     "bank_transfer": 24,      # 24 hours
     "bill_payment": 24,       # 24 hours
     "gift_voucher": 24,       # 24 hours
