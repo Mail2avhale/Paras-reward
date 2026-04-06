@@ -88,9 +88,9 @@ def set_db(database):
 
 EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
 EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "")
-EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "9936606966")
+EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "")
 EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "")
-EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "20810200")
+EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "")
 
 # ==================== AUTO-RETRY DISABLED ====================
 # Retry functionality has been removed. Failed transactions are refunded immediately.
