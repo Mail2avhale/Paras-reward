@@ -2765,7 +2765,7 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
     
     try:
         contents = await file.read()
-        wb = load_workbook(io.BytesIO(contents), read_only=True)
+        wb = load_workbook(io.BytesIO(contents), read_only=False)
         ws = wb.active
         
         # Find header row
