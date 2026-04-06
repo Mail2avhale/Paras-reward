@@ -329,22 +329,22 @@ const AdminBBPSDashboard = () => {
       {/* EKO Wallet Balance Banner */}
       <div className="mb-6 bg-gradient-to-r from-blue-900 to-blue-700 rounded-xl p-4 flex items-center justify-between border border-blue-600" data-testid="eko-wallet-banner">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-400/20 flex items-center justify-center">
-            <Landmark className="h-6 w-6 text-blue-300" />
+          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+            <Landmark className="h-6 w-6 text-white" />
           </div>
           <div>
-            <p className="text-blue-200 text-xs font-semibold uppercase tracking-wider">EKO Wallet Balance</p>
+            <p className="text-white text-xs font-semibold uppercase tracking-wider">EKO Wallet Balance</p>
             {ekoWallet.loading ? (
               <div className="flex items-center gap-2 mt-1">
-                <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-                <span className="text-slate-400 text-sm">Loading...</span>
+                <Loader2 className="h-4 w-4 animate-spin text-white" />
+                <span className="text-white text-sm">Loading...</span>
               </div>
             ) : ekoWallet.balance !== null ? (
               <p className="text-2xl font-bold text-white" data-testid="eko-wallet-balance">
                 ₹{Number(ekoWallet.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </p>
             ) : (
-              <p className="text-sm text-red-400" data-testid="eko-wallet-error">{ekoWallet.error || 'Unable to fetch balance'}</p>
+              <p className="text-sm text-red-300" data-testid="eko-wallet-error">{ekoWallet.error || 'Unable to fetch balance'}</p>
             )}
           </div>
         </div>
