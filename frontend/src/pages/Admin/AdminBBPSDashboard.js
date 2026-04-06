@@ -52,6 +52,7 @@ const AdminBBPSDashboard = () => {
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 });
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [ekoWallet, setEkoWallet] = useState({ balance: null, loading: true });
   
   // Filters
   const [filters, setFilters] = useState({
@@ -61,6 +62,21 @@ const AdminBBPSDashboard = () => {
     from_date: '',
     to_date: ''
   });
+
+  // Fetch EKO wallet balance
+  const fetchEkoBalance = useCallback(async () => {
+    setEkoWallet(prev => ({ ...prev, loading: true }));
+    try {
+      const response = await axios.get(`${API}/bbps/wallet-balance`);
+      if (response.data.success) {
+        setEkoWallet({ balance: response.data.balance, locked: response.data.locked, loading: false });
+      } else {
+        setEkoWallet({ balance: null, error: response.data.error, loading: false });
+      }
+    } catch (error) {
+      setEkoWallet({ balance: null, error: 'Failed to fetch', loading: false });
+    }
+  }, []);
 
   // Fetch BBPS requests
   const fetchRequests = useCallback(async () => {
@@ -97,7 +113,8 @@ const AdminBBPSDashboard = () => {
 
   useEffect(() => {
     fetchRequests();
-  }, [fetchRequests]);
+    fetchEkoBalance();
+  }, [fetchRequests, fetchEkoBalance]);
 
   // View request details
   const viewRequestDetails = async (requestId) => {
@@ -224,6 +241,40 @@ const AdminBBPSDashboard = () => {
           className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {/* EKO Wallet Balance Banner */}
+      <div className="mb-6 bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-4 flex items-center justify-between border border-slate-700" data-testid="eko-wallet-banner">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <Landmark className="h-6 w-6 text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">EKO Wallet Balance</p>
+            {ekoWallet.loading ? (
+              <div className="flex items-center gap-2 mt-1">
+                <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                <span className="text-slate-400 text-sm">Loading...</span>
+              </div>
+            ) : ekoWallet.balance !== null ? (
+              <p className="text-2xl font-bold text-white" data-testid="eko-wallet-balance">
+                ₹{Number(ekoWallet.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </p>
+            ) : (
+              <p className="text-sm text-red-400" data-testid="eko-wallet-error">{ekoWallet.error || 'Unable to fetch balance'}</p>
+            )}
+          </div>
+        </div>
+        <Button
+          onClick={fetchEkoBalance}
+          disabled={ekoWallet.loading}
+          size="sm"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          data-testid="refresh-eko-balance-btn"
+        >
+          <RefreshCw className={`h-4 w-4 mr-1 ${ekoWallet.loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
