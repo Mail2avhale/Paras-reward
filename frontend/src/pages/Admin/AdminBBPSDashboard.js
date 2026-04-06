@@ -274,7 +274,8 @@ const AdminBBPSDashboard = () => {
       formData.append('file', file);
       
       const response = await axios.post(`${API}/bbps/reconcile/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000
       });
       
       if (response.data.success) {
@@ -284,7 +285,9 @@ const AdminBBPSDashboard = () => {
         toast.error(response.data.message || 'Reconciliation failed');
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to reconcile');
+      console.error('Reconcile error:', error);
+      const msg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to reconcile';
+      toast.error(msg);
     } finally {
       setReconcileLoading(false);
       e.target.value = '';

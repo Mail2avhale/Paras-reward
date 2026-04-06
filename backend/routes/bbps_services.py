@@ -2847,6 +2847,41 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
         
         logging.info(f"[RECONCILE] Parsed {len(excel_entries)} entries from Excel")
         
+        # BATCH DB LOOKUP - much faster than 636 individual queries
+        # Collect all eko_tids and client_ref_ids for batch matching
+        all_eko_tids = [e.get("eko_tid", "") for e in excel_entries if e.get("eko_tid") and e.get("eko_tid") not in ("N/A", "None", "")]
+        all_client_refs = [e.get("client_ref_id", "") for e in excel_entries if e.get("client_ref_id") and e.get("client_ref_id") not in ("N/A", "None", "")]
+        
+        # Batch fetch from both collections
+        redeem_by_tid = {}
+        redeem_by_ref = {}
+        bill_by_tid = {}
+        bill_by_ref = {}
+        
+        if all_eko_tids:
+            cursor = db.redeem_requests.find({"eko_tid": {"$in": all_eko_tids}}, {"_id": 0})
+            async for doc in cursor:
+                if doc.get("eko_tid"):
+                    redeem_by_tid[doc["eko_tid"]] = doc
+            
+            cursor = db.bill_payment_requests.find({"eko_tid": {"$in": all_eko_tids}}, {"_id": 0})
+            async for doc in cursor:
+                if doc.get("eko_tid"):
+                    bill_by_tid[doc["eko_tid"]] = doc
+        
+        if all_client_refs:
+            cursor = db.redeem_requests.find({"client_ref_id": {"$in": all_client_refs}}, {"_id": 0})
+            async for doc in cursor:
+                if doc.get("client_ref_id"):
+                    redeem_by_ref[doc["client_ref_id"]] = doc
+            
+            cursor = db.bill_payment_requests.find({"client_ref_id": {"$in": all_client_refs}}, {"_id": 0})
+            async for doc in cursor:
+                if doc.get("client_ref_id"):
+                    bill_by_ref[doc["client_ref_id"]] = doc
+        
+        logging.info(f"[RECONCILE] Batch DB results: redeem_tid={len(redeem_by_tid)}, redeem_ref={len(redeem_by_ref)}, bill_tid={len(bill_by_tid)}, bill_ref={len(bill_by_ref)}")
+        
         # Now cross-reference with DB
         results = []
         stats = {
@@ -2879,79 +2914,27 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
             except:
                 eko_amount_num = 0
             
-            # --- Search Strategy ---
-            # 1. Try exact match by eko_tid (if we stored it)
-            # 2. Try match by client_ref_id  
-            # 3. Try match by amount + consumer + date range
-            
+            # Fast lookup from pre-fetched batch data
             db_match = None
             match_source = None
             
             # Strategy 1: Match by eko_tid
-            if eko_tid and eko_tid != "N/A" and eko_tid != "None":
-                db_match = await db.redeem_requests.find_one(
-                    {"eko_tid": eko_tid}, {"_id": 0}
-                )
-                if db_match:
+            if eko_tid and eko_tid not in ("N/A", "None", ""):
+                if eko_tid in redeem_by_tid:
+                    db_match = redeem_by_tid[eko_tid]
                     match_source = "redeem_requests"
-                else:
-                    db_match = await db.bill_payment_requests.find_one(
-                        {"eko_tid": eko_tid}, {"_id": 0}
-                    )
-                    if db_match:
-                        match_source = "bill_payment_requests"
+                elif eko_tid in bill_by_tid:
+                    db_match = bill_by_tid[eko_tid]
+                    match_source = "bill_payment_requests"
             
             # Strategy 2: Match by client_ref_id
             if not db_match and client_ref_id:
-                db_match = await db.redeem_requests.find_one(
-                    {"client_ref_id": client_ref_id}, {"_id": 0}
-                )
-                if db_match:
+                if client_ref_id in redeem_by_ref:
+                    db_match = redeem_by_ref[client_ref_id]
                     match_source = "redeem_requests"
-                else:
-                    db_match = await db.bill_payment_requests.find_one(
-                        {"client_ref_id": client_ref_id}, {"_id": 0}
-                    )
-                    if db_match:
-                        match_source = "bill_payment_requests"
-            
-            # Strategy 3: Match by amount + consumer/mobile
-            if not db_match and eko_amount_num > 0 and customer_id:
-                # Try redeem_requests
-                cursor = db.redeem_requests.find(
-                    {
-                        "$and": [
-                            {"$or": [{"amount_inr": eko_amount_num}, {"amount": eko_amount_num}]},
-                            {"$or": [
-                                {"details.mobile_number": customer_id},
-                                {"details.consumer_number": customer_id},
-                                {"user_mobile": customer_id}
-                            ]}
-                        ]
-                    },
-                    {"_id": 0}
-                ).sort("created_at", -1).limit(1)
-                matches = await cursor.to_list(1)
-                if matches:
-                    db_match = matches[0]
-                    match_source = "redeem_requests"
-                else:
-                    cursor = db.bill_payment_requests.find(
-                        {
-                            "$and": [
-                                {"amount_inr": eko_amount_num},
-                                {"$or": [
-                                    {"details.phone_number": customer_id},
-                                    {"details.consumer_number": customer_id}
-                                ]}
-                            ]
-                        },
-                        {"_id": 0}
-                    ).sort("created_at", -1).limit(1)
-                    matches = await cursor.to_list(1)
-                    if matches:
-                        db_match = matches[0]
-                        match_source = "bill_payment_requests"
+                elif client_ref_id in bill_by_ref:
+                    db_match = bill_by_ref[client_ref_id]
+                    match_source = "bill_payment_requests"
             
             # Track status counts
             if eko_status in ["success", "0"]:
