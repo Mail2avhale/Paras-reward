@@ -455,7 +455,7 @@ const AdminBBPSDashboard = () => {
                 />
               </label>
               {reconcileLoading && <Loader2 className="h-5 w-5 animate-spin text-amber-600" />}
-              <p className="text-xs text-slate-500">Eko portal वरून download केलेला Excel upload करा</p>
+              <p className="text-xs text-slate-500">Upload the Excel downloaded from Eko portal</p>
             </div>
             
             {/* Results */}
@@ -1125,7 +1125,7 @@ const AdminBBPSDashboard = () => {
                     {(!selectedRequest.eko_details?.tid || selectedRequest.eko_details?.tid === 'N/A') && ekoRefundStep !== 'manual_tid' && ekoRefundStep !== 'otp_sent' && ekoRefundStep !== 'done' ? (
                       <div>
                         <p className="text-sm text-slate-600 mb-3">
-                          TID available नाही. EKO Dashboard वरून TID मिळवा आणि manually enter करा.
+                          TID not available. Get TID from EKO Dashboard and enter manually.
                         </p>
                         <Button
                           onClick={() => setEkoRefundStep('manual_tid')}
@@ -1136,7 +1136,7 @@ const AdminBBPSDashboard = () => {
                       </div>
                     ) : ekoRefundStep === 'manual_tid' ? (
                       <div className="space-y-3">
-                        <p className="text-sm text-amber-700">EKO Transaction ID enter करा:</p>
+                        <p className="text-sm text-amber-700">Enter EKO Transaction ID:</p>
                         <div className="flex gap-2">
                           <input
                             type="text"
@@ -1148,7 +1148,7 @@ const AdminBBPSDashboard = () => {
                           />
                           <Button
                             onClick={() => {
-                              if (!ekoRefundOtp.trim()) { toast.error('TID enter करा'); return; }
+                              if (!ekoRefundOtp.trim()) { toast.error('Please enter TID'); return; }
                               handleResendRefundOtp(ekoRefundOtp.trim());
                               setEkoRefundOtp('');
                             }}
@@ -1204,7 +1204,7 @@ const AdminBBPSDashboard = () => {
                       <div>
                         <p className="text-sm text-slate-600 mb-3">
                           EKO TID: <strong className="font-mono">{selectedRequest.eko_details?.tid}</strong> — 
-                          Customer ला OTP पाठवा, verify करा, wallet refund मिळेल.
+                          Send OTP to customer, verify it, and wallet refund will be processed.
                         </p>
                         <Button
                           onClick={() => handleResendRefundOtp(selectedRequest.eko_details?.tid)}

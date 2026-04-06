@@ -329,7 +329,7 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
                         "success": False,
                         "status": "FAILED",
                         "message": "Service temporarily unavailable. Please try again later.",
-                        "user_message": "पेमेंट सेवा तात्पुरती अनुपलब्ध आहे. कृपया थोड्या वेळाने पुन्हा प्रयत्न करा."
+                        "user_message": "Payment service temporarily unavailable. Please try again later."
                     }
         except Exception as balance_error:
             logging.warning(f"[BBPS-INSTANT] Could not check Eko balance: {balance_error}")
