@@ -2847,12 +2847,12 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
         
         logging.info(f"[RECONCILE] Parsed {len(excel_entries)} entries from Excel")
         
-        # BATCH DB LOOKUP - much faster than 636 individual queries
+        # BATCH DB LOOKUP - much faster than individual queries
         # Collect all eko_tids and client_ref_ids for batch matching
         all_eko_tids = [e.get("eko_tid", "") for e in excel_entries if e.get("eko_tid") and e.get("eko_tid") not in ("N/A", "None", "")]
         all_client_refs = [e.get("client_ref_id", "") for e in excel_entries if e.get("client_ref_id") and e.get("client_ref_id") not in ("N/A", "None", "")]
         
-        # Batch fetch from both collections
+        # Batch fetch from both collections by eko_tid and client_ref_id
         redeem_by_tid = {}
         redeem_by_ref = {}
         bill_by_tid = {}
@@ -2880,7 +2880,69 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
                 if doc.get("client_ref_id"):
                     bill_by_ref[doc["client_ref_id"]] = doc
         
-        logging.info(f"[RECONCILE] Batch DB results: redeem_tid={len(redeem_by_tid)}, redeem_ref={len(redeem_by_ref)}, bill_tid={len(bill_by_tid)}, bill_ref={len(bill_by_ref)}")
+        # FALLBACK: Build lookup indexes by amount+mobile for failed transactions
+        # These failed records don't have eko_tid or client_ref_id stored
+        # Key format: "amount|mobile" -> list of docs
+        redeem_by_amt_mobile = {}
+        bill_by_amt_mobile = {}
+        
+        # Get all unique amounts and mobiles from Excel
+        all_amounts = set()
+        all_mobiles = set()
+        for e in excel_entries:
+            try:
+                amt = float(e.get("amount", "0").replace(",", ""))
+                if amt > 0:
+                    all_amounts.add(amt)
+            except:
+                pass
+            mob = e.get("customer_id", "")
+            if mob and mob not in ("N/A", "None", ""):
+                all_mobiles.add(mob)
+        
+        if all_amounts and all_mobiles:
+            # Fetch all redeem_requests that match ANY of these amounts and mobiles
+            cursor = db.redeem_requests.find(
+                {
+                    "amount_inr": {"$in": list(all_amounts)},
+                    "$or": [
+                        {"details.mobile_number": {"$in": list(all_mobiles)}},
+                        {"details.consumer_number": {"$in": list(all_mobiles)}},
+                        {"user_mobile": {"$in": list(all_mobiles)}}
+                    ]
+                },
+                {"_id": 0}
+            )
+            async for doc in cursor:
+                amt = doc.get("amount_inr", 0)
+                mob = doc.get("details", {}).get("mobile_number") or doc.get("details", {}).get("consumer_number") or doc.get("user_mobile", "")
+                if amt and mob:
+                    key = f"{float(amt)}|{mob}"
+                    if key not in redeem_by_amt_mobile:
+                        redeem_by_amt_mobile[key] = []
+                    redeem_by_amt_mobile[key].append(doc)
+            
+            # Same for bill_payment_requests
+            cursor = db.bill_payment_requests.find(
+                {
+                    "amount_inr": {"$in": list(all_amounts)},
+                    "$or": [
+                        {"details.phone_number": {"$in": list(all_mobiles)}},
+                        {"details.consumer_number": {"$in": list(all_mobiles)}}
+                    ]
+                },
+                {"_id": 0}
+            )
+            async for doc in cursor:
+                amt = doc.get("amount_inr", 0)
+                mob = doc.get("details", {}).get("phone_number") or doc.get("details", {}).get("consumer_number", "")
+                if amt and mob:
+                    key = f"{float(amt)}|{mob}"
+                    if key not in bill_by_amt_mobile:
+                        bill_by_amt_mobile[key] = []
+                    bill_by_amt_mobile[key].append(doc)
+        
+        logging.info(f"[RECONCILE] Batch DB: tid={len(redeem_by_tid)}/{len(bill_by_tid)}, ref={len(redeem_by_ref)}/{len(bill_by_ref)}, amt_mob={len(redeem_by_amt_mobile)}/{len(bill_by_amt_mobile)}")
         
         # Now cross-reference with DB
         results = []
@@ -2935,6 +2997,49 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
                 elif client_ref_id in bill_by_ref:
                     db_match = bill_by_ref[client_ref_id]
                     match_source = "bill_payment_requests"
+            
+            # Strategy 3: Match by amount + mobile number (for failed txns without eko_tid/client_ref_id)
+            if not db_match and eko_amount_num > 0 and customer_id:
+                lookup_key = f"{eko_amount_num}|{customer_id}"
+                
+                # Parse Eko date for time-based filtering
+                eko_date_str = entry.get("date", "")
+                
+                # Try redeem_requests first
+                candidates = redeem_by_amt_mobile.get(lookup_key, [])
+                if candidates:
+                    # Pick the best match - prefer closest date, unmatched records
+                    best = None
+                    for c in candidates:
+                        if c.get("_reconcile_used"):
+                            continue
+                        if best is None:
+                            best = c
+                        else:
+                            # Prefer failed status (those are likely the phantom failures)
+                            if c.get("status") in ("failed", "retry_failed", "eko_failed") and best.get("status") not in ("failed", "retry_failed", "eko_failed"):
+                                best = c
+                    if best:
+                        db_match = best
+                        best["_reconcile_used"] = True
+                        match_source = "redeem_requests"
+                
+                # Try bill_payment_requests
+                if not db_match:
+                    candidates = bill_by_amt_mobile.get(lookup_key, [])
+                    if candidates:
+                        best = None
+                        for c in candidates:
+                            if c.get("_reconcile_used"):
+                                continue
+                            if best is None:
+                                best = c
+                            elif c.get("status") in ("failed", "retry_failed", "eko_failed") and best.get("status") not in ("failed", "retry_failed", "eko_failed"):
+                                best = c
+                        if best:
+                            db_match = best
+                            best["_reconcile_used"] = True
+                            match_source = "bill_payment_requests"
             
             # Track status counts
             if eko_status in ["success", "0"]:
