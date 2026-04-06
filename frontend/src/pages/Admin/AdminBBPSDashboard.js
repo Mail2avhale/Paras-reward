@@ -498,7 +498,7 @@ const AdminBBPSDashboard = () => {
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-5 w-5 text-red-600" />
                       <span className="text-red-700 font-semibold">
-                        {reconcileData.stats.eko_success_internal_failed} transactions: Eko Success but Internal Failed
+                        {reconcileData.stats.eko_success_internal_failed} Eko Success transactions need fixing
                         {reconcileData.stats.needs_prc_reclaim > 0 && ` | PRC Reclaim: ₹${reconcileData.stats.total_prc_to_reclaim?.toLocaleString()}`}
                       </span>
                     </div>
@@ -510,7 +510,11 @@ const AdminBBPSDashboard = () => {
                             request_id: r.request_id,
                             action: r.action,
                             eko_tid: r.eko_tid,
-                            match_source: r.match_source
+                            match_source: r.match_source,
+                            eko_amount: r.eko_amount,
+                            customer_id: r.customer_id,
+                            client_ref_id: r.client_ref_id,
+                            date: r.date
                           }));
                         handleApplyFixes(fixes);
                       }}
@@ -600,12 +604,14 @@ const AdminBBPSDashboard = () => {
                               {r.action && r.action !== 'OK' && r.action !== 'UNMATCHED' ? (
                                 <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                                   r.action === 'FIX_STATUS_RECLAIM_PRC' ? 'bg-red-100 text-red-700' :
+                                  r.action === 'CREATE_COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
                                   r.action === 'FIX_STATUS' ? 'bg-amber-100 text-amber-700' :
                                   r.action === 'NEEDS_REFUND' ? 'bg-blue-100 text-blue-700' :
                                   r.action === 'REVIEW' ? 'bg-purple-100 text-purple-700' :
                                   'bg-gray-100 text-gray-700'
                                 }`}>
                                   {r.action === 'FIX_STATUS_RECLAIM_PRC' ? 'Fix+Reclaim' :
+                                   r.action === 'CREATE_COMPLETED' ? 'Create Record' :
                                    r.action === 'FIX_STATUS' ? 'Fix Status' :
                                    r.action === 'NEEDS_REFUND' ? 'Refund PRC' :
                                    r.action}

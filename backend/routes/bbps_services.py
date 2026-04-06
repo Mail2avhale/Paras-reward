@@ -3126,13 +3126,19 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
                     result_entry["action_detail"] = f"Unknown Eko status: {eko_status}"
             else:
                 stats["unmatched"] += 1
-                result_entry["action"] = "UNMATCHED"
-                result_entry["action_detail"] = "No matching record found in DB"
+                # For unmatched Eko Success - these need new DB records
+                if eko_status in ["success", "0"]:
+                    result_entry["action"] = "CREATE_COMPLETED"
+                    result_entry["action_detail"] = "Eko Success but NO record in DB - create as completed"
+                    stats["eko_success_internal_failed"] += 1
+                else:
+                    result_entry["action"] = "UNMATCHED"
+                    result_entry["action_detail"] = "No matching record found in DB"
             
             results.append(result_entry)
         
         # Sort: action items first
-        action_order = {"FIX_STATUS_RECLAIM_PRC": 0, "FIX_STATUS": 1, "NEEDS_REFUND": 2, "REVIEW": 3, "UNMATCHED": 4, "OK": 5}
+        action_order = {"FIX_STATUS_RECLAIM_PRC": 0, "CREATE_COMPLETED": 1, "FIX_STATUS": 2, "NEEDS_REFUND": 3, "REVIEW": 4, "UNMATCHED": 5, "OK": 6}
         results.sort(key=lambda x: action_order.get(x.get("action", "OK"), 99))
         
         return {
@@ -3180,13 +3186,74 @@ async def apply_reconciliation_fixes(request: Request):
         eko_tid = fix.get("eko_tid")
         match_source = fix.get("match_source", "redeem_requests")
         
-        if not request_id or not action:
-            results.append({"request_id": request_id, "status": "skipped", "reason": "Missing request_id or action"})
+        if not action:
+            results.append({"request_id": request_id, "status": "skipped", "reason": "Missing action"})
             continue
         
-        collection = db.redeem_requests if match_source == "redeem_requests" else db.bill_payment_requests
-        
         try:
+            now_str = datetime.now(timezone.utc).isoformat()
+            
+            # CREATE_COMPLETED: No DB record exists - create new one
+            if action == "CREATE_COMPLETED":
+                eko_amount = fix.get("eko_amount", 0)
+                customer_id = fix.get("customer_id", "")
+                eko_date = fix.get("date", "")
+                
+                try:
+                    eko_amount_num = float(str(eko_amount).replace(",", ""))
+                except:
+                    eko_amount_num = 0
+                
+                new_request_id = f"RECON-{eko_tid or int(datetime.now(timezone.utc).timestamp())}"
+                
+                new_doc = {
+                    "request_id": new_request_id,
+                    "service_type": "mobile_recharge",
+                    "amount_inr": eko_amount_num,
+                    "amount": eko_amount_num,
+                    "details": {"mobile_number": customer_id},
+                    "status": "completed",
+                    "eko_tid": eko_tid,
+                    "eko_status": "SUCCESS",
+                    "client_ref_id": fix.get("client_ref_id"),
+                    "reconciled": True,
+                    "reconciled_at": now_str,
+                    "reconcile_note": "Created via Eko Excel reconciliation - Eko Success but no internal record",
+                    "completed_at": eko_date or now_str,
+                    "created_at": eko_date or now_str,
+                    "updated_at": now_str,
+                    "user_id": "UNKNOWN",
+                    "user_name": "Reconciled Entry",
+                    "total_prc_deducted": 0,
+                    "prc_refunded": False,
+                    "status_history": [{
+                        "status": "completed",
+                        "timestamp": now_str,
+                        "note": f"Reconciled: Eko Success (TID: {eko_tid}), no internal record found"
+                    }]
+                }
+                
+                await db.redeem_requests.insert_one(new_doc)
+                del new_doc["_id"]  # Remove MongoDB added _id
+                
+                fixed_count += 1
+                results.append({
+                    "request_id": new_request_id,
+                    "status": "created",
+                    "action": "CREATE_COMPLETED",
+                    "eko_tid": eko_tid,
+                    "amount": eko_amount_num
+                })
+                logging.info(f"[RECONCILE FIX] Created new record {new_request_id} for Eko TID {eko_tid}")
+                continue
+            
+            # For all other actions, record must exist in DB
+            if not request_id:
+                results.append({"request_id": request_id, "status": "skipped", "reason": "Missing request_id"})
+                continue
+            
+            collection = db.redeem_requests if match_source == "redeem_requests" else db.bill_payment_requests
+        
             doc = await collection.find_one({"request_id": request_id}, {"_id": 0})
             if not doc:
                 results.append({"request_id": request_id, "status": "error", "reason": "Record not found"})
