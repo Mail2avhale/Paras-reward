@@ -462,132 +462,177 @@ const AdminBBPSDashboard = () => {
             {reconcileData && (
               <div className="space-y-4">
                 {/* Stats Summary */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="reconcile-stats">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3" data-testid="reconcile-stats">
                   <div className="bg-blue-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-blue-600">{reconcileData.stats.total_excel}</p>
-                    <p className="text-xs text-blue-500">Total Excel Entries</p>
+                    <p className="text-2xl font-bold text-blue-700">{reconcileData.stats.total_excel}</p>
+                    <p className="text-xs text-blue-600 font-medium">Total Entries</p>
                   </div>
                   <div className="bg-green-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-green-600">{reconcileData.stats.matched}</p>
-                    <p className="text-xs text-green-500">DB Match</p>
+                    <p className="text-2xl font-bold text-green-700">{reconcileData.stats.eko_success_count || 0}</p>
+                    <p className="text-xs text-green-600 font-medium">Eko Success</p>
                   </div>
                   <div className="bg-red-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-red-600">{reconcileData.stats.eko_success_internal_failed}</p>
-                    <p className="text-xs text-red-500">Eko Success / Internal Failed</p>
+                    <p className="text-2xl font-bold text-red-700">{reconcileData.stats.eko_fail_count || 0}</p>
+                    <p className="text-xs text-red-600 font-medium">Eko Fail</p>
                   </div>
                   <div className="bg-orange-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-orange-600">{reconcileData.stats.needs_prc_reclaim}</p>
-                    <p className="text-xs text-orange-500">PRC Reclaim Needed (₹{reconcileData.stats.total_prc_to_reclaim?.toLocaleString()})</p>
+                    <p className="text-2xl font-bold text-orange-700">{reconcileData.stats.eko_refunded_count || 0}</p>
+                    <p className="text-xs text-orange-600 font-medium">Eko Refunded</p>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-purple-700">{reconcileData.stats.matched}</p>
+                    <p className="text-xs text-purple-600 font-medium">DB Matched</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3 text-center">
+                    <p className="text-lg font-bold text-slate-700">₹{(reconcileData.stats.total_amount || 0).toLocaleString()}</p>
+                    <p className="text-xs text-slate-600 font-medium">Total Amount</p>
+                  </div>
+                </div>
+
+                {/* Action Items Alert */}
+                {reconcileData.stats.eko_success_internal_failed > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-600" />
+                      <span className="text-red-700 font-semibold">
+                        {reconcileData.stats.eko_success_internal_failed} transactions: Eko Success but Internal Failed
+                        {reconcileData.stats.needs_prc_reclaim > 0 && ` | PRC Reclaim: ₹${reconcileData.stats.total_prc_to_reclaim?.toLocaleString()}`}
+                      </span>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        const fixes = reconcileData.results
+                          .filter(r => r.action !== 'OK' && r.action !== 'UNMATCHED' && r.action !== 'REVIEW')
+                          .map(r => ({
+                            request_id: r.request_id,
+                            action: r.action,
+                            eko_tid: r.eko_tid,
+                            match_source: r.match_source
+                          }));
+                        handleApplyFixes(fixes);
+                      }}
+                      disabled={reconcileFixLoading}
+                      className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+                      data-testid="apply-all-fixes-btn"
+                    >
+                      {reconcileFixLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wrench className="h-4 w-4 mr-2" />}
+                      Fix All
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Full Excel Data Table */}
+                <div>
+                  <h3 className="font-semibold text-slate-800 mb-2">
+                    All Eko Transactions ({reconcileData.results?.length || 0})
+                  </h3>
+                  <div className="overflow-x-auto border border-slate-200 rounded-lg max-h-[500px] overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-800 text-white sticky top-0">
+                        <tr>
+                          <th className="text-left p-2 text-xs font-semibold">#</th>
+                          <th className="text-left p-2 text-xs font-semibold">Date</th>
+                          <th className="text-left p-2 text-xs font-semibold">Eko TID</th>
+                          <th className="text-left p-2 text-xs font-semibold">Client Ref ID</th>
+                          <th className="text-left p-2 text-xs font-semibold">Mobile</th>
+                          <th className="text-right p-2 text-xs font-semibold">Amount</th>
+                          <th className="text-left p-2 text-xs font-semibold">Type</th>
+                          <th className="text-left p-2 text-xs font-semibold">Eko Status</th>
+                          <th className="text-left p-2 text-xs font-semibold">DB Match</th>
+                          <th className="text-left p-2 text-xs font-semibold">Internal Status</th>
+                          <th className="text-left p-2 text-xs font-semibold">PRC Refunded</th>
+                          <th className="text-right p-2 text-xs font-semibold">Fee</th>
+                          <th className="text-right p-2 text-xs font-semibold">Commission</th>
+                          <th className="text-left p-2 text-xs font-semibold">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reconcileData.results?.map((r, idx) => (
+                          <tr key={idx} className={`border-t border-slate-100 hover:bg-slate-50 ${
+                            r.action === 'FIX_STATUS_RECLAIM_PRC' ? 'bg-red-50' :
+                            r.action === 'FIX_STATUS' ? 'bg-amber-50' :
+                            r.action === 'NEEDS_REFUND' ? 'bg-blue-50' : ''
+                          }`}>
+                            <td className="p-2 text-xs text-slate-400">{idx + 1}</td>
+                            <td className="p-2 text-xs text-slate-600 whitespace-nowrap">{r.date ? r.date.split('.')[0] : '-'}</td>
+                            <td className="p-2 font-mono text-xs text-slate-800">{r.eko_tid || '-'}</td>
+                            <td className="p-2 font-mono text-xs text-slate-600">{r.client_ref_id || '-'}</td>
+                            <td className="p-2 text-xs text-slate-700">{r.customer_id || '-'}</td>
+                            <td className="p-2 text-xs font-semibold text-slate-800 text-right">₹{r.eko_amount}</td>
+                            <td className="p-2 text-xs text-slate-500">{r.debit_credit || '-'}</td>
+                            <td className="p-2">
+                              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                r.eko_status?.toLowerCase() === 'success' ? 'bg-green-100 text-green-700' : 
+                                r.eko_status?.toLowerCase() === 'fail' ? 'bg-red-100 text-red-700' : 
+                                r.eko_status?.toLowerCase() === 'refunded' ? 'bg-orange-100 text-orange-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>{r.eko_status}</span>
+                            </td>
+                            <td className="p-2">
+                              {r.matched ? (
+                                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-700">Yes</span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded text-xs text-slate-400">No</span>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              {r.internal_status ? (
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                  r.internal_status === 'completed' ? 'bg-green-100 text-green-700' : 
+                                  r.internal_status === 'failed' ? 'bg-red-100 text-red-700' : 
+                                  'bg-yellow-100 text-yellow-700'
+                                }`}>{r.internal_status}</span>
+                              ) : <span className="text-xs text-slate-300">-</span>}
+                            </td>
+                            <td className="p-2">
+                              {r.prc_refunded === true ? (
+                                <span className="text-orange-600 font-semibold text-xs">Yes ({r.prc_amount})</span>
+                              ) : r.prc_refunded === false ? (
+                                <span className="text-slate-400 text-xs">No</span>
+                              ) : <span className="text-xs text-slate-300">-</span>}
+                            </td>
+                            <td className="p-2 text-xs text-right text-slate-500">{r.fee && r.fee !== 'N/A' ? `₹${r.fee}` : '-'}</td>
+                            <td className="p-2 text-xs text-right text-slate-500">{r.commission && r.commission !== 'N/A' ? `₹${r.commission}` : '-'}</td>
+                            <td className="p-2">
+                              {r.action && r.action !== 'OK' && r.action !== 'UNMATCHED' ? (
+                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                  r.action === 'FIX_STATUS_RECLAIM_PRC' ? 'bg-red-100 text-red-700' :
+                                  r.action === 'FIX_STATUS' ? 'bg-amber-100 text-amber-700' :
+                                  r.action === 'NEEDS_REFUND' ? 'bg-blue-100 text-blue-700' :
+                                  r.action === 'REVIEW' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {r.action === 'FIX_STATUS_RECLAIM_PRC' ? 'Fix+Reclaim' :
+                                   r.action === 'FIX_STATUS' ? 'Fix Status' :
+                                   r.action === 'NEEDS_REFUND' ? 'Refund PRC' :
+                                   r.action}
+                                </span>
+                              ) : r.action === 'OK' ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : <span className="text-xs text-slate-300">-</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
                 
-                {/* Action Items Table */}
-                {reconcileData.results?.filter(r => r.action !== 'OK' && r.action !== 'UNMATCHED').length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
-                        Action Required ({reconcileData.results.filter(r => r.action !== 'OK' && r.action !== 'UNMATCHED').length})
-                      </h3>
-                      <Button
-                        onClick={() => {
-                          const fixes = reconcileData.results
-                            .filter(r => r.action !== 'OK' && r.action !== 'UNMATCHED' && r.action !== 'REVIEW')
-                            .map(r => ({
-                              request_id: r.request_id,
-                              action: r.action,
-                              eko_tid: r.eko_tid,
-                              match_source: r.match_source
-                            }));
-                          handleApplyFixes(fixes);
-                        }}
-                        disabled={reconcileFixLoading}
-                        className="bg-red-600 hover:bg-red-700 text-white font-semibold"
-                        data-testid="apply-all-fixes-btn"
-                      >
-                        {reconcileFixLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wrench className="h-4 w-4 mr-2" />}
-                        Fix All
-                      </Button>
-                    </div>
-                    
-                    <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                      <table className="w-full text-sm">
-                        <thead className="bg-slate-100">
-                          <tr>
-                            <th className="text-left p-2 text-slate-600">Eko TID</th>
-                            <th className="text-left p-2 text-slate-600">Client Ref</th>
-                            <th className="text-left p-2 text-slate-600">Amount</th>
-                            <th className="text-left p-2 text-slate-600">Eko Status</th>
-                            <th className="text-left p-2 text-slate-600">Internal Status</th>
-                            <th className="text-left p-2 text-slate-600">PRC Refunded</th>
-                            <th className="text-left p-2 text-slate-600">User</th>
-                            <th className="text-left p-2 text-slate-600">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reconcileData.results
-                            .filter(r => r.action !== 'OK' && r.action !== 'UNMATCHED')
-                            .map((r, idx) => (
-                              <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50">
-                                <td className="p-2 font-mono text-xs">{r.eko_tid || 'N/A'}</td>
-                                <td className="p-2 font-mono text-xs">{r.client_ref_id || 'N/A'}</td>
-                                <td className="p-2 font-semibold">₹{r.eko_amount}</td>
-                                <td className="p-2">
-                                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                    r.eko_status?.toLowerCase() === 'success' ? 'bg-green-100 text-green-700' : 
-                                    r.eko_status?.toLowerCase() === 'fail' ? 'bg-red-100 text-red-700' : 
-                                    'bg-gray-100 text-gray-700'
-                                  }`}>{r.eko_status}</span>
-                                </td>
-                                <td className="p-2">
-                                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                    r.internal_status === 'completed' ? 'bg-green-100 text-green-700' : 
-                                    r.internal_status === 'failed' ? 'bg-red-100 text-red-700' : 
-                                    'bg-yellow-100 text-yellow-700'
-                                  }`}>{r.internal_status || 'N/A'}</span>
-                                </td>
-                                <td className="p-2">
-                                  {r.prc_refunded ? (
-                                    <span className="text-orange-600 font-semibold text-xs">Yes ({r.prc_amount} PRC)</span>
-                                  ) : (
-                                    <span className="text-slate-400 text-xs">No</span>
-                                  )}
-                                </td>
-                                <td className="p-2 text-xs">{r.user_name || r.user_id || '-'}</td>
-                                <td className="p-2">
-                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                                    r.action === 'FIX_STATUS_RECLAIM_PRC' ? 'bg-red-100 text-red-700' :
-                                    r.action === 'FIX_STATUS' ? 'bg-amber-100 text-amber-700' :
-                                    r.action === 'NEEDS_REFUND' ? 'bg-blue-100 text-blue-700' :
-                                    'bg-gray-100 text-gray-700'
-                                  }`}>
-                                    {r.action === 'FIX_STATUS_RECLAIM_PRC' ? 'Fix + Reclaim PRC' :
-                                     r.action === 'FIX_STATUS' ? 'Fix Status' :
-                                     r.action === 'NEEDS_REFUND' ? 'Refund PRC' :
-                                     r.action}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Summary of OK items */}
-                {reconcileData.results?.filter(r => r.action === 'OK').length > 0 && (
-                  <p className="text-sm text-green-600 flex items-center gap-1">
-                    <CheckCircle className="h-4 w-4" />
-                    {reconcileData.results.filter(r => r.action === 'OK').length} transactions are already matched correctly
-                  </p>
-                )}
-                {reconcileData.results?.filter(r => r.action === 'UNMATCHED').length > 0 && (
-                  <p className="text-sm text-slate-500 flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4" />
-                    {reconcileData.results.filter(r => r.action === 'UNMATCHED').length} transactions not found in internal DB (may be from different source)
-                  </p>
-                )}
+                {/* Summary line */}
+                <div className="flex items-center gap-4 text-sm">
+                  {reconcileData.results?.filter(r => r.action === 'OK').length > 0 && (
+                    <span className="text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-4 w-4" />
+                      {reconcileData.results.filter(r => r.action === 'OK').length} matched correctly
+                    </span>
+                  )}
+                  {reconcileData.results?.filter(r => r.action === 'UNMATCHED').length > 0 && (
+                    <span className="text-slate-500 flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" />
+                      {reconcileData.results.filter(r => r.action === 'UNMATCHED').length} not found in DB
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>

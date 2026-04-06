@@ -2807,6 +2807,18 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
                 col_map["description"] = idx
             elif h_clean in ["activity"]:
                 col_map["activity"] = idx
+            elif h_clean in ["debit/credit", "debit_credit", "type"]:
+                col_map["debit_credit"] = idx
+            elif h_clean in ["fee"]:
+                col_map["fee"] = idx
+            elif h_clean in ["commission(rs.)", "commission", "commission(rs)"]:
+                col_map["commission"] = idx
+            elif h_clean in ["running balance(rs.)", "running balance", "balance"]:
+                col_map["running_balance"] = idx
+            elif h_clean in ["name"]:
+                col_map["name"] = idx
+            elif h_clean in ["bankrefno", "bank_ref_no", "utr"]:
+                col_map["bank_ref"] = idx
         
         logging.info(f"[RECONCILE] Excel headers: {headers}")
         logging.info(f"[RECONCILE] Column mapping: {col_map}")
@@ -2848,7 +2860,11 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
             "prc_not_refunded_count": 0,
             "needs_prc_reclaim": 0,
             "total_prc_to_reclaim": 0,
-            "needs_eko_refund": 0
+            "needs_eko_refund": 0,
+            "eko_success_count": 0,
+            "eko_fail_count": 0,
+            "eko_refunded_count": 0,
+            "total_amount": 0
         }
         
         for entry in excel_entries:
@@ -2937,7 +2953,16 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
                         db_match = matches[0]
                         match_source = "bill_payment_requests"
             
-            # Build result entry
+            # Track status counts
+            if eko_status in ["success", "0"]:
+                stats["eko_success_count"] += 1
+            elif eko_status in ["fail", "failed", "1"]:
+                stats["eko_fail_count"] += 1
+            elif eko_status in ["refunded", "3"]:
+                stats["eko_refunded_count"] += 1
+            stats["total_amount"] += eko_amount_num
+            
+            # Build result entry with ALL Excel fields
             result_entry = {
                 "eko_tid": eko_tid,
                 "client_ref_id": client_ref_id,
@@ -2945,6 +2970,14 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
                 "eko_status": entry.get("status", ""),
                 "customer_id": customer_id,
                 "operator": entry.get("operator", ""),
+                "date": entry.get("date", ""),
+                "activity": entry.get("activity", ""),
+                "debit_credit": entry.get("debit_credit", ""),
+                "fee": entry.get("fee", ""),
+                "commission": entry.get("commission", ""),
+                "running_balance": entry.get("running_balance", ""),
+                "name": entry.get("name", ""),
+                "bank_ref": entry.get("bank_ref", ""),
                 "matched": db_match is not None,
                 "match_source": match_source
             }
