@@ -658,7 +658,7 @@ async def activate_bbps_service(service_code: str = "53"):
             return create_error_response(
                 response.status_code,
                 "Activation failed",
-                f"Failed to activate BBPS service. Please contact support."
+                "Failed to activate BBPS service. Please contact support."
             )
         
         result = response.json()
@@ -719,7 +719,7 @@ async def get_eko_wallet_balance():
             "user_code": USER_CODE
         }
         
-        logging.info(f"[EKO BALANCE] Checking wallet balance")
+        logging.info("[EKO BALANCE] Checking wallet balance")
         
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(url, headers=headers, params=params)
@@ -1534,17 +1534,62 @@ async def pay_bill(data: PayBillRequest):
 
 # ==================== TRANSACTION STATUS INQUIRY ====================
 
+def _parse_eko_status_response(result: dict, identifier: str, identifier_type: str = "tid") -> dict:
+    """Parse EKO transaction status response into standardized format"""
+    eko_status = result.get("status")
+    eko_data = result.get("data", {})
+    
+    if eko_status == 0:
+        tx_status = eko_data.get("tx_status")
+        if isinstance(tx_status, str):
+            try:
+                tx_status = int(tx_status)
+            except ValueError:
+                pass
+        
+        status_map = {
+            0: "SUCCESS",
+            1: "FAILED",
+            2: "PENDING",
+            3: "REFUND_PENDING",
+            4: "REFUNDED",
+            5: "ON_HOLD"
+        }
+        
+        return {
+            "success": True,
+            "tid": eko_data.get("tid", identifier if identifier_type == "tid" else None),
+            "client_ref_id": eko_data.get("client_ref_id", identifier if identifier_type == "client_ref_id" else None),
+            "tx_status": tx_status,
+            "status": status_map.get(tx_status, "UNKNOWN"),
+            "message": eko_data.get("txstatus_desc", TX_STATUS_MESSAGES.get(tx_status, "Unknown status")),
+            "amount": eko_data.get("amount"),
+            "bbps_ref": eko_data.get("bbpstrxnrefid"),
+            "utr": eko_data.get("bank_ref_num") or eko_data.get("utr"),
+            "refund_status": "REFUNDED" if tx_status == 4 else ("REFUND_PENDING" if tx_status == 3 else None),
+            "raw_response": result
+        }
+    
+    return {
+        "success": False,
+        "error_code": eko_status,
+        "message": result.get("message", "Status check failed"),
+        "user_message": "Transaction not found. Please verify the transaction ID.",
+        "raw_response": result
+    }
+
+
 @router.get("/status/{tid}")
 async def get_transaction_status(tid: str):
     """
-    Check transaction status via EKO API.
+    Check transaction status via EKO API using TID.
     
     Use this when:
     - tx_status = 2 (Pending/Initiated)
     - tx_status = 5 (On Hold)
     - Payment timeout occurred
     
-    Reference: https://developers.eko.in/v3/reference/transactions
+    Reference: https://developers.eko.in/reference/transaction-inquiry
     """
     try:
         url = f"{BASE_URL}/v2/transactions?initiator_id={INITIATOR_ID}&tx_id={tid}"
@@ -1561,46 +1606,140 @@ async def get_transaction_status(tid: str):
             )
         
         result = response.json()
-        eko_status = result.get("status")
-        eko_data = result.get("data", {})
-        
-        if eko_status == 0:
-            tx_status = eko_data.get("tx_status")
-            if isinstance(tx_status, str):
-                try:
-                    tx_status = int(tx_status)
-                except ValueError:
-                    pass
-            
-            status_map = {
-                0: "SUCCESS",
-                1: "FAILED",
-                2: "PENDING",
-                3: "REFUND_PENDING",
-                4: "REFUNDED",
-                5: "ON_HOLD"
-            }
-            
-            return {
-                "success": True,
-                "tid": tid,
-                "tx_status": tx_status,
-                "status": status_map.get(tx_status, "UNKNOWN"),
-                "message": eko_data.get("txstatus_desc", TX_STATUS_MESSAGES.get(tx_status, "Unknown status")),
-                "amount": eko_data.get("amount"),
-                "bbps_ref": eko_data.get("bbpstrxnrefid"),
-                "raw_response": result
-            }
-        
-        return create_error_response(
-            eko_status,
-            result.get("message", "Status check failed"),
-            "Transaction not found. Please verify the transaction ID."
-        )
+        return _parse_eko_status_response(result, tid, "tid")
         
     except Exception as e:
         logging.error(f"[BBPS STATUS] Error: {e}")
         return create_error_response(500, str(e), "Unable to check status. Please try again.")
+
+
+@router.get("/status-by-ref/{client_ref_id}")
+async def get_transaction_status_by_ref(client_ref_id: str):
+    """
+    Check transaction status via EKO API using client_ref_id.
+    
+    Use when TID is N/A (transaction failed before EKO assigned a TID).
+    This checks EKO's records using our client_ref_id to see if:
+    - EKO debited the wallet
+    - EKO refunded the amount
+    - Transaction is still pending
+    
+    Reference: https://developers.eko.in/reference/transaction-inquiry
+    """
+    try:
+        url = f"{BASE_URL}/v2/transactions?initiator_id={INITIATOR_ID}&client_ref_id={client_ref_id}"
+        
+        logging.info(f"[BBPS STATUS BY REF] Checking client_ref_id: {client_ref_id}")
+        
+        response = await bbps_get(url, headers=generate_headers(), timeout=30)
+        
+        logging.info(f"[BBPS STATUS BY REF] HTTP: {response.status_code}, Response: {response.text[:500]}")
+        
+        if response.status_code != 200:
+            return create_error_response(
+                response.status_code,
+                "Status check failed",
+                "Unable to check transaction status. Please try again."
+            )
+        
+        result = response.json()
+        parsed = _parse_eko_status_response(result, client_ref_id, "client_ref_id")
+        parsed["lookup_type"] = "client_ref_id"
+        return parsed
+        
+    except Exception as e:
+        logging.error(f"[BBPS STATUS BY REF] Error: {e}")
+        return create_error_response(500, str(e), "Unable to check status. Please try again.")
+
+
+@router.get("/admin/check-eko-refund/{request_id}")
+async def admin_check_eko_refund(request_id: str):
+    """
+    Admin endpoint: Check EKO refund status for a failed bill payment.
+    
+    Looks up the bill_payment_requests record, extracts client_ref_id or tid,
+    and queries EKO for the current transaction + refund status.
+    
+    This helps admin verify if EKO wallet was debited and if refund was processed.
+    """
+    if db is None:
+        return {"success": False, "error": "Database not initialized"}
+    
+    try:
+        # Find the request in DB
+        request_doc = await db.bill_payment_requests.find_one(
+            {"request_id": request_id},
+            {"_id": 0}
+        )
+        
+        if not request_doc:
+            # Try recharge_requests collection too
+            request_doc = await db.recharge_requests.find_one(
+                {"request_id": request_id},
+                {"_id": 0}
+            )
+        
+        if not request_doc:
+            return {"success": False, "error": f"Request {request_id} not found"}
+        
+        eko_tid = request_doc.get("eko_tid") or request_doc.get("tid")
+        client_ref = request_doc.get("client_ref_id") or request_doc.get("eko_client_ref_id")
+        
+        eko_result = None
+        lookup_method = None
+        
+        # Try TID first (more reliable)
+        if eko_tid and eko_tid not in ["N/A", "null", "", None]:
+            url = f"{BASE_URL}/v2/transactions?initiator_id={INITIATOR_ID}&tx_id={eko_tid}"
+            logging.info(f"[EKO REFUND CHECK] Checking TID: {eko_tid} for request: {request_id}")
+            response = await bbps_get(url, headers=generate_headers(), timeout=30)
+            if response.status_code == 200:
+                eko_result = response.json()
+                lookup_method = "tid"
+        
+        # Fallback to client_ref_id
+        if not eko_result and client_ref:
+            url = f"{BASE_URL}/v2/transactions?initiator_id={INITIATOR_ID}&client_ref_id={client_ref}"
+            logging.info(f"[EKO REFUND CHECK] Checking client_ref_id: {client_ref} for request: {request_id}")
+            response = await bbps_get(url, headers=generate_headers(), timeout=30)
+            if response.status_code == 200:
+                eko_result = response.json()
+                lookup_method = "client_ref_id"
+        
+        if not eko_result:
+            return {
+                "success": False,
+                "request_id": request_id,
+                "our_status": request_doc.get("status"),
+                "eko_tid": eko_tid,
+                "client_ref_id": client_ref,
+                "error": "Could not find transaction in EKO system. No TID or client_ref_id available.",
+                "suggestion": "Check EKO dashboard directly or contact EKO support."
+            }
+        
+        parsed = _parse_eko_status_response(eko_result, eko_tid or client_ref, lookup_method)
+        
+        return {
+            "success": True,
+            "request_id": request_id,
+            "our_status": request_doc.get("status"),
+            "our_refund_status": request_doc.get("refund_status"),
+            "prc_refunded": request_doc.get("prc_refunded") or request_doc.get("refund_amount"),
+            "amount_inr": request_doc.get("amount") or request_doc.get("amount_inr"),
+            "lookup_method": lookup_method,
+            "eko_status": parsed.get("status"),
+            "eko_tx_status": parsed.get("tx_status"),
+            "eko_refund_status": parsed.get("refund_status"),
+            "eko_tid": parsed.get("tid"),
+            "eko_message": parsed.get("message"),
+            "wallet_debited": parsed.get("tx_status") is not None,
+            "eko_refunded": parsed.get("tx_status") in [3, 4],
+            "raw_eko_response": parsed.get("raw_response")
+        }
+    
+    except Exception as e:
+        logging.error(f"[EKO REFUND CHECK] Error for {request_id}: {e}")
+        return {"success": False, "request_id": request_id, "error": str(e)}
 
 
 # ==================== GET CATEGORIES ====================

@@ -120,6 +120,30 @@ const AdminBBPSDashboard = () => {
 
   // Refund PRC for stuck/pending request
   const [refundLoading, setRefundLoading] = useState(false);
+  const [ekoCheckLoading, setEkoCheckLoading] = useState(false);
+  const [ekoRefundResult, setEkoRefundResult] = useState(null);
+  
+  const handleCheckEkoRefund = async (requestId) => {
+    setEkoCheckLoading(true);
+    setEkoRefundResult(null);
+    try {
+      const response = await axios.get(`${API}/bbps/admin/check-eko-refund/${requestId}`);
+      setEkoRefundResult(response.data);
+      if (response.data.eko_refunded) {
+        toast.success('EKO has refunded this transaction to merchant wallet');
+      } else if (response.data.eko_status === 'REFUND_PENDING') {
+        toast.info('EKO refund is pending - check again later');
+      } else {
+        toast.info(`EKO status: ${response.data.eko_status || 'Not found'}`);
+      }
+    } catch (error) {
+      toast.error('Failed to check EKO refund status');
+      setEkoRefundResult({ success: false, error: error.response?.data?.detail || 'Check failed' });
+    } finally {
+      setEkoCheckLoading(false);
+    }
+  };
+
   const handleRefund = async (requestId, reason = "Stuck/Pending transaction - Admin refund") => {
     if (!window.confirm(`Confirm PRC refund for request ${requestId}?\nReason: ${reason}`)) return;
     
@@ -646,6 +670,45 @@ const AdminBBPSDashboard = () => {
                     <p className="text-lg font-bold text-orange-400">
                       {selectedRequest.refund_info.amount} PRC Refunded
                     </p>
+                  </div>
+                )}
+                
+                {/* Check EKO Wallet Refund Status */}
+                {(selectedRequest.request?.status === 'failed' || selectedRequest.request?.status === 'FAILED') && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <p className="text-xs text-blue-600 mb-3 font-semibold">EKO Wallet Refund Check</p>
+                    <p className="text-sm text-slate-600 mb-3">
+                      Check if EKO has refunded the amount to merchant wallet for this failed transaction.
+                    </p>
+                    <Button
+                      onClick={() => handleCheckEkoRefund(selectedRequest.request?.request_id)}
+                      disabled={ekoCheckLoading}
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold mb-3"
+                      data-testid="check-eko-refund-btn"
+                    >
+                      {ekoCheckLoading ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Checking EKO...</>
+                      ) : (
+                        <><Search className="h-4 w-4 mr-2" /> Check EKO Wallet Refund Status</>
+                      )}
+                    </Button>
+                    
+                    {ekoRefundResult && (
+                      <div className={`mt-2 p-3 rounded-lg text-sm ${
+                        ekoRefundResult.eko_refunded ? 'bg-green-50 text-green-700 border border-green-200' :
+                        ekoRefundResult.eko_status === 'REFUND_PENDING' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+                        'bg-slate-50 text-slate-700 border border-slate-200'
+                      }`}>
+                        <p className="font-semibold mb-1">
+                          EKO Status: {ekoRefundResult.eko_status || 'Not Found'}
+                        </p>
+                        {ekoRefundResult.eko_refunded && <p>EKO wallet refunded</p>}
+                        {ekoRefundResult.eko_status === 'REFUND_PENDING' && <p>EKO refund is pending - will be auto-refunded</p>}
+                        {ekoRefundResult.wallet_debited === false && <p>EKO wallet was NOT debited for this transaction</p>}
+                        {ekoRefundResult.error && <p className="text-red-600">{ekoRefundResult.error}</p>}
+                        {ekoRefundResult.eko_message && <p>Message: {ekoRefundResult.eko_message}</p>}
+                      </div>
+                    )}
                   </div>
                 )}
                 
