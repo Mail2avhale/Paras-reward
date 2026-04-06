@@ -1,0 +1,65 @@
+{
+  "summary": "Double Recharge Race Condition Fix - ALL TESTS PASSED (17/17). Verified all code changes for the race condition fix: 1) active_statuses now includes pending/processing/submitted, 2) check_weekly_one_service_limit added to create_bill_payment_request, 3) 2-minute duplicate guard added to both endpoints.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_double_recharge_race_condition_fix.py",
+    "/app/test_reports/pytest/double_recharge_race_condition_fix_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "✅ Lines 3714-3724: active_statuses now includes pending/processing/submitted to prevent race condition",
+    "✅ Lines 31301-31313: check_weekly_one_service_limit call added to create_bill_payment_request endpoint",
+    "✅ Lines 31315-31329: 2-minute duplicate request guard added to create_bill_payment_request",
+    "✅ Lines 1113-1128 (unified_redeem_v2.py): 2-minute duplicate request guard added to redeem request endpoint"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_double_recharge_race_condition_fix.py - Fixed endpoint path from /api/v2/redeem/request to /api/redeem/request"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 passed)"
+  },
+  "test_credentials": {
+    "primary_user_mobile": "9970100782",
+    "primary_user_pin": "997010",
+    "primary_user_uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+    "prc_user_uid": "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21"
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Double recharge race condition fix verified. The fix prevents simultaneous duplicate requests by: 1) Including pending/processing/submitted statuses in the 24-hour cooldown check (previously only counted completed/success), 2) Adding check_weekly_one_service_limit to bill-payment/request endpoint, 3) Adding 2-minute duplicate request guard to both bill-payment and redeem endpoints. All endpoints return appropriate 429 errors when cooldown or duplicate conditions are met.",
+  "verified_features": {
+    "health_check": "PASS - GET /api/health returns 200 healthy",
+    "db_health": "PASS - GET /api/health/db returns 200 connected",
+    "login_flow": "PASS - POST /api/auth/login responds correctly",
+    "dashboard_prc_rate": "PASS - GET /api/user/{uid}/dashboard returns prc_rate field",
+    "user_endpoint": "PASS - GET /api/user/{uid} returns user data",
+    "cooldown_bank_transfer": "PASS - GET /api/service/cooldown/{uid}/bank_transfer works",
+    "cooldown_mobile_recharge": "PASS - GET /api/service/cooldown/{uid}/mobile_recharge works",
+    "bill_payment_endpoint": "PASS - POST /api/bill-payment/request exists and has cooldown check",
+    "bill_payment_cooldown": "PASS - Returns 429 with cooldown/duplicate message",
+    "redeem_request_endpoint": "PASS - POST /api/redeem/request exists",
+    "unified_redeem_endpoint": "PASS - POST /api/redeem/request (unified v2) works",
+    "duplicate_guard": "PASS - 2-minute duplicate guard returns proper 429 message",
+    "prc_user_dashboard": "PASS - PRC user dashboard returns prc_rate",
+    "prc_user_cooldown": "PASS - PRC user cooldown check works"
+  },
+  "bug_fix_verification": {
+    "original_bug": "Users could submit double mobile recharges simultaneously (race condition)",
+    "root_cause": "24-hour cooldown check only counted COMPLETED/SUCCESS status, allowing pending requests to bypass",
+    "fix_applied": [
+      "1. Changed status filter to include pending/processing/submitted (any non-failed)",
+      "2. Added check_weekly_one_service_limit call to create_bill_payment_request",
+      "3. Added 2-minute duplicate request guard to both endpoints"
+    ],
+    "verification_result": "ALL CODE CHANGES VERIFIED - Fix is in place"
+  }
+}

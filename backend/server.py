@@ -3711,17 +3711,28 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
     }
     
     # ========== CHECK BBPS LIMIT (if requesting BBPS service) ==========
+    # ACTIVE status filter: count ANY non-failed request to prevent race condition double-submissions
+    # Failed/refunded are excluded; pending/processing ARE counted to block simultaneous requests
+    active_statuses = [
+        "completed", "COMPLETED", "Completed",
+        "success", "SUCCESS", "Success",
+        "approved", "APPROVED", "Approved",
+        "paid", "PAID", "Paid",
+        "pending", "PENDING", "Pending",
+        "processing", "PROCESSING", "Processing",
+        "submitted", "SUBMITTED", "Submitted"
+    ]
+    
     if is_bbps_request:
         # Find most recent BBPS request in last 24 hours
-        # CRITICAL: Only count TRULY SUCCESSFUL requests - failed/refunded/processing/pending should NOT block users
-        # This allows users to retry if their previous transaction failed or is stuck
+        # Count ALL non-failed requests (including pending/processing) to prevent double-submission race condition
         
         # Check bill_payment_requests collection (where mobile recharge, DTH, etc. are stored)
         bill_payment_request = await db.bill_payment_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": cutoff_str},
-            "status": {"$in": ["completed", "success", "COMPLETED", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid"]},
-            # CRITICAL: Exclude refunded/failed transactions
+            "status": {"$in": active_statuses},
+            # Exclude refunded transactions
             "prc_refunded": {"$ne": True}
         }, {"_id": 0, "request_type": 1, "service_type": 1, "created_at": 1, "request_id": 1, "status": 1}, sort=[("created_at", -1)])
         
@@ -3729,21 +3740,16 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         bbps_request = await db.redeem_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": cutoff_str},
-            "status": {"$in": ["completed", "success", "COMPLETED", "SUCCESS", "approved", "APPROVED", "paid", "PAID", "Paid"]},
-            # CRITICAL: Exclude refunded/failed transactions
-            "prc_refunded": {"$ne": True},
-            # Only count if eko_status indicates success OR it's an approved manual transaction
-            "$or": [
-                {"eko_status": {"$in": [0, "0", "SUCCESS", "success"]}},
-                {"approved_by": {"$exists": True, "$ne": None}}  # Manually approved by admin
-            ]
+            "status": {"$in": active_statuses},
+            # Exclude refunded transactions
+            "prc_refunded": {"$ne": True}
         }, {"_id": 0, "service_type": 1, "created_at": 1, "request_id": 1, "status": 1, "eko_status": 1}, sort=[("created_at", -1)])
         
         # Also check gift voucher requests
         gift_request = await db.gift_voucher_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": cutoff_str},
-            "status": {"$in": ["completed", "success", "approved", "delivered", "paid", "COMPLETED", "SUCCESS", "APPROVED", "DELIVERED", "PAID", "Paid"]}
+            "status": {"$in": active_statuses}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
         # Find the most recent BBPS-category service from all collections
@@ -3809,19 +3815,18 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
     
     # ========== CHECK BANK TRANSFER LIMIT (if requesting bank service) ==========
     if is_bank_request:
-        # Check new bank transfer requests - only count COMPLETED/APPROVED requests
-        # NOTE: Only count COMPLETED/SUCCESS requests - failed/processing/pending should NOT block users
+        # Check new bank transfer requests - count ANY non-failed request
         bank_request = await db.bank_transfer_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": cutoff_str},
-            "status": {"$in": ["completed", "success", "approved", "paid", "COMPLETED", "SUCCESS", "APPROVED", "PAID", "Paid"]}
+            "status": {"$in": active_statuses}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
         # Also check old bank withdrawal requests
         old_bank_request = await db.bank_withdrawal_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": cutoff_str},
-            "status": {"$in": ["completed", "success", "approved", "paid", "COMPLETED", "SUCCESS", "APPROVED", "PAID", "Paid"]}
+            "status": {"$in": active_statuses}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
         # Find most recent bank service
@@ -31292,6 +31297,36 @@ async def create_bill_payment_request(request: Request):
         }
         raise HTTPException(status_code=429, detail=weekly_check["reason"])
     # ======================================================
+    
+    # ===== 24-HOUR ONE SERVICE COOLDOWN CHECK =====
+    try:
+        one_service_check = await check_weekly_one_service_limit(user_id, request_type)
+        if not one_service_check.get("allowed"):
+            raise HTTPException(
+                status_code=429, 
+                detail=one_service_check.get("reason_en", one_service_check.get("reason", "24-hour cooldown active. You can only use 1 service per 24 hours."))
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[BILL-PAYMENT] Cooldown check error: {e}")
+    # ================================================
+    
+    # ===== DUPLICATE REQUEST GUARD (2-minute window) =====
+    two_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
+    duplicate = await db.bill_payment_requests.find_one({
+        "user_id": user_id,
+        "request_type": request_type,
+        "amount_inr": amount_inr,
+        "created_at": {"$gte": two_min_ago},
+        "status": {"$nin": ["rejected", "failed", "cancelled", "REJECTED", "FAILED", "CANCELLED"]}
+    })
+    if duplicate:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"Duplicate request detected. Same {request_type} of ₹{amount_inr} was submitted {duplicate.get('created_at', 'recently')[:16]}. Please wait before retrying."
+        )
+    # =====================================================
     
     # Check if user has enough PRC
     user_prc_balance = user.get("prc_balance", 0)

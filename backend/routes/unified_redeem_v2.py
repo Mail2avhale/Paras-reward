@@ -1109,6 +1109,24 @@ async def create_redeem_request(request: RedeemRequestCreate):
         except Exception as e:
             logging.error(f"[REDEEM] Limit check error: {e}")
     
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 9.5: DUPLICATE REQUEST GUARD (2-minute window)
+    # ═══════════════════════════════════════════════════════════════
+    from datetime import timedelta
+    two_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
+    duplicate = await db.redeem_requests.find_one({
+        "user_id": request.user_id,
+        "service_type": request.service_type,
+        "amount": request.amount,
+        "created_at": {"$gte": two_min_ago},
+        "status": {"$nin": ["rejected", "failed", "cancelled", "REJECTED", "FAILED", "CANCELLED"]}
+    })
+    if duplicate:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"Duplicate request detected. Same service of ₹{request.amount} was submitted recently. Please wait before retrying."
+        )
+    
     # Calculate charges with user_id for burn rate
     charges = await calculate_charges(request.amount, user_id=request.user_id)
     total_prc_required = charges["total_prc_required"]
