@@ -20,7 +20,7 @@ Error Handling follows Eko Developer Documentation:
 - Transaction Status (tx_status: 0=Success, 1=Failed, 2=Pending, 3=Refund Pending, 4=Refunded, 5=On Hold)
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, validator
 from typing import Optional, Dict, Any, List
 import httpx  # ASYNC HTTP - replaces blocking 'requests' library
@@ -28,6 +28,7 @@ import base64
 import hashlib
 import hmac
 import time
+import json
 import logging
 import re
 import os
@@ -2159,3 +2160,244 @@ async def activate_all_services():
         "results": results
     }
 
+
+
+# ==================== TRANSACTION STATUS CALLBACK (WEBHOOK) ====================
+# EKO pushes status updates for pending/processing transactions to this endpoint.
+# Configure this URL in EKO dashboard: https://<domain>/api/bbps/callback/status
+# Ref: https://developers.eko.in/docs/callback-setup
+
+@router.post("/callback/status")
+async def eko_transaction_callback(request: Request):
+    """
+    Webhook endpoint: EKO pushes transaction status updates here.
+    
+    EKO calls this when tx_status changes for pending/processing transactions.
+    Expected payload from EKO:
+      {
+        "tid": "12345",
+        "client_ref_id": "MOB1712345678",
+        "tx_status": 0,     # 0=Success,1=Failed,2=Pending,3=RefundPending,4=Refunded
+        "amount": "500",
+        "bbpstrxnrefid": "BBP123456",
+        "operator_ref": "...",
+        "timestamp": "1712345678"
+      }
+    """
+    if db is None:
+        return {"success": False, "error": "Database not initialized"}
+    
+    try:
+        body = await request.json()
+    except Exception:
+        body = dict(await request.form())
+    
+    logging.info(f"[EKO CALLBACK] Received: {json.dumps(body, default=str)[:1000]}")
+    
+    eko_tid = body.get("tid") or body.get("txn_id") or body.get("eko_tid")
+    client_ref = body.get("client_ref_id")
+    tx_status_raw = body.get("tx_status")
+    amount = body.get("amount")
+    bbps_ref = body.get("bbpstrxnrefid") or body.get("bbps_ref")
+    utr = body.get("bank_ref_num") or body.get("utr")
+    
+    try:
+        tx_status = int(tx_status_raw) if tx_status_raw is not None else None
+    except (ValueError, TypeError):
+        tx_status = None
+    
+    STATUS_MAP = {
+        0: "completed",
+        1: "failed",
+        2: "processing",
+        3: "refund_pending",
+        4: "refunded",
+        5: "on_hold"
+    }
+    new_status = STATUS_MAP.get(tx_status, "unknown")
+    
+    # Save callback log for audit (always)
+    callback_log = {
+        "callback_id": f"CB-{int(time.time()*1000)}",
+        "eko_tid": eko_tid,
+        "client_ref_id": client_ref,
+        "tx_status": tx_status,
+        "mapped_status": new_status,
+        "amount": amount,
+        "bbps_ref": bbps_ref,
+        "utr": utr,
+        "raw_payload": body,
+        "received_at": datetime.now(timezone.utc).isoformat(),
+        "processed": False,
+        "process_result": None
+    }
+    await db.eko_callbacks.insert_one(callback_log)
+    
+    # Find matching request in DB
+    request_doc = None
+    collection_name = None
+    
+    # Strategy: try eko_tid first (most reliable), then client_ref_id
+    search_queries = []
+    if eko_tid:
+        search_queries.append({"eko_tid": str(eko_tid)})
+    if client_ref:
+        search_queries.append({"client_ref_id": str(client_ref)})
+        search_queries.append({"eko_client_ref_id": str(client_ref)})
+    
+    for query in search_queries:
+        # Check redeem_requests first (unified flow)
+        request_doc = await db.redeem_requests.find_one(query, {"_id": 0})
+        if request_doc:
+            collection_name = "redeem_requests"
+            break
+        # Check bill_payment_requests (legacy flow)
+        request_doc = await db.bill_payment_requests.find_one(query, {"_id": 0})
+        if request_doc:
+            collection_name = "bill_payment_requests"
+            break
+    
+    if not request_doc:
+        logging.warning(f"[EKO CALLBACK] No matching request found for TID={eko_tid}, client_ref={client_ref}")
+        await db.eko_callbacks.update_one(
+            {"callback_id": callback_log["callback_id"]},
+            {"$set": {"processed": True, "process_result": "no_match_found"}}
+        )
+        return {"success": True, "message": "Callback logged (no matching request found)"}
+    
+    request_id = request_doc.get("request_id")
+    current_status = request_doc.get("status", "")
+    user_id = request_doc.get("user_id")
+    
+    logging.info(f"[EKO CALLBACK] Matched request: {request_id} in {collection_name}, current_status={current_status}, new_status={new_status}")
+    
+    # Determine what update to apply
+    update_fields = {
+        "eko_callback_status": new_status,
+        "eko_callback_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if eko_tid:
+        update_fields["eko_tid"] = str(eko_tid)
+    if bbps_ref:
+        update_fields["utr_number"] = bbps_ref
+    if utr:
+        update_fields["utr_number"] = utr
+    
+    status_update_note = f"EKO Callback: tx_status={tx_status} ({new_status})"
+    action_taken = "logged"
+    
+    # === Handle status transitions ===
+    
+    # CASE 1: Transaction SUCCESS (was pending/processing → now success)
+    if tx_status == 0 and current_status in ["pending", "processing", "submitted"]:
+        update_fields["status"] = "completed"
+        update_fields["eko_status"] = "SUCCESS"
+        update_fields["completed_at"] = datetime.now(timezone.utc).isoformat()
+        action_taken = "marked_completed"
+        logging.info(f"[EKO CALLBACK] {request_id}: {current_status} → completed (EKO confirmed success)")
+    
+    # CASE 2: Transaction FAILED (was pending/processing → now failed) → Refund PRC
+    elif tx_status == 1 and current_status in ["pending", "processing", "submitted"]:
+        update_fields["status"] = "failed"
+        update_fields["eko_status"] = "FAILED"
+        update_fields["eko_message"] = body.get("message", "Transaction failed (EKO callback)")
+        update_fields["failed_at"] = datetime.now(timezone.utc).isoformat()
+        action_taken = "marked_failed"
+        
+        # Auto-refund PRC
+        if user_id and not request_doc.get("prc_refunded"):
+            try:
+                refund_amount = request_doc.get("total_prc_deducted") or request_doc.get("prc_used") or 0
+                if refund_amount > 0:
+                    from app.services.wallet_service_v2 import WalletServiceV2 as WalletService
+                    WalletService.credit(
+                        user_id=user_id,
+                        amount=refund_amount,
+                        txn_type="refund",
+                        description=f"Auto-refund: EKO callback confirmed failure for {request_id}",
+                        reference=request_id
+                    )
+                    update_fields["prc_refunded"] = True
+                    update_fields["refund_amount"] = refund_amount
+                    action_taken = f"marked_failed_and_refunded_{refund_amount}_PRC"
+                    logging.info(f"[EKO CALLBACK] Auto-refunded {refund_amount} PRC to {user_id}")
+            except Exception as refund_err:
+                logging.error(f"[EKO CALLBACK] Refund failed for {request_id}: {refund_err}")
+                update_fields["refund_error"] = str(refund_err)
+                action_taken = "marked_failed_refund_error"
+    
+    # CASE 3: EKO Refunded (failed→refunded on EKO side, update our records)
+    elif tx_status in [3, 4]:
+        update_fields["eko_refund_status"] = "REFUNDED" if tx_status == 4 else "REFUND_PENDING"
+        action_taken = f"eko_refund_status_updated_{STATUS_MAP.get(tx_status)}"
+        logging.info(f"[EKO CALLBACK] {request_id}: EKO refund status = {STATUS_MAP.get(tx_status)}")
+    
+    # CASE 4: Still pending/on hold
+    elif tx_status in [2, 5]:
+        update_fields["eko_status"] = "PENDING" if tx_status == 2 else "ON_HOLD"
+        action_taken = "still_pending"
+    
+    # Apply update to DB
+    update_query = {"request_id": request_id}
+    await db[collection_name].update_one(
+        update_query,
+        {
+            "$set": update_fields,
+            "$push": {
+                "status_history": {
+                    "status": new_status,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "note": status_update_note,
+                    "source": "eko_callback"
+                }
+            }
+        }
+    )
+    
+    # Update callback log with result
+    await db.eko_callbacks.update_one(
+        {"callback_id": callback_log["callback_id"]},
+        {"$set": {
+            "processed": True,
+            "process_result": action_taken,
+            "matched_request_id": request_id,
+            "matched_collection": collection_name
+        }}
+    )
+    
+    logging.info(f"[EKO CALLBACK] Done: request={request_id}, action={action_taken}")
+    
+    return {
+        "success": True,
+        "message": f"Callback processed: {action_taken}",
+        "request_id": request_id
+    }
+
+
+@router.get("/callback/logs")
+async def get_callback_logs(limit: int = 50, skip: int = 0):
+    """
+    Admin endpoint: View recent EKO callback logs for debugging/audit.
+    Shows all callbacks received from EKO with processing results.
+    """
+    if db is None:
+        return {"success": False, "error": "Database not initialized"}
+    
+    try:
+        logs = await db.eko_callbacks.find(
+            {}, {"_id": 0}
+        ).sort("received_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        total = await db.eko_callbacks.count_documents({})
+        
+        return {
+            "success": True,
+            "logs": logs,
+            "total": total,
+            "showing": len(logs)
+        }
+    except Exception as e:
+        logging.error(f"[CALLBACK LOGS] Error: {e}")
+        return {"success": False, "error": str(e)}
