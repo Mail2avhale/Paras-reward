@@ -389,6 +389,7 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
                 "status": result.get("status", "SUCCESS"),
                 "eko_tid": result.get("tid"),
                 "utr": result.get("bbps_ref", ""),
+                "client_ref_id": result.get("client_ref_id"),
                 "message": result.get("user_message") or result.get("message") or f"{service_type} payment successful"
             }
         else:
@@ -398,13 +399,51 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
                     "success": True,
                     "status": "PROCESSING",
                     "eko_tid": result.get("tid"),
+                    "client_ref_id": result.get("client_ref_id"),
                     "message": "Payment is being processed. Please check status later."
                 }
+            
+            # CRITICAL FIX: If timeout/requires_status_check, verify with Eko before declaring failure
+            # This prevents phantom failures where Eko processed payment but we timed out
+            if result.get("requires_status_check") and result.get("client_ref_id"):
+                logging.warning(f"[BBPS-INSTANT] TIMEOUT detected. Checking status via client_ref_id: {result.get('client_ref_id')}")
+                try:
+                    from routes.bbps_services import get_transaction_status_by_ref
+                    status_check = await get_transaction_status_by_ref(result["client_ref_id"])
+                    
+                    if status_check and isinstance(status_check, dict):
+                        checked_status = status_check.get("tx_status")
+                        checked_tid = status_check.get("tid")
+                        logging.info(f"[BBPS-INSTANT] Status check result: tx_status={checked_status}, tid={checked_tid}")
+                        
+                        if checked_status == 0:
+                            # Eko confirms SUCCESS - do NOT fail!
+                            logging.info(f"[BBPS-INSTANT] Eko confirmed SUCCESS after timeout! TID: {checked_tid}")
+                            return {
+                                "success": True,
+                                "status": "SUCCESS",
+                                "eko_tid": checked_tid,
+                                "client_ref_id": result.get("client_ref_id"),
+                                "message": "Payment successful (verified after timeout)"
+                            }
+                        elif checked_status == 2:
+                            # Still processing
+                            return {
+                                "success": True,
+                                "status": "PROCESSING",
+                                "eko_tid": checked_tid,
+                                "client_ref_id": result.get("client_ref_id"),
+                                "message": "Payment is being processed. Please check status later."
+                            }
+                except Exception as status_err:
+                    logging.error(f"[BBPS-INSTANT] Status check failed: {status_err}")
             
             return {
                 "success": False,
                 "status": "FAILED",
                 "error_code": result.get("error_code"),
+                "client_ref_id": result.get("client_ref_id"),
+                "eko_tid": result.get("tid"),
                 "message": result.get("user_message") or result.get("message") or "Transaction failed"
             }
             
@@ -1364,6 +1403,7 @@ async def create_redeem_request(request: RedeemRequestCreate):
                         "$set": {
                             "status": final_status,
                             "eko_tid": eko_result.get("eko_tid"),
+                            "client_ref_id": eko_result.get("client_ref_id"),
                             "utr_number": eko_result.get("utr"),
                             "eko_status": eko_result.get("status"),
                             "eko_message": eko_result.get("message"),
@@ -1427,6 +1467,8 @@ async def create_redeem_request(request: RedeemRequestCreate):
                             "eko_status": "FAILED",
                             "eko_message": eko_result.get("message"),
                             "error_message": eko_result.get("message"),
+                            "client_ref_id": eko_result.get("client_ref_id"),
+                            "eko_tid": eko_result.get("eko_tid"),
                             "prc_refunded": True,
                             "refund_amount": total_prc_required,
                             "failed_at": datetime.now(timezone.utc).isoformat(),

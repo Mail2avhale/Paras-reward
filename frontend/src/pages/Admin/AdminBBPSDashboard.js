@@ -9,7 +9,8 @@ import {
   CheckCircle, XCircle, Clock, AlertCircle, Loader2,
   Smartphone, Tv, Zap, Flame, Building, Droplet, Wifi, PhoneCall,
   CreditCard, Shield, Car, GraduationCap, Monitor, Landmark, Cylinder,
-  TrendingUp, TrendingDown, Activity, Eye, Copy
+  TrendingUp, TrendingDown, Activity, Eye, Copy, Upload, FileSpreadsheet,
+  ChevronDown, ChevronUp, Wrench, AlertTriangle
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -53,6 +54,12 @@ const AdminBBPSDashboard = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [ekoWallet, setEkoWallet] = useState({ balance: null, loading: true });
+  
+  // Reconciliation
+  const [showReconcile, setShowReconcile] = useState(false);
+  const [reconcileLoading, setReconcileLoading] = useState(false);
+  const [reconcileData, setReconcileData] = useState(null);
+  const [reconcileFixLoading, setReconcileFixLoading] = useState(false);
   
   // Filters
   const [filters, setFilters] = useState({
@@ -254,7 +261,63 @@ const AdminBBPSDashboard = () => {
     }
   };
 
-  // Service name formatter
+  // Reconciliation - Upload Excel and cross-reference
+  const handleReconcileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setReconcileLoading(true);
+    setReconcileData(null);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await axios.post(`${API}/bbps/reconcile/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      if (response.data.success) {
+        setReconcileData(response.data);
+        toast.success(response.data.message);
+      } else {
+        toast.error(response.data.message || 'Reconciliation failed');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reconcile');
+    } finally {
+      setReconcileLoading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleApplyFixes = async (selectedActions) => {
+    if (!selectedActions?.length) {
+      toast.error('No fixes selected');
+      return;
+    }
+    
+    if (!window.confirm(`Apply ${selectedActions.length} fixes? This will update statuses and PRC balances.`)) return;
+    
+    setReconcileFixLoading(true);
+    try {
+      const response = await axios.post(`${API}/bbps/reconcile/fix`, { fixes: selectedActions });
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setReconcileData(null);
+        fetchRequests();
+        fetchEkoBalance();
+      } else {
+        toast.error('Fix failed');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Fix failed');
+    } finally {
+      setReconcileFixLoading(false);
+    }
+  };
+
+  // Format service name
   const formatServiceName = (type) => {
     const names = {
       mobile_recharge: 'Mobile Recharge',
@@ -358,6 +421,177 @@ const AdminBBPSDashboard = () => {
           <RefreshCw className={`h-4 w-4 mr-1 ${ekoWallet.loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
+      </div>
+
+      {/* Eko Reconciliation Panel */}
+      <div className="mb-6">
+        <button
+          onClick={() => setShowReconcile(!showReconcile)}
+          className="w-full flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl p-4 hover:bg-amber-100 transition-colors"
+          data-testid="reconcile-toggle-btn"
+        >
+          <div className="flex items-center gap-3">
+            <FileSpreadsheet className="h-5 w-5 text-amber-600" />
+            <span className="font-semibold text-amber-800">Eko Reconciliation Tool</span>
+            <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">Upload Eko Excel</span>
+          </div>
+          {showReconcile ? <ChevronUp className="h-5 w-5 text-amber-600" /> : <ChevronDown className="h-5 w-5 text-amber-600" />}
+        </button>
+        
+        {showReconcile && (
+          <div className="border border-amber-200 border-t-0 rounded-b-xl bg-white p-4 space-y-4">
+            {/* Upload Section */}
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg cursor-pointer transition-colors font-semibold">
+                <Upload className="h-4 w-4" />
+                {reconcileLoading ? 'Analyzing...' : 'Upload Eko Excel'}
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleReconcileUpload}
+                  className="hidden"
+                  disabled={reconcileLoading}
+                  data-testid="reconcile-upload-input"
+                />
+              </label>
+              {reconcileLoading && <Loader2 className="h-5 w-5 animate-spin text-amber-600" />}
+              <p className="text-xs text-slate-500">Eko portal वरून download केलेला Excel upload करा</p>
+            </div>
+            
+            {/* Results */}
+            {reconcileData && (
+              <div className="space-y-4">
+                {/* Stats Summary */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="reconcile-stats">
+                  <div className="bg-blue-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-blue-600">{reconcileData.stats.total_excel}</p>
+                    <p className="text-xs text-blue-500">Total Excel Entries</p>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-green-600">{reconcileData.stats.matched}</p>
+                    <p className="text-xs text-green-500">DB Match</p>
+                  </div>
+                  <div className="bg-red-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-red-600">{reconcileData.stats.eko_success_internal_failed}</p>
+                    <p className="text-xs text-red-500">Eko Success / Internal Failed</p>
+                  </div>
+                  <div className="bg-orange-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-orange-600">{reconcileData.stats.needs_prc_reclaim}</p>
+                    <p className="text-xs text-orange-500">PRC Reclaim Needed (₹{reconcileData.stats.total_prc_to_reclaim?.toLocaleString()})</p>
+                  </div>
+                </div>
+                
+                {/* Action Items Table */}
+                {reconcileData.results?.filter(r => r.action !== 'OK' && r.action !== 'UNMATCHED').length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        Action Required ({reconcileData.results.filter(r => r.action !== 'OK' && r.action !== 'UNMATCHED').length})
+                      </h3>
+                      <Button
+                        onClick={() => {
+                          const fixes = reconcileData.results
+                            .filter(r => r.action !== 'OK' && r.action !== 'UNMATCHED' && r.action !== 'REVIEW')
+                            .map(r => ({
+                              request_id: r.request_id,
+                              action: r.action,
+                              eko_tid: r.eko_tid,
+                              match_source: r.match_source
+                            }));
+                          handleApplyFixes(fixes);
+                        }}
+                        disabled={reconcileFixLoading}
+                        className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+                        data-testid="apply-all-fixes-btn"
+                      >
+                        {reconcileFixLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wrench className="h-4 w-4 mr-2" />}
+                        Fix All
+                      </Button>
+                    </div>
+                    
+                    <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-100">
+                          <tr>
+                            <th className="text-left p-2 text-slate-600">Eko TID</th>
+                            <th className="text-left p-2 text-slate-600">Client Ref</th>
+                            <th className="text-left p-2 text-slate-600">Amount</th>
+                            <th className="text-left p-2 text-slate-600">Eko Status</th>
+                            <th className="text-left p-2 text-slate-600">Internal Status</th>
+                            <th className="text-left p-2 text-slate-600">PRC Refunded</th>
+                            <th className="text-left p-2 text-slate-600">User</th>
+                            <th className="text-left p-2 text-slate-600">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reconcileData.results
+                            .filter(r => r.action !== 'OK' && r.action !== 'UNMATCHED')
+                            .map((r, idx) => (
+                              <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50">
+                                <td className="p-2 font-mono text-xs">{r.eko_tid || 'N/A'}</td>
+                                <td className="p-2 font-mono text-xs">{r.client_ref_id || 'N/A'}</td>
+                                <td className="p-2 font-semibold">₹{r.eko_amount}</td>
+                                <td className="p-2">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                    r.eko_status?.toLowerCase() === 'success' ? 'bg-green-100 text-green-700' : 
+                                    r.eko_status?.toLowerCase() === 'fail' ? 'bg-red-100 text-red-700' : 
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>{r.eko_status}</span>
+                                </td>
+                                <td className="p-2">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                    r.internal_status === 'completed' ? 'bg-green-100 text-green-700' : 
+                                    r.internal_status === 'failed' ? 'bg-red-100 text-red-700' : 
+                                    'bg-yellow-100 text-yellow-700'
+                                  }`}>{r.internal_status || 'N/A'}</span>
+                                </td>
+                                <td className="p-2">
+                                  {r.prc_refunded ? (
+                                    <span className="text-orange-600 font-semibold text-xs">Yes ({r.prc_amount} PRC)</span>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs">No</span>
+                                  )}
+                                </td>
+                                <td className="p-2 text-xs">{r.user_name || r.user_id || '-'}</td>
+                                <td className="p-2">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                    r.action === 'FIX_STATUS_RECLAIM_PRC' ? 'bg-red-100 text-red-700' :
+                                    r.action === 'FIX_STATUS' ? 'bg-amber-100 text-amber-700' :
+                                    r.action === 'NEEDS_REFUND' ? 'bg-blue-100 text-blue-700' :
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {r.action === 'FIX_STATUS_RECLAIM_PRC' ? 'Fix + Reclaim PRC' :
+                                     r.action === 'FIX_STATUS' ? 'Fix Status' :
+                                     r.action === 'NEEDS_REFUND' ? 'Refund PRC' :
+                                     r.action}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Summary of OK items */}
+                {reconcileData.results?.filter(r => r.action === 'OK').length > 0 && (
+                  <p className="text-sm text-green-600 flex items-center gap-1">
+                    <CheckCircle className="h-4 w-4" />
+                    {reconcileData.results.filter(r => r.action === 'OK').length} transactions are already matched correctly
+                  </p>
+                )}
+                {reconcileData.results?.filter(r => r.action === 'UNMATCHED').length > 0 && (
+                  <p className="text-sm text-slate-500 flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    {reconcileData.results.filter(r => r.action === 'UNMATCHED').length} transactions not found in internal DB (may be from different source)
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats Cards */}

@@ -20,7 +20,7 @@ Error Handling follows Eko Developer Documentation:
 - Transaction Status (tx_status: 0=Success, 1=Failed, 2=Pending, 3=Refund Pending, 4=Refunded, 5=On Hold)
 """
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, validator
 from typing import Optional, Dict, Any, List
 import httpx  # ASYNC HTTP - replaces blocking 'requests' library
@@ -1396,6 +1396,7 @@ async def pay_bill(data: PayBillRequest):
                     "tx_status": 0,
                     "tid": tid,
                     "bbps_ref": bbps_ref,
+                    "client_ref_id": client_ref_id,
                     "message": message or "Payment successful",
                     "user_message": "Your payment has been processed successfully!",
                     "amount": data.amount,
@@ -1409,6 +1410,7 @@ async def pay_bill(data: PayBillRequest):
                     "status": "FAILED",
                     "tx_status": 1,
                     "tid": tid,
+                    "client_ref_id": client_ref_id,
                     "message": message or "Payment failed",
                     "user_message": txstatus_desc or "Transaction failed. Your account has not been charged.",
                     "raw_response": result
@@ -1500,6 +1502,7 @@ async def pay_bill(data: PayBillRequest):
             "status": "FAILED",
             "error_code": eko_status,
             "tid": tid,
+            "client_ref_id": client_ref_id,
             "message": message,
             "user_message": user_message,
             "raw_response": result
@@ -2740,3 +2743,507 @@ async def verify_refund_otp(tid: str, otp: str, state: int = 1):
         logging.error(f"[EKO REFUND] Verify Error for TID {tid}: {e}")
         return {"success": False, "error": str(e)}
 
+
+
+# ==================== EKO RECONCILIATION API ====================
+
+@router.post("/reconcile/upload")
+async def reconcile_eko_excel(file: UploadFile = File(...)):
+    """
+    Upload Eko Excel report to reconcile with internal DB.
+    
+    Flow:
+    1. Parse Excel for Client Reference Id, Transaction Id, Amount, Status
+    2. Match with redeem_requests + bill_payment_requests by amount, consumer, date
+    3. Return reconciliation report with PRC refund status
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    from openpyxl import load_workbook
+    import io
+    
+    try:
+        contents = await file.read()
+        wb = load_workbook(io.BytesIO(contents), read_only=True)
+        ws = wb.active
+        
+        # Find header row
+        headers = []
+        header_row = None
+        for row_idx, row in enumerate(ws.iter_rows(min_row=1, max_row=5, values_only=False), 1):
+            row_vals = [str(cell.value or "").strip().lower() for cell in row]
+            if "transaction id" in row_vals or "tid" in row_vals:
+                headers = row_vals
+                header_row = row_idx
+                break
+        
+        if not headers:
+            # Try first row as header
+            first_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+            headers = [str(v or "").strip().lower() for v in first_row]
+            header_row = 1
+        
+        # Map column indices
+        col_map = {}
+        for idx, h in enumerate(headers):
+            if "transaction id" in h and "client" not in h:
+                col_map["eko_tid"] = idx
+            elif "client" in h and "ref" in h:
+                col_map["client_ref_id"] = idx
+            elif h == "amount":
+                col_map["amount"] = idx
+            elif h == "status":
+                col_map["status"] = idx
+            elif "customer" in h and "id" in h:
+                col_map["customer_id"] = idx
+            elif "operator" in h:
+                col_map["operator"] = idx
+            elif "date" in h or "timestamp" in h:
+                col_map["date"] = idx
+        
+        logging.info(f"[RECONCILE] Excel headers: {headers}")
+        logging.info(f"[RECONCILE] Column mapping: {col_map}")
+        
+        # Parse rows
+        excel_entries = []
+        for row in ws.iter_rows(min_row=header_row + 1, values_only=True):
+            if not row or not any(row):
+                continue
+            
+            entry = {}
+            for key, idx in col_map.items():
+                if idx < len(row):
+                    entry[key] = str(row[idx] or "").strip()
+            
+            # Skip empty entries
+            if not entry.get("eko_tid") and not entry.get("client_ref_id"):
+                continue
+            
+            excel_entries.append(entry)
+        
+        wb.close()
+        
+        if not excel_entries:
+            return {"success": False, "message": "No valid entries found in Excel"}
+        
+        logging.info(f"[RECONCILE] Parsed {len(excel_entries)} entries from Excel")
+        
+        # Now cross-reference with DB
+        results = []
+        stats = {
+            "total_excel": len(excel_entries),
+            "matched": 0,
+            "unmatched": 0,
+            "eko_success_internal_failed": 0,
+            "eko_fail": 0,
+            "eko_refunded": 0,
+            "prc_refunded_count": 0,
+            "prc_not_refunded_count": 0,
+            "needs_prc_reclaim": 0,
+            "total_prc_to_reclaim": 0,
+            "needs_eko_refund": 0
+        }
+        
+        for entry in excel_entries:
+            eko_tid = entry.get("eko_tid", "")
+            client_ref_id = entry.get("client_ref_id", "")
+            eko_amount = entry.get("amount", "0")
+            eko_status = entry.get("status", "").lower()
+            customer_id = entry.get("customer_id", "")
+            
+            try:
+                eko_amount_num = float(eko_amount.replace(",", ""))
+            except:
+                eko_amount_num = 0
+            
+            # --- Search Strategy ---
+            # 1. Try exact match by eko_tid (if we stored it)
+            # 2. Try match by client_ref_id  
+            # 3. Try match by amount + consumer + date range
+            
+            db_match = None
+            match_source = None
+            
+            # Strategy 1: Match by eko_tid
+            if eko_tid and eko_tid != "N/A" and eko_tid != "None":
+                db_match = await db.redeem_requests.find_one(
+                    {"eko_tid": eko_tid}, {"_id": 0}
+                )
+                if db_match:
+                    match_source = "redeem_requests"
+                else:
+                    db_match = await db.bill_payment_requests.find_one(
+                        {"eko_tid": eko_tid}, {"_id": 0}
+                    )
+                    if db_match:
+                        match_source = "bill_payment_requests"
+            
+            # Strategy 2: Match by client_ref_id
+            if not db_match and client_ref_id:
+                db_match = await db.redeem_requests.find_one(
+                    {"client_ref_id": client_ref_id}, {"_id": 0}
+                )
+                if db_match:
+                    match_source = "redeem_requests"
+                else:
+                    db_match = await db.bill_payment_requests.find_one(
+                        {"client_ref_id": client_ref_id}, {"_id": 0}
+                    )
+                    if db_match:
+                        match_source = "bill_payment_requests"
+            
+            # Strategy 3: Match by amount + consumer/mobile
+            if not db_match and eko_amount_num > 0 and customer_id:
+                # Try redeem_requests
+                cursor = db.redeem_requests.find(
+                    {
+                        "$and": [
+                            {"$or": [{"amount_inr": eko_amount_num}, {"amount": eko_amount_num}]},
+                            {"$or": [
+                                {"details.mobile_number": customer_id},
+                                {"details.consumer_number": customer_id},
+                                {"user_mobile": customer_id}
+                            ]}
+                        ]
+                    },
+                    {"_id": 0}
+                ).sort("created_at", -1).limit(1)
+                matches = await cursor.to_list(1)
+                if matches:
+                    db_match = matches[0]
+                    match_source = "redeem_requests"
+                else:
+                    cursor = db.bill_payment_requests.find(
+                        {
+                            "$and": [
+                                {"amount_inr": eko_amount_num},
+                                {"$or": [
+                                    {"details.phone_number": customer_id},
+                                    {"details.consumer_number": customer_id}
+                                ]}
+                            ]
+                        },
+                        {"_id": 0}
+                    ).sort("created_at", -1).limit(1)
+                    matches = await cursor.to_list(1)
+                    if matches:
+                        db_match = matches[0]
+                        match_source = "bill_payment_requests"
+            
+            # Build result entry
+            result_entry = {
+                "eko_tid": eko_tid,
+                "client_ref_id": client_ref_id,
+                "eko_amount": eko_amount,
+                "eko_status": entry.get("status", ""),
+                "customer_id": customer_id,
+                "operator": entry.get("operator", ""),
+                "matched": db_match is not None,
+                "match_source": match_source
+            }
+            
+            if db_match:
+                stats["matched"] += 1
+                internal_status = db_match.get("status", "unknown")
+                prc_refunded = db_match.get("prc_refunded", False)
+                prc_amount = db_match.get("total_prc_deducted", 0) or db_match.get("refund_amount", 0)
+                
+                result_entry.update({
+                    "request_id": db_match.get("request_id", ""),
+                    "internal_status": internal_status,
+                    "user_id": db_match.get("user_id", ""),
+                    "user_name": db_match.get("user_name", ""),
+                    "prc_refunded": prc_refunded,
+                    "prc_amount": prc_amount,
+                    "internal_eko_tid": db_match.get("eko_tid"),
+                    "created_at": db_match.get("created_at", "")
+                })
+                
+                # Determine action needed
+                if eko_status in ["success", "0"]:
+                    if internal_status in ["failed", "retry_failed", "eko_failed"]:
+                        stats["eko_success_internal_failed"] += 1
+                        result_entry["action"] = "FIX_STATUS"
+                        result_entry["action_detail"] = "Eko Success but internally Failed"
+                        
+                        if prc_refunded:
+                            stats["needs_prc_reclaim"] += 1
+                            stats["total_prc_to_reclaim"] += prc_amount
+                            result_entry["action"] = "FIX_STATUS_RECLAIM_PRC"
+                            result_entry["action_detail"] = f"Eko Success, Internal Failed, PRC {prc_amount} was refunded - needs re-deduction"
+                            stats["prc_refunded_count"] += 1
+                        else:
+                            stats["prc_not_refunded_count"] += 1
+                    else:
+                        result_entry["action"] = "OK"
+                        result_entry["action_detail"] = "Status matches"
+                
+                elif eko_status in ["fail", "failed", "1"]:
+                    stats["eko_fail"] += 1
+                    if not prc_refunded:
+                        stats["needs_eko_refund"] += 1
+                        result_entry["action"] = "NEEDS_REFUND"
+                        result_entry["action_detail"] = "Eko Failed but PRC not refunded"
+                    else:
+                        result_entry["action"] = "OK"
+                        result_entry["action_detail"] = "Both failed, PRC refunded"
+                
+                elif eko_status in ["refunded", "3"]:
+                    stats["eko_refunded"] += 1
+                    result_entry["action"] = "OK"
+                    result_entry["action_detail"] = "Already refunded on Eko side"
+                
+                else:
+                    result_entry["action"] = "REVIEW"
+                    result_entry["action_detail"] = f"Unknown Eko status: {eko_status}"
+            else:
+                stats["unmatched"] += 1
+                result_entry["action"] = "UNMATCHED"
+                result_entry["action_detail"] = "No matching record found in DB"
+            
+            results.append(result_entry)
+        
+        # Sort: action items first
+        action_order = {"FIX_STATUS_RECLAIM_PRC": 0, "FIX_STATUS": 1, "NEEDS_REFUND": 2, "REVIEW": 3, "UNMATCHED": 4, "OK": 5}
+        results.sort(key=lambda x: action_order.get(x.get("action", "OK"), 99))
+        
+        return {
+            "success": True,
+            "stats": stats,
+            "results": results,
+            "message": f"Reconciled {len(excel_entries)} entries. {stats['matched']} matched, {stats['unmatched']} unmatched. {stats['eko_success_internal_failed']} need status fix."
+        }
+        
+    except Exception as e:
+        logging.error(f"[RECONCILE] Error: {e}")
+        import traceback
+        logging.error(f"[RECONCILE] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Reconciliation failed: {str(e)}")
+
+
+@router.post("/reconcile/fix")
+async def apply_reconciliation_fixes(request: Request):
+    """
+    Apply fixes for reconciled transactions.
+    
+    Accepts a list of fixes to apply:
+    - FIX_STATUS: Update internal status to "completed" + store eko_tid
+    - FIX_STATUS_RECLAIM_PRC: Same + re-deduct PRC from user
+    - REFUND_PRC: Refund PRC for Eko-failed transactions
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    data = await request.json()
+    fixes = data.get("fixes", [])
+    
+    if not fixes:
+        return {"success": False, "message": "No fixes provided"}
+    
+    results = []
+    fixed_count = 0
+    error_count = 0
+    total_prc_reclaimed = 0
+    total_prc_refunded = 0
+    
+    for fix in fixes:
+        request_id = fix.get("request_id")
+        action = fix.get("action")
+        eko_tid = fix.get("eko_tid")
+        match_source = fix.get("match_source", "redeem_requests")
+        
+        if not request_id or not action:
+            results.append({"request_id": request_id, "status": "skipped", "reason": "Missing request_id or action"})
+            continue
+        
+        collection = db.redeem_requests if match_source == "redeem_requests" else db.bill_payment_requests
+        
+        try:
+            doc = await collection.find_one({"request_id": request_id}, {"_id": 0})
+            if not doc:
+                results.append({"request_id": request_id, "status": "error", "reason": "Record not found"})
+                error_count += 1
+                continue
+            
+            now_str = datetime.now(timezone.utc).isoformat()
+            
+            if action in ["FIX_STATUS", "FIX_STATUS_RECLAIM_PRC"]:
+                # Update status to completed
+                update_fields = {
+                    "status": "completed",
+                    "eko_tid": eko_tid or doc.get("eko_tid"),
+                    "eko_status": "SUCCESS",
+                    "reconciled": True,
+                    "reconciled_at": now_str,
+                    "reconcile_note": "Fixed via Eko Excel reconciliation",
+                    "completed_at": now_str,
+                    "updated_at": now_str
+                }
+                
+                status_update = {
+                    "status": "completed",
+                    "timestamp": now_str,
+                    "note": f"Reconciled: Eko confirmed SUCCESS (TID: {eko_tid})"
+                }
+                
+                await collection.update_one(
+                    {"request_id": request_id},
+                    {
+                        "$set": update_fields,
+                        "$push": {"status_history": status_update}
+                    }
+                )
+                
+                # Reclaim PRC if it was wrongly refunded
+                if action == "FIX_STATUS_RECLAIM_PRC":
+                    user_id = doc.get("user_id")
+                    prc_amount = doc.get("total_prc_deducted", 0) or doc.get("refund_amount", 0)
+                    
+                    if user_id and prc_amount > 0:
+                        # Re-deduct PRC from user
+                        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
+                        if user:
+                            old_balance = user.get("prc_balance", 0)
+                            new_balance = old_balance - prc_amount
+                            
+                            await db.users.update_one(
+                                {"uid": user_id},
+                                {"$set": {"prc_balance": new_balance}}
+                            )
+                            
+                            # Log the reclaim transaction
+                            await db.transactions.insert_one({
+                                "user_id": user_id,
+                                "type": "prc_reclaim",
+                                "amount": -prc_amount,
+                                "balance_before": old_balance,
+                                "balance_after": new_balance,
+                                "description": f"PRC Reclaim: Eko payment was successful (TID: {eko_tid}), wrongly refunded PRC reversed",
+                                "reference": request_id,
+                                "created_at": now_str
+                            })
+                            
+                            # Update the record to reflect PRC reclaim
+                            await collection.update_one(
+                                {"request_id": request_id},
+                                {"$set": {
+                                    "prc_reclaimed": True,
+                                    "prc_reclaim_amount": prc_amount,
+                                    "prc_reclaim_at": now_str,
+                                    "prc_balance_before_reclaim": old_balance,
+                                    "prc_balance_after_reclaim": new_balance
+                                }}
+                            )
+                            
+                            total_prc_reclaimed += prc_amount
+                            logging.info(f"[RECONCILE FIX] Reclaimed {prc_amount} PRC from user {user_id}. Balance: {old_balance} → {new_balance}")
+                
+                fixed_count += 1
+                results.append({
+                    "request_id": request_id,
+                    "status": "fixed",
+                    "action": action,
+                    "eko_tid": eko_tid,
+                    "prc_reclaimed": total_prc_reclaimed if action == "FIX_STATUS_RECLAIM_PRC" else 0
+                })
+            
+            elif action == "REFUND_PRC":
+                # Refund PRC for failed transactions where PRC wasn't refunded
+                user_id = doc.get("user_id")
+                prc_amount = doc.get("total_prc_deducted", 0)
+                
+                if user_id and prc_amount > 0 and not doc.get("prc_refunded"):
+                    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
+                    if user:
+                        old_balance = user.get("prc_balance", 0)
+                        new_balance = old_balance + prc_amount
+                        
+                        await db.users.update_one(
+                            {"uid": user_id},
+                            {"$set": {"prc_balance": new_balance}}
+                        )
+                        
+                        await db.transactions.insert_one({
+                            "user_id": user_id,
+                            "type": "prc_refund",
+                            "amount": prc_amount,
+                            "balance_before": old_balance,
+                            "balance_after": new_balance,
+                            "description": f"PRC Refund: Eko confirmed FAILED (TID: {eko_tid})",
+                            "reference": request_id,
+                            "created_at": now_str
+                        })
+                        
+                        await collection.update_one(
+                            {"request_id": request_id},
+                            {"$set": {
+                                "prc_refunded": True,
+                                "refund_amount": prc_amount,
+                                "reconciled": True,
+                                "reconciled_at": now_str
+                            }}
+                        )
+                        
+                        total_prc_refunded += prc_amount
+                
+                fixed_count += 1
+                results.append({
+                    "request_id": request_id,
+                    "status": "fixed",
+                    "action": "REFUND_PRC",
+                    "prc_refunded": prc_amount
+                })
+            
+            else:
+                results.append({"request_id": request_id, "status": "skipped", "reason": f"Unknown action: {action}"})
+            
+        except Exception as e:
+            logging.error(f"[RECONCILE FIX] Error fixing {request_id}: {e}")
+            results.append({"request_id": request_id, "status": "error", "reason": str(e)})
+            error_count += 1
+    
+    return {
+        "success": True,
+        "fixed": fixed_count,
+        "errors": error_count,
+        "total_prc_reclaimed": total_prc_reclaimed,
+        "total_prc_refunded": total_prc_refunded,
+        "results": results,
+        "message": f"Applied {fixed_count} fixes. PRC Reclaimed: {total_prc_reclaimed}, PRC Refunded: {total_prc_refunded}"
+    }
+
+
+@router.get("/reconcile/prc-check/{request_id}")
+async def check_prc_refund_status(request_id: str):
+    """Check if PRC was refunded for a specific request."""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    # Check both collections
+    doc = await db.redeem_requests.find_one({"request_id": request_id}, {"_id": 0})
+    source = "redeem_requests"
+    if not doc:
+        doc = await db.bill_payment_requests.find_one({"request_id": request_id}, {"_id": 0})
+        source = "bill_payment_requests"
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    user_id = doc.get("user_id")
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "name": 1})
+    
+    return {
+        "request_id": request_id,
+        "source": source,
+        "status": doc.get("status"),
+        "prc_refunded": doc.get("prc_refunded", False),
+        "prc_deducted": doc.get("total_prc_deducted", 0),
+        "refund_amount": doc.get("refund_amount", 0),
+        "eko_tid": doc.get("eko_tid"),
+        "user_id": user_id,
+        "user_name": doc.get("user_name", ""),
+        "user_current_balance": user.get("prc_balance", 0) if user else None,
+        "created_at": doc.get("created_at", ""),
+        "reconciled": doc.get("reconciled", False)
+    }
