@@ -393,24 +393,24 @@ const AdminBBPSDashboard = () => {
       </div>
 
       {/* EKO Wallet Balance Banner */}
-      <div className="mb-6 bg-slate-800 rounded-xl p-5 flex items-center justify-between border border-slate-700 shadow-lg" data-testid="eko-wallet-banner">
+      <div className="mb-6 bg-white rounded-xl p-5 flex items-center justify-between border-2 border-emerald-200 shadow-sm" data-testid="eko-wallet-banner">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-xl bg-emerald-500 flex items-center justify-center shadow">
             <Landmark className="h-7 w-7 text-white" />
           </div>
           <div>
-            <p className="text-slate-300 text-xs font-semibold uppercase tracking-wider mb-1">EKO Wallet Balance</p>
+            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">EKO Wallet Balance</p>
             {ekoWallet.loading ? (
               <div className="flex items-center gap-2">
-                <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
-                <span className="text-slate-300 text-sm">Loading...</span>
+                <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
+                <span className="text-slate-500 text-sm">Loading...</span>
               </div>
             ) : ekoWallet.balance !== null ? (
-              <p className="text-3xl font-bold text-emerald-400" data-testid="eko-wallet-balance">
+              <p className="text-3xl font-bold text-slate-800" data-testid="eko-wallet-balance">
                 ₹{Number(ekoWallet.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </p>
             ) : (
-              <p className="text-base font-semibold text-yellow-400" data-testid="eko-wallet-error">{ekoWallet.error || 'Unable to fetch balance'}</p>
+              <p className="text-base font-semibold text-red-600" data-testid="eko-wallet-error">{ekoWallet.error || 'Unable to fetch balance'}</p>
             )}
           </div>
         </div>
