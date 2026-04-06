@@ -1,6 +1,11 @@
 # PARAS REWARD - Product Requirements Document
 
-## LAST UPDATED - 6 April 2026
+## LAST UPDATED - 7 April 2026
+
+## COMPLETED: Admin User 360 Redeem Limits Display (P0) - 7 April 2026
+- Backend `admin_user360.py` returns `redeem_limit` (total_limit, total_redeemed, effective_available, unlock_percent, total_earned, total_mined)
+- Frontend `AdminUser360New.js` displays 3 color-coded cards: REDEEM LIMIT, USED LIMIT, BAL LIMIT
+- Testing: 100% passed (iteration_187)
 
 ## COMPLETED: Double Recharge Race Condition Fix (P0) - 6 April 2026
 ### Bug Report

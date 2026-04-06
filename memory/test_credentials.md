@@ -3,7 +3,7 @@
 ## Primary Test User (Cash/INR)
 - Mobile: 9970100782
 - PIN: 997010
-- UID: 76b75808-47fa-48dd-ad7c-8074678e3607
+- UID: cbdf46d7-7d66-4d43-8495-e1432a2ab071
 - Plan: Elite (cash)
 - Burn Rate: 1%
 
