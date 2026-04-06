@@ -950,6 +950,29 @@ const AdminUser360New = ({ user: adminUser }) => {
                 })()}
               </div>
               
+              {/* Redeem Limit Card */}
+              <div className="grid grid-cols-3 gap-4" data-testid="redeem-limit-row">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-xs text-amber-600 font-semibold mb-1">REDEEM LIMIT (Total)</p>
+                  <p className="text-2xl font-bold text-amber-700" data-testid="redeem-total-limit">
+                    {formatNumber((userData.redeem_limit?.total_limit || 0).toFixed(0))} <span className="text-sm font-medium">PRC</span>
+                  </p>
+                  <p className="text-xs text-amber-500 mt-1">Unlock: {userData.redeem_limit?.unlock_percent || 0}%</p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <p className="text-xs text-red-600 font-semibold mb-1">USED LIMIT</p>
+                  <p className="text-2xl font-bold text-red-700" data-testid="redeem-used-limit">
+                    {formatNumber((userData.redeem_limit?.total_redeemed || 0).toFixed(0))} <span className="text-sm font-medium">PRC</span>
+                  </p>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <p className="text-xs text-green-600 font-semibold mb-1">BAL LIMIT (Remaining)</p>
+                  <p className="text-2xl font-bold text-green-700" data-testid="redeem-bal-limit">
+                    {formatNumber((userData.redeem_limit?.effective_available || userData.redeem_limit?.remaining_limit || 0).toFixed(0))} <span className="text-sm font-medium">PRC</span>
+                  </p>
+                </div>
+              </div>
+              
               {/* Quick Actions Row */}
               <Card className="bg-white border-slate-200 p-4">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">

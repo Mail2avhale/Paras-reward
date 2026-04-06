@@ -16,6 +16,7 @@ router = APIRouter(prefix="/admin/user360", tags=["Admin User 360"])
 # Database reference (set by server.py)
 db = None
 _get_all_time_redeemed = None
+_calculate_redeem_limit = None
 
 def set_db(database):
     global db
@@ -24,6 +25,10 @@ def set_db(database):
 def set_redeemed_fn(fn):
     global _get_all_time_redeemed
     _get_all_time_redeemed = fn
+
+def set_redeem_limit_fn(fn):
+    global _calculate_redeem_limit
+    _calculate_redeem_limit = fn
 
 
 # ========== HELPER FUNCTIONS ==========
@@ -253,10 +258,19 @@ async def get_user_full_360(uid: str):
         logging.warning(f"[USER360] Login history error for {uid}: {e}")
     
     # ========== 9. BUILD RESPONSE ==========
+    # Calculate redeem limit info
+    redeem_limit_data = {}
+    try:
+        if _calculate_redeem_limit:
+            redeem_limit_data = await _calculate_redeem_limit(uid)
+    except Exception as e:
+        logging.warning(f"[USER360] Redeem limit calc error for {uid}: {e}")
+    
     response = {
         "success": True,
         "user": sanitize_doc(user),
         "stats": stats,
+        "redeem_limit": redeem_limit_data,
         "referral": referral_data,
         "transactions": transactions,
         "redeem_requests": redeem_requests,
