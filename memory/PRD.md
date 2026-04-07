@@ -2,6 +2,11 @@
 
 ## LAST UPDATED - 7 April 2026
 
+## COMPLETED: Deprecated Code Cleanup (P0) - 7 April 2026
+- Removed 12 deprecated/dead-code functions from `bbps_services.py` and `unified_redeem_v2.py`
+- Deleted: debug_config, debug_fastag_errors, activate_bbps_service (PUT duplicate), test_fetch_bill, debug_pay_bill, handle_eko_response, handle_bill_fetch_response, handle_bill_payment_response, validate_bbps_request, log_eko_transaction, get_client_ip_bbps, duplicate get_available_services
+- 367 total lines removed, all active endpoints verified working
+
 ## COMPLETED: EKO Refund API Integration (P0) - 7 April 2026
 - POST `/api/bbps/refund/resend-otp/{tid}` — Resend refund OTP to customer
 - POST `/api/bbps/refund/verify/{tid}?otp=XXXX` — Verify OTP & refund to EKO wallet
@@ -23,6 +28,18 @@
 - "Check EKO Wallet Refund Status" button + "Copy for EKO Support" button
 - Failed Transactions Excel export
 
+## COMPLETED: Excel Reconciliation System (P0) - 7 April 2026
+- POST `/api/bbps/reconcile/upload` — Parse Eko Excel, match with internal DB
+- POST `/api/bbps/reconcile/fix` — Bulk fix mismatched records
+- Admin UI for upload, stats display, and "Fix All" action
+
+## COMPLETED: EKO API URL 405 Fix (P0) - 7 April 2026
+- Fixed status check URLs from `?client_ref_id=` to `/client_ref_id:` format
+- Fixed false timeout failures in `execute_eko_recharge`
+
+## COMPLETED: Admin BBPS UI Filters Fix (P0) - 7 April 2026
+- Fixed search bar and date filter on Admin BBPS Dashboard
+
 ## COMPLETED: Admin User 360 Redeem Limits Display (P0) - 7 April 2026
 ## COMPLETED: Double Recharge Race Condition Fix (P0) - 6 April 2026
 ## COMPLETED: PRC Rate Consistency + INR Conversion (P0) - 6 April 2026
@@ -32,6 +49,7 @@
 ## COMPLETED: EKO User Code + Source IP Fix (P0) - 6 April 2026
 
 ## Upcoming
+- P1: Core Formula System Audit (Mining, Redeem, Network, PRC Dynamic) — remove hardcoded logic
 - P1: Invoice PDF Download option for InvoiceModal.js
 - P1: Fund Settlement (EKO Wallet → Bank Transfer) via admin panel
 

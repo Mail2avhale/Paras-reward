@@ -819,32 +819,6 @@ def serialize_doc(doc: dict) -> dict:
 
 # ==================== USER APIs ====================
 
-@router.get("/services")
-async def get_available_services():
-    """Get all available redeem services"""
-    services = []
-    for service_id, info in SERVICE_TYPES.items():
-        services.append({
-            "id": service_id,
-            "name": info["name"],
-            "icon": info["icon"],
-            "eko_category": info["category"]
-        })
-    
-    # Get dynamic PRC rate
-    prc_rate = await get_dynamic_prc_rate()
-    
-    return {
-        "success": True,
-        "services": services,
-        "charges_info": {
-            "platform_fee": f"₹{PLATFORM_FEE} (flat)",
-            "admin_charge": f"{ADMIN_CHARGE_PERCENT}% of amount",
-            "prc_rate": f"{prc_rate} PRC = ₹1"
-        }
-    }
-
-
 @router.get("/calculate-charges")
 async def calculate_charges_api(amount: float = Query(..., gt=0), user_id: str = None):
     """
