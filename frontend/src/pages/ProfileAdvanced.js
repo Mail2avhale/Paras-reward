@@ -15,7 +15,7 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ImageCropUpload from '@/components/ImageCropUpload';
 import { LanguageSelectorFull } from '@/components/LanguageSelector';
-import ShareApp from '@/components/ShareApp';
+// ShareApp removed (April 2026)
 import { InfoTooltip } from '@/components/InfoTooltip';
 import { Label } from '@/components/ui/label';
 
@@ -263,10 +263,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   
-  // Privacy settings
-  const [isProfilePublic, setIsProfilePublic] = useState(true);
-  const [allowMessages, setAllowMessages] = useState(true);
-  const [savingPrivacy, setSavingPrivacy] = useState(false);
+  // Privacy settings removed (April 2026)
 
   // FAST LOAD: Fetch user data + profile picture in parallel on mount
   useEffect(() => {
@@ -437,26 +434,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     }
   };
 
-  const handlePrivacyToggle = async (field, value) => {
-    setSavingPrivacy(true);
-    try {
-      await axios.put(`${API}/users/${user.uid}/privacy-settings`, {
-        [field]: value
-      });
-      
-      if (field === 'is_public') {
-        setIsProfilePublic(value);
-        toast.success(value ? 'Profile is now public' : 'Profile is now private');
-      } else if (field === 'allow_messages') {
-        setAllowMessages(value);
-        toast.success(value ? 'Messages enabled' : 'Messages disabled');
-      }
-    } catch (error) {
-      toast.error('Failed to update privacy settings');
-    } finally {
-      setSavingPrivacy(false);
-    }
-  };
+  // handlePrivacyToggle removed (April 2026)
 
   const handleDeleteAccount = async () => {
     if (!deletePassword) {
@@ -655,23 +633,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         </motion.div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="px-5 mb-6">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{(userData?.prc_balance || 0).toFixed(0)}</p>
-            <p className="text-gray-500 text-xs">PRC</p>
-          </div>
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{userData?.referral_count || 0}</p>
-            <p className="text-gray-500 text-xs">Friends</p>
-          </div>
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{(userData?.total_redeemed || 0).toFixed(0)}</p>
-            <p className="text-gray-500 text-xs">Redeemed</p>
-          </div>
-        </div>
-      </div>
+      {/* Quick Stats removed - PRC/Friends/Redeemed cards deprecated (April 2026) */}
 
       {/* Edit Profile Section */}
       {editMode ? (
@@ -807,8 +769,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
       {/* Menu Options */}
       <div className="px-5 space-y-3">
-        {/* Share App Card */}
-        <ShareApp user={userData || user} variant="card" />
+        {/* Share & Earn card removed (April 2026) */}
 
         {/* KYC */}
         <button 
@@ -853,51 +814,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         {/* Security Question - Important for PIN Reset */}
         <SecurityQuestionCard user={user} />
 
-        {/* Privacy Settings */}
-        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
-          <div className="flex items-center gap-3 mb-4">
-            <Shield className="w-5 h-5 text-cyan-500" />
-            <span className="text-white font-medium">Privacy Settings</span>
-          </div>
-          
-          {/* Public Profile Toggle */}
-          <div className="flex items-center justify-between py-3 border-b border-gray-800">
-            <div>
-              <p className="text-white text-sm">Public Profile</p>
-              <p className="text-gray-500 text-xs">Others can see your profile and activity</p>
-            </div>
-            <button
-              onClick={() => handlePrivacyToggle('is_public', !isProfilePublic)}
-              disabled={savingPrivacy}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
-                isProfilePublic ? 'bg-purple-500' : 'bg-gray-700'
-              }`}
-            >
-              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                isProfilePublic ? 'left-7' : 'left-1'
-              }`} />
-            </button>
-          </div>
-          
-          {/* Allow Messages Toggle */}
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <p className="text-white text-sm">Allow Messages</p>
-              <p className="text-gray-500 text-xs">Others can send you direct messages</p>
-            </div>
-            <button
-              onClick={() => handlePrivacyToggle('allow_messages', !allowMessages)}
-              disabled={savingPrivacy}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
-                allowMessages ? 'bg-purple-500' : 'bg-gray-700'
-              }`}
-            >
-              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                allowMessages ? 'left-7' : 'left-1'
-              }`} />
-            </button>
-          </div>
-        </div>
+        {/* Privacy Settings removed (April 2026) */}
 
         {/* Change PIN */}
         <button 
