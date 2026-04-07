@@ -299,7 +299,7 @@ async def get_user_burn_rate_bank(user_id: str = None) -> dict:
     - Cash users: 1% burn
     - PRC users: 5% burn
     """
-    if not user_id or not db:
+    if not user_id or db is None:
         return {"burn_rate_percent": 1, "payment_type": "unknown"}
     
     user = await db.users.find_one({"uid": user_id}, {"_id": 0, "subscription_payment_type": 1, "subscription_plan": 1})
@@ -525,8 +525,8 @@ async def check_withdrawal_eligibility(user_id: str):
             "message": "Please add your bank details first"
         }
     
-    # Check KYC status
-    if user.get("kyc_status") != "verified":
+    # Check KYC status - accept both "verified" and "approved"
+    if user.get("kyc_status") not in ["verified", "approved"]:
         return {
             "eligible": False,
             "reason": "kyc_pending",
@@ -652,8 +652,8 @@ async def create_withdrawal_request(user_id: str, request: Request):
     if not user.get("bank_details"):
         raise HTTPException(status_code=400, detail="Please add your bank details first")
     
-    # Check KYC
-    if user.get("kyc_status") != "verified":
+    # Check KYC - accept both "verified" and "approved"
+    if user.get("kyc_status") not in ["verified", "approved"]:
         raise HTTPException(status_code=400, detail="KYC verification required for withdrawals")
     
     # Check 1: Loan EMI in last 24 hours
