@@ -1,22 +1,21 @@
 """
-Mining Routes - GROWTH ECONOMY SYSTEM (March 2026)
+Reward Routes - GROWTH ECONOMY SYSTEM (April 2026)
 ====================================================
 
-Mining Formula:
+Reward Formula (Single Source of Truth):
 - Base: 500 PRC/day
-- Team Bonus: N × PRC_per_user(N)
-- PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
+- Team Bonus: N x PRC_per_user(N)
+- PRC_per_user(N) = max(2.5, 5 x (21 - log2(N)) / 14)
 
 3-Tier Network Cap:
 - Tier 1 (Base/Single Leg): 800 cap (everyone starts here)
 - Tier 2 (Direct Referrals): +16 per direct referral, up to 4000
 - Tier 3 (L1 Indirect Referrals): +5 per L1 indirect, up to 6000
-- Formula: min(6000, 800 + 16×D + 5×L1)
+- Formula: min(6000, 800 + 16xD + 5xL1)
 
-Subscription Speed:
-- Explorer: Shows speed (demo), CANNOT collect
-- Elite (Razorpay/Manual): 100% speed
-- Elite (PRC payment): 70% speed
+Subscription:
+- Explorer: Shows rate (demo), CANNOT collect
+- Elite (Razorpay/Manual): 100% rate
 """
 
 import math
@@ -322,16 +321,10 @@ async def calculate_mining_rate(user_id: str) -> dict:
     network_rate = effective_network * prc_per_user
     
     # Subscription multiplier:
-    # Elite via Razorpay/Manual = 100%, Elite via PRC = 70%
+    # All Elite/paid plans = 100% (PRC subscription payment deprecated April 2026)
     # Explorer = 100% (demo - shows speed but can't collect)
     subscription_plan = user.get("subscription_plan", "explorer")
-    subscription_payment_type = user.get("subscription_payment_type", "cash")
-    is_elite = subscription_plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
-    
-    if is_elite and subscription_payment_type == "prc":
-        boost_multiplier = 0.70
-    else:
-        boost_multiplier = 1.0  # Cash/Razorpay/Manual Elite OR Explorer (demo)
+    boost_multiplier = 1.0
     
     # Apply multiplier
     total_daily_rate = (base_rate + network_rate) * boost_multiplier
@@ -350,7 +343,7 @@ async def calculate_mining_rate(user_id: str) -> dict:
         "cap_tier2_bonus": cap_info["tier2_bonus"],
         "cap_tier3_bonus": cap_info["tier3_bonus"],
         "boost_multiplier": boost_multiplier,
-        "subscription_type": subscription_payment_type,
+        "subscription_type": "standard",
         "subscription_plan": subscription_plan,
         "total_daily_rate": round(total_daily_rate, 2),
         "per_second_rate": round(per_second_rate, 6),

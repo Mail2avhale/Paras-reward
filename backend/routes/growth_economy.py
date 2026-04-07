@@ -212,79 +212,29 @@ async def get_l1_indirect_count(user_id: str) -> int:
 
 async def calculate_mining_speed(user_id: str) -> dict:
     """
-    Calculate user's mining speed based on Growth Network.
-    
-    Formula:
-    - Base Mining: 500 PRC/day (user's own)
-    - Team Bonus: NetworkSize × PRC_per_user(N)
-    - 3-Tier Cap: min(6000, 800 + 16×D + 5×L1)
-    - Total: (Base + Team Bonus) × subscription_speed
+    Wrapper: calls the single source-of-truth formula in mining.py.
+    Kept for backward compatibility with growth economy stats API.
     """
-    settings = await get_economy_settings()
-    
-    # Get user data
-    user = await db.users.find_one({"uid": user_id}, {"_id": 0})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Parallel fetch: direct referrals, L1 indirects, network size
-    direct_referrals, l1_indirect_referrals, network_size = await asyncio.gather(
-        db.users.count_documents({"referred_by": user_id}),
-        get_l1_indirect_count(user_id),
-        get_network_size(user_id)
-    )
-    
-    # Calculate 3-tier network cap
-    cap_info = calculate_network_cap(direct_referrals, l1_indirect_referrals)
-    network_cap = cap_info["cap"]
-    
-    # Limit network size to cap
-    effective_network = min(network_size, network_cap)
-    
-    # Calculate PRC per user
-    prc_per_user = calculate_prc_per_user(
-        effective_network, 
-        settings["min_prc_per_user"], 
-        settings["max_prc_per_user"]
-    )
-    
-    # Calculate network mining
-    network_mining = effective_network * prc_per_user
-    
-    # Base mining: 1000 PRC/day if network < 250, else 0 (only network bonus)
-    base_mining = settings["base_mining"] if effective_network < DEFAULT_BASE_MINING_THRESHOLD else 0
-    
-    # Subscription speed based on payment method
-    plan = user.get("subscription_plan", "")
-    payment_type = user.get("subscription_payment_type", "cash")
-    
-    if plan in ["elite", "vip", "startup", "growth", "pro"]:
-        if payment_type == "prc":
-            subscription_multiplier = 0.70
-        else:
-            subscription_multiplier = 1.0
-    else:
-        subscription_multiplier = 1.0
-    
-    # Total daily PRC
-    total_daily_prc = (base_mining + network_mining) * subscription_multiplier
+    from routes.mining import calculate_mining_rate
+    rate_data = await calculate_mining_rate(user_id)
+    if "error" in rate_data:
+        raise HTTPException(status_code=404, detail=rate_data["error"])
     
     return {
-        "base_mining": base_mining,
-        "network_mining": round(network_mining, 2),
-        "total_daily_prc": round(total_daily_prc, 2),
-        "prc_per_user": prc_per_user,
-        "network_size": effective_network,
-        "raw_network_size": network_size,
-        "network_cap": network_cap,
-        "direct_referrals": direct_referrals,
-        "l1_indirect_referrals": l1_indirect_referrals,
-        "cap_tier1_base": cap_info["tier1_base"],
-        "cap_tier2_bonus": cap_info["tier2_bonus"],
-        "cap_tier3_bonus": cap_info["tier3_bonus"],
-        "subscription_multiplier": subscription_multiplier,
-        "subscription_plan": plan,
-        "subscription_payment_type": payment_type
+        "base_mining": rate_data.get("base_rate", 0),
+        "network_mining": rate_data.get("network_rate", 0),
+        "total_daily_prc": rate_data.get("total_daily_rate", 0),
+        "prc_per_user": rate_data.get("prc_per_user", 0),
+        "network_size": rate_data.get("network_size", 0),
+        "raw_network_size": rate_data.get("raw_network_size", 0),
+        "network_cap": rate_data.get("network_cap", 0),
+        "direct_referrals": rate_data.get("direct_referrals", 0),
+        "l1_indirect_referrals": rate_data.get("l1_indirect_referrals", 0),
+        "cap_tier1_base": rate_data.get("cap_tier1_base", 0),
+        "cap_tier2_bonus": rate_data.get("cap_tier2_bonus", 0),
+        "cap_tier3_bonus": rate_data.get("cap_tier3_bonus", 0),
+        "subscription_multiplier": rate_data.get("boost_multiplier", 1.0),
+        "per_hour_prc": round(rate_data.get("total_daily_rate", 0) / 24, 2),
     }
 
 

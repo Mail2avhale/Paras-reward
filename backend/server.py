@@ -5338,16 +5338,7 @@ async def get_delivery_charge(user, total_prc: float):
     # 10% of PRC value (or flat rate)
     return 50 if is_vip else 100
 
-async def calculate_mining_rate(uid: str):
-    """
-    DEPRECATED: Mining feature removed
-    Returns zeros for backwards compatibility
-    """
-    return 0, 0, 0, {}
-
-async def update_mined_coins(uid: str):
-    """DEPRECATED: Mining feature removed"""
-    return 0
+# calculate_mining_rate and update_mined_coins removed — use routes/mining.py calculate_mining_rate()
 
 # ========== BIRTHDAY CHECK ==========
 async def check_user_birthday(uid: str):
@@ -32355,7 +32346,6 @@ set_mining_db(db)
 set_mining_cache(cache)
 set_mining_helpers({
     "is_paid_subscriber": is_paid_subscriber,
-    "calculate_mining_rate": calculate_mining_rate,
     "log_transaction": log_transaction,
     "log_activity": log_activity,
     "create_notification": create_notification,
