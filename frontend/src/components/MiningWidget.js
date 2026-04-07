@@ -260,17 +260,15 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
               <span className="text-amber-500 font-semibold text-sm ml-1">PRC</span>
             </div>
 
-            {/* PRC/sec + PRC/hr rate - prominent display */}
-            <div className="flex items-center justify-center gap-2 mt-3">
-              <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-3 py-1.5">
-                <Zap className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400 text-sm font-bold font-mono">+{(miningRate / 3600).toFixed(4)}</span>
-                <span className="text-emerald-300/70 text-xs font-medium">PRC/sec</span>
+            {/* PRC/sec + PRC/hr rate - stacked display */}
+            <div className="flex items-center justify-center gap-3 mt-3">
+              <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-4 py-2 text-center min-w-[100px]">
+                <p className="text-emerald-400 text-sm font-bold font-mono leading-tight">+{(miningRate / 3600).toFixed(4)}</p>
+                <p className="text-emerald-300/60 text-[10px] font-semibold tracking-wider mt-0.5">PRC/SEC</p>
               </div>
-              <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-1.5">
-                <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-amber-400 text-sm font-bold font-mono">{miningRate.toFixed(1)}</span>
-                <span className="text-amber-300/70 text-xs font-medium">PRC/hr</span>
+              <div className="bg-amber-500/10 border border-amber-500/25 rounded-lg px-4 py-2 text-center min-w-[100px]">
+                <p className="text-amber-400 text-sm font-bold font-mono leading-tight">{miningRate.toFixed(1)}</p>
+                <p className="text-amber-300/60 text-[10px] font-semibold tracking-wider mt-0.5">PRC/HOUR</p>
               </div>
             </div>
 
