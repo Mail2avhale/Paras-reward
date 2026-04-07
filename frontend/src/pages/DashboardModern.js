@@ -878,14 +878,17 @@ const DashboardModern = ({ user, onLogout }) => {
               <div>
                 <p className="text-gray-500 text-[10px] uppercase tracking-wider">Total Limit</p>
                 <p className="text-white text-sm font-bold">{Number(redeemLimit.total_limit || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                <p className="text-gray-500 text-[10px]">₹{(Number(redeemLimit.total_limit || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
               </div>
               <div>
                 <p className="text-gray-500 text-[10px] uppercase tracking-wider">Redeemed</p>
                 <p className="text-amber-400 text-sm font-bold">{Number(redeemLimit.total_redeemed || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                <p className="text-gray-500 text-[10px]">₹{(Number(redeemLimit.total_redeemed || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
               </div>
               <div>
                 <p className="text-gray-500 text-[10px] uppercase tracking-wider">Available</p>
                 <p className="text-emerald-400 text-sm font-bold">{Number(redeemLimit.effective_available || redeemLimit.available || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                <p className="text-gray-500 text-[10px]">₹{(Number(redeemLimit.effective_available || redeemLimit.available || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
               </div>
             </div>
 
