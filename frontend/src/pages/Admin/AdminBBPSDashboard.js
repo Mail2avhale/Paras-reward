@@ -69,6 +69,7 @@ const AdminBBPSDashboard = () => {
     from_date: '',
     to_date: ''
   });
+  const [searchInput, setSearchInput] = useState('');
 
   // Fetch EKO wallet balance
   const fetchEkoBalance = useCallback(async () => {
@@ -729,17 +730,27 @@ const AdminBBPSDashboard = () => {
       <Card className="bg-white/50 border-slate-200 p-4 mb-6">
         <div className="flex flex-wrap gap-3">
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              type="text"
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              onKeyDown={(e) => { if (e.key === 'Enter') { setPagination(prev => ({ ...prev, page: 1 })); fetchRequests(); } }}
-              className="h-10 w-64 pl-9 bg-white border-slate-200 text-slate-800"
-              placeholder="Search mobile, TID, request ID..."
-              data-testid="bbps-search-input"
-            />
+          <div className="relative flex gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') setFilters(prev => ({ ...prev, search: searchInput })); }}
+                className="h-10 w-64 pl-9 bg-white border-slate-200 text-slate-800"
+                placeholder="Search mobile, TID, request ID..."
+                data-testid="bbps-search-input"
+              />
+            </div>
+            <Button
+              onClick={() => setFilters(prev => ({ ...prev, search: searchInput }))}
+              size="sm"
+              className="h-10 bg-slate-800 hover:bg-slate-700 text-white"
+              data-testid="bbps-search-btn"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
           </div>
           
           {/* Status Filter */}

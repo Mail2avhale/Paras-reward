@@ -2311,8 +2311,14 @@ async def get_bbps_requests(
     
     # Date range filter
     if from_date:
+        # Ensure from_date starts at beginning of day
+        if "T" not in from_date:
+            from_date = from_date + "T00:00:00"
         query["created_at"] = {"$gte": from_date}
     if to_date:
+        # Ensure to_date includes the full day
+        if "T" not in to_date:
+            to_date = to_date + "T23:59:59"
         if "created_at" not in query:
             query["created_at"] = {}
         query["created_at"]["$lte"] = to_date
