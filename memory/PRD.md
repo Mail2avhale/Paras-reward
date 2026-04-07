@@ -8,6 +8,12 @@
 - Frontend: Prominent Plan History cards with green (Ongoing) and gray (Expired) styling
 - Shows Start Date, Expiry Date, Days Remaining for each subscription period
 
+## COMPLETED: Performance Summary Card - 7 April 2026
+- New API: `GET /api/user/{uid}/performance-summary` 
+- Shows: Total Subscription Paid (₹), Total Rewards Redeemed (₹), Available PRC Balance, Estimated PRC Value (₹)
+- Legal safe: No investment/profit/ROI language. Disclaimer text at bottom
+- Backend queries vip_payments, razorpay_orders, subscription_payments + get_user_all_time_redeemed()
+
 ## COMPLETED: Redeem Limit Formula Update (User-defined Tiers) - 7 April 2026
 - Updated `calculate_growth_level()` in `routes/growth_economy.py` per user's spreadsheet
 - New tiers: 2→4%, 4→4%, 8→5%, 16→6%, 32→6%, 64→6%, 128→7%, 256→7%, 512→8%, 1024→9%, 2048→9%, 4096→9%, 8192→10%

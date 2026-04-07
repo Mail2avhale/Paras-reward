@@ -92,6 +92,7 @@ const DashboardModern = ({ user, onLogout }) => {
   const [miningHistory, setMiningHistory] = useState([]);
   const [birthdayGreeting, setBirthdayGreeting] = useState(null);
   const [redeemLimit, setRedeemLimit] = useState(null);
+  const [performanceSummary, setPerformanceSummary] = useState(null);
 
   // Stats - Initialize with user prop data to prevent flickering
   const [stats, setStats] = useState({
@@ -188,9 +189,12 @@ const DashboardModern = ({ user, onLogout }) => {
           clearTimeout(timeoutId);
           setLoading(false);
           
-          // Non-blocking: fetch redeem limit & birthday after main load
+          // Non-blocking: fetch redeem limit, performance summary & birthday after main load
           axios.get(`${API}/user/${user.uid}/redeem-limit`).then(res => {
             if (res.data?.success) setRedeemLimit(res.data.limit);
+          }).catch(() => {});
+          axios.get(`${API}/user/${user.uid}/performance-summary`).then(res => {
+            if (res.data?.success) setPerformanceSummary(res.data.data);
           }).catch(() => {});
           axios.get(`${API}/user/${user.uid}/birthday-check`).then(res => {
             if (res.data?.is_birthday) setBirthdayGreeting(res.data);
@@ -281,6 +285,16 @@ const DashboardModern = ({ user, onLogout }) => {
         }
       } catch (rlError) {
         // Redeem limit fetch failed - non-critical
+      }
+
+      // Fetch performance summary (non-blocking)
+      try {
+        const perfRes = await axios.get(`${API}/user/${user.uid}/performance-summary`);
+        if (perfRes.data?.success) {
+          setPerformanceSummary(perfRes.data.data);
+        }
+      } catch (psError) {
+        // Performance summary fetch failed - non-critical
       }
       
     } catch (error) {
@@ -919,6 +933,70 @@ const DashboardModern = ({ user, onLogout }) => {
                 </div>
               </div>
             </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Performance Summary Card */}
+      {performanceSummary && (
+        <div className="px-5 mb-4" data-testid="performance-summary-card">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="rounded-xl p-4 bg-zinc-900/80 border border-zinc-700/50"
+          >
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+              </div>
+              <span className="text-white font-semibold text-sm" data-testid="perf-title">Performance Summary</span>
+            </div>
+
+            {/* Fields */}
+            <div className="space-y-3">
+              {/* Total Subscription Paid */}
+              <div className="flex items-center justify-between" data-testid="perf-subscription-paid">
+                <span className="text-zinc-400 text-xs">Total Subscription Paid</span>
+                <span className="text-white text-sm font-bold">
+                  ₹{Number(performanceSummary.total_subscription_paid_inr || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </span>
+              </div>
+
+              {/* Total Rewards Redeemed */}
+              <div className="flex items-center justify-between" data-testid="perf-rewards-redeemed">
+                <span className="text-zinc-400 text-xs">Total Rewards Redeemed</span>
+                <span className="text-emerald-400 text-sm font-bold">
+                  ₹{Number(performanceSummary.total_rewards_redeemed_inr || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </span>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-zinc-700/50" />
+
+              {/* Available PRC Balance */}
+              <div className="flex items-center justify-between" data-testid="perf-prc-balance">
+                <span className="text-zinc-400 text-xs">Available PRC Balance</span>
+                <span className="text-amber-300 text-sm font-bold">
+                  {Number(performanceSummary.available_prc_balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })} PRC
+                </span>
+              </div>
+
+              {/* Estimated PRC Value */}
+              <div className="flex items-center justify-between" data-testid="perf-estimated-value">
+                <span className="text-zinc-400 text-xs">Estimated Value</span>
+                <span className="text-white/80 text-sm font-medium">
+                  ≈ ₹{Number(performanceSummary.estimated_prc_value_inr || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  <span className="text-zinc-500 text-[9px] ml-1">(platform utility value)</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Legal Safety Text */}
+            <p className="text-zinc-500 text-[9px] mt-3 leading-relaxed text-center" data-testid="perf-legal-text">
+              This is a performance-based reward summary. PRC is a digital reward and not a financial investment.
+            </p>
           </motion.div>
         </div>
       )}

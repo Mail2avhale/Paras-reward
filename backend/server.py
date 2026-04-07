@@ -14958,6 +14958,101 @@ async def get_user_redeem_limit(user_id: str, request: Request):
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
+# ========== PERFORMANCE SUMMARY API ==========
+
+@api_router.get("/user/{user_id}/performance-summary")
+async def get_performance_summary(user_id: str, request: Request):
+    """
+    Performance Summary Card - Legal safe, reward-based display.
+    Shows: Total Subscription Paid (₹), Total Rewards Redeemed (₹),
+           Available PRC Balance, Estimated PRC Value (₹).
+    NO investment/profit/ROI language.
+    """
+    try:
+        user = await db.users.find_one(
+            {"uid": user_id},
+            {"_id": 0, "prc_balance": 1, "subscription_start": 1}
+        )
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        prc_balance = float(user.get("prc_balance", 0) or 0)
+        success_statuses = [
+            "completed", "COMPLETED", "Completed",
+            "success", "SUCCESS", "Success",
+            "approved", "APPROVED", "Approved",
+            "paid", "PAID", "Paid"
+        ]
+
+        # 1. Total Subscription Paid (₹)
+        total_subscription_inr = 0
+
+        # a) INR payments from vip_payments (manual/razorpay)
+        try:
+            vip_pipeline = [
+                {"$match": {"user_id": user_id, "status": {"$in": success_statuses}}},
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+            ]
+            vip_result = await db.vip_payments.aggregate(vip_pipeline).to_list(1)
+            if vip_result:
+                total_subscription_inr += float(vip_result[0].get("total", 0) or 0)
+        except Exception:
+            pass
+
+        # b) Razorpay orders (only if vip_payments doesn't already capture them)
+        try:
+            raz_pipeline = [
+                {"$match": {"user_id": user_id, "status": {"$in": success_statuses}}},
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+            ]
+            raz_result = await db.razorpay_orders.aggregate(raz_pipeline).to_list(1)
+            if raz_result:
+                raz_total = float(raz_result[0].get("total", 0) or 0)
+                # Only add if vip_payments was empty (avoid double counting)
+                if total_subscription_inr == 0:
+                    total_subscription_inr += raz_total
+        except Exception:
+            pass
+
+        # c) PRC-based subscription payments (convert PRC to INR: PRC / 10)
+        try:
+            prc_sub_pipeline = [
+                {"$match": {"user_id": user_id, "payment_method": "prc", "status": {"$in": success_statuses}}},
+                {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
+            ]
+            prc_sub_result = await db.subscription_payments.aggregate(prc_sub_pipeline).to_list(1)
+            if prc_sub_result:
+                prc_amount = float(prc_sub_result[0].get("total", 0) or 0)
+                total_subscription_inr += prc_amount / 10
+        except Exception:
+            pass
+
+        # 2. Total Rewards Redeemed (PRC → ₹)
+        total_redeemed_prc = await get_user_all_time_redeemed(user_id)
+        total_redeemed_inr = total_redeemed_prc / 10
+
+        # 3. Available PRC Balance
+        available_prc = prc_balance
+
+        # 4. Estimated PRC Value (₹) = prc_balance / 10
+        estimated_value_inr = prc_balance / 10
+
+        return {
+            "success": True,
+            "data": {
+                "total_subscription_paid_inr": round(total_subscription_inr, 2),
+                "total_rewards_redeemed_inr": round(total_redeemed_inr, 2),
+                "total_rewards_redeemed_prc": round(total_redeemed_prc, 2),
+                "available_prc_balance": round(available_prc, 2),
+                "estimated_prc_value_inr": round(estimated_value_inr, 2)
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error in performance summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ========== PRC STATEMENT API ==========
 
