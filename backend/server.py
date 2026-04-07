@@ -6231,14 +6231,14 @@ async def forgot_pin_verify_document(request: Request):
     reset_token = secrets.token_urlsafe(32)
     reset_expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
     
-    # Check if user has security PIN set (all users have one by default)
-    has_security_pin = bool(user.get("security_pin_hash"))
+    # Security PIN is always required — every user has a default (mobile last 4 digits)
+    # Even if security_pin_hash is not in DB, verify-security endpoint generates it on-the-fly
     
     # Update with reset token - always require security PIN (step 3)
     await db.users.update_one(
         {"email": {"$regex": f"^{email}$", "$options": "i"}},
         {"$set": {
-            "pin_reset_verify_step": 3 if has_security_pin else 4,
+            "pin_reset_verify_step": 3,
             "pin_reset_token": reset_token,
             "pin_reset_expiry": reset_expiry.isoformat(),
             "pin_reset_verify_document": doc_type
@@ -6248,7 +6248,7 @@ async def forgot_pin_verify_document(request: Request):
     return {
         "success": True,
         "reset_token": reset_token,
-        "has_security_pin": has_security_pin
+        "has_security_pin": True
     }
 
 
