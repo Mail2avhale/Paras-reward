@@ -780,10 +780,6 @@ const AdminProfitLoss = ({ user }) => {
               <p className="text-2xl font-bold text-green-400">+{prcLiability.rates_30d?.daily_mining?.toLocaleString()}</p>
               <p className="text-xs text-slate-500">Daily Mining</p>
             </div>
-            <div className="p-4 bg-slate-50 rounded-lg text-center">
-              <p className="text-2xl font-bold text-orange-400">-{prcLiability.rates_30d?.daily_burn?.toLocaleString()}</p>
-              <p className="text-xs text-slate-500">Daily Burn</p>
-            </div>
           </div>
           
           <div className="p-4 bg-slate-50 rounded-lg">

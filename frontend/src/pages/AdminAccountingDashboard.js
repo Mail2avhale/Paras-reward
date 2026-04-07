@@ -580,10 +580,6 @@ const AdminAccountingDashboard = ({ user }) => {
                     <span className="text-slate-500">Total Minted</span>
                     <span className="font-semibold text-green-600">{formatPRC(dashboardData.prc_supply.total_minted)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Total Burned</span>
-                    <span className="font-semibold text-red-600">{formatPRC(dashboardData.prc_supply.total_burned)}</span>
-                  </div>
                   <hr />
                   <div className="flex justify-between">
                     <span className="text-gray-100 font-medium">Net Circulating</span>
@@ -870,12 +866,6 @@ const AdminAccountingDashboard = ({ user }) => {
                         {dailySummaries.trends.prc_minted_change >= 0 ? '+' : ''}{dailySummaries.trends.prc_minted_change}
                       </div>
                     </div>
-                    <div className={`p-3 rounded-lg ${dailySummaries.trends.prc_burned_change >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                      <div className="text-xs text-slate-500">PRC Burned Change</div>
-                      <div className={`font-bold ${dailySummaries.trends.prc_burned_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {dailySummaries.trends.prc_burned_change >= 0 ? '+' : ''}{dailySummaries.trends.prc_burned_change}
-                      </div>
-                    </div>
                     <div className={`p-3 rounded-lg ${dailySummaries.trends.revenue_change >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                       <div className="text-xs text-slate-500">Revenue Change</div>
                       <div className={`font-bold ${dailySummaries.trends.revenue_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -898,7 +888,6 @@ const AdminAccountingDashboard = ({ user }) => {
                         <th className="px-3 py-2 text-left">Date</th>
                         <th className="px-3 py-2 text-right">Active Users</th>
                         <th className="px-3 py-2 text-right">PRC Minted</th>
-                        <th className="px-3 py-2 text-right">PRC Burned</th>
                         <th className="px-3 py-2 text-right">Revenue</th>
                         <th className="px-3 py-2 text-right">Expense</th>
                         <th className="px-3 py-2 text-right">Net P&L</th>
@@ -911,7 +900,6 @@ const AdminAccountingDashboard = ({ user }) => {
                           <td className="px-3 py-2">{summary.date}</td>
                           <td className="px-3 py-2 text-right">{summary.active_users}</td>
                           <td className="px-3 py-2 text-right text-green-600">{summary.prc_minted?.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-right text-red-600">{summary.prc_burned?.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-green-600">₹{summary.revenue_inr?.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-red-600">₹{summary.expense_inr?.toFixed(2)}</td>
                           <td className={`px-3 py-2 text-right font-semibold ${summary.net_profit_loss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -1091,7 +1079,7 @@ const AdminAccountingDashboard = ({ user }) => {
                     Update
                   </Button>
                 </div>
-                <p className="text-xs text-slate-500 mt-2">PRC will be burned after {accountingSettings.inactive_expiry_days} days of user inactivity</p>
+                <p className="text-xs text-slate-500 mt-2">Inactive expiry threshold: {accountingSettings.inactive_expiry_days} days</p>
               </div>
 
               {/* Liability Thresholds */}

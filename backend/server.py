@@ -835,77 +835,11 @@ def is_free_user(user: dict) -> bool:
     """
     return not is_paid_subscriber(user)
 
-# ========== CRITICAL: PRC BURN PROTECTION FOR PAID USERS ==========
-# This function MUST be called before ANY PRC burn operation
-# It provides ABSOLUTE protection for paid users
+# ========== BURN PROTECTION (DEPRECATED) ==========
+# Burning concept removed. Functions kept as no-ops for safety.
 async def is_protected_from_burn(db_ref, uid: str) -> bool:
-    """
-    CRITICAL SAFETY CHECK: Determine if user is PROTECTED from PRC burn.
-    
-    Returns True if user should NOT be burned (i.e., is a paid user)
-    Returns False if user CAN be burned (i.e., is a free user)
-    
-    This is the ULTIMATE safety check - use this before every burn operation.
-    """
-    user = await db_ref.users.find_one({"uid": uid}, {
-        "_id": 0,
-        "subscription_plan": 1,
-        "subscription_expiry": 1,
-        "vip_activated_at": 1,
-        "subscription_start": 1,
-        "vip_expiry": 1,
-        "membership_type": 1,
-        "email": 1
-    })
-    
-    if not user:
-        return True  # User not found - protect by default
-    
-    # CHECK 1: Direct subscription_plan check (PRIMARY PROTECTION)
-    plan = (user.get("subscription_plan") or "").lower()
-    if plan in ["startup", "growth", "elite", "vip", "pro"]:
-        logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) has paid plan: {plan}")
-        return True
-    
-    # CHECK 2: Active subscription expiry (subscription is still valid)
-    expiry = user.get("subscription_expiry")
-    if expiry:
-        try:
-            from datetime import datetime, timezone
-            now = datetime.now(timezone.utc)
-            expiry_dt = datetime.fromisoformat(str(expiry).replace('Z', '+00:00'))
-            if expiry_dt.tzinfo is None:
-                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-            if expiry_dt > now:
-                logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) has ACTIVE subscription until {expiry_dt}")
-                return True
-        except Exception:
-            # If we can't parse expiry, protect the user
-            logging.warning(f"[BURN PROTECTED] User {uid} has unparseable expiry: {expiry}, protecting user")
-            return True
-    
-    # CHECK 3: Ever had VIP (was a paying customer)
-    if user.get("vip_activated_at"):
-        logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) was VIP (vip_activated_at exists)")
-        return True
-    
-    # CHECK 4: Ever had subscription start (was a paying customer)
-    if user.get("subscription_start"):
-        logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) was paid (subscription_start exists)")
-        return True
-    
-    # CHECK 5: Has vip_expiry field (was VIP at some point)
-    if user.get("vip_expiry"):
-        logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) was VIP (vip_expiry exists)")
-        return True
-    
-    # CHECK 6: Legacy membership_type check
-    if (user.get("membership_type") or "").lower() in ["vip", "paid", "premium"]:
-        logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) has paid membership_type")
-        return True
-    
-    # User is NOT protected - can be burned
-    return False
+    """Burning concept deprecated. All users are protected."""
+    return True
 
 def get_user_plan(user: dict) -> str:
     """Get user's subscription plan, defaulting to 'explorer'"""
@@ -3240,16 +3174,15 @@ ADMIN_CHARGE_RATE = 0.20  # 20% admin charges
 
 async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
     """
-    Calculate Elite subscription PRC price (Active - 29 March 2026)
+    Calculate Elite subscription PRC price (April 2026 - burn removed)
     
     Formula:
     1. Base + GST = ₹999 + 18% = ₹1178.82
     2. Convert to PRC = ₹1178.82 × PRC_RATE
     3. Processing Fee = ₹10 × PRC_RATE
     4. Admin Charges = 20% of (Base PRC + Processing)
-    5. Burn = 5% of (Base PRC + Processing PRC + Admin PRC)  [PRC payment = 5% burn]
     
-    Total PRC = Base PRC + Processing PRC + Admin PRC + Burn PRC
+    Total PRC = Base PRC + Processing PRC + Admin PRC
     """
     if prc_rate is None:
         prc_rate = await get_dynamic_prc_rate()
@@ -3269,13 +3202,8 @@ async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
     subtotal_prc = base_prc + processing_fee_prc
     admin_charges_prc = subtotal_prc * ADMIN_CHARGE_RATE
     
-    # Step 5: Burn (5% for PRC payment — applied on subtotal + admin)
-    burn_rate_percent = 5
-    subtotal_before_burn = base_prc + processing_fee_prc + admin_charges_prc
-    burn_prc = subtotal_before_burn * burn_rate_percent / 100
-    
-    # Total
-    total_prc = subtotal_before_burn + burn_prc
+    # Total (no burn)
+    total_prc = base_prc + processing_fee_prc + admin_charges_prc
     
     return {
         "base_inr": base_inr,
@@ -3290,16 +3218,16 @@ async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
         "gst_prc": round(gst_inr * prc_rate, 2),
         "processing_fee_prc": round(processing_fee_prc, 2),
         "admin_charges_prc": round(admin_charges_prc, 2),
-        "burn_prc": round(burn_prc, 2),
-        "burn_rate_percent": burn_rate_percent,
-        "subtotal_before_burn_prc": round(subtotal_before_burn, 2),
+        "burn_prc": 0,
+        "burn_rate_percent": 0,
+        "subtotal_before_burn_prc": round(total_prc, 2),
         "total_prc": round(total_prc, 2),
         # For Company Wallet
         "company_wallet_breakdown": {
             "gst_collection": round(gst_inr * prc_rate, 2),
             "processing_fees": round(processing_fee_prc, 2),
             "admin_charges": round(admin_charges_prc, 2),
-            "burn_amount": round(burn_prc, 2),
+            "burn_amount": 0,
             "subscription_revenue": round(base_inr * prc_rate, 2)
         }
     }
@@ -5024,44 +4952,20 @@ async def get_redemption_charge_settings():
     }
 
 async def get_user_burn_rate(user_id: str = None) -> dict:
-    """
-    Get burn rate based on user's subscription_payment_type.
-    - Cash (INR/Razorpay/Manual) users: 1% burn
-    - PRC subscription users: 5% burn
-    - Explorer (free) users: 1% burn (default)
-    
-    Returns: {"burn_rate_percent": 1 or 5, "payment_type": "cash" or "prc"}
-    """
-    if not user_id:
-        return {"burn_rate_percent": 1, "payment_type": "unknown"}
-    
-    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "subscription_payment_type": 1, "subscription_plan": 1})
-    if not user:
-        return {"burn_rate_percent": 1, "payment_type": "unknown"}
-    
-    payment_type = user.get("subscription_payment_type", "cash")
-    plan = user.get("subscription_plan", "explorer")
-    
-    # PRC subscribers get 5% burn, all others get 1%
-    if plan in ["elite", "vip", "startup", "growth", "pro"] and payment_type == "prc":
-        return {"burn_rate_percent": 5, "payment_type": "prc"}
-    else:
-        return {"burn_rate_percent": 1, "payment_type": payment_type or "cash"}
+    """Burning concept deprecated. Always returns 0% burn rate."""
+    return {"burn_rate_percent": 0, "payment_type": "none"}
 
 
 async def calculate_redemption_charges(amount_inr: float, request_type: str = None, user_id: str = None):
     """
     Calculate all charges for bill payment or gift voucher redemption
     
-    Formula (April 2026):
-      Subtotal = Service_Charges + Processing_Fee + Admin_Charges
-      Burn = burn_rate% × Subtotal
-      Total = Subtotal + Burn
+    Formula (April 2026 - burn removed):
+      Total = Service_Charges + Processing_Fee + Admin_Charges
     
     Where:
     - Processing Fee = Flat ₹10 (loan_emi: 50% if <=499, else ₹10)
     - Admin Charges = 20% of Service_Charges
-    - Burn Rate = 1% (cash/INR users) or 5% (PRC users)
     
     Returns breakdown dict
     """
@@ -5081,20 +4985,12 @@ async def calculate_redemption_charges(amount_inr: float, request_type: str = No
     
     # Calculate charges in INR
     admin_charge_inr = (amount_inr * admin_charge_percent) / 100
-    subtotal_inr = amount_inr + processing_fee_inr + admin_charge_inr
-    
-    # Calculate burn based on user's subscription payment type
-    burn_info = await get_user_burn_rate(user_id)
-    burn_rate_percent = burn_info["burn_rate_percent"]
-    burn_inr = (subtotal_inr * burn_rate_percent) / 100
-    
-    total_inr = subtotal_inr + burn_inr
+    total_inr = amount_inr + processing_fee_inr + admin_charge_inr
     
     # Convert to PRC
     amount_prc = amount_inr * prc_rate
     processing_fee_prc = processing_fee_inr * prc_rate
     admin_charge_prc = admin_charge_inr * prc_rate
-    burn_prc = burn_inr * prc_rate
     total_prc = total_inr * prc_rate
     
     return {
@@ -5102,15 +4998,15 @@ async def calculate_redemption_charges(amount_inr: float, request_type: str = No
         "processing_fee_inr": round(processing_fee_inr, 2),
         "admin_charge_inr": round(admin_charge_inr, 2),
         "admin_charge_percent": admin_charge_percent,
-        "burn_inr": round(burn_inr, 2),
-        "burn_rate_percent": burn_rate_percent,
-        "burn_payment_type": burn_info["payment_type"],
-        "subtotal_inr": round(subtotal_inr, 2),
+        "burn_inr": 0,
+        "burn_rate_percent": 0,
+        "burn_payment_type": "none",
+        "subtotal_inr": round(total_inr, 2),
         "total_inr": round(total_inr, 2),
         "amount_prc": round(amount_prc, 2),
         "processing_fee_prc": round(processing_fee_prc, 2),
         "admin_charge_prc": round(admin_charge_prc, 2),
-        "burn_prc": round(burn_prc, 2),
+        "burn_prc": 0,
         "total_prc": round(total_prc, 2),
         "prc_rate": prc_rate,
         "request_type": request_type
@@ -5119,24 +5015,21 @@ async def calculate_redemption_charges(amount_inr: float, request_type: str = No
 async def get_bill_payment_service_charge(amount_inr: float, prc_required: float, request_type: str = None, user_id: str = None):
     """
     Calculate service charge for bill payments
-    Uses formula: Processing Fee + Admin Charges (20%) + Burn (1% or 5%)
+    Uses formula: Processing Fee + Admin Charges (20%)
     Returns service charge in PRC
     """
     charges = await calculate_redemption_charges(amount_inr, request_type, user_id=user_id)
-    # Service charge = Processing Fee + Admin Charges + Burn (in PRC)
-    return charges["processing_fee_prc"] + charges["admin_charge_prc"] + charges["burn_prc"]
+    return charges["processing_fee_prc"] + charges["admin_charge_prc"]
 
 async def get_gift_voucher_service_charge(prc_required: float, user_id: str = None):
     """
     Calculate service charge for gift voucher redemption
-    Uses formula: Processing Fee (₹10) + Admin Charges (20%) + Burn (1% or 5%)
+    Uses formula: Processing Fee (₹10) + Admin Charges (20%)
     Returns service charge in PRC
     """
-    # Convert PRC to INR first (10 PRC = 1 INR)
     amount_inr = prc_required / 10
     charges = await calculate_redemption_charges(amount_inr, user_id=user_id)
-    # Service charge = Processing Fee + Admin Charges + Burn (in PRC)
-    return charges["processing_fee_prc"] + charges["admin_charge_prc"] + charges["burn_prc"]
+    return charges["processing_fee_prc"] + charges["admin_charge_prc"]
 
 # ==================== END BILL PAYMENT SYSTEM ====================
 
@@ -32027,22 +31920,11 @@ async def get_scheduler_status():
                     "next_run_ist": (next_run + timedelta(hours=5, minutes=30)).strftime("%d %b %Y, %I:%M %p IST") if next_run else None
                 })
         
-        # Check last burn to see if scheduler is actually working
-        last_scheduled_burn = await db.prc_burn_history.find_one(
-            {"type": "scheduled"},
-            sort=[("burn_date", -1)]
-        )
-        
         return {
             "success": True,
             "scheduler_running": scheduler_running,
             "total_jobs": len(jobs),
-            "jobs": jobs,
-            "last_scheduled_burn": {
-                "time": last_scheduled_burn.get("burn_date").isoformat() if last_scheduled_burn else None,
-                "status": last_scheduled_burn.get("status") if last_scheduled_burn else None
-            } if last_scheduled_burn else None,
-            "recommendation": "If scheduler shows running but burns aren't executing, use Smart Burn daily or set up external cron job" if scheduler_running else "Scheduler not running - use Smart Burn manually"
+            "jobs": jobs
         }
         
     except Exception as e:
@@ -32050,8 +31932,7 @@ async def get_scheduler_status():
         return {
             "success": False,
             "scheduler_running": False,
-            "error": str(e),
-            "recommendation": "Use Smart Burn manually to execute daily burns"
+            "error": str(e)
         }
 
 
@@ -32711,11 +32592,7 @@ from routes.support_chatbot import set_db as set_chatbot_db
 set_chatbot_db(db)
 api_router.include_router(support_chatbot_router)
 
-# Auto-Burning
-from routes.burning import router as burning_router
-from routes.burning import set_db as set_burning_db, run_auto_burn_all_expired
-set_burning_db(db)
-api_router.include_router(burning_router)
+# Auto-Burning - REMOVED (burning concept deprecated)
 
 app.include_router(api_router)
 
@@ -33272,24 +33149,11 @@ async def startup_db():
             replace_existing=True
         )
         
-        # Auto-burn expired subscription users every 12 hours
-        # Burns 3.33%/day from PRC balance of users with expired subscriptions
-        scheduler.add_job(
-            run_auto_burn_all_expired,
-            CronTrigger(hour='5,17', minute=30),  # 5:30 AM and 5:30 PM UTC (11 AM and 11 PM IST)
-            id='auto_burn_expired_users',
-            name='Auto-burn PRC for expired subscriptions (3.33%/day)',
-            replace_existing=True
-        )
-        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
-        print("   - 🔥 PRC Burn (11 AM IST): Daily 0.5% + Expiry burn")
-        print("   - 🔥 PRC Burn (11 PM IST): Daily 0.5% + Expiry burn")
         print("   - 💰 Wallet reconciliation: Daily at 3 AM")
         print("   - 📊 Daily system summary: Daily at 12:05 AM")
-        print("   - ⚡ Inactive user PRC burn: Weekly Sunday at 4 AM")
         print("   - 🗑️ Account hard delete: Daily at 3:30 AM")
         print("   - 🔓 Auto lockout clear: Daily at 12 PM & 12 AM")
         print("   - 🔄 Razorpay auto-sync: Every 1 minute (faster activation)")
@@ -33297,7 +33161,6 @@ async def startup_db():
         print("   - 🏦 Eko status update: Every 5 minutes")
         print("   - 💓 DB keep-alive ping: Every 2 minutes (prevents cold start)")
         print("   - 🚨 Emergency auto-pause: Every 5 minutes (200% spike detection)")
-        print("   - 🔥 Auto-burn expired subs: 5:30 AM & 5:30 PM UTC (3.33%/day)")
         
         # Trigger initial Razorpay sync 30 seconds after startup
         import asyncio

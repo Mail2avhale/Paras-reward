@@ -13,7 +13,6 @@ const AdminEconomySettings = () => {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
     redeem_percent: 70,
-    burn_rate: 5,
     processing_fee_inr: 10,
     admin_charge_percent: 20,
     base_mining: 550,
@@ -51,7 +50,6 @@ const AdminEconomySettings = () => {
       
       const params = new URLSearchParams();
       params.append('redeem_percent', settings.redeem_percent);
-      params.append('burn_rate', settings.burn_rate);
       params.append('processing_fee_inr', settings.processing_fee_inr);
       params.append('admin_charge_percent', settings.admin_charge_percent);
       params.append('base_mining', settings.base_mining);
@@ -237,25 +235,8 @@ const AdminEconomySettings = () => {
               </div>
             </div>
 
-            {/* Burn Rate */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Burn Rate (%)
-              </label>
-              <input
-                type="number"
-                value={settings.burn_rate}
-                onChange={(e) => setSettings({ ...settings, burn_rate: parseFloat(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="5"
-                min="0"
-                max="20"
-                step="0.5"
-              />
-              <p className="text-xs text-gray-500 mt-1">Applied on every redeem</p>
             </div>
           </div>
-        </div>
 
         {/* Charges Settings */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
@@ -333,12 +314,11 @@ const AdminEconomySettings = () => {
             <p className="text-gray-700">Example: Redeem 1000 PRC (Rate: {settings.prc_rate} PRC = ₹1)</p>
             <div className="mt-2 space-y-1 text-gray-600">
               <p>Redeem Value: 1000 PRC</p>
-              <p>Burn ({settings.burn_rate}%): {(1000 * settings.burn_rate / 100).toFixed(0)} PRC</p>
               <p>Processing (₹{settings.processing_fee_inr}): {(settings.processing_fee_inr * settings.prc_rate).toFixed(0)} PRC</p>
               <p>Admin ({settings.admin_charge_percent}%): {(1000 * settings.admin_charge_percent / 100).toFixed(0)} PRC</p>
               <hr className="my-2" />
               <p className="font-bold text-purple-700">
-                Total Deducted: {(1000 + (1000 * settings.burn_rate / 100) + (settings.processing_fee_inr * settings.prc_rate) + (1000 * settings.admin_charge_percent / 100)).toFixed(0)} PRC
+                Total Deducted: {(1000 + (settings.processing_fee_inr * settings.prc_rate) + (1000 * settings.admin_charge_percent / 100)).toFixed(0)} PRC
               </p>
               <p className="font-bold text-emerald-600">
                 User Gets: ₹{(1000 / settings.prc_rate).toFixed(2)}

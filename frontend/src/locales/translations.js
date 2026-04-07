@@ -60,7 +60,7 @@ const translations = {
   platformBurned: {
     mr: "आज PRC वापरले",
     hi: "आज PRC उपयोग",
-    en: "Today PRC Burned"
+    en: "Today PRC Used"
   },
   redeemsToday: {
     mr: "आजचे रिडीम्स",

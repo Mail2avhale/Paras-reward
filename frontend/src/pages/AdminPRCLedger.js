@@ -105,7 +105,7 @@ const AdminPRCLedger = ({ user }) => {
             <Coins className="h-7 w-7 text-amber-500" />
             PRC Ledger
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Track all PRC mining, consumption, and burning transactions</p>
+          <p className="text-sm text-slate-500 mt-1">Track all PRC mining and consumption transactions</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={fetchLedger} size="sm" disabled={loading}>
@@ -151,20 +151,6 @@ const AdminPRCLedger = ({ user }) => {
             </div>
             <div className="bg-white/20 p-2 rounded-lg">
               <TrendingDown className="h-6 w-6" />
-            </div>
-          </div>
-        </Card>
-
-        {/* Total Burned */}
-        <Card className="p-5 bg-gradient-to-br from-orange-500 to-red-600 text-slate-800">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-orange-100 text-sm font-medium">Total Burned</p>
-              <h2 className="text-2xl font-bold mt-1">{formatPRC(summary.total_burned_prc)} PRC</h2>
-              <p className="text-orange-200 text-sm mt-1">≈ {formatCurrency(summary.total_burned_inr)}</p>
-            </div>
-            <div className="bg-white/20 p-2 rounded-lg">
-              <Flame className="h-6 w-6" />
             </div>
           </div>
         </Card>
@@ -254,7 +240,7 @@ const AdminPRCLedger = ({ user }) => {
                         entry.type === 'mining' ? 'bg-green-500/20 text-green-400' :
                         entry.type === 'tap_game' ? 'bg-blue-500/20 text-blue-400' :
                         entry.type === 'referral' ? 'bg-purple-500/20 text-purple-400' :
-                        entry.type === 'prc_burn' ? 'bg-red-500/20 text-red-400' :
+                        entry.type === 'prc_burn' ? 'bg-gray-500/20 text-gray-400' :
                         entry.type === 'order' ? 'bg-orange-500/20 text-orange-400' :
                         'bg-slate-100 text-slate-600'
                       }`}>

@@ -241,10 +241,6 @@ const AdminFinancialReports = ({ user }) => {
                   <p className="text-sm text-gray-600">Consumed</p>
                   <p className="text-xl font-bold text-blue-600">{formatPRC(pnlData.prc_metrics?.consumed)} PRC</p>
                 </div>
-                <div className="p-4 bg-red-500/10 rounded-lg text-center">
-                  <p className="text-sm text-gray-600">Burned</p>
-                  <p className="text-xl font-bold text-red-600">{formatPRC(pnlData.prc_metrics?.burned)} PRC</p>
-                </div>
               </div>
             </Card>
           </motion.div>

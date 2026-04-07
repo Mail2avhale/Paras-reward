@@ -14,7 +14,6 @@ const BASE_RATE = 10;
  * @param {number} amount - Amount in INR
  * @param {number} processingFee - Processing fee in INR (default 10)
  * @param {number} adminChargePercent - Admin charge percentage (default 20)
- * @param {number} burnRate - Burn rate percentage (0 = no burn, 5 = PRC plan burn)
  * @param {boolean} showBreakdown - Show detailed breakdown
  * @param {string} serviceType - Type of service (bbps, gift, subscription, bank)
  */
@@ -22,7 +21,6 @@ const PRCRateDisplay = ({
   amount = 0, 
   processingFee = 10, 
   adminChargePercent = 20,
-  burnRate = 0,
   showBreakdown = true,
   showRateAlert = false,
   serviceType = 'general',
@@ -85,14 +83,11 @@ const PRCRateDisplay = ({
   };
 
   // Calculate PRC values — must match backend calculate_elite_prc_price() exactly
-  // Backend: admin_charges = 20% of (base_prc + processing_prc), burn = 5% of (base + processing + admin)
   const amountInPRC = amount * currentRate;
   const processingFeeInPRC = processingFee * currentRate;
   const subtotalPRC = amountInPRC + processingFeeInPRC;
   const adminChargeInPRC = subtotalPRC * adminChargePercent / 100;
-  const totalBeforeBurn = amountInPRC + processingFeeInPRC + adminChargeInPRC;
-  const burnPRC = totalBeforeBurn * burnRate / 100;
-  const totalPRC = Math.round((totalBeforeBurn + burnPRC) * 100) / 100;
+  const totalPRC = Math.round((amountInPRC + processingFeeInPRC + adminChargeInPRC) * 100) / 100;
 
   if (loading) {
     return (
@@ -149,13 +144,6 @@ const PRCRateDisplay = ({
               <div className="flex justify-between text-gray-400">
                 <span>Admin Fee ({adminChargePercent}%)</span>
                 <span>₹{Math.round((amount + processingFee) * adminChargePercent / 100).toLocaleString()}</span>
-              </div>
-            )}
-
-            {burnRate > 0 && (
-              <div className="flex justify-between text-red-400">
-                <span>Burn ({burnRate}%)</span>
-                <span>₹{((amount + processingFee + (amount + processingFee) * adminChargePercent / 100) * burnRate / 100).toFixed(2)}</span>
               </div>
             )}
             

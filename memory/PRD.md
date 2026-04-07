@@ -7,6 +7,13 @@
 - Extracted 7 new modular route files: admin_accounting (4954), notifications_routes (3010), admin_prc_balance (1542), ai_routes (1050), manager_routes (976), admin_prc_economy (221)
 - All 117 extracted routes verified working via curl (401/422/200 responses correct)
 
+## COMPLETED: Full Burning Concept Removal - User + Admin (P0) - 7 April 2026
+- Deleted BurningIndicator.js component, deprecated routes/burning.py
+- Removed auto-burn scheduler job (3.33%/day cron), all burn state/functions from AdminDashboard
+- Cleaned burn references from 15+ files: DashboardModern, Mining, AdminDashboard, AdminPRCEconomyDashboard, AdminPRCAnalytics, AdminPRCLedger, AdminAccountingDashboard, AdminFinancialReports, AdminProfitLoss, AdminEconomySettings, AdminTransactionManager, AdminUserLedger, PRCStatement, PRCRateDisplay, locales
+- Backend: Zeroed out burn in calculate_elite_prc_price, calculate_redemption_charges, get_user_burn_rate, get_bill_payment_service_charge
+- Historical burn transactions remain in DB (PRC statement shows as grey "Burn" type for audit trail)
+
 ## COMPLETED: Subscription from PRC Full Frontend Cleanup (P0) - 7 April 2026
 - Deleted SubscriptionPlans.js (1,803 lines) and removed route from App.js
 - Cleaned all user-facing subscription links/buttons from: DashboardModern.js, Sidebar.js, ProfileAdvanced.js, Mining.js, MyInvoices.js, BurningIndicator.js, AIContextualHelp.js

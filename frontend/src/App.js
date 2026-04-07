@@ -214,7 +214,7 @@ const AdminSecurityDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpa
 // AdminVIPPlans and AdminVIPPaymentVerification removed - replaced by AdminSubscriptionManagement (new 4-tier system)
 const AdminSubscriptionManagement = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSubscriptionManagement"));
 const AdminMembers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminMembers"));
-// AdminPRCBurnControl - REMOVED (old burn system deprecated, new Burning Session on Mining page)
+// AdminPRCBurnControl - REMOVED (burning concept deprecated)
 const AdminDataBackup = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDataBackup"));
 // AdminBillPayments - REMOVED (all pending rejected + refunded)
 const AdminRazorpaySubscriptions = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRazorpaySubscriptions"));

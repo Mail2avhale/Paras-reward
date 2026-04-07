@@ -137,7 +137,7 @@ const AdminPRCAnalytics = ({ user }) => {
             <p className="text-sm opacity-80 mt-1">
               {health_score >= 70 ? 'Excellent - PRC economy is healthy' :
                health_score >= 50 ? 'Good - Balanced PRC flow' :
-               health_score >= 30 ? 'Fair - Monitor burn rate' : 'Critical - Review PRC creation'}
+               health_score >= 30 ? 'Fair - Review PRC flow' : 'Critical - Review PRC creation'}
             </p>
           </div>
           <div className="relative w-32 h-32">
@@ -168,13 +168,6 @@ const AdminPRCAnalytics = ({ user }) => {
           change={summary.prc_used_change}
           icon={ShoppingCart}
           color="from-blue-500 to-indigo-600"
-        />
-        <StatCard
-          title={`PRC Burned (${periodLabels[period]})`}
-          value={summary.prc_burned}
-          change={summary.prc_burned_change}
-          icon={Flame}
-          color="from-orange-500 to-red-600"
         />
         <StatCard
           title="Net PRC Flow"
@@ -255,7 +248,6 @@ const AdminPRCAnalytics = ({ user }) => {
               <Legend />
               <Bar dataKey="created" name="Created" fill="#10b981" radius={[4, 4, 0, 0]} />
               <Bar dataKey="used" name="Used" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="burned" name="Burned" fill="#ef4444" radius={[4, 4, 0, 0]} />
             </ComposedChart>
           </ResponsiveContainer>
         </Card>
@@ -278,7 +270,6 @@ const AdminPRCAnalytics = ({ user }) => {
               <Legend />
               <Area type="monotone" dataKey="created" name="Created" stroke="#10b981" fill="#10b98133" stackId="1" />
               <Area type="monotone" dataKey="used" name="Used" stroke="#3b82f6" fill="#3b82f633" stackId="2" />
-              <Area type="monotone" dataKey="burned" name="Burned" stroke="#ef4444" fill="#ef444433" stackId="3" />
             </AreaChart>
           </ResponsiveContainer>
         </Card>
@@ -410,15 +401,6 @@ const AdminPRCAnalytics = ({ user }) => {
                 <td className="py-3 px-4 text-right font-semibold">{summary.prc_used.toLocaleString()}</td>
                 <td className={`py-3 px-4 text-right ${summary.prc_used_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {summary.prc_used_change >= 0 ? '+' : ''}{summary.prc_used_change}%
-                </td>
-              </tr>
-              <tr className="border-b hover:bg-slate-50">
-                <td className="py-3 px-4 flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-orange-600" /> PRC Burned
-                </td>
-                <td className="py-3 px-4 text-right font-semibold">{summary.prc_burned.toLocaleString()}</td>
-                <td className={`py-3 px-4 text-right ${summary.prc_burned_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {summary.prc_burned_change >= 0 ? '+' : ''}{summary.prc_burned_change}%
                 </td>
               </tr>
               <tr className="border-b hover:bg-slate-50">

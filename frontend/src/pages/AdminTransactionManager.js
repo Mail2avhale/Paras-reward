@@ -19,7 +19,7 @@ const TYPE_COLORS = {
   'Voucher Redeem': 'bg-orange-100 text-orange-700',
   'Bank Redeem': 'bg-cyan-100 text-cyan-700',
   'Refund': 'bg-lime-100 text-lime-700',
-  'Burn': 'bg-red-100 text-red-700',
+  'Burn': 'bg-gray-100 text-gray-500',
   'Admin Credit': 'bg-amber-100 text-amber-700',
   'Admin Debit': 'bg-rose-100 text-rose-700',
   'Admin': 'bg-amber-100 text-amber-700',
@@ -28,7 +28,7 @@ const TYPE_COLORS = {
   'Other': 'bg-slate-100 text-slate-700',
 };
 
-const FILTER_TYPES = ['all', 'mining_collect', 'burn', 'prc_burn', 'bank_withdrawal_request', 'subscription_prc', 'admin_refund', 'admin_credit', 'admin_debit', 'daily_streak', 'achievement', 'gift_subscription', 'dmt_refund'];
+const FILTER_TYPES = ['all', 'mining_collect', 'bank_withdrawal_request', 'subscription_prc', 'admin_refund', 'admin_credit', 'admin_debit', 'daily_streak', 'achievement', 'gift_subscription', 'dmt_refund'];
 
 // ========== MODAL ==========
 const Modal = ({ show, onClose, title, children }) => {

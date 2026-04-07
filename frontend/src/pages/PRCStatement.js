@@ -14,7 +14,7 @@ const TYPE_COLORS = {
   'Bank Redeem': { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30' },
   'Voucher Redeem': { bg: 'bg-pink-500/15', text: 'text-pink-400', border: 'border-pink-500/30' },
   'Refund': { bg: 'bg-teal-500/15', text: 'text-teal-400', border: 'border-teal-500/30' },
-  'Burn': { bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30' },
+  'Burn': { bg: 'bg-gray-500/15', text: 'text-gray-400', border: 'border-gray-500/30' },
   'Admin Credit': { bg: 'bg-cyan-500/15', text: 'text-cyan-400', border: 'border-cyan-500/30' },
   'Admin Debit': { bg: 'bg-rose-500/15', text: 'text-rose-400', border: 'border-rose-500/30' },
   'Subscription': { bg: 'bg-indigo-500/15', text: 'text-indigo-400', border: 'border-indigo-500/30' },

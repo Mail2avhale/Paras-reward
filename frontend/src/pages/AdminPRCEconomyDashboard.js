@@ -263,7 +263,6 @@ const AdminPRCEconomyDashboard = () => {
           </div>
           <p className="text-3xl font-bold text-slate-800 mt-2">{whale_wallets?.count || 0}</p>
           <p className="text-purple-300 text-sm">Whale Wallets</p>
-          <p className="text-slate-500 text-xs mt-1">{settings?.whale_burn_rate}% burn rate</p>
         </Card>
       </div>
 
@@ -424,9 +423,6 @@ const AdminPRCEconomyDashboard = () => {
           <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
             <Wallet className="w-5 h-5 text-purple-400" />
             Top Whale Wallets
-            <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-1 rounded ml-2">
-              {settings?.whale_burn_rate}% Burn Rate
-            </span>
           </h3>
           
           <div className="overflow-x-auto">
@@ -435,7 +431,6 @@ const AdminPRCEconomyDashboard = () => {
                 <tr className="text-slate-500 text-sm border-b border-slate-200">
                   <th className="text-left py-2 px-3">User</th>
                   <th className="text-right py-2 px-3">Balance</th>
-                  <th className="text-right py-2 px-3">Daily Burn</th>
                 </tr>
               </thead>
               <tbody>
@@ -451,12 +446,6 @@ const AdminPRCEconomyDashboard = () => {
                       </p>
                       <p className="text-slate-500 text-xs">PRC</p>
                     </td>
-                    <td className="text-right py-3 px-3">
-                      <p className="text-red-400 font-mono">
-                        -{((whale.prc_balance || 0) * 0.02).toFixed(2)}
-                      </p>
-                      <p className="text-slate-500 text-xs">PRC/day</p>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -471,15 +460,7 @@ const AdminPRCEconomyDashboard = () => {
           <Target className="w-5 h-5 text-slate-500" />
           Economy Settings
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div className="bg-white rounded-lg p-3">
-            <p className="text-slate-500">Normal Burn</p>
-            <p className="text-slate-800 font-bold">{settings?.normal_burn_rate || 1}%/day</p>
-          </div>
-          <div className="bg-white rounded-lg p-3">
-            <p className="text-slate-500">Whale Burn</p>
-            <p className="text-purple-400 font-bold">{settings?.whale_burn_rate || 2}%/day</p>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 text-sm">
           <div className="bg-white rounded-lg p-3">
             <p className="text-slate-500">Whale Threshold</p>
             <p className="text-slate-800 font-bold">{(settings?.whale_threshold || 500000).toLocaleString()} PRC</p>

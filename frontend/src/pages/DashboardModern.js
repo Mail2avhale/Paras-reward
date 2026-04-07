@@ -14,7 +14,7 @@ import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/Pro
 // AIChatbotEnhanced REMOVED - chatbot feature deprecated (March 2026)
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
-import BurningIndicator from '@/components/BurningIndicator';
+// BurningIndicator removed - burning concept deprecated
 import HolidayCalendar from '@/components/HolidayCalendar';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -824,11 +824,6 @@ const DashboardModern = ({ user, onLogout }) => {
 
       {/* AI Smart Tip */}
       <div className="px-5 mb-4">
-      </div>
-
-      {/* Burning Indicator - shows only when subscription expired */}
-      <div className="px-5 mb-4">
-        <BurningIndicator user={user} variant="compact" />
       </div>
 
       {/* Quick Actions */}

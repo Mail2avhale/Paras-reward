@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { InfoTooltip } from '@/components/InfoTooltip';
-import BurningIndicator from '@/components/BurningIndicator';
+// BurningIndicator removed - burning concept deprecated
 // PRCBurnAlert removed - free users no longer collect PRC
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -1005,10 +1005,6 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
               </div>
             </div>
 
-            {/* Burning Indicator - shows only when subscription expired */}
-            <div className="mt-4">
-              <BurningIndicator user={user} variant="full" />
-            </div>
           </div>
         </motion.div>
       </div>

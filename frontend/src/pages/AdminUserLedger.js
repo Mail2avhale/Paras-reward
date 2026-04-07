@@ -21,9 +21,8 @@ const TRANSACTION_TYPES = [
   { value: 'cashback', label: 'Cashback' },
   { value: 'order', label: 'Order' },
   { value: 'withdrawal', label: 'Withdrawal' },
-  { value: 'prc_burn', label: 'PRC Burn' },
-  { value: 'admin_credit', label: 'Admin Credit' },
   { value: 'admin_debit', label: 'Admin Debit' },
+  { value: 'admin_credit', label: 'Admin Credit' },
   { value: 'bill_payment_request', label: 'Bill Payment' },
   { value: 'gift_voucher_request', label: 'Gift Voucher' },
 ];
@@ -198,7 +197,7 @@ const AdminUserLedger = ({ user }) => {
               <p className="text-red-100 text-sm">Total Debits</p>
               <p className="text-2xl font-bold">
                 {Object.entries(summary)
-                  .filter(([type]) => ['order', 'withdrawal', 'admin_debit', 'prc_burn'].includes(type))
+                  .filter(([type]) => ['order', 'withdrawal', 'admin_debit'].includes(type))
                   .reduce((sum, [, data]) => sum + (data?.amount || 0), 0)
                   .toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </p>
