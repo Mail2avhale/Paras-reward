@@ -285,8 +285,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             pincode: data.pincode || '',
             birthday: data.date_of_birth || data.birthday || ''
           });
-          setIsProfilePublic(data.is_public !== false);
-          setAllowMessages(data.allow_messages !== false);
         } else {
           setUserData(user);
           setFormData({
@@ -334,8 +332,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         pincode: data.pincode || '',
         birthday: data.date_of_birth || data.birthday || ''
       });
-      setIsProfilePublic(data.is_public !== false);
-      setAllowMessages(data.allow_messages !== false);
     } catch (error) {
       console.error('Error fetching user:', error);
     }
