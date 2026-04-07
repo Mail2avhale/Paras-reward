@@ -7,7 +7,7 @@ import {
   User, Lock, ArrowLeft, Eye, EyeOff, Camera, 
   Save, Phone, Mail, Crown, ChevronRight, 
   LogOut, Trash2, Settings, CreditCard, Shield, FileText, Globe, Info,
-  HelpCircle, CheckCircle, Receipt
+  HelpCircle, CheckCircle, Receipt, KeyRound
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,69 +21,60 @@ import { Label } from '@/components/ui/label';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Security Question Card Component
-const SecurityQuestionCard = ({ user }) => {
-  const [hasQuestion, setHasQuestion] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState('');
+// Security PIN Card Component
+const SecurityPinCard = ({ user }) => {
+  const [hasPin, setHasPin] = useState(false);
+  const [isDefault, setIsDefault] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [questions, setQuestions] = useState([]);
-  const [selectedQuestion, setSelectedQuestion] = useState(0);
-  const [answer, setAnswer] = useState('');
-  const [confirmAnswer, setConfirmAnswer] = useState('');
+  const [currentPin, setCurrentPin] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
 
   useEffect(() => {
     if (user?.uid) {
-      // Security question data only
-      Promise.allSettled([
-        axios.get(`${API}/auth/security-question/check/${user.uid}`, { timeout: 4000 }),
-        axios.get(`${API}/auth/security-questions`, { timeout: 4000 })
-      ]).then(([secRes, qRes]) => {
-        if (secRes.status === 'fulfilled') {
-          setHasQuestion(secRes.value.data.has_security_question);
-          setCurrentQuestion(secRes.value.data.security_question || '');
-          if (secRes.value.data.question_index !== undefined) {
-            setSelectedQuestion(secRes.value.data.question_index);
-          }
-        }
-        if (qRes.status === 'fulfilled') {
-          setQuestions(qRes.value.data.questions || []);
-        }
-        setLoading(false);
-      });
+      axios.get(`${API}/auth/security-pin/check/${user.uid}`, { timeout: 4000 })
+        .then(res => {
+          setHasPin(res.data.has_security_pin);
+          setIsDefault(res.data.is_default);
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
     }
   }, [user]);
 
   const handleSave = async () => {
-    if (!answer.trim()) {
-      toast.error('Please enter an answer');
+    if (!newPin || newPin.length !== 4) {
+      toast.error('Security PIN must be 4 digits');
       return;
     }
-    if (answer !== confirmAnswer) {
-      toast.error('Answers do not match');
+    if (newPin !== confirmPin) {
+      toast.error('PINs do not match');
       return;
     }
-    if (answer.length < 2) {
-      toast.error('Answer must be at least 2 characters');
+    if (new Set(newPin).size === 1) {
+      toast.error('PIN cannot be all same digits');
       return;
     }
 
     setSaving(true);
     try {
-      await axios.post(`${API}/auth/security-question/set`, {
+      await axios.post(`${API}/auth/security-pin/change`, {
         user_id: user.uid,
-        question_index: selectedQuestion,
-        answer: answer.trim()
+        current_security_pin: currentPin || undefined,
+        login_pin: !currentPin ? undefined : undefined,
+        new_security_pin: newPin
       });
-      toast.success('Security question saved successfully!');
-      setHasQuestion(true);
-      setCurrentQuestion(questions[selectedQuestion]);
+      toast.success('Security PIN changed successfully!');
+      setHasPin(true);
+      setIsDefault(false);
       setShowForm(false);
-      setAnswer('');
-      setConfirmAnswer('');
+      setCurrentPin('');
+      setNewPin('');
+      setConfirmPin('');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to save security question');
+      toast.error(error.response?.data?.detail || 'Failed to change Security PIN');
     } finally {
       setSaving(false);
     }
@@ -99,94 +90,101 @@ const SecurityQuestionCard = ({ user }) => {
   }
 
   return (
-    <div className="bg-gradient-to-br from-orange-500/10 to-amber-500/10 rounded-2xl p-4 border border-orange-500/30">
+    <div className="bg-gradient-to-br from-rose-500/10 to-pink-500/10 rounded-2xl p-4 border border-rose-500/30">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
-            <HelpCircle className="w-5 h-5 text-orange-400" />
+          <div className="w-10 h-10 bg-rose-500/20 rounded-xl flex items-center justify-center">
+            <KeyRound className="w-5 h-5 text-rose-400" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">Security Question</h3>
+            <h3 className="font-semibold text-white">Security PIN</h3>
             <p className="text-xs text-gray-400">For PIN reset verification</p>
           </div>
         </div>
-        {hasQuestion && (
+        {hasPin && !isDefault && (
           <CheckCircle className="w-5 h-5 text-green-500" />
         )}
       </div>
 
       {!showForm ? (
         <>
-          {hasQuestion ? (
-            <div className="bg-white/5 rounded-xl p-3 mb-3">
-              <p className="text-xs text-gray-400 mb-1">Your Question:</p>
-              <p className="text-sm text-white">{currentQuestion}</p>
+          {isDefault ? (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-3">
+              <p className="text-sm text-amber-400">
+                Your Security PIN is set to default. Change it for better security.
+              </p>
             </div>
           ) : (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-3">
-              <p className="text-sm text-red-400">
-                ⚠️ No security question set. Set one for secure PIN reset.
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 mb-3">
+              <p className="text-sm text-green-400">
+                Security PIN is set. Used for PIN reset verification.
               </p>
             </div>
           )}
           <Button
             onClick={() => setShowForm(true)}
             variant="outline"
-            className="w-full border-orange-500/50 text-orange-400 hover:bg-orange-500/20"
-            data-testid="set-security-question-btn"
+            className="w-full border-rose-500/50 text-rose-400 hover:bg-rose-500/20"
+            data-testid="change-security-pin-btn"
           >
-            {hasQuestion ? 'Change Security Question' : 'Set Security Question'}
+            Change Security PIN
           </Button>
         </>
       ) : (
         <div className="space-y-3">
           <div>
-            <Label className="text-gray-300 text-sm">Select Question</Label>
-            <select
-              value={selectedQuestion}
-              onChange={(e) => setSelectedQuestion(parseInt(e.target.value))}
-              className="w-full mt-1 p-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:border-orange-500 focus:outline-none"
-              data-testid="security-question-select"
-            >
-              {questions.map((q, i) => (
-                <option key={i} value={i} className="bg-gray-800 text-white">
-                  {q}
-                </option>
-              ))}
-            </select>
+            <Label className="text-gray-300 text-sm">Current Security PIN</Label>
+            <Input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={currentPin}
+              onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="Enter current 4-digit PIN"
+              className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-gray-500 text-center tracking-[0.5em]"
+              data-testid="current-security-pin-input"
+            />
+            <p className="text-xs text-gray-500 mt-1">Default: Last 4 digits of your mobile number</p>
           </div>
 
           <div>
-            <Label className="text-gray-300 text-sm">Your Answer</Label>
+            <Label className="text-gray-300 text-sm">New Security PIN</Label>
             <Input
-              type="text"
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Enter your answer"
-              className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
-              data-testid="security-answer-input"
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={newPin}
+              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="Enter new 4-digit PIN"
+              className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-gray-500 text-center tracking-[0.5em]"
+              data-testid="new-security-pin-input"
             />
           </div>
 
           <div>
-            <Label className="text-gray-300 text-sm">Confirm Answer</Label>
+            <Label className="text-gray-300 text-sm">Confirm New PIN</Label>
             <Input
-              type="text"
-              value={confirmAnswer}
-              onChange={(e) => setConfirmAnswer(e.target.value)}
-              placeholder="Confirm your answer"
-              className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
-              data-testid="security-answer-confirm-input"
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={confirmPin}
+              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="Confirm new 4-digit PIN"
+              className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-gray-500 text-center tracking-[0.5em]"
+              data-testid="confirm-security-pin-input"
             />
           </div>
 
-          <p className="text-xs text-gray-400">
-            💡 Answer is case-insensitive. Remember it for PIN reset!
-          </p>
+          {newPin && confirmPin && newPin !== confirmPin && (
+            <p className="text-red-400 text-xs">PINs do not match</p>
+          )}
+          {newPin && confirmPin && newPin === confirmPin && newPin.length === 4 && (
+            <p className="text-green-400 text-xs">PINs match!</p>
+          )}
 
           <div className="flex gap-2">
             <Button
-              onClick={() => { setShowForm(false); setAnswer(''); setConfirmAnswer(''); }}
+              onClick={() => { setShowForm(false); setCurrentPin(''); setNewPin(''); setConfirmPin(''); }}
               variant="outline"
               className="flex-1 border-gray-500/50"
             >
@@ -194,9 +192,9 @@ const SecurityQuestionCard = ({ user }) => {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving || !answer.trim() || answer !== confirmAnswer}
-              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500"
-              data-testid="save-security-question-btn"
+              disabled={saving || currentPin.length !== 4 || newPin.length !== 4 || newPin !== confirmPin}
+              className="flex-1 bg-gradient-to-r from-rose-500 to-pink-500"
+              data-testid="save-security-pin-btn"
             >
               {saving ? 'Saving...' : 'Save'}
             </Button>
@@ -807,8 +805,8 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           </button>
         )}
 
-        {/* Security Question - Important for PIN Reset */}
-        <SecurityQuestionCard user={user} />
+        {/* Security PIN - Important for PIN Reset */}
+        <SecurityPinCard user={user} />
 
         {/* Privacy Settings removed (April 2026) */}
 
