@@ -678,7 +678,7 @@ const DashboardModern = ({ user, onLogout }) => {
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-1 justify-end">
-                  <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">MINING SPEED</p>
+                  <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">REWARD RATE</p>
                 </div>
                 <p className={`text-sm font-bold flex items-center gap-1 ${
                   stats.subscriptionPlan === 'elite' ? 
