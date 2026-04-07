@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { 
   TrendingUp, Star, ArrowUpRight, Clock,
   Home, UserPlus, Users, User, Zap, Crown, Eye, EyeOff,
-  ChevronRight, Sparkles, ShoppingBag,
+  ChevronRight, Sparkles,
   Sun, Moon, Sunrise, Sunset, Building2
 } from 'lucide-react';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
@@ -846,7 +846,6 @@ const DashboardModern = ({ user, onLogout }) => {
             { icon: Star, label: t('rewards'), route: '/daily-rewards', gradient: 'from-purple-600 to-violet-700' },
             { icon: Users, label: t('referrals'), route: '/referrals', gradient: 'from-pink-600 to-rose-700' },
             { icon: Crown, label: t('subscription'), route: '/subscription', gradient: 'from-emerald-600 to-teal-700' },
-            { icon: ShoppingBag, label: t('shop'), route: '/marketplace', gradient: 'from-blue-600 to-indigo-700' },
           ].map((action, index) => (
             <motion.button
               key={action.route}
@@ -968,30 +967,10 @@ const DashboardModern = ({ user, onLogout }) => {
           </h2>
         </div>
 
-        {/* Bill Payments - REMOVED (deprecated April 2026) */}
-
-        {/* Gift Vouchers & Shop Row */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Shop Card */}
-          <button 
-            onClick={() => navigate('/marketplace')}
-            className="bg-gradient-to-br from-purple-900/40 to-indigo-900/30 rounded-2xl border border-purple-500/30 p-4 text-left hover:border-purple-500/50 transition-all"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center mb-3 shadow-lg">
-                <ShoppingBag className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="font-bold text-white text-sm mb-1">{t('shop')}</h3>
-              <p className="text-[10px] text-gray-400">{t('productsDeals')}</p>
-              <div className="mt-2 px-3 py-1 bg-purple-500 text-white text-[10px] font-semibold rounded-full">
-                {t('explore')}
-              </div>
-            </div>
-          </button>
-        </div>
+        {/* Bill Payments, Gift Vouchers, Shop - REMOVED (deprecated April 2026) */}
       </div>
 
-      {/* Redeem/Gift/BBPS sections - REMOVED (deprecated April 2026) */}
+      {/* Redeem/Gift/BBPS/Shop sections - REMOVED (deprecated April 2026) */}
 
       {/* PRC SAVINGS VAULT BANNER REMOVED - Feature deprecated */}
 

@@ -155,7 +155,7 @@ const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
 // Removed: ReferralEarningsHistory (feature removed)
 const ProfileAdvanced = lazy(() => import("@/pages/ProfileAdvanced"));
 // Removed: ReferralDashboard, ReferralDashboardAI - using ReferralsEnhanced
-const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
+// FlashSalesPage - REMOVED (deprecated April 2026)
 // Removed: MyActivity - feature removed
 
 // Social Feature Pages
@@ -344,7 +344,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/network" element={<Navigate to="/referrals" replace />} />
             {/* Marketplace removed - feature deprecated */}
             <Route path="/marketplace" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/flash-sales" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <FlashSalesPage user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/flash-sales" element={<Navigate to="/dashboard" replace />} />
             {/* Orders removed - Marketplace deprecated (December 2025) */}
             <Route path="/orders" element={<Navigate to="/dashboard" replace />} />
             {/* PRC Redeem Statement */}
@@ -377,14 +377,14 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/recurring-deposit" element={<Navigate to="/dashboard" replace />} />
             <Route path="/rd" element={<Navigate to="/dashboard" replace />} />
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
-            <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BankRedeemPage user={user} />) : <Navigate to="/login" />} />
-            <Route path="/prc-to-bank" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BankRedeemPage user={user} />) : <Navigate to="/login" />} />
-            {/* DMT/Fund Transfer REMOVED - Eko API not working, redirect to redeem */}
-            <Route path="/dmt" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
-            <Route path="/fund-transfer" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
-            <Route path="/bank-transfer" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
-            <Route path="/money-transfer" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
-            <Route path="/bbps" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BBPSServices user={user} />) : <Navigate to="/login" />} />
+            <Route path="/bank-redeem" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/prc-to-bank" element={<Navigate to="/dashboard" replace />} />
+            {/* Redeem PRC routes - DEPRECATED April 2026, redirect to dashboard */}
+            <Route path="/dmt" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/fund-transfer" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/bank-transfer" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/money-transfer" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/bbps" element={<Navigate to="/dashboard" replace />} />
             <Route path="/bill-pay" element={<Navigate to="/dashboard" replace />} />
             
             {/* Stock requests removed - stockist system deprecated */}

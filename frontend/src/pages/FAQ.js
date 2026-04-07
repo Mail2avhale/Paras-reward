@@ -18,7 +18,7 @@ const FAQ = () => {
         },
         {
           question: "What is PRC (Paras Reward Coin)?",
-          answer: "PRC is a virtual reward point used ONLY within the Paras Reward platform. It is earned through platform activities and can be used for in-app services and shopping. PRC has NO cash value and cannot be converted to real money directly."
+          answer: "PRC is a virtual reward point used ONLY within the Paras Reward platform. It is earned through platform activities and can be used for in-app services. PRC has NO cash value and cannot be converted to real money directly."
         },
         {
           question: "What PRC is NOT - Important Disclaimer",
@@ -80,7 +80,7 @@ const FAQ = () => {
         },
         {
           question: "How does product redemption work?",
-          answer: "Browse the Marketplace, add products to cart, proceed to checkout. Your PRC balance will be deducted, a delivery charge applies, and you'll receive 25% cashback in your Cashback Wallet."
+          answer: "This feature is currently unavailable. Stay tuned for updates!"
         }
       ]
     },

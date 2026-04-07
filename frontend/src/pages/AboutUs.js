@@ -20,7 +20,7 @@ const AboutUs = () => {
     {
       icon: Users,
       title: 'Reward Redemption',
-      description: 'Paid plan users can use their reward points within the platform for shopping and exclusive benefits.'
+      description: 'Paid plan users can use their reward points within the platform for exclusive benefits.'
     },
     {
       icon: Heart,
@@ -102,7 +102,7 @@ const AboutUs = () => {
               Our platform offers a fun and engaging way to collect promotional rewards. The term "mining" refers to our virtual reward generation system based on user engagement - <span className="text-red-400">not cryptocurrency or real money mining</span>.
             </p>
             <p>
-              Reward points are promotional in nature and can be used through authorized partners for in-app shopping and platform benefits, subject to availability.
+              Reward points are promotional in nature and can be used through authorized partners for platform benefits, subject to availability.
             </p>
             <p className="text-xs text-gray-500 pt-2 border-t border-gray-800">
               <Link to="/disclaimer" className="text-amber-400 hover:underline">Read full Terms & Disclaimer →</Link>
@@ -156,7 +156,7 @@ const AboutUs = () => {
             </div>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-amber-500 text-gray-900 font-bold flex items-center justify-center text-sm">4</div>
-              <p className="text-gray-300 text-sm">Use rewards for shopping & exclusive platform benefits</p>
+              <p className="text-gray-300 text-sm">Use rewards for exclusive platform benefits</p>
             </div>
           </div>
         </div>

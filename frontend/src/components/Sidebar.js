@@ -5,7 +5,6 @@ import {
   Home,
   Zap,
   User,
-  ShoppingBag,
   Trophy,
   Users,
   Crown,

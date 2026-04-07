@@ -270,7 +270,7 @@ const TermsConditions = () => {
                   <h3 className="text-lg font-semibold text-white mt-6">5.2 Usage Options</h3>
                   <p>PRC points can be used for:</p>
                   <ul className="list-disc list-inside space-y-2 ml-4">
-                    <li>In-app shopping and services</li>
+                    <li>In-app services</li>
                     <li>Other services as available on the platform</li>
                   </ul>
 

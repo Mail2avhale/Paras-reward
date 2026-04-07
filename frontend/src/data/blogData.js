@@ -35,7 +35,7 @@ export const blogArticles = [
       <ul>
         <li>Instant UPI cash transfer (Elite only)</li>
         <li>Shopping vouchers</li>
-        <li>Special offers & marketplace access</li>
+        <li>Special offers & premium access</li>
       </ul>
 
       <h2>✅ Is Paras Reward Free?</h2>
@@ -138,7 +138,7 @@ export const blogArticles = [
       <ul>
         <li>Redeem system</li>
         <li>Daily bonus boosts</li>
-        <li>Access to special offers & marketplace</li>
+        <li>Access to special offers & premium features</li>
         <li>Priority support</li>
         <li>Unlimited PRC validity</li>
         <li>Higher earning rates</li>

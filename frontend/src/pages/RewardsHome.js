@@ -280,7 +280,7 @@ const homeTranslations = {
   step3Desc: {
     mr: "व्हाउचर किंवा बिल पेमेंटसाठी वापरा",
     hi: "वाउचर या बिल पेमेंट के लिए उपयोग करें",
-    en: "Use for shopping or platform services"
+    en: "Use for platform services and benefits"
   },
   freeToUse: {
     mr: "विनामूल्य वापरा",

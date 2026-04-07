@@ -31,7 +31,7 @@ const SupportTickets = () => {
   const categories = [
     'Account Issues',
     'Mining',
-    'Marketplace',
+    'Other',
     'Wallet',
     'KYC/Subscription',
     'Orders',
@@ -52,7 +52,7 @@ const SupportTickets = () => {
       'Daily reward not credited',
       'Mining points calculation issue'
     ],
-    'Marketplace': [
+    'Other': [
       'Order not delivered',
       'Wrong product received',
       'Refund request for order',
