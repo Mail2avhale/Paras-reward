@@ -8369,10 +8369,22 @@ async def get_user_subscription_history(uid: str, request: Request):
         {"user_id": uid}
     ).sort("created_at", -1).to_list(100)
     
-    # Get VIP payments (manual payments with screenshot)
-    vip_payments = await db.vip_payments.find(
+    # Get VIP payments (manual payments with screenshot) - query both uid and user_id
+    vip_payments_uid = await db.vip_payments.find(
         {"uid": uid}
     ).sort("created_at", -1).to_list(100)
+    vip_payments_user_id = await db.vip_payments.find(
+        {"user_id": uid}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Deduplicate vip payments
+    seen_vip_ids = set()
+    vip_payments = []
+    for vp in vip_payments_uid + vip_payments_user_id:
+        vp_id = str(vp.get("_id", ""))
+        if vp_id not in seen_vip_ids:
+            seen_vip_ids.add(vp_id)
+            vip_payments.append(vp)
     
     # Get manual subscription payments (legacy)
     manual_payments = await db.subscription_payments.find(
@@ -8451,82 +8463,82 @@ async def get_user_subscription_history(uid: str, request: Request):
     # Sort by created_at descending
     history.sort(key=lambda x: x.get("created_at") or "", reverse=True)
     
-    # Build plan_periods from successful payments + current user data
+    # Build plan_periods from ALL successful payments in history
     plan_periods = []
     now = datetime.now(timezone.utc)
+    duration_map = {"monthly": 28, "quarterly": 84, "half_yearly": 168, "yearly": 365}
     
-    # Current active plan period from user document
     sub_plan = user.get("subscription_plan", "explorer")
-    sub_start = user.get("subscription_start")
     sub_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
     
+    # Determine if user currently has an active subscription
+    current_expiry_dt = None
     if sub_plan and sub_plan != "explorer" and sub_expiry:
         try:
-            expiry_dt = datetime.fromisoformat(str(sub_expiry).replace('Z', '+00:00'))
-            if expiry_dt.tzinfo is None:
-                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-            is_ongoing = expiry_dt > now
-            days_remaining = max(0, (expiry_dt - now).days) if is_ongoing else 0
-            
-            # Find matching payment amount for current plan
-            current_amount = 0
-            current_method = ""
-            for h in history:
-                if h.get("status") in ("completed", "approved", "paid"):
-                    current_amount = h.get("amount", 0) or 0
-                    current_method = h.get("payment_method", "")
-                    break  # Most recent successful payment
-            
-            plan_periods.append({
-                "plan_name": sub_plan.title(),
-                "status": "ongoing" if is_ongoing else "expired",
-                "start_date": str(sub_start) if sub_start else None,
-                "expiry_date": str(sub_expiry),
-                "days_remaining": days_remaining,
-                "amount": current_amount,
-                "payment_method": current_method,
-                "is_current": True
-            })
+            current_expiry_dt = datetime.fromisoformat(str(sub_expiry).replace('Z', '+00:00'))
+            if current_expiry_dt.tzinfo is None:
+                current_expiry_dt = current_expiry_dt.replace(tzinfo=timezone.utc)
         except Exception:
             pass
     
-    # Build historical periods from successful payments (excluding current)
-    duration_map = {"monthly": 28, "quarterly": 84, "half_yearly": 168, "yearly": 365}
     successful = [h for h in history if h.get("status") in ("completed", "approved", "paid")]
     
-    for payment in successful:
-        created = payment.get("created_at") or payment.get("activated_at")
+    for i, payment in enumerate(successful):
+        created = payment.get("activated_at") or payment.get("created_at")
         if not created:
             continue
         try:
             start_dt = datetime.fromisoformat(str(created).replace('Z', '+00:00'))
             if start_dt.tzinfo is None:
                 start_dt = start_dt.replace(tzinfo=timezone.utc)
+            
             duration_days = payment.get("duration_days") or duration_map.get(payment.get("plan_type", "monthly"), 28)
             end_dt = start_dt + timedelta(days=duration_days)
             
-            # Skip if this matches the current active period
-            if plan_periods and plan_periods[0].get("is_current"):
-                current_start = plan_periods[0].get("start_date")
-                if current_start and abs((start_dt - datetime.fromisoformat(str(current_start).replace('Z', '+00:00')).replace(tzinfo=timezone.utc if datetime.fromisoformat(str(current_start).replace('Z', '+00:00')).tzinfo is None else datetime.fromisoformat(str(current_start).replace('Z', '+00:00')).tzinfo)).total_seconds()) < 86400:
-                    continue
+            # For the most recent payment, use user's actual expiry if available
+            is_most_recent = (i == 0)
+            if is_most_recent and current_expiry_dt:
+                end_dt = current_expiry_dt
             
             is_ongoing = end_dt > now
+            days_remaining = max(0, (end_dt - now).days) if is_ongoing else 0
+            
             plan_periods.append({
-                "plan_name": (payment.get("plan_name") or "Elite").title(),
-                "status": "ongoing" if is_ongoing else "expired",
+                "plan_name": (payment.get("plan_name") or sub_plan or "Elite").title(),
+                "status": "ongoing" if (is_most_recent and is_ongoing and current_expiry_dt) else ("ongoing" if is_ongoing else "expired"),
                 "start_date": start_dt.isoformat(),
                 "expiry_date": end_dt.isoformat(),
-                "days_remaining": max(0, (end_dt - now).days) if is_ongoing else 0,
-                "amount": payment.get("amount", 0),
+                "days_remaining": days_remaining,
+                "amount": payment.get("amount", 0) or 0,
                 "payment_method": payment.get("payment_method", ""),
-                "is_current": False
+                "is_current": is_most_recent and is_ongoing
             })
         except Exception:
             continue
     
+    # If no successful payments but user has active plan (admin-activated), add from user doc
+    if not plan_periods and sub_plan and sub_plan != "explorer" and current_expiry_dt:
+        sub_start = user.get("subscription_start")
+        plan_periods.append({
+            "plan_name": sub_plan.title(),
+            "status": "ongoing" if current_expiry_dt > now else "expired",
+            "start_date": str(sub_start) if sub_start else None,
+            "expiry_date": str(sub_expiry),
+            "days_remaining": max(0, (current_expiry_dt - now).days) if current_expiry_dt > now else 0,
+            "amount": 0,
+            "payment_method": "Admin Activated",
+            "is_current": True
+        })
+    
     # Sort: ongoing first, then by start_date descending
-    plan_periods.sort(key=lambda x: (0 if x.get("status") == "ongoing" else 1, -(datetime.fromisoformat(str(x.get("start_date", "2000-01-01")).replace('Z', '+00:00')).timestamp() if x.get("start_date") else 0)))
+    def sort_key(x):
+        status_order = 0 if x.get("status") == "ongoing" else 1
+        try:
+            ts = datetime.fromisoformat(str(x.get("start_date", "2000-01-01")).replace('Z', '+00:00')).timestamp()
+        except Exception:
+            ts = 0
+        return (status_order, -ts)
+    plan_periods.sort(key=sort_key)
     
     return {
         "user_id": uid,
@@ -14999,10 +15011,10 @@ async def get_performance_summary(user_id: str, request: Request):
         # 1. Total Subscription Paid (₹)
         total_subscription_inr = 0
 
-        # a) INR payments from vip_payments (manual/razorpay)
+        # a) INR payments from vip_payments (query both uid and user_id)
         try:
             vip_pipeline = [
-                {"$match": {"user_id": user_id, "status": {"$in": success_statuses}}},
+                {"$match": {"$or": [{"user_id": user_id}, {"uid": user_id}], "status": {"$in": success_statuses}}},
                 {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
             ]
             vip_result = await db.vip_payments.aggregate(vip_pipeline).to_list(1)
@@ -15011,7 +15023,7 @@ async def get_performance_summary(user_id: str, request: Request):
         except Exception:
             pass
 
-        # b) Razorpay orders (only if vip_payments doesn't already capture them)
+        # b) Razorpay orders
         try:
             raz_pipeline = [
                 {"$match": {"user_id": user_id, "status": {"$in": success_statuses}}},
@@ -15020,7 +15032,7 @@ async def get_performance_summary(user_id: str, request: Request):
             raz_result = await db.razorpay_orders.aggregate(raz_pipeline).to_list(1)
             if raz_result:
                 raz_total = float(raz_result[0].get("total", 0) or 0)
-                # Only add if vip_payments was empty (avoid double counting)
+                # Add Razorpay total (avoid double counting: only if not already in vip_payments)
                 if total_subscription_inr == 0:
                     total_subscription_inr += raz_total
         except Exception:
