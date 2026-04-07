@@ -15,8 +15,26 @@ import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/Pro
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
 // BurningIndicator removed - burning concept deprecated
-import HolidayCalendar from '@/components/HolidayCalendar';
 import MiningWidget from '@/components/MiningWidget';
+
+// Live Date & Time component for dashboard header
+const LiveDateTime = () => {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  
+  const day = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  
+  return (
+    <div className="text-right" data-testid="live-datetime">
+      <p className="text-white text-sm font-semibold leading-tight">{time}</p>
+      <p className="text-gray-500 text-[10px]">{day}</p>
+    </div>
+  );
+};
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -341,7 +359,7 @@ const DashboardModern = ({ user, onLogout }) => {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {/* REMOVED: Plan badge and Profile button from header - per user request */}
+            <LiveDateTime />
           </div>
         </div>
       </div>
@@ -1029,10 +1047,8 @@ const DashboardModern = ({ user, onLogout }) => {
         userData={userData}
       />
 
-      {/* Holiday Calendar */}
-      <div className="px-4 pb-24">
-        <HolidayCalendar />
-      </div>
+      {/* Holiday Calendar - REMOVED per user request */}
+      <div className="pb-24" />
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 z-50">
