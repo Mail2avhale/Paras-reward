@@ -32,7 +32,7 @@ const ReferralsEnhanced = ({ user }) => {
       // Fetch network stats and referrals in PARALLEL with timeout
       const [statsRes, referralsRes] = await Promise.all([
         axios.get(`${API}/api/growth/network-stats/${user.uid}`, { timeout: 4000 }).catch(() => null),
-        axios.get(`${API}/api/referrals/${user.uid}/direct-list`, { timeout: 4000 }).catch(() => null)
+        axios.get(`${API}/api/notifications/referrals/${user.uid}/direct-list`, { timeout: 4000 }).catch(() => null)
       ]);
       
       if (statsRes?.data?.success) {
@@ -215,38 +215,47 @@ const ReferralsEnhanced = ({ user }) => {
               </span>
             </div>
             
-            <div className="divide-y divide-gray-800 max-h-64 overflow-y-auto">
+            <div className="divide-y divide-gray-800 max-h-[500px] overflow-y-auto">
               {directReferrals.map((ref, index) => (
-                <div key={ref.uid || index} className="px-5 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                        ref.is_active 
-                          ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/30' 
-                          : 'bg-red-500/10 text-red-400 ring-2 ring-red-500/20'
-                      }`}>
-                        {ref.name?.charAt(0)?.toUpperCase() || 'U'}
+                <div key={ref.uid || index} className="px-5 py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                          ref.is_active 
+                            ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/30' 
+                            : 'bg-red-500/10 text-red-400 ring-2 ring-red-500/20'
+                        }`}>
+                          {ref.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-gray-900 ${
+                          ref.is_active ? 'bg-emerald-500' : 'bg-red-500'
+                        }`} />
                       </div>
-                      <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-gray-900 ${
-                        ref.is_active ? 'bg-emerald-500' : 'bg-red-500'
-                      }`} />
+                      <div>
+                        <p className="text-white text-sm font-medium">{ref.name || 'User'}</p>
+                        <p className="text-xs text-gray-500 font-mono">
+                          {ref.mobile ? ref.mobile.slice(0, 2) + '****' + ref.mobile.slice(-4) : '—'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-white text-sm font-medium">{ref.name || 'User'}</p>
-                      <p className="text-xs text-gray-500">
-                        {ref.subscription_plan && ref.subscription_plan.toLowerCase() !== 'explorer' 
-                          ? `Elite Member` 
-                          : 'Explorer'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
                     {ref.is_active ? (
                       <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-lg font-medium">Active</span>
                     ) : (
                       <span className="px-2 py-1 bg-red-500/15 text-red-400 text-xs rounded-lg font-medium">Inactive</span>
                     )}
-                    <ChevronRight className="w-4 h-4 text-gray-600" />
+                  </div>
+                  
+                  {/* PRC Stats */}
+                  <div className="grid grid-cols-2 gap-2 ml-[52px]">
+                    <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-1.5">
+                      <p className="text-[10px] text-gray-500 uppercase">PRC Earned</p>
+                      <p className="text-emerald-400 text-sm font-bold">{Number(ref.prc_earned || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                    </div>
+                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-1.5">
+                      <p className="text-[10px] text-gray-500 uppercase">PRC Used</p>
+                      <p className="text-amber-400 text-sm font-bold">{Number(ref.prc_used || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                    </div>
                   </div>
                 </div>
               ))}

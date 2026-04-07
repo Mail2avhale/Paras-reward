@@ -654,6 +654,7 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
             "uid": 1, 
             "name": 1, 
             "email": 1,
+            "mobile": 1,
             "avatar": 1, 
             "profile_picture": 1,
             "city": 1, 
@@ -664,7 +665,10 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
             "mining_session_end": 1,
             "last_login": 1,
             "created_at": 1,
-            "allow_messages": 1
+            "allow_messages": 1,
+            "prc_balance": 1,
+            "total_mined": 1,
+            "total_redeemed": 1
         }
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
@@ -724,6 +728,7 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
         result.append({
             "uid": ref["uid"],
             "name": ref.get("name", "Unknown"),
+            "mobile": ref.get("mobile", ""),
             "avatar": ref.get("avatar") or ref.get("profile_picture"),
             "city": ref.get("city", ""),
             "state": ref.get("state", ""),
@@ -731,7 +736,9 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
             "is_active": is_active,
             "joined_at": ref.get("created_at", ""),
             "last_seen": ref.get("last_login", ""),
-            "can_message": ref.get("allow_messages", True)
+            "can_message": ref.get("allow_messages", True),
+            "prc_earned": round(ref.get("total_mined", 0) or 0, 2),
+            "prc_used": round(ref.get("total_redeemed", 0) or 0, 2)
         })
     
     return {
