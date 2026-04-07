@@ -147,7 +147,8 @@ const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
 // Marketplace & Orders removed - feature deprecated (December 2025)
 // const Orders = lazy(() => import("@/pages/Orders"));
 // VIPMembership removed - replaced by SubscriptionPlans (new 4-tier system)
-// SubscriptionPlans - REMOVED (deprecated April 2026)
+const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
+const BankRedeemPage = lazy(() => import("@/pages/BankRedeemPage"));
 // Removed: WalletNew (withdrawal functionality removed)
 // Removed: Leaderboard (feature removed for AdMob compliance)
 // Removed: ReferralEarningsHistory (feature removed)
@@ -350,7 +351,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/usage-history" element={user ? <Suspense fallback={<LoadingFallback />}><PRCUsageHistory user={user} /></Suspense> : <Navigate to="/login" />} />
             {/* Removed: Activity page */}
             <Route path="/vip" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/subscription" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/subscription" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Suspense fallback={<LoadingFallback />}><SubscriptionPlans user={user} onLogout={handleLogout} onBalanceUpdate={onBalanceUpdate} /></Suspense>) : <Navigate to="/login" />} />
             <Route path="/my-invoices" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <MyInvoices user={user} />) : <Navigate to="/login" />} />
             <Route path="/invoices" element={<Navigate to="/my-invoices" replace />} />
             <Route path="/kyc" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <KYCVerification user={user} />) : <Navigate to="/login" />} />
@@ -375,7 +376,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/recurring-deposit" element={<Navigate to="/dashboard" replace />} />
             <Route path="/rd" element={<Navigate to="/dashboard" replace />} />
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
-            <Route path="/bank-redeem" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Suspense fallback={<LoadingFallback />}><BankRedeemPage user={user} onLogout={handleLogout} onBalanceUpdate={onBalanceUpdate} /></Suspense>) : <Navigate to="/login" />} />
             <Route path="/prc-to-bank" element={<Navigate to="/dashboard" replace />} />
             {/* Redeem PRC routes - DEPRECATED April 2026, redirect to dashboard */}
             <Route path="/dmt" element={<Navigate to="/dashboard" replace />} />

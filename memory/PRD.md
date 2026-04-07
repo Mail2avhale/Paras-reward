@@ -7,6 +7,13 @@
 - Extracted 7 new modular route files: admin_accounting (4954), notifications_routes (3010), admin_prc_balance (1542), ai_routes (1050), manager_routes (976), admin_prc_economy (221)
 - All 117 extracted routes verified working via curl (401/422/200 responses correct)
 
+## COMPLETED: Restore Subscription + Bank Redeem Pages + Remove PRC Payment (P0) - 7 April 2026
+- Restored SubscriptionPlans.js (1803 lines) — removed only "Pay with PRC" option (Razorpay + Manual payment intact)
+- Restored BankRedeemPage.js (743 lines) + CategoryLimitsDisplay.js (126 lines)
+- Re-added routes in App.js (/subscription, /bank-redeem)
+- Re-added Sidebar menu items (Subscription, Redeem to Bank)
+- Added PRC/hr alongside PRC/sec in MiningWidget
+
 ## COMPLETED: Reward Page Removed + Mining Widget on Dashboard (P0) - 7 April 2026
 - Created MiningWidget.js component (compact self-contained mining logic + UI)
 - Embedded mining widget on Dashboard below Plan Card (Time, Earnings, Progress Bar, Collect button)

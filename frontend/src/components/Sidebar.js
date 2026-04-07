@@ -10,6 +10,8 @@ import {
   LogOut,
   ChevronRight,
   FileText,
+  Crown,
+  Banknote,
   Shield
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -52,11 +54,8 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
 
   const menuItems = [
     { id: 'home', label: t('home'), icon: Home, route: '/dashboard' },
-    // Rewards integrated into Dashboard (April 2026)
-    // Tap Game removed - feature deprecated
-    // Marketplace removed - feature deprecated
-    // Orders removed - feature deprecated
-    // Gift Vouchers / Bill Payments - REMOVED (deprecated April 2026)
+    { id: 'subscription', label: t('subscription') || 'Subscription', icon: Crown, route: '/subscription' },
+    { id: 'bank-redeem', label: 'Redeem to Bank', icon: Banknote, route: '/bank-redeem' },
     { id: 'prc-statement', label: 'PRC Statement', icon: FileText, route: '/prc-statement' },
     { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
   ];

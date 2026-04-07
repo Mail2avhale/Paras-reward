@@ -260,10 +260,14 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
               <span className="text-amber-500 font-semibold text-sm ml-1">PRC</span>
             </div>
 
-            {/* PRC/sec rate */}
-            <div className="flex items-center justify-center gap-1 mt-2">
-              <Zap className="w-3 h-3 text-emerald-500" />
-              <p className="text-emerald-500 text-xs font-mono">+{(miningRate / 3600).toFixed(4)} PRC/sec</p>
+            {/* PRC/sec + PRC/hr rate */}
+            <div className="flex items-center justify-center gap-3 mt-2">
+              <div className="flex items-center gap-1">
+                <Zap className="w-3 h-3 text-emerald-500" />
+                <p className="text-emerald-500 text-xs font-mono">+{(miningRate / 3600).toFixed(4)} PRC/sec</p>
+              </div>
+              <span className="text-zinc-600 text-xs">|</span>
+              <p className="text-amber-400 text-xs font-mono">{miningRate.toFixed(1)} PRC/hr</p>
             </div>
 
             {/* Progress Bar */}
