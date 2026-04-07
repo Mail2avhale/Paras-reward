@@ -610,6 +610,138 @@ async def debug_kyc():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== USER-FACING KYC DOCUMENT VIEW & UPDATE ====================
+
+@router.get("/my-documents/{uid}")
+async def get_my_kyc_documents(uid: str):
+    """Get user's own KYC documents with masked numbers and images"""
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        kyc = await db.kyc.find_one({"uid": uid}, {"_id": 0})
+        
+        # Build response with masked numbers
+        aadhaar_raw = (kyc or {}).get("aadhaar_number") or user.get("aadhaar_number") or user.get("aadhaar") or ""
+        pan_raw = (kyc or {}).get("pan_number") or user.get("pan_number") or user.get("pan") or ""
+        
+        # Mask: Aadhaar XXXX XXXX 1234, PAN ABCD****F
+        masked_aadhaar = None
+        if aadhaar_raw and len(aadhaar_raw) >= 4:
+            clean = aadhaar_raw.replace(" ", "")
+            masked_aadhaar = "XXXX XXXX " + clean[-4:]
+        
+        masked_pan = None
+        if pan_raw and len(pan_raw) >= 5:
+            masked_pan = pan_raw[:4] + "****" + pan_raw[-1:]
+        
+        result = {
+            "has_documents": bool(kyc),
+            "kyc_status": (kyc or {}).get("status") or user.get("kyc_status", "not_submitted"),
+            "full_name": (kyc or {}).get("full_name") or user.get("name", ""),
+            "aadhaar_masked": masked_aadhaar,
+            "pan_masked": masked_pan,
+            "submitted_at": (kyc or {}).get("submitted_at"),
+            "verified_at": (kyc or {}).get("verified_at"),
+            "rejection_reason": (kyc or {}).get("rejection_reason"),
+            # Images (base64) - only return if they exist
+            "aadhaar_front": (kyc or {}).get("aadhaar_front_base64") or None,
+            "aadhaar_back": (kyc or {}).get("aadhaar_back_base64") or None,
+            "pan_front": (kyc or {}).get("pan_front_base64") or None,
+            "selfie": (kyc or {}).get("selfie_base64") or None
+        }
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/update/{uid}")
+async def update_kyc(uid: str, kyc_data: KYCSubmit):
+    """Update KYC documents - resets status to pending for re-verification"""
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        now = datetime.now(timezone.utc).isoformat()
+        
+        # Build update data
+        update_data = {
+            "full_name": kyc_data.full_name,
+            "status": "pending",
+            "updated_at": now,
+            "previous_status": "updated_by_user"
+        }
+        
+        # Update document fields based on what's provided
+        if kyc_data.aadhaar_number:
+            aadhaar_clean = kyc_data.aadhaar_number.replace(" ", "").strip()
+            if len(aadhaar_clean) != 12 or not aadhaar_clean.isdigit():
+                raise HTTPException(status_code=400, detail="Invalid Aadhaar number. Must be 12 digits.")
+            
+            # Check uniqueness
+            is_unique = await check_unique_fields("aadhaar_number", aadhaar_clean, exclude_uid=uid)
+            if not is_unique:
+                raise HTTPException(status_code=400, detail="This Aadhaar number is already registered with another account.")
+            
+            update_data["aadhaar_number"] = aadhaar_clean
+            await db.users.update_one({"uid": uid}, {"$set": {"aadhaar_number": aadhaar_clean}})
+        
+        if kyc_data.pan_number:
+            pan_clean = kyc_data.pan_number.replace(" ", "").strip().upper()
+            if len(pan_clean) != 10:
+                raise HTTPException(status_code=400, detail="Invalid PAN number. Must be 10 characters.")
+            
+            is_unique = await check_unique_fields("pan_number", pan_clean, exclude_uid=uid)
+            if not is_unique:
+                raise HTTPException(status_code=400, detail="This PAN number is already registered with another account.")
+            
+            update_data["pan_number"] = pan_clean
+            await db.users.update_one({"uid": uid}, {"$set": {"pan_number": pan_clean}})
+        
+        if kyc_data.aadhaar_front_base64:
+            update_data["aadhaar_front_base64"] = kyc_data.aadhaar_front_base64
+        if kyc_data.aadhaar_back_base64:
+            update_data["aadhaar_back_base64"] = kyc_data.aadhaar_back_base64
+        if kyc_data.pan_front_base64:
+            update_data["pan_front_base64"] = kyc_data.pan_front_base64
+        if kyc_data.selfie_base64:
+            update_data["selfie_base64"] = kyc_data.selfie_base64
+        
+        # Update or insert KYC document
+        existing = await db.kyc.find_one({"uid": uid})
+        if existing:
+            await db.kyc.update_one({"uid": uid}, {"$set": update_data})
+        else:
+            update_data["uid"] = uid
+            update_data["kyc_id"] = str(uuid.uuid4())
+            update_data["submitted_at"] = now
+            await db.kyc.insert_one(update_data)
+        
+        # Reset user kyc_status to pending
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "kyc_status": "pending",
+                "kyc_updated_at": now
+            }}
+        )
+        
+        return {
+            "success": True,
+            "message": "KYC documents updated successfully. Your documents will be re-verified within 1-3 business days."
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 # ==================== AUTO KYC VERIFICATION (EKO API) ====================
 from services.eko_kyc_service import verify_pan_lite, send_aadhaar_otp, verify_aadhaar_otp

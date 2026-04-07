@@ -16,6 +16,222 @@ import { formatAadhaar, formatPAN, validateAadhaar, validatePAN } from '@/utils/
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Component to show user's KYC documents with update option
+const MyKYCDocuments = ({ user, onUpdate }) => {
+  const [docs, setDocs] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showUpdate, setShowUpdate] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState('aadhaar');
+  const [updateData, setUpdateData] = useState({ full_name: '', aadhaar_number: '', pan_number: '', aadhaar_front: '', aadhaar_back: '', pan_front: '' });
+  const [previewImage, setPreviewImage] = useState(null);
+
+  useEffect(() => {
+    if (user?.uid) {
+      axios.get(`${API}/kyc/my-documents/${user.uid}`, { timeout: 10000 })
+        .then(res => { setDocs(res.data); setUpdateData(prev => ({ ...prev, full_name: res.data.full_name || '' })); })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, [user]);
+
+  const handleImageUpload = (field) => (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Image must be less than 5MB'); return; }
+    const reader = new FileReader();
+    reader.onload = () => setUpdateData(prev => ({ ...prev, [field]: reader.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpdate = async () => {
+    if (!updateData.full_name) { toast.error('Full name is required'); return; }
+    setUpdating(true);
+    try {
+      await axios.post(`${API}/kyc/update/${user.uid}`, {
+        full_name: updateData.full_name,
+        aadhaar_number: updateData.aadhaar_number || undefined,
+        pan_number: updateData.pan_number || undefined,
+        aadhaar_front_base64: updateData.aadhaar_front || undefined,
+        aadhaar_back_base64: updateData.aadhaar_back || undefined,
+        pan_front_base64: updateData.pan_front || undefined,
+      }, { timeout: 30000 });
+      toast.success('KYC updated! Re-verification in 1-3 days.');
+      setShowUpdate(false);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Update failed');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (loading) return <div className="px-5 mb-6"><div className="h-40 bg-gray-800 rounded-2xl animate-pulse" /></div>;
+
+  return (
+    <div className="px-5 mb-6">
+      {/* Verified Banner */}
+      <div className="rounded-2xl p-5 bg-emerald-500/10 border border-emerald-500/30 mb-4">
+        <div className="flex items-center gap-4">
+          <CheckCircle className="w-12 h-12 text-emerald-500" />
+          <div>
+            <p className="font-bold text-lg text-emerald-400">KYC Verified!</p>
+            <p className="text-gray-400 text-sm">You can now redeem PRC and access all features.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Document Details */}
+      {docs && (
+        <div className="rounded-2xl bg-gray-900/80 border border-gray-800 overflow-hidden">
+          <div className="p-4 border-b border-gray-800">
+            <h3 className="text-white font-semibold flex items-center gap-2">
+              <Shield className="w-4 h-4 text-emerald-400" /> Your KYC Documents
+            </h3>
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* Name */}
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400 text-sm">Full Name</span>
+              <span className="text-white font-medium text-sm">{docs.full_name || '-'}</span>
+            </div>
+
+            {/* Aadhaar */}
+            {docs.aadhaar_masked && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">Aadhaar Number</span>
+                  <span className="text-white font-mono text-sm tracking-wider">{docs.aadhaar_masked}</span>
+                </div>
+                {(docs.aadhaar_front || docs.aadhaar_back) && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {docs.aadhaar_front && (
+                      <button onClick={() => setPreviewImage(docs.aadhaar_front)} className="relative rounded-lg overflow-hidden border border-gray-700 hover:border-emerald-500 transition-all">
+                        <img src={docs.aadhaar_front} alt="Aadhaar Front" className="w-full h-20 object-cover" />
+                        <span className="absolute bottom-0 left-0 right-0 bg-black/70 text-[10px] text-gray-300 text-center py-0.5">Front</span>
+                      </button>
+                    )}
+                    {docs.aadhaar_back && (
+                      <button onClick={() => setPreviewImage(docs.aadhaar_back)} className="relative rounded-lg overflow-hidden border border-gray-700 hover:border-emerald-500 transition-all">
+                        <img src={docs.aadhaar_back} alt="Aadhaar Back" className="w-full h-20 object-cover" />
+                        <span className="absolute bottom-0 left-0 right-0 bg-black/70 text-[10px] text-gray-300 text-center py-0.5">Back</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* PAN */}
+            {docs.pan_masked && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400 text-sm">PAN Number</span>
+                  <span className="text-white font-mono text-sm tracking-wider">{docs.pan_masked}</span>
+                </div>
+                {docs.pan_front && (
+                  <button onClick={() => setPreviewImage(docs.pan_front)} className="relative rounded-lg overflow-hidden border border-gray-700 hover:border-emerald-500 transition-all">
+                    <img src={docs.pan_front} alt="PAN Card" className="w-full h-20 object-cover" />
+                    <span className="absolute bottom-0 left-0 right-0 bg-black/70 text-[10px] text-gray-300 text-center py-0.5">PAN Card</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Dates */}
+            {docs.verified_at && (
+              <div className="flex items-center justify-between pt-2 border-t border-gray-800">
+                <span className="text-gray-500 text-xs">Verified On</span>
+                <span className="text-gray-400 text-xs">{new Date(docs.verified_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Update KYC Button */}
+          <div className="p-4 border-t border-gray-800">
+            <Button
+              onClick={() => setShowUpdate(!showUpdate)}
+              variant="outline"
+              className="w-full border-amber-500/50 text-amber-400 hover:bg-amber-500/10"
+              data-testid="update-kyc-btn"
+            >
+              <Upload className="w-4 h-4 mr-2" /> Update KYC Documents
+            </Button>
+            <p className="text-gray-600 text-[10px] mt-2 text-center">Status will reset to Pending for re-verification</p>
+          </div>
+        </div>
+      )}
+
+      {/* Update Form */}
+      {showUpdate && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-4 rounded-2xl bg-gray-900/80 border border-amber-500/30 p-4">
+          <h3 className="text-amber-400 font-semibold mb-4 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" /> Update KYC Documents
+          </h3>
+          <p className="text-gray-400 text-xs mb-4">After update, your KYC status will be reset to Pending and admin will re-verify.</p>
+
+          {/* Full Name */}
+          <div className="mb-4">
+            <label className="text-gray-400 text-sm mb-1 block">Full Name (as per document)</label>
+            <Input value={updateData.full_name} onChange={(e) => setUpdateData(prev => ({ ...prev, full_name: e.target.value }))} className="bg-gray-800 border-gray-700 text-white" placeholder="Enter full name" data-testid="update-kyc-name" />
+          </div>
+
+          {/* Document Type */}
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <button onClick={() => setSelectedDoc('aadhaar')} className={`py-2 rounded-lg text-sm font-medium ${selectedDoc === 'aadhaar' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50' : 'bg-gray-800 text-gray-400 border border-gray-700'}`}>Aadhaar</button>
+            <button onClick={() => setSelectedDoc('pan')} className={`py-2 rounded-lg text-sm font-medium ${selectedDoc === 'pan' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50' : 'bg-gray-800 text-gray-400 border border-gray-700'}`}>PAN Card</button>
+          </div>
+
+          {selectedDoc === 'aadhaar' ? (
+            <div className="space-y-3">
+              <Input type="tel" maxLength={12} value={updateData.aadhaar_number} onChange={(e) => setUpdateData(prev => ({ ...prev, aadhaar_number: e.target.value.replace(/\D/g, '').slice(0, 12) }))} className="bg-gray-800 border-gray-700 text-white text-center tracking-widest" placeholder="12-digit Aadhaar Number" data-testid="update-aadhaar-number" />
+              <div className="grid grid-cols-2 gap-2">
+                <label className="cursor-pointer rounded-lg border-2 border-dashed border-gray-700 hover:border-amber-500 p-3 text-center transition-all">
+                  <Camera className="w-5 h-5 text-gray-500 mx-auto mb-1" />
+                  <span className="text-xs text-gray-400">{updateData.aadhaar_front ? 'Front Uploaded' : 'Aadhaar Front'}</span>
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload('aadhaar_front')} />
+                </label>
+                <label className="cursor-pointer rounded-lg border-2 border-dashed border-gray-700 hover:border-amber-500 p-3 text-center transition-all">
+                  <Camera className="w-5 h-5 text-gray-500 mx-auto mb-1" />
+                  <span className="text-xs text-gray-400">{updateData.aadhaar_back ? 'Back Uploaded' : 'Aadhaar Back'}</span>
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload('aadhaar_back')} />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Input maxLength={10} value={updateData.pan_number} onChange={(e) => setUpdateData(prev => ({ ...prev, pan_number: e.target.value.toUpperCase().slice(0, 10) }))} className="bg-gray-800 border-gray-700 text-white text-center tracking-widest" placeholder="PAN Number (ABCDE1234F)" data-testid="update-pan-number" />
+              <label className="cursor-pointer rounded-lg border-2 border-dashed border-gray-700 hover:border-amber-500 p-4 text-center transition-all block">
+                <Camera className="w-5 h-5 text-gray-500 mx-auto mb-1" />
+                <span className="text-xs text-gray-400">{updateData.pan_front ? 'PAN Uploaded' : 'Upload PAN Card'}</span>
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload('pan_front')} />
+              </label>
+            </div>
+          )}
+
+          <div className="flex gap-2 mt-4">
+            <Button onClick={() => setShowUpdate(false)} variant="outline" className="flex-1 border-gray-600">Cancel</Button>
+            <Button onClick={handleUpdate} disabled={updating || !updateData.full_name} className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500" data-testid="submit-kyc-update-btn">
+              {updating ? 'Updating...' : 'Update & Submit'}
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
+          <div className="max-w-lg w-full">
+            <img src={previewImage} alt="Document Preview" className="w-full rounded-xl" />
+            <p className="text-center text-gray-400 text-sm mt-4">Tap anywhere to close</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const KYCVerification = ({ user }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
@@ -258,7 +474,7 @@ const KYCVerification = ({ user }) => {
 
   // Use kycStatusInfo if available for most accurate status
   const actualKycStatus = kycStatusInfo?.kyc_status || userData?.kyc_status;
-  const isVerified = actualKycStatus === 'verified';
+  const isVerified = actualKycStatus === 'verified' || actualKycStatus === 'approved';
   // Use kycStatusInfo for accurate detection
   const isOrphaned = kycStatusInfo?.is_orphaned;
   const canResubmit = kycStatusInfo?.can_resubmit;
@@ -345,21 +561,9 @@ const KYCVerification = ({ user }) => {
         </div>
       )}
 
-      {/* Status Card for Verified - Show if KYC is verified OR document is verified */}
+      {/* Status Card for Verified - Show documents + update option */}
       {(isVerified || documentStatus === 'verified') && (
-        <div className="px-5 mb-6">
-          <div className="rounded-2xl p-5 bg-emerald-500/10 border border-emerald-500/30">
-            <div className="flex items-center gap-4">
-              <CheckCircle className="w-12 h-12 text-emerald-500" />
-              <div>
-                <p className="font-bold text-lg text-emerald-400">KYC Verified!</p>
-                <p className="text-gray-400 text-sm">
-                  You can now redeem PRC and access all features.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <MyKYCDocuments user={user} onUpdate={() => fetchData()} />
       )}
 
       {/* Status Card for Pending Review - Only if actually pending with document */}
