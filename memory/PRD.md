@@ -2,6 +2,13 @@
 
 ## LAST UPDATED - 8 April 2026
 
+## COMPLETED: Dashboard Redeem Limit Card Restored - 8 April 2026
+- Added Redeem Limit card on Dashboard (after Mining Widget)
+- Shows Total Limit, Redeemed, Available with progress bar
+- Fetches from /api/user/{uid}/redeem-limit (non-blocking)
+- Click navigates to /bank-redeem page
+- Fixed early return bug preventing API call when combined dashboard API succeeds
+
 ## COMPLETED: P0 Security Fixes (Code Quality) - 8 April 2026
 - Removed SSL verify=False from bbps_services.py (2 instances) — MITM vulnerability fix
 - Fixed XSS in AdminRazorpaySubscriptions.js printInvoice — DOMPurify.sanitize on full body content

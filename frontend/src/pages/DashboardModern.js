@@ -84,6 +84,7 @@ const DashboardModern = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('home');
   const [miningHistory, setMiningHistory] = useState([]);
   const [birthdayGreeting, setBirthdayGreeting] = useState(null);
+  const [redeemLimit, setRedeemLimit] = useState(null);
 
   // Stats - Initialize with user prop data to prevent flickering
   const [stats, setStats] = useState({
@@ -179,6 +180,15 @@ const DashboardModern = ({ user, onLogout }) => {
           
           clearTimeout(timeoutId);
           setLoading(false);
+          
+          // Non-blocking: fetch redeem limit & birthday after main load
+          axios.get(`${API}/user/${user.uid}/redeem-limit`).then(res => {
+            if (res.data?.success) setRedeemLimit(res.data.limit);
+          }).catch(() => {});
+          axios.get(`${API}/user/${user.uid}/birthday-check`).then(res => {
+            if (res.data?.is_birthday) setBirthdayGreeting(res.data);
+          }).catch(() => {});
+          
           return; // Success - exit early
         }
       } catch (combinedError) {
@@ -254,6 +264,16 @@ const DashboardModern = ({ user, onLogout }) => {
         }
       } catch (bdError) {
         // console.log('Birthday check failed');
+      }
+
+      // Fetch redeem limit (non-blocking)
+      try {
+        const redeemRes = await axios.get(`${API}/user/${user.uid}/redeem-limit`);
+        if (redeemRes.data?.success) {
+          setRedeemLimit(redeemRes.data.limit);
+        }
+      } catch (rlError) {
+        // Redeem limit fetch failed - non-critical
       }
       
     } catch (error) {
@@ -833,6 +853,58 @@ const DashboardModern = ({ user, onLogout }) => {
           if (userData) setUserData(prev => ({ ...prev, prc_balance: newBalance }));
         }} />
       </div>
+
+      {/* Redeem Limit Card */}
+      {redeemLimit && (
+        <div className="px-5 mb-4" data-testid="dashboard-redeem-limit-card">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="rounded-xl p-4 border border-gray-800 bg-gray-900/80 cursor-pointer"
+            onClick={() => navigate('/bank-redeem')}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                  <Building2 className="w-4 h-4 text-emerald-400" />
+                </div>
+                <span className="text-white font-semibold text-sm">Redeem Limit</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-500" />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-center mb-3">
+              <div>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Total Limit</p>
+                <p className="text-white text-sm font-bold">{Number(redeemLimit.total_limit || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Redeemed</p>
+                <p className="text-amber-400 text-sm font-bold">{Number(redeemLimit.total_redeemed || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Available</p>
+                <p className="text-emerald-400 text-sm font-bold">{Number(redeemLimit.effective_available || redeemLimit.available || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full rounded-full transition-all duration-500"
+                style={{ 
+                  width: `${Math.min(100, Math.max(0, ((redeemLimit.total_redeemed || 0) / Math.max(1, redeemLimit.total_limit || 1)) * 100))}%`,
+                  background: 'linear-gradient(90deg, #10b981, #34d399)'
+                }}
+              />
+            </div>
+            <p className="text-gray-600 text-[10px] mt-1.5 text-right">
+              {redeemLimit.network_size || 0} Network Members · {(redeemLimit.unlock_percent || 0).toFixed(1)}% Unlocked
+            </p>
+          </motion.div>
+        </div>
+      )}
 
       {/* Profile Completion Ring - Show if profile is incomplete */}
       <div className="px-5 mb-4">
