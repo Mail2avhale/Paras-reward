@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { 
   TrendingUp, Star, Gift, ArrowUpRight, Clock,
   Home, UserPlus, Users, User, Zap, Crown, Eye, EyeOff,
-  ChevronRight, Sparkles, ShoppingBag, CreditCard,
+  ChevronRight, Sparkles, ShoppingBag,
   Sun, Moon, Sunrise, Sunset, Banknote, Building2, ShieldAlert
 } from 'lucide-react';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
@@ -859,7 +859,7 @@ const DashboardModern = ({ user, onLogout }) => {
           {[
             { icon: Star, label: t('rewards'), route: '/daily-rewards', gradient: 'from-purple-600 to-violet-700' },
             { icon: Users, label: t('referrals'), route: '/referrals', gradient: 'from-pink-600 to-rose-700' },
-            { icon: Banknote, label: 'Redeem to Bank', route: '/prc-to-bank', gradient: 'from-emerald-600 to-teal-700' },
+            { icon: Crown, label: t('subscription'), route: '/subscription', gradient: 'from-emerald-600 to-teal-700' },
             { icon: ShoppingBag, label: t('shop'), route: '/marketplace', gradient: 'from-blue-600 to-indigo-700' },
           ].map((action, index) => (
             <motion.button
@@ -982,59 +982,7 @@ const DashboardModern = ({ user, onLogout }) => {
           </h2>
         </div>
 
-        {/* Bill Payments Card */}
-        <div className="bg-gradient-to-br from-blue-900/40 to-indigo-900/30 rounded-2xl border border-blue-500/30 p-4 mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-blue-400" />
-              {t('billPayments')}
-            </h3>
-            <button 
-              onClick={() => navigate('/redeem')}
-              className="text-blue-400 text-xs font-medium flex items-center gap-1"
-            >
-              {t('viewAll')} <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="grid grid-cols-5 gap-2">
-            <button 
-              onClick={() => navigate('/redeem?service=mobile_recharge')}
-              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <span className="text-xl">📱</span>
-              </div>
-              <span className="text-[10px] text-gray-300 text-center">{t('mobile')}</span>
-            </button>
-            <button 
-              onClick={() => navigate('/redeem?service=dth')}
-              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <span className="text-xl">📺</span>
-              </div>
-              <span className="text-[10px] text-gray-300 text-center">{t('dth')}</span>
-            </button>
-            <button 
-              onClick={() => navigate('/redeem?service=electricity')}
-              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                <span className="text-xl">⚡</span>
-              </div>
-              <span className="text-[10px] text-gray-300 text-center">{t('electricity')}</span>
-            </button>
-            <button 
-              onClick={() => navigate('/redeem?service=emi')}
-              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
-                <span className="text-xl">🏛️</span>
-              </div>
-              <span className="text-[10px] text-gray-300 text-center">Pay EMI</span>
-            </button>
-          </div>
-        </div>
+        {/* Bill Payments - REMOVED (deprecated April 2026) */}
 
         {/* Gift Vouchers & Shop Row */}
         <div className="grid grid-cols-2 gap-3">
@@ -1163,13 +1111,7 @@ const DashboardModern = ({ user, onLogout }) => {
                           </div>
                         </div>
 
-                        {/* Redeem Button */}
-                        <div 
-                          onClick={() => navigate('/redeem')}
-                          className="w-full bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-xl py-2.5 cursor-pointer transition-colors text-center"
-                        >
-                          <p className="text-yellow-200 text-sm font-bold">Redeem →</p>
-                        </div>
+                        {/* Redeem Button - Removed (deprecated April 2026) */}
                       </>
                     );
                   })()}

@@ -167,10 +167,7 @@ const Notifications = lazy(() => import("@/pages/Notifications"));
 // ParasLuxuryLife - REMOVED (deprecated feature)
 // ParasRecurringDeposit - REMOVED (deprecated feature)
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
-const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
-// UserWithdrawalHistory REMOVED - chatbot feature deprecated (March 2026)
-// DMT and Fund Transfer REMOVED - Eko API not working
-const BBPSServices = lazy(() => import("@/pages/BBPSServices"));
+// RedeemPageV2, BBPSServices - REMOVED (Redeem PRC feature deprecated April 2026)
 const MyInvoices = lazy(() => import("@/pages/MyInvoices"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
@@ -252,10 +249,9 @@ const AdminPopupMessages = IS_USER_BUILD ? null : lazy(() => import(/* webpackCh
 const AdminBankTransfers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBankTransfers"));
 const AdminHolidays = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminHolidays"));
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
-const BankRedeemPage = lazy(() => import("@/pages/BankRedeemPage"));
+// BankRedeemPage, BillPaymentHistory - REMOVED (Redeem PRC feature deprecated April 2026)
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
-const BillPaymentHistory = lazy(() => import("@/pages/BillPaymentHistory"));
 
 // ============ MANAGER PAGES REMOVED ============
 // Manager now uses Admin panel with restricted permissions
@@ -495,17 +491,11 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
               <Route path="/admin/*" element={<Navigate to="/dashboard" replace />} />
             )}
             
-            {/* New Redeem V2 Route - Unified Services */}
-            <Route path="/redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <RedeemPageV2 user={user} />) : <Navigate to="/login" />} />
-            
-            {/* User Withdrawal History - REMOVED - chatbot deprecated (March 2026) */}
-            <Route path="/withdrawal-history" element={<Navigate to="/redeem" replace />} />
-            
-            {/* Bill Payment History - View past bill payments and pay again */}
-            <Route path="/bill-history" element={user ? <Suspense fallback={<LoadingFallback />}><BillPaymentHistory user={user} /></Suspense> : <Navigate to="/login" />} />
-            
-            {/* Old bill-payments route redirects to new redeem page */}
-            <Route path="/bill-payments" element={<Navigate to="/redeem" replace />} />
+            {/* Redeem PRC routes - DEPRECATED April 2026 */}
+            <Route path="/redeem" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/withdrawal-history" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/bill-history" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/bill-payments" element={<Navigate to="/dashboard" replace />} />
             <Route path="/gift-vouchers" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <GiftVoucherRedemption user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* Manager routes now redirect to Admin - Manager uses Admin panel with permission-based access */}
             <Route path="/manager" element={<Navigate to="/admin" replace />} />

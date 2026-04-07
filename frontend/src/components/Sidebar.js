@@ -15,8 +15,7 @@ import {
   ChevronRight,
   Star,
   FileText,
-  Shield,
-  Send
+  Shield
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -63,10 +62,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     // Marketplace removed - feature deprecated
     // Orders removed - feature deprecated
     { id: 'gift-vouchers', label: t('giftVouchers'), icon: Gift, route: '/gift-vouchers' },
-    { id: 'bill-payments', label: t('billPayments'), icon: FileText, route: '/redeem' },
-    { id: 'prc-to-bank', label: 'Redeem to Bank', icon: Send, route: '/prc-to-bank' },
-    // DMT/Money Transfer removed - Eko API not working
-    // Bank Redeem removed - now handled via chatbot only
+    // Bill Payments / Redeem PRC - REMOVED (deprecated April 2026)
     { id: 'prc-statement', label: 'PRC Statement', icon: FileText, route: '/prc-statement' },
     { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
     { id: 'subscription', label: t('subscription'), icon: Crown, route: '/subscription' },
