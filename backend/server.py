@@ -90,7 +90,7 @@ from routes.prc_statement import router as prc_statement_router, set_db as set_p
 from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db
 from routes.prc_audit import router as prc_audit_router, set_db as set_prc_audit_db
 from routes.holidays import router as holidays_router, set_db as set_holidays_db, set_cache as set_holidays_cache, seed_holidays, is_holiday
-from routes.notifications_routes import router as notifications_router, set_db as set_notifications_db
+from routes.notifications_routes import router as notifications_router, set_db as set_notifications_db, set_helpers as set_notifications_helpers
 from routes.manager_routes import router as manager_router, set_db as set_manager_db
 from routes.ai_routes import router as ai_router, set_db as set_ai_db
 from routes.admin_prc_economy import router as admin_prc_economy_router, set_db as set_admin_prc_economy_db
@@ -32387,6 +32387,7 @@ api_router.include_router(admin_accounting_router)
 
 # Notifications Router (Extracted from server.py monolith)
 set_notifications_db(db)
+set_notifications_helpers({'get_user_all_time_redeemed': get_user_all_time_redeemed})
 api_router.include_router(notifications_router)
 
 # Manager Router (Extracted from server.py monolith)

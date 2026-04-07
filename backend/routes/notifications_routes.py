@@ -8,10 +8,15 @@ import uuid
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
 db = None
+_get_user_all_time_redeemed = None
 
 def set_db(database):
     global db
     db = database
+
+def set_helpers(helpers: dict):
+    global _get_user_all_time_redeemed
+    _get_user_all_time_redeemed = helpers.get('get_user_all_time_redeemed')
 
 @router.get("/{uid}")
 async def get_notifications(uid: str, page: int = 1, limit: int = 20, unread_only: bool = False):
@@ -668,6 +673,7 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
             "allow_messages": 1,
             "prc_balance": 1,
             "total_mined": 1,
+            "total_mined_prc": 1,
             "total_redeemed": 1
         }
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
@@ -725,8 +731,24 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
         # Active only if Elite AND mining_active flag is True
         is_active = is_elite and is_mining_flag
         
+        # Calculate actual PRC used (redeemed) from all collections
+        ref_uid = ref["uid"]
+        prc_used = 0
+        if _get_user_all_time_redeemed:
+            try:
+                prc_used = await _get_user_all_time_redeemed(ref_uid)
+            except Exception as e:
+                logging.warning(f"Error calculating prc_used for {ref_uid}: {e}")
+        
+        # Reconcile prc_earned: max(total_mined, total_mined_prc, prc_balance + total_redeemed)
+        raw_total_mined = float(ref.get("total_mined", 0) or 0)
+        raw_total_mined_prc = float(ref.get("total_mined_prc", 0) or 0)
+        prc_balance = float(ref.get("prc_balance", 0) or 0)
+        fallback_mined = prc_balance + prc_used
+        prc_earned = max(raw_total_mined, raw_total_mined_prc, fallback_mined)
+        
         result.append({
-            "uid": ref["uid"],
+            "uid": ref_uid,
             "name": ref.get("name", "Unknown"),
             "mobile": ref.get("mobile", ""),
             "avatar": ref.get("avatar") or ref.get("profile_picture"),
@@ -737,8 +759,8 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
             "joined_at": ref.get("created_at", ""),
             "last_seen": ref.get("last_login", ""),
             "can_message": ref.get("allow_messages", True),
-            "prc_earned": round(ref.get("total_mined", 0) or 0, 2),
-            "prc_used": round(ref.get("total_redeemed", 0) or 0, 2)
+            "prc_earned": round(prc_earned, 2),
+            "prc_used": round(prc_used, 2)
         })
     
     return {

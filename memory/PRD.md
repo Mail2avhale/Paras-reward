@@ -14,6 +14,12 @@
 - Max unlock: 90% (was 94.5%). All 13 tier boundaries verified via unit test
 - Mid-tier proportional calculation intact (e.g., 7 users = 11.75%)
 
+## COMPLETED: Referral PRC USED Fix - 7 April 2026
+- Fixed PRC USED showing 0 on Growth Network page
+- Root cause: `total_redeemed` not stored on user docs; was reading non-existent field
+- Fix: Now calls `get_user_all_time_redeemed()` per referral to compute actual PRC redeemed
+- Also fixed PRC EARNED: Uses reconciled total_mined (max of total_mined, total_mined_prc, balance+redeemed)
+
 ## COMPLETED: Bottom Navigation Fix - Subscription Icon Added - 7 April 2026
 - Removed duplicate inline BottomNavItem from DashboardModern.js (was overriding global BottomNav.js)
 - Global BottomNav.js now renders correctly on Dashboard with 4 items: Home, Invite, Plan (Crown), Profile
