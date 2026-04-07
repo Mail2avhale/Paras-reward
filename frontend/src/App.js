@@ -320,9 +320,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             {/* Static Pages */}
             <Route path="/about" element={<AboutUs />} />
             <Route path="/disclaimer" element={<Disclaimer />} />
-            <Route path="/terms" element={<Disclaimer />} />
-            <Route path="/contact" element={<ContactUs />} />
             <Route path="/terms" element={<TermsConditions />} />
+            <Route path="/contact" element={<ContactUs />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/refund" element={<RefundPolicy />} />
