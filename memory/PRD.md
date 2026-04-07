@@ -2,6 +2,13 @@
 
 ## LAST UPDATED - 8 April 2026
 
+## VERIFIED: Bank Redeem E2E Flow (Testing Agent) - 8 April 2026
+- Full lifecycle: User request → Admin complete/reject → User status → PRC deduction/refund
+- Fixed: KYC check accepts both "verified" and "approved" statuses
+- Fixed: MongoDB database boolean check (if db is None)
+- 9/9 backend tests passed, frontend verified (Dashboard + BankRedeemPage)
+- Test file: /app/backend/tests/test_bank_redeem_e2e.py
+
 ## COMPLETED: Dashboard Redeem Limit Card Restored - 8 April 2026
 - Added Redeem Limit card on Dashboard (after Mining Widget)
 - Shows Total Limit, Redeemed, Available with progress bar
