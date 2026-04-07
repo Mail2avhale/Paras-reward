@@ -646,7 +646,8 @@ const AdminMembers = () => {
                     const redeemLimit = member.redeem_limit || {};
                     const totalLimit = redeemLimit.total_limit || 0;
                     const usedLimit = redeemLimit.total_redeemed || 0;
-                    const availableLimit = redeemLimit.remaining_limit || (totalLimit - usedLimit);
+                    const availableLimit = redeemLimit.effective_available || redeemLimit.remaining_limit || Math.max(0, totalLimit - usedLimit);
+                    const prcBalance = member.prc_balance || 0;
                     
                     return (
                       <tr 
@@ -667,23 +668,23 @@ const AdminMembers = () => {
                           </div>
                         </td>
                         <td className="py-2 md:py-3 px-2 md:px-4">
-                          <span className="text-green-400 font-medium text-xs md:text-sm" data-testid={`prc-balance-${member.uid}`}>
-                            {(member.prc_balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                          <span className={`font-semibold text-xs md:text-sm ${prcBalance > 0 ? 'text-green-600' : 'text-slate-400'}`} data-testid={`prc-balance-${member.uid}`}>
+                            {prcBalance > 0 ? prcBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '0'}
                           </span>
                         </td>
                         <td className="py-2 md:py-3 px-2 md:px-4">
-                          <span className="text-slate-800 font-medium text-xs md:text-sm" data-testid={`redeem-limit-${member.uid}`}>
-                            {totalLimit.toLocaleString()}
+                          <span className={`font-semibold text-xs md:text-sm ${totalLimit > 0 ? 'text-blue-600' : 'text-slate-400'}`} data-testid={`redeem-limit-${member.uid}`}>
+                            {totalLimit > 0 ? totalLimit.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '0'}
                           </span>
                         </td>
                         <td className="py-2 md:py-3 px-2 md:px-4">
-                          <span className="text-yellow-400 font-medium text-xs md:text-sm" data-testid={`used-limit-${member.uid}`}>
-                            {usedLimit.toLocaleString()}
+                          <span className={`font-semibold text-xs md:text-sm ${usedLimit > 0 ? 'text-orange-600' : 'text-slate-400'}`} data-testid={`used-limit-${member.uid}`}>
+                            {usedLimit > 0 ? usedLimit.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '0'}
                           </span>
                         </td>
                         <td className="py-2 md:py-3 px-2 md:px-4">
-                          <span className={`font-medium text-xs md:text-sm ${availableLimit > 0 ? 'text-emerald-400' : 'text-red-400'}`} data-testid={`available-limit-${member.uid}`}>
-                            {availableLimit.toLocaleString()}
+                          <span className={`font-semibold text-xs md:text-sm ${availableLimit > 0 ? 'text-emerald-600' : 'text-slate-400'}`} data-testid={`available-limit-${member.uid}`}>
+                            {availableLimit > 0 ? availableLimit.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '0'}
                           </span>
                         </td>
                         <td className="py-2 md:py-3 px-2 md:px-4 text-slate-500 text-xs md:text-sm">
@@ -692,8 +693,8 @@ const AdminMembers = () => {
                         <td className="py-2 md:py-3 px-2 md:px-4">
                           <span className={`px-2 py-0.5 md:py-1 rounded-full text-xs font-medium ${
                             member.is_active !== false 
-                              ? 'bg-green-500/20 text-green-400' 
-                              : 'bg-red-500/20 text-red-400'
+                              ? 'bg-green-500/20 text-green-600' 
+                              : 'bg-red-500/20 text-red-500'
                           }`}>
                             {member.is_active !== false ? 'Active' : 'Inactive'}
                           </span>
