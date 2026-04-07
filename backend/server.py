@@ -72,7 +72,7 @@ from routes.bank_redeem import router as bank_redeem_router, set_db as set_bank_
 # recurring_deposit REMOVED - feature deprecated (March 2026)
 from routes.user_logs import router as user_logs_router, set_db as set_user_logs_db, set_cache as set_user_logs_cache
 from routes.hdfc_bulk_export import router as hdfc_export_router, set_db as set_hdfc_export_db
-from routes.notifications import router as notifications_router, set_db as set_notifications_db, create_notification, notify_payment_status, notify_referral_joined, notify_prc_credited
+from routes.notifications import create_notification, notify_payment_status, notify_referral_joined, notify_prc_credited
 from routes.razorpay_payments import router as razorpay_router, set_db as set_razorpay_db
 from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check, set_weekly_one_service_check as set_redeem_v2_weekly_check
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
@@ -32233,9 +32233,10 @@ api_router.include_router(user_logs_router)
 set_hdfc_export_db(db)
 api_router.include_router(hdfc_export_router)
 
-# Notifications Router - In-app notifications
-set_notifications_db(db)
-api_router.include_router(notifications_router)
+# Notifications utility functions DB init (notifications.py has create_notification etc)
+from routes.notifications import set_db as set_notifications_util_db
+set_notifications_util_db(db)
+# Router mounted from notifications_routes.py below
 
 # Razorpay Payments Router
 set_razorpay_db(db)

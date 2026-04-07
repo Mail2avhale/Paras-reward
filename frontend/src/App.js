@@ -7,7 +7,7 @@ import PopupMessage from "@/components/PopupMessage";
 import { toast } from "sonner";
 import { NotificationProvider, useNotification } from "@/context/NotificationContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import ToastContainer from "@/components/ToastContainer";
+// ToastContainer removed - using Sonner toast only
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
@@ -524,7 +524,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
           },
         }}
       />
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      {/* Duplicate ToastContainer removed - Sonner handles all toasts */}
     </>
   );
 }
