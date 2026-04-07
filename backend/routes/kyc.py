@@ -352,6 +352,12 @@ async def get_kyc_details(uid: str):
             kyc["user_mobile"] = user.get("mobile")
             kyc["user_joined"] = user.get("created_at")
         
+        # Map base64 fields to short names for frontend compatibility
+        kyc["aadhaar_front"] = kyc.get("aadhaar_front_base64")
+        kyc["aadhaar_back"] = kyc.get("aadhaar_back_base64")
+        kyc["pan_front"] = kyc.get("pan_front_base64")
+        kyc["selfie"] = kyc.get("selfie_base64")
+        
         return kyc
     except HTTPException:
         raise

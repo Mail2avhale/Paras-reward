@@ -747,7 +747,25 @@ const AdminKYC = ({ user }) => {
               className={`p-4 bg-white border-slate-200 hover:border-slate-200 transition-all cursor-pointer ${
                 doc.status === 'pending' ? 'border-l-4 border-l-yellow-500' : ''
               } ${selectedIds.has(doc.kyc_id) ? 'ring-2 ring-blue-500 bg-blue-900/20' : ''}`}
-              onClick={() => setSelectedDoc(doc)}
+              onClick={async () => {
+                // Fetch full details with images
+                try {
+                  const res = await axios.get(`${API}/kyc/details/${doc.uid}`);
+                  const fullDoc = res.data;
+                  // Map base64 field names to frontend expected names
+                  setSelectedDoc({
+                    ...doc,
+                    ...fullDoc,
+                    aadhaar_front: fullDoc.aadhaar_front_base64 || fullDoc.aadhaar_front || null,
+                    aadhaar_back: fullDoc.aadhaar_back_base64 || fullDoc.aadhaar_back || null,
+                    pan_front: fullDoc.pan_front_base64 || fullDoc.pan_front || null,
+                    selfie: fullDoc.selfie_base64 || fullDoc.selfie || null
+                  });
+                } catch {
+                  // Fallback to list data if details fetch fails
+                  setSelectedDoc(doc);
+                }
+              }}
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
@@ -910,6 +928,16 @@ const AdminKYC = ({ user }) => {
                       <img 
                         src={selectedDoc.pan_front} 
                         alt="PAN Card" 
+                        className="w-full rounded-lg border border-slate-200"
+                      />
+                    </div>
+                  )}
+                  {selectedDoc.selfie && (
+                    <div>
+                      <p className="text-slate-500 text-sm mb-2">Selfie</p>
+                      <img 
+                        src={selectedDoc.selfie} 
+                        alt="Selfie" 
                         className="w-full rounded-lg border border-slate-200"
                       />
                     </div>
