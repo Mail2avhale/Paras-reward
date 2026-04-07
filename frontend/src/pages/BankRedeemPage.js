@@ -269,6 +269,9 @@ const BankRedeemPage = ({ user: initialUser }) => {
       if (res.data.success) {
         toast.success('Bank transfer request submitted successfully!');
         
+        // Show processing info
+        toast.info('Your request will be processed within 3 to 7 working days.', { duration: 6000 });
+        
         // Update local balance
         setUser(prev => ({
           ...prev,
@@ -650,6 +653,14 @@ const BankRedeemPage = ({ user: initialUser }) => {
                       <div className="mt-2">
                         <p className="text-slate-500 text-xs">UTR Number</p>
                         <p className="text-emerald-400 text-sm font-mono">{req.utr_number}</p>
+                      </div>
+                    )}
+                    
+                    {(req.status === 'pending' || req.status === 'processing') && (
+                      <div className="mt-3 pt-3 border-t border-slate-700 bg-blue-500/5 rounded-lg p-3" data-testid="pending-info-message">
+                        <p className="text-blue-300 text-xs leading-relaxed">
+                          Your request will be processed within 3 to 7 working days. In rare cases, it may take slightly longer — rest assured, your PRC is completely safe and secure.
+                        </p>
                       </div>
                     )}
                   </Card>
