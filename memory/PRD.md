@@ -8,6 +8,12 @@
 - Frontend: Prominent Plan History cards with green (Ongoing) and gray (Expired) styling
 - Shows Start Date, Expiry Date, Days Remaining for each subscription period
 
+## COMPLETED: Redeem Limit Formula Update (User-defined Tiers) - 7 April 2026
+- Updated `calculate_growth_level()` in `routes/growth_economy.py` per user's spreadsheet
+- New tiers: 2→4%, 4→4%, 8→5%, 16→6%, 32→6%, 64→6%, 128→7%, 256→7%, 512→8%, 1024→9%, 2048→9%, 4096→9%, 8192→10%
+- Max unlock: 90% (was 94.5%). All 13 tier boundaries verified via unit test
+- Mid-tier proportional calculation intact (e.g., 7 users = 11.75%)
+
 ## COMPLETED: Bottom Navigation Fix - Subscription Icon Added - 7 April 2026
 - Removed duplicate inline BottomNavItem from DashboardModern.js (was overriding global BottomNav.js)
 - Global BottomNav.js now renders correctly on Dashboard with 4 items: Home, Invite, Plan (Crown), Profile
