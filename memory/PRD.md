@@ -2,6 +2,12 @@
 
 ## LAST UPDATED - 7 April 2026
 
+## COMPLETED: Subscription Plan History UI - 7 April 2026
+- Added Plan History section on Subscription page showing Ongoing and Expired plans
+- Backend: Extended `/api/subscription/history/{uid}` to return `plan_periods` with start/expiry dates and status
+- Frontend: Prominent Plan History cards with green (Ongoing) and gray (Expired) styling
+- Shows Start Date, Expiry Date, Days Remaining for each subscription period
+
 ## COMPLETED: Bottom Navigation Fix - Subscription Icon Added - 7 April 2026
 - Removed duplicate inline BottomNavItem from DashboardModern.js (was overriding global BottomNav.js)
 - Global BottomNav.js now renders correctly on Dashboard with 4 items: Home, Invite, Plan (Crown), Profile

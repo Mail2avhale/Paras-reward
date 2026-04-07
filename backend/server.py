@@ -3463,6 +3463,7 @@ async def get_user_subscription_info(user: dict) -> dict:
         "can_redeem": plan_config["can_redeem"],
         "is_expired": is_expired,
         "days_remaining": days_remaining,
+        "start_date": user.get("subscription_start"),
         "expiry_date": subscription_expiry_str
     }
 
@@ -8359,7 +8360,7 @@ async def get_user_subscription_history(uid: str, request: Request):
         except jwt.InvalidTokenError:
             pass
     
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "subscription_plan": 1})
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "subscription_plan": 1, "subscription_start": 1, "subscription_expiry": 1, "subscription_expires": 1})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -8450,12 +8451,78 @@ async def get_user_subscription_history(uid: str, request: Request):
     # Sort by created_at descending
     history.sort(key=lambda x: x.get("created_at") or "", reverse=True)
     
+    # Build plan_periods from successful payments + current user data
+    plan_periods = []
+    now = datetime.now(timezone.utc)
+    
+    # Current active plan period from user document
+    sub_plan = user.get("subscription_plan", "explorer")
+    sub_start = user.get("subscription_start")
+    sub_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+    
+    if sub_plan and sub_plan != "explorer" and sub_expiry:
+        try:
+            expiry_dt = datetime.fromisoformat(str(sub_expiry).replace('Z', '+00:00'))
+            if expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+            is_ongoing = expiry_dt > now
+            days_remaining = max(0, (expiry_dt - now).days) if is_ongoing else 0
+            plan_periods.append({
+                "plan_name": sub_plan.title(),
+                "status": "ongoing" if is_ongoing else "expired",
+                "start_date": str(sub_start) if sub_start else None,
+                "expiry_date": str(sub_expiry),
+                "days_remaining": days_remaining,
+                "is_current": True
+            })
+        except Exception:
+            pass
+    
+    # Build historical periods from successful payments (excluding current)
+    duration_map = {"monthly": 28, "quarterly": 84, "half_yearly": 168, "yearly": 365}
+    successful = [h for h in history if h.get("status") in ("completed", "approved", "paid")]
+    
+    for payment in successful:
+        created = payment.get("created_at") or payment.get("activated_at")
+        if not created:
+            continue
+        try:
+            start_dt = datetime.fromisoformat(str(created).replace('Z', '+00:00'))
+            if start_dt.tzinfo is None:
+                start_dt = start_dt.replace(tzinfo=timezone.utc)
+            duration_days = payment.get("duration_days") or duration_map.get(payment.get("plan_type", "monthly"), 28)
+            end_dt = start_dt + timedelta(days=duration_days)
+            
+            # Skip if this matches the current active period
+            if plan_periods and plan_periods[0].get("is_current"):
+                current_start = plan_periods[0].get("start_date")
+                if current_start and abs((start_dt - datetime.fromisoformat(str(current_start).replace('Z', '+00:00')).replace(tzinfo=timezone.utc if datetime.fromisoformat(str(current_start).replace('Z', '+00:00')).tzinfo is None else datetime.fromisoformat(str(current_start).replace('Z', '+00:00')).tzinfo)).total_seconds()) < 86400:
+                    continue
+            
+            is_ongoing = end_dt > now
+            plan_periods.append({
+                "plan_name": (payment.get("plan_name") or "Elite").title(),
+                "status": "ongoing" if is_ongoing else "expired",
+                "start_date": start_dt.isoformat(),
+                "expiry_date": end_dt.isoformat(),
+                "days_remaining": max(0, (end_dt - now).days) if is_ongoing else 0,
+                "amount": payment.get("amount", 0),
+                "payment_method": payment.get("payment_method", ""),
+                "is_current": False
+            })
+        except Exception:
+            continue
+    
+    # Sort: ongoing first, then by start_date descending
+    plan_periods.sort(key=lambda x: (0 if x.get("status") == "ongoing" else 1, -(datetime.fromisoformat(str(x.get("start_date", "2000-01-01")).replace('Z', '+00:00')).timestamp() if x.get("start_date") else 0)))
+    
     return {
         "user_id": uid,
         "user_name": user.get("name"),
         "current_plan": user.get("subscription_plan", "explorer"),
         "total_payments": len(history),
-        "history": history
+        "history": history,
+        "plan_periods": plan_periods
     }
 
 

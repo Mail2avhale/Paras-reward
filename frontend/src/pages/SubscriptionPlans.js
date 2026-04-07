@@ -69,6 +69,7 @@ const SubscriptionPlans = ({ user }) => {
   const [paymentAttempts, setPaymentAttempts] = useState([]);
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [hasUnactivatedPayment, setHasUnactivatedPayment] = useState(false);
+  const [planPeriods, setPlanPeriods] = useState([]);
 
   const [invoicePayment, setInvoicePayment] = useState(null); // Payment to show invoice for
 
@@ -131,6 +132,7 @@ const SubscriptionPlans = ({ user }) => {
       try {
         const historyRes = await axios.get(`${API}/subscription/history/${user.uid}`);
         setSubscriptionHistory(historyRes.data.history || []);
+        setPlanPeriods(historyRes.data.plan_periods || []);
       } catch (err) {
         // console.log('No subscription history');
       }
@@ -503,6 +505,75 @@ const SubscriptionPlans = ({ user }) => {
             </div>
           </div>
         </motion.div>
+      )}
+
+      {/* Plan History Section */}
+      {currentStep === 1 && planPeriods.length > 0 && (
+        <div className="px-5 mt-5" data-testid="plan-history-section">
+          <h2 className="text-base font-semibold text-white mb-3">Plan History</h2>
+          <div className="space-y-3">
+            {planPeriods.map((period, idx) => {
+              const isOngoing = period.status === 'ongoing';
+              const startDate = period.start_date ? new Date(period.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+              const expiryDate = period.expiry_date ? new Date(period.expiry_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+
+              return (
+                <div
+                  key={`period-${idx}`}
+                  data-testid={`plan-period-${period.status}`}
+                  className={`p-4 rounded-2xl border ${
+                    isOngoing
+                      ? 'bg-emerald-500/10 border-emerald-500/30'
+                      : 'bg-zinc-900/60 border-zinc-700/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                        isOngoing ? 'bg-emerald-500/20' : 'bg-zinc-800'
+                      }`}>
+                        <Crown className={`w-5 h-5 ${isOngoing ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                      </div>
+                      <div>
+                        <p className={`text-sm font-bold ${isOngoing ? 'text-emerald-400' : 'text-zinc-300'}`}>
+                          {period.plan_name}
+                        </p>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                          isOngoing
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-zinc-700/60 text-zinc-400'
+                        }`}>
+                          {isOngoing ? 'Ongoing' : 'Expired'}
+                        </span>
+                      </div>
+                    </div>
+                    {isOngoing && period.days_remaining > 0 && (
+                      <span className="text-emerald-400 text-xs font-bold" data-testid="plan-days-remaining">
+                        {period.days_remaining} days left
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium">Start Date</p>
+                      <p className={`text-sm font-medium ${isOngoing ? 'text-white' : 'text-zinc-400'}`} data-testid="plan-start-date">
+                        {startDate}
+                      </p>
+                    </div>
+                    <div className="w-px h-8 bg-zinc-700/50" />
+                    <div className="flex-1">
+                      <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium">Expiry Date</p>
+                      <p className={`text-sm font-medium ${isOngoing ? 'text-white' : 'text-zinc-400'}`} data-testid="plan-expiry-date">
+                        {expiryDate}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Step 1: Select Plan */}
