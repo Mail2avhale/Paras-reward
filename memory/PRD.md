@@ -7,6 +7,12 @@
 - Extracted 7 new modular route files: admin_accounting (4954), notifications_routes (3010), admin_prc_balance (1542), ai_routes (1050), manager_routes (976), admin_prc_economy (221)
 - All 117 extracted routes verified working via curl (401/422/200 responses correct)
 
+## COMPLETED: Subscription from PRC Full Frontend Cleanup (P0) - 7 April 2026
+- Deleted SubscriptionPlans.js (1,803 lines) and removed route from App.js
+- Cleaned all user-facing subscription links/buttons from: DashboardModern.js, Sidebar.js, ProfileAdvanced.js, Mining.js, MyInvoices.js, BurningIndicator.js, AIContextualHelp.js
+- Admin subscription management, Invoices, PRC historical statements preserved intact
+- Frontend compile verified clean (no dead imports)
+
 ## COMPLETED: Full BBPS + Gift Voucher + Marketplace Cleanup (P0) - 7 April 2026
 - Deleted 7 user-facing pages: RedeemPageV2, BBPSServices, BillPaymentHistory, BankRedeemPage, GiftVoucherRedemption, CategoryLimitsDisplay, FlashSalesPage
 - 18+ files cleaned: Dashboard, Sidebar, FAQ, SEO, Terms, Blog, About, Profile, Mining, etc.
@@ -49,10 +55,9 @@
 │   └── eko_common.py (190 lines)
 
 ## Upcoming
-- P1: Core Formula System Audit (Mining, Redeem, Network, PRC Dynamic)
-- P1: Invoice PDF Download option
+- P1: Invoice PDF Download option in InvoiceModal.js
 
 ## Future/Backlog
-- P2: Continue server.py extraction (33K → target 20K)
+- P2: Continue server.py extraction (33K → target 20K: Auth, Referrals, Subscription routes)
 - P2: Split oversized React components
 - P3: MongoDB → PostgreSQL migration

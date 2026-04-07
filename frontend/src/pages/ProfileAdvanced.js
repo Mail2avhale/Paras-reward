@@ -807,23 +807,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
       {/* Menu Options */}
       <div className="px-5 space-y-3">
-        {/* Subscription Upgrade */}
-        {!hasPaidPlan && (
-          <button 
-            onClick={() => navigate('/subscription')}
-            className="w-full bg-gradient-to-r from-amber-600 to-yellow-600 rounded-2xl p-4 flex items-center justify-between"
-          >
-            <span className="flex items-center gap-3 text-black font-semibold">
-              <Crown className="w-5 h-5" />
-              Upgrade Your Plan
-              <InfoTooltip>
-                <p>Upgrade to collect PRC! Get full access to redemption, higher limits, and exclusive features</p>
-              </InfoTooltip>
-            </span>
-            <ChevronRight className="w-5 h-5 text-black" />
-          </button>
-        )}
-
         {/* Share App Card */}
         <ShareApp user={userData || user} variant="card" />
 

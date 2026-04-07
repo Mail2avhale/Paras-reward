@@ -65,14 +65,6 @@ const BurningIndicator = ({ user, variant = 'compact' }) => {
             <span className="text-zinc-400">Burning now</span>
             <span className="text-red-400 font-mono">-{liveBurned.toFixed(4)} PRC</span>
           </div>
-
-          <button
-            onClick={() => navigate('/subscription')}
-            data-testid="burning-renew-btn"
-            className="mt-3 w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:from-amber-400 hover:to-orange-400 transition-all"
-          >
-            <Crown className="w-3.5 h-3.5" /> Renew Elite to Stop Burning
-          </button>
         </div>
       </div>
     );
@@ -117,11 +109,11 @@ const BurningIndicator = ({ user, variant = 'compact' }) => {
         </div>
 
         <button
-          onClick={() => navigate('/subscription')}
+          onClick={() => navigate('/dashboard')}
           data-testid="burning-renew-btn"
           className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
         >
-          <Crown className="w-4 h-4" /> Renew Elite Subscription
+          <Crown className="w-4 h-4" /> Contact Admin to Renew
         </button>
       </div>
     </div>

@@ -145,15 +145,8 @@ const MyInvoices = ({ user }) => {
             </div>
             <h3 className="text-white font-semibold mb-2">No Invoices Yet</h3>
             <p className="text-gray-400 text-sm">
-              Invoices will appear here after you make subscription payments.
+              Invoices will appear here after subscription payments.
             </p>
-            <button
-              onClick={() => navigate('/subscription')}
-              className="mt-4 px-6 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium"
-              data-testid="view-plans-btn"
-            >
-              View Plans
-            </button>
           </div>
         )}
 

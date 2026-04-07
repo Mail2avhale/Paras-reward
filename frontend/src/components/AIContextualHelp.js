@@ -19,7 +19,7 @@ const getPageKeyFromPath = (pathname) => {
     '/referrals/ai': 'referrals',
     '/network': 'referrals',
     // marketplace removed
-    '/subscription': 'subscription',
+    // subscription removed (April 2026)
     '/profile': 'profile',
     // gift-vouchers removed (April 2026)
     '/prc-statement': 'prc-statement',

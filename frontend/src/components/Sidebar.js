@@ -5,13 +5,10 @@ import {
   Home,
   Zap,
   User,
-  Trophy,
   Users,
-  Crown,
   HelpCircle,
   LogOut,
   ChevronRight,
-  Star,
   FileText,
   Shield
 } from 'lucide-react';
@@ -62,7 +59,6 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     // Gift Vouchers / Bill Payments - REMOVED (deprecated April 2026)
     { id: 'prc-statement', label: 'PRC Statement', icon: FileText, route: '/prc-statement' },
     { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
-    { id: 'subscription', label: t('subscription'), icon: Crown, route: '/subscription' },
   ];
 
   const bottomMenuItems = [

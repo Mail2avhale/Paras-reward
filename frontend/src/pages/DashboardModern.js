@@ -785,15 +785,7 @@ const DashboardModern = ({ user, onLogout }) => {
               </div>
             </div>
             
-            {/* Renewal warning if less than 7 days left */}
-            {stats.subscriptionExpiry && Math.ceil((new Date(stats.subscriptionExpiry) - new Date()) / (1000 * 60 * 60 * 24)) <= 7 && (
-              <button 
-                onClick={() => navigate('/subscription')}
-                className="w-full mt-3 py-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium hover:bg-red-500/30 transition-colors"
-              >
-                {t('planExpiresSoonRenew')}
-              </button>
-            )}
+            {/* Renewal warning removed - subscription page deprecated */}
 
             {/* Upcoming Plan Card */}
             {stats.upcomingPlan && (
@@ -845,7 +837,6 @@ const DashboardModern = ({ user, onLogout }) => {
           {[
             { icon: Star, label: t('rewards'), route: '/daily-rewards', gradient: 'from-purple-600 to-violet-700' },
             { icon: Users, label: t('referrals'), route: '/referrals', gradient: 'from-pink-600 to-rose-700' },
-            { icon: Crown, label: t('subscription'), route: '/subscription', gradient: 'from-emerald-600 to-teal-700' },
           ].map((action, index) => (
             <motion.button
               key={action.route}
@@ -862,45 +853,10 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* Horizontal Scrollable Cards - Upgrade Banner + Offers (only for Explorer/Free users) */}
+      {/* Horizontal Scrollable Cards - Stats Card (only for Explorer/Free users) */}
       {!['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && (
         <div className="mb-4 overflow-hidden">
           <div className="px-5 flex gap-3 overflow-x-auto scrollbar-hide pb-2" style={{ scrollSnapType: 'x mandatory' }}>
-            {/* Upgrade Card */}
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              onClick={() => navigate('/subscription')}
-              className="flex-shrink-0 w-[85%] cursor-pointer"
-              style={{ scrollSnapAlign: 'start' }}
-            >
-              <div 
-                className="relative overflow-hidden rounded-xl p-4"
-                style={{
-                  background: 'linear-gradient(135deg, #92400e 0%, #78350f 50%, #451a03 100%)'
-                }}
-              >
-                <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-400/20 rounded-full blur-2xl"></div>
-                <div className="relative z-10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-yellow-400/20 flex items-center justify-center">
-                      <Crown className="w-5 h-5 text-yellow-400" />
-                    </div>
-                    <div>
-                      <p className="text-yellow-400 font-bold text-sm">{t('upgradeNow')}</p>
-                      <p className="text-amber-200/60 text-xs">{t('elitePlan')} • {t('unlockRedeemServices')}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="bg-yellow-400 text-black px-3 py-1.5 rounded-lg font-bold text-sm">
-                      ₹999
-                    </div>
-                    <p className="text-yellow-400/80 text-xs mt-0.5">/month</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
             {/* Stats Card */}
             <motion.div 
               initial={{ opacity: 0, x: 20 }}

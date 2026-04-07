@@ -874,14 +874,6 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Collect ({sessionPRC.toFixed(2)} PRC)
                     </Button>
-                    <Button 
-                      onClick={() => navigate('/subscription')}
-                      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-semibold py-3 rounded-xl"
-                      data-testid="upgrade-to-collect-btn"
-                    >
-                      <Crown className="w-4 h-4 mr-2" />
-                      Upgrade to Elite
-                    </Button>
                   </div>
                 ) : (
                   /* Collect Button - Gold Gradient - PAID USERS ONLY */
@@ -1030,12 +1022,6 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
               <div>
                 <p className="text-amber-400 font-medium text-sm">Explorer Plan</p>
                 <p className="text-zinc-500 text-xs mt-1">You can mine PRC but collection requires Elite plan</p>
-                <button 
-                  onClick={() => navigate('/subscription')}
-                  className="text-amber-500 text-xs mt-1 underline hover:text-amber-400"
-                >
-                  Upgrade to Elite →
-                </button>
               </div>
             </div>
           </div>
