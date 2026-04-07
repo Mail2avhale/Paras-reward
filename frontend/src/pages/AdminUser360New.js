@@ -1012,11 +1012,6 @@ const AdminUser360New = ({ user: adminUser }) => {
                     <Link className="h-4 w-4 mr-1" />Change Referral
                   </Button>
                   
-                  {/* Subscription */}
-                  <Button onClick={() => setShowSubscription(true)} disabled={actionLoading} className="bg-amber-600 hover:bg-amber-700">
-                    <Crown className="h-4 w-4 mr-1" />Subscription
-                  </Button>
-                  
                   {/* Diagnose */}
                   <Button onClick={runDiagnosis} disabled={actionLoading} className="bg-purple-600 hover:bg-purple-700">
                     <Zap className="h-4 w-4 mr-1" />Diagnose
@@ -1874,69 +1869,6 @@ const AdminUser360New = ({ user: adminUser }) => {
             <Button onClick={() => setShowEditProfile(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
             <Button onClick={handleSaveProfile} disabled={actionLoading} className="flex-1 bg-indigo-600 hover:bg-indigo-700">
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-      
-      {/* Subscription Modal */}
-      <Modal show={showSubscription} onClose={() => setShowSubscription(false)} title="Subscription Management" size="lg">
-        <div className="space-y-4">
-          <div className="p-3 bg-white rounded-lg">
-            <p className="text-slate-500 text-sm">Current Plan: <span className="text-amber-400 font-semibold capitalize">{userData?.user?.subscription_plan || 'Explorer'}</span></p>
-            <p className="text-slate-500 text-sm">Expiry: <span className="text-slate-800">{formatDate(userData?.user?.subscription_expiry)}</span></p>
-          </div>
-          
-          <div>
-            <Label className="text-slate-500">Select Plan</Label>
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              {['explorer', 'elite'].map(plan => (
-                <button key={plan} onClick={() => setSubscriptionForm({...subscriptionForm, plan})}
-                  className={`p-4 rounded-lg capitalize font-semibold ${
-                    subscriptionForm.plan === plan 
-                      ? plan === 'elite' ? 'bg-amber-600 text-slate-800' : 'bg-purple-600 text-slate-800' 
-                      : 'bg-white text-slate-500 hover:bg-slate-100'
-                  }`}>
-                  {plan === 'elite' && <Crown className="h-4 w-4 inline mr-2" />}
-                  {plan}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div>
-            <Label className="text-slate-500">Duration (Days)</Label>
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              {[28, 90, 180, 365].map(days => (
-                <button key={days} onClick={() => setSubscriptionForm({...subscriptionForm, duration: days})}
-                  className={`p-2 rounded-lg ${subscriptionForm.duration === days ? 'bg-purple-600 text-slate-800' : 'bg-white text-slate-500'}`}>
-                  {days === 365 ? '1 Year' : `${days} Days`}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 bg-white rounded-lg">
-            <div>
-              <p className="text-slate-800 font-medium">Free Subscription</p>
-              <p className="text-slate-500 text-sm">Grant without payment</p>
-            </div>
-            <button onClick={() => setSubscriptionForm({...subscriptionForm, isFree: !subscriptionForm.isFree})}
-              className={`w-12 h-6 rounded-full ${subscriptionForm.isFree ? 'bg-green-500' : 'bg-slate-100'}`}>
-              <div className={`w-5 h-5 bg-white rounded-full transform transition-transform ${subscriptionForm.isFree ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
-          </div>
-          
-          <div>
-            <Label className="text-slate-500">Notes</Label>
-            <textarea value={subscriptionForm.notes} onChange={(e) => setSubscriptionForm({...subscriptionForm, notes: e.target.value})}
-              placeholder="Admin notes..." className="w-full p-3 bg-white border border-slate-200 rounded-lg text-slate-800 resize-none h-20 mt-1" />
-          </div>
-          
-          <div className="flex gap-3">
-            <Button onClick={() => setShowSubscription(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
-            <Button onClick={handleSubscriptionUpdate} disabled={actionLoading} className="flex-1 bg-purple-600 hover:bg-purple-700">
-              {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Subscription'}
             </Button>
           </div>
         </div>
