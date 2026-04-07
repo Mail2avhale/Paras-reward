@@ -43,6 +43,27 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
   const isFreeUser = !subscriptionPlan || subscriptionPlan === 'explorer' || subscriptionPlan === 'free' || subscriptionPlan === '';
   const hasPaidPlan = ['startup', 'growth', 'elite'].includes(subscriptionPlan);
 
+  // Plan-based color scheme matching credit card
+  const isElite = subscriptionPlan === 'elite';
+  const isGrowth = subscriptionPlan === 'growth';
+  const cardBg = isElite 
+    ? 'linear-gradient(145deg, #1a1505 0%, #2d2008 50%, #1f1604 100%)'
+    : isGrowth
+    ? 'linear-gradient(145deg, #051a10 0%, #082d15 50%, #041f0c 100%)'
+    : 'linear-gradient(145deg, #1c1c1c 0%, #0d0d0d 50%, #1a1a1a 100%)';
+  const cardBorder = isElite 
+    ? '1px solid rgba(212, 175, 55, 0.3)'
+    : isGrowth
+    ? '1px solid rgba(16, 185, 129, 0.3)'
+    : '1px solid rgba(100, 100, 100, 0.25)';
+  const cardShadow = isElite 
+    ? '0 8px 25px -5px rgba(212, 175, 55, 0.15)'
+    : isGrowth
+    ? '0 8px 25px -5px rgba(16, 185, 129, 0.15)'
+    : '0 8px 25px -5px rgba(0, 0, 0, 0.3)';
+  const accentColor = isElite ? '#d4af37' : isGrowth ? '#10b981' : '#9ca3af';
+  const accentLight = isElite ? 'text-amber-400' : isGrowth ? 'text-emerald-400' : 'text-gray-400';
+
   const fetchMiningStatus = useCallback(async (isInitial = false) => {
     if (!user?.uid) return;
     try {
@@ -224,10 +245,10 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
   // Active session UI
   if (isMining) {
     return (
-      <div className="relative overflow-hidden rounded-2xl p-5 border border-amber-500/20 bg-zinc-900/80" data-testid="mining-widget-active">
+      <div className="relative overflow-hidden rounded-2xl p-5" style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow }} data-testid="mining-widget-active">
         {/* Ambient glow */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500 rounded-full blur-[80px]" />
+          <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-[80px]" style={{ backgroundColor: accentColor }} />
         </div>
 
         <div className="relative z-10">
@@ -235,40 +256,41 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
           <p className="text-zinc-400 text-xs text-center mb-2">{t('timeRemaining') || 'Time Remaining'}</p>
           <div className="flex items-center justify-center gap-0.5 mb-4">
             {formatTime(sessionTimeRemaining).split('').map((char, i) => (
-              <div key={i} className={char === ':' ? 'w-3 text-center' : 'w-8 h-10 bg-zinc-800 border border-zinc-700 rounded-md flex items-center justify-center'}>
-                <span className={`font-mono font-bold ${char === ':' ? 'text-lg text-amber-400' : 'text-xl text-zinc-100'}`}>{char}</span>
+              <div key={i} className={char === ':' ? 'w-3 text-center' : 'w-8 h-10 rounded-md flex items-center justify-center'} style={char !== ':' ? { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' } : {}}>
+                <span className={`font-mono font-bold ${char === ':' ? `text-lg` : 'text-xl text-zinc-100'}`} style={char === ':' ? { color: accentColor } : {}}>{char}</span>
               </div>
             ))}
           </div>
 
           {/* Session Earnings Card */}
-          <div className="bg-zinc-800/60 rounded-xl p-4 mb-4 border border-zinc-700/40">
+          <div className="rounded-xl p-4 mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <p className="text-zinc-500 text-xs text-center mb-2">{t('sessionEarnings') || 'Session Earnings'}</p>
             <div className="flex items-center justify-center gap-1">
-              <Coins className="w-4 h-4 text-amber-500 mr-1" />
+              <Coins className="w-4 h-4 mr-1" style={{ color: accentColor }} />
               {sessionPRC.toFixed(2).split('').map((char, i) => (
                 <motion.div
                   key={`${i}-${char}`}
-                  className={char === '.' ? 'w-2 flex items-end justify-center pb-0.5' : 'w-7 h-9 bg-zinc-900 border border-amber-500/30 rounded-md flex items-center justify-center'}
+                  className={char === '.' ? 'w-2 flex items-end justify-center pb-0.5' : 'w-7 h-9 rounded-md flex items-center justify-center'}
+                  style={char !== '.' ? { background: 'rgba(0,0,0,0.3)', border: `1px solid ${accentColor}30` } : {}}
                   initial={{ y: -3, opacity: 0.6 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <span className={`font-mono font-bold ${char === '.' ? 'text-amber-400 text-lg' : 'text-lg bg-gradient-to-b from-amber-300 to-amber-500 bg-clip-text text-transparent'}`}>{char}</span>
+                  <span className={`font-mono font-bold ${char === '.' ? 'text-lg' : 'text-lg'}`} style={{ color: char === '.' ? accentColor : accentColor }}>{char}</span>
                 </motion.div>
               ))}
-              <span className="text-amber-500 font-semibold text-sm ml-1">PRC</span>
+              <span className="font-semibold text-sm ml-1" style={{ color: accentColor }}>PRC</span>
             </div>
 
             {/* PRC/sec + PRC/hr rate - stacked display */}
             <div className="flex items-center justify-center gap-3 mt-3">
-              <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-4 py-2 text-center min-w-[100px]">
+              <div className="rounded-lg px-4 py-2 text-center min-w-[100px]" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
                 <p className="text-emerald-400 text-sm font-bold font-mono leading-tight">+{(miningRate / 3600).toFixed(4)}</p>
                 <p className="text-emerald-300/60 text-[10px] font-semibold tracking-wider mt-0.5">PRC/SEC</p>
               </div>
-              <div className="bg-amber-500/10 border border-amber-500/25 rounded-lg px-4 py-2 text-center min-w-[100px]">
-                <p className="text-amber-400 text-sm font-bold font-mono leading-tight">{miningRate.toFixed(1)}</p>
-                <p className="text-amber-300/60 text-[10px] font-semibold tracking-wider mt-0.5">PRC/HOUR</p>
+              <div className="rounded-lg px-4 py-2 text-center min-w-[100px]" style={{ background: `${accentColor}12`, border: `1px solid ${accentColor}33` }}>
+                <p className={`text-sm font-bold font-mono leading-tight ${accentLight}`}>{miningRate.toFixed(1)}</p>
+                <p className="text-[10px] font-semibold tracking-wider mt-0.5" style={{ color: `${accentColor}90` }}>PRC/HOUR</p>
               </div>
             </div>
 
@@ -276,14 +298,14 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
             <div className="mt-3">
               <div className="flex justify-between text-xs text-zinc-500 mb-1">
                 <span>Session Progress</span>
-                <span className="text-amber-400 font-mono">{sessionProgress.toFixed(1)}%</span>
+                <span className="font-mono" style={{ color: accentColor }}>{sessionProgress.toFixed(1)}%</span>
               </div>
-              <div className="h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
                 <motion.div
                   className="h-full rounded-full"
                   animate={{ width: `${sessionProgress}%` }}
                   transition={{ duration: 0.5 }}
-                  style={{ background: 'linear-gradient(90deg, #10b981, #34d399)', boxShadow: '0 0 8px rgba(16,185,129,0.4)' }}
+                  style={{ background: `linear-gradient(90deg, ${accentColor}, ${accentColor}cc)`, boxShadow: `0 0 8px ${accentColor}40` }}
                 />
               </div>
             </div>
@@ -304,11 +326,21 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
             <Button
               onClick={collectRewards}
               disabled={!canCollect || isCollecting}
-              className={`w-full py-3 rounded-xl font-semibold text-base transition-all active:scale-[0.98] ${
-                canCollect
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.3)] border border-amber-400/50'
-                  : 'bg-zinc-800 text-zinc-600 border border-zinc-700 cursor-not-allowed'
-              }`}
+              className="w-full py-3 rounded-xl font-semibold text-base transition-all active:scale-[0.98]"
+              style={canCollect ? {
+                background: isElite 
+                  ? 'linear-gradient(135deg, #d4af37, #b8960c)' 
+                  : isGrowth 
+                  ? 'linear-gradient(135deg, #10b981, #059669)' 
+                  : 'linear-gradient(135deg, #6b7280, #4b5563)',
+                color: isElite ? '#000' : '#fff',
+                boxShadow: `0 0 15px ${accentColor}30`,
+                border: `1px solid ${accentColor}50`
+              } : {
+                background: 'rgba(255,255,255,0.05)',
+                color: 'rgba(255,255,255,0.3)',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}
               data-testid="collect-rewards-btn"
             >
               {isCollecting ? (
@@ -330,25 +362,36 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
 
   // Idle state - Start Session
   return (
-    <div className="rounded-2xl p-5 border border-zinc-800 bg-zinc-900/60" data-testid="mining-widget-idle">
+    <div className="rounded-2xl p-5 overflow-hidden relative" style={{ background: cardBg, border: cardBorder, boxShadow: cardShadow }} data-testid="mining-widget-idle">
       <div className="text-center">
         <motion.div
-          className="w-16 h-16 mx-auto mb-3 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center"
+          className="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
           animate={{ scale: [1, 1.04, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          <Zap className="w-8 h-8 text-amber-500" />
+          <Zap className="w-8 h-8" style={{ color: accentColor }} />
         </motion.div>
 
         <p className="text-zinc-500 text-xs mb-1">Daily Earning Rate</p>
-        <p className="text-lg font-bold text-amber-400 font-mono mb-3">
+        <p className="text-lg font-bold font-mono mb-3" style={{ color: accentColor }}>
           {miningRate.toFixed(1)} PRC/hr
         </p>
 
         <Button
           onClick={startSession}
           disabled={isStarting}
-          className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-semibold py-3 rounded-xl text-base shadow-[0_0_15px_rgba(16,185,129,0.3)] border border-emerald-500/50 active:scale-[0.98] transition-all"
+          className="w-full font-semibold py-3 rounded-xl text-base active:scale-[0.98] transition-all"
+          style={{
+            background: isElite 
+              ? 'linear-gradient(135deg, #d4af37, #b8960c)' 
+              : isGrowth 
+              ? 'linear-gradient(135deg, #10b981, #059669)' 
+              : 'linear-gradient(135deg, #3b82f6, #2563eb)',
+            color: isElite ? '#000' : '#fff',
+            boxShadow: `0 0 15px ${accentColor}30`,
+            border: `1px solid ${accentColor}50`
+          }}
           data-testid="start-mining-btn"
         >
           {isStarting ? (
@@ -364,7 +407,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
         </Button>
 
         {isFreeUser && (
-          <p className="text-amber-400/60 text-xs mt-2">Upgrade to Elite to collect earned PRC</p>
+          <p className="text-xs mt-2" style={{ color: `${accentColor}80` }}>Upgrade to Elite to collect earned PRC</p>
         )}
       </div>
     </div>

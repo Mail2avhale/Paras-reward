@@ -724,11 +724,24 @@ const DashboardModern = ({ user, onLogout }) => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`rounded-xl p-4 border ${
-              stats.subscriptionPlan === 'elite' ? 'bg-gradient-to-r from-amber-900/30 to-yellow-900/30 border-amber-500/30' :
-              stats.subscriptionPlan === 'growth' ? 'bg-gradient-to-r from-emerald-900/30 to-green-900/30 border-emerald-500/30' :
-              'bg-gradient-to-r from-blue-900/30 to-indigo-900/30 border-blue-500/30'
-            }`}
+            className="rounded-xl p-4 border overflow-hidden relative"
+            style={{
+              background: stats.subscriptionPlan === 'elite' 
+                ? 'linear-gradient(145deg, #1a1505 0%, #2d2008 50%, #1f1604 100%)'
+                : stats.subscriptionPlan === 'growth'
+                ? 'linear-gradient(145deg, #051a10 0%, #082d15 50%, #041f0c 100%)'
+                : 'linear-gradient(145deg, #050d1a 0%, #081a2d 50%, #04101f 100%)',
+              border: stats.subscriptionPlan === 'elite'
+                ? '1px solid rgba(212, 175, 55, 0.35)'
+                : stats.subscriptionPlan === 'growth'
+                ? '1px solid rgba(16, 185, 129, 0.35)'
+                : '1px solid rgba(59, 130, 246, 0.35)',
+              boxShadow: stats.subscriptionPlan === 'elite'
+                ? '0 8px 25px -5px rgba(212, 175, 55, 0.15)'
+                : stats.subscriptionPlan === 'growth'
+                ? '0 8px 25px -5px rgba(16, 185, 129, 0.15)'
+                : '0 8px 25px -5px rgba(59, 130, 246, 0.15)'
+            }}
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
