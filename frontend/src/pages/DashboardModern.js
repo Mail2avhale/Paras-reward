@@ -889,19 +889,19 @@ const DashboardModern = ({ user, onLogout }) => {
               </div>
             </div>
 
-            {/* Progress bar */}
-            <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-              <div 
-                className="h-full rounded-full transition-all duration-500"
-                style={{ 
-                  width: `${Math.min(100, Math.max(0, ((redeemLimit.total_redeemed || 0) / Math.max(1, redeemLimit.total_limit || 1)) * 100))}%`,
-                  background: 'linear-gradient(90deg, #10b981, #34d399)'
-                }}
-              />
+            {/* Progress bar - unlocked vs remaining */}
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                <div 
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ 
+                    width: `${Math.min(100, Math.max(0, redeemLimit.unlock_percent || 0))}%`,
+                    background: 'linear-gradient(90deg, #10b981, #34d399)'
+                  }}
+                />
+              </div>
+              <span className="text-emerald-400 text-[10px] font-semibold whitespace-nowrap">{(redeemLimit.unlock_percent || 0).toFixed(1)}%</span>
             </div>
-            <p className="text-gray-600 text-[10px] mt-1.5 text-right">
-              {redeemLimit.network_size || 0} Network Members · {(redeemLimit.unlock_percent || 0).toFixed(1)}% Unlocked
-            </p>
           </motion.div>
         </div>
       )}
