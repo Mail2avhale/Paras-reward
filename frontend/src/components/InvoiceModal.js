@@ -58,13 +58,9 @@ const InvoiceModal = ({ payment, user, onClose }) => {
     const content = printRef.current;
     if (!content) return;
     const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Invoice ${invoiceNo}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
+    if (!printWindow) return;
+    const sanitizedBody = DOMPurify.sanitize(content.innerHTML);
+    const styles = `* { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; padding: 40px; background: #fff; }
           .invoice-container { max-width: 700px; margin: 0 auto; }
           .header { text-align: center; margin-bottom: 28px; border-bottom: 2px solid #10b981; padding-bottom: 16px; }
@@ -93,14 +89,9 @@ const InvoiceModal = ({ payment, user, onClose }) => {
           .paid-badge span { display: inline-block; padding: 10px 48px; border: 2px solid #10b981; border-radius: 8px; color: #10b981; font-size: 16px; font-weight: 800; letter-spacing: 2px; }
           .footer { text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 9px; color: #9ca3af; }
           .prc-note { background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 12px; font-size: 10px; color: #92400e; margin-bottom: 16px; }
-          @media print { body { padding: 20px; } }
-        </style>
-      </head>
-      <body>
-        ${DOMPurify.sanitize(content.innerHTML)}
-      </body>
-      </html>
-    `);
+          @media print { body { padding: 20px; } }`;
+    printWindow.document.open();
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Invoice</title><style>${styles}</style></head><body>${sanitizedBody}</body></html>`);
     printWindow.document.close();
     printWindow.focus();
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);

@@ -172,16 +172,59 @@ const AdminRazorpaySubscriptions = ({ user }) => {
     }
   };
   
-  // Print Invoice
+  // Print Invoice (XSS-safe: body content sanitized via DOMPurify)
   const printInvoice = () => {
     const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Invoice - ${invoiceData?.invoice_number}</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+    if (!printWindow) return;
+    const bodyContent = DOMPurify.sanitize(`
+        <div class="header">
+          <h1>PARAS REWARD</h1>
+          <p>PARAS REWARD TECHNOLOGIES PRIVATE LIMITED</p>
+          <p>Tax Invoice</p>
+        </div>
+        <div class="info-grid">
+          <div class="info-box">
+            <h3>Invoice Details</h3>
+            <p><strong>Invoice No:</strong> ${invoiceData?.invoice_number || ''}</p>
+            <p><strong>Date:</strong> ${new Date(invoiceData?.invoice_date).toLocaleDateString('en-IN')}</p>
+            <p><strong>Payment ID:</strong> ${invoiceData?.payment_id || 'N/A'}</p>
+          </div>
+          <div class="info-box">
+            <h3>Bill To</h3>
+            <p><strong>${invoiceData?.customer?.name || ''}</strong></p>
+            <p>${invoiceData?.customer?.email || ''}</p>
+            <p>${invoiceData?.customer?.mobile || ''}</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Description</th><th>HSN/SAC</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
+          </thead>
+          <tbody>
+            ${(invoiceData?.items || []).map(item => `
+              <tr>
+                <td>${item.description || ''}</td>
+                <td>${item.hsn_code || ''}</td>
+                <td>${item.quantity}</td>
+                <td>${item.unit_price?.toFixed(2)}</td>
+                <td>${item.amount?.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="totals">
+          <p>Subtotal: ${invoiceData?.subtotal?.toFixed(2)}</p>
+          <p>CGST (9%): ${invoiceData?.cgst?.toFixed(2)}</p>
+          <p>SGST (9%): ${invoiceData?.sgst?.toFixed(2)}</p>
+          <p class="total-final">Total: ${invoiceData?.total_amount?.toFixed(2)}</p>
+        </div>
+        <div class="paid-stamp">PAID</div>
+        <div class="footer">
+          <p>Thank you for your business!</p>
+          <p>This is a computer-generated invoice and does not require a signature.</p>
+        </div>
+    `);
+    const styles = `body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
           .header { text-align: center; border-bottom: 2px solid #10b981; padding-bottom: 20px; margin-bottom: 30px; }
           .header h1 { color: #10b981; margin: 0; }
           .header p { color: #666; margin: 5px 0; }
@@ -197,70 +240,9 @@ const AdminRazorpaySubscriptions = ({ user }) => {
           .total-final { font-size: 20px; font-weight: bold; color: #10b981; }
           .footer { text-align: center; color: #999; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
           .paid-stamp { color: #10b981; font-size: 24px; font-weight: bold; text-align: center; padding: 20px; border: 3px solid #10b981; border-radius: 8px; margin: 20px 0; }
-          @media print { body { padding: 20px; } }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>PARAS REWARD</h1>
-          <p>PARAS REWARD TECHNOLOGIES PRIVATE LIMITED</p>
-          <p>Tax Invoice</p>
-        </div>
-        
-        <div class="info-grid">
-          <div class="info-box">
-            <h3>Invoice Details</h3>
-            <p><strong>Invoice No:</strong> ${invoiceData?.invoice_number}</p>
-            <p><strong>Date:</strong> ${new Date(invoiceData?.invoice_date).toLocaleDateString('en-IN')}</p>
-            <p><strong>Payment ID:</strong> ${invoiceData?.payment_id || 'N/A'}</p>
-          </div>
-          <div class="info-box">
-            <h3>Bill To</h3>
-            <p><strong>${DOMPurify.sanitize(invoiceData?.customer?.name || '')}</strong></p>
-            <p>${DOMPurify.sanitize(invoiceData?.customer?.email || '')}</p>
-            <p>${DOMPurify.sanitize(invoiceData?.customer?.mobile || '')}</p>
-          </div>
-        </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th>HSN/SAC</th>
-              <th>Qty</th>
-              <th>Rate</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${invoiceData?.items?.map(item => `
-              <tr>
-                <td>${DOMPurify.sanitize(item.description || '')}</td>
-                <td>${DOMPurify.sanitize(item.hsn_code || '')}</td>
-                <td>${item.quantity}</td>
-                <td>₹${item.unit_price?.toFixed(2)}</td>
-                <td>₹${item.amount?.toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        
-        <div class="totals">
-          <p>Subtotal: ₹${invoiceData?.subtotal?.toFixed(2)}</p>
-          <p>CGST (9%): ₹${invoiceData?.cgst?.toFixed(2)}</p>
-          <p>SGST (9%): ₹${invoiceData?.sgst?.toFixed(2)}</p>
-          <p class="total-final">Total: ₹${invoiceData?.total_amount?.toFixed(2)}</p>
-        </div>
-        
-        <div class="paid-stamp">✓ PAID</div>
-        
-        <div class="footer">
-          <p>Thank you for your business!</p>
-          <p>This is a computer-generated invoice and does not require a signature.</p>
-        </div>
-      </body>
-      </html>
-    `);
+          @media print { body { padding: 20px; } }`;
+    printWindow.document.open();
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Invoice</title><style>${styles}</style></head><body>${bodyContent}</body></html>`);
     printWindow.document.close();
     printWindow.print();
   };

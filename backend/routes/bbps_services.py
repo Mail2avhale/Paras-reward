@@ -2291,7 +2291,7 @@ async def resend_refund_otp(tid: str):
         logging.info(f"[EKO REFUND] Resending OTP for TID: {tid}, URL: {url}")
         
         import requests as sync_requests
-        response = sync_requests.post(url, headers=headers, data=body, timeout=30, verify=False)
+        response = sync_requests.post(url, headers=headers, data=body, timeout=30)
         
         logging.info(f"[EKO REFUND] OTP HTTP: {response.status_code} | Body: {response.text[:500]}")
         
@@ -2359,7 +2359,7 @@ async def verify_refund_otp(tid: str, otp: str, state: int = 1):
         logging.info(f"[EKO REFUND] Verifying OTP for TID: {tid}, URL: {url}")
         
         import requests as sync_requests
-        response = sync_requests.post(url, headers=headers, data=body, timeout=30, verify=False)
+        response = sync_requests.post(url, headers=headers, data=body, timeout=30)
         
         logging.info(f"[EKO REFUND] Verify HTTP: {response.status_code} | Body: {response.text[:500]}")
         
