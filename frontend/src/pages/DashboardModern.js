@@ -16,6 +16,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
 // BurningIndicator removed - burning concept deprecated
 import HolidayCalendar from '@/components/HolidayCalendar';
+import MiningWidget from '@/components/MiningWidget';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -278,7 +279,6 @@ const DashboardModern = ({ user, onLogout }) => {
     setActiveTab(tabName);
     const routes = {
       'home': '/dashboard',
-      'rewards': '/daily-rewards',
       'referrals': '/referrals',
       'profile': '/profile'
     };
@@ -813,6 +813,14 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       )}
 
+      {/* Mining Widget - Reward collection on dashboard */}
+      <div className="px-5 mb-4" data-testid="dashboard-mining-widget">
+        <MiningWidget user={user} onBalanceUpdate={(newBalance) => {
+          setStats(prev => ({ ...prev, prcBalance: newBalance }));
+          if (userData) setUserData(prev => ({ ...prev, prc_balance: newBalance }));
+        }} />
+      </div>
+
       {/* Profile Completion Ring - Show if profile is incomplete */}
       <div className="px-5 mb-4">
         <ProfileCompletionRing 
@@ -826,27 +834,7 @@ const DashboardModern = ({ user, onLogout }) => {
       <div className="px-5 mb-4">
       </div>
 
-      {/* Quick Actions */}
-      <div className="px-5 mb-4">
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            { icon: Star, label: t('rewards'), route: '/daily-rewards', gradient: 'from-purple-600 to-violet-700' },
-            { icon: Users, label: t('referrals'), route: '/referrals', gradient: 'from-pink-600 to-rose-700' },
-          ].map((action, index) => (
-            <motion.button
-              key={action.route}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              onClick={() => navigate(action.route)}
-              className={`flex flex-col items-center justify-center p-3 rounded-xl bg-gradient-to-br ${action.gradient} shadow-lg`}
-            >
-              <action.icon className="w-5 h-5 text-white mb-1" />
-              <span className="text-[10px] font-semibold text-white">{action.label}</span>
-            </motion.button>
-          ))}
-        </div>
-      </div>
+      {/* Quick Actions removed - rewards integrated into dashboard */}
 
       {/* Horizontal Scrollable Cards - Stats Card (only for Explorer/Free users) */}
       {!['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && (
@@ -948,12 +936,6 @@ const DashboardModern = ({ user, onLogout }) => {
             label={t('home')} 
             isActive={activeTab === 'home'} 
             onClick={() => handleNavigation('home')}
-          />
-          <BottomNavItem 
-            icon={Star} 
-            label={t('rewards')} 
-            isActive={activeTab === 'rewards'} 
-            onClick={() => handleNavigation('rewards')}
           />
           <BottomNavItem 
             icon={Users} 

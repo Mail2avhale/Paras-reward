@@ -128,14 +128,12 @@ const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
 
 // CRITICAL PAGES - Preload after initial render for faster navigation
 const DashboardModern = lazy(() => import("@/pages/DashboardModern"));
-const DailyRewards = lazy(() => import("@/pages/Mining")); // Renamed for AdMob compliance
+// Mining page removed - integrated into Dashboard (April 2026)
 
 // Preload critical pages after initial render
 const preloadCriticalPages = () => {
-  // Preload after 2 seconds to not block initial render
   setTimeout(() => {
     import("@/pages/DashboardModern");
-    import("@/pages/Mining");
   }, 2000);
 };
 
@@ -333,8 +331,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/dashboard" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DashboardModern user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* fintech route removed - not in use */}
             <Route path="/support" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SupportTickets user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
-            <Route path="/daily-rewards" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DailyRewards user={user} onLogout={handleLogout} onBalanceUpdate={onBalanceUpdate} />) : <Navigate to="/login" />} />
-            <Route path="/mining" element={<Navigate to="/daily-rewards" />} /> {/* Redirect old route */}
+            <Route path="/daily-rewards" element={<Navigate to="/dashboard" />} /> {/* Rewards integrated into Dashboard */}
+            <Route path="/mining" element={<Navigate to="/dashboard" />} /> {/* Redirect old route */}
             {/* TapGame removed - feature deprecated */}
             <Route path="/game" element={<Navigate to="/dashboard" replace />} />
             {/* Removed: Treasure Hunt and Scratch Card games */}

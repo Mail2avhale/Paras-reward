@@ -7,6 +7,15 @@
 - Extracted 7 new modular route files: admin_accounting (4954), notifications_routes (3010), admin_prc_balance (1542), ai_routes (1050), manager_routes (976), admin_prc_economy (221)
 - All 117 extracted routes verified working via curl (401/422/200 responses correct)
 
+## COMPLETED: Reward Page Removed + Mining Widget on Dashboard (P0) - 7 April 2026
+- Created MiningWidget.js component (compact self-contained mining logic + UI)
+- Embedded mining widget on Dashboard below Plan Card (Time, Earnings, Progress Bar, Collect button)
+- Removed Reward page (Mining.js deleted, /daily-rewards redirects to /dashboard)
+- Removed Quick Action cards (Rewards + Referrals) from Dashboard
+- Removed "Rewards" tab from bottom navigation (Dashboard + BottomNav)
+- Removed rewards link from Sidebar
+- Cleaned BottomNav.js, SEO.js, App.js unused references
+
 ## COMPLETED: Full Burning Concept Removal - User + Admin (P0) - 7 April 2026
 - Deleted BurningIndicator.js component, deprecated routes/burning.py
 - Removed auto-burn scheduler job (3.33%/day cron), all burn state/functions from AdminDashboard

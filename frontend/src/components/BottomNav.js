@@ -12,7 +12,6 @@ const BottomNav = () => {
   const getActiveTab = () => {
     const path = location.pathname;
     if (path === '/dashboard') return 'home';
-    if (path === '/mining' || path === '/daily-rewards') return 'rewards';
     if (path === '/referrals') return 'referrals';
     if (path === '/profile' || path === '/profile-advanced') return 'profile';
     return 'home';
@@ -22,7 +21,6 @@ const BottomNav = () => {
 
   const navItems = [
     { id: 'home', label: t('home'), icon: Home, route: '/dashboard' },
-    { id: 'rewards', label: t('rewards'), icon: Zap, route: '/daily-rewards' },
     { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
     { id: 'profile', label: t('profile'), icon: User, route: '/profile' },
   ];

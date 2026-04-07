@@ -52,7 +52,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
 
   const menuItems = [
     { id: 'home', label: t('home'), icon: Home, route: '/dashboard' },
-    { id: 'rewards', label: t('rewards'), icon: Zap, route: '/daily-rewards' },
+    // Rewards integrated into Dashboard (April 2026)
     // Tap Game removed - feature deprecated
     // Marketplace removed - feature deprecated
     // Orders removed - feature deprecated

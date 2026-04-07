@@ -79,13 +79,7 @@ export const SEOConfigs = {
     url: "https://www.parasreward.com/dashboard",
     noIndex: true
   },
-  dailyRewards: {
-    title: "Daily Rewards - Earn PRC Every Day",
-    description: "Collect your daily PRC rewards! Streak bonuses, random rewards, and more. Don't miss a day!",
-    keywords: "daily rewards, prc points, streak bonus, free rewards india",
-    url: "https://www.parasreward.com/daily-rewards",
-    noIndex: true
-  },
+  // dailyRewards removed - integrated into Dashboard (April 2026)
   // tapGame removed - feature deprecated
   referrals: {
     title: "Growth Network - Invite Friends & Earn Bonus PRC",
