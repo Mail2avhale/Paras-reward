@@ -454,31 +454,6 @@ const SubscriptionPlans = ({ user }) => {
         </div>
       </div>
 
-      {/* Current Plan Banner */}
-      {currentSubscription && (
-        <div className="mx-5 mt-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 to-amber-600/10 border border-amber-500/30">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-              {(() => {
-                const IconComponent = planIcons[currentSubscription.plan] || Users;
-                return <IconComponent className="w-6 h-6 text-amber-500" />;
-              })()}
-            </div>
-            <div>
-              <p className="text-amber-400 font-semibold">{t('current')} {t('plan')}: {currentSubscription.plan_name}</p>
-              <p className="text-gray-400 text-sm">
-                {currentSubscription.is_expired ? (
-                  <span className="text-red-400">{t('expiredRenew')}</span>
-                ) : currentSubscription.days_remaining > 0 ? (
-                  <span>{t('daysRemaining').replace('{count}', currentSubscription.days_remaining)}</span>
-                ) : (
-                  <span>{t('freePlanUpgrade')}</span>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ALERT: Payment received but subscription not activated */}
       {hasUnactivatedPayment && (
@@ -570,71 +545,62 @@ const SubscriptionPlans = ({ user }) => {
                     </div>
                   )}
 
-                  <div className="flex items-start gap-4 mt-4">
-                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${planColors[plan.id]} flex items-center justify-center shadow-lg`}>
-                      <IconComponent className="w-8 h-8 text-white" />
+                  <div className="flex items-start gap-3 mt-4">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${planColors[plan.id]} flex items-center justify-center flex-shrink-0`}>
+                      <IconComponent className="w-6 h-6 text-white" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-white font-bold text-xl">{plan.name}</h3>
+                        <h3 className="text-white font-bold text-lg">{plan.name}</h3>
                         {isCurrentPlan && (
                           <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full">{t('current')}</span>
                         )}
                       </div>
                       
                       {/* Features */}
-                      <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="flex flex-wrap gap-1.5 mt-2">
                         {plan.is_free ? (
                           <>
-                            <span className="px-2 py-1 bg-gray-800/80 rounded-lg text-xs text-gray-300 flex items-center gap-1">
+                            <span className="px-2 py-0.5 bg-gray-800/80 rounded-lg text-[11px] text-gray-300 flex items-center gap-1">
                               <Zap className="w-3 h-3 text-gray-500" /> Mine PRC
                             </span>
-                            <span className="px-2 py-1 bg-red-900/50 rounded-lg text-xs text-red-400 flex items-center gap-1">
-                              ❌ Cannot Collect
+                            <span className="px-2 py-0.5 bg-red-900/50 rounded-lg text-[11px] text-red-400 flex items-center gap-1">
+                              Cannot Collect
                             </span>
                           </>
                         ) : (
                           <>
-                            <span className="px-2 py-1 bg-amber-900/50 rounded-lg text-xs text-amber-300 flex items-center gap-1">
+                            <span className="px-2 py-0.5 bg-amber-900/50 rounded-lg text-[11px] text-amber-300 flex items-center gap-1">
                               <Zap className="w-3 h-3 text-amber-500" /> Mine + Collect
                             </span>
-                            <span className="px-2 py-1 bg-emerald-900/50 rounded-lg text-xs text-emerald-300 flex items-center gap-1">
-                              <CheckCircle className="w-3 h-3 text-emerald-500" /> Premium Benefits
+                            <span className="px-2 py-0.5 bg-emerald-900/50 rounded-lg text-[11px] text-emerald-300 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3 text-emerald-500" /> Premium
                             </span>
                           </>
                         )}
                       </div>
                       
                       {/* Price Section */}
-                      <div className="mt-4 flex items-end justify-between">
-                        <div>
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
                           {plan.is_free ? (
-                            <span className="text-3xl font-bold text-white">FREE</span>
+                            <span className="text-2xl font-bold text-white">FREE</span>
                           ) : offer ? (
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-3xl font-bold text-white">₹{offer.offer}</span>
-                              <span className="text-lg text-gray-500 line-through">₹{offer.original}</span>
-                              <span className="text-sm text-gray-400">/month</span>
+                            <div className="flex items-baseline gap-1.5 flex-wrap">
+                              <span className="text-2xl font-bold text-white">₹{offer.offer}</span>
+                              <span className="text-sm text-gray-500 line-through">₹{offer.original}</span>
+                              <span className="text-xs text-gray-400">/mo</span>
                             </div>
                           ) : (
-                            <>
-                              <span className="text-3xl font-bold text-white">₹{plan.pricing?.monthly}</span>
-                              <span className="text-gray-500 text-sm">/month</span>
-                            </>
-                          )}
-                          
-                          {/* Savings Message */}
-                          {offer && (
-                            <p className={`text-sm mt-1 font-medium ${
-                              isBest ? 'text-amber-400' : isPopular ? 'text-emerald-400' : 'text-blue-400'
-                            }`}>
-                              You save ₹{offer.original - offer.offer}!
-                            </p>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-2xl font-bold text-white">₹{plan.pricing?.monthly}</span>
+                              <span className="text-gray-500 text-xs">/mo</span>
+                            </div>
                           )}
                         </div>
                         
                         {!plan.is_free && (
-                          <div className={`px-4 py-2 rounded-xl font-semibold text-sm ${
+                          <div className={`px-4 py-2 rounded-xl font-semibold text-xs whitespace-nowrap flex-shrink-0 ${
                             isBest ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-black' :
                             isPopular ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white' :
                             'bg-blue-500 text-white'
@@ -708,11 +674,18 @@ const SubscriptionPlans = ({ user }) => {
                             </span>
                           </div>
                         </div>
-                        {isOngoing && period.days_remaining > 0 && (
-                          <span className="text-emerald-400 text-xs font-bold" data-testid="plan-days-remaining">
-                            {period.days_remaining} days left
-                          </span>
-                        )}
+                        <div className="text-right">
+                          {isOngoing && period.days_remaining > 0 && (
+                            <span className="text-emerald-400 text-xs font-bold" data-testid="plan-days-remaining">
+                              {period.days_remaining} days left
+                            </span>
+                          )}
+                          {period.amount > 0 && (
+                            <p className={`text-xs font-semibold mt-0.5 ${isOngoing ? 'text-white' : 'text-zinc-400'}`}>
+                              ₹{Number(period.amount).toLocaleString('en-IN')}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-4">
@@ -730,6 +703,23 @@ const SubscriptionPlans = ({ user }) => {
                           </p>
                         </div>
                       </div>
+
+                      {/* Invoice Button */}
+                      {period.amount > 0 && (
+                        <button
+                          onClick={() => setInvoicePayment({
+                            plan_name: period.plan_name,
+                            amount: period.amount,
+                            payment_method: period.payment_method || '',
+                            created_at: period.start_date,
+                            status: period.status === 'ongoing' ? 'paid' : 'completed'
+                          })}
+                          className="mt-3 w-full py-2 bg-zinc-800/80 hover:bg-zinc-700/80 text-zinc-300 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-1.5 border border-zinc-700/50"
+                          data-testid={`invoice-btn-${idx}`}
+                        >
+                          <FileText className="w-3.5 h-3.5" /> View Invoice
+                        </button>
+                      )}
                     </div>
                   );
                 })}

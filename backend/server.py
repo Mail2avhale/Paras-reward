@@ -8467,12 +8467,24 @@ async def get_user_subscription_history(uid: str, request: Request):
                 expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
             is_ongoing = expiry_dt > now
             days_remaining = max(0, (expiry_dt - now).days) if is_ongoing else 0
+            
+            # Find matching payment amount for current plan
+            current_amount = 0
+            current_method = ""
+            for h in history:
+                if h.get("status") in ("completed", "approved", "paid"):
+                    current_amount = h.get("amount", 0) or 0
+                    current_method = h.get("payment_method", "")
+                    break  # Most recent successful payment
+            
             plan_periods.append({
                 "plan_name": sub_plan.title(),
                 "status": "ongoing" if is_ongoing else "expired",
                 "start_date": str(sub_start) if sub_start else None,
                 "expiry_date": str(sub_expiry),
                 "days_remaining": days_remaining,
+                "amount": current_amount,
+                "payment_method": current_method,
                 "is_current": True
             })
         except Exception:
