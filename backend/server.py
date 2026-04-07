@@ -15051,16 +15051,18 @@ async def get_performance_summary(user_id: str, request: Request):
         except Exception:
             pass
 
-        # c) PRC-based subscription payments (convert PRC to INR: PRC / 10)
+        # c) PRC-based subscription payments (use inr_equivalent, fallback to prc/10)
         try:
             prc_sub_pipeline = [
                 {"$match": {"user_id": user_id, "payment_method": "prc", "status": {"$in": success_statuses}}},
-                {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
+                {"$group": {"_id": None, "total_inr": {"$sum": "$inr_equivalent"}, "total_prc": {"$sum": "$prc_amount"}}}
             ]
             prc_sub_result = await db.subscription_payments.aggregate(prc_sub_pipeline).to_list(1)
             if prc_sub_result:
-                prc_amount = float(prc_sub_result[0].get("total", 0) or 0)
-                total_subscription_inr += prc_amount / 10
+                inr_total = float(prc_sub_result[0].get("total_inr", 0) or 0)
+                prc_total = float(prc_sub_result[0].get("total_prc", 0) or 0)
+                # Prefer inr_equivalent (actual plan price), fallback to prc/10
+                total_subscription_inr += inr_total if inr_total > 0 else (prc_total / 10)
         except Exception:
             pass
 
