@@ -2,6 +2,16 @@
 
 ## LAST UPDATED - 8 April 2026
 
+## COMPLETED: Security PIN System (Replaced Security Question) - 8 April 2026
+- Replaced Security Question with 4-digit Security PIN in Forgot PIN flow
+- Default Security PIN = last 4 digits of registered mobile (auto-set on registration)
+- All 32 existing users migrated with default security PIN
+- User can change Security PIN (verify via current PIN or login PIN)
+- Security PIN NEVER disclosed in any API response (tested & verified)
+- Fixed security leak: security_pin_hash was exposed in user profile → excluded
+- APIs: /auth/security-pin/check/{uid}, /auth/security-pin/change, /auth/forgot-pin/verify-security
+- Test: 19/19 backend pass, frontend verified (iteration_192.json)
+
 ## VERIFIED: Razorpay Subscription E2E Flow - 8 April 2026
 - Create order, auto-activation, remaining+28 days renewal, expiry→explorer downgrade
 - 16/17 backend tests passed (1 skipped - admin activate needs email)
