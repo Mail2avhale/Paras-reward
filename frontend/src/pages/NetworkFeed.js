@@ -41,7 +41,7 @@ const NetworkFeed = ({ user }) => {
     { id: 'subscription', label: 'Subscriptions', icon: '⭐', types: ['subscription'] },
     { id: 'referral', label: 'Referrals', icon: '🤝', types: ['referral_bonus', 'referral_reward'] },
     { id: 'earnings', label: 'Earnings', icon: '💰', types: ['tap_game', 'mining'] },
-    { id: 'redeem', label: 'Redeems', icon: '🛍️', types: ['bill_payment', 'gift_voucher', 'shopping'] },
+    { id: 'redeem', label: 'Transactions', icon: '🛍️', types: ['shopping'] },
   ];
 
   // Filter activities by category

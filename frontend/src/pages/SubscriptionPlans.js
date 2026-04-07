@@ -735,7 +735,7 @@ const SubscriptionPlans = ({ user }) => {
                               <Zap className="w-3 h-3 text-amber-500" /> Mine + Collect
                             </span>
                             <span className="px-2 py-1 bg-emerald-900/50 rounded-lg text-xs text-emerald-300 flex items-center gap-1">
-                              <CheckCircle className="w-3 h-3 text-emerald-500" /> Redeem to Bank
+                              <CheckCircle className="w-3 h-3 text-emerald-500" /> Premium Benefits
                             </span>
                           </>
                         )}
@@ -787,7 +787,7 @@ const SubscriptionPlans = ({ user }) => {
                     <div className="mt-4 pt-4 border-t border-gray-800/50 grid grid-cols-3 gap-2 text-center">
                       <div>
                         <CheckCircle className="w-4 h-4 text-green-500 mx-auto mb-1" />
-                        <span className="text-xs text-gray-400">Redeem PRC</span>
+                        <span className="text-xs text-gray-400">Premium Access</span>
                       </div>
                       <div>
                         <Gift className="w-4 h-4 text-purple-500 mx-auto mb-1" />
@@ -837,7 +837,7 @@ const SubscriptionPlans = ({ user }) => {
                 { feature: 'Daily Base Mining', cash: '1000 PRC', cashIcon: '', prc: '1000 PRC', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-emerald-400' },
                 { feature: 'Network Income', cash: 'Full', cashIcon: '', prc: 'Full', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-emerald-400' },
                 { feature: 'Earning Growth', cash: 'Fast', cashIcon: '🚀', prc: 'Standard', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-zinc-400' },
-                { feature: 'Redeem Power', cash: 'Full Unlock', cashIcon: '', prc: 'Limited', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
+                { feature: 'Platform Access', cash: 'Full Unlock', cashIcon: '', prc: 'Limited', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-amber-400' },
                 { feature: 'Burn Rate', cash: '1%', cashIcon: '', prc: '5%', prcIcon: '🔥', cashColor: 'text-emerald-400', prcColor: 'text-red-400' },
                 { feature: 'Priority', cash: 'High', cashIcon: '', prc: 'Normal', prcIcon: '', cashColor: 'text-emerald-400', prcColor: 'text-zinc-400' },
                 { feature: 'Best For', cash: 'Serious Users', cashIcon: '', prc: 'PRC Holders', prcIcon: '', cashColor: 'text-amber-400', prcColor: 'text-purple-400' },

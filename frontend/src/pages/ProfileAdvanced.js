@@ -836,7 +836,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             <FileText className="w-5 h-5 text-blue-500" />
             {t.kycVerification}
             <InfoTooltip>
-              <p>KYC verification is required to redeem PRC for bill payments. Complete it once for lifetime access</p>
+              <p>KYC verification is required for premium features. Complete it once for lifetime access</p>
             </InfoTooltip>
           </span>
           <div className="flex items-center gap-2">

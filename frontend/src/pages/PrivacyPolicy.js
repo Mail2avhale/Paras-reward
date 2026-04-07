@@ -484,7 +484,7 @@ const PrivacyPolicy = () => {
                     If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately at <strong>{companyInfo.email}</strong>. We will take steps to delete such information from our systems.
                   </p>
                   <p>
-                    Users must be at least 18 years old to register an account and use our financial services (rewards redemption, bill payments, etc.).
+                    Users must be at least 18 years old to register an account and use our platform services.
                   </p>
                 </div>
               </section>

@@ -6,7 +6,6 @@ import {
   Zap,
   User,
   ShoppingBag,
-  Gift,
   Trophy,
   Users,
   Crown,
@@ -61,8 +60,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     // Tap Game removed - feature deprecated
     // Marketplace removed - feature deprecated
     // Orders removed - feature deprecated
-    { id: 'gift-vouchers', label: t('giftVouchers'), icon: Gift, route: '/gift-vouchers' },
-    // Bill Payments / Redeem PRC - REMOVED (deprecated April 2026)
+    // Gift Vouchers / Bill Payments - REMOVED (deprecated April 2026)
     { id: 'prc-statement', label: 'PRC Statement', icon: FileText, route: '/prc-statement' },
     { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
     { id: 'subscription', label: t('subscription'), icon: Crown, route: '/subscription' },

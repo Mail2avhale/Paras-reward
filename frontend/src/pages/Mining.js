@@ -995,7 +995,7 @@ const DailyRewards = ({ user, onBalanceUpdate }) => {
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <p className="text-zinc-500 text-xs">{globalT('currentBalance')}</p>
                   <InfoTooltip>
-                    <p>Your available PRC balance that can be used for bill payments, vouchers, and marketplace purchases</p>
+                    <p>Your available PRC balance that can be used for marketplace purchases and platform benefits</p>
                   </InfoTooltip>
                 </div>
                 <p className="text-2xl font-semibold text-zinc-100 font-mono tabular-nums">{(userData?.prc_balance || 0).toFixed(2)}</p>

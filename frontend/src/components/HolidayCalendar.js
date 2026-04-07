@@ -62,7 +62,7 @@ const HolidayCalendar = () => {
       {todayHoliday?.is_holiday && (
         <div className="mb-3 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2" data-testid="today-holiday-banner">
           <span className="text-amber-400 text-sm font-medium">
-            Today is a holiday — {todayHoliday.holiday_name}. Redeem services are paused.
+            Today is a holiday — {todayHoliday.holiday_name}. Some services may be paused.
           </span>
         </div>
       )}

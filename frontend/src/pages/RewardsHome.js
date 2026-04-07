@@ -208,19 +208,19 @@ const homeTranslations = {
     en: "Gift Vouchers"
   },
   giftVouchersDesc: {
-    mr: "Amazon, Flipkart आणि इतर ब्रँड्सच्या गिफ्ट व्हाउचरसाठी पॉइंट्स रिडीम करा.",
-    hi: "Amazon, Flipkart और अन्य ब्रांड्स के गिफ्ट वाउचर के लिए पॉइंट्स रिडीम करें।",
-    en: "Redeem your points for gift vouchers from Amazon, Flipkart & more."
+    mr: "प्लॅटफॉर्मवर विविध सेवांसाठी पॉइंट्स वापरा.",
+    hi: "प्लेटफॉर्म पर विभिन्न सेवाओं के लिए पॉइंट्स उपयोग करें।",
+    en: "Use your points for various platform services and benefits."
   },
   billPayments: {
-    mr: "बिल पेमेंट",
-    hi: "बिल पेमेंट",
-    en: "Bill Payments"
+    mr: "सेवा",
+    hi: "सेवाएं",
+    en: "Services"
   },
   billPaymentsDesc: {
-    mr: "मोबाइल रिचार्ज, DTH आणि युटिलिटी बिलांसाठी पॉइंट्स वापरा.",
-    hi: "मोबाइल रिचार्ज, DTH और यूटिलिटी बिलों के लिए पॉइंट्स उपयोग करें।",
-    en: "Use your points for mobile recharge, DTH & utility bill payments."
+    mr: "प्लॅटफॉर्मवर उपलब्ध सेवांसाठी पॉइंट्स वापरा.",
+    hi: "प्लेटफॉर्म पर उपलब्ध सेवाओं के लिए पॉइंट्स उपयोग करें।",
+    en: "Use your points for available platform services."
   },
   luxuryLife: {
     mr: "लक्झरी सेव्हिंग्स",
@@ -280,7 +280,7 @@ const homeTranslations = {
   step3Desc: {
     mr: "व्हाउचर किंवा बिल पेमेंटसाठी वापरा",
     hi: "वाउचर या बिल पेमेंट के लिए उपयोग करें",
-    en: "Use for vouchers or bill payments"
+    en: "Use for shopping or platform services"
   },
   freeToUse: {
     mr: "विनामूल्य वापरा",
@@ -364,20 +364,6 @@ const RewardsHome = () => {
       color: 'from-blue-500 to-blue-600',
       link: '/register'
     },
-    {
-      icon: Gift,
-      title: t('giftVouchers'),
-      description: t('giftVouchersDesc'),
-      color: 'from-purple-500 to-purple-600',
-      link: '/register'
-    },
-    {
-      icon: CreditCard,
-      title: t('billPayments'),
-      description: t('billPaymentsDesc'),
-      color: 'from-green-500 to-emerald-600',
-      link: '/register'
-    }
   ];
 
   const plans = [
@@ -685,7 +671,7 @@ const RewardsHome = () => {
             {[
               {
                 q: "What is Paras Reward?",
-                a: "Paras Reward is a platform where you can earn PRC (Paras Reward Coins) through daily activities like mining, games, and referrals. Redeem your coins for gift vouchers, bill payments, and more!"
+                a: "Paras Reward is a platform where you can earn PRC (Paras Reward Coins) through daily activities like mining, games, and referrals. Use your coins within the platform!"
               },
               {
                 q: "What is PRC (Paras Reward Coin)?",
@@ -704,8 +690,8 @@ const RewardsHome = () => {
                 a: "Earn PRC through: Daily Mining (automatic), Daily Rewards, and Invite Friends bonus. Premium members earn up to 5x more!"
               },
               {
-                q: "What can I redeem my PRC for?",
-                a: "Redeem PRC for: Amazon/Flipkart Gift Vouchers, Mobile Recharges, DTH Recharges, Bill Payments. VIP members can also redeem to bank (subject to limits and charges)."
+                q: "What can I use PRC for?",
+                a: "PRC can be used within the Paras Reward platform for various activities. Premium members get enhanced benefits and higher earning rates."
               },
               {
                 q: "How does inviting friends work?",

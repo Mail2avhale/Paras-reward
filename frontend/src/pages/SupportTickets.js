@@ -71,7 +71,7 @@ const SupportTickets = () => {
     ],
     'Orders': [
       'Bill payment failed',
-      'Recharge not received',
+      'Service issue',
       'Bank transfer pending',
       'Gift voucher code not working'
     ],

@@ -94,7 +94,7 @@ const PaymentRetryQueueWidget = () => {
           </div>
           <div>
             <h3 className="text-lg font-semibold text-slate-800">Payment Retry Queue</h3>
-            <p className="text-xs text-slate-500">Auto-retry for failed BBPS transactions</p>
+            <p className="text-xs text-slate-500">Auto-retry for failed transactions</p>
           </div>
         </div>
         <Button

@@ -17,7 +17,7 @@ export const blogArticles = [
       <ul>
         <li>Collect reward points every hour</li>
         <li>Boost rewards with referrals</li>
-        <li>Redeem coins for cash or vouchers (Elite users only)</li>
+        <li>Use coins within the platform ecosystem</li>
         <li>Get daily bonuses for activity</li>
       </ul>
       <p>It's a reward model based on user time and engagement — not cryptocurrency trading or investment.</p>
@@ -42,7 +42,7 @@ export const blogArticles = [
       <p>Yes — joining and collecting rewards is 100% free. Elite Membership is optional and required only for redemption.</p>
 
       <h2>✅ Is It Legal and Safe?</h2>
-      <p>Yes. Paras Reward is a compliant, India-based rewards platform, not a crypto trading or investment app. Coins collected in the app reflect your activity and can be redeemed legally through supported channels.</p>
+      <p>Yes. Paras Reward is a compliant, India-based rewards platform, not a crypto trading or investment app. Coins collected in the app reflect your activity and are used within supported platform channels.</p>
     `
   },
   {
@@ -154,56 +154,13 @@ export const blogArticles = [
       <h2>⚠️ Without VIP:</h2>
       <p>Free users can earn PRC but with limitations:</p>
       <ul>
-        <li>Cannot redeem to bank</li>
+        <li>Limited features access</li>
         <li>Limited access to premium features</li>
         <li>PRC earning restricted (VIP membership required to accumulate PRC)</li>
       </ul>
 
       <h2>✅ Is VIP Worth It?</h2>
       <p>If you're actively using the platform and have a strong Growth Network, VIP membership pays for itself quickly through redemptions and increased reward rates.</p>
-    `
-  },
-  {
-    id: 5,
-    slug: "how-to-redeem-coins",
-    title: "How to Redeem Coins in Paras Reward (With Steps)",
-    excerpt: "Ready to convert your time into money? Follow these simple steps to redeem your PRC coins for gift vouchers via UPI.",
-    author: "PARAS REWARD Team",
-    date: "November 2, 2024",
-    readTime: "4 min read",
-    category: "Redemption",
-    image: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&h=400&fit=crop",
-    content: `
-      <p class="lead">Ready to convert your time into money? Follow these simple steps to redeem your PRC coins:</p>
-
-      <h2>🔄 Step-by-Step Redeem Process:</h2>
-      <ol>
-        <li>Go to "Redeem" section</li>
-        <li>Select service (Mobile, DTH, Bills, Bank Transfer)</li>
-        <li>Enter required details</li>
-        <li>Select the amount based on balance</li>
-        <li>Confirm redemption</li>
-        <li>Admin processes within 24-48 hours</li>
-      </ol>
-
-      <h2>⚠️ Redeem Rules:</h2>
-      <ul>
-        <li>₹10 platform fee + 20% admin charges</li>
-        <li>10 PRC = ₹1</li>
-        <li>Minimum redemption: ₹10</li>
-        <li>KYC verification required</li>
-      </ul>
-
-      <h2>✅ Supported Redemption Methods:</h2>
-      <ul>
-        <li><strong>Mobile Recharge</strong> (All operators)</li>
-        <li><strong>DTH Recharge</strong> (Tata Play, Dish TV, etc.)</li>
-        <li><strong>Product redemption</strong> (5000+ items)</li>
-      </ul>
-
-      <h2>📊 Conversion Rate:</h2>
-      <p><strong>10 PRC = ₹1 INR</strong></p>
-      <p>Example: If you have 10,000 PRC, it equals ₹1,000 worth of value.</p>
     `
   },
   {
@@ -224,7 +181,7 @@ export const blogArticles = [
         <li><strong>Free to join</strong> — no upfront investment</li>
         <li><strong>No financial trading</strong> involved</li>
         <li><strong>Transparent reward logic</strong></li>
-        <li><strong>Redeem via legal UPI channels</strong></li>
+        <li><strong>Transparent reward logic</strong></li>
         <li><strong>Regular app updates and support</strong></li>
         <li><strong>10,000+ active users</strong></li>
         <li><strong>₹50L+ rewards distributed</strong></li>

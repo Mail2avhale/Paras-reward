@@ -120,10 +120,10 @@ const ProfileCompletionPopup = ({ user, isOpen, onClose }) => {
             <h4 className="font-semibold text-green-900 text-sm mb-2">Why complete your profile?</h4>
             <ul className="text-xs text-green-800 space-y-1">
               <li className="flex items-center gap-2">
-                <CheckCircle className="h-3 w-3" /> Unlock gift voucher redemption
+                <CheckCircle className="h-3 w-3" /> Unlock premium features
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="h-3 w-3" /> Enable bill payments
+                <CheckCircle className="h-3 w-3" /> Enable platform services
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="h-3 w-3" /> Get verified badge

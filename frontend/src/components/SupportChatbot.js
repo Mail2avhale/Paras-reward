@@ -7,7 +7,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 const SupportChatbot = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'bot', text: "Hey there! I'm your Paras Reward assistant.\n\nAsk me anything — your earnings, referrals, how to redeem, or any feature. I have access to your real account data!\n\nHow can I help you today?" }
+    { role: 'bot', text: "Hey there! I'm your Paras Reward assistant.\n\nAsk me anything — your earnings, referrals, mining, or any feature. I have access to your real account data!\n\nHow can I help you today?" }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

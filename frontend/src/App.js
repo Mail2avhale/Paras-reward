@@ -249,8 +249,7 @@ const AdminPopupMessages = IS_USER_BUILD ? null : lazy(() => import(/* webpackCh
 const AdminBankTransfers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBankTransfers"));
 const AdminHolidays = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminHolidays"));
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
-// BankRedeemPage, BillPaymentHistory - REMOVED (Redeem PRC feature deprecated April 2026)
-const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
+// GiftVoucherRedemption - REMOVED (deprecated April 2026)
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
 
 // ============ MANAGER PAGES REMOVED ============
@@ -386,7 +385,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/bank-transfer" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
             <Route path="/money-transfer" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
             <Route path="/bbps" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BBPSServices user={user} />) : <Navigate to="/login" />} />
-            <Route path="/bill-pay" element={user ? <Navigate to="/bbps" /> : <Navigate to="/login" />} />
+            <Route path="/bill-pay" element={<Navigate to="/dashboard" replace />} />
             
             {/* Stock requests removed - stockist system deprecated */}
             
@@ -496,7 +495,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/withdrawal-history" element={<Navigate to="/dashboard" replace />} />
             <Route path="/bill-history" element={<Navigate to="/dashboard" replace />} />
             <Route path="/bill-payments" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/gift-vouchers" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <GiftVoucherRedemption user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/gift-vouchers" element={<Navigate to="/dashboard" replace />} />
             {/* Manager routes now redirect to Admin - Manager uses Admin panel with permission-based access */}
             <Route path="/manager" element={<Navigate to="/admin" replace />} />
             <Route path="/manager/*" element={<Navigate to="/admin" replace />} />

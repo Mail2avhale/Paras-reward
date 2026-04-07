@@ -21,8 +21,8 @@ const getPageKeyFromPath = (pathname) => {
     // marketplace removed
     '/subscription': 'subscription',
     '/profile': 'profile',
-    // redeem/bill-payments removed (April 2026)
-    '/gift-vouchers': 'gift-vouchers',
+    // gift-vouchers removed (April 2026)
+    '/prc-statement': 'prc-statement',
   };
   
   return pathMappings[pathname] || null;

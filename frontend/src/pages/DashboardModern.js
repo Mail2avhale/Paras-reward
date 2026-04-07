@@ -4,10 +4,10 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { 
-  TrendingUp, Star, Gift, ArrowUpRight, Clock,
+  TrendingUp, Star, ArrowUpRight, Clock,
   Home, UserPlus, Users, User, Zap, Crown, Eye, EyeOff,
   ChevronRight, Sparkles, ShoppingBag,
-  Sun, Moon, Sunrise, Sunset, Banknote, Building2, ShieldAlert
+  Sun, Moon, Sunrise, Sunset, Building2
 } from 'lucide-react';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/ProfileCompletionComponents';
@@ -161,15 +161,6 @@ const DashboardModern = ({ user, onLogout }) => {
           // Use PRC rate from combined response (single source of truth)
           const prcRate = combinedRes.data.prc_rate || null;
           
-          // Fetch redeem limit separately (lightweight)
-          let redeemLimit = {};
-          try {
-            const redeemLimitRes = await axios.get(`${API}/user/${user.uid}/redeem-limit`);
-            redeemLimit = redeemLimitRes.data?.limit || {};
-          } catch (e) {
-            // Non-critical, continue
-          }
-          
           setStats({
             prcBalance: userData.prc_balance || 0,
             totalMined: userData.total_mined || 0,
@@ -178,8 +169,7 @@ const DashboardModern = ({ user, onLogout }) => {
             subscriptionPlan: userData.subscription_plan || 'explorer',
             subscriptionExpiry: userData.subscription_expiry || null,
             subscriptionStart: userData.subscription_start || null,
-            prcRate: prcRate,
-            redeemLimit: redeemLimit
+            prcRate: prcRate
           });
           
           // Set recent activity from combined response
@@ -195,15 +185,13 @@ const DashboardModern = ({ user, onLogout }) => {
       }
       
       // Fallback to individual API calls
-      const [userResult, activityResult, rateResult, redeemLimitResult] = await Promise.allSettled([
+      const [userResult, activityResult, rateResult] = await Promise.allSettled([
         axios.get(`${API}/user/${user.uid}`),
         axios.get(`${API}/user/${user.uid}/recent-activity?limit=10`),
-        axios.get(`${API}/prc-economy/current-rate`),
-        axios.get(`${API}/user/${user.uid}/redeem-limit`)
+        axios.get(`${API}/prc-economy/current-rate`)
       ]);
       
       const prcRate = rateResult.status === 'fulfilled' ? (rateResult.value.data?.rate?.final_rate || null) : null;
-      const redeemLimit = redeemLimitResult.status === 'fulfilled' ? (redeemLimitResult.value.data?.limit || {}) : {};
       
       // Process user data
       if (userResult.status === 'fulfilled') {
@@ -220,8 +208,7 @@ const DashboardModern = ({ user, onLogout }) => {
           subscriptionStart: fetchedUserData.subscription_start || fetchedUserData.vip_activation_date || null,
           upcomingPlan: fetchedUserData.upcoming_plan || null,
           upcomingPlansCount: fetchedUserData.upcoming_plans_count || 0,
-          prcRate: prcRate,
-          redeemLimit: redeemLimit
+          prcRate: prcRate
         });
       } else {
         // Fallback to user prop data
@@ -234,8 +221,7 @@ const DashboardModern = ({ user, onLogout }) => {
           subscriptionPlan: user.subscription_plan || 'explorer',
           subscriptionExpiry: user.subscription_expiry || null,
           subscriptionStart: user.subscription_start || user.vip_activation_date || null,
-          prcRate: prcRate,
-          redeemLimit: redeemLimit
+          prcRate: prcRate
         });
       }
       
@@ -986,23 +972,6 @@ const DashboardModern = ({ user, onLogout }) => {
 
         {/* Gift Vouchers & Shop Row */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Gift Vouchers Card */}
-          <button 
-            onClick={() => navigate('/gift-vouchers')}
-            className="bg-gradient-to-br from-pink-900/40 to-rose-900/30 rounded-2xl border border-pink-500/30 p-4 text-left hover:border-pink-500/50 transition-all"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center mb-3 shadow-lg">
-                <Gift className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="font-bold text-white text-sm mb-1">{t('giftVouchers')}</h3>
-              <p className="text-[10px] text-gray-400">{t('amazonFlipkartMore')}</p>
-              <div className="mt-2 px-3 py-1 bg-pink-500 text-white text-[10px] font-semibold rounded-full">
-                {t('redeem')}
-              </div>
-            </div>
-          </button>
-
           {/* Shop Card */}
           <button 
             onClick={() => navigate('/marketplace')}
@@ -1022,177 +991,7 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* ========== REDEEM TO BANK CARD ========== */}
-      {/* Shows active card for KYC verified paid users, or KYC pending message for others */}
-      {(() => {
-        const plan = (stats.subscriptionPlan || userData?.subscription_plan || user?.subscription_plan || '').toLowerCase();
-        const kycFromUserData = userData?.kyc_status?.toLowerCase();
-        const kycFromUser = user?.kyc_status?.toLowerCase();
-        const kycStatus = kycFromUserData || kycFromUser || '';
-        const isPaidPlan = ['startup', 'growth', 'elite'].includes(plan);
-        const isKycVerified = ['verified', 'approved'].includes(kycStatus);
-        const isKycPending = ['pending', 'submitted', 'under_review'].includes(kycStatus);
-        const isKycRejected = ['rejected', 'failed'].includes(kycStatus);
-        
-        // KYC Verified + Paid Plan = Show PRC Balance with Category Limits
-        if (isPaidPlan && isKycVerified) {
-          return (
-            <div className="px-5 mb-4">
-              <div
-                className="relative overflow-hidden rounded-2xl p-5"
-                style={{
-                  background: 'linear-gradient(145deg, #2e1065 0%, #4c1d95 40%, #5b21b6 70%, #1e1b4b 100%)',
-                  boxShadow: '0 15px 40px -10px rgba(139, 92, 246, 0.35)'
-                }}
-                data-testid="prc-balance-card"
-              >
-                <div className="relative z-10">
-                  {/* PRC Redeem Card - Available/Used/Balance Breakdown */}
-                  {(() => {
-                    const prcRate = stats.prcRate || 10;
-                    const rl = stats.redeemLimit || {};
-                    const balance = stats.prcBalance || 0;
-                    const totalLimit = rl.total_limit || rl.total_earned || 0;
-                    const totalUsed = rl.total_redeemed || 0;
-                    const remaining = rl.effective_remaining != null ? rl.effective_remaining : (rl.available || 0);
-                    const isNegative = remaining < 0;
-                    const unlockPct = rl.redeem_limit_percent || rl.unlock_percent || 0;
-                    
-                    return (
-                      <>
-                        {/* Breakdown: Total Limit - Used = Remaining */}
-                        <div className="mb-4 space-y-2.5" data-testid="redeem-breakdown-card">
-                          <div className="flex items-center justify-between">
-                            <span className="text-white/70 text-xs font-bold uppercase tracking-wider">Total Limit</span>
-                            <div className="text-right">
-                              <span className="text-white font-extrabold text-lg">{totalLimit.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-white/60 text-xs font-semibold">PRC</span></span>
-                              {prcRate > 0 && <p className="text-white/50 text-[10px] font-medium">≈ ₹{Math.floor(totalLimit / prcRate).toLocaleString()}</p>}
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between cursor-pointer hover:bg-white/5 rounded-lg px-1 -mx-1 py-0.5 transition-colors" onClick={() => navigate('/usage-history')} data-testid="used-prc-link">
-                            <span className="text-white/70 text-xs font-bold uppercase tracking-wider underline decoration-dotted underline-offset-2">Used ›</span>
-                            <div className="text-right">
-                              <span className="text-red-300 font-extrabold text-lg">- {totalUsed.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-red-300/60 text-xs font-semibold">PRC</span></span>
-                              {prcRate > 0 && <p className="text-red-300/50 text-[10px] font-medium">≈ ₹{Math.floor(totalUsed / prcRate).toLocaleString()}</p>}
-                            </div>
-                          </div>
-                          <div className="border-t border-white/30"></div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-white text-xs font-extrabold uppercase tracking-wider">Remaining</span>
-                            <div className="text-right">
-                              <span className={`font-extrabold text-2xl ${isNegative ? 'text-red-300' : 'text-yellow-300'}`}>
-                                {isNegative ? '-' : ''}{Math.abs(remaining).toLocaleString(undefined, {maximumFractionDigits: 0})}
-                                <span className={`text-xs font-semibold ml-1 ${isNegative ? 'text-red-300/70' : 'text-yellow-300/70'}`}>PRC</span>
-                              </span>
-                              {!isNegative && remaining > 0 && prcRate > 0 && (
-                                <p className="text-yellow-200/80 text-xs font-semibold">≈ ₹{Math.floor(remaining / prcRate).toLocaleString()}</p>
-                              )}
-                            </div>
-                          </div>
-                          {isNegative && (
-                            <p className="text-red-200/80 text-[10px] font-medium">Negative due to subscription — will recover with mining</p>
-                          )}
-                        </div>
-
-                        {/* Balance + Unlock % + Rate */}
-                        <div className="grid grid-cols-3 gap-2 mb-3">
-                          <div className="bg-white/10 rounded-xl p-2.5">
-                            <p className="text-white/60 text-[10px] font-bold uppercase">PRC Balance</p>
-                            <p className="text-white text-sm font-extrabold">{balance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                            {prcRate > 0 && <p className="text-white/40 text-[9px] font-medium">≈ ₹{Math.floor(balance / prcRate).toLocaleString()}</p>}
-                          </div>
-                          <div className="bg-white/10 rounded-xl p-2.5">
-                            <p className="text-white/60 text-[10px] font-bold uppercase">Unlock</p>
-                            <p className="text-yellow-300 text-sm font-extrabold">{unlockPct}%</p>
-                          </div>
-                          <div className="bg-white/10 rounded-xl p-2.5">
-                            <p className="text-white/60 text-[10px] font-bold uppercase">Rate</p>
-                            <p className="text-white text-sm font-extrabold">{prcRate} PRC = ₹1</p>
-                          </div>
-                        </div>
-
-                        {/* Redeem Button - Removed (deprecated April 2026) */}
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-          );
-        }
-        
-        // Paid Plan but KYC Pending/Rejected = Show KYC message card
-        if (isPaidPlan && !isKycVerified) {
-          return (
-            <div className="px-5 mb-4">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                onClick={() => navigate('/profile')}
-                className="cursor-pointer relative overflow-hidden rounded-2xl p-5"
-                style={{
-                  background: isKycRejected 
-                    ? 'linear-gradient(145deg, #7f1d1d 0%, #991b1b 30%, #b91c1c 70%, #450a0a 100%)'
-                    : 'linear-gradient(145deg, #78350f 0%, #92400e 30%, #b45309 70%, #451a03 100%)',
-                  boxShadow: isKycRejected 
-                    ? '0 15px 40px -10px rgba(239, 68, 68, 0.4)'
-                    : '0 15px 40px -10px rgba(245, 158, 11, 0.4)'
-                }}
-                data-testid="redeem-kyc-pending-card"
-              >
-                {/* Background decorations */}
-                <div className={`absolute top-0 right-0 w-32 h-32 ${isKycRejected ? 'bg-red-400/20' : 'bg-amber-400/20'} rounded-full blur-3xl`}></div>
-                <div className={`absolute -bottom-10 -left-10 w-24 h-24 ${isKycRejected ? 'bg-red-400/20' : 'bg-yellow-400/20'} rounded-full blur-2xl`}></div>
-                
-                <div className="relative z-10">
-                  {/* Header */}
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-12 h-12 rounded-xl ${isKycRejected ? 'bg-red-500/30' : 'bg-amber-500/30'} backdrop-blur flex items-center justify-center`}>
-                      <ShieldAlert className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-white font-bold text-lg">KYC Required</p>
-                      <p className={`${isKycRejected ? 'text-red-200' : 'text-amber-200'} text-sm`}>
-                        {isKycRejected ? 'KYC Rejected' : 'KYC Verification Required'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Message */}
-                  <div className={`${isKycRejected ? 'bg-red-900/30' : 'bg-amber-900/30'} backdrop-blur rounded-xl p-4 mb-4`}>
-                    <p className="text-white/90 text-sm leading-relaxed">
-                      {isKycRejected 
-                        ? 'Your KYC verification was rejected. Please update your documents and resubmit to enable point redemption.'
-                        : 'Complete your KYC verification to unlock the Redeem feature. Your reward points will be waiting for you!'
-                      }
-                    </p>
-                    <div className="mt-3 flex items-center gap-2">
-                      <Banknote className="w-4 h-4 text-white/60" />
-                      <span className="text-white/70 text-xs">Your Points: <span className="text-white font-semibold">{stats.prcBalance.toLocaleString()} PRC</span></span>
-                    </div>
-                  </div>
-                  
-                  {/* CTA Button */}
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/profile');
-                    }}
-                    className={`w-full py-3.5 ${isKycRejected ? 'bg-red-500 hover:bg-red-400' : 'bg-amber-500 hover:bg-amber-400'} text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-colors`}
-                    data-testid="complete-kyc-btn"
-                  >
-                    <ShieldAlert className="w-5 h-5" />
-                    {isKycRejected ? 'Update KYC Documents' : 'Complete KYC Now'}
-                    <ArrowUpRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          );
-        }
-        
-        return null;
-      })()}
+      {/* Redeem/Gift/BBPS sections - REMOVED (deprecated April 2026) */}
 
       {/* PRC SAVINGS VAULT BANNER REMOVED - Feature deprecated */}
 

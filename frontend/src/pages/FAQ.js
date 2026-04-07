@@ -14,11 +14,11 @@ const FAQ = () => {
       questions: [
         {
           question: "What is Paras Reward?",
-          answer: "PARAS REWARD is a digital engagement platform where users earn virtual reward points (PRC) through activities like daily engagement and referrals. The term 'mining' refers to our virtual reward system - NOT cryptocurrency mining. Points can be redeemed for services like mobile recharges and bill payments through our partners."
+          answer: "PARAS REWARD is a digital engagement platform where users earn virtual reward points (PRC) through activities like daily engagement and referrals. The term 'mining' refers to our virtual reward system - NOT cryptocurrency mining. Points can be used within the platform for various services through our partners."
         },
         {
           question: "What is PRC (Paras Reward Coin)?",
-          answer: "PRC is a virtual reward point used ONLY within the Paras Reward platform. It is earned through platform activities and can be redeemed for gift vouchers, recharges, and bill payments. PRC has NO cash value and cannot be converted to real money directly."
+          answer: "PRC is a virtual reward point used ONLY within the Paras Reward platform. It is earned through platform activities and can be used for in-app services and shopping. PRC has NO cash value and cannot be converted to real money directly."
         },
         {
           question: "What PRC is NOT - Important Disclaimer",

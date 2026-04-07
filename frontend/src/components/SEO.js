@@ -13,7 +13,7 @@ import { Helmet } from 'react-helmet-async';
  */
 const SEO = ({ 
   title = "PARAS REWARD - India's Trusted Reward Platform",
-  description = "Join 3000+ Indians earning daily rewards! Collect PRC points, play games, invite friends & redeem for gift vouchers, bill payments & more!",
+  description = "Join 3000+ Indians earning daily rewards! Collect PRC points, play games, invite friends & enjoy exclusive benefits!",
   keywords = "paras reward, prc points, daily rewards, earn rewards india",
   image = "https://www.parasreward.com/paras-logo.jpg",
   url = "https://www.parasreward.com",
@@ -68,7 +68,7 @@ export default SEO;
 export const SEOConfigs = {
   home: {
     title: "PARAS REWARD - India's Trusted Reward Platform | Earn PRC Daily",
-    description: "Join 3000+ Indians earning daily rewards! Collect PRC points, play games, invite friends & redeem for gift vouchers, bill payments & more!",
+    description: "Join 3000+ Indians earning daily rewards! Collect PRC points, play games, invite friends & enjoy exclusive platform benefits!",
     keywords: "paras reward, paras reward app, prc points, daily rewards app india, earn rewards online, loyalty rewards platform",
     url: "https://www.parasreward.com"
   },
@@ -92,20 +92,6 @@ export const SEOConfigs = {
     description: "Grow your network and increase your rewards! Share your code and unlock more benefits through activity.",
     keywords: "growth network india, invite friends earn rewards, partner program",
     url: "https://www.parasreward.com/referrals",
-    noIndex: true
-  },
-  giftVouchers: {
-    title: "Gift Vouchers - Redeem PRC for Amazon, Flipkart & More",
-    description: "Redeem your PRC for gift vouchers! Amazon, Flipkart, Myntra, Swiggy and more. Instant delivery!",
-    keywords: "gift vouchers india, amazon voucher, flipkart voucher, redeem rewards",
-    url: "https://www.parasreward.com/gift-vouchers",
-    noIndex: true
-  },
-  billPayments: {
-    title: "Bill Payments - Pay Bills with PRC",
-    description: "Pay your electricity, mobile recharge, DTH, and more using PRC! Save real money every month.",
-    keywords: "bill payment rewards, mobile recharge prc, electricity bill pay",
-    url: "https://www.parasreward.com/bill-payments",
     noIndex: true
   },
   subscription: {
@@ -134,7 +120,7 @@ export const SEOConfigs = {
   },
   howItWorks: {
     title: "How It Works - Learn About PARAS REWARD",
-    description: "Discover how PARAS REWARD works! Earn PRC through daily activities, games & referrals. Redeem for real products!",
+    description: "Discover how PARAS REWARD works! Earn PRC through daily activities, games & referrals. Unlock exclusive benefits!",
     keywords: "how paras reward works, earning rewards, prc explained",
     url: "https://www.parasreward.com/how-it-works"
   },

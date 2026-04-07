@@ -259,19 +259,18 @@ const TermsConditions = () => {
                 </div>
                 <div className="text-gray-300 space-y-4 leading-relaxed">
                   <h3 className="text-lg font-semibold text-white mt-6">5.1 Redemption Eligibility</h3>
-                  <p>To redeem PRC points, you must:</p>
+                  <p>To use PRC points, you must:</p>
                   <ul className="list-disc list-inside space-y-2 ml-4">
                     <li>Have an active VIP membership</li>
                     <li>Complete KYC verification</li>
-                    <li>Have a minimum redeemable balance</li>
+                    <li>Have a minimum usable balance</li>
                     <li>Not have any pending violations</li>
                   </ul>
 
-                  <h3 className="text-lg font-semibold text-white mt-6">5.2 Redemption Options</h3>
-                  <p>PRC points can be redeemed for:</p>
+                  <h3 className="text-lg font-semibold text-white mt-6">5.2 Usage Options</h3>
+                  <p>PRC points can be used for:</p>
                   <ul className="list-disc list-inside space-y-2 ml-4">
-                    <li>Bill payments (mobile recharge, electricity, DTH, etc.)</li>
-                    <li>Gift vouchers from partner merchants</li>
+                    <li>In-app shopping and services</li>
                     <li>Other services as available on the platform</li>
                   </ul>
 
