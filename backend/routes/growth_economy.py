@@ -290,19 +290,55 @@ async def calculate_mining_speed(user_id: str) -> dict:
 
 async def get_network_size(user_id: str, max_depth: int = 10) -> int:
     """
-    Get total ACTIVE network size using Single Leg Tree.
+    Get total network size = all users referred by this user (direct + indirect).
     
-    Single Leg: All users arranged by joining date.
-    User's network = all ACTIVE users who joined AFTER them.
-    Active user = Elite subscription + active mining session (not expired).
-    
-    Uses tree_position for efficient single-query lookup.
+    Network = Direct referrals + their referrals (recursive).
+    This counts ALL referrals, not just active ones.
+    Active user filtering is done separately for mining rewards.
+    """
+    try:
+        # Count direct referrals
+        direct_count = await db.users.count_documents({"referred_by": user_id})
+        
+        if direct_count == 0:
+            return 0
+        
+        # BFS to count all downstream referrals
+        total = 0
+        current_level = [user_id]
+        
+        for depth in range(max_depth):
+            if not current_level:
+                break
+            
+            # Find all users referred by current level
+            next_level_users = await db.users.find(
+                {"referred_by": {"$in": current_level}},
+                {"_id": 0, "uid": 1}
+            ).to_list(length=10000)
+            
+            if not next_level_users:
+                break
+            
+            total += len(next_level_users)
+            current_level = [u["uid"] for u in next_level_users]
+        
+        return total
+    except Exception as e:
+        logging.error(f"Error getting network size: {e}")
+        return 0
+
+
+async def get_active_network_size(user_id: str) -> int:
+    """
+    Get ACTIVE network size for mining reward calculation.
+    Active = paid subscription + active mining session.
+    Uses tree_position for single leg tree lookup.
     """
     try:
         now = datetime.now(timezone.utc)
         now_str = now.isoformat()
         
-        # Get user's tree position
         user = await db.users.find_one(
             {"uid": user_id},
             {"_id": 0, "tree_position": 1}
@@ -312,8 +348,6 @@ async def get_network_size(user_id: str, max_depth: int = 10) -> int:
         
         my_position = user["tree_position"]
         
-        # Count ACTIVE users below this user in single leg tree
-        # Handle both string and datetime formats for mining_session_end
         active_filter = {
             "tree_position": {"$gt": my_position},
             "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP", "Startup", "Growth", "Pro"]},
@@ -329,7 +363,7 @@ async def get_network_size(user_id: str, max_depth: int = 10) -> int:
         total_count = await db.users.count_documents(active_filter)
         return total_count
     except Exception as e:
-        logging.error(f"Error getting network size: {e}")
+        logging.error(f"Error getting active network size: {e}")
         return 0
 
 
