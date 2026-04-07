@@ -861,49 +861,67 @@ const DashboardModern = ({ user, onLogout }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="rounded-xl p-4 border border-gray-800 bg-gray-900/80 cursor-pointer"
+            className="rounded-xl p-4 cursor-pointer overflow-hidden relative"
+            style={{
+              background: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 40%, #a855f7 70%, #c084fc 100%)',
+              border: '1px solid rgba(192, 132, 252, 0.4)',
+              boxShadow: '0 8px 25px -5px rgba(124, 58, 237, 0.25)'
+            }}
             onClick={() => navigate('/bank-redeem')}
           >
+            {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
-                  <Building2 className="w-4 h-4 text-emerald-400" />
+                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
+                  <Building2 className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-white font-semibold text-sm">Redeem Limit</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-500" />
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 text-center mb-3">
-              <div>
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Total Limit</p>
-                <p className="text-white text-sm font-bold">{Number(redeemLimit.total_limit || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-                <p className="text-gray-500 text-[10px]">₹{(Number(redeemLimit.total_limit || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-              </div>
-              <div onClick={(e) => { e.stopPropagation(); navigate('/usage-history'); }} className="cursor-pointer">
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Redeemed</p>
-                <p className="text-amber-400 text-sm font-bold underline decoration-amber-400/30">{Number(redeemLimit.total_redeemed || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-                <p className="text-gray-500 text-[10px]">₹{(Number(redeemLimit.total_redeemed || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-              </div>
-              <div>
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Available</p>
-                <p className="text-emerald-400 text-sm font-bold">{Number(redeemLimit.effective_available || redeemLimit.available || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-                <p className="text-gray-500 text-[10px]">₹{(Number(redeemLimit.effective_available || redeemLimit.available || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-              </div>
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-400/20 text-amber-300">
+                {(redeemLimit.unlock_percent || 0).toFixed(2)}% Unlocked
+              </span>
             </div>
 
             {/* Progress bar - unlocked vs remaining */}
-            <div className="flex items-center gap-2 mt-1">
-              <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+            <div className="mb-1">
+              <div className="w-full h-2 bg-purple-900/50 rounded-full overflow-hidden">
                 <div 
                   className="h-full rounded-full transition-all duration-500"
                   style={{ 
                     width: `${Math.min(100, Math.max(0, redeemLimit.unlock_percent || 0))}%`,
-                    background: 'linear-gradient(90deg, #10b981, #34d399)'
+                    background: 'linear-gradient(90deg, #f59e0b, #fbbf24)'
                   }}
                 />
               </div>
-              <span className="text-emerald-400 text-[10px] font-semibold whitespace-nowrap">{(redeemLimit.unlock_percent || 0).toFixed(1)}%</span>
+              <div className="flex justify-between mt-0.5">
+                <span className="text-white/40 text-[9px]">0%</span>
+                <span className="text-white/40 text-[9px]">100% max</span>
+              </div>
+            </div>
+
+            {/* Values - row layout like screenshot */}
+            <div className="space-y-2 mt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-white/70 text-xs uppercase tracking-wider">Total Limit</span>
+                <div className="text-right">
+                  <span className="text-white text-sm font-bold">{Number(redeemLimit.total_limit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRC</span>
+                  <span className="text-white/40 text-[10px] ml-1.5">₹{(Number(redeemLimit.total_limit || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/usage-history'); }}>
+                <span className="text-white/70 text-xs uppercase tracking-wider">Used</span>
+                <div className="text-right">
+                  <span className="text-amber-300 text-sm font-bold">- {Number(redeemLimit.total_redeemed || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRC</span>
+                  <span className="text-white/40 text-[10px] ml-1.5">₹{(Number(redeemLimit.total_redeemed || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                </div>
+              </div>
+              <div className="border-t border-white/15 pt-2 flex items-center justify-between">
+                <span className="text-white font-bold text-xs uppercase tracking-wider">Remaining</span>
+                <div className="text-right">
+                  <span className="text-yellow-300 text-sm font-extrabold">{Number(redeemLimit.effective_available || redeemLimit.available || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} PRC</span>
+                  <span className="text-white/40 text-[10px] ml-1.5">₹{(Number(redeemLimit.effective_available || redeemLimit.available || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
