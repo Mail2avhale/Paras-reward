@@ -2,36 +2,57 @@
 
 ## LAST UPDATED - 7 April 2026
 
-## COMPLETED: Redeem PRC Feature Deletion (P0) - 7 April 2026
-- Deleted 4 user-facing pages: RedeemPageV2.js (2664 lines), BBPSServices.js (672), BillPaymentHistory.js (348), BankRedeemPage.js (743)
-- Cleaned 8 routes in App.js (redirect to /dashboard), Sidebar, DashboardModern, AIContextualHelp
-- Admin BBPS Dashboard + Admin Bank Transfers preserved for historical records
-- Database collections (redeem_requests, bill_payment_requests) preserved
+## COMPLETED: server.py Monolith Refactoring (P2) - 7 April 2026
+- Reduced server.py from 45,221 → 33,323 lines (-26%, -11,898 lines)
+- Extracted 7 new modular route files: admin_accounting (4954), notifications_routes (3010), admin_prc_balance (1542), ai_routes (1050), manager_routes (976), admin_prc_economy (221)
+- All 117 extracted routes verified working via curl (401/422/200 responses correct)
+
+## COMPLETED: Full BBPS + Gift Voucher + Marketplace Cleanup (P0) - 7 April 2026
+- Deleted 7 user-facing pages: RedeemPageV2, BBPSServices, BillPaymentHistory, BankRedeemPage, GiftVoucherRedemption, CategoryLimitsDisplay, FlashSalesPage
+- 18+ files cleaned: Dashboard, Sidebar, FAQ, SEO, Terms, Blog, About, Profile, Mining, etc.
+- Fixed critical BankRedeemPage runtime crash (references to deleted components in App.js)
+- Admin records preserved (BBPS Dashboard, Bank Transfers, Gift Vouchers)
 
 ## COMPLETED: Cooldown Time IST Display Fix (P0) - 7 April 2026
-- Cooldown end time was displayed in UTC, now correctly shows IST
-- Fixed both BBPS and Bank Transfer cooldown messages in server.py
-
-## COMPLETED: Admin Members Table Fix (P0) - 7 April 2026
-- Color contrast fix: green/yellow-400 → green/orange-600 for visibility on white background
-- Added effective_available field mapping for accurate Available column
-
+## COMPLETED: Admin Members Table Color Fix (P0) - 7 April 2026
 ## COMPLETED: Deprecated Code Cleanup (P0) - 7 April 2026
-- Removed 12 deprecated/dead-code functions from bbps_services.py and unified_redeem_v2.py (367 lines)
-
-## COMPLETED: EKO Refund API Integration - 7 April 2026
-## COMPLETED: 4 Critical EKO Bugs Fixed - 7 April 2026
-## COMPLETED: EKO Transaction Callback Webhook - 7 April 2026
-## COMPLETED: EKO Wallet Balance + Refund Check - 7 April 2026
+## COMPLETED: EKO Integration Fixes - 7 April 2026
 ## COMPLETED: Excel Reconciliation System - 7 April 2026
-## COMPLETED: EKO API URL 405 Fix - 7 April 2026
-## COMPLETED: Admin BBPS UI Filters Fix - 7 April 2026
+
+## Architecture
+/app/backend/
+├── server.py (33,323 lines - main monolith, further extraction possible)
+├── routes/
+│   ├── admin_accounting.py (4,954 lines - 45 routes)
+│   ├── notifications_routes.py (3,010 lines - 22 routes)
+│   ├── unified_redeem_v2.py (3,182 lines)
+│   ├── bbps_services.py (3,104 lines)
+│   ├── razorpay_payments.py (3,074 lines)
+│   ├── auth.py (1,864 lines)
+│   ├── admin_prc_balance.py (1,542 lines - 12 routes)
+│   ├── admin_finance.py (1,458 lines)
+│   ├── admin_misc.py (1,267 lines)
+│   ├── manual_bank_transfer.py (1,107 lines)
+│   ├── ai_routes.py (1,050 lines - 11 routes)
+│   ├── manager_routes.py (976 lines - 17 routes)
+│   ├── prc_economy.py (946 lines)
+│   ├── admin_ledger.py (932 lines)
+│   ├── kyc.py (913 lines)
+│   ├── users.py (792 lines)
+│   ├── growth_economy.py (769 lines)
+│   ├── mining.py (720 lines)
+│   ├── admin_ledger_view.py (683 lines)
+│   ├── admin_users.py (658 lines)
+│   ├── error_monitor.py (654 lines)
+│   ├── admin_withdrawals.py (330 lines)
+│   ├── admin_prc_economy.py (221 lines - 10 routes)
+│   └── eko_common.py (190 lines)
 
 ## Upcoming
-- P1: Core Formula System Audit (Mining, Redeem, Network, PRC Dynamic) — remove hardcoded logic
-- P1: Invoice PDF Download option for InvoiceModal.js
+- P1: Core Formula System Audit (Mining, Redeem, Network, PRC Dynamic)
+- P1: Invoice PDF Download option
 
 ## Future/Backlog
+- P2: Continue server.py extraction (33K → target 20K)
 - P2: Split oversized React components
-- P2: server.py refactoring (45k+ lines)
 - P3: MongoDB → PostgreSQL migration
