@@ -917,7 +917,14 @@ async def get_payment_history(user_id: str, include_all: bool = False):
             payments.append(sp)
     
     # Sort merged list by created_at descending
-    payments.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    # Handle mixed datetime/string types by converting to string for comparison
+    def get_sort_key(x):
+        created_at = x.get("created_at", "")
+        if isinstance(created_at, datetime):
+            return created_at.isoformat()
+        return str(created_at) if created_at else ""
+    
+    payments.sort(key=get_sort_key, reverse=True)
     
     # Add user-friendly status messages
     for p in payments:
