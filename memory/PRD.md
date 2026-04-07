@@ -2,6 +2,13 @@
 
 ## LAST UPDATED - 8 April 2026
 
+## VERIFIED: Razorpay Subscription E2E Flow - 8 April 2026
+- Create order, auto-activation, remaining+28 days renewal, expiry→explorer downgrade
+- 16/17 backend tests passed (1 skipped - admin activate needs email)
+- Fixed: payment history sort TypeError (datetime vs string)
+- Frontend subscription page verified (Elite plan, 74 days remaining)
+- Test file: /app/backend/tests/test_razorpay_subscription_e2e.py
+
 ## VERIFIED: Bank Redeem E2E Flow (Testing Agent) - 8 April 2026
 - Full lifecycle: User request → Admin complete/reject → User status → PRC deduction/refund
 - Fixed: KYC check accepts both "verified" and "approved" statuses
