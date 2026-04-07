@@ -3796,12 +3796,15 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
                 if now < cooldown_end:
                     days_left = (cooldown_end - now).days
                     hours_left = int((cooldown_end - now).total_seconds() // 3600) % 24
-                    cooldown_date_formatted = cooldown_end.strftime("%d %B, %Y at %I:%M %p")
+                    ist = timezone(timedelta(hours=5, minutes=30))
+                    cooldown_end_ist = cooldown_end.astimezone(ist)
+                    request_date_ist = request_date.astimezone(ist)
+                    cooldown_date_formatted = cooldown_end_ist.strftime("%d %B, %Y at %I:%M %p")
                     used_name = service_name_map.get(last_bbps["service"], last_bbps["service"])
                     
                     return {
                         "allowed": False,
-                        "reason": f"You have already used '{used_name}' on {request_date.strftime('%d %B')}. Next BBPS service available after {cooldown_date_formatted}.",
+                        "reason": f"You have already used '{used_name}' on {request_date_ist.strftime('%d %B')}. Next BBPS service available after {cooldown_date_formatted}.",
                         "category": "bbps",
                         "service_used": last_bbps,
                         "requested_service": requested_service,
@@ -3858,12 +3861,15 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
                 if now < cooldown_end:
                     days_left = (cooldown_end - now).days
                     hours_left = int((cooldown_end - now).total_seconds() // 3600) % 24
-                    cooldown_date_formatted = cooldown_end.strftime("%d %B, %Y at %I:%M %p")
+                    ist = timezone(timedelta(hours=5, minutes=30))
+                    cooldown_end_ist = cooldown_end.astimezone(ist)
+                    request_date_ist = request_date.astimezone(ist)
+                    cooldown_date_formatted = cooldown_end_ist.strftime("%d %B, %Y at %I:%M %p")
                     used_name = service_name_map.get(last_bank["service"], last_bank["service"])
                     
                     return {
                         "allowed": False,
-                        "reason": f"You have already used '{used_name}' on {request_date.strftime('%d %B')}. Next Bank Transfer available after {cooldown_date_formatted}.",
+                        "reason": f"You have already used '{used_name}' on {request_date_ist.strftime('%d %B')}. Next Bank Transfer available after {cooldown_date_formatted}.",
                         "category": "bank_transfer",
                         "service_used": last_bank,
                         "requested_service": requested_service,
