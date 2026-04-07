@@ -1021,26 +1021,6 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* ========== SERVICES SECTION ========== */}
-      <div className="px-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white text-lg font-bold flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-400" />
-            {t('services')}
-          </h2>
-        </div>
-
-        {/* Bill Payments, Gift Vouchers, Shop - REMOVED (deprecated April 2026) */}
-      </div>
-
-      {/* Redeem/Gift/BBPS/Shop sections - REMOVED (deprecated April 2026) */}
-
-      {/* PRC SAVINGS VAULT BANNER REMOVED - Feature deprecated */}
-
-      {/* Share App FAB removed */}
-
-      {/* AI Chatbot REMOVED - feature deprecated (March 2026) */}
-
       {/* Profile Floating Reminder - Gentle prompt */}
       <ProfileFloatingReminder 
         user={user}
