@@ -27,6 +27,7 @@ import uuid
 import os
 import re
 import asyncio
+import hashlib
 from concurrent.futures import ThreadPoolExecutor
 
 # Thread pool for CPU-bound operations (bcrypt)
@@ -374,6 +375,17 @@ async def register_user(request: Request):
         user_dict["network_parent"] = None
     
     await db.users.insert_one(user_dict)
+    
+    # Auto-set Security PIN = last 4 digits of mobile (hashed)
+    mobile_raw = data.get("mobile", "") or ""
+    mobile_digits = ''.join(filter(str.isdigit, mobile_raw))
+    if len(mobile_digits) >= 4:
+        default_sec_pin = mobile_digits[-4:]
+        sec_pin_hash = hashlib.sha256(default_sec_pin.encode()).hexdigest()
+        await db.users.update_one(
+            {"uid": user.uid},
+            {"$set": {"security_pin_hash": sec_pin_hash, "security_pin_set_at": datetime.now(timezone.utc).isoformat()}}
+        )
     
     # Notify referrer
     if user_dict.get("referred_by"):

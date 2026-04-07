@@ -68,6 +68,9 @@ async def get_user(uid: str):
     
     user.pop("password_hash", None)
     user.pop("reset_token", None)
+    user.pop("security_pin_hash", None)  # Never expose security PIN hash
+    user.pop("pin_reset_token", None)
+    user.pop("pin_reset_expiry", None)
     # PERFORMANCE: Remove profile_picture from general user fetch
     # Use /users/{uid}/profile-picture endpoint instead
     user.pop("profile_picture", None)
@@ -100,6 +103,9 @@ async def get_user_children(uid: str):
         for child in children:
             child.pop("password_hash", None)
             child.pop("reset_token", None)
+            child.pop("security_pin_hash", None)  # Never expose security PIN hash
+            child.pop("pin_reset_token", None)
+            child.pop("pin_reset_expiry", None)
             child.pop("_id", None)
         
         return {"children": children, "count": len(children)}

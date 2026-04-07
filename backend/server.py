@@ -6231,14 +6231,14 @@ async def forgot_pin_verify_document(request: Request):
     reset_token = secrets.token_urlsafe(32)
     reset_expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
     
-    # Check if user has security question set
-    has_security_question = user.get("security_question") and user.get("security_answer")
+    # Check if user has security PIN set (all users have one by default)
+    has_security_pin = bool(user.get("security_pin_hash"))
     
-    # Update with reset token
+    # Update with reset token - always require security PIN (step 3)
     await db.users.update_one(
         {"email": {"$regex": f"^{email}$", "$options": "i"}},
         {"$set": {
-            "pin_reset_verify_step": 3 if has_security_question else 4,  # 3 = security question, 4 = set new pin
+            "pin_reset_verify_step": 3 if has_security_pin else 4,
             "pin_reset_token": reset_token,
             "pin_reset_expiry": reset_expiry.isoformat(),
             "pin_reset_verify_document": doc_type
@@ -6248,97 +6248,100 @@ async def forgot_pin_verify_document(request: Request):
     return {
         "success": True,
         "reset_token": reset_token,
-        "has_security_question": has_security_question,
-        "security_question": user.get("security_question") if has_security_question else None
+        "has_security_pin": has_security_pin
     }
 
 
-# ==================== SECURITY QUESTION APIs ====================
+# ==================== SECURITY PIN APIs ====================
 
-# Security Questions List
-SECURITY_QUESTIONS = [
-    "What is your mother's maiden village/town name?",
-    "What was your first mobile number?",
-    "What was the name of your first school?",
-    "What is your childhood best friend's name?",
-    "What is your favorite teacher's name?",
-]
-
-@api_router.get("/auth/security-questions")
-async def get_security_questions():
-    """Get list of available security questions"""
-    return {
-        "questions": SECURITY_QUESTIONS
-    }
-
-@api_router.post("/auth/security-question/set")
-async def set_security_question(request: Request):
-    """Set security question for a user"""
+@api_router.post("/auth/security-pin/change")
+async def change_security_pin(request: Request):
+    """Change security PIN for a user (requires current PIN or login PIN)"""
     data = await request.json()
     user_id = data.get("user_id", "").strip()
-    question_index = data.get("question_index")  # 0-4
-    answer = data.get("answer", "").strip()
+    current_pin = data.get("current_security_pin", "").strip()
+    new_pin = data.get("new_security_pin", "").strip()
+    login_pin = data.get("login_pin", "").strip()
     
     if not user_id:
         raise HTTPException(status_code=400, detail="User ID required")
     
-    if question_index is None or not isinstance(question_index, int) or question_index < 0 or question_index > 4:
-        raise HTTPException(status_code=400, detail="Invalid question selection (0-4)")
+    if not new_pin or len(new_pin) != 4 or not new_pin.isdigit():
+        raise HTTPException(status_code=400, detail="New Security PIN must be exactly 4 digits")
     
-    if not answer or len(answer) < 2:
-        raise HTTPException(status_code=400, detail="Answer must be at least 2 characters")
+    # Weak PIN check
+    if len(set(new_pin)) == 1:
+        raise HTTPException(status_code=400, detail="Security PIN cannot be all same digits")
     
     # Find user
     user = await db.users.find_one({"uid": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Hash the answer for security (case-insensitive)
-    answer_hash = hashlib.sha256(answer.lower().strip().encode()).hexdigest()
+    # Verify identity: either current security PIN or login PIN
+    verified = False
     
-    # Update user
+    if current_pin:
+        stored_hash = user.get("security_pin_hash")
+        if stored_hash:
+            if hashlib.sha256(current_pin.encode()).hexdigest() == stored_hash:
+                verified = True
+        else:
+            # No security PIN set, accept any current_pin as first-time setup
+            verified = True
+    
+    if not verified and login_pin:
+        # Verify login PIN
+        stored_password = user.get("password") or user.get("password_hash") or user.get("pin_hash")
+        if stored_password and verify_password(login_pin, stored_password):
+            verified = True
+    
+    if not verified:
+        raise HTTPException(status_code=400, detail="Incorrect PIN. Please enter correct current Security PIN or Login PIN.")
+    
+    # Hash and save new security PIN
+    new_hash = hashlib.sha256(new_pin.encode()).hexdigest()
+    
     await db.users.update_one(
         {"uid": user_id},
         {"$set": {
-            "security_question": SECURITY_QUESTIONS[question_index],
-            "security_question_index": question_index,
-            "security_answer": answer_hash,
-            "security_question_set_at": datetime.now(timezone.utc).isoformat()
+            "security_pin_hash": new_hash,
+            "security_pin_updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
     
     return {
         "success": True,
-        "message": "Security question set successfully"
+        "message": "Security PIN changed successfully"
     }
 
-@api_router.get("/auth/security-question/check/{user_id}")
-async def check_security_question(user_id: str):
-    """Check if user has security question set"""
-    # Find user (without projection to avoid issues)
+@api_router.get("/auth/security-pin/check/{user_id}")
+async def check_security_pin_status(user_id: str):
+    """Check if user has security PIN set (never reveals the PIN)"""
     user = await db.users.find_one({"uid": user_id})
-    
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    has_question = bool(user.get("security_question"))
+    has_pin = bool(user.get("security_pin_hash"))
     
     return {
-        "has_security_question": has_question,
-        "security_question": user.get("security_question") if has_question else None,
-        "question_index": user.get("security_question_index")
+        "has_security_pin": has_pin,
+        "is_default": not bool(user.get("security_pin_updated_at"))
     }
 
 @api_router.post("/auth/forgot-pin/verify-security")
-async def forgot_pin_verify_security(request: Request):
-    """Step 3.5: Verify security question answer during PIN reset"""
+async def forgot_pin_verify_security_pin(request: Request):
+    """Step 3.5: Verify 4-digit Security PIN during PIN reset"""
     data = await request.json()
     email = data.get("email", "").strip().lower()
-    answer = data.get("answer", "").strip()
+    security_pin = data.get("security_pin", "").strip()
     reset_token = data.get("reset_token", "")
     
-    if not email or not answer or not reset_token:
+    if not email or not security_pin or not reset_token:
         raise HTTPException(status_code=400, detail="All fields required")
+    
+    if len(security_pin) != 4 or not security_pin.isdigit():
+        raise HTTPException(status_code=400, detail="Security PIN must be 4 digits")
     
     # Find user with valid reset token
     user = await db.users.find_one({
@@ -6360,16 +6363,27 @@ async def forgot_pin_verify_security(request: Request):
         except:
             pass
     
-    # Verify security answer
-    stored_answer_hash = user.get("security_answer")
-    if not stored_answer_hash:
-        raise HTTPException(status_code=400, detail="Security question not set")
+    # Verify security PIN
+    stored_hash = user.get("security_pin_hash")
+    if not stored_hash:
+        # Fallback: user has no security PIN set, use last 4 digits of mobile
+        mobile = user.get("mobile", "") or user.get("mobile_number", "")
+        mobile_digits = ''.join(filter(str.isdigit, mobile))
+        if len(mobile_digits) >= 4:
+            default_pin = mobile_digits[-4:]
+            stored_hash = hashlib.sha256(default_pin.encode()).hexdigest()
+            # Also save it for future use
+            await db.users.update_one(
+                {"_id": user["_id"]},
+                {"$set": {"security_pin_hash": stored_hash, "security_pin_set_at": datetime.now(timezone.utc).isoformat()}}
+            )
+        else:
+            raise HTTPException(status_code=400, detail="Security PIN not configured. Contact support.")
     
-    # Hash the provided answer and compare
-    answer_hash = hashlib.sha256(answer.lower().strip().encode()).hexdigest()
+    pin_hash = hashlib.sha256(security_pin.encode()).hexdigest()
     
-    if answer_hash != stored_answer_hash:
-        raise HTTPException(status_code=400, detail="Incorrect security answer")
+    if pin_hash != stored_hash:
+        raise HTTPException(status_code=400, detail="Incorrect Security PIN")
     
     # Generate new reset token for final step
     new_reset_token = secrets.token_urlsafe(32)
@@ -6835,6 +6849,9 @@ async def get_user(uid: str):
     # Remove sensitive data
     user.pop("password_hash", None)
     user.pop("reset_token", None)
+    user.pop("security_pin_hash", None)  # Never expose security PIN hash
+    user.pop("pin_reset_token", None)
+    user.pop("pin_reset_expiry", None)
     user["_id"] = str(user["_id"])
     
     return user
@@ -6855,6 +6872,9 @@ async def get_user_children(uid: str):
         for child in children:
             child.pop("password_hash", None)
             child.pop("reset_token", None)
+            child.pop("security_pin_hash", None)  # Never expose security PIN hash
+            child.pop("pin_reset_token", None)
+            child.pop("pin_reset_expiry", None)
             child.pop("_id", None)
         
         return {"children": children, "count": len(children)}
@@ -7610,7 +7630,16 @@ async def get_user_data(uid: str, request: Request):
     # PERFORMANCE FIX: Exclude profile_picture from user fetch
     # Profile pictures can be very large base64 strings causing slow responses
     # Use /api/users/{uid}/profile-picture endpoint for profile pictures
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0, "profile_picture": 0})
+    # SECURITY: Exclude sensitive fields - security_pin_hash, reset tokens
+    user = await db.users.find_one({"uid": uid}, {
+        "_id": 0, 
+        "password_hash": 0, 
+        "profile_picture": 0,
+        "security_pin_hash": 0,
+        "pin_reset_token": 0,
+        "pin_reset_expiry": 0,
+        "reset_token": 0
+    })
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
