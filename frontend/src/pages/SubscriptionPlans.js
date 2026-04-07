@@ -508,23 +508,7 @@ const SubscriptionPlans = ({ user }) => {
       {/* Step 1: Select Plan */}
       {currentStep === 1 && (
         <div className="px-5 mt-6 space-y-6">
-          {/* AI Smart Tip for Subscription */}
-          
-          {/* Limited Time Offer Banner */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative overflow-hidden bg-gradient-to-r from-red-600 via-pink-600 to-purple-600 rounded-2xl p-4 text-center"
-          >
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-30"></div>
-            <div className="relative">
-              <span className="inline-block px-3 py-1 bg-yellow-400 text-black text-xs font-bold rounded-full mb-2 animate-pulse">
-                LIMITED TIME OFFER
-              </span>
-              <h2 className="text-white text-lg font-bold">Up to 60% OFF on All Plans!</h2>
-              <p className="text-white/80 text-sm">Hurry! Offer ends soon</p>
-            </div>
-          </motion.div>
+          {/* Limited Time Offer removed (April 2026) */}
 
           <h2 className="text-lg font-semibold text-white">{t('chooseYourPlan')}</h2>
           
