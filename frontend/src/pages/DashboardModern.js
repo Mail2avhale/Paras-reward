@@ -25,13 +25,13 @@ const LiveDateTime = () => {
     return () => clearInterval(timer);
   }, []);
   
-  const day = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-  const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const day = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
   
   return (
     <div className="text-right" data-testid="live-datetime">
       <p className="text-white text-sm font-semibold leading-tight">{time}</p>
-      <p className="text-gray-500 text-[10px]">{day}</p>
+      <p className="text-white text-[10px] font-semibold">{day}</p>
     </div>
   );
 };
