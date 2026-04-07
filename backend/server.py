@@ -8411,6 +8411,8 @@ async def get_user_subscription_history(uid: str, request: Request):
             "plan_name": payment.get("plan_name", "").title(),
             "plan_type": payment.get("plan_type", "monthly"),
             "amount": payment.get("amount", 0),
+            "prc_amount": payment.get("prc_amount", 0),
+            "inr_equivalent": payment.get("inr_equivalent", 0),
             "status": "completed" if status == "paid" else status,
             "payment_method": "Online (Razorpay)",
             "payment_id": payment.get("payment_id"),
@@ -8432,6 +8434,8 @@ async def get_user_subscription_history(uid: str, request: Request):
             "plan_name": payment.get("plan", "").title(),
             "plan_type": payment.get("plan_type", "monthly"),
             "amount": payment.get("amount", 0),
+            "prc_amount": payment.get("prc_amount", 0),
+            "inr_equivalent": payment.get("inr_equivalent", 0),
             "status": payment.get("status", "pending"),
             "payment_method": "UPI/Bank Transfer",
             "utr_number": payment.get("utr_number"),
@@ -8452,8 +8456,10 @@ async def get_user_subscription_history(uid: str, request: Request):
             "plan_name": payment.get("plan_name", payment.get("plan", "")).title(),
             "plan_type": payment.get("plan_type", payment.get("duration", "monthly")),
             "amount": payment.get("amount", 0),
+            "prc_amount": payment.get("prc_amount", 0),
+            "inr_equivalent": payment.get("inr_equivalent", 0),
             "status": payment.get("status", "pending"),
-            "payment_method": "UPI/Bank Transfer",
+            "payment_method": "UPI/Bank Transfer" if not payment.get("payment_method") else payment.get("payment_method"),
             "utr_number": payment.get("utr_number"),
             "created_at": str(created_at) if created_at else None,
             "activated_at": str(approved_at) if approved_at and payment.get("status") == "approved" else None,
@@ -8503,13 +8509,20 @@ async def get_user_subscription_history(uid: str, request: Request):
             is_ongoing = end_dt > now
             days_remaining = max(0, (end_dt - now).days) if is_ongoing else 0
             
+            # Calculate amount: prefer INR amount, fallback to PRC/10 or inr_equivalent
+            pay_amount = float(payment.get("amount", 0) or 0)
+            if pay_amount == 0:
+                prc_amt = float(payment.get("prc_amount", 0) or 0)
+                inr_eq = float(payment.get("inr_equivalent", 0) or 0)
+                pay_amount = inr_eq if inr_eq > 0 else (prc_amt / 10 if prc_amt > 0 else 0)
+            
             plan_periods.append({
                 "plan_name": (payment.get("plan_name") or sub_plan or "Elite").title(),
                 "status": "ongoing" if (is_most_recent and is_ongoing and current_expiry_dt) else ("ongoing" if is_ongoing else "expired"),
                 "start_date": start_dt.isoformat(),
                 "expiry_date": end_dt.isoformat(),
                 "days_remaining": days_remaining,
-                "amount": payment.get("amount", 0) or 0,
+                "amount": pay_amount,
                 "payment_method": payment.get("payment_method", ""),
                 "is_current": is_most_recent and is_ongoing
             })
