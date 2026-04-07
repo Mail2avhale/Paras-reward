@@ -1597,7 +1597,7 @@ async def get_transaction_status(tid: str):
     Reference: https://developers.eko.in/reference/transaction-inquiry
     """
     try:
-        url = f"{BASE_URL}/v2/transactions?initiator_id={INITIATOR_ID}&tx_id={tid}"
+        url = f"{BASE_URL}/v2/transactions/{tid}?initiator_id={INITIATOR_ID}"
         
         logging.info(f"[BBPS STATUS] Checking TID: {tid}")
         
@@ -1632,9 +1632,9 @@ async def get_transaction_status_by_ref(client_ref_id: str):
     Reference: https://developers.eko.in/reference/transaction-inquiry
     """
     try:
-        url = f"{BASE_URL}/v2/transactions?initiator_id={INITIATOR_ID}&client_ref_id={client_ref_id}"
+        url = f"{BASE_URL}/v2/transactions/client_ref_id:{client_ref_id}?initiator_id={INITIATOR_ID}"
         
-        logging.info(f"[BBPS STATUS BY REF] Checking client_ref_id: {client_ref_id}")
+        logging.info(f"[BBPS STATUS BY REF] Checking client_ref_id: {client_ref_id}, URL: {url}")
         
         response = await bbps_get(url, headers=generate_headers(), timeout=30)
         
@@ -1695,7 +1695,7 @@ async def admin_check_eko_refund(request_id: str):
         
         # Try TID first (more reliable)
         if eko_tid and eko_tid not in ["N/A", "null", "", None]:
-            url = f"{BASE_URL}/v2/transactions?initiator_id={INITIATOR_ID}&tx_id={eko_tid}"
+            url = f"{BASE_URL}/v2/transactions/{eko_tid}?initiator_id={INITIATOR_ID}"
             logging.info(f"[EKO REFUND CHECK] Checking TID: {eko_tid} for request: {request_id}")
             response = await bbps_get(url, headers=generate_headers(), timeout=30)
             if response.status_code == 200:
@@ -1704,7 +1704,7 @@ async def admin_check_eko_refund(request_id: str):
         
         # Fallback to client_ref_id
         if not eko_result and client_ref:
-            url = f"{BASE_URL}/v2/transactions?initiator_id={INITIATOR_ID}&client_ref_id={client_ref}"
+            url = f"{BASE_URL}/v2/transactions/client_ref_id:{client_ref}?initiator_id={INITIATOR_ID}"
             logging.info(f"[EKO REFUND CHECK] Checking client_ref_id: {client_ref} for request: {request_id}")
             response = await bbps_get(url, headers=generate_headers(), timeout=30)
             if response.status_code == 200:
