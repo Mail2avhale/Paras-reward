@@ -5,10 +5,11 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { 
   TrendingUp, Star, ArrowUpRight, Clock,
-  Home, UserPlus, Users, User, Zap, Crown, Eye, EyeOff,
+  Zap, Crown, Eye, EyeOff,
   ChevronRight, Sparkles,
   Sun, Moon, Sunrise, Sunset, Building2
 } from 'lucide-react';
+
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/ProfileCompletionComponents';
 // AIChatbotEnhanced REMOVED - chatbot feature deprecated (March 2026)
@@ -73,18 +74,6 @@ const getTimeGreeting = () => {
   }
 };
 
-// Bottom Navigation Item
-const BottomNavItem = ({ icon: Icon, label, isActive, onClick }) => (
-  <button 
-    onClick={onClick}
-    className={`flex flex-col items-center justify-center py-2 px-3 transition-all ${
-      isActive ? 'text-amber-500' : 'text-gray-400'
-    }`}
-  >
-    <Icon className={`w-5 h-5 mb-1 ${isActive ? 'text-amber-500' : ''}`} />
-    <span className="text-[10px] font-medium">{label}</span>
-  </button>
-);
 
 const DashboardModern = ({ user, onLogout }) => {
   const navigate = useNavigate();
@@ -99,7 +88,7 @@ const DashboardModern = ({ user, onLogout }) => {
   const [recentTransactions, setRecentTransactions] = useState([]);
   // globalActivity and activityTab moved to separate Activity page
   const [showProfilePopup, setShowProfilePopup] = useState(false);
-  const [activeTab, setActiveTab] = useState('home');
+
   const [miningHistory, setMiningHistory] = useState([]);
   const [birthdayGreeting, setBirthdayGreeting] = useState(null);
   const [redeemLimit, setRedeemLimit] = useState(null);
@@ -313,17 +302,6 @@ const DashboardModern = ({ user, onLogout }) => {
     }
   }, [user]);
 
-  const handleNavigation = (tabName) => {
-    setActiveTab(tabName);
-    const routes = {
-      'home': '/dashboard',
-      'referrals': '/referrals',
-      'profile': '/profile'
-    };
-    if (routes[tabName]) {
-      navigate(routes[tabName]);
-    }
-  };
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -1027,32 +1005,8 @@ const DashboardModern = ({ user, onLogout }) => {
         userData={userData}
       />
 
-      {/* Holiday Calendar - REMOVED per user request */}
+      {/* Bottom padding for fixed BottomNav rendered by App.js */}
       <div className="pb-24" />
-
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 z-50">
-        <div className="flex items-center justify-around py-2 px-4 max-w-lg mx-auto">
-          <BottomNavItem 
-            icon={Home} 
-            label={t('home')} 
-            isActive={activeTab === 'home'} 
-            onClick={() => handleNavigation('home')}
-          />
-          <BottomNavItem 
-            icon={Users} 
-            label={t('referrals')} 
-            isActive={activeTab === 'referrals'} 
-            onClick={() => handleNavigation('referrals')}
-          />
-          <BottomNavItem 
-            icon={User} 
-            label={t('profile')} 
-            isActive={activeTab === 'profile'} 
-            onClick={() => handleNavigation('profile')}
-          />
-        </div>
-      </div>
       
     </div>
   );

@@ -1,6 +1,12 @@
 # PARAS REWARD - Product Requirements Document
 
-## LAST UPDATED - 8 April 2026
+## LAST UPDATED - 7 April 2026
+
+## COMPLETED: Bottom Navigation Fix - Subscription Icon Added - 7 April 2026
+- Removed duplicate inline BottomNavItem from DashboardModern.js (was overriding global BottomNav.js)
+- Global BottomNav.js now renders correctly on Dashboard with 4 items: Home, Invite, Plan (Crown), Profile
+- Subscription/Plan icon (Crown) added as requested by user
+- Removed unused imports (Home, Users, User, UserPlus) and dead code (activeTab state, handleNavigation function)
 
 ## COMPLETED: Security PIN System (Replaced Security Question) - 8 April 2026
 - Replaced Security Question with 4-digit Security PIN in Forgot PIN flow
