@@ -149,7 +149,7 @@ const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
 // Marketplace & Orders removed - feature deprecated (December 2025)
 // const Orders = lazy(() => import("@/pages/Orders"));
 // VIPMembership removed - replaced by SubscriptionPlans (new 4-tier system)
-const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
+// SubscriptionPlans - REMOVED (deprecated April 2026)
 // Removed: WalletNew (withdrawal functionality removed)
 // Removed: Leaderboard (feature removed for AdMob compliance)
 // Removed: ReferralEarningsHistory (feature removed)
@@ -351,8 +351,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/prc-statement" element={user ? <Suspense fallback={<LoadingFallback />}><PRCStatement user={user} /></Suspense> : <Navigate to="/login" />} />
             <Route path="/usage-history" element={user ? <Suspense fallback={<LoadingFallback />}><PRCUsageHistory user={user} /></Suspense> : <Navigate to="/login" />} />
             {/* Removed: Activity page */}
-            <Route path="/vip" element={<Navigate to="/subscription" replace />} /> {/* Legacy VIP route redirects to new subscription system */}
-            <Route path="/subscription" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SubscriptionPlans user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/vip" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/subscription" element={<Navigate to="/dashboard" replace />} />
             <Route path="/my-invoices" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <MyInvoices user={user} />) : <Navigate to="/login" />} />
             <Route path="/invoices" element={<Navigate to="/my-invoices" replace />} />
             <Route path="/kyc" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <KYCVerification user={user} />) : <Navigate to="/login" />} />
