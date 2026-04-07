@@ -880,9 +880,9 @@ const DashboardModern = ({ user, onLogout }) => {
                 <p className="text-white text-sm font-bold">{Number(redeemLimit.total_limit || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                 <p className="text-gray-500 text-[10px]">₹{(Number(redeemLimit.total_limit || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
               </div>
-              <div>
+              <div onClick={(e) => { e.stopPropagation(); navigate('/usage-history'); }} className="cursor-pointer">
                 <p className="text-gray-500 text-[10px] uppercase tracking-wider">Redeemed</p>
-                <p className="text-amber-400 text-sm font-bold">{Number(redeemLimit.total_redeemed || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                <p className="text-amber-400 text-sm font-bold underline decoration-amber-400/30">{Number(redeemLimit.total_redeemed || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                 <p className="text-gray-500 text-[10px]">₹{(Number(redeemLimit.total_redeemed || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
               </div>
               <div>
