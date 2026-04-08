@@ -94,7 +94,7 @@ const RewardsHome = () => {
               Earn Rewards with<br />Daily Activity
             </motion.h1>
             <motion.p variants={fadeUp} custom={2} className="text-base sm:text-lg text-blue-100 mb-3 font-medium">
-              Simple &bull; Transparent &bull; Controlled Reward System
+              Simple &bull; Scalable &bull; Sustainable Reward Ecosystem
             </motion.p>
             <motion.p variants={fadeUp} custom={3} className="text-sm text-blue-200 mb-8 flex items-center justify-center gap-3 flex-wrap">
               <span className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 px-3 py-1 rounded-full"><BadgeCheck className="h-4 w-4 text-green-300" /> Registered in India</span>
@@ -297,34 +297,72 @@ const RewardsHome = () => {
         </div>
       </section>
 
-      {/* ===== 8. ABOUT + VISION + MISSION ===== */}
+      {/* ===== 8. ABOUT + AIM + VISION + MISSION ===== */}
       <section className="py-12 sm:py-20 px-6 bg-white" data-testid="about-section">
         <div className="max-w-5xl mx-auto">
+          {/* About Us */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+            className="bg-gray-50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-gray-100 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <Heart className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg">About Us</h3>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed mb-4">
+              Paras Reward Technologies Private Limited is a digital platform focused on building a simple and scalable reward-based ecosystem for users across India.
+            </p>
+            <p className="text-sm text-gray-600 leading-relaxed mb-4">
+              The platform allows users to earn digital rewards (PRC) through their daily activity and engagement. These rewards can be used for real utility services such as mobile recharge and controlled bank payout options.
+            </p>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Our goal is to create a transparent, user-friendly, and sustainable reward system that encourages participation, consistency, and growth.
+            </p>
+          </motion.div>
+
+          {/* Aim + Vision + Mission Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-            {[
-              { icon: Heart, title: 'About', desc: 'Simple reward platform based on user activity. Users earn PRC through daily participation and use them for real services.', color: 'bg-blue-100 text-blue-600' },
-              { icon: Eye, title: 'Vision', desc: "Aiming to become India's most trusted digital reward platform by building a transparent and sustainable ecosystem.", color: 'bg-purple-100 text-purple-600' },
-              { icon: Zap, title: 'Mission', list: ['Simple rewards', 'Transparent system', 'Sustainable growth', 'Strong community'], color: 'bg-indigo-100 text-indigo-600' },
-            ].map((card, i) => (
-              <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}
-                className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                <div className={`w-12 h-12 rounded-xl ${card.color} flex items-center justify-center mb-4`}>
-                  <card.icon className="h-6 w-6" />
-                </div>
-                <h3 className="font-bold text-gray-900 text-lg mb-3">{card.title}</h3>
-                {card.desc ? (
-                  <p className="text-sm text-gray-600 leading-relaxed">{card.desc}</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {card.list.map((item, j) => (
-                      <li key={j} className="flex items-center gap-2 text-sm text-gray-600">
-                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />{item}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </motion.div>
-            ))}
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}
+              className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-4">
+                <Star className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg mb-3">Aim</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                To provide a simple and accessible digital reward system where every user can benefit from their activity and engagement without complexity.
+              </p>
+            </motion.div>
+
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={1}
+              className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+              <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mb-4">
+                <Eye className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg mb-3">Vision</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                To build one of India's most trusted digital reward ecosystems where users can earn, grow, and utilize rewards in a controlled and sustainable manner.
+              </p>
+            </motion.div>
+
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={2}
+              className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+              <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4">
+                <Zap className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg mb-3">Mission</h3>
+              <ul className="space-y-2">
+                {[
+                  'Simplify digital earning through activity-based rewards',
+                  'Create a secure and transparent platform for users',
+                  'Ensure long-term sustainability through controlled reward distribution',
+                  'Build a strong community-driven ecosystem across India',
+                ].map((item, j) => (
+                  <li key={j} className="flex items-start gap-2 text-sm text-gray-600">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />{item}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -374,15 +412,15 @@ const RewardsHome = () => {
               </div>
               <h3 className="text-lg font-bold text-gray-900">Important Disclaimer</h3>
             </div>
-            <p className="text-sm text-gray-700 mb-4">Paras Reward is a digital reward platform. Please read carefully before using our services.</p>
-            <ul className="space-y-2">
+            <p className="text-sm text-gray-700 mb-4 font-medium">Paras Reward is a digital reward platform.</p>
+            <ul className="space-y-2.5">
               {[
-                'PRC is a digital reward unit, not real currency, cryptocurrency, or an investment product',
-                'No guaranteed income or returns of any kind',
-                'Rewards earned depend entirely on user activity and may vary',
-                'Redeem facility is subject to eligibility and platform rules',
-                'Subscription fees are non-refundable as per our refund policy',
-                'Past performance does not indicate future results',
+                'PRC (Paras Reward Coin) is a reward unit and not a currency, investment, or financial instrument',
+                'The platform does not guarantee any fixed or assured income',
+                'Rewards are based on user activity, participation, and system conditions',
+                'The displayed PRC value is indicative and for utility purposes only',
+                'Bank redeem and other services are subject to platform rules and eligibility criteria',
+                'Users are advised to use the platform responsibly',
               ].map((item, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />{item}
@@ -396,6 +434,46 @@ const RewardsHome = () => {
         </div>
       </section>
 
+      {/* ===== 10.5 TERMS & CONDITIONS SUMMARY ===== */}
+      <section className="py-12 px-6" data-testid="terms-section">
+        <div className="max-w-3xl mx-auto">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                <BookOpen className="h-5 w-5 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Terms & Conditions</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { title: 'User Eligibility', items: ['Must be 18 years or above', 'KYC verification may be required'] },
+                { title: 'Account Usage', items: ['Only one account per user allowed', 'Duplicate accounts may lead to suspension'] },
+                { title: 'Subscription', items: ['Active subscription required for access', 'Subscription fees are non-refundable'] },
+                { title: 'Rewards (PRC)', items: ['PRC is a digital reward unit', 'No direct monetary value outside the platform', 'Depends on activity and system rules'] },
+                { title: 'Redeem Policy', items: ['Subject to unlock conditions and limits', 'One redeem per subscription cycle', 'Bank redeem for eligible users only'] },
+                { title: 'Burn & Adjustments', items: ['Platform may apply burn or adjustments to maintain system balance'] },
+                { title: 'Fraud & Misuse', items: ['Fraudulent activity leads to suspension', 'Manipulation results in termination'] },
+                { title: 'Platform Rights', items: ['Company reserves right to modify features, rewards, and policies'] },
+              ].map((section, i) => (
+                <div key={i} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                  <h4 className="font-semibold text-gray-900 text-sm mb-2">{section.title}</h4>
+                  <ul className="space-y-1.5">
+                    {section.items.map((item, j) => (
+                      <li key={j} className="flex items-start gap-2 text-xs text-gray-500">
+                        <CheckCircle className="h-3.5 w-3.5 text-blue-400 mt-0.5 flex-shrink-0" />{item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-4 text-center">
+              The platform is not responsible for any indirect or consequential loss. Read full <Link to="/terms" className="text-blue-600 underline">Terms & Conditions</Link>.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ===== 11. FINAL CTA ===== */}
       <section className="py-16 sm:py-24 px-6" data-testid="final-cta-section">
         <div className="max-w-3xl mx-auto text-center">
@@ -404,10 +482,13 @@ const RewardsHome = () => {
             <motion.h2 variants={fadeUp} className="text-2xl sm:text-4xl font-extrabold text-white mb-4">
               Start Your Reward<br />Journey Today
             </motion.h2>
-            <motion.p variants={fadeUp} custom={1} className="text-blue-100 mb-8 text-base">
+            <motion.p variants={fadeUp} custom={1} className="text-blue-100 mb-4 text-base">
               Join thousands of users earning rewards daily
             </motion.p>
-            <motion.div variants={fadeUp} custom={2}>
+            <motion.p variants={fadeUp} custom={2} className="text-blue-200 text-xs mb-8 max-w-md mx-auto">
+              Paras Reward is designed as a performance-based digital reward system, not an investment or income guarantee platform.
+            </motion.p>
+            <motion.div variants={fadeUp} custom={3}>
               <Button data-testid="final-cta-btn" size="lg" onClick={() => navigate('/register')}
                 className="rounded-full px-10 py-6 bg-white text-blue-700 hover:bg-blue-50 font-bold shadow-xl text-base">
                 Join Now <ArrowRight className="ml-2 h-5 w-5" />
@@ -425,7 +506,7 @@ const RewardsHome = () => {
               <div className="flex items-center gap-2 mb-4">
                 <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-auto object-contain" />
               </div>
-              <p className="text-gray-400 text-sm leading-relaxed">PRC is a digital reward unit, not real currency. Earnings depend on user activity.</p>
+              <p className="text-gray-400 text-sm leading-relaxed">A digital platform focused on building a simple and scalable reward-based ecosystem for users across India.</p>
             </div>
             <div>
               <h4 className="font-semibold mb-4 text-white">Company</h4>
