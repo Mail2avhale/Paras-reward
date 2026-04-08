@@ -1,318 +1,38 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { 
-  Coins, Gift, Users, TrendingUp, Shield, Smartphone, 
-  ChevronRight, Star, Zap, Award, CreditCard, ShoppingBag,
-  FileText, Phone, Mail, MapPin, ArrowRight, CheckCircle,
-  Play, Crown, Percent, Clock, Target, Sparkles, Globe, ChevronDown,
-  Lock
+  Users, Shield, ChevronRight, Award, ArrowRight, CheckCircle,
+  Crown, Target, Globe, ChevronDown, Eye, Smartphone, Building2,
+  Coins, Gift, MapPin, Phone, Mail, Clock, FileText, Lock,
+  Sparkles, Layers, BarChart3, Wallet, CreditCard, UserPlus,
+  Activity, BadgeCheck, Scale, BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 import SEO, { SEOConfigs } from '@/components/SEO';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
 
-// Floating coin animation component
-const FloatingCoins = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    {[...Array(12)].map((_, i) => (
-      <motion.div
-        key={i}
-        className="absolute text-yellow-400/30"
-        initial={{ 
-          x: Math.random() * 100 + '%', 
-          y: '110%',
-          rotate: 0,
-          scale: 0.5 + Math.random() * 0.5
-        }}
-        animate={{ 
-          y: '-10%',
-          rotate: 360,
-          transition: {
-            duration: 8 + Math.random() * 4,
-            repeat: Infinity,
-            delay: i * 0.5,
-            ease: 'linear'
-          }
-        }}
-      >
-        <Coins className="w-6 h-6 sm:w-8 sm:h-8" />
-      </motion.div>
-    ))}
+// Animation variants
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] } })
+};
+
+const stagger = { visible: { transition: { staggerChildren: 0.12 } } };
+
+// Glass Card Component
+const GlassCard = ({ children, className = '', hover = true, ...props }) => (
+  <div 
+    className={`bg-white/60 backdrop-blur-xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.04)] ${hover ? 'hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5' : ''} transition-all duration-300 rounded-2xl md:rounded-3xl ${className}`}
+    {...props}
+  >
+    {children}
   </div>
 );
-
-// Glassmorphism stat card
-const GlassStatCard = ({ icon: Icon, value, label, color, delay }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, delay }}
-    viewport={{ once: true }}
-    className="relative group"
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 rounded-2xl blur-xl group-hover:blur-2xl transition-all" />
-    <div className="relative bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-4 sm:p-6 hover:bg-white/15 transition-all">
-      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-      </div>
-      <div className="text-2xl sm:text-3xl font-bold text-white mb-1">{value}</div>
-      <div className="text-white/60 text-sm">{label}</div>
-    </div>
-  </motion.div>
-);
-
-// Feature card with hover effect
-const FeatureCard = ({ icon: Icon, title, description, color, isNew, onClick, ctaText }) => (
-  <motion.div
-    whileHover={{ y: -8, scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
-    className="relative group cursor-pointer"
-    onClick={onClick}
-  >
-    <div className={`absolute inset-0 bg-gradient-to-br ${color} rounded-3xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500`} />
-    <Card className="relative h-full p-6 bg-white border-0 shadow-lg hover:shadow-2xl transition-all duration-300 rounded-3xl overflow-hidden">
-      {isNew && (
-        <div className="absolute top-4 right-4">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
-          </span>
-        </div>
-      )}
-      <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
-        <Icon className="h-7 w-7 text-white" />
-      </div>
-      <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-500 text-sm leading-relaxed mb-4">{description}</p>
-      <div className="flex items-center text-blue-600 font-semibold group-hover:text-blue-700">
-        {ctaText}
-        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-2 transition-transform" />
-      </div>
-    </Card>
-  </motion.div>
-);
-
-// Subscription plan card
-const PlanCard = ({ name, price, originalPrice, features, color, icon: Icon, isPopular, onClick, ctaText }) => (
-  <motion.div
-    whileHover={{ y: -8 }}
-    className={`relative ${isPopular ? 'z-10' : ''}`}
-  >
-    {isPopular && (
-      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
-        <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
-          MOST POPULAR
-        </span>
-      </div>
-    )}
-    <Card className={`h-full p-6 rounded-2xl border-2 transition-all ${isPopular ? 'border-purple-400 bg-gradient-to-br from-purple-50 to-pink-50 shadow-xl scale-105' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-      <div className="text-center mb-4">
-        <div className={`w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center mb-3`}>
-          <Icon className="h-7 w-7 text-white" />
-        </div>
-        <h3 className="text-xl font-bold text-gray-900">{name}</h3>
-        <div className="mt-2">
-          {price === 'FREE' ? (
-            <span className="text-3xl font-bold text-gray-900">{price}</span>
-          ) : (
-            <div>
-              {originalPrice && (
-                <span className="text-lg text-gray-400 line-through mr-2">₹{originalPrice}</span>
-              )}
-              <span className="text-3xl font-bold text-gray-900">₹{price}</span>
-              <span className="text-gray-500">/month</span>
-              {originalPrice && (
-                <div className="mt-1">
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                    {Math.round((1 - parseInt(price) / parseInt(originalPrice)) * 100)}% OFF
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-      <ul className="space-y-3 mb-6">
-        {features.map((feature, idx) => (
-          <li key={idx} className="flex items-center gap-2 text-sm">
-            {feature.included ? (
-              <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-            ) : (
-              <Lock className="h-4 w-4 text-gray-300 flex-shrink-0" />
-            )}
-            <span className={feature.included ? 'text-gray-700' : 'text-gray-400'}>{feature.text}</span>
-          </li>
-        ))}
-      </ul>
-      <Button 
-        onClick={onClick}
-        className={`w-full ${isPopular ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500' : 'bg-gray-900 hover:bg-gray-800'}`}
-      >
-        {ctaText}
-      </Button>
-    </Card>
-  </motion.div>
-);
-
-// AdMob Compliant Translations
-const homeTranslations = {
-  heroTitle: {
-    mr: "PRC पॉइंट्स गोळा करा!",
-    hi: "PRC पॉइंट्स इकट्ठा करें!",
-    en: "Collect PRC Points!"
-  },
-  heroSubtitle: {
-    mr: "दैनंदिन क्रियाकलापांद्वारे पॉइंट्स गोळा करा आणि रिवॉर्ड्ससाठी रिडीम करा",
-    hi: "दैनिक गतिविधियों से पॉइंट्स इकट्ठा करें और रिवॉर्ड्स के लिए रिडीम करें",
-    en: "Collect Points Through Daily Activities & Redeem for Rewards"
-  },
-  getStarted: {
-    mr: "आता रजिस्टर करा",
-    hi: "अभी रजिस्टर करें",
-    en: "Register Now"
-  },
-  login: {
-    mr: "लॉगिन",
-    hi: "लॉगिन",
-    en: "Login"
-  },
-  dailyMining: {
-    mr: "दैनंदिन चेक-इन",
-    hi: "दैनिक चेक-इन",
-    en: "Daily Check-in"
-  },
-  dailyMiningDesc: {
-    mr: "दररोज चेक-इन करा आणि पॉइंट्स गोळा करा. सातत्य ठेवल्यास बोनस मिळेल.",
-    hi: "रोज़ चेक-इन करें और पॉइंट्स इकट्ठा करें। लगातार रहने पर बोनस मिलेगा।",
-    en: "Check-in daily to collect points. Stay consistent for bonus rewards."
-  },
-  referralRewards: {
-    mr: "मित्रांना आमंत्रित करा",
-    hi: "दोस्तों को आमंत्रित करें",
-    en: "Invite Friends"
-  },
-  referralRewardsDesc: {
-    mr: "मित्रांना आमंत्रित करा आणि ते सामील झाल्यावर बोनस पॉइंट्स मिळवा.",
-    hi: "दोस्तों को आमंत्रित करें और उनके जुड़ने पर बोनस पॉइंट्स पाएं।",
-    en: "Invite friends and get bonus points when they join the platform."
-  },
-  giftVouchers: {
-    mr: "गिफ्ट व्हाउचर",
-    hi: "गिफ्ट वाउचर",
-    en: "Gift Vouchers"
-  },
-  giftVouchersDesc: {
-    mr: "प्लॅटफॉर्मवर विविध सेवांसाठी पॉइंट्स वापरा.",
-    hi: "प्लेटफॉर्म पर विभिन्न सेवाओं के लिए पॉइंट्स उपयोग करें।",
-    en: "Use your points for various platform services and benefits."
-  },
-  billPayments: {
-    mr: "सेवा",
-    hi: "सेवाएं",
-    en: "Services"
-  },
-  billPaymentsDesc: {
-    mr: "प्लॅटफॉर्मवर उपलब्ध सेवांसाठी पॉइंट्स वापरा.",
-    hi: "प्लेटफॉर्म पर उपलब्ध सेवाओं के लिए पॉइंट्स उपयोग करें।",
-    en: "Use your points for available platform services."
-  },
-  luxuryLife: {
-    mr: "लक्झरी सेव्हिंग्स",
-    hi: "लक्ज़री सेविंग्स",
-    en: "Luxury Savings"
-  },
-  luxuryLifeDesc: {
-    mr: "तुमच्या पॉइंट्सचा काही भाग आपोआप मोबाइल, बाइक किंवा कारसाठी सेव्ह होतो.",
-    hi: "आपके पॉइंट्स का कुछ हिस्सा ऑटो-सेव होता है मोबाइल, बाइक या कार के लिए।",
-    en: "A portion of your points auto-saves towards mobile, bike or car goals."
-  },
-  prcRain: {
-    mr: "पॉइंट रेन गेम",
-    hi: "पॉइंट रेन गेम",
-    en: "Point Rain Game"
-  },
-  prcRainDesc: {
-    mr: "मजेशीर गेम खेळा आणि अतिरिक्त पॉइंट्स गोळा करा.",
-    hi: "मज़ेदार गेम खेलें और अतिरिक्त पॉइंट्स इकट्ठा करें।",
-    en: "Play fun games and collect additional points."
-  },
-  registerNow: {
-    mr: "आता रजिस्टर करा",
-    hi: "अभी रजिस्टर करें",
-    en: "Register Now"
-  },
-  howItWorks: {
-    mr: "कसे काम करते",
-    hi: "कैसे काम करता है",
-    en: "How It Works"
-  },
-  step1Title: {
-    mr: "अकाउंट बनवा",
-    hi: "अकाउंट बनाएं",
-    en: "Create Account"
-  },
-  step1Desc: {
-    mr: "विनामूल्य साइन अप करा",
-    hi: "मुफ्त साइन अप करें",
-    en: "Sign up for free"
-  },
-  step2Title: {
-    mr: "पॉइंट्स गोळा करा",
-    hi: "पॉइंट्स इकट्ठा करें",
-    en: "Collect Points"
-  },
-  step2Desc: {
-    mr: "दैनंदिन क्रियाकलाप पूर्ण करा",
-    hi: "दैनिक गतिविधियां पूरी करें",
-    en: "Complete daily activities"
-  },
-  step3Title: {
-    mr: "रिडीम करा",
-    hi: "रिडीम करें",
-    en: "Redeem Rewards"
-  },
-  step3Desc: {
-    mr: "व्हाउचर किंवा बिल पेमेंटसाठी वापरा",
-    hi: "वाउचर या बिल पेमेंट के लिए उपयोग करें",
-    en: "Use for platform services and benefits"
-  },
-  freeToUse: {
-    mr: "विनामूल्य वापरा",
-    hi: "मुफ्त उपयोग करें",
-    en: "Free to Use"
-  },
-  activeUsers: {
-    mr: "सक्रिय सदस्य",
-    hi: "सक्रिय सदस्य",
-    en: "Active Members"
-  },
-  pointsDistributed: {
-    mr: "वितरित पॉइंट्स",
-    hi: "वितरित पॉइंट्स",
-    en: "Points Distributed"
-  },
-  allRightsReserved: {
-    mr: "सर्व हक्क राखीव",
-    hi: "सर्वाधिकार सुरक्षित",
-    en: "All rights reserved"
-  },
-  termsApply: {
-    mr: "अटी व शर्ती लागू",
-    hi: "नियम और शर्तें लागू",
-    en: "Terms & Conditions Apply"
-  },
-  disclaimer: {
-    mr: "PRC हे प्लॅटफॉर्म पॉइंट्स आहेत आणि वास्तविक चलन नाहीत.",
-    hi: "PRC प्लेटफॉर्म पॉइंट्स हैं और वास्तविक मुद्रा नहीं हैं।",
-    en: "PRC are platform points and not real currency."
-  }
-};
 
 const RewardsHome = () => {
   const navigate = useNavigate();
@@ -322,10 +42,6 @@ const RewardsHome = () => {
   const [contactInfo, setContactInfo] = useState({ email: '', phone: '', address: '' });
   const [showLangDropdown, setShowLangDropdown] = useState(false);
 
-  const t = useCallback((key) => {
-    return homeTranslations[key]?.[language] || homeTranslations[key]?.en || key;
-  }, [language]);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -333,103 +49,56 @@ const RewardsHome = () => {
           axios.get(`${API}/stats`),
           axios.get(`${API}/public/contact-info`)
         ]);
-        
-        if (statsRes.status === 'fulfilled') {
-          setStats(statsRes.value.data);
-        }
-        if (contactRes.status === 'fulfilled') {
-          setContactInfo(contactRes.value.data);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-      } finally {
-        setLoading(false);
-      }
+        if (statsRes.status === 'fulfilled') setStats(statsRes.value.data);
+        if (contactRes.status === 'fulfilled') setContactInfo(contactRes.value.data);
+      } catch (error) { /* silent */ }
+      finally { setLoading(false); }
     };
     fetchData();
   }, []);
 
-  const features = [
-    {
-      icon: Coins,
-      title: t('dailyMining'),
-      description: t('dailyMiningDesc'),
-      color: 'from-yellow-500 to-amber-600',
-      link: '/register'
-    },
-    {
-      icon: Users,
-      title: t('referralRewards'),
-      description: t('referralRewardsDesc'),
-      color: 'from-blue-500 to-blue-600',
-      link: '/register'
-    },
-  ];
-
-  const plans = [
-    {
-      name: 'Explorer',
-      price: 'FREE',
-      icon: Users,
-      color: 'from-gray-500 to-gray-600',
-      features: [
-        { text: '0% Mining Speed', included: true },
-        { text: 'View Balance', included: true },
-        { text: 'Basic Features', included: true },
-        { text: 'Redeem Vouchers', included: false }
-      ]
-    },
-    {
-      name: 'Elite',
-      price: '999 + GST',
-      originalPrice: '999',
-      icon: Crown,
-      color: 'from-amber-500 to-orange-600',
-      isPopular: true,
-      features: [
-        { text: '100% Mining Speed', included: true },
-        { text: 'Unlimited Mining', included: true },
-        { text: 'VIP Support', included: true },
-        { text: 'Maximum Benefits', included: true }
-      ]
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white overflow-x-hidden">
-      {/* Animated Header */}
+    <div className="min-h-screen overflow-x-hidden" style={{ background: '#FDFBF7' }}>
+      {/* Fixed Guilloche Background Pattern */}
+      <div 
+        className="fixed inset-0 z-0 pointer-events-none opacity-[0.08] mix-blend-multiply"
+        style={{ backgroundImage: 'url(/guilloche-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}
+      />
+      {/* Noise Grain Overlay */}
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat' }} />
+
+      <SEO {...SEOConfigs.home} />
+
+      {/* ========== HEADER ========== */}
       <motion.header 
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-100"
+        initial={{ y: -100 }} animate={{ y: 0 }} transition={{ duration: 0.6 }}
+        className="fixed top-0 left-0 right-0 z-50 bg-[#FDFBF7]/80 backdrop-blur-xl border-b border-stone-200/60"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2.5" data-testid="header-logo">
               <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-10 rounded-xl" />
-              <span className="font-bold text-xl bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Paras Reward
-              </span>
+              <span className="font-bold text-xl text-[#114232]">Paras Reward</span>
             </Link>
-            
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Language Selector */}
               <div className="relative">
                 <button
+                  data-testid="language-selector"
                   onClick={() => setShowLangDropdown(!showLangDropdown)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm font-medium"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-stone-100 hover:bg-stone-200 text-sm font-medium text-stone-700 transition-colors"
                 >
-                  <Globe className="h-4 w-4" />
-                  {language.toUpperCase()}
+                  <Globe className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{language.toUpperCase()}</span>
                   <ChevronDown className="h-3 w-3" />
                 </button>
                 {showLangDropdown && (
-                  <div className="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border py-2 z-50">
+                  <div className="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-stone-200 py-2 z-50">
                     {Object.entries(LANGUAGES).map(([code, name]) => (
                       <button
                         key={code}
                         onClick={() => { setLanguage(code); setShowLangDropdown(false); }}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${language === code ? 'text-purple-600 font-medium' : 'text-gray-700'}`}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-stone-50 ${language === code ? 'text-[#D97706] font-semibold' : 'text-stone-700'}`}
                       >
                         {name}
                       </button>
@@ -437,339 +106,541 @@ const RewardsHome = () => {
                   </div>
                 )}
               </div>
-              
-              <Button variant="ghost" onClick={() => navigate('/login')} className="text-gray-700">
-                {t('login')}
+              <Button data-testid="header-login-btn" variant="ghost" onClick={() => navigate('/login')} className="text-[#114232] hover:bg-[#114232]/5 rounded-full px-4">
+                Login
               </Button>
               <Button 
+                data-testid="header-register-btn"
                 onClick={() => navigate('/register')}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-500/30"
+                className="bg-[#114232] hover:bg-[#0a2e22] text-white rounded-full px-5 shadow-lg shadow-[#114232]/20"
               >
-                {t('getStarted')}
+                Register
               </Button>
             </div>
           </div>
         </div>
       </motion.header>
 
-      {/* SEO Meta Tags */}
-      <SEO {...SEOConfigs.home} />
-
-      {/* Hero Section */}
-      <section className="relative pt-24 pb-20 sm:pt-32 sm:pb-28 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900" />
-        <FloatingCoins />
-        
-        {/* Animated gradient orbs */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '2s' }} />
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-full text-sm font-medium mb-6">
-                <Sparkles className="h-4 w-4 text-yellow-400" />
-                {t('freeToUse')}
-              </div>
-              
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-                {t('heroTitle')}
-              </h1>
-              
-              <p className="text-lg sm:text-xl text-white/80 max-w-2xl mx-auto mb-8">
-                {t('heroSubtitle')}
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      {/* ========== HERO SECTION ========== */}
+      <section className="relative pt-28 pb-20 sm:pt-36 sm:pb-28 px-6 md:px-12 lg:px-24 z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <motion.div initial="hidden" animate="visible" variants={stagger}>
+              <motion.div variants={fadeUp} custom={0}>
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100/80 text-[#D97706] text-xs font-bold uppercase tracking-[0.15em] mb-6">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Trusted Reward Platform
+                </span>
+              </motion.div>
+              <motion.h1 variants={fadeUp} custom={1} className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter leading-[1.1] text-[#1C1917] mb-6">
+                Earn Rewards with{' '}
+                <span className="text-[#114232]">Daily Activity</span>
+              </motion.h1>
+              <motion.p variants={fadeUp} custom={2} className="text-base md:text-lg leading-relaxed text-[#57534E] mb-8 max-w-lg">
+                Simple &bull; Transparent &bull; Controlled Reward System for Everyone
+              </motion.p>
+              <motion.div variants={fadeUp} custom={3} className="flex flex-col sm:flex-row gap-3">
                 <Button 
+                  data-testid="hero-cta-btn"
                   size="lg"
                   onClick={() => navigate('/register')}
-                  className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-gray-900 font-bold px-8 py-6 text-lg shadow-2xl shadow-yellow-500/30"
+                  className="rounded-full px-8 py-6 bg-[#114232] hover:bg-[#0a2e22] text-white font-semibold shadow-lg shadow-[#114232]/20 text-base"
                 >
-                  {t('getStarted')}
+                  Start Earning Now
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <Button 
+                  data-testid="hero-login-btn"
                   size="lg"
                   variant="outline"
                   onClick={() => navigate('/login')}
-                  className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg"
+                  className="rounded-full px-8 py-6 border-2 border-[#114232] text-[#114232] hover:bg-[#114232]/5 font-semibold text-base"
                 >
-                  {t('login')}
+                  Login
                 </Button>
-              </div>
+              </motion.div>
+
+              {/* Mini Stats */}
+              <motion.div variants={fadeUp} custom={4} className="flex items-center gap-6 mt-10">
+                <div>
+                  <div className="text-2xl font-bold text-[#1C1917]">{loading ? '...' : `${stats.totalUsers.toLocaleString()}+`}</div>
+                  <div className="text-xs text-[#57534E]">Active Users</div>
+                </div>
+                <div className="w-px h-10 bg-stone-300" />
+                <div>
+                  <div className="text-2xl font-bold text-[#1C1917]">{loading ? '...' : `${stats.vipMembers.toLocaleString()}+`}</div>
+                  <div className="text-xs text-[#57534E]">Premium Members</div>
+                </div>
+                <div className="w-px h-10 bg-stone-300" />
+                <div>
+                  <div className="text-2xl font-bold text-[#D97706]">{loading ? '...' : Math.round(stats.totalRedeemed).toLocaleString()}</div>
+                  <div className="text-xs text-[#57534E]">Rewards Redeemed</div>
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* Hero Coin Visual */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="hidden lg:flex justify-center items-center"
+            >
+              <motion.img 
+                  src="/hero-coin.png" 
+                  alt="PRC Reward Coin"
+                  className="w-72 h-72 xl:w-80 xl:h-80 object-contain drop-shadow-2xl"
+                  style={{ mixBlendMode: 'multiply' }}
+                  animate={{ y: [0, -16, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                />
             </motion.div>
           </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-16">
-            <GlassStatCard 
-              icon={Users} 
-              value={loading ? '...' : `${stats.totalUsers.toLocaleString()}+`}
-              label={t('activeUsers')}
-              color="from-blue-500 to-blue-600"
-              delay={0.1}
-            />
-            <GlassStatCard 
-              icon={Coins} 
-              value={loading ? '...' : Math.round(stats.totalPRC).toLocaleString()}
-              label={t('pointsDistributed')}
-              color="from-yellow-500 to-amber-600"
-              delay={0.2}
-            />
-            <GlassStatCard 
-              icon={Crown} 
-              value={loading ? '...' : `${stats.vipMembers.toLocaleString()}+`}
-              label="Premium Members"
-              color="from-purple-500 to-pink-600"
-              delay={0.3}
-            />
-            <GlassStatCard 
-              icon={Gift} 
-              value={loading ? '...' : Math.round(stats.totalRedeemed).toLocaleString()}
-              label="Points Redeemed"
-              color="from-green-500 to-emerald-600"
-              delay={0.4}
-            />
-          </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Multiple Ways to <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Collect & Redeem</span>
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Our platform offers diverse ways to collect points and flexible redemption options
-            </p>
-          </motion.div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, idx) => (
-              <FeatureCard
-                key={idx}
-                icon={feature.icon}
-                title={feature.title}
-                description={feature.description}
-                color={feature.color}
-                isNew={feature.isNew}
-                onClick={() => navigate(feature.link)}
-                ctaText={t('registerNow')}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works - Simple Steps */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-900 to-gray-800">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-              {t('howItWorks')}
-            </h2>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { icon: Users, title: t('step1Title'), desc: t('step1Desc'), num: '01' },
-              { icon: Coins, title: t('step2Title'), desc: t('step2Desc'), num: '02' },
-              { icon: Gift, title: t('step3Title'), desc: t('step3Desc'), num: '03' }
-            ].map((step, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.2 }}
-                viewport={{ once: true }}
-                className="relative text-center"
-              >
-                <div className="text-6xl font-bold text-white/10 mb-4">{step.num}</div>
-                <div className="w-16 h-16 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-4">
-                  <step.icon className="h-8 w-8 text-white" />
+      {/* ========== TRUST SECTION ========== */}
+      <section className="relative px-6 md:px-12 lg:px-24 py-12 z-10" data-testid="trust-section">
+        <div className="max-w-5xl mx-auto">
+          <GlassCard className="p-6 sm:p-8" hover={false}>
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
+              <div className="flex items-center gap-4 flex-shrink-0">
+                <div className="w-14 h-14 rounded-2xl bg-[#114232] flex items-center justify-center">
+                  <Building2 className="h-7 w-7 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
-                <p className="text-gray-400">{step.desc}</p>
+                <div>
+                  <h3 className="font-bold text-[#1C1917] text-lg">Paras Reward Technologies Pvt. Ltd.</h3>
+                  <p className="text-xs text-[#57534E] mt-0.5">CIN: U82990MH2026PTC467423 | Maharashtra, India</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3 md:ml-auto">
+                {[
+                  { icon: BadgeCheck, text: 'Registered Indian Company' },
+                  { icon: Eye, text: 'Transparent Platform' },
+                  { icon: Shield, text: 'Secure System' },
+                ].map((badge, i) => (
+                  <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-full bg-emerald-50 border border-emerald-200/60">
+                    <badge.icon className="h-4 w-4 text-[#114232]" />
+                    <span className="text-xs font-semibold text-[#114232]">{badge.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </GlassCard>
+        </div>
+      </section>
+
+      {/* ========== ABOUT US ========== */}
+      <section className="relative px-6 md:px-12 lg:px-24 py-16 md:py-24 z-10" data-testid="about-section">
+        <div className="max-w-5xl mx-auto">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+            <motion.div variants={fadeUp}>
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#D97706] mb-3 block">About Us</span>
+              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#1C1917] mb-6">
+                Building India's Trusted<br />Reward Ecosystem
+              </h2>
+            </motion.div>
+            <motion.p variants={fadeUp} custom={1} className="text-base md:text-lg leading-relaxed text-[#57534E] max-w-3xl">
+              Paras Reward Technologies Private Limited is a digital platform focused on building a simple and scalable reward ecosystem in India. Users earn PRC (digital rewards) through daily activity and participation, and use them for real services like mobile recharge and controlled redeem options. We aim to create a transparent and sustainable system for long-term user benefit.
+            </motion.p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ========== AIM / VISION / MISSION (Bento Grid) ========== */}
+      <section className="relative px-6 md:px-12 lg:px-24 py-8 z-10" data-testid="avm-section">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          {/* AIM */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}>
+            <GlassCard className="p-8 h-full">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center mb-5">
+                <Target className="h-6 w-6 text-[#D97706]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#1C1917] mb-3">Our Aim</h3>
+              <p className="text-sm leading-relaxed text-[#57534E]">
+                To provide a simple and accessible reward platform where users can benefit from their daily activity without complexity.
+              </p>
+            </GlassCard>
+          </motion.div>
+          {/* VISION */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={1}>
+            <GlassCard className="p-8 h-full">
+              <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-5">
+                <Eye className="h-6 w-6 text-[#114232]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#1C1917] mb-3">Our Vision</h3>
+              <p className="text-sm leading-relaxed text-[#57534E]">
+                Aiming to become one of India's most trusted digital reward platforms by building a transparent and sustainable ecosystem.
+              </p>
+            </GlassCard>
+          </motion.div>
+          {/* MISSION */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={2}>
+            <GlassCard className="p-8 h-full">
+              <div className="w-12 h-12 rounded-xl bg-stone-100 flex items-center justify-center mb-5">
+                <Sparkles className="h-6 w-6 text-[#1C1917]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#1C1917] mb-3">Our Mission</h3>
+              <ul className="space-y-2 text-sm text-[#57534E]">
+                {['Simplify digital rewards', 'Build a secure and transparent system', 'Ensure long-term sustainability', 'Create a strong user community'].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-[#114232] mt-0.5 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </GlassCard>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ========== HOW IT WORKS ========== */}
+      <section className="relative px-6 md:px-12 lg:px-24 py-16 md:py-24 z-10" data-testid="how-it-works-section">
+        <div className="max-w-5xl mx-auto">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
+            <motion.span variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.2em] text-[#D97706] mb-3 block">How It Works</motion.span>
+            <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold tracking-tight text-[#1C1917]">
+              4 Simple Steps
+            </motion.h2>
+          </motion.div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {[
+              { num: '01', icon: UserPlus, title: 'Register', desc: 'Create your free account' },
+              { num: '02', icon: Crown, title: 'Activate Subscription', desc: 'Choose your plan' },
+              { num: '03', icon: Coins, title: 'Collect Rewards', desc: 'Earn PRC daily' },
+              { num: '04', icon: Gift, title: 'Use Rewards', desc: 'Recharge or redeem' },
+            ].map((step, i) => (
+              <motion.div 
+                key={i}
+                initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}
+              >
+                <GlassCard className="p-6 text-center h-full">
+                  <div className="text-3xl font-black text-[#114232]/10 mb-2">{step.num}</div>
+                  <div className="w-12 h-12 mx-auto rounded-xl bg-[#114232] flex items-center justify-center mb-3">
+                    <step.icon className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="font-bold text-[#1C1917] mb-1 text-sm sm:text-base">{step.title}</h3>
+                  <p className="text-xs text-[#57534E]">{step.desc}</p>
+                </GlassCard>
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div className="text-center mt-12">
-            <Button 
-              size="lg"
-              onClick={() => navigate('/register')}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold px-8"
+      {/* ========== WHAT IS PRC ========== */}
+      <section className="relative px-6 md:px-12 lg:px-24 py-16 md:py-24 z-10" data-testid="prc-section">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+              <motion.span variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.2em] text-[#D97706] mb-3 block">What is PRC?</motion.span>
+              <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold tracking-tight text-[#1C1917] mb-6">
+                Digital Reward Unit
+              </motion.h2>
+              <motion.p variants={fadeUp} custom={2} className="text-base md:text-lg leading-relaxed text-[#57534E] mb-6">
+                PRC is a digital reward unit earned through daily activity on the platform.
+              </motion.p>
+              <motion.div variants={fadeUp} custom={3} className="space-y-3 mb-6">
+                {[
+                  'Used for mobile recharge',
+                  'Used for controlled bank redeem',
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-[#114232] flex-shrink-0" />
+                    <span className="text-[#1C1917] font-medium">{item}</span>
+                  </div>
+                ))}
+              </motion.div>
+              <motion.div variants={fadeUp} custom={4}>
+                <GlassCard className="inline-flex items-center gap-3 px-5 py-3" hover={false}>
+                  <Coins className="h-5 w-5 text-[#D97706]" />
+                  <span className="font-bold text-[#1C1917]">PRC Utility Value &asymp; ₹1 per 10 PRC</span>
+                </GlassCard>
+              </motion.div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }} transition={{ duration: 0.6 }}
+              className="flex justify-center"
             >
-              {t('getStarted')}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+              <div className="relative">
+                <motion.img 
+                  src="/hero-coin.png" 
+                  alt="PRC Coin"
+                  className="w-56 h-56 sm:w-64 sm:h-64 object-contain drop-shadow-xl"
+                  animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                />
+                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-40 h-6 bg-[#114232]/10 rounded-full blur-xl" />
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Subscription Plans */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Choose Your Plan
-            </h2>
-            <p className="text-lg text-gray-600">
-              From free to premium - pick what works for you
-            </p>
+      {/* ========== REDEEM SYSTEM ========== */}
+      <section className="relative px-6 md:px-12 lg:px-24 py-16 md:py-24 z-10" data-testid="redeem-section">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Redeem System */}
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+              <motion.span variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.2em] text-[#D97706] mb-3 block">Redeem System</motion.span>
+              <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold tracking-tight text-[#1C1917] mb-6">
+                Controlled & Fair
+              </motion.h2>
+              <motion.div variants={fadeUp} custom={2} className="space-y-4">
+                {[
+                  { icon: Shield, text: 'Controlled redeem process' },
+                  { icon: Activity, text: 'Based on activity and growth' },
+                  { icon: Clock, text: 'One redeem per cycle' },
+                ].map((item, i) => (
+                  <GlassCard key={i} className="flex items-center gap-4 p-4" hover={false}>
+                    <div className="w-10 h-10 rounded-xl bg-[#114232]/10 flex items-center justify-center flex-shrink-0">
+                      <item.icon className="h-5 w-5 text-[#114232]" />
+                    </div>
+                    <span className="font-medium text-[#1C1917]">{item.text}</span>
+                  </GlassCard>
+                ))}
+              </motion.div>
+            </motion.div>
+
+            {/* Redeem Options */}
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+              <motion.span variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.2em] text-[#D97706] mb-3 block">Redeem Options</motion.span>
+              <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold tracking-tight text-[#1C1917] mb-6">
+                Use Your Rewards
+              </motion.h2>
+              <motion.div variants={fadeUp} custom={2} className="space-y-4">
+                <GlassCard className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <Smartphone className="h-6 w-6 text-[#D97706]" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-[#1C1917] mb-1">Mobile Recharge</h4>
+                      <p className="text-sm text-[#57534E]">Recharge your mobile directly with PRC rewards</p>
+                    </div>
+                  </div>
+                </GlassCard>
+                <GlassCard className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <CreditCard className="h-6 w-6 text-[#114232]" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-[#1C1917] mb-1">Bank Redeem</h4>
+                      <p className="text-sm text-[#57534E]">Transfer to bank account (eligible users only)</p>
+                    </div>
+                  </div>
+                </GlassCard>
+              </motion.div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========== PERFORMANCE SUMMARY ========== */}
+      <section className="relative px-6 md:px-12 lg:px-24 py-16 md:py-24 z-10" data-testid="performance-section">
+        <div className="max-w-5xl mx-auto text-center">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+            <motion.span variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.2em] text-[#D97706] mb-3 block">Performance Summary</motion.span>
+            <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold tracking-tight text-[#1C1917] mb-10">
+              Track Everything
+            </motion.h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
-            {plans.map((plan, idx) => (
-              <PlanCard
-                key={idx}
-                {...plan}
-                onClick={() => navigate('/register')}
-                ctaText={t('registerNow')}
-              />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {[
+              { icon: Wallet, label: 'Total Subscription Paid', color: 'bg-emerald-100 text-[#114232]' },
+              { icon: Gift, label: 'Total Rewards Redeemed', color: 'bg-amber-100 text-[#D97706]' },
+              { icon: Coins, label: 'Available PRC Balance', color: 'bg-stone-100 text-[#1C1917]' },
+              { icon: BarChart3, label: 'Estimated Value', color: 'bg-emerald-100 text-[#114232]' },
+            ].map((item, i) => (
+              <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
+                <GlassCard className="p-6 text-center h-full">
+                  <div className={`w-12 h-12 mx-auto rounded-xl ${item.color} flex items-center justify-center mb-3`}>
+                    <item.icon className="h-6 w-6" />
+                  </div>
+                  <p className="text-xs sm:text-sm font-medium text-[#57534E]">{item.label}</p>
+                </GlassCard>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-gray-600">
-              Everything you need to know about Paras Reward
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            {[
-              {
-                q: "What is Paras Reward?",
-                a: "Paras Reward is a platform where you can earn PRC (Paras Reward Coins) through daily activities like mining, games, and referrals. Use your coins within the platform!"
-              },
-              {
-                q: "What is PRC (Paras Reward Coin)?",
-                a: "PRC is a virtual reward point used ONLY within the Paras Reward platform. PRC is NOT cryptocurrency, NOT real money, and has NO cash value outside this platform. It cannot be traded, sold, or converted to any currency."
-              },
-              {
-                q: "What PRC is NOT?",
-                a: "PRC is NOT: ❌ Cryptocurrency or Bitcoin ❌ Real money or legal tender ❌ An investment product ❌ Tradeable on exchanges ❌ Transferable to others ❌ Convertible to cash directly. PRC is purely a loyalty reward for platform activities."
-              },
-              {
-                q: "Is it free to join?",
-                a: "Yes! Creating an account is completely free. You can start earning PRC immediately with our Explorer plan. Upgrade to premium plans for higher earning rates."
-              },
-              {
-                q: "How do I earn PRC coins?",
-                a: "Earn PRC through: Daily Mining (automatic), Daily Rewards, and Invite Friends bonus. Premium members earn up to 5x more!"
-              },
-              {
-                q: "What can I use PRC for?",
-                a: "PRC can be used within the Paras Reward platform for various activities. Premium members get enhanced benefits and higher earning rates."
-              },
-              {
-                q: "How does inviting friends work?",
-                a: "Share your invite code with friends. When they join and stay active in the app, your mining speed increases! Boost up to 18% with active friends (L1: 10%, L2: 5%, L3: 3%)."
-              },
-              {
-                q: "Is my data safe?",
-                a: "Absolutely! We use bank-grade encryption and follow strict privacy policies. Your data is never shared without consent. We are D-U-N-S® Registered and verified."
-              }
-            ].map((faq, index) => (
-              <details 
-                key={index}
-                className="group bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+      {/* ========== DISCLAIMER + TERMS ========== */}
+      <section className="relative px-6 md:px-12 lg:px-24 py-16 z-10" data-testid="disclaimer-section">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-6">
+          {/* Disclaimer */}
+          <GlassCard className="p-8" hover={false}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                <Scale className="h-5 w-5 text-[#D97706]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#1C1917]">Disclaimer</h3>
+            </div>
+            <p className="text-sm text-[#57534E] mb-4">Paras Reward is a digital reward platform.</p>
+            <ul className="space-y-2 text-sm text-[#57534E]">
+              {[
+                'PRC is a reward unit, not a currency or investment',
+                'No guaranteed income',
+                'Rewards depend on user activity and may vary',
+                'Redeem is subject to eligibility',
+              ].map((item, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#D97706] mt-1.5 flex-shrink-0" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </GlassCard>
+
+          {/* Terms Summary */}
+          <GlassCard className="p-8" hover={false}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                <BookOpen className="h-5 w-5 text-[#114232]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#1C1917]">Terms Summary</h3>
+            </div>
+            <ul className="space-y-3">
+              {[
+                'One account per user',
+                'Subscription required for full benefits',
+                'KYC may be required',
+                'Misuse leads to suspension',
+              ].map((item, i) => (
+                <li key={i} className="flex items-center gap-3 text-sm text-[#57534E]">
+                  <CheckCircle className="h-4 w-4 text-[#114232] flex-shrink-0" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6">
+              <Link 
+                to="/terms"
+                data-testid="read-full-terms-link"
+                className="inline-flex items-center gap-2 text-[#114232] font-semibold text-sm hover:gap-3 transition-all"
               >
-                <summary className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50 transition-colors">
-                  <span className="font-semibold text-gray-900 pr-4">{faq.q}</span>
-                  <ChevronDown className="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform flex-shrink-0" />
+                Read Full Terms
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </GlassCard>
+        </div>
+      </section>
+
+      {/* ========== FAQ SECTION ========== */}
+      <section className="relative px-6 md:px-12 lg:px-24 py-16 md:py-24 z-10" data-testid="faq-section">
+        <div className="max-w-4xl mx-auto">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-12">
+            <motion.span variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.2em] text-[#D97706] mb-3 block">FAQ</motion.span>
+            <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold tracking-tight text-[#1C1917]">
+              Frequently Asked Questions
+            </motion.h2>
+          </motion.div>
+
+          <div className="space-y-3">
+            {[
+              { q: "What is Paras Reward?", a: "Paras Reward is a digital platform where you earn PRC (Paras Reward Coins) through daily activities. Use your rewards for mobile recharge and controlled bank redeem." },
+              { q: "What is PRC?", a: "PRC is a digital reward unit used within the Paras Reward platform. PRC is NOT cryptocurrency, NOT real money, and NOT an investment product. It is a reward for platform activity." },
+              { q: "How do I earn PRC?", a: "Earn PRC through daily mining activity. Premium subscription members earn at higher rates. Stay active and grow your network for maximum rewards." },
+              { q: "What can I use PRC for?", a: "PRC can be used for mobile recharge and bank redeem (subject to eligibility). The utility value is approximately ₹1 per 10 PRC." },
+              { q: "Is subscription required?", a: "Yes, an active subscription is required to earn PRC through mining. Choose a plan that suits your needs." },
+              { q: "How does redeem work?", a: "Redeem is controlled and based on your activity, network growth, and eligibility. One redeem per cycle is allowed." },
+              { q: "Is my data safe?", a: "Absolutely. We use industry-standard encryption and follow strict privacy policies. Your data is never shared without consent." },
+              { q: "How do referrals work?", a: "Share your referral code with friends. When they join and activate, your network grows, which increases your redeem eligibility." },
+            ].map((faq, i) => (
+              <details key={i} className="group" data-testid={`faq-item-${i}`}>
+                <summary className="flex items-center justify-between p-5 cursor-pointer bg-white/60 backdrop-blur-xl border border-white/50 rounded-2xl hover:bg-white/80 transition-all">
+                  <span className="font-semibold text-[#1C1917] pr-4 text-sm sm:text-base">{faq.q}</span>
+                  <ChevronDown className="w-5 h-5 text-[#57534E] group-open:rotate-180 transition-transform flex-shrink-0" />
                 </summary>
-                <div className="px-5 pb-5 text-gray-600">
+                <div className="px-5 pb-5 pt-2 text-sm text-[#57534E] leading-relaxed">
                   {faq.a}
                 </div>
               </details>
             ))}
           </div>
-          
-          <div className="text-center mt-8">
-            <Link 
-              to="/faq"
-              className="inline-flex items-center gap-2 text-purple-600 font-semibold hover:text-purple-700 transition-colors"
-            >
-              View All FAQs
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
+      {/* ========== FINAL CTA ========== */}
+      <section className="relative px-6 md:px-12 lg:px-24 py-16 md:py-24 z-10" data-testid="final-cta-section">
+        <div className="max-w-3xl mx-auto text-center">
+          <GlassCard className="p-10 sm:p-14" hover={false}>
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+              <motion.p variants={fadeUp} className="text-sm text-[#D97706] font-bold uppercase tracking-[0.2em] mb-4">
+                Start simple. Stay active. Grow steadily.
+              </motion.p>
+              <motion.h2 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl font-bold tracking-tight text-[#1C1917] mb-4">
+                Paras Reward
+              </motion.h2>
+              <motion.p variants={fadeUp} custom={2} className="text-base md:text-lg text-[#57534E] mb-8">
+                Earn, Grow, Redeem
+              </motion.p>
+              <motion.div variants={fadeUp} custom={3}>
+                <Button 
+                  data-testid="final-cta-btn"
+                  size="lg"
+                  onClick={() => navigate('/register')}
+                  className="rounded-full px-10 py-6 bg-[#114232] hover:bg-[#0a2e22] text-white font-semibold shadow-lg shadow-[#114232]/20 text-base"
+                >
+                  Start Earning Now
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </motion.div>
+            </motion.div>
+          </GlassCard>
+        </div>
+      </section>
+
+      {/* ========== FOOTER ========== */}
+      <footer className="relative z-10 bg-[#114232] text-white py-12 px-6 md:px-12 lg:px-24" data-testid="footer-section">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          <div className="grid md:grid-cols-4 gap-8 mb-10">
             <div>
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2.5 mb-4">
                 <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-10 rounded-xl" />
                 <span className="font-bold text-xl">Paras Reward</span>
               </div>
-              <p className="text-gray-400 text-sm">{t('disclaimer')}</p>
+              <p className="text-white/60 text-sm leading-relaxed">
+                PRC is a digital reward unit, not real currency. Earnings depend on user activity.
+              </p>
             </div>
             
             <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><Link to="/login" className="hover:text-white">Login</Link></li>
-                <li><Link to="/register" className="hover:text-white">Register</Link></li>
-                <li><Link to="/terms" className="hover:text-white">Terms & Conditions</Link></li>
-                <li><Link to="/privacy" className="hover:text-white">Privacy Policy</Link></li>
+              <h4 className="font-semibold mb-4 text-white/90">Quick Links</h4>
+              <ul className="space-y-2 text-white/60 text-sm">
+                <li><Link to="/login" className="hover:text-white transition-colors">Login</Link></li>
+                <li><Link to="/register" className="hover:text-white transition-colors">Register</Link></li>
+                <li><Link to="/how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
+                <li><Link to="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-semibold mb-4">Features</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>Daily Check-in</li>
-                <li>Invite Friends</li>
-                <li>Gift Vouchers</li>
-                <li>Bill Payments</li>
+              <h4 className="font-semibold mb-4 text-white/90">Legal</h4>
+              <ul className="space-y-2 text-white/60 text-sm">
+                <li><Link to="/terms" className="hover:text-white transition-colors">Terms & Conditions</Link></li>
+                <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/disclaimer" className="hover:text-white transition-colors">Disclaimer</Link></li>
+                <li><Link to="/refund-policy" className="hover:text-white transition-colors">Refund Policy</Link></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-semibold mb-4">Contact</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
+              <h4 className="font-semibold mb-4 text-white/90">Contact</h4>
+              <ul className="space-y-3 text-white/60 text-sm">
                 {contactInfo.company_name && (
                   <li className="font-medium text-white">{contactInfo.company_name}</li>
                 )}
                 {contactInfo.address && (
                   <li className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-green-400" />
+                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-400" />
                     <span className="whitespace-pre-line">{contactInfo.address}</span>
                   </li>
                 )}
@@ -782,13 +653,13 @@ const RewardsHome = () => {
                 )}
                 {contactInfo.email && (
                   <li className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-blue-400" />
+                    <Mail className="h-4 w-4 text-amber-400" />
                     {contactInfo.email}
                   </li>
                 )}
                 {contactInfo.working_hours && (
                   <li className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-cyan-400" />
+                    <Clock className="h-4 w-4 text-amber-400" />
                     {contactInfo.working_hours}
                   </li>
                 )}
@@ -796,44 +667,29 @@ const RewardsHome = () => {
             </div>
           </div>
           
-          <div className="border-t border-gray-800 pt-8">
+          <div className="border-t border-white/10 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <p className="text-gray-400 text-sm">
-                © {new Date().getFullYear()} Paras Reward Technologies Private Limited. {t('allRightsReserved')}
+              <p className="text-white/50 text-sm">
+                &copy; {new Date().getFullYear()} Paras Reward Technologies Private Limited. All rights reserved.
               </p>
-              
-              {/* D-U-N-S Registered Seal */}
               <div className="flex items-center gap-3">
-                {/* Production iframe - will work on registered domain (parasreward.com) */}
-                <iframe 
-                  id="duns-seal-iframe" 
-                  src="https://dunsregistered.dnb.com/SealAuthentication.aspx?Cid=1" 
-                  width="114" 
-                  height="97" 
-                  title="D-U-N-S Registered Seal"
-                  style={{ border: 'none', background: 'transparent' }}
-                />
-                {/* Fallback badge for mobile/preview */}
                 <a 
                   href="https://www.dnb.com/duns-number.html" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-teal-600/20 to-cyan-600/20 border border-teal-500/30 rounded-lg hover:border-teal-400/50 transition-all"
-                  title="D-U-N-S Registered - Verified by Dun & Bradstreet"
+                  className="flex items-center gap-2 px-3 py-2 bg-white/10 border border-white/20 rounded-lg hover:border-white/30 transition-all"
+                  title="D-U-N-S Registered"
                 >
-                  <div className="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-white" />
+                  <div className="w-7 h-7 bg-teal-500 rounded-full flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-white" />
                   </div>
                   <div className="text-left">
-                    <p className="text-xs font-semibold text-teal-400">D-U-N-S®</p>
-                    <p className="text-[10px] text-gray-400">Registered</p>
+                    <p className="text-[10px] font-semibold text-teal-300">D-U-N-S&reg;</p>
+                    <p className="text-[9px] text-white/50">Registered</p>
                   </div>
                 </a>
               </div>
-              
-              <p className="text-gray-500 text-xs">
-                {t('termsApply')}
-              </p>
+              <p className="text-white/40 text-xs">Terms & Conditions Apply</p>
             </div>
           </div>
         </div>
