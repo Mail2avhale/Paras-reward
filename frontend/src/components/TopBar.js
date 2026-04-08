@@ -87,7 +87,7 @@ const TopBar = ({ user, onLogout }) => {
             <img
               src={LOGO_URL}
               alt="PARAS REWARD"
-              className="h-10 w-10 rounded-xl object-cover shadow-lg"
+              className="h-10 w-auto rounded-xl object-contain bg-black p-1 shadow-lg"
             />
             <div className="hidden sm:flex flex-col">
               <span className="font-bold text-lg text-gray-900 leading-tight">
