@@ -340,7 +340,7 @@ const LoginNew = ({ onLogin }) => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
       <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-6">
         <div className="text-center mb-5">
-          <img src="/paras-logo-light.png" alt="Paras Reward" className="h-16 w-auto mx-auto mb-3 object-contain" />
+          <img src="/paras-logo.png" alt="Paras Reward" className="h-16 w-auto mx-auto mb-3 object-contain" />
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Welcome Back</h1>
           <p className="text-gray-600 text-sm">Sign in to your PARAS REWARD account</p>
         </div>

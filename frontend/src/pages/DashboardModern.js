@@ -616,7 +616,7 @@ const DashboardModern = ({ user, onLogout }) => {
               {/* PARAS REWARD Logo */}
               <div className="flex items-center">
                 <img 
-                  src="/paras-logo-dark.png"
+                  src="/paras-logo.png"
                   alt="PARAS REWARD"
                   className="h-10 w-auto object-contain rounded"
                   style={{

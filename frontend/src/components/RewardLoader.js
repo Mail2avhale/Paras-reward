@@ -8,7 +8,7 @@ const RewardLoader = ({ message = 'Loading...', size = 'default', theme = 'dark'
   };
   
   const s = sizes[size] || sizes.default;
-  const logoSrc = theme === 'light' ? '/paras-logo-light.png' : '/paras-logo-dark.png';
+  const logoSrc = '/paras-logo.png';
   
   return (
     <div data-testid="reward-loader" className="flex flex-col items-center justify-center py-12 gap-5">
