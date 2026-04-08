@@ -153,6 +153,15 @@ const BankRedeemPage = ({ user: initialUser }) => {
     }
   }, [activeTab, loadRequests]);
 
+  // Amount validation error message
+  const amountError = (() => {
+    if (!amount || isNaN(amount)) return '';
+    const amt = parseInt(amount);
+    if (amt < config.min_withdrawal) return `Minimum ₹${config.min_withdrawal.toLocaleString()} amount required`;
+    if (amt > config.max_withdrawal) return `Maximum ₹${config.max_withdrawal.toLocaleString()} allowed`;
+    return '';
+  })();
+
   // Calculate fees when amount changes (including burn rate)
   useEffect(() => {
     if (!amount || isNaN(amount)) {
@@ -237,7 +246,16 @@ const BankRedeemPage = ({ user: initialUser }) => {
     }
     
     if (!fees) {
-      toast.error('Please enter valid amount');
+      const amt = parseInt(amount);
+      if (!amount || isNaN(amount)) {
+        toast.error('Please enter withdrawal amount');
+      } else if (amt < config.min_withdrawal) {
+        toast.error(`Minimum withdrawal amount is ₹${config.min_withdrawal.toLocaleString()}`);
+      } else if (amt > config.max_withdrawal) {
+        toast.error(`Maximum withdrawal amount is ₹${config.max_withdrawal.toLocaleString()}`);
+      } else {
+        toast.error('Please enter valid amount');
+      }
       return;
     }
     
@@ -416,13 +434,19 @@ const BankRedeemPage = ({ user: initialUser }) => {
                   required
                 />
               </div>
+              {amountError && (
+                <p data-testid="amount-error" className="text-red-400 text-sm mt-2 flex items-center gap-1.5">
+                  <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  {amountError}
+                </p>
+              )}
               <p className="text-slate-500 text-xs mt-2">
                 Rate: 1 INR = {config.prc_rate} PRC | Fee: ₹{config.transaction_fee} + {config.admin_fee_percent}%
               </p>
             </Card>
 
             {/* Fee Breakdown via PRCRateDisplay */}
-            {parseFloat(amount) > 0 && (
+            {parseFloat(amount) > 0 && !amountError && (
               <PRCRateDisplay 
                 amount={parseFloat(amount) || 0}
                 processingFee={config.transaction_fee || 10}
