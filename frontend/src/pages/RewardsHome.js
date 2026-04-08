@@ -96,12 +96,10 @@ const RewardsHome = () => {
             <motion.p variants={fadeUp} custom={2} className="text-base sm:text-lg text-blue-100 mb-3 font-medium">
               Simple &bull; Transparent &bull; Controlled Reward System
             </motion.p>
-            <motion.p variants={fadeUp} custom={3} className="text-sm text-blue-200 mb-8 flex items-center justify-center gap-2 flex-wrap">
-              <span className="flex items-center gap-1"><BadgeCheck className="h-4 w-4" /> Registered in India</span>
-              <span>&bull;</span>
-              <span className="flex items-center gap-1"><Shield className="h-4 w-4" /> Secure</span>
-              <span>&bull;</span>
-              <span className="flex items-center gap-1"><Eye className="h-4 w-4" /> Transparent</span>
+            <motion.p variants={fadeUp} custom={3} className="text-sm text-blue-200 mb-8 flex items-center justify-center gap-3 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 px-3 py-1 rounded-full"><BadgeCheck className="h-4 w-4 text-green-300" /> Registered in India</span>
+              <span className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 px-3 py-1 rounded-full"><Shield className="h-4 w-4 text-blue-300" /> Secure</span>
+              <span className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 px-3 py-1 rounded-full"><Eye className="h-4 w-4 text-purple-300" /> Transparent</span>
             </motion.p>
             <motion.div variants={fadeUp} custom={4}>
               <Button data-testid="hero-cta-btn" size="lg" onClick={() => navigate('/register')}
@@ -113,24 +111,40 @@ const RewardsHome = () => {
         </div>
       </section>
 
-      {/* ===== 2. TRUST STRIP ===== */}
-      <section className="bg-white border-b border-gray-100 py-5 px-6" data-testid="trust-strip">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-10">
-          {[
-            { icon: Users, val: '10,000+', label: 'Users' },
-            { icon: Wallet, val: '₹25L+', label: 'Rewards Distributed' },
-            { icon: Shield, val: '100%', label: 'Transparent System' },
-          ].map((item, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                <item.icon className="h-5 w-5 text-blue-600" />
+      {/* ===== 2. SOCIAL PROOF STRIP ===== */}
+      <section className="bg-white border-b border-gray-100 py-6 px-6" data-testid="trust-strip">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12">
+            {[
+              { icon: Users, val: loading ? '...' : `${stats.totalUsers.toLocaleString()}+`, label: 'Active Users' },
+              { icon: Wallet, val: loading ? '...' : `₹${Math.round(stats.totalRedeemed).toLocaleString()}+`, label: 'Rewards Distributed' },
+              { icon: Crown, val: loading ? '...' : `${stats.vipMembers.toLocaleString()}+`, label: 'Premium Members' },
+              { icon: Shield, val: '100%', label: 'Transparent System' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <item.icon className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <div className="font-bold text-gray-900 text-lg leading-tight">{item.val}</div>
+                  <div className="text-xs text-gray-500">{item.label}</div>
+                </div>
               </div>
-              <div>
-                <div className="font-bold text-gray-900 text-lg leading-tight">{item.val}</div>
-                <div className="text-xs text-gray-500">{item.label}</div>
-              </div>
+            ))}
+          </div>
+          {/* Social proof line */}
+          <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-gray-100">
+            <div className="flex -space-x-2">
+              {['bg-blue-500','bg-purple-500','bg-green-500','bg-amber-500','bg-pink-500'].map((bg, i) => (
+                <div key={i} className={`w-7 h-7 rounded-full ${bg} border-2 border-white flex items-center justify-center`}>
+                  <span className="text-white text-[10px] font-bold">{['S','A','R','M','P'][i]}</span>
+                </div>
+              ))}
             </div>
-          ))}
+            <p className="text-sm text-gray-500">
+              <span className="font-semibold text-gray-700">{loading ? '...' : `${stats.totalUsers.toLocaleString()}+`}</span> users trust Paras Reward
+            </p>
+          </div>
         </div>
       </section>
 
@@ -185,6 +199,13 @@ const RewardsHome = () => {
                 <p className="text-xs text-gray-500">{step.desc}</p>
               </motion.div>
             ))}
+          </div>
+          {/* CTA after How It Works */}
+          <div className="text-center mt-10">
+            <Button data-testid="hiw-cta-btn" onClick={() => navigate('/register')}
+              className="rounded-full px-8 py-5 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg shadow-blue-600/25 text-sm">
+              Start Earning Now <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         </div>
       </section>
@@ -333,6 +354,13 @@ const RewardsHome = () => {
               </motion.div>
             ))}
           </div>
+          {/* CTA after Why Choose */}
+          <div className="text-center mt-10">
+            <Button data-testid="why-cta-btn" onClick={() => navigate('/register')}
+              className="rounded-full px-8 py-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg shadow-blue-600/25 text-sm">
+              Join Paras Reward <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -346,14 +374,24 @@ const RewardsHome = () => {
               </div>
               <h3 className="text-lg font-bold text-gray-900">Important Disclaimer</h3>
             </div>
-            <p className="text-sm text-gray-700 mb-4">Paras Reward is a digital reward platform.</p>
+            <p className="text-sm text-gray-700 mb-4">Paras Reward is a digital reward platform. Please read carefully before using our services.</p>
             <ul className="space-y-2">
-              {['No guaranteed income', 'PRC is not currency or investment', 'Rewards depend on user activity and may vary', 'Redeem is subject to eligibility'].map((item, i) => (
+              {[
+                'PRC is a digital reward unit, not real currency, cryptocurrency, or an investment product',
+                'No guaranteed income or returns of any kind',
+                'Rewards earned depend entirely on user activity and may vary',
+                'Redeem facility is subject to eligibility and platform rules',
+                'Subscription fees are non-refundable as per our refund policy',
+                'Past performance does not indicate future results',
+              ].map((item, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                   <CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />{item}
                 </li>
               ))}
             </ul>
+            <p className="text-xs text-gray-400 mt-4 pt-3 border-t border-amber-200">
+              By using Paras Reward, you agree to our <Link to="/terms" className="text-blue-600 underline">Terms & Conditions</Link> and <Link to="/disclaimer" className="text-blue-600 underline">Full Disclaimer</Link>.
+            </p>
           </div>
         </div>
       </section>
