@@ -7,6 +7,7 @@ import PopupMessage from "@/components/PopupMessage";
 import { toast } from "sonner";
 import { NotificationProvider, useNotification } from "@/context/NotificationContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { PageTitleUpdater } from "@/hooks/usePageTitle";
 // ToastContainer removed - using Sonner toast only
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
@@ -302,6 +303,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
       <OfflineIndicator />
       {/* HoliCelebration removed as per user request */}
       <BrowserRouter>
+        <PageTitleUpdater />
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
             <Route path="/" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RewardsHome />} />

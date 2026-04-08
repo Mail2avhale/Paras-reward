@@ -118,45 +118,24 @@
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Daily Rewards",
-      "short_name": "Rewards",
-      "description": "Collect your daily PRC points",
-      "url": "/daily-rewards?utm_source=shortcut",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Tap Game",
-      "short_name": "Play",
-      "description": "Play tap game and earn PRC",
-      "url": "/game?utm_source=shortcut",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Referrals",
+      "name": "Growth Network",
       "short_name": "Invite",
-      "description": "Invite friends and earn bonus",
+      "description": "Invite friends and grow your network",
       "url": "/referrals?utm_source=shortcut",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Gift Vouchers",
-      "short_name": "Vouchers",
-      "description": "Redeem PRC for gift vouchers",
-      "url": "/gift-vouchers?utm_source=shortcut",
+      "name": "Subscription",
+      "short_name": "Plan",
+      "description": "View and manage subscription plans",
+      "url": "/subscription?utm_source=shortcut",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Bill Payments",
-      "short_name": "Bills",
-      "description": "Pay bills with PRC",
-      "url": "/bill-payments?utm_source=shortcut",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "PRC Savings Vault",
-      "short_name": "Savings",
-      "description": "Grow your PRC with interest",
-      "url": "/rd?utm_source=shortcut",
+      "name": "Redeem to Bank",
+      "short_name": "Redeem",
+      "description": "Redeem PRC to bank account",
+      "url": "/bank-redeem?utm_source=shortcut",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {

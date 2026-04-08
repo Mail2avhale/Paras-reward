@@ -2,6 +2,15 @@
 
 ## LAST UPDATED - 8 April 2026
 
+## COMPLETED: SEO Improvements - 8 April 2026
+- Dynamic Page Titles: Each page gets unique browser tab title (Dashboard, Growth Network, etc.)
+- OG Share Image: New 1536x1024 professional banner for WhatsApp/Facebook/Twitter share previews
+- PWA Manifest cleanup: Removed outdated shortcuts (Tap Game, Gift Vouchers, Bill Payments, Savings Vault)
+- Removed placeholder values (FB App ID, Google/Bing verification codes)
+- Updated Structured Data: featureList and dateModified refreshed
+- Sitemap dates updated to April 2026, added Subscription page
+- Hook: /app/frontend/src/hooks/usePageTitle.js (PageTitleUpdater component)
+
 ## VERIFIED: Admin Login As User (Impersonation) E2E Test - 8 April 2026
 - Backend: 17/18 passed (pin_hash exposure fixed post-test)
 - Frontend: 100% - All UI flows working
