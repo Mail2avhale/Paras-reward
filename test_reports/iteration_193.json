@@ -1,0 +1,69 @@
+{
+  "summary": "E2E testing complete for PARAS REWARD app. Backend: 17/17 tests passed. Frontend: All core flows working - Login, Dashboard, Bottom Navigation, Growth Network, Subscription Plans, Profile, Bank Redeem pages all load correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ProfileAdvanced.js",
+        "issue": "Nested button HTML error - InfoTooltip (which renders a button) is placed inside a button element for KYC Verification row",
+        "selector": "button containing InfoTooltip at line 770-788",
+        "priority": "LOW",
+        "fix_suggestion": "Change outer element from <button> to <div> with onClick handler, or change InfoTooltip to use <span> instead of <button>"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_e2e_core_flows.py",
+    "/app/test_reports/pytest/e2e_core_flows_results.xml"
+  ],
+  "action_items": [
+    "Fix nested button issue in ProfileAdvanced.js - InfoTooltip inside button element causes HTML validation error"
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_e2e_core_flows.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)",
+    "frontend": "100% (All core flows working)"
+  },
+  "test_credentials": {
+    "primary_user_mobile": "9970100782",
+    "primary_user_pin": "997010",
+    "primary_user_uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+    "prc_user_mobile": "9421331342",
+    "prc_user_uid": "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
+    "admin_email": "admin@test.com",
+    "admin_pin": "153759"
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "E2E testing complete. All core flows verified: 1) Login with mobile+PIN works correctly with 2-step flow (identifier verification then PIN entry). 2) Dashboard shows Mining Widget, Redeem Limit Card, Performance Summary Card, Live DateTime. 3) Bottom Navigation (Home, Invite, Plan, Profile) all work. 4) Growth Network page shows Direct Referrals (7), Network Size (7), Network Capacity (1%). 5) Subscription Plans page shows Elite plan details. 6) Profile page loads correctly. 7) Bank Redeem page shows redeem limit info and KYC requirement. Minor issue: nested button HTML error in Profile page (InfoTooltip inside button).",
+  "verified_flows": {
+    "login_flow": "PASS - 2-step login with mobile number and 6-digit PIN",
+    "dashboard": "PASS - Mining Widget, Redeem Limit Card, Performance Summary Card, Live DateTime all present",
+    "bottom_navigation": "PASS - All 4 tabs (Home, Invite, Plan, Profile) navigate correctly",
+    "growth_network": "PASS - Shows Direct Referrals, Network Size, Network Capacity",
+    "subscription_plans": "PASS - Shows current plan (Elite) and plan details",
+    "profile_page": "PASS - Loads user info correctly",
+    "bank_redeem": "PASS - Shows redeem limit, KYC requirement notice"
+  },
+  "api_verification": {
+    "health": "PASS - /api/health returns healthy",
+    "login": "PASS - /api/auth/login with mobile+pin",
+    "check_auth_type": "PASS - /api/auth/check-auth-type returns user_exists",
+    "dashboard": "PASS - /api/user/{uid}/dashboard returns user and mining data",
+    "performance_summary": "PASS - /api/user/{uid}/performance-summary returns financial summary",
+    "mining_status": "PASS - /api/mining/status/{uid} returns mining state",
+    "network_stats": "PASS - /api/growth/network-stats/{uid} returns referral stats",
+    "redeem_limit": "PASS - /api/user/{uid}/redeem-limit returns limit data",
+    "subscription_plans": "PASS - /api/subscription/plans returns plan list",
+    "user_profile": "PASS - /api/users/{uid} returns user data without sensitive fields"
+  }
+}
