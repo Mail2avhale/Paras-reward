@@ -49,7 +49,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
     prc_rate: 10,
     transaction_fee: 10,
     admin_fee_percent: 20,
-    min_withdrawal: 200,
+    min_withdrawal: 1000,
     max_withdrawal: 10000
   });
   

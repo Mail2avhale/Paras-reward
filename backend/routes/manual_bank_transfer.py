@@ -10,7 +10,7 @@ Fee Structure:
   - Admin Fee: 20% of withdrawal amount
   
 Limits:
-  - Minimum: ₹200
+  - Minimum: ₹1,000
   - Maximum: ₹10,000
 """
 
@@ -51,7 +51,7 @@ def set_weekly_one_service_check(func):
 
 TRANSACTION_FEE = 10  # ₹10 flat fee
 ADMIN_FEE_PERCENT = 20  # 20% admin fee
-MIN_WITHDRAWAL = 200  # ₹200 minimum
+MIN_WITHDRAWAL = 1000  # ₹1,000 minimum
 MAX_WITHDRAWAL = 10000  # ₹10,000 maximum
 
 # Eko API for IFSC verification
