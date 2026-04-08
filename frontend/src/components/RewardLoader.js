@@ -14,12 +14,6 @@ const RewardLoader = ({ message = 'Loading...', size = 'default', theme = 'dark'
     <div data-testid="reward-loader" className="flex flex-col items-center justify-center py-12 gap-5">
       {/* Logo with pulse zoom + star blink */}
       <div className="relative" style={{ width: s.logo, height: s.logo }}>
-        {/* Glow ring */}
-        <div 
-          className="absolute inset-[-12px] rounded-full"
-          style={{ animation: 'loaderGlow 2.5s ease-in-out infinite' }}
-        />
-        
         {/* Blinking stars around logo */}
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <div
