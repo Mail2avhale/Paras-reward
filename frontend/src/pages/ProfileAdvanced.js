@@ -766,9 +766,11 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         {/* Share & Earn card removed (April 2026) */}
 
         {/* KYC */}
-        <button 
+        <div 
           onClick={() => navigate('/kyc')}
-          className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl p-4 flex items-center justify-between"
+          role="button"
+          tabIndex={0}
+          className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl p-4 flex items-center justify-between cursor-pointer"
         >
           <span className="flex items-center gap-3 text-white">
             <FileText className="w-5 h-5 text-blue-500" />
@@ -785,7 +787,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             </span>
             <ChevronRight className="w-5 h-5 text-gray-500" />
           </div>
-        </button>
+        </div>
 
         {/* Security PIN - Important for PIN Reset */}
         <SecurityPinCard user={user} />
