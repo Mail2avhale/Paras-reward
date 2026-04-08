@@ -266,15 +266,29 @@ async def get_network_size(user_id: str) -> int:
 async def get_l1_indirect_count(user_id: str) -> int:
     """
     Count L1 Indirect Referrals = users referred by user's direct referrals.
-    Efficient: Only fetches UIDs, then counts.
+    Handles mixed referred_by (uid or referral_code).
     """
     try:
-        # Step 1: Get UIDs of direct referrals
-        direct_uids = await db.users.distinct("uid", {"referred_by": user_id})
-        if not direct_uids:
+        user_doc = await db.users.find_one({"uid": user_id}, {"_id": 0, "referral_code": 1})
+        user_ref_code = user_doc.get("referral_code", "") if user_doc else ""
+        
+        ref_or = [{"referred_by": user_id}]
+        if user_ref_code:
+            ref_or.append({"referred_by": user_ref_code})
+        
+        direct_users = await db.users.find(
+            {"$or": ref_or},
+            {"_id": 0, "uid": 1, "referral_code": 1}
+        ).to_list(10000)
+        
+        if not direct_users:
             return 0
-        # Step 2: Count users referred by those direct referrals
-        l1_count = await db.users.count_documents({"referred_by": {"$in": direct_uids}})
+        
+        search_values = [u["uid"] for u in direct_users]
+        search_values += [u["referral_code"] for u in direct_users if u.get("referral_code")]
+        search_values = list(set(search_values))
+        
+        l1_count = await db.users.count_documents({"referred_by": {"$in": search_values}})
         return l1_count
     except Exception as e:
         logging.error(f"Error counting L1 indirects for {user_id}: {e}")

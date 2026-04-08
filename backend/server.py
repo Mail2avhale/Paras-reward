@@ -7701,8 +7701,12 @@ async def get_user_data(uid: str, request: Request):
     # OPTIMIZED: Use aggregation pipeline to get all counts in parallel
     # This reduces 5 DB calls to 1 aggregation + 1 count
     
-    # Get referral count (uses index)
-    referral_count = await db.users.count_documents({"referred_by": uid})
+    # Get referral count (uses index) - query both uid and referral_code
+    referral_code = user.get("referral_code", "")
+    ref_or_conditions = [{"referred_by": uid}]
+    if referral_code:
+        ref_or_conditions.append({"referred_by": referral_code})
+    referral_count = await db.users.count_documents({"$or": ref_or_conditions})
     user["referral_count"] = referral_count
     
     # OPTIMIZED: Calculate total_redeemed using the centralized function
@@ -12696,9 +12700,16 @@ async def check_and_grant_referral_reward(new_paid_user_id: str, now):
 # =========================================================================
 
 async def get_referral_uids(referrer_uid: str) -> list:
-    """Get list of UIDs of users referred by a specific user"""
+    """Get list of UIDs of users referred by a specific user (checks both uid and referral_code)"""
+    referrer = await db.users.find_one({"uid": referrer_uid}, {"_id": 0, "referral_code": 1})
+    referral_code = referrer.get("referral_code", "") if referrer else ""
+    
+    or_conditions = [{"referred_by": referrer_uid}]
+    if referral_code:
+        or_conditions.append({"referred_by": referral_code})
+    
     referrals = await db.users.find(
-        {"referred_by": referrer_uid},
+        {"$or": or_conditions},
         {"uid": 1, "_id": 0}
     ).to_list(1000)
     return [r["uid"] for r in referrals]

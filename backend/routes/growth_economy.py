@@ -197,13 +197,32 @@ def calculate_network_cap(direct_referrals: int, l1_indirect_referrals: int = 0)
 async def get_l1_indirect_count(user_id: str) -> int:
     """
     Count L1 Indirect Referrals = users referred by user's direct referrals.
-    Efficient: Only fetches UIDs, then counts.
+    Handles mixed referred_by (uid or referral_code).
     """
     try:
-        direct_uids = await db.users.distinct("uid", {"referred_by": user_id})
-        if not direct_uids:
+        # Get user's referral_code
+        user_doc = await db.users.find_one({"uid": user_id}, {"_id": 0, "referral_code": 1})
+        user_ref_code = user_doc.get("referral_code", "") if user_doc else ""
+        
+        # Find direct referrals (referred_by = uid OR referral_code)
+        ref_or = [{"referred_by": user_id}]
+        if user_ref_code:
+            ref_or.append({"referred_by": user_ref_code})
+        
+        direct_users = await db.users.find(
+            {"$or": ref_or},
+            {"_id": 0, "uid": 1, "referral_code": 1}
+        ).to_list(10000)
+        
+        if not direct_users:
             return 0
-        l1_count = await db.users.count_documents({"referred_by": {"$in": direct_uids}})
+        
+        # Build search values for L1 indirect (both uids and referral_codes of direct referrals)
+        search_values = [u["uid"] for u in direct_users]
+        search_values += [u["referral_code"] for u in direct_users if u.get("referral_code")]
+        search_values = list(set(search_values))
+        
+        l1_count = await db.users.count_documents({"referred_by": {"$in": search_values}})
         return l1_count
     except Exception as e:
         logging.error(f"Error counting L1 indirects for {user_id}: {e}")
@@ -244,34 +263,62 @@ async def get_network_size(user_id: str, max_depth: int = 10) -> int:
     
     Network = Direct referrals + their referrals (recursive).
     This counts ALL referrals, not just active ones.
-    Active user filtering is done separately for mining rewards.
+    
+    IMPORTANT: referred_by field may contain either uid OR referral_code,
+    so we must query both to ensure accurate BFS traversal.
     """
     try:
-        # Count direct referrals
-        direct_count = await db.users.count_documents({"referred_by": user_id})
+        # Get user's referral_code too (referred_by can store either uid or referral_code)
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "uid": 1, "referral_code": 1})
+        if not user:
+            return 0
+        
+        referral_code = user.get("referral_code", "")
+        
+        # Count direct referrals using both uid and referral_code
+        or_conditions = [{"referred_by": user_id}]
+        if referral_code:
+            or_conditions.append({"referred_by": referral_code})
+        
+        direct_count = await db.users.count_documents({"$or": or_conditions})
         
         if direct_count == 0:
             return 0
         
         # BFS to count all downstream referrals
         total = 0
-        current_level = [user_id]
+        current_level_ids = [user_id]
+        current_level_codes = [referral_code] if referral_code else []
+        visited = {user_id}
         
         for depth in range(max_depth):
-            if not current_level:
+            if not current_level_ids and not current_level_codes:
                 break
             
-            # Find all users referred by current level
+            # Build match: referred_by matches ANY uid or referral_code in current level
+            search_values = list(set(current_level_ids + current_level_codes))
+            if not search_values:
+                break
+            
             next_level_users = await db.users.find(
-                {"referred_by": {"$in": current_level}},
-                {"_id": 0, "uid": 1}
+                {"referred_by": {"$in": search_values}},
+                {"_id": 0, "uid": 1, "referral_code": 1}
             ).to_list(length=10000)
             
             if not next_level_users:
                 break
             
-            total += len(next_level_users)
-            current_level = [u["uid"] for u in next_level_users]
+            # Deduplicate (avoid counting same user twice or infinite loops)
+            new_users = [u for u in next_level_users if u["uid"] not in visited]
+            if not new_users:
+                break
+            
+            total += len(new_users)
+            for u in new_users:
+                visited.add(u["uid"])
+            
+            current_level_ids = [u["uid"] for u in new_users]
+            current_level_codes = [u.get("referral_code", "") for u in new_users if u.get("referral_code")]
         
         return total
     except Exception as e:
@@ -323,9 +370,17 @@ async def get_growth_network_stats(user_id: str) -> dict:
     """
     Get Growth Network statistics with 3-Tier Cap breakdown
     """
+    # Get user's referral_code for mixed referred_by lookup
+    user_doc = await db.users.find_one({"uid": user_id}, {"_id": 0, "referral_code": 1})
+    user_ref_code = user_doc.get("referral_code", "") if user_doc else ""
+    
+    ref_or = [{"referred_by": user_id}]
+    if user_ref_code:
+        ref_or.append({"referred_by": user_ref_code})
+    
     # Parallel fetch
     direct_referrals, l1_indirect_referrals, network_size = await asyncio.gather(
-        db.users.count_documents({"referred_by": user_id}),
+        db.users.count_documents({"$or": ref_or}),
         get_l1_indirect_count(user_id),
         get_network_size(user_id)
     )

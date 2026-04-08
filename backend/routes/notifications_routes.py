@@ -651,9 +651,21 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
     """
     skip = (page - 1) * limit
     
+    # Get user's referral_code to handle mixed referred_by values
+    current_user_for_code = await db.users.find_one(
+        {"uid": user_id},
+        {"_id": 0, "referral_code": 1}
+    )
+    user_referral_code = current_user_for_code.get("referral_code", "") if current_user_for_code else ""
+    
+    ref_or_conds = [{"referred_by": user_id}]
+    if user_referral_code:
+        ref_or_conds.append({"referred_by": user_referral_code})
+    ref_filter = {"$or": ref_or_conds}
+    
     # Get direct referrals (users who used this user's referral code)
     direct_referrals = await db.users.find(
-        {"referred_by": user_id},
+        ref_filter,
         {
             "_id": 0, 
             "uid": 1, 
@@ -678,7 +690,7 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
         }
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
-    total = await db.users.count_documents({"referred_by": user_id})
+    total = await db.users.count_documents(ref_filter)
     
     # Also get the user who referred this user (can also message them)
     current_user = await db.users.find_one(
