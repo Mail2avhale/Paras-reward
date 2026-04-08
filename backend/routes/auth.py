@@ -791,21 +791,36 @@ async def login(request: Request):
     # Subscription expiry check (unified for all paid plans)
     subscription_expiry_message = None
     is_paid = is_paid_subscriber_func(user) if is_paid_subscriber_func else False
-    if is_paid:
-        # Check subscription_expiry or subscription_expires
-        expiry_str = user.get("subscription_expiry") or user.get("subscription_expires")
+    current_plan = user.get("subscription_plan", "explorer").lower()
+    if current_plan not in ["explorer", "free", "", "none"]:
+        # Check ALL expiry fields
+        expiry_str = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
         if expiry_str:
             try:
-                expiry_date = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
+                expiry_date = datetime.fromisoformat(str(expiry_str).replace('Z', '+00:00'))
+                if expiry_date.tzinfo is None:
+                    expiry_date = expiry_date.replace(tzinfo=timezone.utc)
                 now = datetime.now(timezone.utc)
                 if expiry_date < now:
                     days_expired = (now - expiry_date).days
-                    subscription_expiry_message = f"⚠️ Your Elite subscription expired {days_expired} days ago! Please renew."
+                    subscription_expiry_message = f"Your {current_plan.capitalize()} subscription expired {days_expired} days ago. Please renew."
+                    # Actually downgrade to explorer in DB
+                    await db.users.update_one(
+                        {"uid": user["uid"]},
+                        {"$set": {
+                            "subscription_plan": "explorer",
+                            "subscription_expired": True,
+                            "subscription_expired_at": now.isoformat(),
+                            "subscription_status": "expired"
+                        }}
+                    )
+                    user["subscription_plan"] = "explorer"
                     user["subscription_expired"] = True
                     user["subscription_days_expired"] = days_expired
                     user["subscription_expiry_message"] = subscription_expiry_message
-            except Exception:
-                pass
+                    logging.info(f"[LOGIN EXPIRY] User {user['uid']} plan '{current_plan}' expired → explorer")
+            except Exception as e:
+                logging.error(f"[LOGIN EXPIRY] Error: {e}")
     
     # Generate JWT tokens for all users (sync operation - fast)
     token_id = str(uuid.uuid4())

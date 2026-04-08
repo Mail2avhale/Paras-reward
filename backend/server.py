@@ -61,7 +61,7 @@ from routes.admin_failed_transactions import router as admin_failed_txn_router, 
 from routes.admin_transactions import router as admin_txn_router, set_db as set_admin_txn_db
 from routes.admin_fraud import router as admin_fraud_router, set_db as set_admin_fraud_db, set_helpers as set_admin_fraud_helpers
 from routes.admin_reports import router as admin_reports_router, set_db as set_admin_reports_db, set_cache as set_admin_reports_cache
-from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db
+from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db, generate_daily_summary, hard_delete_expired_accounts
 from routes.admin_orders import router as admin_orders_router, set_db as set_admin_orders_db, set_helpers as set_admin_orders_helpers, set_cache as set_admin_orders_cache
 from routes.admin_settings import router as admin_settings_router, set_db as set_admin_settings_db, set_helpers as set_admin_settings_helpers
 from routes.admin_withdrawals import router as admin_withdrawals_router, set_db as set_admin_withdrawals_db, set_helpers as set_admin_withdrawals_helpers, set_cache as set_admin_withdrawals_cache
@@ -87,7 +87,7 @@ from routes.admin_ledger import router as admin_ledger_router, set_db as set_adm
 from routes.admin_ledger_view import router as admin_ledger_view_router, set_db as set_admin_ledger_view_db
 from routes.admin_tasks import router as admin_tasks_router
 from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
-from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db
+from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db, generate_daily_summary, hard_delete_expired_accounts
 from routes.prc_audit import router as prc_audit_router, set_db as set_prc_audit_db
 from routes.holidays import router as holidays_router, set_db as set_holidays_db, set_cache as set_holidays_cache, seed_holidays, is_holiday
 from routes.notifications_routes import router as notifications_router, set_db as set_notifications_db, set_helpers as set_notifications_helpers
@@ -2582,6 +2582,88 @@ async def check_emergency_auto_pause_job():
         
     except Exception as e:
         logging.error(f"[EMERGENCY JOB] Error: {e}")
+
+
+
+async def auto_expire_subscriptions():
+    """
+    Background cron job: Automatically downgrade expired subscriptions to Explorer.
+    Runs every 30 minutes to catch expired plans promptly.
+    Checks ALL expiry fields (subscription_expiry, subscription_expires, vip_expiry).
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        
+        # Find all users with paid plans (not explorer/free)
+        paid_users = await db.users.find(
+            {
+                "subscription_plan": {"$nin": ["explorer", "free", "", None]},
+                "subscription_expired": {"$ne": True}
+            },
+            {"_id": 0, "uid": 1, "subscription_plan": 1, "subscription_expiry": 1, 
+             "subscription_expires": 1, "vip_expiry": 1, "subscription_status": 1}
+        ).to_list(500)
+        
+        if not paid_users:
+            return
+        
+        expired_count = 0
+        for user in paid_users:
+            uid = user.get("uid")
+            if not uid:
+                continue
+            
+            # Skip if subscription_status is explicitly "active"
+            if user.get("subscription_status") == "active":
+                # Still check expiry date even if status says active
+                pass
+            
+            # Check ALL expiry fields
+            expiry_val = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
+            if not expiry_val:
+                # No expiry date = assume still active (Rule 4 from is_subscription_active)
+                continue
+            
+            try:
+                if isinstance(expiry_val, str):
+                    expiry_dt = datetime.fromisoformat(str(expiry_val).replace('Z', '+00:00'))
+                elif isinstance(expiry_val, datetime):
+                    expiry_dt = expiry_val
+                else:
+                    continue
+                
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                
+                if now > expiry_dt:
+                    # Subscription has expired - downgrade to explorer
+                    old_plan = user.get("subscription_plan", "unknown")
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {
+                            "subscription_plan": "explorer",
+                            "subscription_expired": True,
+                            "subscription_expired_at": now_iso,
+                            "subscription_status": "expired"
+                        }}
+                    )
+                    expired_count += 1
+                    logging.info(f"[AUTO-EXPIRE] User {uid} plan '{old_plan}' expired → explorer")
+                    
+                    # Clear cache for this user
+                    if cache:
+                        await cache.delete(f"user_data:{uid}")
+                        await cache.delete(f"user:dashboard:{uid}")
+            except Exception as e:
+                logging.error(f"[AUTO-EXPIRE] Error processing user {uid}: {e}")
+                continue
+        
+        if expired_count > 0:
+            logging.info(f"[AUTO-EXPIRE] Downgraded {expired_count} expired subscriptions to explorer")
+    except Exception as e:
+        logging.error(f"[AUTO-EXPIRE] Job error: {e}")
+
 
 
 async def database_keep_alive_ping():
@@ -7512,7 +7594,7 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     
     # CHECK SUBSCRIPTION EXPIRY in dashboard too
     if subscription_plan and subscription_plan.lower() not in ["explorer", "free", ""]:
-        expiry_val = user.get("subscription_expiry") or user.get("subscription_expires")
+        expiry_val = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
         if expiry_val:
             try:
                 if isinstance(expiry_val, str):
@@ -33326,6 +33408,16 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Auto-expire subscriptions - check every 30 minutes
+        scheduler.add_job(
+            auto_expire_subscriptions,
+            'interval',
+            minutes=30,
+            id='auto_expire_subscriptions',
+            name='Auto expire and downgrade subscriptions to explorer',
+            replace_existing=True
+        )
+        
         # Auto-sync Razorpay payments every 1 minute for faster activation
         scheduler.add_job(
             auto_sync_razorpay_payments,
@@ -33389,6 +33481,7 @@ async def startup_db():
         print("   - 📊 Daily system summary: Daily at 12:05 AM")
         print("   - 🗑️ Account hard delete: Daily at 3:30 AM")
         print("   - 🔓 Auto lockout clear: Daily at 12 PM & 12 AM")
+        print("   - ⏰ Subscription auto-expire: Every 30 minutes")
         print("   - 🔄 Razorpay auto-sync: Every 1 minute (faster activation)")
         print("   - 💳 Razorpay captured-sync: Every 2 minutes")
         print("   - 🏦 Eko status update: Every 5 minutes")

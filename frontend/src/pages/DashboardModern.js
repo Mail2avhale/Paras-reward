@@ -789,11 +789,18 @@ const DashboardModern = ({ user, onLogout }) => {
                 </span>
               </div>
               <span className={`text-xs px-2 py-1 rounded-full ${
-                stats.subscriptionExpiry && new Date(stats.subscriptionExpiry) > new Date() 
-                  ? 'bg-green-500/20 text-green-400' 
-                  : 'bg-red-500/20 text-red-400'
+                stats.subscriptionExpiry 
+                  ? (new Date(stats.subscriptionExpiry) > new Date() 
+                    ? 'bg-green-500/20 text-green-400' 
+                    : 'bg-red-500/20 text-red-400')
+                  : (stats.subscriptionPlan !== 'explorer' 
+                    ? 'bg-green-500/20 text-green-400' 
+                    : 'bg-gray-500/20 text-gray-400')
               }`}>
-                {stats.subscriptionExpiry && new Date(stats.subscriptionExpiry) > new Date() ? `✓ ${t('active')}` : `⚠ ${t('expired')}`}
+                {stats.subscriptionExpiry 
+                  ? (new Date(stats.subscriptionExpiry) > new Date() ? `✓ ${t('active')}` : `⚠ ${t('expired')}`)
+                  : (stats.subscriptionPlan !== 'explorer' ? `✓ ${t('active')}` : `— ${t('expired')}`)
+                }
               </span>
             </div>
             

@@ -261,6 +261,75 @@ async def smart_burn_check_and_run(request: Request):
     """DEPRECATED - Burn module removed March 2026"""
     return {"success": True, "deprecated": True, "message": "Burn module removed March 2026", "burn_executed": False}
 
+@router.post("/run-expire-subscriptions")
+async def run_expire_subscriptions_manual(request: Request):
+    """Manually trigger subscription expiry check - downgrades expired Elite/paid plans to Explorer"""
+    try:
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        
+        paid_users = await db.users.find(
+            {
+                "subscription_plan": {"$nin": ["explorer", "free", "", None]},
+                "subscription_expired": {"$ne": True}
+            },
+            {"_id": 0, "uid": 1, "subscription_plan": 1, "subscription_expiry": 1,
+             "subscription_expires": 1, "vip_expiry": 1, "name": 1}
+        ).to_list(1000)
+        
+        expired_users = []
+        for user in paid_users:
+            uid = user.get("uid")
+            if not uid:
+                continue
+            
+            expiry_val = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
+            if not expiry_val:
+                continue
+            
+            try:
+                if isinstance(expiry_val, str):
+                    expiry_dt = datetime.fromisoformat(str(expiry_val).replace('Z', '+00:00'))
+                elif isinstance(expiry_val, datetime):
+                    expiry_dt = expiry_val
+                else:
+                    continue
+                
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                
+                if now > expiry_dt:
+                    old_plan = user.get("subscription_plan", "unknown")
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {
+                            "subscription_plan": "explorer",
+                            "subscription_expired": True,
+                            "subscription_expired_at": now_iso,
+                            "subscription_status": "expired"
+                        }}
+                    )
+                    expired_users.append({
+                        "uid": uid,
+                        "name": user.get("name", ""),
+                        "old_plan": old_plan,
+                        "expiry": str(expiry_val)
+                    })
+            except Exception:
+                continue
+        
+        return {
+            "success": True,
+            "message": f"Expired {len(expired_users)} subscriptions → Explorer",
+            "total_checked": len(paid_users),
+            "total_expired": len(expired_users),
+            "expired_users": expired_users
+        }
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+
 @router.post("/run-prc-burn")
 async def run_prc_burn_manual(request: Request):
     """Manually trigger auto-burn for all expired subscription users"""
