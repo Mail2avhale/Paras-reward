@@ -618,7 +618,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 <img 
                   src="/paras-logo.png"
                   alt="PARAS REWARD"
-                  className="h-10 w-auto object-contain rounded"
+                  className="h-16 w-16 object-contain rounded"
                   style={{
                     filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
                   }}
