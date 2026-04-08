@@ -213,9 +213,7 @@ const RegisterSimple = () => {
       <Card className="w-full max-w-md p-8 shadow-2xl">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User className="h-10 w-10 text-white" />
-          </div>
+          <img src="/paras-logo-new.png" alt="Paras Reward" className="h-20 w-auto mx-auto mb-4 object-contain" />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
           <p className="text-gray-600">Join PARAS Reward and start earning!</p>
         </div>

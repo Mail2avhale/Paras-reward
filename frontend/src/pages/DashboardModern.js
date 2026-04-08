@@ -616,7 +616,7 @@ const DashboardModern = ({ user, onLogout }) => {
               {/* PARAS REWARD Logo */}
               <div className="flex items-center">
                 <img 
-                  src="https://customer-assets.emergentagent.com/job_finance-ai-35/artifacts/tppmh3uy_IMG-20251230-WA0004.jpg"
+                  src="/paras-logo-new.png"
                   alt="PARAS REWARD"
                   className="h-10 w-auto object-contain rounded"
                   style={{

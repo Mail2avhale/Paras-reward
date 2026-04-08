@@ -8,7 +8,7 @@ import { LanguageSelectorCompact } from '@/components/LanguageSelector';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
+const LOGO_URL = "/paras-logo-new.png";
 
 const TopBar = ({ user, onLogout }) => {
   const navigate = useNavigate();

@@ -14,7 +14,7 @@ import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 import SEO, { SEOConfigs } from '@/components/SEO';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
+const LOGO_URL = "/paras-logo-new.png";
 
 // Animation variants
 const fadeUp = {
@@ -76,7 +76,7 @@ const RewardsHome = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2.5" data-testid="header-logo">
-              <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-10 rounded-xl" />
+              <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-auto max-w-[120px] object-contain" />
               <span className="font-bold text-xl text-white">Paras Reward</span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -573,7 +573,7 @@ const RewardsHome = () => {
           <div className="grid md:grid-cols-4 gap-8 mb-10">
             <div>
               <div className="flex items-center gap-2.5 mb-4">
-                <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-10 rounded-xl" />
+                <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-auto max-w-[120px] object-contain" />
                 <span className="font-bold text-xl">Paras Reward</span>
               </div>
               <p className="text-white/40 text-sm leading-relaxed">
