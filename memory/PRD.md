@@ -2,6 +2,13 @@
 
 ## LAST UPDATED - 8 April 2026
 
+## VERIFIED: Admin Login As User (Impersonation) E2E Test - 8 April 2026
+- Backend: 17/18 passed (pin_hash exposure fixed post-test)
+- Frontend: 100% - All UI flows working
+- Flows verified: Admin login, Dashboard, Login As User dialog, user search, user selection, confirmation, impersonation session creation/end
+- Fixed security issue: pin_hash excluded from GET /api/users/{uid} response (users.py + admin_users.py)
+- Test report: /app/test_reports/iteration_194.json
+
 ## VERIFIED: E2E Core Flows Test - 8 April 2026
 - Backend: 17/17 tests passed (100%)
 - Frontend: All core flows working (100%)

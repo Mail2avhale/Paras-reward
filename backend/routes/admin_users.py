@@ -233,7 +233,7 @@ async def get_admin_user_stats():
 @router.get("/users/{uid}")
 async def get_admin_user_detail(uid: str):
     """Get detailed user info for admin"""
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0, "password": 0})
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0, "password": 0, "pin_hash": 0, "security_pin_hash": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     

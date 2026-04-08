@@ -67,6 +67,7 @@ async def get_user(uid: str):
         raise HTTPException(status_code=404, detail="User not found")
     
     user.pop("password_hash", None)
+    user.pop("pin_hash", None)
     user.pop("reset_token", None)
     user.pop("security_pin_hash", None)  # Never expose security PIN hash
     user.pop("pin_reset_token", None)
