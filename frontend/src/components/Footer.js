@@ -74,7 +74,7 @@ const Footer = () => {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <img 
-                src="/paras-logo-new.png" 
+                src="/paras-logo-light.png" 
                 alt="PARAS REWARD" 
                 className="h-12 w-auto object-contain logo-animated"
               />

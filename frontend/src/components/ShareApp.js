@@ -321,7 +321,7 @@ const ShareModal = ({
                         level="H"
                         includeMargin={true}
                         imageSettings={{
-                          src: "/paras-logo-new.png",
+                          src: "/paras-logo-light.png",
                           height: 30,
                           width: 30,
                           excavate: true,

@@ -103,12 +103,21 @@ const isAdminOrManager = (user) => {
 // Loading component - optimized with skeleton
 const LoadingFallback = () => (
   <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-    <div className="text-center">
-      <div className="relative">
-        <div className="w-16 h-16 border-4 border-amber-500/30 rounded-full"></div>
-        <div className="absolute top-0 left-0 w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+    <div className="flex flex-col items-center gap-5">
+      <div className="relative" style={{ width: 100, height: 100 }}>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="absolute" style={{ width: 6, height: 6, top: `${[5,-2,50,95,102,50][i]}%`, left: `${[-5,50,105,-5,50,105][i]}%`, animation: `starBlink 1.5s ease-in-out ${i*0.25}s infinite` }}>
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full text-amber-400"><path d="M12 2l2.09 6.26L20.18 9l-5.09 3.74L16.18 19 12 15.27 7.82 19l1.09-6.26L3.82 9l6.09-.74L12 2z" /></svg>
+          </div>
+        ))}
+        <img src="/paras-logo-dark.png" alt="Loading" className="w-full h-full object-contain" style={{ animation: 'logoPulse 2s ease-in-out infinite' }} />
       </div>
-      <p className="mt-4 text-gray-400 text-sm font-medium animate-pulse">Loading...</p>
+      <p className="text-gray-400 text-sm font-medium" style={{ animation: 'textFade 2s ease-in-out infinite' }}>Loading...</p>
+      <style>{`
+        @keyframes logoPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+        @keyframes starBlink { 0%,100%{opacity:0;transform:scale(0.5)} 50%{opacity:1;transform:scale(1.2)} }
+        @keyframes textFade { 0%,100%{opacity:0.4} 50%{opacity:1} }
+      `}</style>
     </div>
   </div>
 );

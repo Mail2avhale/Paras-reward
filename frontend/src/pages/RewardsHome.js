@@ -13,7 +13,7 @@ import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 import SEO, { SEOConfigs } from '@/components/SEO';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const LOGO_URL = "/paras-logo-new.png";
+const LOGO_URL = "/paras-logo-light.png";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },

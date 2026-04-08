@@ -8,7 +8,7 @@ import { LanguageSelectorCompact } from '@/components/LanguageSelector';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const LOGO_URL = "/paras-logo-new.png";
+const LOGO_URL = "/paras-logo-dark.png";
 
 const TopBar = ({ user, onLogout }) => {
   const navigate = useNavigate();

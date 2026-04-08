@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const LOGO_URL = "/paras-logo-new.png";
+const LOGO_URL = "/paras-logo-dark.png";
 
 const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
   const navigate = useNavigate();
