@@ -2589,13 +2589,16 @@ async def auto_expire_subscriptions():
     """
     Background cron job: Automatically downgrade expired subscriptions to Explorer.
     Runs every 30 minutes to catch expired plans promptly.
-    Checks ALL expiry fields (subscription_expiry, subscription_expires, vip_expiry).
+    
+    Two cases handled:
+    1. Has expiry date → check if passed → downgrade
+    2. No expiry date + no subscription_status=active → check payment records → downgrade if no valid payment
     """
     try:
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
         
-        # Find all users with paid plans (not explorer/free)
+        # Find all users with paid plans (not explorer/free) that are not already expired
         paid_users = await db.users.find(
             {
                 "subscription_plan": {"$nin": ["explorer", "free", "", None]},
@@ -2614,30 +2617,70 @@ async def auto_expire_subscriptions():
             if not uid:
                 continue
             
-            # Skip if subscription_status is explicitly "active"
-            if user.get("subscription_status") == "active":
-                # Still check expiry date even if status says active
-                pass
-            
             # Check ALL expiry fields
             expiry_val = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
-            if not expiry_val:
-                # No expiry date = assume still active (Rule 4 from is_subscription_active)
-                continue
             
-            try:
-                if isinstance(expiry_val, str):
-                    expiry_dt = datetime.fromisoformat(str(expiry_val).replace('Z', '+00:00'))
-                elif isinstance(expiry_val, datetime):
-                    expiry_dt = expiry_val
-                else:
+            if expiry_val:
+                # CASE 1: Has expiry date - check if expired
+                try:
+                    if isinstance(expiry_val, str):
+                        expiry_dt = datetime.fromisoformat(str(expiry_val).replace('Z', '+00:00'))
+                    elif isinstance(expiry_val, datetime):
+                        expiry_dt = expiry_val
+                    else:
+                        continue
+                    
+                    if expiry_dt.tzinfo is None:
+                        expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                    
+                    if now > expiry_dt:
+                        old_plan = user.get("subscription_plan", "unknown")
+                        await db.users.update_one(
+                            {"uid": uid},
+                            {"$set": {
+                                "subscription_plan": "explorer",
+                                "subscription_expired": True,
+                                "subscription_expired_at": now_iso,
+                                "subscription_status": "expired"
+                            }}
+                        )
+                        expired_count += 1
+                        logging.info(f"[AUTO-EXPIRE] User {uid} plan '{old_plan}' expired (expiry passed) → explorer")
+                        if cache:
+                            await cache.delete(f"user_data:{uid}")
+                            await cache.delete(f"user:dashboard:{uid}")
+                except Exception as e:
+                    logging.error(f"[AUTO-EXPIRE] Error processing user {uid}: {e}")
+            else:
+                # CASE 2: No expiry date at all
+                # If subscription_status is explicitly "active", skip (admin-activated)
+                if user.get("subscription_status") == "active":
                     continue
                 
-                if expiry_dt.tzinfo is None:
-                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                # No expiry + no active status → check for valid payment records
+                has_valid_payment = False
+                try:
+                    # Check razorpay_orders for paid/captured orders
+                    razorpay_order = await db.razorpay_orders.find_one(
+                        {"uid": uid, "payment_status": {"$in": ["captured", "paid"]}},
+                        {"_id": 1}
+                    )
+                    if razorpay_order:
+                        has_valid_payment = True
+                    
+                    if not has_valid_payment:
+                        # Check vip_payments for approved payments
+                        vip_payment = await db.vip_payments.find_one(
+                            {"user_id": uid, "status": "approved"},
+                            {"_id": 1}
+                        )
+                        if vip_payment:
+                            has_valid_payment = True
+                except Exception:
+                    pass
                 
-                if now > expiry_dt:
-                    # Subscription has expired - downgrade to explorer
+                if not has_valid_payment:
+                    # No expiry, no active status, no valid payment → downgrade
                     old_plan = user.get("subscription_plan", "unknown")
                     await db.users.update_one(
                         {"uid": uid},
@@ -2645,19 +2688,15 @@ async def auto_expire_subscriptions():
                             "subscription_plan": "explorer",
                             "subscription_expired": True,
                             "subscription_expired_at": now_iso,
-                            "subscription_status": "expired"
+                            "subscription_status": "expired",
+                            "downgrade_reason": "no_expiry_no_payment"
                         }}
                     )
                     expired_count += 1
-                    logging.info(f"[AUTO-EXPIRE] User {uid} plan '{old_plan}' expired → explorer")
-                    
-                    # Clear cache for this user
+                    logging.info(f"[AUTO-EXPIRE] User {uid} plan '{old_plan}' no expiry + no payment → explorer")
                     if cache:
                         await cache.delete(f"user_data:{uid}")
                         await cache.delete(f"user:dashboard:{uid}")
-            except Exception as e:
-                logging.error(f"[AUTO-EXPIRE] Error processing user {uid}: {e}")
-                continue
         
         if expired_count > 0:
             logging.info(f"[AUTO-EXPIRE] Downgraded {expired_count} expired subscriptions to explorer")
@@ -7595,7 +7634,10 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     # CHECK SUBSCRIPTION EXPIRY in dashboard too
     if subscription_plan and subscription_plan.lower() not in ["explorer", "free", ""]:
         expiry_val = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
+        should_downgrade = False
+        
         if expiry_val:
+            # CASE 1: Has expiry date - check if passed
             try:
                 if isinstance(expiry_val, str):
                     expiry_dt = datetime.fromisoformat(str(expiry_val).replace('Z', '+00:00'))
@@ -7607,24 +7649,40 @@ async def get_user_dashboard_combined(uid: str, request: Request):
                 if expiry_dt:
                     if expiry_dt.tzinfo is None:
                         expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-                    
                     if now > expiry_dt:
-                        logging.info(f"[DASHBOARD EXPIRY] User {uid} plan '{subscription_plan}' expired, setting to explorer")
-                        await db.users.update_one(
-                            {"uid": uid},
-                            {"$set": {
-                                "subscription_plan": "explorer",
-                                "subscription_expired": True,
-                                "subscription_expired_at": now.isoformat()
-                            }}
-                        )
-                        subscription_plan = "explorer"
-                        user["subscription_expired"] = True
-                        if cache:
-                            await cache.delete(f"user_data:{uid}")
-                            await cache.delete(f"user:dashboard:{uid}")
+                        should_downgrade = True
             except Exception as e:
-                logging.error(f"[DASHBOARD EXPIRY] Error: {e}")
+                logging.error(f"[DASHBOARD EXPIRY] Parse error: {e}")
+        else:
+            # CASE 2: No expiry date - check if subscription_status is active
+            if user.get("subscription_status") != "active":
+                # No expiry + no active status → check payment records
+                has_payment = await db.razorpay_orders.find_one(
+                    {"uid": uid, "payment_status": {"$in": ["captured", "paid"]}}, {"_id": 1}
+                )
+                if not has_payment:
+                    has_payment = await db.vip_payments.find_one(
+                        {"user_id": uid, "status": "approved"}, {"_id": 1}
+                    )
+                if not has_payment:
+                    should_downgrade = True
+        
+        if should_downgrade:
+            logging.info(f"[DASHBOARD EXPIRY] User {uid} plan '{subscription_plan}' expired, setting to explorer")
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    "subscription_plan": "explorer",
+                    "subscription_expired": True,
+                    "subscription_expired_at": now.isoformat(),
+                    "subscription_status": "expired"
+                }}
+            )
+            subscription_plan = "explorer"
+            user["subscription_expired"] = True
+            if cache:
+                await cache.delete(f"user_data:{uid}")
+                await cache.delete(f"user:dashboard:{uid}")
     
     # Build response
     # Include PRC rate in dashboard response (single source of truth)

@@ -274,7 +274,7 @@ async def run_expire_subscriptions_manual(request: Request):
                 "subscription_expired": {"$ne": True}
             },
             {"_id": 0, "uid": 1, "subscription_plan": 1, "subscription_expiry": 1,
-             "subscription_expires": 1, "vip_expiry": 1, "name": 1}
+             "subscription_expires": 1, "vip_expiry": 1, "name": 1, "subscription_status": 1}
         ).to_list(1000)
         
         expired_users = []
@@ -284,43 +284,62 @@ async def run_expire_subscriptions_manual(request: Request):
                 continue
             
             expiry_val = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
-            if not expiry_val:
-                continue
+            should_downgrade = False
+            reason = ""
             
-            try:
-                if isinstance(expiry_val, str):
-                    expiry_dt = datetime.fromisoformat(str(expiry_val).replace('Z', '+00:00'))
-                elif isinstance(expiry_val, datetime):
-                    expiry_dt = expiry_val
-                else:
+            if expiry_val:
+                # CASE 1: Has expiry - check if passed
+                try:
+                    if isinstance(expiry_val, str):
+                        expiry_dt = datetime.fromisoformat(str(expiry_val).replace('Z', '+00:00'))
+                    elif isinstance(expiry_val, datetime):
+                        expiry_dt = expiry_val
+                    else:
+                        continue
+                    if expiry_dt.tzinfo is None:
+                        expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                    if now > expiry_dt:
+                        should_downgrade = True
+                        reason = f"expiry_passed ({expiry_val})"
+                except Exception:
                     continue
-                
-                if expiry_dt.tzinfo is None:
-                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-                
-                if now > expiry_dt:
-                    old_plan = user.get("subscription_plan", "unknown")
-                    await db.users.update_one(
-                        {"uid": uid},
-                        {"$set": {
-                            "subscription_plan": "explorer",
-                            "subscription_expired": True,
-                            "subscription_expired_at": now_iso,
-                            "subscription_status": "expired"
-                        }}
+            else:
+                # CASE 2: No expiry - check status and payments
+                if user.get("subscription_status") == "active":
+                    continue
+                has_payment = await db.razorpay_orders.find_one(
+                    {"uid": uid, "payment_status": {"$in": ["captured", "paid"]}}, {"_id": 1}
+                )
+                if not has_payment:
+                    has_payment = await db.vip_payments.find_one(
+                        {"user_id": uid, "status": "approved"}, {"_id": 1}
                     )
-                    expired_users.append({
-                        "uid": uid,
-                        "name": user.get("name", ""),
-                        "old_plan": old_plan,
-                        "expiry": str(expiry_val)
-                    })
-            except Exception:
-                continue
+                if not has_payment:
+                    should_downgrade = True
+                    reason = "no_expiry_no_payment"
+            
+            if should_downgrade:
+                old_plan = user.get("subscription_plan", "unknown")
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {
+                        "subscription_plan": "explorer",
+                        "subscription_expired": True,
+                        "subscription_expired_at": now_iso,
+                        "subscription_status": "expired",
+                        "downgrade_reason": reason
+                    }}
+                )
+                expired_users.append({
+                    "uid": uid,
+                    "name": user.get("name", ""),
+                    "old_plan": old_plan,
+                    "reason": reason
+                })
         
         return {
             "success": True,
-            "message": f"Expired {len(expired_users)} subscriptions → Explorer",
+            "message": f"Expired {len(expired_users)} subscriptions -> Explorer",
             "total_checked": len(paid_users),
             "total_expired": len(expired_users),
             "expired_users": expired_users
