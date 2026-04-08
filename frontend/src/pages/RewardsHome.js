@@ -52,7 +52,7 @@ const RewardsHome = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2" data-testid="header-logo">
-              <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-auto object-contain rounded-lg bg-white p-0.5" />
+              <img src={LOGO_URL} alt="Paras Reward" className="h-11 w-auto object-contain" />
               <span className="font-bold text-lg text-gray-900 hidden sm:block">Paras Reward</span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -87,24 +87,8 @@ const RewardsHome = () => {
         </div>
         <div className="relative max-w-4xl mx-auto text-center z-10">
           <motion.div initial="hidden" animate="visible" variants={stagger}>
-            <motion.div variants={fadeUp} custom={0} className="flex justify-center mb-8">
-              <div className="relative">
-                {/* Glow ring behind logo */}
-                <motion.div 
-                  className="absolute inset-0 rounded-full bg-white/20 blur-xl"
-                  animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                />
-                {/* Spinning logo */}
-                <motion.img 
-                  src={LOGO_URL} 
-                  alt="Paras Reward" 
-                  className="h-24 sm:h-28 w-24 sm:w-28 object-contain rounded-full bg-white/95 p-3 shadow-2xl shadow-black/20 relative z-10"
-                  animate={{ rotateY: [0, 360] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                  style={{ transformStyle: 'preserve-3d' }}
-                />
-              </div>
+            <motion.div variants={fadeUp} custom={0}>
+              <img src={LOGO_URL} alt="Paras Reward" className="h-20 sm:h-24 w-auto mx-auto mb-6 object-contain" />
             </motion.div>
             <motion.h1 variants={fadeUp} custom={1} className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-4">
               Earn Rewards with<br />Daily Activity
