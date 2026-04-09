@@ -30,7 +30,7 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
   - POST /api/recharge/activate-service — admin utility
   - Eko error codes handled: 0 (success), 24/1295 (already active), 347 (insufficient), 463 (not enabled)
   - TX status: 0=success, 1=failed, 2=pending, 3-5 handled
-  - Business rules: ₹500 max, 1/day combined, redeem limit check, subscription check
+  - Business rules: ₹500 max daily, ₹1500 max monthly (combined Utility+Mobile+DTH), redeem limit check, subscription check
   - All business errors → generic "Technical error" (never expose Eko/wallet details)
   - PRC deducted atomically, refunded on failure only
   - Records in recharge_transactions + bill_payment_requests (Admin BBPS visible)
@@ -48,6 +48,15 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - Stats aggregation also covers both collections
 - Status filter now case-insensitive (handles Paid/paid/PAID)
 - Frontend: Added `dish_recharge` (DTH), `paid/success/retry_failed` status support, proper service name formatting
+
+### Monthly ₹1500 Utility Limit (DONE — April 2026)
+- Combined monthly limit across all Utility + Mobile + DTH recharges
+- Enforced in BOTH `eko_recharge.py` (Step 3.5) and `unified_redeem_v2.py` (Step 9.2)
+- Queries `recharge_transactions` (Eko) + `redeem_requests` (BBPS) to calculate monthly total
+- Already completed transactions this month count towards the limit
+- Daily ₹500 limit remains active alongside monthly ₹1500
+- Frontend `RechargeCard.js` caps input amount to min(daily, monthly) remaining
+- User message on limit: "Monthly recharge limit reached"
 
 ## Pending Issues
 - P1: Fix Missing Hook Dependencies (192 instances)

@@ -1124,6 +1124,60 @@ async def create_redeem_request(request: RedeemRequestCreate):
             logging.error(f"[REDEEM] Limit check error: {e}")
     
     # ═══════════════════════════════════════════════════════════════
+    # STEP 9.2: MONTHLY ₹1500 UTILITY LIMIT CHECK
+    # ═══════════════════════════════════════════════════════════════
+    MONTHLY_UTILITY_LIMIT = 1500
+    MONTHLY_UTILITY_TYPES = [
+        "mobile_recharge", "mobile_postpaid", "dish_recharge",
+        "electricity", "gas", "water", "broadband", "landline",
+        "dth", "cable_tv", "emi", "credit_card", "insurance",
+        "fastag", "education", "municipal_tax", "housing_society", "lpg"
+    ]
+    if request.service_type in MONTHLY_UTILITY_TYPES:
+        month_start_dt = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+
+        # Sum from redeem_requests (BBPS utility)
+        bbps_m_pipe = [
+            {"$match": {
+                "user_id": request.user_id,
+                "created_at": {"$gte": month_start_dt},
+                "service_type": {"$in": MONTHLY_UTILITY_TYPES},
+                "status": {"$in": [
+                    "completed", "COMPLETED", "Completed",
+                    "approved", "APPROVED", "Approved",
+                    "success", "SUCCESS", "Success",
+                    "paid", "PAID", "Paid",
+                    "processing", "PROCESSING", "Processing"
+                ]}
+            }},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$amount_inr", "$amount"]}}}}
+        ]
+        bbps_m_res = await db.redeem_requests.aggregate(bbps_m_pipe).to_list(1)
+        bbps_month_used = bbps_m_res[0]["total"] if bbps_m_res else 0
+
+        # Sum from recharge_transactions (Eko mobile/DTH)
+        eko_m_pipe = [
+            {"$match": {
+                "user_id": request.user_id,
+                "created_at": {"$gte": month_start_dt},
+                "status": {"$nin": ["failed", "refunded"]}
+            }},
+            {"$group": {"_id": None, "total": {"$sum": "$amount_inr"}}}
+        ]
+        eko_m_res = await db.recharge_transactions.aggregate(eko_m_pipe).to_list(1)
+        eko_month_used = eko_m_res[0]["total"] if eko_m_res else 0
+
+        total_monthly_used = bbps_month_used + eko_month_used
+        monthly_remaining = MONTHLY_UTILITY_LIMIT - total_monthly_used
+        logging.info(f"[REDEEM] Monthly utility check: user={request.user_id}, used=₹{total_monthly_used} (bbps=₹{bbps_month_used}, eko=₹{eko_month_used}), remaining=₹{monthly_remaining}")
+
+        if request.amount > monthly_remaining:
+            raise HTTPException(
+                status_code=403,
+                detail="Monthly recharge limit reached"
+            )
+    
+    # ═══════════════════════════════════════════════════════════════
     # STEP 9.5: DUPLICATE REQUEST GUARD (2-minute window)
     # ═══════════════════════════════════════════════════════════════
     from datetime import timedelta

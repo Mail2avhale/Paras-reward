@@ -20,6 +20,7 @@ const RechargeCard = ({ user, stats }) => {
   const [result, setResult] = useState(null);
   const [recentTxns, setRecentTxns] = useState([]);
   const [dailyRemaining, setDailyRemaining] = useState(500);
+  const [monthlyRemaining, setMonthlyRemaining] = useState(1500);
 
   const prcRate = stats?.prcRate || 10;
 
@@ -51,6 +52,9 @@ const RechargeCard = ({ user, stats }) => {
         if (res.data.daily_remaining !== undefined) {
           setDailyRemaining(res.data.daily_remaining);
         }
+        if (res.data.monthly_remaining !== undefined) {
+          setMonthlyRemaining(res.data.monthly_remaining);
+        }
       }
     } catch {
       // silent
@@ -73,7 +77,7 @@ const RechargeCard = ({ user, stats }) => {
     setResult(null);
   };
 
-  const maxAllowed = Math.min(500, dailyRemaining);
+  const maxAllowed = Math.min(500, dailyRemaining, monthlyRemaining);
 
   const handleAmountChange = (e) => {
     const raw = e.target.value;

@@ -69,7 +69,16 @@ DEFAULT_LATLONG = "19.9975,73.7898"
 
 MAX_RECHARGE_AMOUNT = 500
 MAX_DAILY_TOTAL = 500
+MAX_MONTHLY_UTILITY = 1500
 GENERIC_ERROR = "Technical error. Please try again later."
+
+# All utility/recharge service types that count towards monthly ₹1500 limit
+MONTHLY_LIMIT_SERVICES = [
+    "mobile_recharge", "mobile_postpaid", "dish_recharge",
+    "electricity", "gas", "water", "broadband", "landline",
+    "dth", "cable_tv", "emi", "credit_card", "insurance",
+    "fastag", "education", "municipal_tax", "housing_society", "lpg"
+]
 
 # Service activation cache
 _service_activated = False
@@ -370,6 +379,48 @@ async def initiate_recharge(data: RechargeRequest):
     if int_amount > remaining_daily:
         logging.info(f"[RECHARGE] Step 3: BLOCKED daily limit ₹{int_amount} > remaining ₹{remaining_daily}")
         return {"success": False, "message": GENERIC_ERROR, "error_ref": "R03"}
+
+    # ===== Step 3.5: Monthly utility limit (₹1500/month combined across all utility+recharge) =====
+    month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+
+    # Sum from recharge_transactions (Eko mobile/DTH)
+    eko_month_pipe = [
+        {"$match": {
+            "user_id": data.user_id,
+            "created_at": {"$gte": month_start},
+            "status": {"$nin": ["failed", "refunded"]}
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$amount_inr"}}}
+    ]
+    eko_month_res = await db.recharge_transactions.aggregate(eko_month_pipe).to_list(1)
+    eko_month_total = eko_month_res[0]["total"] if eko_month_res else 0
+
+    # Sum from redeem_requests (BBPS utility services)
+    bbps_month_pipe = [
+        {"$match": {
+            "user_id": data.user_id,
+            "created_at": {"$gte": month_start},
+            "service_type": {"$in": MONTHLY_LIMIT_SERVICES},
+            "status": {"$in": [
+                "completed", "COMPLETED", "Completed",
+                "approved", "APPROVED", "Approved",
+                "success", "SUCCESS", "Success",
+                "paid", "PAID", "Paid",
+                "processing", "PROCESSING", "Processing"
+            ]}
+        }},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$amount_inr", "$amount"]}}}}
+    ]
+    bbps_month_res = await db.redeem_requests.aggregate(bbps_month_pipe).to_list(1)
+    bbps_month_total = bbps_month_res[0]["total"] if bbps_month_res else 0
+
+    monthly_used = eko_month_total + bbps_month_total
+    monthly_remaining = MAX_MONTHLY_UTILITY - monthly_used
+    logging.info(f"[RECHARGE] Step 3.5: user={data.user_id}, monthly_used=₹{monthly_used} (eko=₹{eko_month_total}, bbps=₹{bbps_month_total}), remaining=₹{monthly_remaining}")
+
+    if int_amount > monthly_remaining:
+        logging.info(f"[RECHARGE] Step 3.5: BLOCKED monthly limit ₹{int_amount} > remaining ₹{monthly_remaining}")
+        return {"success": False, "message": "Monthly recharge limit reached", "error_ref": "R03M"}
 
     # ===== Step 4: User + subscription check =====
     user = await db.users.find_one({"uid": data.user_id})
@@ -690,7 +741,7 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
 
 @router.get("/history/{user_id}")
 async def get_recharge_history(user_id: str):
-    """Get user's recharge transaction history + daily remaining limit"""
+    """Get user's recharge transaction history + daily & monthly remaining limits"""
     if db is None:
         return {"success": False, "transactions": []}
 
@@ -708,13 +759,39 @@ async def get_recharge_history(user_id: str):
     agg = await db.recharge_transactions.aggregate(pipeline).to_list(1)
     today_used = agg[0]["total"] if agg else 0
 
+    # Calculate monthly remaining (Eko + BBPS utility)
+    month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+    eko_m_pipe = [
+        {"$match": {"user_id": user_id, "created_at": {"$gte": month_start}, "status": {"$nin": ["failed", "refunded"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount_inr"}}}
+    ]
+    eko_m = await db.recharge_transactions.aggregate(eko_m_pipe).to_list(1)
+    eko_month = eko_m[0]["total"] if eko_m else 0
+
+    bbps_m_pipe = [
+        {"$match": {
+            "user_id": user_id,
+            "created_at": {"$gte": month_start},
+            "service_type": {"$in": MONTHLY_LIMIT_SERVICES},
+            "status": {"$in": ["completed", "COMPLETED", "Completed", "approved", "APPROVED", "success", "SUCCESS", "paid", "PAID", "Paid", "processing", "PROCESSING"]}
+        }},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$amount_inr", "$amount"]}}}}
+    ]
+    bbps_m = await db.redeem_requests.aggregate(bbps_m_pipe).to_list(1)
+    bbps_month = bbps_m[0]["total"] if bbps_m else 0
+
+    monthly_used = eko_month + bbps_month
+
     return {
         "success": True,
         "transactions": txns,
         "count": len(txns),
         "daily_limit": MAX_DAILY_TOTAL,
         "daily_used": today_used,
-        "daily_remaining": max(0, MAX_DAILY_TOTAL - today_used)
+        "daily_remaining": max(0, MAX_DAILY_TOTAL - today_used),
+        "monthly_limit": MAX_MONTHLY_UTILITY,
+        "monthly_used": monthly_used,
+        "monthly_remaining": max(0, MAX_MONTHLY_UTILITY - monthly_used)
     }
 
     return {"success": True, "transactions": txns, "count": len(txns)}
