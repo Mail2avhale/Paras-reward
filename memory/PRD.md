@@ -64,6 +64,14 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - Concurrent requests now see the pending amount in daily/monthly limit checks
 - Failed transactions get updated to "failed" status (excluded from future limit checks)
 
+### Eko tx_status Fix & Admin Detail Endpoint (DONE — April 2026)
+- **CRITICAL FIX**: tx_status mapping was wrong per Eko developer docs:
+  - tx_status=1 was mapped as FAILED (correct: PENDING)
+  - tx_status=3 was mapped as REFUND_PENDING (correct: FAILURE)
+  - tx_status=4 was mapped as REFUNDED (correct: CANCELLED)
+  - Unknown tx_status now defaults to "pending" (per Eko recommendation to use enquiry API)
+- **Admin Detail Fix**: `/admin/bbps-request/{id}` now searches BOTH `redeem_requests` AND `bill_payment_requests`
+
 ## Pending Issues
 - P1: Fix Missing Hook Dependencies (192 instances)
 - P1: Replace Index Keys with Stable Keys (82 instances)

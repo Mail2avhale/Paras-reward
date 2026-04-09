@@ -84,7 +84,7 @@ MONTHLY_LIMIT_SERVICES = [
 _service_activated = False
 
 
-# ===== Eko Status Constants =====
+# ===== Eko Status Constants (as per developers.eko.in/docs) =====
 class EkoStatus:
     SUCCESS = 0
     ALREADY_ACTIVE = 24
@@ -93,12 +93,13 @@ class EkoStatus:
 
 
 class TxStatus:
-    SUCCESS = 0
-    FAILED = 1
-    PENDING = 2
-    REFUND_PENDING = 3
-    REFUNDED = 4
-    ON_HOLD = 5
+    """Eko tx_status values as per official documentation:
+    https://developers.eko.in/docs/general-queries
+    """
+    SUCCESS = 0       # Transaction successful
+    PENDING = 1       # Transaction pending — DO NOT refund, monitor
+    FAILURE = 3       # Transaction failed
+    CANCELLED = 4     # Transaction cancelled
 
 
 # ===== Auth Header Generation (matching bbps_services.py pattern) =====
@@ -571,10 +572,14 @@ async def initiate_recharge(data: RechargeRequest):
                 final_status = "success"
             elif tx_status == TxStatus.PENDING:
                 final_status = "pending"
-            elif tx_status == TxStatus.ON_HOLD:
-                final_status = "pending"
-            else:
+            elif tx_status == TxStatus.FAILURE:
                 final_status = "failed"
+            elif tx_status == TxStatus.CANCELLED:
+                final_status = "failed"
+            else:
+                # Unknown tx_status — treat as pending, must check via enquiry API
+                logging.warning(f"[RECHARGE] Unknown tx_status={tx_status}, treating as pending")
+                final_status = "pending"
         elif eko_status == EkoStatus.INSUFFICIENT_BALANCE:
             logging.error("[RECHARGE] Eko wallet insufficient balance (347)")
             final_status = "failed"
