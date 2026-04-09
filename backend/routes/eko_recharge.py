@@ -380,6 +380,18 @@ async def initiate_recharge(data: RechargeRequest):
         logging.info(f"[RECHARGE] Step 3: BLOCKED daily limit ₹{int_amount} > remaining ₹{remaining_daily}")
         return {"success": False, "message": GENERIC_ERROR, "error_ref": "R03"}
 
+    # ===== Step 3.1: 10-minute cooldown between recharges =====
+    from datetime import timedelta
+    ten_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    recent_txn = await db.recharge_transactions.find_one({
+        "user_id": data.user_id,
+        "created_at": {"$gte": ten_min_ago},
+        "status": {"$nin": ["failed", "refunded"]}
+    })
+    if recent_txn:
+        logging.info(f"[RECHARGE] Step 3.1: BLOCKED 10-min cooldown for user {data.user_id}, last req={recent_txn.get('request_id','?')[:12]}")
+        return {"success": False, "message": "Please wait 10 minutes between recharges.", "error_ref": "R03C"}
+
     # ===== Step 3.5: Monthly utility limit (₹1500/month combined across all utility+recharge) =====
     month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
 
