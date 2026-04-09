@@ -23,6 +23,7 @@ TYPE_MAP = {
     "mining_reward": "Reward", "growth_reward": "Reward", "daily_reward": "Reward", "reward": "Reward",
     "credit": "Reward", "daily_streak": "Reward", "achievement": "Reward",
     "recharge": "Recharge", "mobile_recharge": "Recharge", "dth_recharge": "Recharge",
+    "bill_payment_request": "Recharge",
     "bill_payment": "Bill Pay", "electricity": "Bill Pay", "bill_pay": "Bill Pay", "bbps": "Bill Pay",
     "voucher": "Voucher Redeem", "gift_voucher": "Voucher Redeem", "gift_card": "Voucher Redeem",
     "bank_transfer": "Bank Redeem", "bank_redeem": "Bank Redeem", "bank_withdrawal": "Bank Redeem", "prc_to_bank": "Bank Redeem",
@@ -49,16 +50,28 @@ def classify_type(raw_type: str) -> str:
     return TYPE_MAP.get(raw_type.lower().strip(), "Other")
 
 
+DEBIT_TYPES = {
+    "bill_payment_request", "bill_payment", "order", "withdrawal",
+    "admin_debit", "delivery_charge", "prc_burn", "gift_voucher_request",
+    "prc_rain_loss", "recharge", "mobile_recharge", "dth_recharge",
+    "bank_transfer", "bank_redeem", "bank_withdrawal", "prc_to_bank",
+    "dmt_transfer", "redeem", "retry_debit", "burn", "hourly_burn",
+    "subscription", "subscription_payment", "subscription_prc",
+    "elite_activation", "test_debit",
+}
+
+
 def determine_credit(doc: dict) -> bool:
     """
     Determine if a transaction is credit or debit.
-    Priority: entry_type field > amount sign.
-    - If entry_type exists → use it (credit=True, debit=False)
-    - If entry_type absent → positive amount = credit, negative = debit
+    Priority: entry_type field > known debit types > amount sign.
     """
     entry_type = doc.get("entry_type")
     if entry_type:
         return entry_type == "credit"
+    tx_type = (doc.get("type") or doc.get("transaction_type") or doc.get("txn_type") or "").lower().strip()
+    if tx_type in DEBIT_TYPES:
+        return False
     return doc.get("amount", 0) > 0
 
 
