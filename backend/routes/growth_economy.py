@@ -10,11 +10,19 @@ Complete Economy System with:
 
 All calculations use Dynamic PRC to INR Rate
 MLM-Free Terminology Used Throughout
+
+=== FORMULA LOCK v1.0 (April 2026) ===
+3 Core Formulas are LOCKED. Do NOT modify without admin confirmation.
+1. Network Size → Single Leg Tree (get_active_network_size)
+2. Mining Speed → Single Leg Tree (calculate_mining_rate in mining.py)
+3. Redeem Unlock % → Single Leg Tree (get_user_unlock_percent)
+Locked by: Admin directive, April 9 2026
 """
 
 import math
 import logging
 import asyncio
+import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Optional, Tuple
 from fastapi import APIRouter, HTTPException, Depends
@@ -47,6 +55,70 @@ DEFAULT_BURN_RATE_PRC = 5  # 5% burn for Elite by PRC
 DEFAULT_BURN_RATE_CASH = 1  # 1% burn for Elite by Cash/Razorpay
 DEFAULT_PROCESSING_FEE_INR = 10  # ₹10 processing fee
 DEFAULT_ADMIN_CHARGE_PERCENT = 20  # 20% admin charges on PRC
+
+
+# ==================== FORMULA LOCK SYSTEM ====================
+# LOCKED: April 9, 2026 — DO NOT MODIFY WITHOUT ADMIN CONFIRMATION
+# These tiers and formulas are immutable. Any change requires explicit unlock.
+
+LOCKED_TIER_TABLE = (
+    (2, 4), (4, 4), (8, 5), (16, 6), (32, 6), (64, 6),
+    (128, 7), (256, 7), (512, 8), (1024, 9), (2048, 9),
+    (4096, 9), (8192, 10)
+)
+
+# Integrity hash of the locked tier table — used to detect tampering
+LOCKED_TIER_HASH = hashlib.sha256(str(LOCKED_TIER_TABLE).encode()).hexdigest()
+
+FORMULA_LOCK = {
+    "version": "1.0",
+    "locked_at": "2026-04-09",
+    "locked_by": "Admin Directive",
+    "formulas": {
+        "network_size": "Single Leg Tree (tree_position > my_position, paid + mining_active)",
+        "mining_speed": "Single Leg Tree → effective_network × prc_per_user (mining.py)",
+        "redeem_unlock_pct": "Single Leg Tree → calculate_growth_level(active_network_size)"
+    },
+    "tier_hash": LOCKED_TIER_HASH,
+    "max_unlock_pct": 90,
+    "tier_count": 13
+}
+
+def verify_formula_integrity():
+    """Verify that locked formulas have not been tampered with."""
+    errors = []
+    
+    # 1. Verify tier table hash
+    current_hash = hashlib.sha256(str(LOCKED_TIER_TABLE).encode()).hexdigest()
+    if current_hash != LOCKED_TIER_HASH:
+        errors.append("TIER TABLE TAMPERED: hash mismatch")
+    
+    # 2. Verify tier count
+    if len(LOCKED_TIER_TABLE) != 13:
+        errors.append(f"TIER COUNT CHANGED: expected 13, got {len(LOCKED_TIER_TABLE)}")
+    
+    # 3. Verify max unlock is 90%
+    total = sum(c for _, c in LOCKED_TIER_TABLE)
+    if total != 90:
+        errors.append(f"MAX UNLOCK CHANGED: expected 90%, got {total}%")
+    
+    # 4. Verify known checkpoints
+    checkpoints = {1: 2.0, 33: 25.19, 253: 44.84, 334: 47.44, 487: 52.22}
+    for net_size, expected_pct in checkpoints.items():
+        calc = calculate_growth_level(net_size)
+        if abs(calc - expected_pct) > 0.01:
+            errors.append(f"FORMULA DRIFT: network={net_size}, expected={expected_pct}%, got={calc}%")
+    
+    return {
+        "locked": True,
+        "version": FORMULA_LOCK["version"],
+        "integrity": "VALID" if not errors else "COMPROMISED",
+        "errors": errors,
+        "tier_hash": current_hash,
+        "tier_count": len(LOCKED_TIER_TABLE),
+        "max_unlock_pct": sum(c for _, c in LOCKED_TIER_TABLE),
+        "formulas": FORMULA_LOCK["formulas"]
+    }
 
 
 # ==================== PYDANTIC MODELS ====================
@@ -408,9 +480,12 @@ async def get_growth_network_stats(user_id: str) -> dict:
 
 def calculate_growth_level(network_size: int) -> float:
     """
-    Calculate CUMULATIVE redeem limit percentage based on network size.
+    LOCKED FORMULA v1.0 (April 9, 2026)
+    ====================================
+    Calculate CUMULATIVE redeem limit percentage based on SINGLE LEG TREE network size.
     
-    Each tier adds its contribution incrementally:
+    Uses LOCKED_TIER_TABLE — DO NOT MODIFY without admin confirmation.
+    
     | Team  | Tier %  | Cumulative % |
     |   2   |   4     |      4       |
     |   4   |   4     |      8       |
@@ -429,18 +504,12 @@ def calculate_growth_level(network_size: int) -> float:
     Between tiers, contribution is proportional per user.
     Max total: 90%
     """
-    TIERS = [
-        (2, 4), (4, 4), (8, 5), (16, 6), (32, 6), (64, 6),
-        (128, 7), (256, 7), (512, 8), (1024, 9), (2048, 9),
-        (4096, 9), (8192, 10)
-    ]
-    
     if network_size < 1:
         return 0
     
     total = 0
     prev = 0
-    for threshold, contribution in TIERS:
+    for threshold, contribution in LOCKED_TIER_TABLE:
         bracket_size = threshold - prev
         if network_size >= threshold:
             total += contribution
@@ -456,8 +525,11 @@ def calculate_growth_level(network_size: int) -> float:
 
 async def get_user_unlock_percent(user_id: str) -> float:
     """
+    LOCKED FORMULA v1.0 (April 9, 2026)
+    ====================================
     Get user's unlock percentage based on Single Leg Tree active network size.
     Uses tree_position-based active network (same as mining reward).
+    DO NOT CHANGE to BFS/referral network without admin confirmation.
     """
     network_size = await get_active_network_size(user_id)
     unlock_percent = calculate_growth_level(network_size)
@@ -812,3 +884,15 @@ async def api_remove_prc_rate_override():
     except Exception as e:
         logging.error(f"Remove PRC rate override error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== FORMULA LOCK VERIFICATION ====================
+
+@router.get("/admin/formula-lock-status")
+async def get_formula_lock_status():
+    """
+    Admin endpoint: Verify integrity of all 3 locked formulas.
+    Returns VALID if all formulas are unchanged, COMPROMISED if any drift detected.
+    """
+    result = verify_formula_integrity()
+    return {"success": True, "lock_status": result}

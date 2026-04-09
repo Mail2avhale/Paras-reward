@@ -2,8 +2,16 @@
 Reward Routes - GROWTH ECONOMY SYSTEM (April 2026)
 ====================================================
 
+FORMULA LOCK v1.0 (April 9, 2026)
+===================================
+3 Core Formulas are LOCKED to Single Leg Tree:
+1. Network Size → Single Leg Tree (get_active_network_size / get_network_size)
+2. Mining Speed → Single Leg Tree (calculate_mining_rate)
+3. Redeem Unlock % → Single Leg Tree (growth_economy.py:get_user_unlock_percent)
+DO NOT MODIFY without admin confirmation.
+
 Reward Formula (Single Source of Truth):
-- Base: 500 PRC/day
+- Base: 500 PRC/day (below 250 network), 0 (above 250)
 - Team Bonus: N x PRC_per_user(N)
 - PRC_per_user(N) = max(2.5, 5 x (21 - log2(N)) / 14)
 
@@ -220,6 +228,8 @@ async def check_subscription_expiry(user: dict) -> dict:
 
 async def get_network_size(user_id: str) -> int:
     """
+    LOCKED FORMULA v1.0 (April 9, 2026)
+    ====================================
     Get total ACTIVE network size for a user using Single Leg Tree.
     
     Single Leg: All users arranged by joining date.
@@ -227,6 +237,7 @@ async def get_network_size(user_id: str) -> int:
     Active user = Elite subscription + active mining session (not expired).
     
     Uses tree_position for efficient single-query lookup.
+    DO NOT CHANGE to BFS/referral network without admin confirmation.
     """
     try:
         now = datetime.now(timezone.utc)
@@ -297,15 +308,19 @@ async def get_l1_indirect_count(user_id: str) -> int:
 
 async def calculate_mining_rate(user_id: str) -> dict:
     """
-    Calculate user's mining rate based on Growth Economy formulas
+    LOCKED FORMULA v1.0 (April 9, 2026)
+    ====================================
+    Calculate user's mining rate based on Single Leg Tree.
     
     Returns:
     - base_rate: 1000 PRC/day if network < 250, else 0
-    - network_rate: N × PRC_per_user(N)
+    - network_rate: N × PRC_per_user(N)  [N = Single Leg Tree active users]
     - total_rate: base + network
     - per_second_rate: total / 86400
     - boost_multiplier: subscription type multiplier
     - 3-tier network cap breakdown
+    
+    DO NOT CHANGE network source without admin confirmation.
     """
     # Get user data
     user = await db.users.find_one({"uid": user_id}, {"_id": 0})
