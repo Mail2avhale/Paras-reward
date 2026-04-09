@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Smartphone, Tv, ChevronDown, Loader2, 
-  CheckCircle, AlertCircle, Zap, RefreshCw
+  CheckCircle, AlertCircle, Zap
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -18,6 +18,7 @@ const RechargeCard = ({ user, stats }) => {
   const [loading, setLoading] = useState(false);
   const [operatorsLoading, setOperatorsLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [recentTxns, setRecentTxns] = useState([]);
 
   const prcRate = stats?.prcRate || 10;
 
@@ -31,15 +32,34 @@ const RechargeCard = ({ user, stats }) => {
         setOperators(res.data.operators);
       }
     } catch {
-      // silent fail
+      // silent
     } finally {
       setOperatorsLoading(false);
     }
   }, []);
 
+  const fetchRecentTxns = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const res = await axios.get(`${API}/recharge/history/${user.uid}`);
+      if (res.data.success) {
+        const successful = (res.data.transactions || [])
+          .filter(t => t.status === 'success' || t.status === 'complete')
+          .slice(0, 3);
+        setRecentTxns(successful);
+      }
+    } catch {
+      // silent
+    }
+  }, [user?.uid]);
+
   useEffect(() => {
     fetchOperators(rechargeType);
   }, [rechargeType, fetchOperators]);
+
+  useEffect(() => {
+    fetchRecentTxns();
+  }, [fetchRecentTxns]);
 
   const handleTypeSwitch = (type) => {
     if (type === rechargeType) return;
@@ -49,17 +69,26 @@ const RechargeCard = ({ user, stats }) => {
     setResult(null);
   };
 
+  const handleAmountChange = (e) => {
+    const raw = e.target.value;
+    if (raw === '') { setAmount(''); return; }
+    const num = parseInt(raw, 10);
+    if (isNaN(num) || num < 0) return;
+    if (num > 500) return;          // hard block beyond 500
+    setAmount(String(num));
+  };
+
   const handleRecharge = async () => {
     if (!number || !selectedOperator || !amount) {
       toast.error('Please fill all fields');
       return;
     }
-    const amt = parseFloat(amount);
+    const amt = parseInt(amount, 10);
     if (isNaN(amt) || amt <= 0 || amt > 500) {
-      toast.error('Amount must be between ₹1 and ₹500');
+      toast.error('Amount must be between 1 and 500');
       return;
     }
-    if (rechargeType === 'mobile' && (number.length !== 10 || !/^\d{10}$/.test(number))) {
+    if (rechargeType === 'mobile' && !/^\d{10}$/.test(number)) {
       toast.error('Enter a valid 10-digit mobile number');
       return;
     }
@@ -81,6 +110,7 @@ const RechargeCard = ({ user, stats }) => {
         toast.success(res.data.message);
         setNumber('');
         setAmount('');
+        fetchRecentTxns();
       } else {
         setResult({ success: false, message: res.data.message });
         toast.error(res.data.message);
@@ -94,12 +124,11 @@ const RechargeCard = ({ user, stats }) => {
     }
   };
 
-  // PRC estimate: (amount * 1.2 + 10) * prcRate
-  const prcEstimate = amount && parseFloat(amount) > 0
-    ? Math.ceil((parseFloat(amount) * 1.2 + 10) * prcRate)
+  const prcEstimate = amount && parseInt(amount, 10) > 0
+    ? Math.ceil((parseInt(amount, 10) * 1.2 + 10) * prcRate)
     : 0;
 
-  const isFormValid = number && selectedOperator && amount && parseFloat(amount) > 0 && parseFloat(amount) <= 500;
+  const isFormValid = number && selectedOperator && amount && parseInt(amount, 10) > 0 && parseInt(amount, 10) <= 500;
 
   return (
     <motion.div
@@ -115,16 +144,11 @@ const RechargeCard = ({ user, stats }) => {
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
-            <Zap className="w-4 h-4 text-cyan-400" />
-          </div>
-          <span className="text-white font-semibold text-sm">Quick Recharge</span>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+          <Zap className="w-4 h-4 text-cyan-400" />
         </div>
-        <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-          Max ₹500/day
-        </span>
+        <span className="text-white font-semibold text-sm">Quick Recharge</span>
       </div>
 
       {/* Mobile / DTH Toggle */}
@@ -193,22 +217,17 @@ const RechargeCard = ({ user, stats }) => {
         </div>
       </div>
 
-      {/* Amount Input */}
+      {/* Amount Input — hard capped at 500 */}
       <div className="mb-4">
         <div className="relative">
           <span className="absolute left-3 top-2.5 text-gray-400 text-sm font-medium">₹</span>
           <input
-            type="number"
+            type="text"
             inputMode="numeric"
-            min="1"
-            max="500"
-            step="1"
-            placeholder="Amount (max ₹500)"
+            maxLength={3}
+            placeholder="Amount (max 500)"
             value={amount}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (v === '' || (Number(v) >= 0 && Number(v) <= 500)) setAmount(v);
-            }}
+            onChange={handleAmountChange}
             data-testid="recharge-amount-input"
             className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-7 pr-3 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
           />
@@ -266,6 +285,38 @@ const RechargeCard = ({ user, stats }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Recent Successful Recharges */}
+      {recentTxns.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-zinc-700/40" data-testid="recent-recharges">
+          <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-2">Recent Recharges</p>
+          <div className="space-y-2">
+            {recentTxns.map((txn) => (
+              <div
+                key={txn.request_id}
+                className="flex items-center justify-between"
+                data-testid={`recent-txn-${txn.request_id}`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {txn.recharge_type === 'dth'
+                    ? <Tv className="w-3.5 h-3.5 text-cyan-500/60 flex-shrink-0" />
+                    : <Smartphone className="w-3.5 h-3.5 text-cyan-500/60 flex-shrink-0" />
+                  }
+                  <span className="text-white/70 text-xs truncate">
+                    {txn.number}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-emerald-400 text-xs font-semibold">
+                    ₹{Number(txn.amount_inr || 0).toLocaleString('en-IN')}
+                  </span>
+                  <CheckCircle className="w-3 h-3 text-emerald-500/70" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 };
