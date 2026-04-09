@@ -55,8 +55,9 @@ DEBIT_TYPES = {
     "admin_debit", "delivery_charge", "prc_burn", "gift_voucher_request",
     "prc_rain_loss", "recharge", "mobile_recharge", "dth_recharge",
     "bank_transfer", "bank_redeem", "bank_withdrawal", "prc_to_bank",
+    "bank_withdrawal_request", "bank_redeem_request",
     "dmt_transfer", "redeem", "retry_debit", "burn", "hourly_burn",
-    "subscription", "subscription_payment", "subscription_prc",
+    "auto_burn", "subscription", "subscription_payment", "subscription_prc",
     "elite_activation", "test_debit",
 }
 
