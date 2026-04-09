@@ -1,102 +1,52 @@
 # PARAS REWARD - Product Requirements Document
 
-## LAST UPDATED - 8 April 2026
-
-## COMPLETED: Landing Page Fintech Redesign v3 - 8 April 2026
-- Complete redesign with Blue (#2563eb) → Purple (#7c3aed) gradient theme
-- 12 sections as per user's exact UI structure spec
-- Light/white background, card-based layout, mobile-first
-- Sections: Hero, Trust Strip, Company Trust, How It Works, Quick Understand, Performance Preview, Redeem Options, About/Vision/Mission, Why Choose Us, Disclaimer, Final CTA, Footer
-- New logo integrated everywhere (favicon, PWA icons, all components)
-
-## COMPLETED: SEO Improvements - 8 April 2026
-- Dynamic Page Titles: Each page gets unique browser tab title (Dashboard, Growth Network, etc.)
-- OG Share Image: New 1536x1024 professional banner for WhatsApp/Facebook/Twitter share previews
-- PWA Manifest cleanup: Removed outdated shortcuts (Tap Game, Gift Vouchers, Bill Payments, Savings Vault)
-- Removed placeholder values (FB App ID, Google/Bing verification codes)
-- Updated Structured Data: featureList and dateModified refreshed
-- Sitemap dates updated to April 2026, added Subscription page
-- Hook: /app/frontend/src/hooks/usePageTitle.js (PageTitleUpdater component)
-
-## VERIFIED: Admin Login As User (Impersonation) E2E Test - 8 April 2026
-- Backend: 17/18 passed (pin_hash exposure fixed post-test)
-- Frontend: 100% - All UI flows working
-- Flows verified: Admin login, Dashboard, Login As User dialog, user search, user selection, confirmation, impersonation session creation/end
-- Fixed security issue: pin_hash excluded from GET /api/users/{uid} response (users.py + admin_users.py)
-- Test report: /app/test_reports/iteration_194.json
-
-## VERIFIED: E2E Core Flows Test - 8 April 2026
-- Backend: 17/17 tests passed (100%)
-- Frontend: All core flows working (100%)
-- Flows verified: Login, Dashboard, Bottom Nav, Growth Network, Subscription Plans, Profile, Bank Redeem
-- Test report: /app/test_reports/iteration_193.json
-- Fixed minor nested button HTML issue in ProfileAdvanced.js
-
-## COMPLETED: Network Size / referred_by Bug Fix - 8 April 2026
-- Root cause: register_user() stored raw `referral_code` in `referred_by` field instead of `uid`
-- BFS network count functions only checked against `uid`, missing newer users
-- Fix: Updated queries across server.py, growth_economy.py, mining.py, notifications_routes.py
-- Now queries `{"referred_by": {"$in": [uid, referral_code]}}` to catch both formats
-- Verified: API endpoints return correct network_size and unlock_percent
-
-## COMPLETED: Subscription Plan History UI - 7 April 2026
-- Added Plan History section on Subscription page showing Ongoing and Expired plans
-- Backend: Extended `/api/subscription/history/{uid}` to return `plan_periods` with start/expiry dates and status
-- Frontend: Prominent Plan History cards with green (Ongoing) and gray (Expired) styling
-
-## COMPLETED: Performance Summary Card - 7 April 2026
-- New API: `GET /api/user/{uid}/performance-summary` 
-- Shows: Total Subscription Paid (INR), Total Rewards Redeemed (INR), Available PRC Balance, Estimated PRC Value (INR)
-- Legal safe: No investment/profit/ROI language. Disclaimer text at bottom
-- PRC subscription payments use `inr_equivalent` field for accurate INR amounts
-
-## COMPLETED: Redeem Limit Formula Update (User-defined Tiers) - 7 April 2026
-- Updated `calculate_growth_level()` in `routes/growth_economy.py` per user's spreadsheet
-- New tiers: 2→4%, 4→4%, 8→5%, 16→6%, 32→6%, 64→6%, 128→7%, 256→7%, 512→8%, 1024→9%, 2048→9%, 4096→9%, 8192→10%
-- Max unlock: 90%. All 13 tier boundaries verified via unit test
-
-## COMPLETED: Referral PRC USED Fix - 7 April 2026
-- Fixed PRC USED showing 0 on Growth Network page
-- Now calls `get_user_all_time_redeemed()` per referral to compute actual PRC redeemed
-
-## COMPLETED: Bottom Navigation Fix - Subscription Icon Added - 7 April 2026
-- Global BottomNav.js renders correctly with 4 items: Home, Invite, Plan (Crown), Profile
-
-## COMPLETED: Security PIN System - 8 April 2026
-- Replaced Security Question with 4-digit Security PIN in Forgot PIN flow
-- Default Security PIN = last 4 digits of registered mobile
-- APIs: /auth/security-pin/check/{uid}, /auth/security-pin/change, /auth/forgot-pin/verify-security
-
-## VERIFIED: Razorpay Subscription E2E Flow - 8 April 2026
-## VERIFIED: Bank Redeem E2E Flow - 8 April 2026
-## COMPLETED: Dashboard Redeem Limit Card Restored - 8 April 2026
-## COMPLETED: P0 Security Fixes (Code Quality) - 8 April 2026
-## COMPLETED: server.py Monolith Refactoring (P2) - 7 April 2026
-## VERIFIED: All 8 Core Flows Pass - 7 April 2026
-## COMPLETED: Full Burning Concept Removal - 7 April 2026
-## COMPLETED: Full BBPS + Gift Voucher + Marketplace Cleanup - 7 April 2026
+## Original Problem Statement
+Build and maintain a comprehensive digital reward platform (PRC ecosystem) with mining, subscription management, network referrals, bank redeem, bill payments, and admin controls.
 
 ## Architecture
-/app/backend/
-├── server.py (33,323 lines - main monolith)
-├── routes/ (25+ route files)
-│   ├── growth_economy.py (816 lines - BFS network, redeem tiers)
-│   ├── mining.py (728 lines - mining formula)
-│   ├── notifications_routes.py (3,010 lines)
-│   ├── unified_redeem_v2.py (3,182 lines)
-│   └── ... (20+ more)
-├── utils/helpers.py (320 lines - PRC rate, subscriptions)
+- **Frontend**: React (CRA) + Tailwind CSS + Shadcn UI
+- **Backend**: FastAPI (Python) + MongoDB (Motor)
+- **3rd Party**: OpenAI GPT-4o-mini (Chatbot via Emergent LLM Key), Razorpay (Payments), Eko (DMT/BBPS)
 
-## Upcoming (P1)
-- Invoice PDF Download option in InvoiceModal.js
+## What's Been Implemented
 
-## Code Quality (P1-P2)
-- Missing React Hook Dependencies (192 instances)
-- Replace Index Keys with Stable Keys in React (82 instances)
-- Remove localStorage Security Risks (11 instances)
-- Remove Console Statements for production (235 instances)
+### Core Systems (DONE)
+- User auth (PIN-based login), registration, KYC
+- Mining system with growth economy
+- Subscription plans (Elite/Explorer) with auto-expire cron
+- Network referral system (13-tier)
+- Bank redeem (₹1000-₹10000 limits)
+- Bill payments (BBPS), DMT, Mobile recharge
+- Admin dashboard with User 360° view
+- PRC economy with burn system
+
+### Recent Session Work (April 2026)
+- ✅ Landing page redesigned (12-section fintech style) with official company profile content
+- ✅ Global logo replacement (transparent, animated spinner)
+- ✅ SEO (dynamic titles, OG tags, sitemap)
+- ✅ Bank redeem limits updated (₹1000-₹10000)
+- ✅ Network size BFS bug verified fixed
+- ✅ pin_hash removed from API responses (security)
+- ✅ Subscription auto-expire cron job (every 30 min) - downgrades expired Elite to Explorer
+- ✅ Subscription expiry handles BOTH cases: expired date AND no expiry + no payment
+- ✅ Login/Dashboard expiry checks with immediate downgrade
+- ✅ Admin manual trigger API: POST /api/admin/run-expire-subscriptions
+- ✅ Scheduler missing imports fixed (generate_daily_summary, hard_delete_expired_accounts)
+- ✅ Admin profile edit URL mismatch fixed (user360 → user-360 + user_id in body)
+- ✅ Admin update cache clear added
+- ✅ TopBar logo: black bg + object-contain for full visibility
+- ✅ Dashboard card logo: h-16 w-16 (bigger)
+- ✅ Official company content: About Us, Aim, Vision, Mission, Disclaimer, T&C Summary, Final Statement
+
+## Pending Issues
+- P1: Fix Missing Hook Dependencies (192 instances)
+- P1: Replace Index Keys with Stable Keys (82 instances)
+- P1: Remove localStorage Security Risks & Console logs
+
+## Upcoming Tasks
+- P1: Invoice PDF Download (InvoiceModal.js)
 
 ## Future/Backlog
-- P2: Split oversized React components (AdminBBPSDashboard, AdminBankTransfers, etc.)
-- P2: Continue server.py extraction (33K -> target 20K)
-- P3: MongoDB -> PostgreSQL migration
+- P2: Split oversized components (AdminBBPSDashboard, AdminBankTransfers, DashboardModern)
+- P2: server.py monolith refactoring Phase 2
+- P3: MongoDB → PostgreSQL migration

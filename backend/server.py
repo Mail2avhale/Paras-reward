@@ -21360,6 +21360,9 @@ async def user_360_quick_action(request: Request):
             {"$set": filtered_updates}
         )
         
+        # Clear user cache after update
+        await cache.delete(f"user_data:{user_id}")
+        
         updated_fields = ", ".join(filtered_updates.keys())
         result_message = f"User details updated: {updated_fields}"
         

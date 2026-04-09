@@ -485,9 +485,8 @@ const AdminUser360New = ({ user: adminUser }) => {
     
     setActionLoading(true);
     try {
-      // Try new endpoint first
-      const response = await axios.post(`${API}/admin/user360/action/${userData.user.uid}`, {
-        action, ...params, admin_id: adminUser?.uid
+      const response = await axios.post(`${API}/admin/user-360/action`, {
+        action, ...params, user_id: userData.user.uid, admin_id: adminUser?.uid
       }, {
         headers: { Authorization: `Bearer ${adminUser?.token}` }
       });
