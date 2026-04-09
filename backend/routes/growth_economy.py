@@ -379,22 +379,24 @@ async def get_growth_network_stats(user_id: str) -> dict:
         ref_or.append({"referred_by": user_ref_code})
     
     # Parallel fetch
-    direct_referrals, l1_indirect_referrals, network_size = await asyncio.gather(
+    direct_referrals, l1_indirect_referrals, network_size, active_network_size = await asyncio.gather(
         db.users.count_documents({"$or": ref_or}),
         get_l1_indirect_count(user_id),
-        get_network_size(user_id)
+        get_network_size(user_id),
+        get_active_network_size(user_id)
     )
     
     # Calculate 3-tier network cap
     cap_info = calculate_network_cap(direct_referrals, l1_indirect_referrals)
     
-    # Calculate redeem limit % based on network size
-    redeem_limit_percent = calculate_growth_level(network_size)
+    # Calculate redeem limit % based on SINGLE LEG TREE active network size
+    redeem_limit_percent = calculate_growth_level(active_network_size)
     
     return {
         "direct_referrals": direct_referrals,
         "l1_indirect_referrals": l1_indirect_referrals,
         "network_size": network_size,
+        "active_network_size": active_network_size,
         "network_cap": cap_info["cap"],
         "cap_tier1_base": cap_info["tier1_base"],
         "cap_tier2_bonus": cap_info["tier2_bonus"],
@@ -454,13 +456,10 @@ def calculate_growth_level(network_size: int) -> float:
 
 async def get_user_unlock_percent(user_id: str) -> float:
     """
-    Get user's unlock percentage based on Growth Network size.
-    
-    Formula: Redeem_Limit_% = 3 + 0.5 × log₂(N), max 10%
-    
-    No admin cap needed - formula already caps at 10%.
+    Get user's unlock percentage based on Single Leg Tree active network size.
+    Uses tree_position-based active network (same as mining reward).
     """
-    network_size = await get_network_size(user_id)
+    network_size = await get_active_network_size(user_id)
     unlock_percent = calculate_growth_level(network_size)
     
     return unlock_percent
