@@ -326,32 +326,32 @@ async def initiate_recharge(data: RechargeRequest):
     Standard flow as per: https://developers.eko.in/reference/bbps-pay
     """
     if db is None:
-        logging.error("[RECHARGE] Database not initialized")
-        return {"success": False, "message": GENERIC_ERROR}
+        logging.error("[RECHARGE] Step 0a: Database not initialized")
+        return {"success": False, "message": GENERIC_ERROR, "error_ref": "R0A"}
 
     if not _eko_configured():
-        logging.error("[RECHARGE] Eko credentials not configured")
-        return {"success": False, "message": GENERIC_ERROR}
+        logging.error("[RECHARGE] Step 0b: Eko credentials not configured")
+        return {"success": False, "message": GENERIC_ERROR, "error_ref": "R0B"}
 
     # ===== Step 0: Ensure BBPS service is activated =====
     activation = await _ensure_service_activated()
     if not activation.get("success"):
-        logging.error(f"[RECHARGE] Service activation failed: {activation.get('error')}")
-        return {"success": False, "message": GENERIC_ERROR}
+        logging.error(f"[RECHARGE] Step 0c: Service activation failed: {activation.get('error')}")
+        return {"success": False, "message": GENERIC_ERROR, "error_ref": "R0C"}
 
     # ===== Step 1: Validate amount =====
     int_amount = int(data.amount)
     if int_amount <= 0 or int_amount > MAX_RECHARGE_AMOUNT:
-        logging.warning(f"[RECHARGE] Invalid amount {int_amount} from user {data.user_id}")
-        return {"success": False, "message": GENERIC_ERROR}
+        logging.warning(f"[RECHARGE] Step 1: Invalid amount {int_amount} from user {data.user_id}")
+        return {"success": False, "message": GENERIC_ERROR, "error_ref": "R01"}
 
     # ===== Step 2: Validate number =====
     if data.recharge_type == "mobile":
         if not data.number or not re.match(r'^\d{10}$', data.number):
-            return {"success": False, "message": "Please enter a valid 10-digit mobile number."}
+            return {"success": False, "message": "Please enter a valid 10-digit mobile number.", "error_ref": "R02"}
     else:
         if not data.number or len(data.number.strip()) < 3:
-            return {"success": False, "message": "Please enter a valid subscriber ID."}
+            return {"success": False, "message": "Please enter a valid subscriber ID.", "error_ref": "R02"}
 
     # ===== Step 3: Daily limit (1/day combined) =====
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -360,30 +360,34 @@ async def initiate_recharge(data: RechargeRequest):
         "created_at": {"$gte": today_start},
         "status": {"$nin": ["failed", "refunded"]}
     })
+    logging.info(f"[RECHARGE] Step 3: user={data.user_id}, today_count={today_count}")
     if today_count >= MAX_RECHARGES_PER_DAY:
-        logging.info(f"[RECHARGE] Daily limit hit for user {data.user_id} (count={today_count})")
-        return {"success": False, "message": GENERIC_ERROR}
+        logging.info(f"[RECHARGE] Step 3: BLOCKED daily limit for user {data.user_id} (count={today_count})")
+        return {"success": False, "message": GENERIC_ERROR, "error_ref": "R03"}
 
     # ===== Step 4: User + subscription check =====
     user = await db.users.find_one({"uid": data.user_id})
     if not user:
-        return {"success": False, "message": GENERIC_ERROR}
+        logging.warning(f"[RECHARGE] Step 4a: User not found: {data.user_id}")
+        return {"success": False, "message": GENERIC_ERROR, "error_ref": "R04A"}
 
     plan = (user.get("subscription_plan") or "explorer").lower()
     if plan in ["explorer", "free", ""]:
-        return {"success": False, "message": "Active subscription required for recharge services."}
+        logging.info(f"[RECHARGE] Step 4b: User {data.user_id} plan={plan} blocked")
+        return {"success": False, "message": "Active subscription required for recharge services.", "error_ref": "R04B"}
 
     # ===== Step 5: Calculate PRC charges =====
     if not calculate_charges_func:
-        logging.error("[RECHARGE] calculate_charges_func not set")
-        return {"success": False, "message": GENERIC_ERROR}
+        logging.error("[RECHARGE] Step 5a: calculate_charges_func not set")
+        return {"success": False, "message": GENERIC_ERROR, "error_ref": "R05A"}
 
     req_type = "mobile_recharge" if data.recharge_type == "mobile" else "dish_recharge"
     try:
         charges = await calculate_charges_func(float(int_amount), req_type, data.user_id)
+        logging.info(f"[RECHARGE] Step 5: charges={charges.get('total_prc', 0):.2f} PRC for ₹{int_amount}")
     except Exception as e:
-        logging.error(f"[RECHARGE] Charges calculation error: {e}")
-        return {"success": False, "message": GENERIC_ERROR}
+        logging.error(f"[RECHARGE] Step 5b: Charges calculation error: {e}")
+        return {"success": False, "message": GENERIC_ERROR, "error_ref": "R05B"}
 
     total_prc = charges["total_prc"]
 
@@ -391,16 +395,19 @@ async def initiate_recharge(data: RechargeRequest):
     if check_redeem_limit_func:
         try:
             limit_check = await check_redeem_limit_func(data.user_id, float(int_amount))
+            logging.info(f"[RECHARGE] Step 6: limit_check={limit_check}")
             if not limit_check.get("allowed"):
-                logging.info(f"[RECHARGE] Redeem limit insufficient for user {data.user_id}")
-                return {"success": False, "message": GENERIC_ERROR}
+                logging.info(f"[RECHARGE] Step 6: BLOCKED redeem limit for user {data.user_id}")
+                return {"success": False, "message": GENERIC_ERROR, "error_ref": "R06"}
         except Exception as e:
-            logging.error(f"[RECHARGE] Redeem limit check error: {e}")
-            return {"success": False, "message": GENERIC_ERROR}
+            logging.error(f"[RECHARGE] Step 6 exception: {e}")
+            return {"success": False, "message": GENERIC_ERROR, "error_ref": "R06E"}
 
     # ===== Step 7: PRC balance check =====
-    if user.get("prc_balance", 0) < total_prc:
-        return {"success": False, "message": f"Insufficient PRC balance. Required: {total_prc:.0f} PRC"}
+    user_prc = user.get("prc_balance", 0)
+    logging.info(f"[RECHARGE] Step 7: user_prc={user_prc}, required={total_prc}")
+    if user_prc < total_prc:
+        return {"success": False, "message": f"Insufficient PRC balance. Required: {total_prc:.0f} PRC", "error_ref": "R07"}
 
     # ===== Step 8: Atomic PRC deduction =====
     deduct_result = await db.users.update_one(
