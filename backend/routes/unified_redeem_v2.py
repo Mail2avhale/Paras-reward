@@ -2250,11 +2250,13 @@ async def get_bbps_requests(
     limit: int = 50
 ):
     """
-    Admin: Get all BBPS instant requests with full details
+    Admin: Get all BBPS instant requests with full details.
+    Queries BOTH redeem_requests AND bill_payment_requests collections
+    to include Eko recharge transactions (mobile/DTH).
     """
-    # Build query
+    # Build base query filters
     query = {}
-    
+
     # Search by mobile, TID, request_id, client_ref_id
     if search and search.strip():
         s = search.strip()
@@ -2264,58 +2266,84 @@ async def get_bbps_requests(
             {"client_ref_id": {"$regex": s, "$options": "i"}},
             {"details.mobile_number": s},
             {"details.consumer_number": s},
+            {"details.number": s},
             {"user_mobile": s},
             {"user_name": {"$regex": s, "$options": "i"}}
         ]
-    
-    # Filter by status
+
+    # Filter by status (case-insensitive)
     if status:
-        query["status"] = status
-    
+        query["status"] = {"$regex": f"^{status}$", "$options": "i"}
+
     # Filter by service type - exclude DMT (bank transfer)
     if service_type:
         query["service_type"] = service_type
     else:
-        # Only show BBPS instant services (not DMT)
         query["service_type"] = {"$ne": "dmt"}
-    
+
     # Filter by user
     if user_id:
         query["user_id"] = user_id
-    
+
     # Date range filter
     if from_date:
-        # Ensure from_date starts at beginning of day
         if "T" not in from_date:
             from_date = from_date + "T00:00:00"
         query["created_at"] = {"$gte": from_date}
     if to_date:
-        # Ensure to_date includes the full day
         if "T" not in to_date:
             to_date = to_date + "T23:59:59"
         if "created_at" not in query:
             query["created_at"] = {}
         query["created_at"]["$lte"] = to_date
-    
-    # Get total count
-    total = await db.redeem_requests.count_documents(query)
-    
-    # Pagination
+
+    # Query BOTH collections
+    rr_count = await db.redeem_requests.count_documents(query)
+    bp_count = await db.bill_payment_requests.count_documents(query)
+    total = rr_count + bp_count
+
+    # Fetch from both collections (over-fetch for merge & sort)
+    fetch_limit = (page * limit) + limit  # fetch enough to cover pagination
+    rr_raw = await db.redeem_requests.find(
+        query, {"_id": 0}
+    ).sort("created_at", -1).limit(fetch_limit).to_list(fetch_limit)
+
+    bp_raw = await db.bill_payment_requests.find(
+        query, {"_id": 0}
+    ).sort("created_at", -1).limit(fetch_limit).to_list(fetch_limit)
+
+    # Tag source for dedup
+    for r in rr_raw:
+        r["_source"] = "redeem_requests"
+    for r in bp_raw:
+        r["_source"] = "bill_payment_requests"
+
+    # Merge, deduplicate by request_id, sort
+    merged = rr_raw + bp_raw
+    seen_ids = set()
+    unique = []
+    for r in merged:
+        rid = r.get("request_id")
+        if rid and rid in seen_ids:
+            continue
+        if rid:
+            seen_ids.add(rid)
+        unique.append(r)
+
+    unique.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+    # Apply pagination
     skip = (page - 1) * limit
-    
-    # Fetch requests with full details
-    requests_raw = await db.redeem_requests.find(
-        query,
-        {"_id": 0}  # Exclude MongoDB _id
-    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
-    
-    # Enrich requests with user info
+    page_results = unique[skip:skip + limit]
+
+    # Enrich with user info
     requests = []
-    for req in requests_raw:
-        user_id = req.get("user_id")
-        if user_id:
+    for req in page_results:
+        req.pop("_source", None)
+        uid = req.get("user_id")
+        if uid and not req.get("user_name"):
             user = await db.users.find_one(
-                {"uid": user_id},
+                {"uid": uid},
                 {"_id": 0, "name": 1, "mobile": 1, "email": 1}
             )
             if user:
@@ -2323,16 +2351,16 @@ async def get_bbps_requests(
                 req["user_mobile"] = user.get("mobile", "")
                 if not req.get("user_email"):
                     req["user_email"] = user.get("email", "")
-        
-        # Ensure amount field exists (fallback to amount_inr for old records)
+
+        # Ensure amount field exists
         if not req.get("amount") and req.get("amount_inr"):
             req["amount"] = req.get("amount_inr")
         elif not req.get("amount") and req.get("details", {}).get("amount"):
             req["amount"] = req.get("details", {}).get("amount")
-        
+
         requests.append(req)
-    
-    # Calculate stats
+
+    # Calculate stats from BOTH collections
     stats = {
         "total": total,
         "by_status": {},
@@ -2340,48 +2368,62 @@ async def get_bbps_requests(
         "total_amount": 0,
         "total_prc_used": 0
     }
-    
-    # Get aggregated stats
-    pipeline = [
-        {"$match": {"service_type": {"$ne": "dmt"}}},
-        {"$group": {
-            "_id": "$status",
-            "count": {"$sum": 1},
-            "total_amount": {"$sum": {"$ifNull": ["$amount", {"$ifNull": ["$amount_inr", 0]}]}},
-            "total_prc": {"$sum": "$total_prc_deducted"}
-        }}
-    ]
-    
-    status_stats = await db.redeem_requests.aggregate(pipeline).to_list(10)
-    for stat in status_stats:
-        stats["by_status"][stat["_id"]] = {
-            "count": stat["count"],
-            "amount": stat["total_amount"],
-            "prc": stat["total_prc"]
-        }
-        stats["total_amount"] += stat["total_amount"] or 0
-        stats["total_prc_used"] += stat["total_prc"] or 0
-    
-    # Get service-wise stats
-    service_pipeline = [
-        {"$match": {"service_type": {"$ne": "dmt"}}},
-        {"$group": {
-            "_id": "$service_type",
-            "count": {"$sum": 1},
-            "success": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
-            "failed": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}}
-        }}
-    ]
-    
-    service_stats = await db.redeem_requests.aggregate(service_pipeline).to_list(20)
-    for stat in service_stats:
-        stats["by_service"][stat["_id"]] = {
-            "total": stat["count"],
-            "success": stat["success"],
-            "failed": stat["failed"],
-            "success_rate": round((stat["success"] / stat["count"]) * 100, 1) if stat["count"] > 0 else 0
-        }
-    
+
+    stats_match = {"service_type": {"$ne": "dmt"}}
+    status_group = {
+        "_id": "$status",
+        "count": {"$sum": 1},
+        "total_amount": {"$sum": {"$ifNull": ["$amount", {"$ifNull": ["$amount_inr", 0]}]}},
+        "total_prc": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}
+    }
+    service_group = {
+        "_id": "$service_type",
+        "count": {"$sum": 1},
+        "success": {"$sum": {"$cond": [{"$in": ["$status", ["completed", "paid", "success"]]}, 1, 0]}},
+        "failed": {"$sum": {"$cond": [{"$in": ["$status", ["failed", "eko_failed", "retry_failed"]]}, 1, 0]}}
+    }
+
+    for coll in [db.redeem_requests, db.bill_payment_requests]:
+        s_stats = await coll.aggregate([
+            {"$match": stats_match},
+            {"$group": status_group}
+        ]).to_list(20)
+        for stat in s_stats:
+            key = stat["_id"]
+            if key in stats["by_status"]:
+                stats["by_status"][key]["count"] += stat["count"]
+                stats["by_status"][key]["amount"] += (stat["total_amount"] or 0)
+                stats["by_status"][key]["prc"] += (stat["total_prc"] or 0)
+            else:
+                stats["by_status"][key] = {
+                    "count": stat["count"],
+                    "amount": stat["total_amount"] or 0,
+                    "prc": stat["total_prc"] or 0
+                }
+            stats["total_amount"] += stat["total_amount"] or 0
+            stats["total_prc_used"] += stat["total_prc"] or 0
+
+        svc_stats = await coll.aggregate([
+            {"$match": stats_match},
+            {"$group": service_group}
+        ]).to_list(30)
+        for stat in svc_stats:
+            key = stat["_id"]
+            if key in stats["by_service"]:
+                stats["by_service"][key]["total"] += stat["count"]
+                stats["by_service"][key]["success"] += stat["success"]
+                stats["by_service"][key]["failed"] += stat["failed"]
+            else:
+                stats["by_service"][key] = {
+                    "total": stat["count"],
+                    "success": stat["success"],
+                    "failed": stat["failed"]
+                }
+
+    # Recalculate success rates
+    for key, svc in stats["by_service"].items():
+        svc["success_rate"] = round((svc["success"] / svc["total"]) * 100, 1) if svc["total"] > 0 else 0
+
     return {
         "success": True,
         "requests": requests,

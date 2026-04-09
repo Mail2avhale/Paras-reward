@@ -19,6 +19,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const SERVICE_ICONS = {
   mobile_recharge: Smartphone,
   mobile_postpaid: Smartphone,
+  dish_recharge: Tv,
   dth: Tv,
   electricity: Zap,
   gas: Flame,
@@ -40,10 +41,16 @@ const STATUS_CONFIG = {
   pending: { color: 'yellow', icon: Clock, label: 'Pending' },
   processing: { color: 'blue', icon: Loader2, label: 'Processing' },
   completed: { color: 'green', icon: CheckCircle, label: 'Completed' },
+  paid: { color: 'green', icon: CheckCircle, label: 'Paid/Success' },
+  success: { color: 'green', icon: CheckCircle, label: 'Success' },
+  SUCCESS: { color: 'green', icon: CheckCircle, label: 'Success' },
+  COMPLETED: { color: 'green', icon: CheckCircle, label: 'Completed' },
+  Paid: { color: 'green', icon: CheckCircle, label: 'Paid' },
   failed: { color: 'red', icon: XCircle, label: 'Failed' },
   rejected: { color: 'gray', icon: AlertCircle, label: 'Rejected' },
   refunded: { color: 'orange', icon: RefreshCw, label: 'Refunded' },
-  eko_failed: { color: 'red', icon: XCircle, label: 'Failed' }
+  eko_failed: { color: 'red', icon: XCircle, label: 'Failed' },
+  retry_failed: { color: 'red', icon: XCircle, label: 'Retry Failed' }
 };
 
 const AdminBBPSDashboard = () => {
@@ -327,6 +334,7 @@ const AdminBBPSDashboard = () => {
     const names = {
       mobile_recharge: 'Mobile Recharge',
       mobile_postpaid: 'Mobile Postpaid',
+      dish_recharge: 'DTH Recharge',
       dth: 'DTH',
       electricity: 'Electricity',
       gas: 'Gas',
@@ -340,7 +348,9 @@ const AdminBBPSDashboard = () => {
       fastag: 'FASTag',
       education: 'Education',
       municipal_tax: 'Municipal Tax',
-      lpg: 'LPG'
+      lpg: 'LPG',
+      bank_transfer: 'Bank Transfer',
+      bank_withdrawal: 'Bank Withdrawal'
     };
     return names[type] || type;
   };
@@ -763,6 +773,7 @@ const AdminBBPSDashboard = () => {
             <option value="pending">Pending</option>
             <option value="processing">Processing</option>
             <option value="completed">Completed</option>
+            <option value="paid">Paid/Success</option>
             <option value="failed">Failed</option>
             <option value="rejected">Rejected</option>
           </select>
@@ -775,6 +786,7 @@ const AdminBBPSDashboard = () => {
           >
             <option value="">All Services</option>
             <option value="mobile_recharge">Mobile Recharge</option>
+            <option value="dish_recharge">DTH Recharge</option>
             <option value="dth">DTH</option>
             <option value="electricity">Electricity</option>
             <option value="gas">Gas</option>

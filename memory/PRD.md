@@ -42,6 +42,13 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
   - Recent 3 successful recharges shown
   - E2E tested: 20/20 backend + all frontend tests passed
 
+### Admin BBPS Dashboard — Dual Collection Merge (DONE — April 2026)
+- **Bug**: Eko recharges stored in `bill_payment_requests` were invisible in Admin BBPS dashboard (which only queried `redeem_requests`)
+- **Fix**: Updated `get_bbps_requests` in `unified_redeem_v2.py` to query BOTH `redeem_requests` AND `bill_payment_requests`, merge results, deduplicate by request_id, sort by date
+- Stats aggregation also covers both collections
+- Status filter now case-insensitive (handles Paid/paid/PAID)
+- Frontend: Added `dish_recharge` (DTH), `paid/success/retry_failed` status support, proper service name formatting
+
 ## Pending Issues
 - P1: Fix Missing Hook Dependencies (192 instances)
 - P1: Replace Index Keys with Stable Keys (82 instances)
