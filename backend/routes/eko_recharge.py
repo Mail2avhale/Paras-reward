@@ -475,9 +475,39 @@ async def initiate_recharge(data: RechargeRequest):
         logging.warning(f"[RECHARGE] Atomic PRC deduction failed for {data.user_id}")
         return {"success": False, "message": GENERIC_ERROR}
 
-    # ===== Step 9: Call Eko paybill API =====
+    # ===== Step 8.5: Pre-insert "pending" record for concurrency guard =====
+    # This ensures concurrent requests see the pending amount in daily/monthly limit checks
     request_id = str(uuid.uuid4())
     client_ref_id = f"RCH{int(time.time() * 1000)}"
+    pre_now = datetime.now(timezone.utc).isoformat()
+    pending_txn = {
+        "request_id": request_id,
+        "user_id": data.user_id,
+        "user_name": user.get("name", ""),
+        "user_mobile": user.get("mobile", ""),
+        "recharge_type": data.recharge_type,
+        "number": data.number,
+        "operator_id": data.operator_id,
+        "amount_inr": float(int_amount),
+        "total_prc_deducted": round(total_prc, 2),
+        "prc_required": round(charges.get("amount_prc", 0), 2),
+        "processing_fee_prc": round(charges.get("processing_fee_prc", 0), 2),
+        "admin_charge_prc": round(charges.get("admin_charge_prc", 0), 2),
+        "eko_tid": None,
+        "client_ref_id": client_ref_id,
+        "status": "pending",
+        "created_at": pre_now
+    }
+    try:
+        await db.recharge_transactions.insert_one(pending_txn)
+        logging.info(f"[RECHARGE] Step 8.5: Pre-inserted pending record req={request_id}, amount=₹{int_amount}")
+    except Exception as e:
+        logging.error(f"[RECHARGE] Step 8.5: Pending record insert failed: {e}")
+        # Refund PRC and abort
+        await db.users.update_one({"uid": data.user_id}, {"$inc": {"prc_balance": total_prc}})
+        return {"success": False, "message": GENERIC_ERROR}
+
+    # ===== Step 9: Call Eko paybill API =====
     timestamp = str(round(time.time() * 1000))
     amount_str = str(int_amount)
 
@@ -597,32 +627,21 @@ async def _handle_success(data, request_id, client_ref_id, tid, status,
                            total_prc, charges, req_type, user_name, user_mobile,
                            now_iso):
     """Record successful/pending recharge — PRC stays deducted.
-    Each DB operation is individually protected so partial failures don't crash the response."""
+    Updates the pre-inserted pending record and adds bill_payment_requests + PRC statement."""
     amount_inr = float(int(data.amount))
 
-    # 1. Record in recharge_transactions
+    # 1. UPDATE the pre-inserted pending record in recharge_transactions
     try:
-        txn = {
-            "request_id": request_id,
-            "user_id": data.user_id,
-            "user_name": user_name,
-            "user_mobile": user_mobile,
-            "recharge_type": data.recharge_type,
-            "number": data.number,
-            "operator_id": data.operator_id,
-            "amount_inr": amount_inr,
-            "total_prc_deducted": round(total_prc, 2),
-            "prc_required": round(charges.get("amount_prc", 0), 2),
-            "processing_fee_prc": round(charges.get("processing_fee_prc", 0), 2),
-            "admin_charge_prc": round(charges.get("admin_charge_prc", 0), 2),
-            "eko_tid": tid,
-            "client_ref_id": client_ref_id,
-            "status": status,
-            "created_at": now_iso
-        }
-        await db.recharge_transactions.insert_one(txn)
+        await db.recharge_transactions.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "eko_tid": tid,
+                "status": status,
+                "updated_at": now_iso
+            }}
+        )
     except Exception as e:
-        logging.error(f"[RECHARGE] recharge_transactions insert failed (non-fatal): {e}")
+        logging.error(f"[RECHARGE] recharge_transactions update failed (non-fatal): {e}")
 
     # 2. Record in bill_payment_requests for Admin BBPS dashboard
     try:
@@ -696,7 +715,7 @@ async def _handle_success(data, request_id, client_ref_id, tid, status,
 async def _handle_failure(data, request_id, client_ref_id, tid,
                            total_prc, user_name, user_mobile,
                            now_iso, eko_message):
-    """Refund PRC and record failed recharge"""
+    """Refund PRC and update pre-inserted pending record to failed"""
     # Refund PRC
     await db.users.update_one(
         {"uid": data.user_id},
@@ -704,28 +723,21 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
     )
     logging.info(f"[RECHARGE] PRC refunded: {total_prc:.2f} to user {data.user_id}")
 
-    # Record failed transaction
+    # UPDATE the pre-inserted pending record to failed
     try:
-        txn = {
-            "request_id": request_id,
-            "user_id": data.user_id,
-            "user_name": user_name,
-            "user_mobile": user_mobile,
-            "recharge_type": data.recharge_type,
-            "number": data.number,
-            "operator_id": data.operator_id,
-            "amount_inr": float(int(data.amount)),
-            "total_prc_deducted": 0,
-            "eko_tid": tid,
-            "client_ref_id": client_ref_id,
-            "status": "failed",
-            "prc_refunded": True,
-            "eko_error": eko_message or "",
-            "created_at": now_iso
-        }
-        await db.recharge_transactions.insert_one(txn)
+        await db.recharge_transactions.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "failed",
+                "total_prc_deducted": 0,
+                "prc_refunded": True,
+                "eko_tid": tid,
+                "eko_error": eko_message or "",
+                "updated_at": now_iso
+            }}
+        )
     except Exception as e:
-        logging.error(f"[RECHARGE] Failed txn recording error (non-fatal): {e}")
+        logging.error(f"[RECHARGE] Failed txn update error (non-fatal): {e}")
 
     logging.warning(f"[RECHARGE] FAILED: user={data.user_id}, ref={client_ref_id}, "
                     f"eko_msg={eko_message[:100] if eko_message else 'none'}")

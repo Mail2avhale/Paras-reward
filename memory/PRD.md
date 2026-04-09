@@ -58,6 +58,12 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - Frontend `RechargeCard.js` caps input amount to min(daily, monthly) remaining
 - User message on limit: "Monthly recharge limit reached"
 
+### Race Condition Fix: Daily/Monthly Limit Bypass (DONE — April 2026)
+- **Bug**: Concurrent recharge requests bypassed daily ₹500 limit because `recharge_transactions` insert happened AFTER the Eko API call (30s+ window)
+- **Fix**: Pre-insert a "pending" record into `recharge_transactions` BEFORE the Eko API call (Step 8.5). Success/failure handlers now UPDATE the existing record instead of INSERT.
+- Concurrent requests now see the pending amount in daily/monthly limit checks
+- Failed transactions get updated to "failed" status (excluded from future limit checks)
+
 ## Pending Issues
 - P1: Fix Missing Hook Dependencies (192 instances)
 - P1: Replace Index Keys with Stable Keys (82 instances)
