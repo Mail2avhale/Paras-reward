@@ -153,16 +153,11 @@ const RechargeCard = ({ user, stats }) => {
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
-            <Zap className="w-4 h-4 text-cyan-400" />
-          </div>
-          <span className="text-white font-semibold text-sm">Quick Recharge</span>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+          <Zap className="w-4 h-4 text-cyan-400" />
         </div>
-        <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-          ₹{dailyRemaining} left today
-        </span>
+        <span className="text-white font-semibold text-sm">Quick Recharge</span>
       </div>
 
       {/* Mobile / DTH Toggle */}
