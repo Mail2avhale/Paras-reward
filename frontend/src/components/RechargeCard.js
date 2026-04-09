@@ -19,6 +19,7 @@ const RechargeCard = ({ user, stats }) => {
   const [operatorsLoading, setOperatorsLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [recentTxns, setRecentTxns] = useState([]);
+  const [dailyRemaining, setDailyRemaining] = useState(500);
 
   const prcRate = stats?.prcRate || 10;
 
@@ -47,6 +48,9 @@ const RechargeCard = ({ user, stats }) => {
           .filter(t => t.status === 'success' || t.status === 'complete')
           .slice(0, 3);
         setRecentTxns(successful);
+        if (res.data.daily_remaining !== undefined) {
+          setDailyRemaining(res.data.daily_remaining);
+        }
       }
     } catch {
       // silent
@@ -69,12 +73,14 @@ const RechargeCard = ({ user, stats }) => {
     setResult(null);
   };
 
+  const maxAllowed = Math.min(500, dailyRemaining);
+
   const handleAmountChange = (e) => {
     const raw = e.target.value;
     if (raw === '') { setAmount(''); return; }
     const num = parseInt(raw, 10);
     if (isNaN(num) || num < 0) return;
-    if (num > 500) return;          // hard block beyond 500
+    if (num > maxAllowed) return;
     setAmount(String(num));
   };
 
@@ -111,6 +117,9 @@ const RechargeCard = ({ user, stats }) => {
         setNumber('');
         setAmount('');
         fetchRecentTxns();
+        if (res.data.amount) {
+          setDailyRemaining(prev => Math.max(0, prev - res.data.amount));
+        }
       } else {
         setResult({ success: false, message: res.data.message });
         toast.error(res.data.message);
@@ -128,7 +137,7 @@ const RechargeCard = ({ user, stats }) => {
     ? Math.ceil((parseInt(amount, 10) * 1.2 + 10) * prcRate)
     : 0;
 
-  const isFormValid = number && selectedOperator && amount && parseInt(amount, 10) > 0 && parseInt(amount, 10) <= 500;
+  const isFormValid = number && selectedOperator && amount && parseInt(amount, 10) > 0 && parseInt(amount, 10) <= maxAllowed;
 
   return (
     <motion.div
@@ -144,11 +153,16 @@ const RechargeCard = ({ user, stats }) => {
       }}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
-          <Zap className="w-4 h-4 text-cyan-400" />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+            <Zap className="w-4 h-4 text-cyan-400" />
+          </div>
+          <span className="text-white font-semibold text-sm">Quick Recharge</span>
         </div>
-        <span className="text-white font-semibold text-sm">Quick Recharge</span>
+        <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+          ₹{dailyRemaining} left today
+        </span>
       </div>
 
       {/* Mobile / DTH Toggle */}

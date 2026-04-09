@@ -68,7 +68,7 @@ SOURCE_IP = os.environ.get("EKO_SOURCE_IP", "34.44.149.98")
 DEFAULT_LATLONG = "19.9975,73.7898"
 
 MAX_RECHARGE_AMOUNT = 500
-MAX_RECHARGES_PER_DAY = 1
+MAX_DAILY_TOTAL = 500
 GENERIC_ERROR = "Technical error. Please try again later."
 
 # Service activation cache
@@ -353,16 +353,22 @@ async def initiate_recharge(data: RechargeRequest):
         if not data.number or len(data.number.strip()) < 3:
             return {"success": False, "message": "Please enter a valid subscriber ID.", "error_ref": "R02"}
 
-    # ===== Step 3: Daily limit (1/day combined) =====
+    # ===== Step 3: Daily total limit (₹500/day combined) =====
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-    today_count = await db.recharge_transactions.count_documents({
-        "user_id": data.user_id,
-        "created_at": {"$gte": today_start},
-        "status": {"$nin": ["failed", "refunded"]}
-    })
-    logging.info(f"[RECHARGE] Step 3: user={data.user_id}, today_count={today_count}")
-    if today_count >= MAX_RECHARGES_PER_DAY:
-        logging.info(f"[RECHARGE] Step 3: BLOCKED daily limit for user {data.user_id} (count={today_count})")
+    pipeline = [
+        {"$match": {
+            "user_id": data.user_id,
+            "created_at": {"$gte": today_start},
+            "status": {"$nin": ["failed", "refunded"]}
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$amount_inr"}}}
+    ]
+    agg_result = await db.recharge_transactions.aggregate(pipeline).to_list(1)
+    today_total = agg_result[0]["total"] if agg_result else 0
+    remaining_daily = MAX_DAILY_TOTAL - today_total
+    logging.info(f"[RECHARGE] Step 3: user={data.user_id}, today_total=₹{today_total}, remaining=₹{remaining_daily}")
+    if int_amount > remaining_daily:
+        logging.info(f"[RECHARGE] Step 3: BLOCKED daily limit ₹{int_amount} > remaining ₹{remaining_daily}")
         return {"success": False, "message": GENERIC_ERROR, "error_ref": "R03"}
 
     # ===== Step 4: User + subscription check =====
@@ -684,7 +690,7 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
 
 @router.get("/history/{user_id}")
 async def get_recharge_history(user_id: str):
-    """Get user's recharge transaction history"""
+    """Get user's recharge transaction history + daily remaining limit"""
     if db is None:
         return {"success": False, "transactions": []}
 
@@ -692,5 +698,23 @@ async def get_recharge_history(user_id: str):
         {"user_id": user_id},
         {"_id": 0, "eko_response": 0, "eko_error": 0}
     ).sort("created_at", -1).limit(20).to_list(20)
+
+    # Calculate today's remaining
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    pipeline = [
+        {"$match": {"user_id": user_id, "created_at": {"$gte": today_start}, "status": {"$nin": ["failed", "refunded"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount_inr"}}}
+    ]
+    agg = await db.recharge_transactions.aggregate(pipeline).to_list(1)
+    today_used = agg[0]["total"] if agg else 0
+
+    return {
+        "success": True,
+        "transactions": txns,
+        "count": len(txns),
+        "daily_limit": MAX_DAILY_TOTAL,
+        "daily_used": today_used,
+        "daily_remaining": max(0, MAX_DAILY_TOTAL - today_used)
+    }
 
     return {"success": True, "transactions": txns, "count": len(txns)}
