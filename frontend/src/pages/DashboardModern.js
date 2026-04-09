@@ -17,6 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
 // BurningIndicator removed - burning concept deprecated
 import MiningWidget from '@/components/MiningWidget';
+import RechargeCard from '@/components/RechargeCard';
 
 // Live Date & Time component for dashboard header
 const LiveDateTime = () => {
@@ -1005,6 +1006,13 @@ const DashboardModern = ({ user, onLogout }) => {
               This is a performance-based reward summary. PRC is a digital reward and not a financial investment.
             </p>
           </motion.div>
+        </div>
+      )}
+
+      {/* Quick Recharge Card */}
+      {user && stats && (
+        <div className="px-5 mb-4" data-testid="dashboard-recharge-card">
+          <RechargeCard user={user} stats={stats} />
         </div>
       )}
 

@@ -99,6 +99,7 @@ from routes.mining import router as mining_router, set_db as set_mining_db, set_
 # DMT V1, V3 and Fund Transfer routes REMOVED - Eko API not working
 from routes.gst_invoice import router as invoice_router, set_db as set_invoice_db
 from routes.eko_callback import router as eko_callback_router, set_db as set_eko_callback_db
+from routes.eko_recharge import router as eko_recharge_router, set_db as set_eko_recharge_db, set_recharge_redeem_check, set_recharge_log_transaction, set_recharge_calculate_charges
 from routes.growth_economy import router as growth_economy_router, set_db as set_growth_economy_db
 from routes.admin_subscription import router as admin_subscription_router
 
@@ -32658,6 +32659,13 @@ api_router.include_router(kyc_router)
 set_bbps_db(db)
 set_bbps_redeem_limit_check(check_redeem_limit)
 api_router.include_router(bbps_router)
+
+# Eko Recharge Router (Mobile Prepaid & DTH)
+set_eko_recharge_db(db)
+set_recharge_redeem_check(check_redeem_limit)
+set_recharge_log_transaction(log_transaction)
+set_recharge_calculate_charges(calculate_redemption_charges)
+api_router.include_router(eko_recharge_router)
 
 # DMT/Eko COMPLETELY REMOVED - V3 API not working with current Eko account
 # All DMT routes, files and code have been deleted
