@@ -225,7 +225,7 @@ const RechargeCard = ({ user, stats }) => {
             type="text"
             inputMode="numeric"
             maxLength={3}
-            placeholder="Amount (max 500)"
+            placeholder="Amount"
             value={amount}
             onChange={handleAmountChange}
             data-testid="recharge-amount-input"
