@@ -18,26 +18,29 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - Bank redeem (₹1000-₹10000 limits)
 - Bill payments (BBPS), Mobile recharge, DTH recharge
 - Admin dashboard with User 360° view
-- PRC economy with burn system (deprecated, 0% burn)
+- PRC economy with burn system
 
-### Recent Session Work (April 2026)
-- ✅ Landing page redesigned with official legal content
-- ✅ Global logo replacement
-- ✅ Subscription auto-expire cron job (every 30 min)
-- ✅ Admin profile edit URL mismatch fixed
-- ✅ Network Size & Redeem Unlock % → Single Leg Tree
-- ✅ Formula Lock System with integrity hashes
-- ✅ **Eko Prepaid Mobile & DTH Recharge Integration (NEW)**
-  - Backend: `/app/backend/routes/eko_recharge.py`
-  - Frontend: `/app/frontend/src/components/RechargeCard.js`
-  - Dashboard card with Mobile/DTH toggle
-  - Max ₹500/day combined limit, 1 recharge/day
-  - Operators fetched live from Eko BBPS API
-  - PRC deduction on success, refund on failure
-  - Records in `recharge_transactions` + `bill_payment_requests` (Admin BBPS visible)
-  - PRC Statement logging via `log_transaction`
-  - All business rule errors → generic "Technical error" to user
-  - 100% backend test pass rate (16/16 tests)
+### Eko Prepaid Mobile & DTH Recharge (DONE — April 2026)
+- **Backend**: `/app/backend/routes/eko_recharge.py`
+  - Service activation (code 53) with caching — as per Eko developer docs
+  - GET /api/recharge/operators/{type} — fetches from Eko BBPS
+  - GET /api/recharge/operator-params/{operator_id} — required fields + regex
+  - POST /api/recharge/initiate — full recharge flow with Eko paybill
+  - GET /api/recharge/history/{user_id}
+  - POST /api/recharge/activate-service — admin utility
+  - Eko error codes handled: 0 (success), 24/1295 (already active), 347 (insufficient), 463 (not enabled)
+  - TX status: 0=success, 1=failed, 2=pending, 3-5 handled
+  - Business rules: ₹500 max, 1/day combined, redeem limit check, subscription check
+  - All business errors → generic "Technical error" (never expose Eko/wallet details)
+  - PRC deducted atomically, refunded on failure only
+  - Records in recharge_transactions + bill_payment_requests (Admin BBPS visible)
+- **Frontend**: `/app/frontend/src/components/RechargeCard.js`
+  - Dashboard card (bottom) with Mobile/DTH toggle
+  - Amount hard-capped at 500 (input level block)
+  - Operator dropdown from Eko API
+  - PRC estimate display
+  - Recent 3 successful recharges shown
+  - E2E tested: 20/20 backend + all frontend tests passed
 
 ## Pending Issues
 - P1: Fix Missing Hook Dependencies (192 instances)
