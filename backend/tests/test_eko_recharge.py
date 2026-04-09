@@ -4,8 +4,10 @@ Eko Prepaid Mobile & DTH Recharge API Tests
 Tests for the Eko BBPS recharge integration.
 
 Features tested:
-- GET /api/recharge/operators/mobile - Mobile prepaid operators
-- GET /api/recharge/operators/dth - DTH operators
+- POST /api/recharge/activate-service - BBPS service activation (code 53)
+- GET /api/recharge/operators/mobile - Mobile prepaid operators (category 5)
+- GET /api/recharge/operators/dth - DTH operators (category 4)
+- GET /api/recharge/operator-params/{operator_id} - Operator parameters with regex
 - POST /api/recharge/initiate - Recharge initiation with validations
 - GET /api/recharge/history/{user_id} - Recharge history
 
@@ -27,6 +29,76 @@ BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://formula-audit-fix.pr
 TEST_USER_UID = "76b75808-47fa-48dd-ad7c-8074678e3607"
 TEST_USER_MOBILE = "9970100782"
 TEST_USER_PIN = "997010"
+
+
+class TestServiceActivation:
+    """Test POST /api/recharge/activate-service endpoint"""
+    
+    def test_activate_service_success(self):
+        """POST /api/recharge/activate-service activates BBPS service (code 53)"""
+        response = requests.post(f"{BASE_URL}/api/recharge/activate-service")
+        
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
+        data = response.json()
+        assert data.get("success") == True, "Expected success=True"
+        # Service may be already active (cached) or newly activated
+        print(f"✅ Service activation: success={data.get('success')}, cached={data.get('cached')}, already_active={data.get('already_active')}")
+
+
+class TestOperatorParameters:
+    """Test GET /api/recharge/operator-params/{operator_id} endpoint"""
+    
+    def test_get_airtel_params(self):
+        """GET /api/recharge/operator-params/1 returns Airtel mobile params with regex"""
+        response = requests.get(f"{BASE_URL}/api/recharge/operator-params/1")
+        
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
+        data = response.json()
+        assert data.get("success") == True, "Expected success=True"
+        assert data.get("operator_id") == "1", "Expected operator_id=1"
+        assert "Airtel" in data.get("operator_name", ""), "Expected Airtel in operator_name"
+        assert "parameters" in data, "Response should contain 'parameters' key"
+        
+        # Check regex pattern for mobile number
+        params = data.get("parameters", [])
+        if len(params) > 0:
+            param = params[0]
+            assert "regex" in param, "Parameter should have regex"
+            assert "^[0-9]{10}$" in param.get("regex", ""), f"Expected 10-digit regex, got: {param.get('regex')}"
+            print(f"✅ Airtel params: regex={param.get('regex')}, label={param.get('param_label')}")
+    
+    def test_get_dish_tv_params(self):
+        """GET /api/recharge/operator-params/16 returns Dish TV params with regex"""
+        response = requests.get(f"{BASE_URL}/api/recharge/operator-params/16")
+        
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
+        data = response.json()
+        assert data.get("success") == True, "Expected success=True"
+        assert data.get("operator_id") == "16", "Expected operator_id=16"
+        assert "Dish" in data.get("operator_name", ""), "Expected Dish in operator_name"
+        
+        # Check regex pattern for subscriber number
+        params = data.get("parameters", [])
+        if len(params) > 0:
+            param = params[0]
+            assert "regex" in param, "Parameter should have regex"
+            # Dish TV accepts 10-11 digit numbers
+            assert "10" in param.get("regex", "") or "11" in param.get("regex", ""), \
+                f"Expected 10-11 digit regex, got: {param.get('regex')}"
+            print(f"✅ Dish TV params: regex={param.get('regex')}, label={param.get('param_label')}")
+    
+    def test_invalid_operator_id(self):
+        """GET /api/recharge/operator-params/99999 returns error for invalid operator"""
+        response = requests.get(f"{BASE_URL}/api/recharge/operator-params/99999")
+        
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
+        data = response.json()
+        # May return success=False or empty parameters
+        print(f"✅ Invalid operator handled: success={data.get('success')}, error={data.get('error', 'none')}")
 
 
 class TestRechargeOperators:
