@@ -474,6 +474,7 @@ async def initiate_recharge(data: RechargeRequest):
             final_status = "failed"
         elif eko_status == EkoStatus.SERVICE_NOT_ENABLED:
             logging.error("[RECHARGE] Service not enabled for operator (463)")
+            global _service_activated
             _service_activated = False
             final_status = "failed"
         else:
@@ -498,74 +499,102 @@ async def initiate_recharge(data: RechargeRequest):
     user_mobile = user.get("mobile", "")
 
     if final_status in ("success", "pending"):
-        return await _handle_success(
-            data, request_id, client_ref_id, tid, final_status, total_prc,
-            charges, req_type, user_name, user_mobile, now_iso, eko_response
-        )
+        # CRITICAL: Once Eko confirms success, ALWAYS return success to user.
+        # Even if our DB recording fails, the recharge already went through.
+        try:
+            return await _handle_success(
+                data, request_id, client_ref_id, tid, final_status, total_prc,
+                charges, req_type, user_name, user_mobile, now_iso
+            )
+        except Exception as e:
+            logging.critical(f"[RECHARGE] !! Eko SUCCESS but recording FAILED: {e} | "
+                             f"user={data.user_id}, tid={tid}, ref={client_ref_id}, amount=₹{int_amount}")
+            return {
+                "success": True,
+                "message": "Recharge successful!" if final_status == "success" else "Recharge is being processed.",
+                "request_id": request_id,
+                "amount": float(int_amount),
+                "prc_deducted": round(total_prc, 2),
+                "status": final_status,
+                "tid": tid
+            }
     else:
-        return await _handle_failure(
-            data, request_id, client_ref_id, tid, total_prc,
-            user_name, user_mobile, now_iso, eko_response, eko_message
-        )
+        try:
+            return await _handle_failure(
+                data, request_id, client_ref_id, tid, total_prc,
+                user_name, user_mobile, now_iso, eko_message
+            )
+        except Exception as e:
+            logging.error(f"[RECHARGE] Failure handler crashed: {e} | user={data.user_id}, ref={client_ref_id}")
+            return {"success": False, "message": GENERIC_ERROR, "request_id": request_id}
 
 
 async def _handle_success(data, request_id, client_ref_id, tid, status,
                            total_prc, charges, req_type, user_name, user_mobile,
-                           now_iso, eko_response):
-    """Record successful/pending recharge — PRC stays deducted"""
-    # recharge_transactions record
-    txn = {
-        "request_id": request_id,
-        "user_id": data.user_id,
-        "user_name": user_name,
-        "user_mobile": user_mobile,
-        "recharge_type": data.recharge_type,
-        "number": data.number,
-        "operator_id": data.operator_id,
-        "amount_inr": float(int(data.amount)),
-        "total_prc_deducted": round(total_prc, 2),
-        "prc_required": round(charges.get("amount_prc", 0), 2),
-        "processing_fee_prc": round(charges.get("processing_fee_prc", 0), 2),
-        "admin_charge_prc": round(charges.get("admin_charge_prc", 0), 2),
-        "eko_tid": tid,
-        "client_ref_id": client_ref_id,
-        "status": status,
-        "created_at": now_iso
-    }
-    await db.recharge_transactions.insert_one(txn)
+                           now_iso):
+    """Record successful/pending recharge — PRC stays deducted.
+    Each DB operation is individually protected so partial failures don't crash the response."""
+    amount_inr = float(int(data.amount))
 
-    # bill_payment_requests for Admin BBPS dashboard
-    bill_record = {
-        "request_id": request_id,
-        "user_id": data.user_id,
-        "user_name": user_name,
-        "user_mobile": user_mobile,
-        "request_type": req_type,
-        "service_type": req_type,
-        "amount_inr": float(int(data.amount)),
-        "amount": float(int(data.amount)),
-        "prc_required": round(charges.get("amount_prc", 0), 2),
-        "processing_fee_inr": round(charges.get("processing_fee_inr", 0), 2),
-        "processing_fee_prc": round(charges.get("processing_fee_prc", 0), 2),
-        "admin_charge_inr": round(charges.get("admin_charge_inr", 0), 2),
-        "admin_charge_prc": round(charges.get("admin_charge_prc", 0), 2),
-        "admin_charge_percent": charges.get("admin_charge_percent", 20),
-        "total_inr": round(charges.get("total_inr", 0), 2),
-        "total_prc_deducted": round(total_prc, 2),
-        "details": {
+    # 1. Record in recharge_transactions
+    try:
+        txn = {
+            "request_id": request_id,
+            "user_id": data.user_id,
+            "user_name": user_name,
+            "user_mobile": user_mobile,
+            "recharge_type": data.recharge_type,
             "number": data.number,
             "operator_id": data.operator_id,
-            "recharge_type": data.recharge_type
-        },
-        "status": "paid" if status == "success" else "pending",
-        "eko_tid": tid,
-        "client_ref_id": client_ref_id,
-        "created_at": now_iso,
-        "processed_at": now_iso if status == "success" else None
-    }
-    await db.bill_payment_requests.insert_one(bill_record)
+            "amount_inr": amount_inr,
+            "total_prc_deducted": round(total_prc, 2),
+            "prc_required": round(charges.get("amount_prc", 0), 2),
+            "processing_fee_prc": round(charges.get("processing_fee_prc", 0), 2),
+            "admin_charge_prc": round(charges.get("admin_charge_prc", 0), 2),
+            "eko_tid": tid,
+            "client_ref_id": client_ref_id,
+            "status": status,
+            "created_at": now_iso
+        }
+        await db.recharge_transactions.insert_one(txn)
+    except Exception as e:
+        logging.error(f"[RECHARGE] recharge_transactions insert failed (non-fatal): {e}")
 
-    # PRC statement log
+    # 2. Record in bill_payment_requests for Admin BBPS dashboard
+    try:
+        bill_record = {
+            "request_id": request_id,
+            "user_id": data.user_id,
+            "user_name": user_name,
+            "user_mobile": user_mobile,
+            "request_type": req_type,
+            "service_type": req_type,
+            "amount_inr": amount_inr,
+            "amount": amount_inr,
+            "prc_required": round(charges.get("amount_prc", 0), 2),
+            "processing_fee_inr": round(charges.get("processing_fee_inr", 0), 2),
+            "processing_fee_prc": round(charges.get("processing_fee_prc", 0), 2),
+            "admin_charge_inr": round(charges.get("admin_charge_inr", 0), 2),
+            "admin_charge_prc": round(charges.get("admin_charge_prc", 0), 2),
+            "admin_charge_percent": charges.get("admin_charge_percent", 20),
+            "total_inr": round(charges.get("total_inr", 0), 2),
+            "total_prc_deducted": round(total_prc, 2),
+            "details": {
+                "number": data.number,
+                "operator_id": data.operator_id,
+                "recharge_type": data.recharge_type
+            },
+            "status": "paid" if status == "success" else "pending",
+            "eko_tid": tid,
+            "client_ref_id": client_ref_id,
+            "created_at": now_iso,
+            "processed_at": now_iso if status == "success" else None
+        }
+        await db.bill_payment_requests.insert_one(bill_record)
+    except Exception as e:
+        logging.error(f"[RECHARGE] bill_payment_requests insert failed (non-fatal): {e}")
+
+    # 3. PRC statement log
     if log_transaction_func:
         try:
             label = "Mobile" if data.recharge_type == "mobile" else "DTH"
@@ -578,13 +607,13 @@ async def _handle_success(data, request_id, client_ref_id, tid, status,
                 metadata={
                     "request_id": request_id,
                     "recharge_type": data.recharge_type,
-                    "amount_inr": float(int(data.amount)),
+                    "amount_inr": amount_inr,
                     "operator_id": data.operator_id
                 },
                 skip_balance_update=True
             )
         except Exception as e:
-            logging.error(f"[RECHARGE] PRC log error (non-fatal): {e}")
+            logging.error(f"[RECHARGE] PRC statement log failed (non-fatal): {e}")
 
     msg = "Recharge successful!" if status == "success" else "Recharge is being processed. Please check status shortly."
     logging.info(f"[RECHARGE] {status.upper()}: user={data.user_id}, tid={tid}, ref={client_ref_id}")
@@ -593,7 +622,7 @@ async def _handle_success(data, request_id, client_ref_id, tid, status,
         "success": True,
         "message": msg,
         "request_id": request_id,
-        "amount": float(int(data.amount)),
+        "amount": amount_inr,
         "prc_deducted": round(total_prc, 2),
         "status": status,
         "tid": tid
@@ -602,7 +631,7 @@ async def _handle_success(data, request_id, client_ref_id, tid, status,
 
 async def _handle_failure(data, request_id, client_ref_id, tid,
                            total_prc, user_name, user_mobile,
-                           now_iso, eko_response, eko_message):
+                           now_iso, eko_message):
     """Refund PRC and record failed recharge"""
     # Refund PRC
     await db.users.update_one(
@@ -612,24 +641,27 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
     logging.info(f"[RECHARGE] PRC refunded: {total_prc:.2f} to user {data.user_id}")
 
     # Record failed transaction
-    txn = {
-        "request_id": request_id,
-        "user_id": data.user_id,
-        "user_name": user_name,
-        "user_mobile": user_mobile,
-        "recharge_type": data.recharge_type,
-        "number": data.number,
-        "operator_id": data.operator_id,
-        "amount_inr": float(int(data.amount)),
-        "total_prc_deducted": 0,
-        "eko_tid": tid,
-        "client_ref_id": client_ref_id,
-        "status": "failed",
-        "prc_refunded": True,
-        "eko_error": eko_message or str(eko_response.get("error", "")),
-        "created_at": now_iso
-    }
-    await db.recharge_transactions.insert_one(txn)
+    try:
+        txn = {
+            "request_id": request_id,
+            "user_id": data.user_id,
+            "user_name": user_name,
+            "user_mobile": user_mobile,
+            "recharge_type": data.recharge_type,
+            "number": data.number,
+            "operator_id": data.operator_id,
+            "amount_inr": float(int(data.amount)),
+            "total_prc_deducted": 0,
+            "eko_tid": tid,
+            "client_ref_id": client_ref_id,
+            "status": "failed",
+            "prc_refunded": True,
+            "eko_error": eko_message or "",
+            "created_at": now_iso
+        }
+        await db.recharge_transactions.insert_one(txn)
+    except Exception as e:
+        logging.error(f"[RECHARGE] Failed txn recording error (non-fatal): {e}")
 
     logging.warning(f"[RECHARGE] FAILED: user={data.user_id}, ref={client_ref_id}, "
                     f"eko_msg={eko_message[:100] if eko_message else 'none'}")
