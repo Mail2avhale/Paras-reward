@@ -29,14 +29,20 @@ const ReferralsEnhanced = ({ user }) => {
     try {
       setRefreshing(true);
       
-      // Fetch network stats and referrals in PARALLEL with timeout
-      const [statsRes, referralsRes] = await Promise.all([
+      // Fetch network stats, mining speed, and referrals in PARALLEL with timeout
+      const [statsRes, miningRes, referralsRes] = await Promise.all([
         axios.get(`${API}/api/growth/network-stats/${user.uid}`, { timeout: 4000 }).catch(() => null),
+        axios.get(`${API}/api/growth/mining-speed/${user.uid}`, { timeout: 4000 }).catch(() => null),
         axios.get(`${API}/api/notifications/referrals/${user.uid}/direct-list`, { timeout: 4000 }).catch(() => null)
       ]);
       
       if (statsRes?.data?.success) {
-        setNetworkStats(statsRes.data.data);
+        const stats = { ...statsRes.data.data };
+        // Use single leg tree network size (from mining-speed) for Network Size display
+        if (miningRes?.data?.data?.network_size !== undefined) {
+          stats.single_leg_network = miningRes.data.data.network_size;
+        }
+        setNetworkStats(stats);
       }
       
       if (referralsRes?.data?.referrals) {
@@ -84,9 +90,10 @@ const ReferralsEnhanced = ({ user }) => {
     }
   };
 
-  // Calculate progress
+  // Calculate progress using single leg network
+  const activeNetwork = networkStats?.single_leg_network ?? networkStats?.network_size ?? 0;
   const networkProgress = networkStats ? 
-    Math.min(100, (networkStats.network_size / networkStats.network_cap) * 100) : 0;
+    Math.min(100, (activeNetwork / (networkStats.network_cap || 1)) * 100) : 0;
 
   if (loading) {
     return (
@@ -172,12 +179,12 @@ const ReferralsEnhanced = ({ user }) => {
             <p className="text-sm text-gray-500">Direct Referrals</p>
           </div>
 
-          {/* Network Size */}
+          {/* Network Size (Single Leg Tree) */}
           <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 text-center" data-testid="network-size-card">
             <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-purple-500/20 flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-purple-400" />
             </div>
-            <p className="text-3xl font-bold text-white">{networkStats?.network_size || 0}</p>
+            <p className="text-3xl font-bold text-white">{networkStats?.single_leg_network ?? networkStats?.network_size ?? 0}</p>
             <p className="text-sm text-gray-500">Network Size</p>
           </div>
         </div>
@@ -197,7 +204,7 @@ const ReferralsEnhanced = ({ user }) => {
             />
           </div>
           <div className="flex items-center justify-between mt-2">
-            <span className="text-gray-500 text-xs">{networkStats?.network_size || 0} active users</span>
+            <span className="text-gray-500 text-xs">{activeNetwork} active users</span>
             <span className="text-gray-500 text-xs">Cap: {networkStats?.network_cap || 0}</span>
           </div>
         </div>
