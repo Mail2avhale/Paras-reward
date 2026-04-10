@@ -58,19 +58,13 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - Frontend `RechargeCard.js` caps input amount to min(daily, monthly) remaining
 - User message on limit: "Monthly recharge limit reached"
 
-### Race Condition Fix: Daily/Monthly Limit Bypass (DONE — April 2026)
-- **Bug**: Concurrent recharge requests bypassed daily ₹500 limit because `recharge_transactions` insert happened AFTER the Eko API call (30s+ window)
-- **Fix**: Pre-insert a "pending" record into `recharge_transactions` BEFORE the Eko API call (Step 8.5). Success/failure handlers now UPDATE the existing record instead of INSERT.
-- Concurrent requests now see the pending amount in daily/monthly limit checks
-- Failed transactions get updated to "failed" status (excluded from future limit checks)
-
-### Eko tx_status Fix & Admin Detail Endpoint (DONE — April 2026)
-- **CRITICAL FIX**: tx_status mapping was wrong per Eko developer docs:
-  - tx_status=1 was mapped as FAILED (correct: PENDING)
-  - tx_status=3 was mapped as REFUND_PENDING (correct: FAILURE)
-  - tx_status=4 was mapped as REFUNDED (correct: CANCELLED)
-  - Unknown tx_status now defaults to "pending" (per Eko recommendation to use enquiry API)
-- **Admin Detail Fix**: `/admin/bbps-request/{id}` now searches BOTH `redeem_requests` AND `bill_payment_requests`
+### Race Condition Fix + Comprehensive Eko Error Handling (DONE — April 2026)
+- **Race condition fix**: Pre-insert "pending" record in `recharge_transactions` BEFORE Eko API call. Concurrent requests now see pending amounts.
+- **10-minute cooldown** between recharges added.
+- **tx_status corrected** per official Eko docs (developers.eko.in/docs/error-codes): 0=Success, 1=Fail, 2=Response Awaited, 3=Refund Pending, 4=Refunded, 5=On Hold
+- **User-friendly error messages**: 30+ Eko error patterns mapped (plan errors, operator down, invalid number, etc.)
+- **Only hidden**: Eko wallet low balance (347) → "Technical error". All other failures show meaningful message.
+- **Admin Detail Fix**: `/admin/bbps-request/{id}` now searches BOTH collections.
 
 ## Pending Issues
 - P1: Fix Missing Hook Dependencies (192 instances)

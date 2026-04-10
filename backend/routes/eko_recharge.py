@@ -84,22 +84,101 @@ MONTHLY_LIMIT_SERVICES = [
 _service_activated = False
 
 
-# ===== Eko Status Constants (as per developers.eko.in/docs) =====
+# ===== Eko Status Constants (as per developers.eko.in/docs/error-codes) =====
 class EkoStatus:
     SUCCESS = 0
     ALREADY_ACTIVE = 24
+    ERROR_FROM_NPCI = 55
+    MONTHLY_LIMIT_EXCEEDED = 314
     INSUFFICIENT_BALANCE = 347
-    SERVICE_NOT_ENABLED = 463
+    USER_NOT_FOUND = 463
+    BANK_NOT_AVAILABLE = 544
 
 
 class TxStatus:
     """Eko tx_status values as per official documentation:
-    https://developers.eko.in/docs/general-queries
+    https://developers.eko.in/docs/error-codes
     """
-    SUCCESS = 0       # Transaction successful
-    PENDING = 1       # Transaction pending — DO NOT refund, monitor
-    FAILURE = 3       # Transaction failed
-    CANCELLED = 4     # Transaction cancelled
+    SUCCESS = 0              # Success
+    FAILED = 1               # Fail
+    RESPONSE_AWAITED = 2     # Response Awaited / Initiated (NEFT)
+    REFUND_PENDING = 3       # Refund Pending
+    REFUNDED = 4             # Refunded
+    ON_HOLD = 5              # On Hold — Transaction Inquiry Required
+
+
+# ===== User-Friendly Error Message Mapping =====
+# Only low Eko wallet balance (347) → "Technical error" (hide from user)
+# All other errors → meaningful message to user
+HIDDEN_STATUS_CODES = {347}  # Only hide insufficient Eko wallet balance
+
+ERROR_MESSAGE_MAP = {
+    # === Most specific patterns FIRST ===
+    # Low balance (hidden)
+    "insufficient balance": "Technical error. Please try again later.",
+    # Number / Subscriber errors (before "operator" pattern)
+    "invalid subscriber": "Invalid mobile number. Please check and try again.",
+    "subscriber not": "This number is not active. Please verify the number.",
+    "invalid customer": "Invalid customer details. Please check and try again.",
+    "customer not found": "Number not found with this operator. Please check operator selection.",
+    "invalid mobile": "Invalid mobile number. Please enter a valid 10-digit number.",
+    "not eligible": "This number is not eligible for recharge. Please contact your operator.",
+    "number not": "Invalid number. Please check and try again.",
+    # Plan / Amount errors
+    "invalid amount": "Invalid recharge amount. Please check the plan.",
+    "invalid plan": "This recharge plan is not available. Please select a valid plan.",
+    "plan not": "This recharge plan is not available. Please try a different amount.",
+    "amount not": "This amount is not accepted. Please enter a valid recharge amount.",
+    "minimum amount": "Amount is below the minimum limit. Please increase the amount.",
+    "maximum amount": "Amount exceeds the maximum limit. Please reduce the amount.",
+    # Transaction errors
+    "duplicate": "Duplicate recharge detected. Please check your recent transactions.",
+    "already fulfilled": "This recharge was already done. Please check your history.",
+    "monthly limit": "Transaction limit reached. Please try after some time.",
+    "daily limit": "Daily transaction limit reached. Please try tomorrow.",
+    "limit exceeded": "Transaction limit exceeded. Please try with a smaller amount.",
+    "limit has been exhausted": "Transaction limit reached. Please try later.",
+    # Auth / Service errors
+    "agent not allowed": "Service is currently unavailable. Please try later.",
+    "not allowed": "This transaction is not allowed. Please try later.",
+    "no key for response": "Invalid request. Please check details and try again.",
+    "service not activated": "Service is not activated. Please try later.",
+    # Operator / Provider errors (generic - keep AFTER specific patterns)
+    "operator": "Operator is temporarily unavailable. Please try after some time.",
+    "biller": "Service provider is temporarily unavailable. Please try later.",
+    "bank is not available": "Service provider is currently down. Please try after some time.",
+    "service temporarily": "Service is temporarily unavailable. Please try after some time.",
+    # Network errors
+    "timeout": "Network timeout. Please check recharge status before retrying.",
+    "connection": "Network connection issue. Please try again.",
+    "npci": "Payment network error. Please try after some time.",
+}
+
+
+def _get_user_friendly_message(eko_message: str, eko_status: int = None) -> str:
+    """Convert Eko error message to user-friendly message.
+    Only hides: Eko wallet insufficient balance (347).
+    Everything else: meaningful error shown to user."""
+    if not eko_message:
+        return GENERIC_ERROR
+
+    # Check if this is a hidden status (only low Eko wallet balance)
+    if eko_status in HIDDEN_STATUS_CODES:
+        return GENERIC_ERROR
+
+    # Search for known patterns in the Eko message (case-insensitive)
+    msg_lower = eko_message.lower()
+    for pattern, friendly_msg in ERROR_MESSAGE_MAP.items():
+        if pattern in msg_lower:
+            return friendly_msg
+
+    # No known pattern — show actual Eko message directly
+    # Clean up message if too long
+    clean_msg = eko_message.strip()
+    if len(clean_msg) > 150:
+        clean_msg = clean_msg[:147] + "..."
+    return clean_msg if clean_msg else GENERIC_ERROR
+
 
 
 # ===== Auth Header Generation (matching bbps_services.py pattern) =====
@@ -575,38 +654,53 @@ async def initiate_recharge(data: RechargeRequest):
         if eko_status == EkoStatus.SUCCESS:
             if tx_status == TxStatus.SUCCESS:
                 final_status = "success"
-            elif tx_status == TxStatus.PENDING:
+            elif tx_status == TxStatus.RESPONSE_AWAITED:
                 final_status = "pending"
-            elif tx_status == TxStatus.FAILURE:
+            elif tx_status == TxStatus.ON_HOLD:
+                final_status = "pending"
+            elif tx_status == TxStatus.FAILED:
                 final_status = "failed"
-            elif tx_status == TxStatus.CANCELLED:
+            elif tx_status == TxStatus.REFUND_PENDING:
+                final_status = "failed"
+            elif tx_status == TxStatus.REFUNDED:
                 final_status = "failed"
             else:
-                # Unknown tx_status — treat as pending, must check via enquiry API
+                # Unknown tx_status — treat as pending, check via enquiry API
                 logging.warning(f"[RECHARGE] Unknown tx_status={tx_status}, treating as pending")
                 final_status = "pending"
         elif eko_status == EkoStatus.INSUFFICIENT_BALANCE:
             logging.error("[RECHARGE] Eko wallet insufficient balance (347)")
             final_status = "failed"
-        elif eko_status == EkoStatus.SERVICE_NOT_ENABLED:
-            logging.error("[RECHARGE] Service not enabled for operator (463)")
-            global _service_activated
-            _service_activated = False
+        elif eko_status == EkoStatus.USER_NOT_FOUND:
+            logging.error(f"[RECHARGE] Eko user not found (463): {eko_message}")
+            final_status = "failed"
+        elif eko_status == EkoStatus.BANK_NOT_AVAILABLE:
+            logging.error(f"[RECHARGE] Operator/bank not available (544): {eko_message}")
+            final_status = "failed"
+        elif eko_status == EkoStatus.ERROR_FROM_NPCI:
+            logging.error(f"[RECHARGE] NPCI error (55): {eko_message}")
+            final_status = "failed"
+        elif eko_status == EkoStatus.MONTHLY_LIMIT_EXCEEDED:
+            logging.error(f"[RECHARGE] Eko monthly limit exceeded (314): {eko_message}")
             final_status = "failed"
         else:
+            logging.error(f"[RECHARGE] Eko status={eko_status}, msg={eko_message[:100]}")
             final_status = "failed"
 
     except httpx.TimeoutException:
         logging.error(f"[RECHARGE] Eko API TIMEOUT for ref={client_ref_id}")
-        eko_response = {"error": "timeout", "message": "Request timed out"}
+        eko_message = "timeout"
+        eko_response = {"error": "timeout", "message": eko_message}
         final_status = "pending"
     except httpx.ConnectError as ce:
         logging.error(f"[RECHARGE] Eko CONNECTION ERROR: {ce}")
+        eko_message = "connection error"
         eko_response = {"error": "connection_error", "message": str(ce)}
         final_status = "failed"
     except Exception as e:
         logging.error(f"[RECHARGE] Eko UNEXPECTED ERROR: {e}")
-        eko_response = {"error": "unexpected", "message": str(e)}
+        eko_message = str(e)
+        eko_response = {"error": "unexpected", "message": eko_message}
         final_status = "failed"
 
     # ===== Step 10: Handle result =====
@@ -769,13 +863,8 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
     logging.warning(f"[RECHARGE] FAILED: user={data.user_id}, ref={client_ref_id}, "
                     f"eko_status={eko_status}, eko_msg={eko_message[:100] if eko_message else 'none'}")
 
-    # Decide user-facing message
-    # Only hide: low balance (347), service not enabled (463), internal/network errors (None)
-    HIDE_STATUS_CODES = {EkoStatus.INSUFFICIENT_BALANCE, EkoStatus.SERVICE_NOT_ENABLED, None}
-    if eko_status in HIDE_STATUS_CODES or not eko_message:
-        user_message = GENERIC_ERROR
-    else:
-        user_message = eko_message
+    # Decide user-facing message using smart mapping
+    user_message = _get_user_friendly_message(eko_message, eko_status)
 
     return {
         "success": False,
