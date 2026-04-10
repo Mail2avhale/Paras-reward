@@ -553,6 +553,11 @@ async def initiate_recharge(data: RechargeRequest):
     eko_message = ""
     final_status = "failed"
 
+    eko_status = None
+    eko_message = ""
+    eko_response = {}
+    tid = None
+
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(eko_url, headers=headers, json=body)
@@ -633,7 +638,7 @@ async def initiate_recharge(data: RechargeRequest):
         try:
             return await _handle_failure(
                 data, request_id, client_ref_id, tid, total_prc,
-                user_name, user_mobile, now_iso, eko_message
+                user_name, user_mobile, now_iso, eko_message, eko_status
             )
         except Exception as e:
             logging.error(f"[RECHARGE] Failure handler crashed: {e} | user={data.user_id}, ref={client_ref_id}")
@@ -731,8 +736,12 @@ async def _handle_success(data, request_id, client_ref_id, tid, status,
 
 async def _handle_failure(data, request_id, client_ref_id, tid,
                            total_prc, user_name, user_mobile,
-                           now_iso, eko_message):
-    """Refund PRC and update pre-inserted pending record to failed"""
+                           now_iso, eko_message, eko_status=None):
+    """Refund PRC and update pre-inserted pending record to failed.
+    Error message logic (as per user requirement):
+    - Low balance (347) / Service not enabled (463) / Internal errors (None) → Generic "Technical error"
+    - All other Eko failures → Show actual Eko error message to user
+    """
     # Refund PRC
     await db.users.update_one(
         {"uid": data.user_id},
@@ -750,6 +759,7 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
                 "prc_refunded": True,
                 "eko_tid": tid,
                 "eko_error": eko_message or "",
+                "eko_status": eko_status,
                 "updated_at": now_iso
             }}
         )
@@ -757,11 +767,19 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
         logging.error(f"[RECHARGE] Failed txn update error (non-fatal): {e}")
 
     logging.warning(f"[RECHARGE] FAILED: user={data.user_id}, ref={client_ref_id}, "
-                    f"eko_msg={eko_message[:100] if eko_message else 'none'}")
+                    f"eko_status={eko_status}, eko_msg={eko_message[:100] if eko_message else 'none'}")
+
+    # Decide user-facing message
+    # Only hide: low balance (347), service not enabled (463), internal/network errors (None)
+    HIDE_STATUS_CODES = {EkoStatus.INSUFFICIENT_BALANCE, EkoStatus.SERVICE_NOT_ENABLED, None}
+    if eko_status in HIDE_STATUS_CODES or not eko_message:
+        user_message = GENERIC_ERROR
+    else:
+        user_message = eko_message
 
     return {
         "success": False,
-        "message": GENERIC_ERROR,
+        "message": user_message,
         "request_id": request_id
     }
 
