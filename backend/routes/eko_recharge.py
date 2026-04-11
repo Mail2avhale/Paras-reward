@@ -156,28 +156,40 @@ ERROR_MESSAGE_MAP = {
 
 
 def _get_user_friendly_message(eko_message: str, eko_status: int = None) -> str:
-    """Convert Eko error message to user-friendly message.
-    Only hides: Eko wallet insufficient balance (347).
-    Everything else: meaningful error shown to user."""
+    """Show real Eko error to user (as per Eko developer docs).
+    Only hides: Eko wallet insufficient balance (347) → 'Technical error'.
+    Everything else: clean Eko message shown directly."""
     if not eko_message:
         return GENERIC_ERROR
 
-    # Check if this is a hidden status (only low Eko wallet balance)
+    # Hide only Eko wallet insufficient balance (347)
     if eko_status in HIDDEN_STATUS_CODES:
         return GENERIC_ERROR
 
-    # Search for known patterns in the Eko message (case-insensitive)
-    msg_lower = eko_message.lower()
-    for pattern, friendly_msg in ERROR_MESSAGE_MAP.items():
-        if pattern in msg_lower:
-            return friendly_msg
+    # Clean the ugly Eko prefix patterns:
+    # "utility.payment.failed Last_used_OkeyKey: N <actual message>"
+    # "utility.payment.failed <actual message>"
+    import re
+    clean = eko_message.strip()
+    # Remove "utility.payment.failed" prefix
+    clean = re.sub(r'^utility\.payment\.failed\s*', '', clean, flags=re.IGNORECASE)
+    # Remove "Last_used_OkeyKey: N" prefix
+    clean = re.sub(r'^Last_used_OkeyKey:\s*\d+\s*', '', clean, flags=re.IGNORECASE)
+    # Remove leading dashes/colons
+    clean = re.sub(r'^[-:.\s]+', '', clean).strip()
 
-    # No known pattern — show actual Eko message directly
-    # Clean up message if too long
-    clean_msg = eko_message.strip()
-    if len(clean_msg) > 150:
-        clean_msg = clean_msg[:147] + "..."
-    return clean_msg if clean_msg else GENERIC_ERROR
+    if not clean:
+        return eko_message.strip()[:150] if eko_message else GENERIC_ERROR
+
+    # Capitalize first letter
+    if clean[0].islower():
+        clean = clean[0].upper() + clean[1:]
+
+    # Truncate if too long
+    if len(clean) > 200:
+        clean = clean[:197] + "..."
+
+    return clean
 
 
 
