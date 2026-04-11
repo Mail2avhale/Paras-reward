@@ -1017,7 +1017,7 @@ const AdminBBPSDashboard = () => {
                       </td>
                       <td className="p-3">
                         {(req.failure_reason || req.eko_error) ? (
-                          <span className="text-xs text-red-400 max-w-[180px] block truncate" title={req.failure_reason || req.eko_error}>
+                          <span className="text-xs text-red-400 max-w-[280px] block" title={req.failure_reason || req.eko_error} style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'}}>
                             {req.failure_reason || req.eko_error}
                           </span>
                         ) : req.status?.toLowerCase() === 'success' || req.status?.toLowerCase() === 'completed' || req.status?.toLowerCase() === 'paid' ? (
@@ -1213,9 +1213,9 @@ const AdminBBPSDashboard = () => {
                       <span className="text-slate-500">Status:</span>
                       <span className="text-slate-800">{selectedRequest.eko_details?.status || 'N/A'}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex flex-col gap-1">
                       <span className="text-slate-500">Message:</span>
-                      <span className="text-slate-800">{selectedRequest.eko_details?.message || 'N/A'}</span>
+                      <span className="text-slate-800 text-xs break-words">{selectedRequest.eko_details?.message || selectedRequest.request?.eko_error || selectedRequest.request?.failure_reason || 'N/A'}</span>
                     </div>
                   </div>
                   

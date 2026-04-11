@@ -2598,12 +2598,12 @@ async def get_bbps_request_details(request_id: str):
             "client_ref_id": request_doc.get("client_ref_id") or request_doc.get("eko_client_ref_id"),
             "utr": request_doc.get("utr_number"),
             "status": request_doc.get("eko_status"),
-            "message": request_doc.get("eko_message"),
+            "message": request_doc.get("eko_error") or request_doc.get("eko_message") or request_doc.get("failure_reason"),
             "response": request_doc.get("eko_response")
         },
         "refund_info": {
             "refunded": request_doc.get("prc_refunded", False),
-            "amount": request_doc.get("refund_amount", 0)
+            "amount": request_doc.get("refund_amount") or request_doc.get("prc_required") or request_doc.get("total_prc_deducted") or 0
         }
     }
 
