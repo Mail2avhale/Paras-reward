@@ -28,6 +28,7 @@ import hashlib
 import hmac
 from datetime import datetime, timezone
 import httpx
+import asyncio
 
 router = APIRouter(prefix="/recharge", tags=["Recharge"])
 
@@ -1196,10 +1197,11 @@ async def admin_enquiry_status(request_id: str):
                 {"request_id": request_id},
                 {"$set": update_fields}
             )
-            # Also update bill_payment_requests if exists
+            # bill_payment_requests uses "paid" for success
+            bp_status = "paid" if new_status == "success" else new_status
             await db.bill_payment_requests.update_one(
                 {"request_id": request_id},
-                {"$set": {"status": new_status, "updated_at": now_iso}}
+                {"$set": {"status": bp_status, "eko_tid": eko_data.get("tid"), "updated_at": now_iso}}
             )
             logging.info(f"[RECHARGE] Status updated: {old_status} → {new_status} for {request_id}")
 
@@ -1245,6 +1247,120 @@ async def admin_enquiry_status(request_id: str):
     except Exception as e:
         logging.error(f"[RECHARGE] Admin enquiry error: {e}")
         return {"success": False, "error": str(e)}
+
+
+
+# ===== ADMIN: Check ALL pending transactions via Eko enquiry =====
+
+@router.post("/admin/check-all-pending")
+async def admin_check_all_pending():
+    """
+    Admin: Bulk-check all pending recharge transactions via Eko Enquiry API.
+    Updates status for each pending transaction found on Eko's side.
+    """
+    if db is None or not _eko_configured():
+        return {"success": False, "error": "Service not configured"}
+
+    pending_txns = await db.recharge_transactions.find(
+        {"status": "pending"},
+        {"_id": 0, "request_id": 1, "eko_tid": 1, "client_ref_id": 1, "created_at": 1, "user_id": 1}
+    ).sort("created_at", -1).limit(50).to_list(50)
+
+    if not pending_txns:
+        return {"success": True, "message": "No pending transactions found", "results": []}
+
+    results = []
+    updated_count = 0
+    failed_count = 0
+
+    for txn in pending_txns:
+        req_id = txn.get("request_id")
+        eko_tid = txn.get("eko_tid")
+        client_ref = txn.get("client_ref_id")
+        lookup_id = eko_tid if eko_tid else (f"client_ref_id:{client_ref}" if client_ref else None)
+
+        if not lookup_id:
+            results.append({"request_id": req_id, "status": "skipped", "reason": "No TID or client_ref_id"})
+            continue
+
+        try:
+            timestamp = str(round(time.time() * 1000))
+            headers = _generate_headers(timestamp)
+            url = f"{BASE_URL}/v1/transactions/{lookup_id}"
+
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(url, headers=headers, params={
+                    "initiator_id": INITIATOR_ID,
+                    "user_code": USER_CODE
+                })
+
+            result = response.json()
+            eko_data = result.get("data", {})
+            tx_status = _parse_tx_status(eko_data.get("tx_status"))
+            now_iso = datetime.now(timezone.utc).isoformat()
+
+            new_status = None
+            if tx_status == TxStatus.SUCCESS:
+                new_status = "success"
+            elif tx_status == TxStatus.FAILED:
+                new_status = "failed"
+            elif tx_status == TxStatus.REFUND_PENDING:
+                new_status = "refund_pending"
+            elif tx_status == TxStatus.REFUNDED:
+                new_status = "refunded"
+
+            if new_status and new_status != "pending":
+                update_fields = {"status": new_status, "eko_enquiry_at": now_iso}
+                if eko_data.get("tid"):
+                    update_fields["eko_tid"] = eko_data["tid"]
+                await db.recharge_transactions.update_one(
+                    {"request_id": req_id},
+                    {"$set": update_fields}
+                )
+                bp_status = "paid" if new_status == "success" else new_status
+                await db.bill_payment_requests.update_one(
+                    {"request_id": req_id},
+                    {"$set": {"status": bp_status, "eko_tid": eko_data.get("tid"), "updated_at": now_iso}}
+                )
+
+                # Auto-refund PRC if failed
+                if new_status in ("failed", "refund_pending", "refunded"):
+                    full_txn = await db.recharge_transactions.find_one(
+                        {"request_id": req_id},
+                        {"_id": 0, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1}
+                    )
+                    if full_txn and not full_txn.get("prc_refunded") and full_txn.get("total_prc_deducted", 0) > 0:
+                        prc_amt = full_txn["total_prc_deducted"]
+                        await db.users.update_one(
+                            {"uid": full_txn["user_id"]},
+                            {"$inc": {"prc_balance": prc_amt}}
+                        )
+                        await db.recharge_transactions.update_one(
+                            {"request_id": req_id},
+                            {"$set": {"prc_refunded": True, "refund_at": now_iso, "total_prc_deducted": 0}}
+                        )
+
+                updated_count += 1
+                results.append({"request_id": req_id, "old": "pending", "new": new_status, "eko_tid": eko_data.get("tid")})
+                logging.info(f"[BULK ENQUIRY] {req_id}: pending → {new_status}")
+            else:
+                results.append({"request_id": req_id, "status": "still_pending", "tx_status": tx_status})
+
+            # Small delay to avoid Eko rate limiting
+            await asyncio.sleep(0.5)
+
+        except Exception as e:
+            failed_count += 1
+            results.append({"request_id": req_id, "status": "error", "reason": str(e)[:100]})
+
+    return {
+        "success": True,
+        "total_checked": len(pending_txns),
+        "updated": updated_count,
+        "errors": failed_count,
+        "results": results
+    }
+
 
 
 # ===== ADMIN: Refund PRC for failed/pending transactions =====

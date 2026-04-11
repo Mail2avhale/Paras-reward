@@ -435,6 +435,30 @@ const AdminBBPSDashboard = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          <Button
+            onClick={async () => {
+              try {
+                setLoading(true);
+                const res = await axios.post(`${API}/recharge/admin/check-all-pending`);
+                if (res.data.success) {
+                  toast.success(`Checked ${res.data.total_checked} pending. Updated: ${res.data.updated}, Errors: ${res.data.errors}`);
+                  fetchRequests();
+                } else {
+                  toast.error(res.data.error || 'Failed to check pending');
+                }
+              } catch (e) {
+                toast.error('Failed to check pending transactions');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+            className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+            data-testid="check-all-pending-btn"
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            Check All Pending
+          </Button>
         </div>
       </div>
 
