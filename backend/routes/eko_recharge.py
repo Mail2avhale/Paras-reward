@@ -398,6 +398,88 @@ async def get_operator_params(operator_id: str):
         return {"success": False, "parameters": []}
 
 
+# ===== 3.5. FETCH BILL (for DTH/operators requiring fetchBill) =====
+
+class FetchBillRequest(BaseModel):
+    user_id: str
+    number: str  # subscriber ID / utility_acc_no
+    operator_id: str
+    sender_name: str = ""
+    confirmation_mobile: str = ""
+
+
+@router.post("/fetch-bill")
+async def fetch_bill(data: FetchBillRequest):
+    """
+    Fetch bill for operators that require fetchBill=1.
+    As per: https://developers.eko.in/reference/bbps-fetch-bill
+    Must be called BEFORE paybill for operators with fetchBill flag.
+    """
+    if db is None or not _eko_configured():
+        return {"success": False, "error": "Service not configured"}
+
+    await _ensure_service_activated()
+
+    user = await db.users.find_one({"uid": data.user_id}, {"_id": 0, "name": 1, "mobile": 1})
+    if not user:
+        return {"success": False, "error": "User not found"}
+
+    sender_name = _sanitize_name(data.sender_name or user.get("name", "User"))
+    confirmation_mobile = data.confirmation_mobile or user.get("mobile") or INITIATOR_ID
+    client_ref_id = f"FB{int(time.time() * 1000)}"
+
+    try:
+        timestamp = str(round(time.time() * 1000))
+        headers = _generate_headers(timestamp)
+
+        # Build query params for fetchBill GET request
+        params = {
+            "initiator_id": INITIATOR_ID,
+            "user_code": USER_CODE,
+            "client_ref_id": client_ref_id,
+            "utility_acc_no": data.number,
+            "confirmation_mobile_no": confirmation_mobile,
+            "sender_name": sender_name,
+            "operator_id": str(data.operator_id),
+            "source_ip": SOURCE_IP,
+            "latlong": DEFAULT_LATLONG
+        }
+
+        # Try v2 endpoint first (consistent with our paybill)
+        url = f"{BASE_URL}/v2/billpayments/fetchbill"
+        logging.info(f"[RECHARGE] FetchBill: operator={data.operator_id}, number={data.number}")
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, headers=headers, params=params)
+
+        result = response.json()
+        eko_status = result.get("status")
+        logging.info(f"[RECHARGE] FetchBill response: status={eko_status}, msg={result.get('message', '')[:100]}")
+
+        if eko_status == 0:
+            bill_data = result.get("data", {})
+            return {
+                "success": True,
+                "bill": {
+                    "customer_name": bill_data.get("utilitycustomername", ""),
+                    "amount": bill_data.get("amount", ""),
+                    "bill_date": bill_data.get("billdate", ""),
+                    "bill_number": bill_data.get("billnumber", ""),
+                    "billfetchresponse": bill_data.get("billfetchresponse", ""),
+                    "customer_id": bill_data.get("customer_id", "")
+                }
+            }
+        else:
+            user_msg = _get_user_friendly_message(result.get("message", ""), eko_status)
+            return {"success": False, "error": user_msg}
+
+    except httpx.TimeoutException:
+        return {"success": False, "error": "Network timeout. Please try again."}
+    except Exception as e:
+        logging.error(f"[RECHARGE] FetchBill error: {e}")
+        return {"success": False, "error": GENERIC_ERROR}
+
+
 # ===== 4. INITIATE RECHARGE =====
 
 class RechargeRequest(BaseModel):
@@ -406,6 +488,7 @@ class RechargeRequest(BaseModel):
     number: str
     operator_id: str
     amount: float
+    billfetchresponse: str = ""  # Required for operators with fetchBill=1
 
 
 @router.post("/initiate")
@@ -621,6 +704,10 @@ async def initiate_recharge(data: RechargeRequest):
         "operator_id": str(data.operator_id),
         "latlong": DEFAULT_LATLONG
     }
+
+    # Add billfetchresponse for DTH operators that require fetchBill
+    if data.billfetchresponse:
+        body["billfetchresponse"] = data.billfetchresponse
 
     eko_url = f"{BASE_URL}/v2/billpayments/paybill?initiator_id={INITIATOR_ID}"
     logging.info(f"[RECHARGE] Calling Eko: user={data.user_id}, type={data.recharge_type}, "

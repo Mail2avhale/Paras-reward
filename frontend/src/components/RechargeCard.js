@@ -22,6 +22,13 @@ const RechargeCard = ({ user, stats }) => {
   const [dailyRemaining, setDailyRemaining] = useState(500);
   const [monthlyRemaining, setMonthlyRemaining] = useState(1500);
 
+  // DTH-specific state
+  const [operatorParams, setOperatorParams] = useState(null);
+  const [fetchBillRequired, setFetchBillRequired] = useState(false);
+  const [billData, setBillData] = useState(null);
+  const [fetchingBill, setFetchingBill] = useState(false);
+  const [numberError, setNumberError] = useState('');
+
   const prcRate = stats?.prcRate || 10;
 
   const fetchOperators = useCallback(async (type) => {
@@ -75,6 +82,86 @@ const RechargeCard = ({ user, stats }) => {
     setNumber('');
     setAmount('');
     setResult(null);
+    // Reset DTH state
+    setOperatorParams(null);
+    setFetchBillRequired(false);
+    setBillData(null);
+    setNumberError('');
+  };
+
+  // DTH: Fetch operator params when operator changes
+  const handleOperatorChange = async (opId) => {
+    setSelectedOperator(opId);
+    setNumberError('');
+    setBillData(null);
+
+    if (rechargeType === 'dth' && opId) {
+      try {
+        const res = await axios.get(`${API}/recharge/operator-params/${opId}`);
+        if (res.data.success && res.data.parameters?.length) {
+          setOperatorParams(res.data.parameters);
+          setFetchBillRequired(res.data.fetch_bill_required || false);
+        } else {
+          setOperatorParams(null);
+          setFetchBillRequired(false);
+        }
+      } catch {
+        setOperatorParams(null);
+        setFetchBillRequired(false);
+      }
+    } else {
+      setOperatorParams(null);
+      setFetchBillRequired(false);
+    }
+  };
+
+  // DTH: Validate subscriber ID against operator regex
+  const validateDthNumber = (val) => {
+    if (!operatorParams?.length || rechargeType !== 'dth') return true;
+    const param = operatorParams[0];
+    if (param.regex) {
+      try {
+        const regex = new RegExp(param.regex);
+        if (!regex.test(val)) {
+          setNumberError(param.error_message || `Invalid ${param.param_label || 'subscriber ID'} format`);
+          return false;
+        }
+      } catch { /* invalid regex from Eko, skip */ }
+    }
+    setNumberError('');
+    return true;
+  };
+
+  // DTH: Handle fetch bill
+  const handleFetchBill = async () => {
+    if (!number || !selectedOperator) {
+      toast.error('Please enter subscriber ID and select operator');
+      return;
+    }
+    if (!validateDthNumber(number)) return;
+
+    setFetchingBill(true);
+    setBillData(null);
+    try {
+      const res = await axios.post(`${API}/recharge/fetch-bill`, {
+        user_id: user.uid,
+        number: number.trim(),
+        operator_id: selectedOperator
+      });
+      if (res.data.success) {
+        setBillData(res.data.bill);
+        if (res.data.bill?.amount) {
+          setAmount(String(Math.min(parseInt(res.data.bill.amount) || 0, 500)));
+        }
+        toast.success('Bill fetched successfully');
+      } else {
+        toast.error(res.data.error || 'Failed to fetch bill');
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Failed to fetch bill');
+    } finally {
+      setFetchingBill(false);
+    }
   };
 
   const maxAllowed = Math.min(500, dailyRemaining, monthlyRemaining);
@@ -102,24 +189,40 @@ const RechargeCard = ({ user, stats }) => {
       toast.error('Enter a valid 10-digit mobile number');
       return;
     }
+    // DTH: validate subscriber ID against operator regex
+    if (rechargeType === 'dth' && !validateDthNumber(number)) {
+      return;
+    }
+    // DTH: if fetchBill required but not fetched
+    if (rechargeType === 'dth' && fetchBillRequired && !billData) {
+      toast.error('Please fetch bill first before recharging');
+      return;
+    }
 
     setLoading(true);
     setResult(null);
 
     try {
-      const res = await axios.post(`${API}/recharge/initiate`, {
+      const payload = {
         user_id: user.uid,
         recharge_type: rechargeType,
         number: number.trim(),
         operator_id: selectedOperator,
         amount: amt
-      });
+      };
+      // Pass billfetchresponse if available (DTH with fetchBill)
+      if (rechargeType === 'dth' && billData?.billfetchresponse) {
+        payload.billfetchresponse = billData.billfetchresponse;
+      }
+
+      const res = await axios.post(`${API}/recharge/initiate`, payload);
 
       if (res.data.success) {
         setResult({ success: true, message: res.data.message });
         toast.success(res.data.message);
         setNumber('');
         setAmount('');
+        setBillData(null);
         fetchRecentTxns();
         if (res.data.amount) {
           setDailyRemaining(prev => Math.max(0, prev - res.data.amount));
@@ -141,7 +244,8 @@ const RechargeCard = ({ user, stats }) => {
     ? Math.ceil((parseInt(amount, 10) * 1.2 + 10) * prcRate)
     : 0;
 
-  const isFormValid = number && selectedOperator && amount && parseInt(amount, 10) > 0 && parseInt(amount, 10) <= maxAllowed;
+  const isFormValid = number && selectedOperator && amount && parseInt(amount, 10) > 0 && parseInt(amount, 10) <= maxAllowed && !numberError
+    && (rechargeType !== 'dth' || !fetchBillRequired || billData);
 
   return (
     <motion.div
@@ -192,19 +296,62 @@ const RechargeCard = ({ user, stats }) => {
           type="tel"
           inputMode="numeric"
           maxLength={rechargeType === 'mobile' ? 10 : 20}
-          placeholder={rechargeType === 'mobile' ? 'Enter 10-digit mobile number' : 'Enter subscriber ID'}
+          placeholder={
+            rechargeType === 'mobile'
+              ? 'Enter 10-digit mobile number'
+              : (operatorParams?.[0]?.param_label || 'Enter subscriber ID')
+          }
           value={number}
-          onChange={(e) => setNumber(e.target.value.replace(/[^0-9]/g, ''))}
+          onChange={(e) => {
+            const val = e.target.value.replace(/[^0-9]/g, '');
+            setNumber(val);
+            if (rechargeType === 'dth' && val.length >= 3) validateDthNumber(val);
+            else setNumberError('');
+            setBillData(null);
+          }}
           data-testid="recharge-number-input"
-          className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
+          className={`w-full bg-zinc-800/60 border rounded-lg px-3 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors ${
+            numberError ? 'border-red-500/50 focus:border-red-500/70' : 'border-zinc-700/50 focus:border-cyan-500/50'
+          }`}
         />
+        {numberError && (
+          <p className="text-red-400 text-[10px] mt-1 pl-1" data-testid="number-error">{numberError}</p>
+        )}
       </div>
+
+      {/* DTH: Fetch Bill Button (when required) */}
+      {rechargeType === 'dth' && fetchBillRequired && selectedOperator && number && !billData && (
+        <button
+          onClick={handleFetchBill}
+          disabled={fetchingBill || !number || !!numberError}
+          data-testid="fetch-bill-btn"
+          className={`w-full py-2 rounded-lg text-xs font-semibold mb-3 flex items-center justify-center gap-2 transition-all ${
+            fetchingBill || !number || !!numberError
+              ? 'bg-zinc-700/60 text-zinc-500 cursor-not-allowed'
+              : 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25'
+          }`}
+        >
+          {fetchingBill ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Fetching Bill...</> : 'Fetch Bill Details'}
+        </button>
+      )}
+
+      {/* DTH: Bill Details Display */}
+      {billData && (
+        <div className="mb-3 p-2.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20" data-testid="bill-details">
+          {billData.customer_name && (
+            <p className="text-cyan-300 text-xs font-medium">{billData.customer_name}</p>
+          )}
+          {billData.amount && (
+            <p className="text-gray-400 text-[10px] mt-0.5">Bill Amount: ₹{billData.amount}</p>
+          )}
+        </div>
+      )}
 
       {/* Operator Select */}
       <div className="mb-3 relative">
         <select
           value={selectedOperator}
-          onChange={(e) => setSelectedOperator(e.target.value)}
+          onChange={(e) => handleOperatorChange(e.target.value)}
           data-testid="recharge-operator-select"
           className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2.5 text-sm appearance-none focus:outline-none focus:border-cyan-500/50 transition-colors"
           style={{ color: selectedOperator ? '#fff' : '#6b7280' }}

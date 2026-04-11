@@ -66,6 +66,14 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Only hidden**: Eko wallet low balance (347) → "Technical error". All other failures show meaningful message.
 - **Admin Detail Fix**: `/admin/bbps-request/{id}` now searches BOTH collections.
 
+### DTH Recharge Flow — As Per Eko Developer Docs (DONE — April 2026)
+- Backend: Added `POST /recharge/fetch-bill` endpoint for operators with fetchBill=1
+- Backend: Added `billfetchresponse` parameter to paybill for DTH
+- Frontend: DTH tab fetches operator params (regex, param_label) on operator selection
+- Frontend: Live subscriber ID validation against Eko's per-operator regex
+- Frontend: FetchBill step shown when required, bill details displayed before pay
+- Mobile flow: UNCHANGED
+
 ## Pending Issues
 - P1: Fix Missing Hook Dependencies (192 instances)
 - P1: Replace Index Keys with Stable Keys (82 instances)
