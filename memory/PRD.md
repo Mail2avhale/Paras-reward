@@ -74,6 +74,15 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - Frontend: FetchBill step shown when required, bill details displayed before pay
 - Mobile flow: UNCHANGED
 
+### Admin Full Transaction Visibility + Fetch Status + Refund PRC (DONE — April 2026)
+- Admin BBPS Dashboard now queries ALL 3 collections: `redeem_requests` + `bill_payment_requests` + `recharge_transactions`
+- **ALL statuses visible**: Success, Failed, Pending, Refunded, On Hold
+- **Reason column**: Shows Eko error/failure reason for failed transactions
+- **Fetch Status button**: Calls Eko Transaction Enquiry API (`GET /v1/transactions/{tid}`) — live status check, auto-updates local DB if changed
+- **Refund PRC button**: Only shown for failed/pending transactions where PRC not already refunded. Refunds PRC to user and marks transaction as "refunded"
+- Status filter: Added "Refunded" option
+- Detail endpoint: Also searches `recharge_transactions` collection
+
 ## Pending Issues
 - P1: Fix Missing Hook Dependencies (192 instances)
 - P1: Replace Index Keys with Stable Keys (82 instances)

@@ -1017,4 +1017,174 @@ async def get_recharge_history(user_id: str):
         "monthly_remaining": max(0, MAX_MONTHLY_UTILITY - monthly_used)
     }
 
-    return {"success": True, "transactions": txns, "count": len(txns)}
+
+# ===== ADMIN: Fetch Transaction Status from Eko =====
+
+@router.get("/admin/enquiry/{request_id}")
+async def admin_enquiry_status(request_id: str):
+    """
+    Admin: Check live transaction status from Eko using Transaction Enquiry API.
+    As per: https://developers.eko.in — GET /v1/transactions/{id}
+    """
+    if db is None or not _eko_configured():
+        return {"success": False, "error": "Service not configured"}
+
+    # Find the transaction
+    txn = await db.recharge_transactions.find_one(
+        {"request_id": request_id},
+        {"_id": 0, "eko_tid": 1, "client_ref_id": 1, "status": 1, "user_id": 1}
+    )
+    if not txn:
+        return {"success": False, "error": "Transaction not found"}
+
+    # Use eko_tid if available, else client_ref_id
+    eko_tid = txn.get("eko_tid")
+    client_ref = txn.get("client_ref_id")
+    lookup_id = eko_tid if eko_tid else f"client_ref_id:{client_ref}"
+
+    if not lookup_id:
+        return {"success": False, "error": "No TID or reference ID available"}
+
+    try:
+        timestamp = str(round(time.time() * 1000))
+        headers = _generate_headers(timestamp)
+
+        url = f"{BASE_URL}/v1/transactions/{lookup_id}"
+        logging.info(f"[RECHARGE] Admin enquiry: request={request_id}, lookup={lookup_id}")
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, headers=headers, params={
+                "initiator_id": INITIATOR_ID,
+                "user_code": USER_CODE
+            })
+
+        result = response.json()
+        eko_status = result.get("status")
+        eko_data = result.get("data", {})
+        tx_status = _parse_tx_status(eko_data.get("tx_status"))
+
+        # Map tx_status to readable label
+        status_labels = {
+            TxStatus.SUCCESS: "Success",
+            TxStatus.FAILED: "Failed",
+            TxStatus.RESPONSE_AWAITED: "Response Awaited",
+            TxStatus.REFUND_PENDING: "Refund Pending",
+            TxStatus.REFUNDED: "Refunded",
+            TxStatus.ON_HOLD: "On Hold"
+        }
+        readable_status = status_labels.get(tx_status, f"Unknown ({tx_status})")
+
+        # Update local record if status changed
+        new_status = None
+        if tx_status == TxStatus.SUCCESS:
+            new_status = "success"
+        elif tx_status == TxStatus.FAILED:
+            new_status = "failed"
+        elif tx_status in (TxStatus.REFUND_PENDING, TxStatus.REFUNDED):
+            new_status = "refunded"
+        elif tx_status in (TxStatus.RESPONSE_AWAITED, TxStatus.ON_HOLD):
+            new_status = "pending"
+
+        old_status = txn.get("status")
+        if new_status and new_status != old_status:
+            await db.recharge_transactions.update_one(
+                {"request_id": request_id},
+                {"$set": {"status": new_status, "eko_enquiry_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            # Also update bill_payment_requests if exists
+            await db.bill_payment_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {"status": new_status}}
+            )
+            logging.info(f"[RECHARGE] Status updated: {old_status} → {new_status} for {request_id}")
+
+        return {
+            "success": True,
+            "eko_status": eko_status,
+            "tx_status": tx_status,
+            "tx_status_label": readable_status,
+            "message": result.get("message", ""),
+            "eko_tid": eko_data.get("tid", eko_tid),
+            "amount": eko_data.get("amount", ""),
+            "old_status": old_status,
+            "new_status": new_status or old_status,
+            "status_changed": new_status is not None and new_status != old_status
+        }
+
+    except httpx.TimeoutException:
+        return {"success": False, "error": "Eko API timeout. Please try again."}
+    except Exception as e:
+        logging.error(f"[RECHARGE] Admin enquiry error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+# ===== ADMIN: Refund PRC for failed/pending transactions =====
+
+class RefundRequest(BaseModel):
+    admin_note: str = ""
+
+
+@router.post("/admin/refund/{request_id}")
+async def admin_refund_prc(request_id: str, data: RefundRequest = RefundRequest()):
+    """
+    Admin: Refund PRC for a failed/pending transaction.
+    Only allowed if PRC was not already refunded.
+    """
+    if db is None:
+        return {"success": False, "error": "Service not configured"}
+
+    # Find the transaction
+    txn = await db.recharge_transactions.find_one(
+        {"request_id": request_id},
+        {"_id": 0}
+    )
+    if not txn:
+        return {"success": False, "error": "Transaction not found"}
+
+    # Check if already refunded
+    if txn.get("prc_refunded"):
+        return {"success": False, "error": "PRC already refunded for this transaction"}
+
+    # Check if status allows refund (failed, pending — not success)
+    if txn.get("status") in ("success", "paid"):
+        return {"success": False, "error": "Cannot refund a successful transaction"}
+
+    prc_amount = txn.get("total_prc_deducted", 0)
+    if prc_amount <= 0:
+        return {"success": False, "error": "No PRC to refund (amount is 0)"}
+
+    user_id = txn.get("user_id")
+
+    # Refund PRC to user
+    refund_result = await db.users.update_one(
+        {"uid": user_id},
+        {"$inc": {"prc_balance": prc_amount}}
+    )
+    if refund_result.modified_count == 0:
+        return {"success": False, "error": "User not found or PRC update failed"}
+
+    # Mark transaction as refunded
+    now_iso = datetime.now(timezone.utc).isoformat()
+    await db.recharge_transactions.update_one(
+        {"request_id": request_id},
+        {"$set": {
+            "prc_refunded": True,
+            "status": "refunded",
+            "refund_at": now_iso,
+            "admin_refund_note": data.admin_note
+        }}
+    )
+    # Also update bill_payment_requests if exists
+    await db.bill_payment_requests.update_one(
+        {"request_id": request_id},
+        {"$set": {"status": "refunded", "prc_refunded": True}}
+    )
+
+    logging.info(f"[RECHARGE] Admin PRC refund: {prc_amount:.2f} PRC → user {user_id}, request={request_id}")
+
+    return {
+        "success": True,
+        "message": f"₹{prc_amount:.2f} PRC refunded successfully",
+        "prc_refunded": prc_amount,
+        "user_id": user_id
+    }

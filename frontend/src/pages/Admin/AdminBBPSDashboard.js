@@ -235,14 +235,23 @@ const AdminBBPSDashboard = () => {
     
     setRefundLoading(true);
     try {
+      // Try recharge refund endpoint first (for recharge_transactions)
+      try {
+        const res = await axios.post(`${API}/recharge/admin/refund/${requestId}`, { admin_note: reason });
+        if (res.data.success) {
+          toast.success(res.data.message || 'PRC refunded successfully!');
+          fetchRequests();
+          return;
+        }
+      } catch { /* fall through to unified refund */ }
+
+      // Fall back to unified BBPS refund endpoint
       const response = await axios.post(`${API}/redeem/admin/manual-refund/${requestId}`, null, {
         params: { admin_id: "admin", reason }
       });
       if (response.data.success) {
         toast.success(`${response.data.refund_amount} PRC refunded successfully!`);
-        // Refresh the request details
         viewRequestDetails(requestId);
-        // Refresh the list
         fetchRequests();
       } else {
         toast.error(response.data.message || 'Refund failed');
@@ -251,6 +260,30 @@ const AdminBBPSDashboard = () => {
       toast.error(error.response?.data?.detail || 'Refund failed. Please try again.');
     } finally {
       setRefundLoading(false);
+    }
+  };
+
+  // Admin: Fetch live transaction status from Eko
+  const [enquiryLoading, setEnquiryLoading] = useState(null);
+  const handleFetchStatus = async (requestId) => {
+    setEnquiryLoading(requestId);
+    try {
+      const res = await axios.get(`${API}/recharge/admin/enquiry/${requestId}`);
+      if (res.data.success) {
+        const { tx_status_label, old_status, new_status, status_changed } = res.data;
+        if (status_changed) {
+          toast.success(`Status updated: ${old_status} → ${new_status} (Eko: ${tx_status_label})`);
+          fetchRequests();
+        } else {
+          toast.info(`Eko Status: ${tx_status_label} (no change)`);
+        }
+      } else {
+        toast.error(res.data.error || 'Failed to fetch status');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to fetch status from Eko');
+    } finally {
+      setEnquiryLoading(null);
     }
   };
 
@@ -776,6 +809,7 @@ const AdminBBPSDashboard = () => {
             <option value="paid">Paid/Success</option>
             <option value="failed">Failed</option>
             <option value="rejected">Rejected</option>
+            <option value="refunded">Refunded</option>
           </select>
           
           {/* Service Type Filter */}
@@ -890,6 +924,7 @@ const AdminBBPSDashboard = () => {
                 <th className="text-left p-3 text-xs font-semibold text-slate-500">User</th>
                 <th className="text-left p-3 text-xs font-semibold text-slate-500">Amount</th>
                 <th className="text-left p-3 text-xs font-semibold text-slate-500">Status</th>
+                <th className="text-left p-3 text-xs font-semibold text-slate-500">Reason</th>
                 <th className="text-left p-3 text-xs font-semibold text-slate-500">Eko TID</th>
                 <th className="text-left p-3 text-xs font-semibold text-slate-500">Date</th>
                 <th className="text-left p-3 text-xs font-semibold text-slate-500">Actions</th>
@@ -898,14 +933,14 @@ const AdminBBPSDashboard = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center">
+                  <td colSpan="9" className="p-8 text-center">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto text-amber-400" />
                     <p className="text-slate-500 mt-2">Loading...</p>
                   </td>
                 </tr>
               ) : requests.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-500">
+                  <td colSpan="9" className="p-8 text-center text-slate-500">
                     No requests found
                   </td>
                 </tr>
@@ -962,6 +997,17 @@ const AdminBBPSDashboard = () => {
                         </span>
                       </td>
                       <td className="p-3">
+                        {(req.failure_reason || req.eko_error) ? (
+                          <span className="text-xs text-red-400 max-w-[180px] block truncate" title={req.failure_reason || req.eko_error}>
+                            {req.failure_reason || req.eko_error}
+                          </span>
+                        ) : req.status?.toLowerCase() === 'success' || req.status?.toLowerCase() === 'completed' || req.status?.toLowerCase() === 'paid' ? (
+                          <span className="text-xs text-green-500">-</span>
+                        ) : (
+                          <span className="text-xs text-slate-500">-</span>
+                        )}
+                      </td>
+                      <td className="p-3">
                         {req.eko_tid ? (
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-mono text-green-400">{req.eko_tid}</span>
@@ -1000,16 +1046,36 @@ const AdminBBPSDashboard = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {/* Fetch Status from Eko (for pending/failed) */}
+                          {(req.status?.toLowerCase() === 'pending' || req.status?.toLowerCase() === 'failed' || req.status?.toLowerCase() === 'on_hold') && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleFetchStatus(req.request_id)}
+                              className="h-7 px-1.5 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20 text-[10px]"
+                              disabled={enquiryLoading === req.request_id}
+                              data-testid={`fetch-status-btn-${req.request_id}`}
+                              title="Fetch live status from Eko"
+                            >
+                              {enquiryLoading === req.request_id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          )}
+                          {/* Refund PRC (for failed/pending where PRC not yet refunded) */}
                           {(req.status === 'pending' || req.status === 'PENDING' || req.status === 'failed' || req.status === 'FAILED') && !req.prc_refunded && (
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => handleRefund(req.request_id, `Stuck ${req.status} transaction - No EKO TID`)}
-                              className="h-8 px-2 text-orange-400 hover:text-orange-300 hover:bg-orange-500/20"
+                              className="h-7 px-1.5 text-orange-400 hover:text-orange-300 hover:bg-orange-500/20 text-[10px]"
                               disabled={refundLoading}
                               data-testid={`refund-btn-${req.request_id}`}
+                              title="Refund PRC to user"
                             >
-                              <RefreshCw className={`h-4 w-4 ${refundLoading ? 'animate-spin' : ''}`} />
+                              Refund
                             </Button>
                           )}
                           {req.prc_refunded && (

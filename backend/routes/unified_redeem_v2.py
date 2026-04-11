@@ -2351,13 +2351,46 @@ async def get_bbps_requests(
             query["created_at"] = {}
         query["created_at"]["$lte"] = to_date
 
-    # Query BOTH collections
+    # Query BOTH collections + recharge_transactions
     rr_count = await db.redeem_requests.count_documents(query)
     bp_count = await db.bill_payment_requests.count_documents(query)
-    total = rr_count + bp_count
 
-    # Fetch from both collections (over-fetch for merge & sort)
-    fetch_limit = (page * limit) + limit  # fetch enough to cover pagination
+    # Build adapted query for recharge_transactions (uses recharge_type instead of service_type)
+    rt_query = {}
+    if search and search.strip():
+        s = search.strip()
+        rt_query["$or"] = [
+            {"request_id": {"$regex": s, "$options": "i"}},
+            {"eko_tid": s},
+            {"client_ref_id": {"$regex": s, "$options": "i"}},
+            {"number": s},
+            {"user_mobile": s},
+            {"user_name": {"$regex": s, "$options": "i"}}
+        ]
+    if status:
+        rt_query["status"] = {"$regex": f"^{status}$", "$options": "i"}
+    # Map service_type filter to recharge_type for recharge_transactions
+    rt_type_map = {"mobile_recharge": "mobile", "dish_recharge": "dth"}
+    if service_type:
+        rt_type = rt_type_map.get(service_type)
+        if rt_type:
+            rt_query["recharge_type"] = rt_type
+        else:
+            rt_query["recharge_type"] = {"$exists": False}  # won't match anything
+    if user_id:
+        rt_query["user_id"] = user_id
+    if from_date:
+        rt_query["created_at"] = {"$gte": from_date if "T" in from_date else from_date + "T00:00:00"}
+    if to_date:
+        if "created_at" not in rt_query:
+            rt_query["created_at"] = {}
+        rt_query["created_at"]["$lte"] = to_date if "T" in to_date else to_date + "T23:59:59"
+
+    rt_count = await db.recharge_transactions.count_documents(rt_query)
+    total = rr_count + bp_count + rt_count
+
+    # Fetch from all three collections (over-fetch for merge & sort)
+    fetch_limit = (page * limit) + limit
     rr_raw = await db.redeem_requests.find(
         query, {"_id": 0}
     ).sort("created_at", -1).limit(fetch_limit).to_list(fetch_limit)
@@ -2366,14 +2399,28 @@ async def get_bbps_requests(
         query, {"_id": 0}
     ).sort("created_at", -1).limit(fetch_limit).to_list(fetch_limit)
 
+    rt_raw = await db.recharge_transactions.find(
+        rt_query, {"_id": 0}
+    ).sort("created_at", -1).limit(fetch_limit).to_list(fetch_limit)
+
     # Tag source for dedup
     for r in rr_raw:
         r["_source"] = "redeem_requests"
     for r in bp_raw:
         r["_source"] = "bill_payment_requests"
+    # Normalize recharge_transactions fields to match expected schema
+    for r in rt_raw:
+        r["_source"] = "recharge_transactions"
+        rt = r.get("recharge_type", "")
+        r["service_type"] = "mobile_recharge" if rt == "mobile" else ("dish_recharge" if rt == "dth" else rt)
+        if not r.get("amount"):
+            r["amount"] = r.get("amount_inr")
+        # Carry over failure reason and refund status for admin
+        r["failure_reason"] = r.get("eko_error", "")
+        r["prc_refunded"] = r.get("prc_refunded", False)
 
     # Merge, deduplicate by request_id, sort
-    merged = rr_raw + bp_raw
+    merged = rr_raw + bp_raw + rt_raw
     seen_ids = set()
     unique = []
     for r in merged:
@@ -2424,6 +2471,7 @@ async def get_bbps_requests(
     }
 
     stats_match = {"service_type": {"$ne": "dmt"}}
+    rt_stats_match = {}  # recharge_transactions doesn't have service_type
     status_group = {
         "_id": "$status",
         "count": {"$sum": 1},
@@ -2436,10 +2484,18 @@ async def get_bbps_requests(
         "success": {"$sum": {"$cond": [{"$in": ["$status", ["completed", "paid", "success"]]}, 1, 0]}},
         "failed": {"$sum": {"$cond": [{"$in": ["$status", ["failed", "eko_failed", "retry_failed"]]}, 1, 0]}}
     }
+    rt_service_group = {
+        "_id": "$recharge_type",
+        "count": {"$sum": 1},
+        "success": {"$sum": {"$cond": [{"$in": ["$status", ["success", "paid"]]}, 1, 0]}},
+        "failed": {"$sum": {"$cond": [{"$in": ["$status", ["failed"]]}, 1, 0]}}
+    }
 
-    for coll in [db.redeem_requests, db.bill_payment_requests]:
+    for coll in [db.redeem_requests, db.bill_payment_requests, db.recharge_transactions]:
+        use_match = rt_stats_match if coll == db.recharge_transactions else stats_match
+        use_svc_group = rt_service_group if coll == db.recharge_transactions else service_group
         s_stats = await coll.aggregate([
-            {"$match": stats_match},
+            {"$match": use_match},
             {"$group": status_group}
         ]).to_list(20)
         for stat in s_stats:
@@ -2458,11 +2514,14 @@ async def get_bbps_requests(
             stats["total_prc_used"] += stat["total_prc"] or 0
 
         svc_stats = await coll.aggregate([
-            {"$match": stats_match},
-            {"$group": service_group}
+            {"$match": use_match},
+            {"$group": use_svc_group}
         ]).to_list(30)
         for stat in svc_stats:
             key = stat["_id"]
+            # Normalize recharge_type to service_type for stats
+            if coll == db.recharge_transactions:
+                key = "mobile_recharge" if key == "mobile" else ("dish_recharge" if key == "dth" else key)
             if key in stats["by_service"]:
                 stats["by_service"][key]["total"] += stat["count"]
                 stats["by_service"][key]["success"] += stat["success"]
@@ -2497,7 +2556,7 @@ async def get_bbps_request_details(request_id: str):
     Admin: Get single BBPS request with complete details
     Searches both redeem_requests and bill_payment_requests collections.
     """
-    # Check redeem_requests first, then bill_payment_requests
+    # Check redeem_requests first, then bill_payment_requests, then recharge_transactions
     request_doc = await db.redeem_requests.find_one(
         {"request_id": request_id},
         {"_id": 0}
@@ -2507,6 +2566,19 @@ async def get_bbps_request_details(request_id: str):
             {"request_id": request_id},
             {"_id": 0}
         )
+    if not request_doc:
+        request_doc = await db.recharge_transactions.find_one(
+            {"request_id": request_id},
+            {"_id": 0}
+        )
+        if request_doc:
+            # Normalize fields
+            rt = request_doc.get("recharge_type", "")
+            request_doc["service_type"] = "mobile_recharge" if rt == "mobile" else ("dish_recharge" if rt == "dth" else rt)
+            if not request_doc.get("amount"):
+                request_doc["amount"] = request_doc.get("amount_inr")
+            request_doc["failure_reason"] = request_doc.get("eko_error", "")
+            request_doc["prc_refunded"] = request_doc.get("prc_refunded", False)
     
     if not request_doc:
         raise HTTPException(status_code=404, detail="Request not found")
