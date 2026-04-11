@@ -464,6 +464,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/eko-services" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEkoServices user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 {/* AdminRedeemDashboard - REMOVED (deprecated March 2026, no pending requests) */}
                 <Route path="/admin/redeem" element={<Navigate to="/admin/bbps" replace />} />
+                <Route path="/admin/bbps-requests" element={<Navigate to="/admin/bbps" replace />} />
                 <Route path="/admin/bbps" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminBBPSDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 {/* Admin DMT routes REMOVED - Eko API not working, redirect to admin */}
                 <Route path="/admin/dmt" element={<Navigate to="/admin" replace />} />
