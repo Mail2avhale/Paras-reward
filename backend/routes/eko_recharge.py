@@ -541,7 +541,7 @@ async def initiate_recharge(data: RechargeRequest):
     logging.info(f"[RECHARGE] Step 3: user={data.user_id}, today_total=₹{today_total}, remaining=₹{remaining_daily}")
     if int_amount > remaining_daily:
         logging.info(f"[RECHARGE] Step 3: BLOCKED daily limit ₹{int_amount} > remaining ₹{remaining_daily}")
-        return {"success": False, "message": GENERIC_ERROR, "error_ref": "R03"}
+        return {"success": False, "message": "You've reached your daily recharge limit. No worries! Keep collecting reward points to continue tomorrow.", "error_ref": "R03"}
 
     # ===== Step 3.1: 10-minute cooldown between recharges =====
     from datetime import timedelta
@@ -595,7 +595,7 @@ async def initiate_recharge(data: RechargeRequest):
 
     if int_amount > monthly_remaining:
         logging.info(f"[RECHARGE] Step 3.5: BLOCKED monthly limit ₹{int_amount} > remaining ₹{monthly_remaining}")
-        return {"success": False, "message": "Monthly recharge limit reached", "error_ref": "R03M"}
+        return {"success": False, "message": "You've reached your monthly recharge limit. No worries! Keep collecting reward points to continue next month.", "error_ref": "R03M"}
 
     # ===== Step 4: User + subscription check =====
     user = await db.users.find_one({"uid": data.user_id})
