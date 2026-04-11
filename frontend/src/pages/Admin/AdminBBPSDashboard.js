@@ -49,6 +49,7 @@ const STATUS_CONFIG = {
   failed: { color: 'red', icon: XCircle, label: 'Failed' },
   rejected: { color: 'gray', icon: AlertCircle, label: 'Rejected' },
   refunded: { color: 'orange', icon: RefreshCw, label: 'Refunded' },
+  refund_pending: { color: 'amber', icon: AlertTriangle, label: 'Refund Pending' },
   eko_failed: { color: 'red', icon: XCircle, label: 'Failed' },
   retry_failed: { color: 'red', icon: XCircle, label: 'Retry Failed' }
 };
@@ -694,7 +695,7 @@ const AdminBBPSDashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
         {/* Total */}
         <Card className="bg-blue-50 border-blue-200 p-4">
           <div className="flex items-center gap-3">
@@ -738,8 +739,8 @@ const AdminBBPSDashboard = () => {
           </div>
         </Card>
         
-        {/* Pending */}
-        <Card className="bg-yellow-50 border-yellow-200 p-4">
+        {/* Pending / Response Awaited */}
+        <Card className="bg-yellow-50 border-yellow-200 p-4 cursor-pointer hover:bg-yellow-100 transition-colors" onClick={() => { setFilters(prev => ({ ...prev, status: 'pending' })); setPagination(prev => ({ ...prev, page: 1 })); }} data-testid="response-awaited-card">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-yellow-500 flex items-center justify-center">
               <Clock className="h-5 w-5 text-white" />
@@ -748,6 +749,21 @@ const AdminBBPSDashboard = () => {
               <p className="text-yellow-700 text-xs font-medium">Pending</p>
               <p className="text-xl font-bold text-yellow-700">
                 {stats.by_status?.pending?.count || 0}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Refund Pending */}
+        <Card className="bg-amber-50 border-amber-200 p-4 cursor-pointer hover:bg-amber-100 transition-colors" onClick={() => { setFilters(prev => ({ ...prev, status: 'refund_pending' })); setPagination(prev => ({ ...prev, page: 1 })); }} data-testid="refund-pending-card">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-amber-700 text-xs font-medium">Refund Pending</p>
+              <p className="text-xl font-bold text-amber-700">
+                {stats.by_status?.refund_pending?.count || 0}
               </p>
             </div>
           </div>
@@ -809,6 +825,7 @@ const AdminBBPSDashboard = () => {
             <option value="paid">Paid/Success</option>
             <option value="failed">Failed</option>
             <option value="rejected">Rejected</option>
+            <option value="refund_pending">Refund Pending</option>
             <option value="refunded">Refunded</option>
           </select>
           
@@ -990,6 +1007,8 @@ const AdminBBPSDashboard = () => {
                           req.status === 'failed' ? 'bg-red-500/20 text-red-400' :
                           req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
                           req.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
+                          req.status === 'refund_pending' ? 'bg-amber-500/20 text-amber-400' :
+                          req.status === 'refunded' ? 'bg-orange-500/20 text-orange-400' :
                           'bg-gray-500/20 text-slate-500'
                         }`}>
                           <StatusIcon className={`h-3 w-3 ${req.status === 'processing' ? 'animate-spin' : ''}`} />
@@ -1046,8 +1065,8 @@ const AdminBBPSDashboard = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {/* Fetch Status from Eko (for pending/failed) */}
-                          {(req.status?.toLowerCase() === 'pending' || req.status?.toLowerCase() === 'failed' || req.status?.toLowerCase() === 'on_hold') && (
+                          {/* Fetch Status from Eko (for pending/failed/refund_pending) */}
+                          {(req.status?.toLowerCase() === 'pending' || req.status?.toLowerCase() === 'failed' || req.status?.toLowerCase() === 'on_hold' || req.status?.toLowerCase() === 'refund_pending') && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -1064,8 +1083,8 @@ const AdminBBPSDashboard = () => {
                               )}
                             </Button>
                           )}
-                          {/* Refund PRC (for failed/pending where PRC not yet refunded) */}
-                          {(req.status === 'pending' || req.status === 'PENDING' || req.status === 'failed' || req.status === 'FAILED') && !req.prc_refunded && (
+                          {/* Refund PRC (for failed/pending/refund_pending where PRC not yet refunded) */}
+                          {(req.status === 'pending' || req.status === 'PENDING' || req.status === 'failed' || req.status === 'FAILED' || req.status === 'refund_pending') && !req.prc_refunded && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -1234,7 +1253,7 @@ const AdminBBPSDashboard = () => {
                 )}
                 
                 {/* Check EKO Wallet Refund Status */}
-                {(selectedRequest.request?.status === 'failed' || selectedRequest.request?.status === 'FAILED') && (
+                {(selectedRequest.request?.status === 'failed' || selectedRequest.request?.status === 'FAILED' || selectedRequest.request?.status === 'refund_pending') && (
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <p className="text-xs text-blue-600 mb-3 font-semibold">EKO Wallet Refund Check</p>
                     <p className="text-sm text-slate-600 mb-3">
@@ -1275,7 +1294,7 @@ const AdminBBPSDashboard = () => {
                 {/* Refund Button for non-completed, non-refunded requests */}
                 
                 {/* EKO Wallet Refund via OTP */}
-                {(selectedRequest.request?.status === 'failed' || selectedRequest.request?.status === 'FAILED') && (
+                {(selectedRequest.request?.status === 'failed' || selectedRequest.request?.status === 'FAILED' || selectedRequest.request?.status === 'refund_pending') && (
                   <div className="bg-amber-50 border border-amber-300 rounded-xl p-4" data-testid="eko-wallet-refund-section">
                     <p className="text-xs text-amber-700 mb-2 font-semibold">EKO Wallet Refund (OTP Flow)</p>
                     

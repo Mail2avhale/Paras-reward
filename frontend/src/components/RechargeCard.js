@@ -4,7 +4,9 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Smartphone, Tv, ChevronDown, Loader2, 
-  CheckCircle, AlertCircle, Zap
+  CheckCircle, AlertCircle, Zap, Clock,
+  XCircle, RefreshCw, FileText, RotateCcw,
+  ChevronUp, X, Copy
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -19,8 +21,12 @@ const RechargeCard = ({ user, stats }) => {
   const [operatorsLoading, setOperatorsLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [recentTxns, setRecentTxns] = useState([]);
+  const [allTxns, setAllTxns] = useState([]);
   const [dailyRemaining, setDailyRemaining] = useState(500);
   const [monthlyRemaining, setMonthlyRemaining] = useState(1500);
+  const [showHistory, setShowHistory] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
 
   // DTH-specific state
   const [operatorParams, setOperatorParams] = useState(null);
@@ -52,10 +58,12 @@ const RechargeCard = ({ user, stats }) => {
     try {
       const res = await axios.get(`${API}/recharge/history/${user.uid}`);
       if (res.data.success) {
-        const successful = (res.data.transactions || [])
+        const txns = res.data.transactions || [];
+        const successful = txns
           .filter(t => t.status === 'success' || t.status === 'complete')
           .slice(0, 3);
         setRecentTxns(successful);
+        setAllTxns(txns);
         if (res.data.daily_remaining !== undefined) {
           setDailyRemaining(res.data.daily_remaining);
         }
@@ -246,6 +254,63 @@ const RechargeCard = ({ user, stats }) => {
 
   const isFormValid = number && selectedOperator && amount && parseInt(amount, 10) > 0 && parseInt(amount, 10) <= maxAllowed && !numberError
     && (rechargeType !== 'dth' || !fetchBillRequired || billData);
+
+  // View receipt for a transaction
+  const handleViewReceipt = async (requestId) => {
+    setReceiptLoading(true);
+    try {
+      const res = await axios.get(`${API}/recharge/receipt/${requestId}?user_id=${user.uid}`);
+      if (res.data.success) {
+        setReceiptData(res.data.receipt);
+      } else {
+        toast.error(res.data.error || 'Failed to load receipt');
+      }
+    } catch {
+      toast.error('Failed to load receipt');
+    } finally {
+      setReceiptLoading(false);
+    }
+  };
+
+  // Retry a failed recharge
+  const handleRetry = async (requestId) => {
+    try {
+      const res = await axios.post(`${API}/recharge/retry/${requestId}`, { user_id: user.uid });
+      if (res.data.success && res.data.retry_data) {
+        const rd = res.data.retry_data;
+        setRechargeType(rd.recharge_type);
+        setNumber(rd.number);
+        setSelectedOperator(rd.operator_id);
+        setAmount(String(rd.amount));
+        setShowHistory(false);
+        setResult(null);
+        toast.success('Recharge details loaded. Tap "Recharge Now" to retry.');
+      } else {
+        toast.error(res.data.error || 'Cannot retry this transaction');
+      }
+    } catch {
+      toast.error('Failed to load retry data');
+    }
+  };
+
+  // Status icon and color helper
+  const getStatusDisplay = (status) => {
+    const map = {
+      success: { icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10', label: 'Success' },
+      complete: { icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10', label: 'Success' },
+      pending: { icon: Clock, color: 'text-yellow-400', bg: 'bg-yellow-500/10', label: 'Processing' },
+      failed: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Failed' },
+      refunded: { icon: RefreshCw, color: 'text-orange-400', bg: 'bg-orange-500/10', label: 'Refunded' },
+      refund_pending: { icon: AlertCircle, color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'Refund Pending' },
+    };
+    return map[status] || { icon: Clock, color: 'text-gray-400', bg: 'bg-gray-500/10', label: status || 'Unknown' };
+  };
+
+  const formatDate = (d) => {
+    if (!d) return '';
+    try { return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+    catch { return d; }
+  };
 
   return (
     <motion.div
@@ -446,37 +511,179 @@ const RechargeCard = ({ user, stats }) => {
         )}
       </AnimatePresence>
 
-      {/* Recent Successful Recharges */}
-      {recentTxns.length > 0 && (
+      {/* Recent Successful Recharges + View All */}
+      {(recentTxns.length > 0 || allTxns.length > 0) && (
         <div className="mt-4 pt-3 border-t border-zinc-700/40" data-testid="recent-recharges">
-          <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-2">Recent Recharges</p>
-          <div className="space-y-2">
-            {recentTxns.map((txn) => (
-              <div
-                key={txn.request_id}
-                className="flex items-center justify-between"
-                data-testid={`recent-txn-${txn.request_id}`}
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-gray-500 text-[10px] uppercase tracking-wider">Recent Recharges</p>
+            {allTxns.length > 0 && (
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                data-testid="toggle-history-btn"
+                className="text-cyan-400 text-[10px] font-medium flex items-center gap-1 hover:text-cyan-300 transition-colors"
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  {txn.recharge_type === 'dth'
-                    ? <Tv className="w-3.5 h-3.5 text-cyan-500/60 flex-shrink-0" />
-                    : <Smartphone className="w-3.5 h-3.5 text-cyan-500/60 flex-shrink-0" />
-                  }
-                  <span className="text-white/70 text-xs truncate">
-                    {txn.number}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-emerald-400 text-xs font-semibold">
-                    ₹{Number(txn.amount_inr || 0).toLocaleString('en-IN')}
-                  </span>
-                  <CheckCircle className="w-3 h-3 text-emerald-500/70" />
-                </div>
-              </div>
-            ))}
+                {showHistory ? <>Hide <ChevronUp className="w-3 h-3" /></> : <>View All ({allTxns.length}) <ChevronDown className="w-3 h-3" /></>}
+              </button>
+            )}
           </div>
+
+          {!showHistory ? (
+            <div className="space-y-2">
+              {recentTxns.map((txn) => (
+                <div
+                  key={txn.request_id}
+                  className="flex items-center justify-between"
+                  data-testid={`recent-txn-${txn.request_id}`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {txn.recharge_type === 'dth'
+                      ? <Tv className="w-3.5 h-3.5 text-cyan-500/60 flex-shrink-0" />
+                      : <Smartphone className="w-3.5 h-3.5 text-cyan-500/60 flex-shrink-0" />
+                    }
+                    <span className="text-white/70 text-xs truncate">{txn.number}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-emerald-400 text-xs font-semibold">
+                      ₹{Number(txn.amount_inr || 0).toLocaleString('en-IN')}
+                    </span>
+                    <CheckCircle className="w-3 h-3 text-emerald-500/70" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1" data-testid="full-history">
+              {allTxns.map((txn) => {
+                const sd = getStatusDisplay(txn.status);
+                const StatusIcon = sd.icon;
+                const canRetry = ['failed', 'refunded', 'refund_pending'].includes(txn.status);
+                return (
+                  <div
+                    key={txn.request_id}
+                    className={`p-2 rounded-lg ${sd.bg} border border-zinc-700/30`}
+                    data-testid={`history-txn-${txn.request_id}`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {txn.recharge_type === 'dth'
+                          ? <Tv className="w-3 h-3 text-cyan-500/60 flex-shrink-0" />
+                          : <Smartphone className="w-3 h-3 text-cyan-500/60 flex-shrink-0" />
+                        }
+                        <span className="text-white/80 text-[11px] truncate">{txn.number}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-white/80 text-[11px] font-semibold">₹{txn.amount_inr}</span>
+                        <StatusIcon className={`w-3 h-3 ${sd.color}`} />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500 text-[9px]">{formatDate(txn.created_at)}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleViewReceipt(txn.request_id)}
+                          data-testid={`receipt-btn-${txn.request_id}`}
+                          className="text-cyan-400/70 hover:text-cyan-300 p-0.5"
+                          title="View Receipt"
+                        >
+                          <FileText className="w-3 h-3" />
+                        </button>
+                        {canRetry && (
+                          <button
+                            onClick={() => handleRetry(txn.request_id)}
+                            data-testid={`retry-btn-${txn.request_id}`}
+                            className="text-amber-400/70 hover:text-amber-300 p-0.5"
+                            title="Retry Recharge"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
+
+      {/* Receipt Modal */}
+      <AnimatePresence>
+        {receiptData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            onClick={() => setReceiptData(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              data-testid="receipt-modal"
+              className="bg-[#0f1a2e] border border-cyan-500/20 rounded-xl p-5 w-full max-w-sm shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white font-semibold text-sm">Transaction Receipt</h3>
+                <button onClick={() => setReceiptData(null)} className="text-gray-500 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className={`text-center p-3 rounded-lg ${
+                  receiptData.status === 'success' ? 'bg-emerald-500/10' :
+                  receiptData.status === 'failed' ? 'bg-red-500/10' :
+                  'bg-yellow-500/10'
+                }`}>
+                  <p className="text-2xl font-bold text-white">₹{receiptData.amount_inr}</p>
+                  <p className={`text-xs font-medium mt-1 ${
+                    receiptData.status === 'success' ? 'text-emerald-400' :
+                    receiptData.status === 'failed' ? 'text-red-400' :
+                    'text-yellow-400'
+                  }`}>{receiptData.status_label}</p>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  {[
+                    ['Type', receiptData.type],
+                    ['Number', receiptData.number],
+                    ['PRC Deducted', receiptData.total_prc_deducted ? `${receiptData.total_prc_deducted} PRC` : '-'],
+                    ['Eko TID', receiptData.eko_tid || '-'],
+                    ['Date', formatDate(receiptData.created_at)],
+                    ['Request ID', receiptData.request_id?.slice(0, 16) + '...'],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex justify-between">
+                      <span className="text-gray-500">{label}</span>
+                      <span className="text-white/80 font-mono text-[11px]">{value}</span>
+                    </div>
+                  ))}
+                  {receiptData.prc_refunded && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">PRC Refunded</span>
+                      <span className="text-orange-400 font-semibold">Yes</span>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    const text = `Recharge Receipt\nType: ${receiptData.type}\nNumber: ${receiptData.number}\nAmount: ₹${receiptData.amount_inr}\nStatus: ${receiptData.status_label}\nTID: ${receiptData.eko_tid || 'N/A'}\nDate: ${receiptData.created_at}\nRef: ${receiptData.request_id}`;
+                    navigator.clipboard.writeText(text);
+                    toast.success('Receipt copied!');
+                  }}
+                  data-testid="copy-receipt-btn"
+                  className="w-full py-2 rounded-lg bg-cyan-500/15 text-cyan-400 text-xs font-medium border border-cyan-500/20 hover:bg-cyan-500/25 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Copy className="w-3 h-3" /> Copy Receipt
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

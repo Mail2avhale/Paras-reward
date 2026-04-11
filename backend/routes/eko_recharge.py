@@ -1018,6 +1018,91 @@ async def get_recharge_history(user_id: str):
     }
 
 
+
+# ===== USER: Get Transaction Receipt =====
+
+@router.get("/receipt/{request_id}")
+async def get_transaction_receipt(request_id: str, user_id: str = ""):
+    """Get detailed receipt for a recharge transaction (user-facing)"""
+    if db is None:
+        return {"success": False, "error": "Service not configured"}
+
+    query = {"request_id": request_id}
+    if user_id:
+        query["user_id"] = user_id
+
+    txn = await db.recharge_transactions.find_one(query, {"_id": 0})
+    if not txn:
+        return {"success": False, "error": "Transaction not found"}
+
+    label = "Mobile Recharge" if txn.get("recharge_type") == "mobile" else "DTH Recharge"
+    status_label = {
+        "success": "Successful",
+        "pending": "Processing",
+        "failed": "Failed",
+        "refunded": "Refunded",
+        "refund_pending": "Refund Pending"
+    }.get(txn.get("status", ""), txn.get("status", "Unknown"))
+
+    return {
+        "success": True,
+        "receipt": {
+            "request_id": txn.get("request_id"),
+            "type": label,
+            "recharge_type": txn.get("recharge_type"),
+            "number": txn.get("number"),
+            "operator_id": txn.get("operator_id"),
+            "amount_inr": txn.get("amount_inr", 0),
+            "total_prc_deducted": txn.get("total_prc_deducted", 0),
+            "prc_required": txn.get("prc_required", 0),
+            "processing_fee_prc": txn.get("processing_fee_prc", 0),
+            "admin_charge_prc": txn.get("admin_charge_prc", 0),
+            "status": txn.get("status"),
+            "status_label": status_label,
+            "eko_tid": txn.get("eko_tid"),
+            "created_at": txn.get("created_at"),
+            "updated_at": txn.get("updated_at"),
+            "prc_refunded": txn.get("prc_refunded", False),
+            "user_name": txn.get("user_name", ""),
+            "user_mobile": txn.get("user_mobile", "")
+        }
+    }
+
+
+# ===== USER: Retry Failed Recharge =====
+
+class RetryRequest(BaseModel):
+    user_id: str
+
+@router.post("/retry/{request_id}")
+async def retry_failed_recharge(request_id: str, data: RetryRequest):
+    """Retry a failed recharge by creating a new recharge request with same params"""
+    if db is None:
+        return {"success": False, "error": "Service not configured"}
+
+    txn = await db.recharge_transactions.find_one(
+        {"request_id": request_id, "user_id": data.user_id},
+        {"_id": 0}
+    )
+    if not txn:
+        return {"success": False, "error": "Transaction not found"}
+
+    if txn.get("status") not in ("failed", "refunded", "refund_pending"):
+        return {"success": False, "error": "Only failed/refunded transactions can be retried"}
+
+    # Build a new recharge request with same params
+    return {
+        "success": True,
+        "retry_data": {
+            "recharge_type": txn.get("recharge_type"),
+            "number": txn.get("number"),
+            "operator_id": txn.get("operator_id"),
+            "amount": txn.get("amount_inr", 0)
+        }
+    }
+
+
+
 # ===== ADMIN: Fetch Transaction Status from Eko =====
 
 @router.get("/admin/enquiry/{request_id}")
@@ -1074,29 +1159,60 @@ async def admin_enquiry_status(request_id: str):
         }
         readable_status = status_labels.get(tx_status, f"Unknown ({tx_status})")
 
-        # Update local record if status changed
+        # Map tx_status to internal status
         new_status = None
         if tx_status == TxStatus.SUCCESS:
             new_status = "success"
         elif tx_status == TxStatus.FAILED:
             new_status = "failed"
-        elif tx_status in (TxStatus.REFUND_PENDING, TxStatus.REFUNDED):
+        elif tx_status == TxStatus.REFUND_PENDING:
+            new_status = "refund_pending"
+        elif tx_status == TxStatus.REFUNDED:
             new_status = "refunded"
         elif tx_status in (TxStatus.RESPONSE_AWAITED, TxStatus.ON_HOLD):
             new_status = "pending"
 
         old_status = txn.get("status")
+        now_iso = datetime.now(timezone.utc).isoformat()
+        prc_auto_refunded = False
+
         if new_status and new_status != old_status:
+            update_fields = {"status": new_status, "eko_enquiry_at": now_iso}
+            if eko_data.get("tid"):
+                update_fields["eko_tid"] = eko_data["tid"]
             await db.recharge_transactions.update_one(
                 {"request_id": request_id},
-                {"$set": {"status": new_status, "eko_enquiry_at": datetime.now(timezone.utc).isoformat()}}
+                {"$set": update_fields}
             )
             # Also update bill_payment_requests if exists
             await db.bill_payment_requests.update_one(
                 {"request_id": request_id},
-                {"$set": {"status": new_status}}
+                {"$set": {"status": new_status, "updated_at": now_iso}}
             )
             logging.info(f"[RECHARGE] Status updated: {old_status} → {new_status} for {request_id}")
+
+            # Auto-refund PRC when transitioning to failed/refund_pending/refunded from pending
+            if new_status in ("failed", "refund_pending", "refunded") and old_status in ("pending", "processing"):
+                full_txn = await db.recharge_transactions.find_one(
+                    {"request_id": request_id},
+                    {"_id": 0, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1}
+                )
+                if full_txn and not full_txn.get("prc_refunded") and full_txn.get("total_prc_deducted", 0) > 0:
+                    prc_amt = full_txn["total_prc_deducted"]
+                    await db.users.update_one(
+                        {"uid": full_txn["user_id"]},
+                        {"$inc": {"prc_balance": prc_amt}}
+                    )
+                    await db.recharge_transactions.update_one(
+                        {"request_id": request_id},
+                        {"$set": {"prc_refunded": True, "refund_at": now_iso, "total_prc_deducted": 0}}
+                    )
+                    await db.bill_payment_requests.update_one(
+                        {"request_id": request_id},
+                        {"$set": {"prc_refunded": True}}
+                    )
+                    prc_auto_refunded = True
+                    logging.info(f"[RECHARGE] Auto PRC refund: {prc_amt} PRC → user {full_txn['user_id']} (enquiry status change)")
 
         return {
             "success": True,
@@ -1108,7 +1224,8 @@ async def admin_enquiry_status(request_id: str):
             "amount": eko_data.get("amount", ""),
             "old_status": old_status,
             "new_status": new_status or old_status,
-            "status_changed": new_status is not None and new_status != old_status
+            "status_changed": new_status is not None and new_status != old_status,
+            "prc_auto_refunded": prc_auto_refunded
         }
 
     except httpx.TimeoutException:

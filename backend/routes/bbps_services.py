@@ -1339,8 +1339,8 @@ async def admin_check_eko_refund(request_id: str):
         )
         
         if not request_doc:
-            # Try recharge_requests collection too
-            request_doc = await db.recharge_requests.find_one(
+            # Try recharge_transactions collection too
+            request_doc = await db.recharge_transactions.find_one(
                 {"request_id": request_id},
                 {"_id": 0}
             )
@@ -2377,6 +2377,7 @@ async def verify_refund_otp(tid: str, otp: str, state: int = 1):
         success = result.get("status") == 0
         
         # Log refund in DB
+        now_iso = datetime.now(timezone.utc).isoformat()
         if db is not None:
             await db.eko_refund_logs.insert_one({
                 "tid": tid,
@@ -2385,9 +2386,45 @@ async def verify_refund_otp(tid: str, otp: str, state: int = 1):
                 "refunded_amount": refund_data.get("refunded_amount") or refund_data.get("amount"),
                 "new_balance": refund_data.get("balance"),
                 "message": result.get("message"),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": now_iso,
                 "raw_response": result
             })
+            
+            # On successful Eko wallet refund, update recharge_transactions + bill_payment_requests
+            if success:
+                # Find and update recharge_transactions by eko_tid
+                txn = await db.recharge_transactions.find_one(
+                    {"eko_tid": tid},
+                    {"_id": 0, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1, "request_id": 1}
+                )
+                if txn:
+                    await db.recharge_transactions.update_one(
+                        {"eko_tid": tid},
+                        {"$set": {
+                            "status": "refunded",
+                            "eko_refund_tid": refund_data.get("refund_tid"),
+                            "eko_refunded_at": now_iso,
+                            "updated_at": now_iso
+                        }}
+                    )
+                    # Also update bill_payment_requests
+                    if txn.get("request_id"):
+                        await db.bill_payment_requests.update_one(
+                            {"request_id": txn["request_id"]},
+                            {"$set": {"status": "refunded", "updated_at": now_iso}}
+                        )
+                    # Auto-refund PRC if not already refunded
+                    if not txn.get("prc_refunded") and txn.get("total_prc_deducted", 0) > 0:
+                        prc_amt = txn["total_prc_deducted"]
+                        await db.users.update_one(
+                            {"uid": txn["user_id"]},
+                            {"$inc": {"prc_balance": prc_amt}}
+                        )
+                        await db.recharge_transactions.update_one(
+                            {"eko_tid": tid},
+                            {"$set": {"prc_refunded": True, "refund_at": now_iso}}
+                        )
+                        logging.info(f"[EKO REFUND] Auto PRC refund: {prc_amt} PRC → user {txn['user_id']}, tid={tid}")
         
         return {
             "success": success,
