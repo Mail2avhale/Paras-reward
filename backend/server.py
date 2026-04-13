@@ -11497,6 +11497,58 @@ async def get_expiring_subscriptions():
     
     return {"expiring_users": expiring_users, "count": len(expiring_users)}
 
+
+# ========== USER: ACTIVATE UPCOMING PLAN ==========
+
+@api_router.post("/subscription/activate-upcoming/{uid}")
+async def user_activate_upcoming(uid: str):
+    """
+    User-facing: Manually activate an upcoming plan.
+    Only works when current plan is expired/explorer AND upcoming plan exists.
+    """
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expires": 1, "subscription_expired": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    plan = user.get("subscription_plan", "explorer")
+    is_expired = user.get("subscription_expired", False)
+
+    # Check if current plan is still active (non-expired paid plan)
+    if plan not in ["explorer", "free", "", None] and not is_expired:
+        expiry_val = user.get("subscription_expiry") or user.get("subscription_expires")
+        if expiry_val:
+            from routes.admin_subscription import parse_expiry
+            expiry_dt = parse_expiry(expiry_val)
+            from datetime import datetime, timezone
+            if expiry_dt and expiry_dt > datetime.now(timezone.utc):
+                return {"success": False, "message": "Your current plan is still active. Upcoming plan will auto-activate after expiry."}
+
+    # Check if upcoming plan exists
+    upcoming = await db.subscription_payments.find_one(
+        {"user_id": uid, "status": "upcoming"},
+        {"_id": 0}
+    )
+    if not upcoming:
+        return {"success": False, "message": "No upcoming plan found."}
+
+    # Activate the upcoming plan
+    from routes.admin_subscription import check_and_activate_upcoming
+    result = await check_and_activate_upcoming(uid)
+
+    if result:
+        # Clear cache
+        if cache:
+            await cache.delete(f"user_data:{uid}")
+            await cache.delete(f"user:dashboard:{uid}")
+        return {
+            "success": True,
+            "message": f"{result.get('plan_name', 'Plan')} activated successfully!",
+            "activated_plan": result.get("plan_name"),
+        }
+    else:
+        return {"success": False, "message": "Could not activate upcoming plan. Please contact support."}
+
+
 # ========== PLAN UPGRADE/DOWNGRADE ==========
 
 @api_router.post("/subscription/upgrade/{uid}")

@@ -6,7 +6,7 @@ import {
   Crown, CheckCircle, Upload, ArrowLeft, Star, Zap, ShoppingBag, 
   Gift, Clock, Shield, CreditCard, ChevronRight, Calendar,
   AlertCircle, Check, Rocket, TrendingUp, Award, Users, Wallet,
-  FileText
+  FileText, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -71,6 +71,7 @@ const SubscriptionPlans = ({ user }) => {
   const [hasUnactivatedPayment, setHasUnactivatedPayment] = useState(false);
   const [planPeriods, setPlanPeriods] = useState([]);
   const [upcomingPlans, setUpcomingPlans] = useState([]);
+  const [activatingPlan, setActivatingPlan] = useState(false);
 
   const [invoicePayment, setInvoicePayment] = useState(null); // Payment to show invoice for
 
@@ -508,6 +509,8 @@ const SubscriptionPlans = ({ user }) => {
                   const scheduledEnd = plan.scheduled_end
                     ? new Date(plan.scheduled_end).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                     : null;
+                  // Show Activate button when current plan is expired/explorer
+                  const canActivate = !currentSubscription?.plan || currentSubscription?.plan === 'explorer' || currentSubscription?.plan === 'free' || currentSubscription?.expired;
                   return (
                     <motion.div
                       key={`upcoming-${idx}`}
@@ -547,6 +550,36 @@ const SubscriptionPlans = ({ user }) => {
                           </>
                         )}
                       </div>
+                      {canActivate && (
+                        <button
+                          onClick={async () => {
+                            setActivatingPlan(true);
+                            try {
+                              const res = await axios.post(`${API}/subscription/activate-upcoming/${user.uid}`);
+                              if (res.data.success) {
+                                toast.success(res.data.message);
+                                setUpcomingPlans([]);
+                                window.location.reload();
+                              } else {
+                                toast.info(res.data.message);
+                              }
+                            } catch {
+                              toast.error('Failed to activate plan');
+                            } finally {
+                              setActivatingPlan(false);
+                            }
+                          }}
+                          disabled={activatingPlan}
+                          data-testid={`activate-upcoming-btn-${idx}`}
+                          className="mt-3 w-full py-2.5 rounded-xl bg-amber-500 text-black text-sm font-bold hover:bg-amber-400 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          {activatingPlan ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Activating...</>
+                          ) : (
+                            'Activate Now'
+                          )}
+                        </button>
+                      )}
                     </motion.div>
                   );
                 })}
