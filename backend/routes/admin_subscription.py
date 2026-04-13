@@ -436,6 +436,8 @@ async def check_and_activate_upcoming(uid: str):
         "subscription_expires": end,
         "subscription_payment_type": upcoming.get("payment_method", "prc"),
         "membership_type": "vip",
+        "subscription_expired": False,
+        "subscription_expired_at": None,
     }})
 
     # Update payment record

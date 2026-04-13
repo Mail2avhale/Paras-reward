@@ -2647,6 +2647,17 @@ async def auto_expire_subscriptions():
                         )
                         expired_count += 1
                         logging.info(f"[AUTO-EXPIRE] User {uid} plan '{old_plan}' expired (expiry passed) → explorer")
+                        
+                        # Check for upcoming plan to auto-activate
+                        try:
+                            from routes.admin_subscription import check_and_activate_upcoming
+                            activation = await check_and_activate_upcoming(uid)
+                            if activation:
+                                expired_count -= 1  # Not really expired, upcoming activated
+                                logging.info(f"[AUTO-EXPIRE] User {uid} upcoming plan auto-activated: {activation.get('plan_name')}")
+                        except Exception as upcoming_err:
+                            logging.error(f"[AUTO-EXPIRE] Error activating upcoming for {uid}: {upcoming_err}")
+                        
                         if cache:
                             await cache.delete(f"user_data:{uid}")
                             await cache.delete(f"user:dashboard:{uid}")
@@ -8016,6 +8027,27 @@ async def get_user_data(uid: str, request: Request):
     
     if subscription_start:
         user["subscription_start"] = subscription_start
+    
+    # SAFETY NET: If user is on explorer with subscription_expired=True, check for upcoming plans
+    if subscription_plan in ["explorer", "free", "", None] and user.get("subscription_expired"):
+        try:
+            from routes.admin_subscription import check_and_activate_upcoming
+            activation = await check_and_activate_upcoming(uid)
+            if activation:
+                updated_user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0, "profile_picture": 0})
+                if updated_user:
+                    user["subscription_plan"] = updated_user.get("subscription_plan", "explorer")
+                    user["subscription_expiry"] = updated_user.get("subscription_expiry")
+                    user["subscription_start"] = updated_user.get("subscription_start")
+                    user["subscription_status"] = "active"
+                    user["subscription_expired"] = False
+                    subscription_plan = user["subscription_plan"]
+                    logging.info(f"[UPCOMING-SUB] Safety net: auto-activated upcoming plan for {uid}: {subscription_plan}")
+                    if cache:
+                        await cache.delete(f"user_data:{uid}")
+                        await cache.delete(f"user:dashboard:{uid}")
+        except Exception as upcoming_err:
+            logging.error(f"[UPCOMING-SUB] Safety net error: {upcoming_err}")
     
     # Fetch upcoming plans count for user dashboard
     try:
