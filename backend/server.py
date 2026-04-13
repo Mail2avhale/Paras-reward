@@ -14847,7 +14847,7 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
     where redeeming PRC would reduce the user's future limit.
     """
     try:
-        from routes.growth_economy import get_user_unlock_percent, get_network_size, calculate_growth_level
+        from routes.growth_economy import get_user_unlock_percent, get_network_size, calculate_growth_level, get_tree_network_size
         
         # Get user data
         user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "total_mined_prc": 1, "total_mined": 1})
@@ -14883,8 +14883,8 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         # total_earned = total_mined - total_redeemed (for display purposes)
         total_earned = max(0, reconciled_total_mined - total_redeemed)
         
-        # Get unlock % from growth network
-        network_size = await get_network_size(user_id)
+        # Get unlock % from Single Leg Tree (tree_position based — NOT BFS referral)
+        network_size = await get_tree_network_size(user_id)
         redeem_limit_percent = calculate_growth_level(network_size)
         
         # TOTAL LIMIT = total_mined × Unlock% (based on total_mined, not total_earned)

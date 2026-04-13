@@ -329,6 +329,32 @@ async def calculate_mining_speed(user_id: str) -> dict:
     }
 
 
+async def get_tree_network_size(user_id: str) -> int:
+    """
+    Get TOTAL network size based on Single Leg Tree position.
+    
+    In Single Leg Tree, ALL users below your position are in your network.
+    This is the CORRECT function for redeem limit % calculation.
+    
+    network_size = count of users WHERE tree_position > my_tree_position
+    """
+    try:
+        user = await db.users.find_one(
+            {"uid": user_id},
+            {"_id": 0, "tree_position": 1}
+        )
+        if not user or not user.get("tree_position"):
+            return 0
+        
+        my_position = user["tree_position"]
+        count = await db.users.count_documents({"tree_position": {"$gt": my_position}})
+        return count
+    except Exception as e:
+        logging.error(f"Error getting tree network size for {user_id}: {e}")
+        return 0
+
+
+
 async def get_network_size(user_id: str, max_depth: int = 10) -> int:
     """
     Get total network size = all users referred by this user (direct + indirect).
@@ -451,24 +477,27 @@ async def get_growth_network_stats(user_id: str) -> dict:
         ref_or.append({"referred_by": user_ref_code})
     
     # Parallel fetch
-    direct_referrals, l1_indirect_referrals, network_size, active_network_size = await asyncio.gather(
+    direct_referrals, l1_indirect_referrals, network_size, active_network_size, tree_network_size = await asyncio.gather(
         db.users.count_documents({"$or": ref_or}),
         get_l1_indirect_count(user_id),
         get_network_size(user_id),
-        get_active_network_size(user_id)
+        get_active_network_size(user_id),
+        get_tree_network_size(user_id)
     )
     
     # Calculate 3-tier network cap
     cap_info = calculate_network_cap(direct_referrals, l1_indirect_referrals)
     
-    # Calculate redeem limit % based on SINGLE LEG TREE active network size
-    redeem_limit_percent = calculate_growth_level(active_network_size)
+    # Calculate redeem limit % based on SINGLE LEG TREE total network size (tree_position based)
+    redeem_limit_percent = calculate_growth_level(tree_network_size)
     
     return {
         "direct_referrals": direct_referrals,
         "l1_indirect_referrals": l1_indirect_referrals,
-        "network_size": network_size,
+        "network_size": tree_network_size,
+        "referral_network_size": network_size,
         "active_network_size": active_network_size,
+        "tree_network_size": tree_network_size,
         "network_cap": cap_info["cap"],
         "cap_tier1_base": cap_info["tier1_base"],
         "cap_tier2_bonus": cap_info["tier2_bonus"],
