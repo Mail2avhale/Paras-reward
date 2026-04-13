@@ -441,7 +441,11 @@ const AdminBBPSDashboard = () => {
                 setLoading(true);
                 const res = await axios.post(`${API}/recharge/admin/check-all-pending`);
                 if (res.data.success) {
-                  toast.success(`Checked ${res.data.total_checked} pending. Updated: ${res.data.updated}, Errors: ${res.data.errors}`);
+                  if (res.data.total_checked !== undefined) {
+                    toast.success(`Checked ${res.data.total_checked} pending. Updated: ${res.data.updated}, Errors: ${res.data.errors}`);
+                  } else {
+                    toast.success(res.data.message || 'No pending transactions found');
+                  }
                   fetchRequests();
                 } else {
                   toast.error(res.data.error || 'Failed to check pending');
