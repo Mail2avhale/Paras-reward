@@ -70,6 +70,7 @@ const SubscriptionPlans = ({ user }) => {
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [hasUnactivatedPayment, setHasUnactivatedPayment] = useState(false);
   const [planPeriods, setPlanPeriods] = useState([]);
+  const [upcomingPlans, setUpcomingPlans] = useState([]);
 
   const [invoicePayment, setInvoicePayment] = useState(null); // Payment to show invoice for
 
@@ -135,6 +136,14 @@ const SubscriptionPlans = ({ user }) => {
         setPlanPeriods(historyRes.data.plan_periods || []);
       } catch (err) {
         // console.log('No subscription history');
+      }
+      
+      // Fetch upcoming plans
+      try {
+        const upcomingRes = await axios.get(`${API}/subscription/user/${user.uid}/info`);
+        setUpcomingPlans(upcomingRes.data.upcoming_plans || []);
+      } catch (err) {
+        // silent
       }
       
       // Fetch ALL payment attempts (including failed/pending)
@@ -486,6 +495,64 @@ const SubscriptionPlans = ({ user }) => {
       {currentStep === 1 && (
         <div className="px-5 mt-6 space-y-6">
           {/* Limited Time Offer removed (April 2026) */}
+
+          {/* Upcoming Plan Card */}
+          {upcomingPlans.length > 0 && (
+            <div data-testid="upcoming-plans-section">
+              <h2 className="text-base font-semibold text-white mb-3">Upcoming Plans</h2>
+              <div className="space-y-3">
+                {upcomingPlans.map((plan, idx) => {
+                  const scheduledStart = plan.scheduled_start
+                    ? new Date(plan.scheduled_start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : 'After current plan expires';
+                  const scheduledEnd = plan.scheduled_end
+                    ? new Date(plan.scheduled_end).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : null;
+                  return (
+                    <motion.div
+                      key={`upcoming-${idx}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 rounded-2xl border bg-amber-500/5 border-amber-500/30"
+                      data-testid={`upcoming-plan-${idx}`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                            <Clock className="w-5 h-5 text-amber-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-amber-400 capitalize">{plan.plan_name}</p>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-amber-500/20 text-amber-300">
+                              Upcoming
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-amber-400 text-xs font-bold">{plan.duration_days} days</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium">Starts</p>
+                          <p className="text-sm font-medium text-white">{scheduledStart}</p>
+                        </div>
+                        {scheduledEnd && (
+                          <>
+                            <div className="w-px h-8 bg-zinc-700/50" />
+                            <div className="flex-1">
+                              <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium">Ends</p>
+                              <p className="text-sm font-medium text-white">{scheduledEnd}</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <h2 className="text-lg font-semibold text-white">{t('chooseYourPlan')}</h2>
           
