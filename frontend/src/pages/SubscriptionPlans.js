@@ -1177,26 +1177,26 @@ const SubscriptionPlans = ({ user }) => {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-400">Base Price</span>
-                      <span className="text-white">₹{prcPricing.base_price}</span>
+                      <span className="text-white">₹{prcPricing.pricing?.base_inr || prcPricing.base_price_inr || 999}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">GST (18%)</span>
-                      <span className="text-white">₹{prcPricing.gst_amount}</span>
+                      <span className="text-white">₹{prcPricing.pricing?.gst_inr || (prcPricing.pricing?.base_inr * 0.18).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Processing Fee</span>
-                      <span className="text-white">₹{prcPricing.processing_fee}</span>
+                      <span className="text-white">₹{prcPricing.pricing?.processing_fee_inr || 10}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Admin Charge (20%)</span>
-                      <span className="text-white">{Number(prcPricing.admin_charge_prc).toLocaleString('en-IN')} PRC</span>
+                      <span className="text-white">{Number(prcPricing.pricing?.admin_charges_prc || 0).toLocaleString('en-IN')} PRC</span>
                     </div>
                     <div className="border-t border-cyan-500/20 pt-2 mt-2">
                       <div className="flex justify-between font-bold">
                         <span className="text-cyan-400">Total PRC Required</span>
-                        <span className="text-cyan-300 text-lg">{Number(prcPricing.total_prc_required).toLocaleString('en-IN')} PRC</span>
+                        <span className="text-cyan-300 text-lg">{Number(prcPricing.total_prc_required || prcPricing.pricing?.total_prc || 0).toLocaleString('en-IN')} PRC</span>
                       </div>
-                      <p className="text-gray-500 text-xs mt-1">PRC Rate: ₹{prcPricing.prc_rate}/PRC</p>
+                      <p className="text-gray-500 text-xs mt-1">PRC Rate: ₹{prcPricing.pricing?.prc_rate || ''}/PRC</p>
                     </div>
                   </div>
                 ) : (
