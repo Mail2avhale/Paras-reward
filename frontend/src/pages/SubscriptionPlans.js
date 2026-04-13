@@ -54,6 +54,9 @@ const SubscriptionPlans = ({ user }) => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [razorpayEnabled, setRazorpayEnabled] = useState(true);
   const [manualEnabled, setManualEnabled] = useState(true);
+  const [prcEnabled, setPrcEnabled] = useState(false);
+  const [prcPricing, setPrcPricing] = useState(null);
+  const [prcLoading, setPrcLoading] = useState(false);
   
   // Steps: 1=Select Plan, 2=Select Duration, 3=Payment Info, 4=Upload Proof
   const [currentStep, setCurrentStep] = useState(1);
@@ -120,12 +123,24 @@ const SubscriptionPlans = ({ user }) => {
       // Get gateway statuses from public settings
       const isManualEnabled = configRes.data.manual_subscription_enabled === true;
       const isRazorpayEnabled = configRes.data.razorpay_enabled === true;
+      const isPrcEnabled = configRes.data.prc_subscription_enabled === true;
       setManualEnabled(isManualEnabled);
       setRazorpayEnabled(isRazorpayEnabled);
+      setPrcEnabled(isPrcEnabled);
       
-      // Set default payment method (priority: Razorpay > Manual)
+      // Fetch PRC pricing if enabled
+      if (isPrcEnabled) {
+        try {
+          const prcRes = await axios.get(`${API}/subscription/elite-pricing`);
+          if (prcRes.data.success) setPrcPricing(prcRes.data);
+        } catch { /* silent */ }
+      }
+      
+      // Set default payment method (priority: Razorpay > PRC > Manual)
       if (isRazorpayEnabled) {
         setPaymentMethod('razorpay');
+      } else if (isPrcEnabled) {
+        setPaymentMethod('prc');
       } else if (isManualEnabled) {
         setPaymentMethod('manual');
       }
@@ -1020,7 +1035,44 @@ const SubscriptionPlans = ({ user }) => {
             </button>
             )}
 
-            {/* Pay with PRC option removed (April 2026) */}
+            {/* Pay with PRC */}
+            {prcEnabled && (
+            <button
+              onClick={() => setPaymentMethod('prc')}
+              className={`w-full p-4 rounded-2xl border-2 transition-all ${
+                paymentMethod === 'prc'
+                  ? 'border-cyan-500 bg-cyan-500/10'
+                  : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'
+              }`}
+              data-testid="prc-payment-option"
+            >
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  paymentMethod === 'prc' ? 'bg-cyan-500/20' : 'bg-gray-800'
+                }`}>
+                  <Wallet className={`w-6 h-6 ${paymentMethod === 'prc' ? 'text-cyan-400' : 'text-gray-400'}`} />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <p className={`font-semibold ${paymentMethod === 'prc' ? 'text-cyan-400' : 'text-white'}`}>
+                      Pay with PRC
+                    </p>
+                    <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full font-medium">
+                      Instant
+                    </span>
+                  </div>
+                  <p className="text-gray-400 text-sm">
+                    {prcPricing ? `${Number(prcPricing.total_prc_required).toLocaleString('en-IN')} PRC required` : 'Use your PRC balance'}
+                  </p>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  paymentMethod === 'prc' ? 'border-cyan-500 bg-cyan-500' : 'border-gray-600'
+                }`}>
+                  {paymentMethod === 'prc' && <Check className="w-3 h-3 text-white" />}
+                </div>
+              </div>
+            </button>
+            )}
           </div>
 
           {/* Razorpay Pay Now Button */}
@@ -1109,6 +1161,88 @@ const SubscriptionPlans = ({ user }) => {
           )}
 
           {/* PRC Payment Section removed (April 2026) */}
+          {/* PRC Payment Section (Re-enabled) */}
+          {paymentMethod === 'prc' && prcEnabled && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
+              <div className="p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/30">
+                <div className="flex items-center gap-3 mb-3">
+                  <Wallet className="w-5 h-5 text-cyan-400" />
+                  <p className="text-cyan-400 font-semibold">PRC Payment Breakdown</p>
+                </div>
+                {prcPricing ? (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Base Price</span>
+                      <span className="text-white">₹{prcPricing.base_price}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">GST (18%)</span>
+                      <span className="text-white">₹{prcPricing.gst_amount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Processing Fee</span>
+                      <span className="text-white">₹{prcPricing.processing_fee}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Admin Charge (20%)</span>
+                      <span className="text-white">{Number(prcPricing.admin_charge_prc).toLocaleString('en-IN')} PRC</span>
+                    </div>
+                    <div className="border-t border-cyan-500/20 pt-2 mt-2">
+                      <div className="flex justify-between font-bold">
+                        <span className="text-cyan-400">Total PRC Required</span>
+                        <span className="text-cyan-300 text-lg">{Number(prcPricing.total_prc_required).toLocaleString('en-IN')} PRC</span>
+                      </div>
+                      <p className="text-gray-500 text-xs mt-1">PRC Rate: ₹{prcPricing.prc_rate}/PRC</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-sm">Loading pricing...</p>
+                )}
+              </div>
+
+              <button
+                onClick={async () => {
+                  if (!selectedPlan || !user?.uid) return;
+                  setPrcLoading(true);
+                  try {
+                    const res = await axios.post(`${API}/subscription/pay-with-prc`, {
+                      user_id: user.uid,
+                      plan_name: selectedPlan.id || 'elite',
+                      prc_amount: prcPricing?.total_prc_required || 0
+                    });
+                    if (res.data.success) {
+                      toast.success(res.data.message || 'Subscription activated with PRC!');
+                      window.location.reload();
+                    } else {
+                      toast.error(res.data.error || res.data.message || 'PRC payment failed');
+                    }
+                  } catch (err) {
+                    const msg = err.response?.data?.detail || err.response?.data?.error || 'PRC payment failed';
+                    toast.error(msg);
+                  } finally {
+                    setPrcLoading(false);
+                  }
+                }}
+                disabled={prcLoading || !prcPricing}
+                data-testid="pay-with-prc-btn"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-600 to-cyan-500 text-white font-bold text-lg disabled:opacity-50 flex items-center justify-center gap-2 hover:from-cyan-500 hover:to-cyan-400 transition-all"
+              >
+                {prcLoading ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
+                ) : (
+                  <>
+                    <Wallet className="w-5 h-5" />
+                    Pay {prcPricing ? `${Number(prcPricing.total_prc_required).toLocaleString('en-IN')} PRC` : ''}
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded-lg">Instant</span>
+                  </>
+                )}
+              </button>
+            </motion.div>
+          )}
 
           {/* Manual Payment Info (existing UPI/Bank) */}
           {paymentMethod === 'manual' && (
