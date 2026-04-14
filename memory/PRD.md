@@ -64,6 +64,18 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - Frontend: "Activate Now" button on upcoming plan card (shows when plan expired)
 - Frontend: Upcoming plan card on subscription page
 
+### User-Facing Dashboard-Blocking OTP Refund Flow (DONE - April 2026)
+- Backend: GET /api/recharge/pending-refunds/{user_id} — fetches all refund_pending transactions
+- Backend: POST /api/recharge/refund/send-otp/{tid} — user-scoped OTP send with ownership validation
+- Backend: POST /api/recharge/refund/verify-otp/{tid} — user-scoped OTP verify + auto PRC refund
+- Backend: Dashboard API returns requires_refund_action flag + pending_refund_count
+- Backend: Cache invalidation on successful refund
+- Frontend: RefundBlockerModal — full-screen non-dismissible overlay modal
+- Frontend: Shows all pending transactions with TID, amount, phone, operator
+- Frontend: Send OTP → OTP input → Verify OTP flow per transaction
+- Frontend: Auto-refreshes list after each successful refund, closes when all done
+- Testing: 100% pass rate (13/13 backend, all frontend verified)
+
 ## Pending Issues
 - P1: Fix Missing Hook Dependencies (192 instances)
 - P1: Replace Index Keys with Stable Keys (82 instances)
@@ -73,6 +85,7 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - P1: Invoice PDF Download (InvoiceModal.js)
 
 ## Future/Backlog
+- P2: WhatsApp Share Receipt button
 - P2: Split oversized components (AdminBBPSDashboard, AdminBankTransfers, DashboardModern)
 - P2: server.py monolith refactoring Phase 2
 - P3: MongoDB → PostgreSQL migration
