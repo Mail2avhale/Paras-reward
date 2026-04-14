@@ -25,56 +25,34 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - Business rules: 500 max daily, 1500 max monthly, redeem limit check
 - Race condition fix: pre-insert pending record + 10-min cooldown
 - Error handling: Real Eko errors shown to user (clean prefix), only wallet balance (347) hidden
-- Friendly messages for daily/monthly limit reached
 
 ### Admin BBPS Dashboard (DONE)
 - Merges 3 collections: redeem_requests + bill_payment_requests + recharge_transactions
-- 6 stat cards: Total, Success, Failed, Pending, Refund Pending, Total Amount
-- Reason column (full text, not truncated), Fetch Status (Eko Enquiry), Refund PRC
-- "Check All Pending" button — bulk Eko enquiry for all pending transactions
-- EKO Wallet Refund OTP flow for failed + refund_pending transactions
-- Route redirect: /admin/bbps-requests → /admin/bbps
-
-### Eko Refund Flow + User/Admin Enhancements (DONE - April 2026)
-- verify_refund_otp auto-updates recharge_transactions + bill_payment_requests + auto-refunds PRC
-- admin_enquiry_status handles refund_pending as distinct status + auto-refunds PRC
-- User receipt endpoint: GET /api/recharge/receipt/{id}
-- User retry endpoint: POST /api/recharge/retry/{id}
-- User RechargeCard: View All history, Receipt modal, Retry button
+- 6 stat cards, Reason column, Fetch Status, Refund PRC
+- "Check All Pending" button — bulk Eko enquiry
+- EKO Wallet Refund OTP flow for admin
 
 ### Single Leg Tree Network Fix (DONE - April 2026)
-- BUG: calculate_user_redeem_limit used BFS referral chain (get_network_size) instead of tree_position
-- FIX: New get_tree_network_size() function — counts ALL users below user's tree_position
-- Impact: All users' unlock % increased (e.g., SANTOSH pos=2: 71.72% → 85.02%)
-- Both redeem-limit API and growth-network-stats API now use tree_position-based count
+- Fixed: calculate_user_redeem_limit now uses tree_position (not BFS referral chain)
 
 ### Subscription Auto-Activation Fix (DONE - April 2026)
-- BUG: Cron job expired plan → set "explorer" → did NOT call check_and_activate_upcoming()
-- BUG: Dashboard load skipped upcoming check because user already "explorer"
-- BUG: check_and_activate_upcoming didn't clear subscription_expired=False
-- FIX 1: Cron auto_expire_subscriptions now calls check_and_activate_upcoming after expiry
-- FIX 2: Dashboard safety net checks upcoming even when explorer + expired
-- FIX 3: check_and_activate_upcoming clears subscription_expired=False
+- Fixed: Cron + Dashboard race condition, upcoming plan activation
 
 ### PRC Subscription Payment (DONE - April 2026)
-- Backend: POST /api/subscription/pay-with-prc (already existed, re-enabled)
-- Backend: POST /api/subscription/activate-upcoming/{uid} (new, user-facing)
-- Admin: Toggle prc_subscription_enabled via Admin Settings page
-- Frontend: PRC payment tab on subscription page (shows pricing breakdown)
-- Frontend: "Activate Now" button on upcoming plan card (shows when plan expired)
-- Frontend: Upcoming plan card on subscription page
+- Pay with PRC, Activate Now button, Admin toggle
 
 ### User-Facing Dashboard-Blocking OTP Refund Flow (DONE - April 2026)
-- Backend: GET /api/recharge/pending-refunds/{user_id} — fetches all refund_pending transactions
-- Backend: POST /api/recharge/refund/send-otp/{tid} — user-scoped OTP send with ownership validation
-- Backend: POST /api/recharge/refund/verify-otp/{tid} — user-scoped OTP verify + auto PRC refund
+**Aligned with Eko API documentation:**
+- **Eko Get Refund OTP**: POST {BASE_URL}/v1/transactions/{tid}/refund/otp → stores otp_ref_id
+- **Eko Initiate Refund**: POST {BASE_URL}/v2/transactions/{tid}/refund → passes otp_ref_id, user_code, otp, state=1
+- Backend: async httpx (not blocking requests), helper functions (_build_eko_headers, _eko_credentials_valid, _find_user_txn)
+- Backend: GET /api/recharge/pending-refunds/{uid}, POST send-otp/{tid}, POST verify-otp/{tid}
 - Backend: Dashboard API returns requires_refund_action flag + pending_refund_count
 - Backend: Cache invalidation on successful refund
-- Frontend: RefundBlockerModal — full-screen non-dismissible overlay modal
-- Frontend: Shows all pending transactions with TID, amount, phone, operator
-- Frontend: Send OTP → OTP input → Verify OTP flow per transaction
-- Frontend: Auto-refreshes list after each successful refund, closes when all done
-- Testing: 100% pass rate (13/13 backend, all frontend verified)
+- Admin endpoints also updated: async httpx, otp_ref_id support
+- Frontend: RefundBlockerModal — full-screen non-dismissible overlay
+- Frontend: Send OTP → OTP input → Verify per transaction
+- Testing: 100% pass (iteration_199: 13/13, iteration_200: 17/17)
 
 ## Pending Issues
 - P1: Fix Missing Hook Dependencies (192 instances)
@@ -86,6 +64,6 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 
 ## Future/Backlog
 - P2: WhatsApp Share Receipt button
-- P2: Split oversized components (AdminBBPSDashboard, AdminBankTransfers, DashboardModern)
+- P2: Split oversized components
 - P2: server.py monolith refactoring Phase 2
 - P3: MongoDB → PostgreSQL migration
