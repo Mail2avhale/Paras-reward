@@ -18,6 +18,7 @@ import { DashboardSkeleton } from '@/components/skeletons';
 // BurningIndicator removed - burning concept deprecated
 import MiningWidget from '@/components/MiningWidget';
 import RechargeCard from '@/components/RechargeCard';
+import RefundBlockerModal from '@/components/RefundBlockerModal';
 
 // Live Date & Time component for dashboard header
 const LiveDateTime = () => {
@@ -89,6 +90,7 @@ const DashboardModern = ({ user, onLogout }) => {
   const [recentTransactions, setRecentTransactions] = useState([]);
   // globalActivity and activityTab moved to separate Activity page
   const [showProfilePopup, setShowProfilePopup] = useState(false);
+  const [requiresRefundAction, setRequiresRefundAction] = useState(false);
 
   const [miningHistory, setMiningHistory] = useState([]);
   const [birthdayGreeting, setBirthdayGreeting] = useState(null);
@@ -186,6 +188,11 @@ const DashboardModern = ({ user, onLogout }) => {
           // Set recent activity from combined response
           const activities = combinedRes.data.recent_activity || [];
           setRecentTransactions(activities.slice(0, 5));
+          
+          // Check for pending refunds blocker
+          if (combinedRes.data.requires_refund_action) {
+            setRequiresRefundAction(true);
+          }
           
           clearTimeout(timeoutId);
           setLoading(false);
@@ -324,6 +331,14 @@ const DashboardModern = ({ user, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+
+      {/* Refund Blocker Modal - blocks entire dashboard */}
+      {requiresRefundAction && (
+        <RefundBlockerModal
+          userId={user?.uid}
+          onAllRefundsComplete={() => setRequiresRefundAction(false)}
+        />
+      )}
 
       {/* Profile Completion Popup */}
       {showProfilePopup && (

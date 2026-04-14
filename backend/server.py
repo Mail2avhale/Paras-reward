@@ -99,7 +99,7 @@ from routes.mining import router as mining_router, set_db as set_mining_db, set_
 # DMT V1, V3 and Fund Transfer routes REMOVED - Eko API not working
 from routes.gst_invoice import router as invoice_router, set_db as set_invoice_db
 from routes.eko_callback import router as eko_callback_router, set_db as set_eko_callback_db
-from routes.eko_recharge import router as eko_recharge_router, set_db as set_eko_recharge_db, set_recharge_redeem_check, set_recharge_log_transaction, set_recharge_calculate_charges
+from routes.eko_recharge import router as eko_recharge_router, set_db as set_eko_recharge_db, set_recharge_redeem_check, set_recharge_log_transaction, set_recharge_calculate_charges, set_cache as set_eko_recharge_cache
 from routes.growth_economy import router as growth_economy_router, set_db as set_growth_economy_db
 from routes.admin_subscription import router as admin_subscription_router
 
@@ -7706,6 +7706,19 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     except Exception as e:
         logging.warning(f"[DASHBOARD] PRC rate fetch failed: {e}")
     
+    # Check for pending refunds (dashboard blocker)
+    pending_refund_count = 0
+    try:
+        pending_refund_count = await db.recharge_transactions.count_documents(
+            {"user_id": uid, "status": "refund_pending"}
+        )
+        if pending_refund_count == 0:
+            pending_refund_count = await db.bill_payment_requests.count_documents(
+                {"user_id": uid, "status": "refund_pending"}
+            )
+    except Exception as e:
+        logging.warning(f"[DASHBOARD] Pending refund check failed: {e}")
+
     result = {
         "user": {
             "uid": uid,
@@ -7738,6 +7751,8 @@ async def get_user_dashboard_combined(uid: str, request: Request):
         },
         "prc_rate": prc_rate,
         "recent_activity": recent_activity,
+        "requires_refund_action": pending_refund_count > 0,
+        "pending_refund_count": pending_refund_count,
         "cached_at": now.isoformat()
     }
     
@@ -32746,6 +32761,7 @@ api_router.include_router(bbps_router)
 
 # Eko Recharge Router (Mobile Prepaid & DTH)
 set_eko_recharge_db(db)
+set_eko_recharge_cache(cache)
 set_recharge_redeem_check(check_redeem_limit)
 set_recharge_log_transaction(log_transaction)
 set_recharge_calculate_charges(calculate_redemption_charges)

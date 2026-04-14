@@ -37,11 +37,17 @@ db = None
 check_redeem_limit_func = None
 log_transaction_func = None
 calculate_charges_func = None
+cache = None
 
 
 def set_db(database):
     global db
     db = database
+
+
+def set_cache(cache_instance):
+    global cache
+    cache = cache_instance
 
 
 def set_recharge_redeem_check(func):
@@ -1433,3 +1439,266 @@ async def admin_refund_prc(request_id: str, data: RefundRequest = RefundRequest(
         "prc_refunded": prc_amount,
         "user_id": user_id
     }
+
+
+
+# ==================== USER-FACING REFUND OTP FLOW ====================
+# For dashboard-blocking refund modal: users with refund_pending transactions
+# must verify OTP to complete the Eko refund before accessing the dashboard.
+
+@router.get("/pending-refunds/{user_id}")
+async def get_user_pending_refunds(user_id: str):
+    """Get all refund_pending transactions for a user (used by blocking modal)."""
+    if db is None:
+        return {"success": False, "pending_refunds": []}
+
+    # Check both collections
+    recharge_pending = await db.recharge_transactions.find(
+        {"user_id": user_id, "status": "refund_pending"},
+        {"_id": 0, "eko_response": 0, "eko_error": 0}
+    ).sort("created_at", -1).to_list(100)
+
+    bill_pending = await db.bill_payment_requests.find(
+        {"user_id": user_id, "status": "refund_pending"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+
+    all_pending = []
+    seen_tids = set()
+
+    for txn in recharge_pending:
+        tid = txn.get("eko_tid")
+        if tid and tid not in seen_tids:
+            seen_tids.add(tid)
+            all_pending.append({
+                "eko_tid": tid,
+                "request_id": txn.get("request_id", ""),
+                "amount_inr": txn.get("amount_inr", txn.get("amount", 0)),
+                "phone": txn.get("phone", txn.get("consumer_number", "")),
+                "operator": txn.get("operator_name", txn.get("operator", "")),
+                "created_at": txn.get("created_at", ""),
+                "source": "recharge"
+            })
+
+    for txn in bill_pending:
+        tid = txn.get("eko_tid")
+        if tid and tid not in seen_tids:
+            seen_tids.add(tid)
+            all_pending.append({
+                "eko_tid": tid,
+                "request_id": txn.get("request_id", ""),
+                "amount_inr": txn.get("amount_inr", txn.get("amount", 0)),
+                "phone": txn.get("consumer_number", txn.get("phone", "")),
+                "operator": txn.get("operator_name", txn.get("service_type", "")),
+                "created_at": txn.get("created_at", ""),
+                "source": "bill_payment"
+            })
+
+    return {
+        "success": True,
+        "pending_refunds": all_pending,
+        "count": len(all_pending),
+        "requires_action": len(all_pending) > 0
+    }
+
+
+class UserRefundOTPRequest(BaseModel):
+    user_id: str
+
+
+@router.post("/refund/send-otp/{tid}")
+async def user_send_refund_otp(tid: str, data: UserRefundOTPRequest):
+    """
+    User-facing: Send refund OTP for a transaction.
+    Validates user owns the transaction before calling Eko API.
+    """
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+
+    # Verify the TID belongs to the requesting user
+    txn = await db.recharge_transactions.find_one(
+        {"eko_tid": tid, "user_id": data.user_id},
+        {"_id": 0, "status": 1, "user_id": 1}
+    )
+    if not txn:
+        txn = await db.bill_payment_requests.find_one(
+            {"eko_tid": tid, "user_id": data.user_id},
+            {"_id": 0, "status": 1, "user_id": 1}
+        )
+    if not txn:
+        return {"success": False, "error": "Transaction not found or does not belong to you"}
+
+    if txn.get("status") != "refund_pending":
+        return {"success": False, "error": "This transaction is not in refund pending status"}
+
+    # Call Eko Refund OTP API
+    try:
+        import requests as sync_requests
+        timestamp = str(round(time.time() * 1000))
+        encoded_key = base64.b64encode(AUTH_KEY.encode())
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key, timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+
+        headers = {
+            "developer_key": DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+
+        url = f"{BASE_URL}/v1/transactions/{tid}/refund/otp"
+        body = {"initiator_id": INITIATOR_ID}
+
+        logging.info(f"[USER REFUND] Sending OTP for TID: {tid}, user: {data.user_id}")
+        response = sync_requests.post(url, headers=headers, data=body, timeout=30)
+        logging.info(f"[USER REFUND] OTP Response HTTP: {response.status_code} | Body: {response.text[:500]}")
+
+        try:
+            result = response.json()
+        except Exception:
+            return {"success": False, "error": "Eko returned an invalid response. Please try again."}
+
+        return {
+            "success": result.get("status") == 0,
+            "tid": tid,
+            "message": "OTP sent to the customer's registered mobile number" if result.get("status") == 0 else (result.get("message") or "Failed to send OTP"),
+        }
+
+    except Exception as e:
+        logging.error(f"[USER REFUND] OTP Error for TID {tid}: {e}")
+        return {"success": False, "error": "Failed to send OTP. Please try again later."}
+
+
+class UserVerifyRefundOTPRequest(BaseModel):
+    user_id: str
+    otp: str
+
+
+@router.post("/refund/verify-otp/{tid}")
+async def user_verify_refund_otp(tid: str, data: UserVerifyRefundOTPRequest):
+    """
+    User-facing: Verify OTP and complete Eko refund.
+    Validates user owns the transaction, then calls Eko verify API.
+    On success: updates transaction status to 'refunded' and auto-refunds PRC.
+    """
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+
+    # Verify ownership
+    txn = await db.recharge_transactions.find_one(
+        {"eko_tid": tid, "user_id": data.user_id},
+        {"_id": 0, "status": 1, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1, "request_id": 1}
+    )
+    if not txn:
+        txn = await db.bill_payment_requests.find_one(
+            {"eko_tid": tid, "user_id": data.user_id},
+            {"_id": 0, "status": 1, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1, "request_id": 1}
+        )
+    if not txn:
+        return {"success": False, "error": "Transaction not found or does not belong to you"}
+
+    if txn.get("status") != "refund_pending":
+        return {"success": False, "error": "This transaction is not in refund pending status"}
+
+    # Call Eko Verify Refund API
+    try:
+        import requests as sync_requests
+        timestamp = str(round(time.time() * 1000))
+        encoded_key = base64.b64encode(AUTH_KEY.encode())
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key, timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+
+        headers = {
+            "developer_key": DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+
+        url = f"{BASE_URL}/v2/transactions/{tid}/refund"
+        body = {
+            "initiator_id": INITIATOR_ID,
+            "otp": str(data.otp),
+            "state": "1",
+            "user_code": USER_CODE
+        }
+
+        logging.info(f"[USER REFUND] Verifying OTP for TID: {tid}, user: {data.user_id}")
+        response = sync_requests.post(url, headers=headers, data=body, timeout=30)
+        logging.info(f"[USER REFUND] Verify Response HTTP: {response.status_code} | Body: {response.text[:500]}")
+
+        try:
+            result = response.json()
+        except Exception:
+            return {"success": False, "error": "Eko returned an invalid response. Please try again."}
+
+        success = result.get("status") == 0
+        refund_data = result.get("data", {})
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        if success:
+            # Update recharge_transactions
+            await db.recharge_transactions.update_one(
+                {"eko_tid": tid},
+                {"$set": {
+                    "status": "refunded",
+                    "eko_refund_tid": refund_data.get("refund_tid"),
+                    "eko_refunded_at": now_iso,
+                    "refund_method": "user_otp",
+                    "updated_at": now_iso
+                }}
+            )
+            # Update bill_payment_requests
+            if txn.get("request_id"):
+                await db.bill_payment_requests.update_one(
+                    {"request_id": txn["request_id"]},
+                    {"$set": {"status": "refunded", "updated_at": now_iso}}
+                )
+            # Also update by eko_tid in bill_payment_requests
+            await db.bill_payment_requests.update_one(
+                {"eko_tid": tid},
+                {"$set": {"status": "refunded", "updated_at": now_iso}}
+            )
+
+            # Auto-refund PRC if not already refunded
+            if not txn.get("prc_refunded") and txn.get("total_prc_deducted", 0) > 0:
+                prc_amt = txn["total_prc_deducted"]
+                await db.users.update_one(
+                    {"uid": data.user_id},
+                    {"$inc": {"prc_balance": prc_amt}}
+                )
+                await db.recharge_transactions.update_one(
+                    {"eko_tid": tid},
+                    {"$set": {"prc_refunded": True, "refund_at": now_iso}}
+                )
+                logging.info(f"[USER REFUND] Auto PRC refund: {prc_amt} PRC to user {data.user_id}, tid={tid}")
+
+            # Log in eko_refund_logs
+            await db.eko_refund_logs.insert_one({
+                "tid": tid,
+                "otp_verified": True,
+                "refund_tid": refund_data.get("refund_tid"),
+                "refunded_amount": refund_data.get("refunded_amount") or refund_data.get("amount"),
+                "initiated_by": "user",
+                "user_id": data.user_id,
+                "timestamp": now_iso,
+            })
+
+            # Invalidate dashboard cache so requires_refund_action refreshes
+            if cache:
+                await cache.delete(f"user:dashboard:{data.user_id}")
+                await cache.delete(f"user_data:{data.user_id}")
+
+        return {
+            "success": success,
+            "tid": tid,
+            "message": "Refund completed successfully!" if success else (result.get("message") or "OTP verification failed. Please try again."),
+            "refund_tid": refund_data.get("refund_tid") if success else None,
+            "refunded_amount": refund_data.get("refunded_amount") or refund_data.get("amount") if success else None,
+        }
+
+    except Exception as e:
+        logging.error(f"[USER REFUND] Verify Error for TID {tid}: {e}")
+        return {"success": False, "error": "Refund verification failed. Please try again later."}
