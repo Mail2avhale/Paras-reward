@@ -93,7 +93,7 @@ const SubscriptionPlans = ({ user }) => {
   };
 
   const durationLabels = {
-    monthly: { label: t('monthly'), days: 30 }
+    monthly: { label: t('monthly'), days: 28 }
   };
 
   useEffect(() => {
