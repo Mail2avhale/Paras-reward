@@ -1,0 +1,65 @@
+{
+  "summary": "E2E testing of Refund One-Click Flow and Payment Issue Banner Fix. Backend: 15/15 tests passed. Frontend: All UI elements verified working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_refund_one_click_flow.py",
+    "/app/test_reports/pytest/refund_one_click_flow_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "POST /api/recharge/refund/process/{tid} correctly implements one-click flow: Resend OTP → get data.otp → Initiate Refund",
+    "When Eko returns empty OTP (for test/fake TIDs), requires_manual_otp: true is correctly returned",
+    "POST /api/recharge/refund/verify-otp/{tid} correctly handles manual OTP fallback",
+    "RefundBlockerModal correctly shows 'Process Refund' button instead of 'Send OTP'",
+    "Manual OTP fallback UI appears correctly when requires_manual_otp is true",
+    "SubscriptionPlans.js correctly excludes payments with claimed_at or 'activated' in status_message from Payment Issue banner",
+    "_mark_refunded helper function correctly updates DB status and auto-refunds PRC"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_refund_one_click_flow.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": {
+    "test_user": "mobile=9970100782, PIN=997010, UID=76b75808-47fa-48dd-ad7c-8074678e3607",
+    "admin": "email=admin@test.com, PIN=153759"
+  },
+  "seed_data_creation": "Test refund_pending transactions with eko_tid 9999990001, 9999990002, and 3548838278 exist for test user",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Refund one-click flow verified. For test/fake TIDs, Eko returns empty OTP so requires_manual_otp=true is expected. Real TIDs would return OTP in data.otp field for auto-refund. Payment Issue banner fix verified - payments with claimed_at or 'activated' in status_message are excluded.",
+  "features_verified": {
+    "backend_e2e": {
+      "GET /api/recharge/pending-refunds/{user_id}": "PASS - Returns correct data structure with success, pending_refunds, count, requires_action",
+      "POST /api/recharge/refund/process/{tid}": "PASS - One-click flow works, returns requires_manual_otp=true for test TIDs (expected)",
+      "POST /api/recharge/refund/verify-otp/{tid}": "PASS - Manual OTP fallback works, validates ownership, handles Eko errors",
+      "GET /api/user/{uid}/dashboard": "PASS - Returns requires_refund_action (boolean) and pending_refund_count (integer)",
+      "GET /api/razorpay/payment-history/{user_id}": "PASS - Returns payments with claimed_at and status_message fields"
+    },
+    "frontend_e2e": {
+      "Login as test user": "PASS - PIN login with 6 individual digit inputs works",
+      "RefundBlockerModal appears": "PASS - Modal blocks dashboard when requires_refund_action is true",
+      "Process Refund button": "PASS - One-click button visible (not Send OTP)",
+      "Manual OTP fallback UI": "PASS - OTP input and Verify button appear when requires_manual_otp=true",
+      "OTP sent toast message": "PASS - 'OTP sent to customer mobile. Please enter OTP below.' displayed",
+      "Payment Issue banner logic": "PASS - Payments with claimed_at or 'activated' in status_message are excluded"
+    },
+    "code_quality": {
+      "one_click_flow": "VERIFIED - /refund/process/{tid} calls Resend OTP → extracts data.otp → calls Initiate Refund",
+      "manual_fallback": "VERIFIED - When Eko returns empty OTP, requires_manual_otp=true triggers manual UI",
+      "payment_issue_fix": "VERIFIED - SubscriptionPlans.js lines 178-181 exclude claimed/activated payments",
+      "helper_functions": "VERIFIED - _mark_refunded, _build_eko_headers, _find_user_txn working correctly"
+    }
+  },
+  "mocked_apis": "Eko API returns status 0 for OTP send but empty otp field for fake TIDs. This triggers manual OTP fallback correctly. This is actual Eko behavior, not mocked."
+}

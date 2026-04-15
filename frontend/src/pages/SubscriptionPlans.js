@@ -168,13 +168,25 @@ const SubscriptionPlans = ({ user }) => {
         const attempts = paymentRes.data.payments || [];
         setPaymentAttempts(attempts);
         
-        // Check if any payment is paid but user doesn't have active subscription
-        const paidPayment = attempts.find(p => p.status === 'paid');
-        if (paidPayment && (!subRes.data.subscription?.plan || subRes.data.subscription?.plan === 'explorer')) {
-          setHasUnactivatedPayment(true);
+        // Check if any RECENT payment is paid but subscription not active
+        // Exclude old payments that already activated a subscription which later expired normally
+        const userPlan = subRes.data.subscription?.plan;
+        const isExplorerOrNone = !userPlan || userPlan === 'explorer' || userPlan === 'free';
+        if (isExplorerOrNone) {
+          const recentPaid = attempts.find(p => {
+            if (p.status !== 'paid') return false;
+            // If payment has "Subscription activated" in message, it was already used — skip
+            if (p.status_message?.includes('activated')) return false;
+            // If payment claimed_at exists, subscription was activated from it — skip
+            if (p.claimed_at || p.claimed_by) return false;
+            return true;
+          });
+          if (recentPaid) {
+            setHasUnactivatedPayment(true);
+          }
         }
       } catch (err) {
-        // console.log('No payment history');
+        // silent
       }
       
     } catch (error) {
@@ -491,17 +503,41 @@ const SubscriptionPlans = ({ user }) => {
           <div className="flex items-start gap-3">
             <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-red-400 font-semibold">⚠️ Payment Issue Detected!</p>
+              <p className="text-red-400 font-semibold">Payment Issue Detected!</p>
               <p className="text-red-300/80 text-sm mt-1">
-                Your payment was successful but subscription was not activated. Please contact support.
+                Your payment was successful but subscription was not activated. Try retrying or contact support.
               </p>
-              <button 
-                onClick={() => navigate('/support')}
-                className="mt-3 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl text-sm font-medium transition-colors"
-                data-testid="unactivated-payment-support-button"
-              >
-                Contact Support →
-              </button>
+              <div className="flex gap-2 mt-3">
+                <button 
+                  onClick={async () => {
+                    try {
+                      const syncRes = await axios.post(`${API}/razorpay/sync-captured/${user.uid}`, {}, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                      });
+                      if (syncRes.data?.activated) {
+                        toast.success('Subscription activated successfully!');
+                        setHasUnactivatedPayment(false);
+                        window.location.reload();
+                      } else {
+                        toast.error(syncRes.data?.message || 'Could not auto-activate. Please contact support.');
+                      }
+                    } catch {
+                      toast.error('Retry failed. Please contact support.');
+                    }
+                  }}
+                  className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-sm font-medium transition-colors"
+                  data-testid="retry-activation-button"
+                >
+                  Retry Activation
+                </button>
+                <button 
+                  onClick={() => navigate('/support')}
+                  className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl text-sm font-medium transition-colors"
+                  data-testid="unactivated-payment-support-button"
+                >
+                  Contact Support
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>
