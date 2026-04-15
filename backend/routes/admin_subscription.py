@@ -409,7 +409,8 @@ async def check_and_activate_upcoming(uid: str):
     plan = user.get("subscription_plan", "explorer")
 
     # Only proceed if current plan is expired or user is on explorer
-    has_active = plan not in ["explorer", "free", None] and current_expiry and current_expiry > now
+    is_expired_flag = user.get("subscription_expired", False)
+    has_active = plan not in ["explorer", "free", None] and current_expiry and current_expiry > now and not is_expired_flag
     if has_active:
         return None
 

@@ -11733,8 +11733,9 @@ async def subscription_pay_with_prc(request: Request):
         current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
         has_active_plan = False
         expiry_dt = None
+        is_expired_flag = user.get("subscription_expired", False)
         
-        if current_expiry:
+        if current_expiry and not is_expired_flag:
             try:
                 if isinstance(current_expiry, str):
                     expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
