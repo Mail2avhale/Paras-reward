@@ -20760,6 +20760,35 @@ async def admin_fix_user_issue(uid: str, request: Request):
         else:
             result_message = f"User has {subscription_plan} plan - no fix needed"
     
+    elif fix_action == "clear_expired_flag":
+        # Clear wrong subscription_expired flag when expiry is still in future
+        current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        now = datetime.now(timezone.utc)
+        expiry_dt = None
+        if current_expiry:
+            try:
+                if isinstance(current_expiry, str):
+                    expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+                else:
+                    expiry_dt = current_expiry
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+            except:
+                pass
+        
+        if expiry_dt and expiry_dt > now:
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    "subscription_expired": False,
+                    "subscription_expired_at": None,
+                    "subscription_status": "active"
+                }}
+            )
+            result_message = f"Cleared expired flag. Plan active until {str(expiry_dt)[:10]}"
+        else:
+            result_message = f"Expiry is in the past ({str(expiry_dt)[:10] if expiry_dt else 'N/A'}) - flag is correct"
+    
     else:
         result_message = f"Unknown fix action: {fix_action}"
     
