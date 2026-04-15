@@ -142,7 +142,7 @@ async def get_prc_statement(
         # 2. transactions (burn, etc.)
         for doc in await db.transactions.find({"user_id": uid, "deleted": {"$ne": True}}, {"_id": 0}).to_list(5000):
             txn_id = doc.get("transaction_id", "")
-            if txn_id in seen_txn_ids:
+            if txn_id and txn_id in seen_txn_ids:
                 continue
             dt = parse_date(doc.get("created_at") or doc.get("timestamp"))
             if not dt:
@@ -161,12 +161,13 @@ async def get_prc_statement(
                 "balance": round(doc.get("balance_after", 0), 2),
                 "txn_id": txn_id
             })
-            seen_txn_ids.add(txn_id)
+            if txn_id:
+                seen_txn_ids.add(txn_id)
 
         # 3. prc_transactions (auto-burn, admin credits/debits)
         for doc in await db.prc_transactions.find({"user_id": uid, "deleted": {"$ne": True}}, {"_id": 0}).to_list(5000):
             txn_id = doc.get("transaction_id", "") or doc.get("txn_id", "")
-            if txn_id in seen_txn_ids:
+            if txn_id and txn_id in seen_txn_ids:
                 continue
             dt = parse_date(doc.get("created_at") or doc.get("timestamp"))
             if not dt:
@@ -192,7 +193,7 @@ async def get_prc_statement(
         # 4. ledger
         for doc in await db.ledger.find({"user_id": uid, "deleted": {"$ne": True}}, {"_id": 0}).to_list(5000):
             txn_id = doc.get("txn_id", "")
-            if txn_id in seen_txn_ids:
+            if txn_id and txn_id in seen_txn_ids:
                 continue
             dt = parse_date(doc.get("created_at"))
             if not dt:
@@ -212,7 +213,48 @@ async def get_prc_statement(
                 "balance": round(doc.get("balance_after", 0), 2),
                 "txn_id": txn_id
             })
-            seen_txn_ids.add(txn_id)
+            if txn_id:
+                seen_txn_ids.add(txn_id)
+
+        # 5. subscription_payments (PRC method - debits not logged elsewhere)
+        # Build set of existing subscription entries by date+amount for dedup
+        existing_sub_keys = set()
+        for e in all_entries:
+            if e["type"] == "Subscription" and e["debit"] > 0:
+                existing_sub_keys.add((round(e["date_ts"]), round(e["debit"])))
+        
+        for doc in await db.subscription_payments.find(
+            {"user_id": uid, "payment_method": "prc"},
+            {"_id": 0}
+        ).to_list(500):
+            payment_id = doc.get("payment_id", "")
+            if payment_id and payment_id in seen_txn_ids:
+                continue
+            dt = parse_date(doc.get("created_at"))
+            if not dt:
+                continue
+            amount = abs(doc.get("prc_amount", 0))
+            if amount == 0:
+                continue
+            # Skip if same date+amount already exists (from transactions collection)
+            key = (round(dt.timestamp()), round(amount))
+            if key in existing_sub_keys:
+                continue
+            plan = doc.get("plan_name", "Elite")
+            status = doc.get("status", "")
+            suffix = "(Upcoming)" if status == "upcoming" else ""
+            days = doc.get("duration_days", 28)
+            all_entries.append({
+                "date": dt.isoformat(), "date_ts": dt.timestamp(),
+                "type": "Subscription",
+                "narration": f"{plan.title()} Subscription ({days} days) {suffix}".strip(),
+                "credit": 0,
+                "debit": round(amount, 2),
+                "balance": 0,
+                "txn_id": payment_id or ""
+            })
+            if payment_id:
+                seen_txn_ids.add(payment_id)
 
         # Sort
         all_entries.sort(key=lambda x: x["date_ts"], reverse=(sort_order == "desc"))

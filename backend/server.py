@@ -11851,13 +11851,18 @@ async def subscription_pay_with_prc(request: Request):
         
         # Log to transactions
         desc_suffix = "(Upcoming - starts after current plan)" if is_upcoming else f"- ₹{pricing['base_inr']} + GST + Fees"
+        # Fetch updated balance for statement
+        updated_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
+        balance_after = round(float(updated_user.get("prc_balance", 0)), 2) if updated_user else 0
         await db.transactions.insert_one({
             "user_id": user_id,
+            "transaction_id": f"SUB-PRC-{payment_id}",
             "type": "subscription_prc",
             "amount": -prc_amount,
             "prc_amount": prc_amount,
             "inr_value": pricing["base_with_gst_inr"],
             "description": f"Elite Subscription ({duration_days} days) {desc_suffix}",
+            "balance_after": balance_after,
             "timestamp": now,
             "created_at": now.isoformat(),
             "status": "completed"
