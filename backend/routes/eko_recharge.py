@@ -96,6 +96,7 @@ class EkoStatus:
     SUCCESS = 0
     ALREADY_ACTIVE = 24
     ERROR_FROM_NPCI = 55
+    LOW_BALANCE_208 = 208        # Undocumented: OkeyKey low balance
     MONTHLY_LIMIT_EXCEEDED = 314
     INSUFFICIENT_BALANCE = 347
     USER_NOT_FOUND = 463
@@ -117,12 +118,13 @@ class TxStatus:
 # ===== User-Friendly Error Message Mapping =====
 # Only low Eko wallet balance (347) → "Technical error" (hide from user)
 # All other errors → meaningful message to user
-HIDDEN_STATUS_CODES = {347}  # Only hide insufficient Eko wallet balance
+HIDDEN_STATUS_CODES = {347, 208}  # Hide Eko wallet balance issues from user
 
 ERROR_MESSAGE_MAP = {
     # === Most specific patterns FIRST ===
     # Low balance (hidden)
     "insufficient balance": "Technical error. Please try again later.",
+    "low balance": "Technical error. Please try again later.",
     # Number / Subscriber errors (before "operator" pattern)
     "invalid subscriber": "Invalid mobile number. Please check and try again.",
     "subscriber not": "This number is not active. Please verify the number.",
@@ -776,6 +778,9 @@ async def initiate_recharge(data: RechargeRequest):
                 final_status = "pending"
         elif eko_status == EkoStatus.INSUFFICIENT_BALANCE:
             logging.error("[RECHARGE] Eko wallet insufficient balance (347)")
+            final_status = "failed"
+        elif eko_status == EkoStatus.LOW_BALANCE_208:
+            logging.error(f"[RECHARGE] Eko OkeyKey low balance (208): {eko_message}")
             final_status = "failed"
         elif eko_status == EkoStatus.USER_NOT_FOUND:
             logging.error(f"[RECHARGE] Eko user not found (463): {eko_message}")
