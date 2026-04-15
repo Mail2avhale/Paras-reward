@@ -156,7 +156,7 @@ const SubscriptionPlans = ({ user }) => {
       
       // Fetch upcoming plans
       try {
-        const upcomingRes = await axios.get(`${API}/subscription/user/${user.uid}/info`);
+        const upcomingRes = await axios.get(`${API}/admin/subscription/user/${user.uid}/info`);
         setUpcomingPlans(upcomingRes.data.upcoming_plans || []);
       } catch (err) {
         // silent
