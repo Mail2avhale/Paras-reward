@@ -77,7 +77,7 @@ DEFAULT_LATLONG = "19.9975,73.7898"
 MAX_RECHARGE_AMOUNT = 500
 MAX_DAILY_TOTAL = 500
 MAX_MONTHLY_UTILITY = 1500
-GENERIC_ERROR = "Technical error. Please try again later."
+GENERIC_ERROR = "Service temporarily unavailable. Please try again later."
 
 # All utility/recharge service types that count towards monthly ₹1500 limit
 MONTHLY_LIMIT_SERVICES = [
@@ -123,8 +123,8 @@ HIDDEN_STATUS_CODES = {347, 208}  # Hide Eko wallet balance issues from user
 ERROR_MESSAGE_MAP = {
     # === Most specific patterns FIRST ===
     # Low balance (hidden)
-    "insufficient balance": "Technical error. Please try again later.",
-    "low balance": "Technical error. Please try again later.",
+    "insufficient balance": "Service temporarily unavailable. Please try again later.",
+    "low balance": "Service temporarily unavailable. Please try again later.",
     # Number / Subscriber errors (before "operator" pattern)
     "invalid subscriber": "Invalid mobile number. Please check and try again.",
     "subscriber not": "This number is not active. Please verify the number.",
