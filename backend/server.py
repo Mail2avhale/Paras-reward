@@ -20796,6 +20796,33 @@ async def admin_fix_user_issue(uid: str, request: Request):
         else:
             result_message = f"Expiry is in the past ({str(expiry_dt)[:10] if expiry_dt else 'N/A'}) - flag is correct"
     
+    elif fix_action == "extend_subscription":
+        # Extend subscription expiry by N days (for duplicate payment compensation)
+        days = body.get("days", 28)
+        current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        if current_expiry:
+            try:
+                if isinstance(current_expiry, str):
+                    expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+                else:
+                    expiry_dt = current_expiry
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                new_expiry = expiry_dt + timedelta(days=days)
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {
+                        "subscription_expiry": new_expiry.isoformat(),
+                        "subscription_expired": False,
+                        "subscription_status": "active"
+                    }}
+                )
+                result_message = f"Extended by {days} days. Old expiry: {str(expiry_dt)[:10]} → New: {str(new_expiry)[:10]}"
+            except Exception as e:
+                result_message = f"Failed to extend: {e}"
+        else:
+            result_message = "No expiry date found to extend"
+    
     else:
         result_message = f"Unknown fix action: {fix_action}"
     
