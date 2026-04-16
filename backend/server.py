@@ -8698,7 +8698,9 @@ async def get_user_subscription_history(uid: str, request: Request):
             if is_most_recent and current_expiry_dt:
                 end_dt = current_expiry_dt
             
-            is_ongoing = end_dt > now
+            # Only the MOST RECENT payment can be "ongoing"
+            # All older payments are "expired" (superseded by newer plan)
+            is_ongoing = is_most_recent and end_dt > now and current_expiry_dt is not None
             days_remaining = max(0, (end_dt - now).days) if is_ongoing else 0
             
             # Calculate amount: prefer INR amount, fallback to PRC/10 or inr_equivalent
@@ -8710,7 +8712,7 @@ async def get_user_subscription_history(uid: str, request: Request):
             
             plan_periods.append({
                 "plan_name": (payment.get("plan_name") or sub_plan or "Elite").title(),
-                "status": "ongoing" if (is_most_recent and is_ongoing and current_expiry_dt) else ("ongoing" if is_ongoing else "expired"),
+                "status": "ongoing" if is_ongoing else "expired",
                 "start_date": start_dt.isoformat(),
                 "expiry_date": end_dt.isoformat(),
                 "days_remaining": days_remaining,
