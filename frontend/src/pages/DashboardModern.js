@@ -853,25 +853,57 @@ const DashboardModern = ({ user, onLogout }) => {
             
             {/* Renewal warning removed - subscription page deprecated */}
 
-            {/* Upcoming Plan Card */}
+            {/* Next Renewal Card - Clear Timeline */}
             {stats.upcomingPlan && (
-              <div className="mt-3 p-3 rounded-lg border" style={{
-                background: 'linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(217,119,6,0.05) 100%)',
-                borderColor: 'rgba(245,158,11,0.3)'
+              <div className="mt-3 p-3.5 rounded-xl border" style={{
+                background: 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(22,163,74,0.04) 100%)',
+                borderColor: 'rgba(34,197,94,0.3)'
               }} data-testid="upcoming-plan-card">
-                <div className="flex items-center gap-2 mb-1">
-                  <svg className="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <span className="text-amber-600 font-semibold text-sm">Upcoming Plan</span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <svg className="h-3 w-3 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <span className="text-green-400 font-semibold text-sm">Next Renewal: Paid & Confirmed</span>
+                  </div>
                   {stats.upcomingPlansCount > 1 && (
-                    <span className="text-xs bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full">+{stats.upcomingPlansCount - 1} more</span>
+                    <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-medium">+{stats.upcomingPlansCount - 1} more</span>
                   )}
                 </div>
-                <p className="text-slate-600 text-xs">
-                  <span className="capitalize font-medium">{stats.upcomingPlan.plan_name}</span>
-                  {' — '}
-                  Starts {stats.upcomingPlan.scheduled_start ? new Date(stats.upcomingPlan.scheduled_start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'after current plan'}
-                  {' · '}
-                  {stats.upcomingPlan.duration_days || 28} days
+                <div className="flex items-center gap-3 text-xs">
+                  <div className="flex-1">
+                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-0.5">Starts</p>
+                    <p className="text-white font-medium">
+                      {stats.upcomingPlan.scheduled_start 
+                        ? new Date(stats.upcomingPlan.scheduled_start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                        : 'After current plan'}
+                    </p>
+                  </div>
+                  <div className="text-zinc-600">→</div>
+                  <div className="flex-1">
+                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-0.5">Ends</p>
+                    <p className="text-white font-medium">
+                      {stats.upcomingPlan.scheduled_end
+                        ? new Date(stats.upcomingPlan.scheduled_end).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                        : `${stats.upcomingPlan.duration_days || 28} days`}
+                    </p>
+                  </div>
+                  <div className="text-zinc-600">·</div>
+                  <div className="flex-1 text-right">
+                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-0.5">Paid</p>
+                    <p className="text-green-400 font-semibold">
+                      {stats.upcomingPlan.prc_amount 
+                        ? `${Number(stats.upcomingPlan.prc_amount).toLocaleString()} PRC`
+                        : stats.upcomingPlan.amount_inr || stats.upcomingPlan.amount
+                          ? `₹${Number(stats.upcomingPlan.amount_inr || stats.upcomingPlan.amount).toLocaleString()}`
+                          : 'Confirmed'}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-zinc-500 text-[10px] mt-2 text-center">
+                  Auto-renews on {stats.upcomingPlan.scheduled_start 
+                    ? new Date(stats.upcomingPlan.scheduled_start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : 'plan expiry'}. No action needed.
                 </p>
               </div>
             )}

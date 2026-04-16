@@ -548,10 +548,10 @@ const SubscriptionPlans = ({ user }) => {
         <div className="px-5 mt-6 space-y-6">
           {/* Limited Time Offer removed (April 2026) */}
 
-          {/* Upcoming Plan Card */}
+          {/* Upcoming / Next Renewal Section */}
           {upcomingPlans.length > 0 && (
             <div data-testid="upcoming-plans-section">
-              <h2 className="text-base font-semibold text-white mb-3">Upcoming Plans</h2>
+              <h2 className="text-base font-semibold text-white mb-3">Next Renewal</h2>
               <div className="space-y-3">
                 {upcomingPlans.map((plan, idx) => {
                   const scheduledStart = plan.scheduled_start
@@ -560,6 +560,14 @@ const SubscriptionPlans = ({ user }) => {
                   const scheduledEnd = plan.scheduled_end
                     ? new Date(plan.scheduled_end).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                     : null;
+                  const paidOn = plan.paid_on
+                    ? new Date(plan.paid_on).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : null;
+                  const paymentLabel = plan.prc_amount
+                    ? `${Number(plan.prc_amount).toLocaleString()} PRC`
+                    : plan.amount_inr
+                      ? `₹${Number(plan.amount_inr).toLocaleString()}`
+                      : 'Confirmed';
                   // Show Activate button when current plan is expired/explorer
                   const canActivate = !currentSubscription?.plan || currentSubscription?.plan === 'explorer' || currentSubscription?.plan === 'free' || currentSubscription?.expired;
                   return (
@@ -567,40 +575,60 @@ const SubscriptionPlans = ({ user }) => {
                       key={`upcoming-${idx}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-4 rounded-2xl border bg-amber-500/5 border-amber-500/30"
+                      className="p-4 rounded-2xl border bg-green-500/5 border-green-500/30"
                       data-testid={`upcoming-plan-${idx}`}
                     >
+                      {/* Header - Confirmed status */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                            <Clock className="w-5 h-5 text-amber-400" />
+                          <div className="w-9 h-9 rounded-xl bg-green-500/20 flex items-center justify-center">
+                            <CheckCircle className="w-5 h-5 text-green-400" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-amber-400 capitalize">{plan.plan_name}</p>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-amber-500/20 text-amber-300">
-                              Upcoming
+                            <p className="text-sm font-bold text-green-400 capitalize">{plan.plan_name} Renewal</p>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-green-500/20 text-green-300">
+                              Paid & Confirmed
                             </span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-amber-400 text-xs font-bold">{plan.duration_days} days</span>
+                          <span className="text-green-400 text-xs font-bold">{plan.duration_days} days</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
+
+                      {/* Timeline: Start → End */}
+                      <div className="flex items-center gap-3 mb-3">
                         <div className="flex-1">
                           <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium">Starts</p>
                           <p className="text-sm font-medium text-white">{scheduledStart}</p>
                         </div>
+                        <div className="text-zinc-600 text-lg">→</div>
                         {scheduledEnd && (
-                          <>
-                            <div className="w-px h-8 bg-zinc-700/50" />
-                            <div className="flex-1">
-                              <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium">Ends</p>
-                              <p className="text-sm font-medium text-white">{scheduledEnd}</p>
-                            </div>
-                          </>
+                          <div className="flex-1">
+                            <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium">Ends</p>
+                            <p className="text-sm font-medium text-white">{scheduledEnd}</p>
+                          </div>
                         )}
                       </div>
+
+                      {/* Payment confirmation */}
+                      <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-3.5 h-3.5 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          <span className="text-green-300/80 text-xs">Payment</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-green-400 text-xs font-bold">{paymentLabel}</span>
+                          {paidOn && <span className="text-zinc-500 text-[10px] ml-1">on {paidOn}</span>}
+                        </div>
+                      </div>
+
+                      {/* Reassurance */}
+                      <p className="text-zinc-500 text-[10px] text-center mt-2.5">
+                        Auto-activates on {scheduledStart}. No action needed.
+                      </p>
+
+                      {/* Activate Now button (only when current plan expired) */}
                       {canActivate && (
                         <button
                           onClick={async () => {
@@ -622,7 +650,7 @@ const SubscriptionPlans = ({ user }) => {
                           }}
                           disabled={activatingPlan}
                           data-testid={`activate-upcoming-btn-${idx}`}
-                          className="mt-3 w-full py-2.5 rounded-xl bg-amber-500 text-black text-sm font-bold hover:bg-amber-400 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                          className="mt-3 w-full py-2.5 rounded-xl bg-green-500 text-black text-sm font-bold hover:bg-green-400 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                         >
                           {activatingPlan ? (
                             <><Loader2 className="w-4 h-4 animate-spin" /> Activating...</>

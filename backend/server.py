@@ -8070,7 +8070,7 @@ async def get_user_data(uid: str, request: Request):
         if upcoming_count > 0:
             upcoming_plan = await db.subscription_payments.find_one(
                 {"user_id": uid, "status": "upcoming"},
-                {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1, "duration_days": 1},
+                {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1, "duration_days": 1, "payment_method": 1, "prc_amount": 1, "amount": 1, "amount_inr": 1, "created_at": 1},
                 sort=[("scheduled_start", 1)]
             )
             user["upcoming_plan"] = upcoming_plan

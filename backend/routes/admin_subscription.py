@@ -495,18 +495,26 @@ async def get_user_subscription_info(uid: str):
             "remaining_days": max(0, (expiry_dt - now).days),
         }
 
-    # Upcoming plans
+    # Upcoming plans (with payment details)
     upcoming = []
     cursor = db.subscription_payments.find(
         {"user_id": uid, "status": "upcoming"},
-        {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1, "duration_days": 1, "created_at": 1}
+        {"_id": 0}
     ).sort("scheduled_start", 1)
     async for doc in cursor:
+        payment_method = doc.get("payment_method", "razorpay")
+        prc_amount = doc.get("prc_amount", 0)
+        amount_inr = doc.get("amount", doc.get("amount_inr", 0))
         upcoming.append({
             "plan_name": doc.get("plan_name", "elite"),
             "scheduled_start": doc.get("scheduled_start"),
             "scheduled_end": doc.get("scheduled_end"),
             "duration_days": doc.get("duration_days", 28),
+            "payment_method": payment_method,
+            "prc_amount": round(prc_amount, 2) if prc_amount else None,
+            "amount_inr": round(amount_inr, 2) if amount_inr else None,
+            "paid_on": doc.get("created_at"),
+            "status": "confirmed",
         })
 
     return {
