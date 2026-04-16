@@ -43,15 +43,26 @@ const InvoiceModal = ({ payment, user, onClose }) => {
     : rawPayId;
   const isPRC = payment.payment_method === 'prc';
 
-  // Calculate amounts
+  // Calculate amounts — Base is always ₹999 (pre-GST)
   const breakdown = payment.pricing_breakdown || {};
-  const baseAmount = breakdown.base_inr || payment.amount || 999;
+  // payment.amount is GST-inclusive (₹1178.82), so derive base from it
   const gstRate = breakdown.gst_rate || 18;
   const halfGstRate = gstRate / 2; // 9% each for CGST and SGST
-  const totalGst = breakdown.gst_inr || (baseAmount * gstRate / 100);
+  
+  // Determine the correct base amount (pre-GST)
+  let baseAmount;
+  if (breakdown.base_inr && breakdown.base_inr > 0) {
+    baseAmount = breakdown.base_inr; // Explicit base from backend
+  } else {
+    // payment.amount is GST-inclusive → reverse calculate: base = amount / 1.18
+    const rawAmount = payment.amount || 1178.82;
+    baseAmount = Math.round(rawAmount / (1 + gstRate / 100) * 100) / 100;
+  }
+  
+  const totalGst = breakdown.gst_inr || Math.round(baseAmount * gstRate / 100 * 100) / 100;
   const cgst = Math.round(totalGst / 2 * 100) / 100;
   const sgst = Math.round(totalGst / 2 * 100) / 100;
-  const total = payment.inr_equivalent || (baseAmount + totalGst);
+  const total = Math.round((baseAmount + totalGst) * 100) / 100;
   const planLabel = `${(payment.plan_name || 'Elite').charAt(0).toUpperCase() + (payment.plan_name || 'elite').slice(1)} Subscription - ${(payment.plan_type || 'Monthly').charAt(0).toUpperCase() + (payment.plan_type || 'monthly').slice(1)}`;
 
   const handlePrint = () => {
@@ -151,7 +162,7 @@ const InvoiceModal = ({ payment, user, onClose }) => {
             {/* PRC payment note */}
             {isPRC && (
               <div className="prc-note" style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 6, padding: '8px 12px', fontSize: 10, color: '#92400e', marginBottom: 14 }}>
-                Paid via PRC: {payment.prc_amount?.toFixed(2)} PRC @ rate {payment.prc_rate_used} PRC/INR
+                Paid via PRC: {payment.prc_amount ? Number(payment.prc_amount).toLocaleString() : ''} PRC {payment.prc_rate_used ? `@ rate ${payment.prc_rate_used} PRC/INR` : ''}
               </div>
             )}
 
