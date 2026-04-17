@@ -112,72 +112,74 @@ const AdminCoreTeam = () => {
       </div>
 
       {/* Pool Wallet Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4" data-testid="pool-stats">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Wallet className="w-4 h-4 text-indigo-400" />
-            <span className="text-zinc-500 text-xs uppercase tracking-wider">Pool Balance</span>
-          </div>
-          <p className="text-2xl font-bold text-white">{Number(poolData?.balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })} <span className="text-sm text-zinc-500 font-normal">PRC</span></p>
+      <div className="grid grid-cols-2 gap-3" data-testid="pool-stats">
+        <div className="rounded-xl p-4 relative overflow-hidden" style={{
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(49,46,129,0.1) 100%)',
+          border: '1px solid rgba(99,102,241,0.2)',
+        }}>
+          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(129,140,248,0.6), transparent 70%)' }} />
+          <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium mb-1">Pool Balance</p>
+          <p className="text-xl font-bold text-white">{Number(poolData?.balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+          <p className="text-indigo-400 text-xs font-medium">PRC</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="w-4 h-4 text-green-400" />
-            <span className="text-zinc-500 text-xs uppercase tracking-wider">Core Team</span>
-          </div>
-          <p className="text-2xl font-bold text-white">{poolData?.core_team_count || 0} <span className="text-sm text-zinc-500 font-normal">Members</span></p>
+        <div className="rounded-xl p-4 relative overflow-hidden" style={{
+          background: 'linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(22,163,74,0.06) 100%)',
+          border: '1px solid rgba(34,197,94,0.2)',
+        }}>
+          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(34,197,94,0.6), transparent 70%)' }} />
+          <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium mb-1">Core Team</p>
+          <p className="text-xl font-bold text-white">{poolData?.core_team_count || 0}</p>
+          <p className="text-green-400 text-xs font-medium">Members</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Crown className="w-4 h-4 text-amber-400" />
-            <span className="text-zinc-500 text-xs uppercase tracking-wider">Total Credited</span>
-          </div>
-          <p className="text-2xl font-bold text-white">{Number(poolData?.total_credited || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })} <span className="text-sm text-zinc-500 font-normal">PRC</span></p>
+        <div className="rounded-xl p-4 relative overflow-hidden" style={{
+          background: 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(217,119,6,0.06) 100%)',
+          border: '1px solid rgba(245,158,11,0.2)',
+        }}>
+          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.6), transparent 70%)' }} />
+          <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium mb-1">Total Credited</p>
+          <p className="text-xl font-bold text-white">{Number(poolData?.total_credited || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+          <p className="text-amber-400 text-xs font-medium">PRC</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <RefreshCw className="w-4 h-4 text-cyan-400" />
-            <span className="text-zinc-500 text-xs uppercase tracking-wider">Total Distributed</span>
-          </div>
-          <p className="text-2xl font-bold text-white">{Number(poolData?.total_distributed || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })} <span className="text-sm text-zinc-500 font-normal">PRC</span></p>
+        <div className="rounded-xl p-4 relative overflow-hidden" style={{
+          background: 'linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(8,145,178,0.06) 100%)',
+          border: '1px solid rgba(6,182,212,0.2)',
+        }}>
+          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.6), transparent 70%)' }} />
+          <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium mb-1">Total Distributed</p>
+          <p className="text-xl font-bold text-white">{Number(poolData?.total_distributed || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+          <p className="text-cyan-400 text-xs font-medium">PRC</p>
         </div>
       </div>
 
       {/* Settings + Distribute */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Settings className="w-4 h-4 text-zinc-400" />
-            <h3 className="text-sm font-semibold text-white">Pool Rate</h3>
-          </div>
+      <div className="grid grid-cols-1 gap-3">
+        <div className="rounded-xl p-4" style={{ background: 'rgba(24,24,27,0.6)', border: '1px solid rgba(63,63,70,0.4)' }}>
+          <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">Pool Rate</p>
           <div className="flex items-center gap-3">
             <input
               type="number" min="0" max="100" value={poolRate}
               onChange={(e) => setPoolRate(Number(e.target.value))}
-              className="w-24 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-center"
+              className="w-20 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-center text-sm"
               data-testid="pool-rate-input"
             />
-            <span className="text-zinc-500 text-sm">% of mining collect → pool</span>
+            <span className="text-zinc-500 text-xs flex-1">% of mining collect → pool</span>
             <button onClick={saveRate} disabled={savingRate}
-              className="ml-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg disabled:opacity-50"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg disabled:opacity-50"
               data-testid="save-rate-btn">
-              {savingRate ? 'Saving...' : 'Save'}
+              {savingRate ? '...' : 'Save'}
             </button>
           </div>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <RefreshCw className="w-4 h-4 text-zinc-400" />
-            <h3 className="text-sm font-semibold text-white">Manual Distribution</h3>
-          </div>
-          <p className="text-zinc-500 text-xs mb-3">Distribute current pool balance equally to all Elite core team members.</p>
-          <button onClick={distribute} disabled={distributing || (poolData?.balance || 0) <= 0}
-            className="w-full py-2.5 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
-            data-testid="distribute-btn">
-            {distributing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {distributing ? 'Distributing...' : `Distribute ${Number(poolData?.balance || 0).toLocaleString()} PRC`}
-          </button>
-        </div>
+        <button onClick={distribute} disabled={distributing || (poolData?.balance || 0) <= 0}
+          className="w-full py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+          style={{
+            background: (poolData?.balance || 0) > 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'rgba(63,63,70,0.4)',
+            border: '1px solid rgba(16,185,129,0.3)',
+          }}
+          data-testid="distribute-btn">
+          {distributing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          {distributing ? 'Distributing...' : `Distribute ${Number(poolData?.balance || 0).toLocaleString()} PRC to Team`}
+        </button>
       </div>
 
       {/* Add Member */}
