@@ -7761,15 +7761,17 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     try:
         pool_wallet = await db.pool_wallet.find_one({"wallet_id": "main"}, {"_id": 0, "balance": 1})
         pool_balance = round(float(pool_wallet.get("balance", 0)), 4) if pool_wallet else 0
+        pool_total_dist = round(float(pool_wallet.get("total_distributed", 0)), 4) if pool_wallet else 0
         core_team_count = await db.core_team_members.count_documents({"status": "active"})
         is_core_team = await db.core_team_members.find_one({"uid": uid, "status": "active"}) is not None
         result["pool_wallet"] = {
             "balance": pool_balance,
+            "total_distributed": pool_total_dist,
             "core_team_count": core_team_count,
             "is_core_member": is_core_team,
         }
     except Exception:
-        result["pool_wallet"] = {"balance": 0, "core_team_count": 0, "is_core_member": False}
+        result["pool_wallet"] = {"balance": 0, "total_distributed": 0, "core_team_count": 0, "is_core_member": False}
     
     # Cache for 60 seconds
     await cache.set(cache_key, result, ttl=60)

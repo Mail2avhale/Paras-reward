@@ -978,18 +978,9 @@ const DashboardModern = ({ user, onLogout }) => {
 
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-                    background: 'linear-gradient(135deg, rgba(129,140,248,0.3) 0%, rgba(99,102,241,0.2) 100%)',
-                    border: '1px solid rgba(129,140,248,0.3)',
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
-                  }}>
-                    <svg className="w-5 h-5 text-indigo-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 14h.01"/></svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white tracking-wide">Core Team Pool Wallet</p>
-                    <p className="text-[10px] text-indigo-300/60">{stats.poolWallet?.core_team_count || 0} Team Members</p>
-                  </div>
+                <div>
+                  <p className="text-sm font-bold text-white tracking-wide">Core Team Pool Wallet</p>
+                  <p className="text-[10px] text-indigo-300/60">{stats.poolWallet?.core_team_count || 0} Team Members</p>
                 </div>
                 <span className="text-[10px] px-3 py-1 rounded-full font-bold tracking-wider" style={{
                   background: 'linear-gradient(135deg, rgba(129,140,248,0.25) 0%, rgba(167,139,250,0.2) 100%)',
@@ -1009,7 +1000,13 @@ const DashboardModern = ({ user, onLogout }) => {
                     <span className="text-sm text-indigo-300/50 ml-1.5 font-medium">PRC</span>
                   </p>
                 </div>
-                <p className="text-indigo-400/40 text-[9px] font-medium">Distributed daily at midnight</p>
+                <div className="text-right">
+                  <p className="text-indigo-300/50 text-[10px] uppercase tracking-widest font-medium">Total Distributed</p>
+                  <p className="text-lg font-bold text-indigo-300 mt-1">
+                    {Number(stats.poolWallet?.total_distributed || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    <span className="text-[10px] text-indigo-300/50 ml-1 font-medium">PRC</span>
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>
