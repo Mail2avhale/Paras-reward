@@ -488,13 +488,13 @@ async def get_growth_network_stats(user_id: str) -> dict:
     # Calculate 3-tier network cap
     cap_info = calculate_network_cap(direct_referrals, l1_indirect_referrals)
     
-    # Calculate redeem limit % based on SINGLE LEG TREE total network size (tree_position based)
-    redeem_limit_percent = calculate_growth_level(tree_network_size)
+    # Calculate redeem limit % based on ACTIVE network (tree_position + paid + mining active)
+    redeem_limit_percent = calculate_growth_level(active_network_size)
     
     return {
         "direct_referrals": direct_referrals,
         "l1_indirect_referrals": l1_indirect_referrals,
-        "network_size": tree_network_size,
+        "network_size": active_network_size,
         "referral_network_size": network_size,
         "active_network_size": active_network_size,
         "tree_network_size": tree_network_size,
