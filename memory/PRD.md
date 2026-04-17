@@ -10,37 +10,40 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 
 ## What's Been Implemented
 
-### Core Systems (DONE)
-- User auth, mining, subscriptions, network referrals, bank redeem, BBPS, admin dashboard
+### Pool Wallet & Core Team System (DONE - April 2026)
+- Mining collect → 20% (admin-configurable) extra PRC to pool wallet
+- Daily midnight cron → pool balance distributed equally to active Elite core team members
+- Admin: Add/Remove core team, change pool rate, manual distribute, view balance/transactions
+- User: Dashboard shows pool balance + team count + "Core Team" badge
+- PRC Statement: "Core Team Bonus - Pool Distribution" entries
+- Backend: `/app/backend/routes/pool_wallet.py` — 8 endpoints
+- Frontend: Dashboard pool wallet card with indigo theme
 
-### Eko Refund Flow — One-Click Auto-Refund (DONE - April 2026)
-**Per Eko v1 docs (https://developers.eko.in/v1/reference/refund):**
-- `POST /api/recharge/refund/process/{tid}` — ONE-CLICK: Resend OTP → get `data.otp` from response → Initiate Refund automatically
-- `POST /api/recharge/refund/verify-otp/{tid}` — MANUAL FALLBACK: if Eko doesn't return OTP in response (production SMS flow)
-- `GET /api/recharge/pending-refunds/{user_id}` — list all refund_pending transactions
-- Dashboard API `requires_refund_action` flag blocks dashboard until refunds complete
-- Frontend `RefundBlockerModal.js`: "Process Refund" one-click button + manual OTP fallback
-- Helpers: `_build_eko_headers`, `_eko_credentials_valid`, `_find_user_txn`, `_mark_refunded`
-- Cache invalidation, PRC auto-refund, audit logging
+### Subscription System Fixes (DONE - April 2026)
+- "Upcoming" → "Next Renewal: Paid & Confirmed" — clear timeline UI
+- Duplicate ongoing subscription fix (only most recent = ongoing)
+- Invoice GST double-counting fix (base ₹999, not ₹1178.82)
+- Monthly 30 → 28 days fix
+- extend_subscription admin action for duplicate payment compensation
+- subscription_expired flag mismatch bulk fix (49 users)
+- Upcoming plan URL prefix fix (/admin/subscription/)
+- PRC subscription activation: checks subscription_expired flag
 
-### Subscription Payment Issue Banner Fix (DONE - April 2026)
-- **BUG**: "Payment Issue Detected" banner showed for ALL paid Razorpay payments when user was on explorer, including old payments that already activated subscriptions which later expired normally
-- **FIX**: Exclude payments where `claimed_at` exists OR `status_message` contains "activated"
-- **NEW**: "Retry Activation" button added alongside "Contact Support" for genuine unactivated payments
+### Eko Refund & Recharge (DONE - April 2026)
+- One-click auto-refund flow (Resend OTP → get data.otp → Initiate Refund)
+- Dashboard-blocking RefundBlockerModal
+- Status 208 handling → "Service temporarily unavailable"
+- PRC Statement: subscription_payments scan + empty txn_id dedup fix
 
-### Single Leg Tree, Subscription Activation, PRC Payment (DONE - April 2026)
-- See previous PRD entries for completed core fixes
-
-## Pending Issues
-- P1: Fix Missing Hook Dependencies (192 instances)
-- P1: Replace Index Keys with Stable Keys
-- P1: Remove localStorage Security Risks & Console logs
+### Redeem Limit Formula (UPDATED - April 2026)
+- Changed from ALL users → ACTIVE ONLY (Elite + mining active) for network size in redeem limit calculation
 
 ## Upcoming Tasks
-- P1: Invoice PDF Download (InvoiceModal.js)
+- P1: Admin Core Team Management UI page
+- P1: Invoice PDF Download
 
 ## Future/Backlog
-- P2: WhatsApp Share Receipt button
-- P2: Split oversized components
-- P2: server.py monolith refactoring Phase 2
+- P2: Community Help Page
+- P2: WhatsApp Share Receipt
+- P2: server.py monolith refactor
 - P3: MongoDB → PostgreSQL migration
