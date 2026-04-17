@@ -369,33 +369,63 @@ const DashboardModern = ({ user, onLogout }) => {
               {userData?.name || user?.email?.split('@')[0] || 'User'}
               {stats.poolWallet?.is_core_member && (
                 <span className="inline-flex items-center" data-testid="core-team-header-badge">
-                  <svg width="32" height="38" viewBox="0 0 32 38" fill="none" style={{ filter: 'drop-shadow(0 2px 4px rgba(202,138,4,0.4))' }}>
-                    {/* Ribbon tails */}
-                    <path d="M8 26L4 36L10 32L12 38L14 28" fill="url(#ribbon1)" />
-                    <path d="M24 26L28 36L22 32L20 38L18 28" fill="url(#ribbon2)" />
-                    {/* Medal body - wavy circle */}
-                    <circle cx="16" cy="15" r="13" fill="url(#medalGrad)" stroke="url(#borderGrad)" strokeWidth="1.2" />
-                    {/* Inner ring */}
-                    <circle cx="16" cy="15" r="10" fill="none" stroke="rgba(202,138,4,0.4)" strokeWidth="0.5" strokeDasharray="2 1.5" />
+                  <svg width="28" height="36" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.35))' }}>
+                    {/* Ribbon left tail */}
+                    <path d="M14 44L6 68L16 58L22 70L24 48" fill="url(#rl)" />
+                    {/* Ribbon right tail */}
+                    <path d="M42 44L50 68L40 58L34 70L32 48" fill="url(#rr)" />
+                    {/* Medal shadow */}
+                    <ellipse cx="28" cy="30" rx="20" ry="20" fill="rgba(0,0,0,0.25)" />
+                    {/* Medal outer ring */}
+                    <circle cx="28" cy="28" r="21" fill="url(#outerRing)" />
+                    {/* Medal body */}
+                    <circle cx="28" cy="28" r="18.5" fill="url(#medalBody)" />
+                    {/* Metallic shine arc */}
+                    <path d="M14 18 Q20 8 36 12 Q28 16 18 22Z" fill="rgba(255,255,255,0.3)" />
+                    {/* Inner decorative ring */}
+                    <circle cx="28" cy="28" r="15" fill="none" stroke="url(#innerBorder)" strokeWidth="0.8" />
                     {/* Star */}
-                    <path d="M16 7L17.8 12.2L23.2 12.2L18.8 15.5L20.5 20.8L16 17.8L11.5 20.8L13.2 15.5L8.8 12.2L14.2 12.2Z" fill="rgba(253,224,71,0.9)" stroke="rgba(202,138,4,0.6)" strokeWidth="0.4" />
+                    <path d="M28 15L31.5 23.2L40.4 24L33.6 30.2L35.6 39L28 34.5L20.4 39L22.4 30.2L15.6 24L24.5 23.2Z" fill="url(#starFill)" stroke="url(#starStroke)" strokeWidth="0.6" />
+                    {/* Center highlight on star */}
+                    <circle cx="28" cy="27" r="3" fill="rgba(255,255,255,0.15)" />
+                    {/* Bottom reflection */}
+                    <ellipse cx="28" cy="40" rx="12" ry="3" fill="rgba(255,255,255,0.06)" />
                     <defs>
-                      <linearGradient id="medalGrad" x1="3" y1="2" x2="29" y2="28">
-                        <stop offset="0%" stopColor="#fbbf24" />
-                        <stop offset="50%" stopColor="#f59e0b" />
-                        <stop offset="100%" stopColor="#d97706" />
-                      </linearGradient>
-                      <linearGradient id="borderGrad" x1="3" y1="2" x2="29" y2="28">
+                      <linearGradient id="medalBody" x1="9" y1="8" x2="47" y2="48">
                         <stop offset="0%" stopColor="#fde68a" />
+                        <stop offset="25%" stopColor="#fbbf24" />
+                        <stop offset="50%" stopColor="#f59e0b" />
+                        <stop offset="75%" stopColor="#d97706" />
                         <stop offset="100%" stopColor="#b45309" />
                       </linearGradient>
-                      <linearGradient id="ribbon1" x1="4" y1="26" x2="14" y2="38">
-                        <stop offset="0%" stopColor="#7c3aed" />
-                        <stop offset="100%" stopColor="#4f46e5" />
+                      <linearGradient id="outerRing" x1="7" y1="7" x2="49" y2="49">
+                        <stop offset="0%" stopColor="#fef3c7" />
+                        <stop offset="30%" stopColor="#d97706" />
+                        <stop offset="60%" stopColor="#92400e" />
+                        <stop offset="100%" stopColor="#78350f" />
                       </linearGradient>
-                      <linearGradient id="ribbon2" x1="18" y1="26" x2="28" y2="38">
+                      <linearGradient id="innerBorder" x1="13" y1="13" x2="43" y2="43">
+                        <stop offset="0%" stopColor="#fde68a" stopOpacity="0.6" />
+                        <stop offset="100%" stopColor="#92400e" stopOpacity="0.4" />
+                      </linearGradient>
+                      <linearGradient id="starFill" x1="20" y1="15" x2="36" y2="39">
+                        <stop offset="0%" stopColor="#fef9c3" />
+                        <stop offset="40%" stopColor="#fde047" />
+                        <stop offset="100%" stopColor="#ca8a04" />
+                      </linearGradient>
+                      <linearGradient id="starStroke" x1="20" y1="15" x2="36" y2="39">
+                        <stop offset="0%" stopColor="#a16207" />
+                        <stop offset="100%" stopColor="#713f12" />
+                      </linearGradient>
+                      <linearGradient id="rl" x1="6" y1="44" x2="22" y2="70">
                         <stop offset="0%" stopColor="#7c3aed" />
-                        <stop offset="100%" stopColor="#4f46e5" />
+                        <stop offset="50%" stopColor="#6d28d9" />
+                        <stop offset="100%" stopColor="#4c1d95" />
+                      </linearGradient>
+                      <linearGradient id="rr" x1="34" y1="44" x2="50" y2="70">
+                        <stop offset="0%" stopColor="#7c3aed" />
+                        <stop offset="50%" stopColor="#6d28d9" />
+                        <stop offset="100%" stopColor="#4c1d95" />
                       </linearGradient>
                     </defs>
                   </svg>
