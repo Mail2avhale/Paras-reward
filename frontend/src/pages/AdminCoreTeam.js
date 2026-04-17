@@ -113,41 +113,29 @@ const AdminCoreTeam = () => {
 
       {/* Pool Wallet Stats */}
       <div className="grid grid-cols-2 gap-3" data-testid="pool-stats">
-        <div className="rounded-xl p-4 relative overflow-hidden" style={{
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(49,46,129,0.1) 100%)',
-          border: '1px solid rgba(99,102,241,0.2)',
-        }}>
-          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(129,140,248,0.6), transparent 70%)' }} />
-          <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium mb-1">Pool Balance</p>
-          <p className="text-xl font-bold text-white">{Number(poolData?.balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
-          <p className="text-indigo-400 text-xs font-medium">PRC</p>
+        <div className="rounded-xl p-4 relative overflow-hidden bg-white" style={{ border: '1px solid #e5e7eb' }}>
+          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.8), transparent 70%)' }} />
+          <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium mb-1">Pool Balance</p>
+          <p className="text-xl font-bold text-gray-900">{Number(poolData?.balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+          <p className="text-indigo-600 text-xs font-medium">PRC</p>
         </div>
-        <div className="rounded-xl p-4 relative overflow-hidden" style={{
-          background: 'linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(22,163,74,0.06) 100%)',
-          border: '1px solid rgba(34,197,94,0.2)',
-        }}>
-          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(34,197,94,0.6), transparent 70%)' }} />
-          <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium mb-1">Core Team</p>
-          <p className="text-xl font-bold text-white">{poolData?.core_team_count || 0}</p>
-          <p className="text-green-400 text-xs font-medium">Members</p>
+        <div className="rounded-xl p-4 relative overflow-hidden bg-white" style={{ border: '1px solid #e5e7eb' }}>
+          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, rgba(34,197,94,0.8), transparent 70%)' }} />
+          <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium mb-1">Core Team</p>
+          <p className="text-xl font-bold text-gray-900">{poolData?.core_team_count || 0}</p>
+          <p className="text-green-600 text-xs font-medium">Members</p>
         </div>
-        <div className="rounded-xl p-4 relative overflow-hidden" style={{
-          background: 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(217,119,6,0.06) 100%)',
-          border: '1px solid rgba(245,158,11,0.2)',
-        }}>
-          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.6), transparent 70%)' }} />
-          <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium mb-1">Total Credited</p>
-          <p className="text-xl font-bold text-white">{Number(poolData?.total_credited || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
-          <p className="text-amber-400 text-xs font-medium">PRC</p>
+        <div className="rounded-xl p-4 relative overflow-hidden bg-white" style={{ border: '1px solid #e5e7eb' }}>
+          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.8), transparent 70%)' }} />
+          <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium mb-1">Total Credited</p>
+          <p className="text-xl font-bold text-gray-900">{Number(poolData?.total_credited || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+          <p className="text-amber-600 text-xs font-medium">PRC</p>
         </div>
-        <div className="rounded-xl p-4 relative overflow-hidden" style={{
-          background: 'linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(8,145,178,0.06) 100%)',
-          border: '1px solid rgba(6,182,212,0.2)',
-        }}>
-          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.6), transparent 70%)' }} />
-          <p className="text-zinc-500 text-[10px] uppercase tracking-wider font-medium mb-1">Total Distributed</p>
-          <p className="text-xl font-bold text-white">{Number(poolData?.total_distributed || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
-          <p className="text-cyan-400 text-xs font-medium">PRC</p>
+        <div className="rounded-xl p-4 relative overflow-hidden bg-white" style={{ border: '1px solid #e5e7eb' }}>
+          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.8), transparent 70%)' }} />
+          <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium mb-1">Total Distributed</p>
+          <p className="text-xl font-bold text-gray-900">{Number(poolData?.total_distributed || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+          <p className="text-cyan-600 text-xs font-medium">PRC</p>
         </div>
       </div>
 
