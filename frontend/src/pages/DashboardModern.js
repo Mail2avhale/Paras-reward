@@ -368,14 +368,37 @@ const DashboardModern = ({ user, onLogout }) => {
             <h1 className="text-white text-xl font-bold flex items-center gap-2">
               {userData?.name || user?.email?.split('@')[0] || 'User'}
               {stats.poolWallet?.is_core_member && (
-                <span className="inline-flex items-center gap-1 text-[9px] px-2.5 py-1 rounded-md font-bold tracking-wider" style={{
-                  background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%)',
-                  color: '#fff',
-                  boxShadow: '0 2px 8px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                }} data-testid="core-team-header-badge">
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-                  CORE TEAM
+                <span className="inline-flex items-center" data-testid="core-team-header-badge">
+                  <svg width="32" height="38" viewBox="0 0 32 38" fill="none" style={{ filter: 'drop-shadow(0 2px 4px rgba(202,138,4,0.4))' }}>
+                    {/* Ribbon tails */}
+                    <path d="M8 26L4 36L10 32L12 38L14 28" fill="url(#ribbon1)" />
+                    <path d="M24 26L28 36L22 32L20 38L18 28" fill="url(#ribbon2)" />
+                    {/* Medal body - wavy circle */}
+                    <circle cx="16" cy="15" r="13" fill="url(#medalGrad)" stroke="url(#borderGrad)" strokeWidth="1.2" />
+                    {/* Inner ring */}
+                    <circle cx="16" cy="15" r="10" fill="none" stroke="rgba(202,138,4,0.4)" strokeWidth="0.5" strokeDasharray="2 1.5" />
+                    {/* Star */}
+                    <path d="M16 7L17.8 12.2L23.2 12.2L18.8 15.5L20.5 20.8L16 17.8L11.5 20.8L13.2 15.5L8.8 12.2L14.2 12.2Z" fill="rgba(253,224,71,0.9)" stroke="rgba(202,138,4,0.6)" strokeWidth="0.4" />
+                    <defs>
+                      <linearGradient id="medalGrad" x1="3" y1="2" x2="29" y2="28">
+                        <stop offset="0%" stopColor="#fbbf24" />
+                        <stop offset="50%" stopColor="#f59e0b" />
+                        <stop offset="100%" stopColor="#d97706" />
+                      </linearGradient>
+                      <linearGradient id="borderGrad" x1="3" y1="2" x2="29" y2="28">
+                        <stop offset="0%" stopColor="#fde68a" />
+                        <stop offset="100%" stopColor="#b45309" />
+                      </linearGradient>
+                      <linearGradient id="ribbon1" x1="4" y1="26" x2="14" y2="38">
+                        <stop offset="0%" stopColor="#7c3aed" />
+                        <stop offset="100%" stopColor="#4f46e5" />
+                      </linearGradient>
+                      <linearGradient id="ribbon2" x1="18" y1="26" x2="28" y2="38">
+                        <stop offset="0%" stopColor="#7c3aed" />
+                        <stop offset="100%" stopColor="#4f46e5" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
                 </span>
               )}
             </h1>
