@@ -365,8 +365,16 @@ const DashboardModern = ({ user, onLogout }) => {
                 {greeting.text}
               </p>
             </div>
-            <h1 className="text-white text-xl font-bold">
+            <h1 className="text-white text-xl font-bold flex items-center gap-2">
               {userData?.name || user?.email?.split('@')[0] || 'User'}
+              {stats.poolWallet?.is_core_member && (
+                <span className="text-[9px] px-2 py-0.5 rounded-full font-bold tracking-wider" style={{
+                  background: 'linear-gradient(135deg, rgba(129,140,248,0.25) 0%, rgba(167,139,250,0.2) 100%)',
+                  border: '1px solid rgba(129,140,248,0.35)',
+                  color: '#a5b4fc',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+                }} data-testid="core-team-header-badge">CORE TEAM</span>
+              )}
             </h1>
           </div>
           <div className="flex items-center gap-2">
