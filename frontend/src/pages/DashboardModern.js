@@ -368,12 +368,15 @@ const DashboardModern = ({ user, onLogout }) => {
             <h1 className="text-white text-xl font-bold flex items-center gap-2">
               {userData?.name || user?.email?.split('@')[0] || 'User'}
               {stats.poolWallet?.is_core_member && (
-                <span className="text-[9px] px-2 py-0.5 rounded-full font-bold tracking-wider" style={{
-                  background: 'linear-gradient(135deg, rgba(129,140,248,0.25) 0%, rgba(167,139,250,0.2) 100%)',
-                  border: '1px solid rgba(129,140,248,0.35)',
-                  color: '#a5b4fc',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-                }} data-testid="core-team-header-badge">CORE TEAM</span>
+                <span className="inline-flex items-center gap-1 text-[9px] px-2.5 py-1 rounded-md font-bold tracking-wider" style={{
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%)',
+                  color: '#fff',
+                  boxShadow: '0 2px 8px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                }} data-testid="core-team-header-badge">
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                  CORE TEAM
+                </span>
               )}
             </h1>
           </div>
@@ -982,14 +985,6 @@ const DashboardModern = ({ user, onLogout }) => {
                   <p className="text-sm font-bold text-white tracking-wide">Core Team Pool Wallet</p>
                   <p className="text-[10px] text-indigo-300/60">{stats.poolWallet?.core_team_count || 0} Team Members</p>
                 </div>
-                <span className="text-[10px] px-3 py-1 rounded-full font-bold tracking-wider" style={{
-                  background: 'linear-gradient(135deg, rgba(129,140,248,0.25) 0%, rgba(167,139,250,0.2) 100%)',
-                  border: '1px solid rgba(129,140,248,0.35)',
-                  color: '#a5b4fc',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-                }} data-testid="core-team-badge">
-                  CORE TEAM
-                </span>
               </div>
 
               <div className="flex items-end justify-between">
