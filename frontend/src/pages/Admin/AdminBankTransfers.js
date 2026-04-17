@@ -730,20 +730,27 @@ const AdminBankTransfers = () => {
                           )}
                         </td>
                         <td className="p-4" data-testid={`redeem-limit-${req.request_id}`}>
-                          {req.redeem_limit_available != null ? (
-                            <div>
-                              <p className={`font-bold text-sm ${req.redeem_limit_available < 0 ? 'text-red-600' : req.redeem_limit_available === 0 ? 'text-orange-500' : 'text-emerald-600'}`}>
-                                {req.redeem_limit_available < 0 ? '⚠ ' : ''}{Number(req.redeem_limit_available || 0).toLocaleString()} PRC
-                              </p>
-                              {req.redeem_limit_available < 0 && (
-                                <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded border border-red-300">
-                                  NEGATIVE LIMIT
-                                </span>
-                              )}
-                              <p className="text-slate-400 text-[10px]">Unlock: {req.redeem_limit_percent || 0}%</p>
-                              <p className="text-slate-400 text-[10px]">Total Limit: {Number(req.redeem_limit_total || 0).toLocaleString()}</p>
-                            </div>
-                          ) : (
+                          {req.redeem_limit_available != null ? (() => {
+                            const rawLimit = req.redeem_limit_raw ?? (req.redeem_limit_total - req.redeem_limit_used);
+                            const prc = req.prc_deducted || 0;
+                            const isOverLimit = rawLimit < 0;
+                            const excess = isOverLimit ? Math.abs(rawLimit) : 0;
+                            return (
+                              <div>
+                                <p className={`font-bold text-sm ${isOverLimit ? 'text-red-600' : rawLimit === 0 ? 'text-orange-500' : 'text-emerald-600'}`}>
+                                  {Number(rawLimit).toLocaleString()} PRC
+                                </p>
+                                {req.status === 'pending' && isOverLimit && (
+                                  <div className="mt-1 px-2 py-1 bg-red-50 border border-red-300 rounded">
+                                    <p className="text-red-700 text-[10px] font-bold">OVER LIMIT</p>
+                                    <p className="text-red-600 text-xs font-semibold">Excess: {Number(excess).toLocaleString()} PRC</p>
+                                  </div>
+                                )}
+                                <p className="text-slate-400 text-[10px] mt-0.5">Unlock: {req.redeem_limit_percent || 0}%</p>
+                                <p className="text-slate-400 text-[10px]">Limit: {Number(req.redeem_limit_total || 0).toLocaleString()} | Used: {Number(req.redeem_limit_used || 0).toLocaleString()}</p>
+                              </div>
+                            );
+                          })() : (
                             <span className="text-slate-400 text-xs">N/A</span>
                           )}
                         </td>
@@ -1004,21 +1011,27 @@ const AdminBankTransfers = () => {
                         )}
                       </div>
                       {/* Redeem Limit */}
-                      {req.redeem_limit_available != null && (
-                        <div className={`-mx-3 px-3 py-2 border-t ${req.redeem_limit_available < 0 ? 'bg-red-50 border-red-200' : 'border-slate-200'}`}>
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-500 text-xs">Redeem Limit: </span>
-                            <div className="flex items-center gap-1">
-                              <span className={`font-semibold text-sm ${req.redeem_limit_available < 0 ? 'text-red-600' : req.redeem_limit_available === 0 ? 'text-orange-500' : 'text-emerald-600'}`}>
-                                {Number(req.redeem_limit_available || 0).toLocaleString()} PRC
+                      {req.redeem_limit_available != null && (() => {
+                        const rawLimit = req.redeem_limit_raw ?? (req.redeem_limit_total - req.redeem_limit_used);
+                        const isOverLimit = rawLimit < 0;
+                        const excess = isOverLimit ? Math.abs(rawLimit) : 0;
+                        return (
+                          <div className={`-mx-3 px-3 py-2 border-t ${isOverLimit ? 'bg-red-50 border-red-200' : 'border-slate-200'}`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500 text-xs">Redeem Limit: </span>
+                              <span className={`font-semibold text-sm ${isOverLimit ? 'text-red-600' : rawLimit === 0 ? 'text-orange-500' : 'text-emerald-600'}`}>
+                                {Number(rawLimit).toLocaleString()} PRC
                               </span>
-                              {req.redeem_limit_available < 0 && (
-                                <span className="px-1 py-0.5 bg-red-100 text-red-700 text-[9px] font-bold rounded border border-red-300">NEGATIVE</span>
-                              )}
                             </div>
+                            {req.status === 'pending' && isOverLimit && (
+                              <div className="mt-1 flex items-center justify-between">
+                                <span className="text-red-700 text-[10px] font-bold">OVER LIMIT</span>
+                                <span className="text-red-600 text-xs font-semibold">Excess: {Number(excess).toLocaleString()} PRC</span>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                       {/* Lifetime Redeemed */}
                       <div className="flex items-center justify-between -mx-3 px-3 py-2 rounded-b-lg border-t border-slate-200">
                         <div className="flex items-center gap-2">
@@ -1136,20 +1149,30 @@ const AdminBankTransfers = () => {
                 </div>
                 
                 {/* Redeem Limit Warning */}
-                {selectedRequest.redeem_limit_available != null && (
-                  <div className={`px-3 py-2 rounded border ${selectedRequest.redeem_limit_available < 0 ? 'bg-red-50 border-red-300' : selectedRequest.redeem_limit_available === 0 ? 'bg-orange-50 border-orange-300' : 'bg-emerald-50 border-emerald-200'}`} data-testid="modal-redeem-limit">
-                    <div className="flex items-center justify-between">
-                      <p className="text-slate-600 text-xs font-medium">Redeem Limit Available</p>
-                      <p className={`font-bold text-sm ${selectedRequest.redeem_limit_available < 0 ? 'text-red-600' : selectedRequest.redeem_limit_available === 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
-                        {Number(selectedRequest.redeem_limit_available).toLocaleString()} PRC
-                      </p>
+                {selectedRequest.redeem_limit_available != null && (() => {
+                  const rawLimit = selectedRequest.redeem_limit_raw ?? (selectedRequest.redeem_limit_total - selectedRequest.redeem_limit_used);
+                  const isOverLimit = rawLimit < 0;
+                  const excess = isOverLimit ? Math.abs(rawLimit) : 0;
+                  return (
+                    <div className={`px-3 py-2 rounded border ${isOverLimit ? 'bg-red-50 border-red-300' : rawLimit === 0 ? 'bg-orange-50 border-orange-300' : 'bg-emerald-50 border-emerald-200'}`} data-testid="modal-redeem-limit">
+                      <div className="flex items-center justify-between">
+                        <p className="text-slate-600 text-xs font-medium">Redeem Limit</p>
+                        <p className={`font-bold text-sm ${isOverLimit ? 'text-red-600' : rawLimit === 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                          {Number(rawLimit).toLocaleString()} PRC
+                        </p>
+                      </div>
+                      {selectedRequest.status === 'pending' && isOverLimit && (
+                        <div className="mt-1 bg-red-100 rounded px-2 py-1.5 border border-red-300">
+                          <p className="text-red-700 text-xs font-bold">OVER LIMIT by {Number(excess).toLocaleString()} PRC</p>
+                          <p className="text-red-600 text-[10px]">User's total limit: {Number(selectedRequest.redeem_limit_total || 0).toLocaleString()} PRC | Used: {Number(selectedRequest.redeem_limit_used || 0).toLocaleString()} PRC</p>
+                        </div>
+                      )}
+                      {!(selectedRequest.status === 'pending' && isOverLimit) && (
+                        <p className="text-slate-400 text-[10px] mt-0.5">Unlock: {selectedRequest.redeem_limit_percent || 0}% | Total: {Number(selectedRequest.redeem_limit_total || 0).toLocaleString()} | Used: {Number(selectedRequest.redeem_limit_used || 0).toLocaleString()}</p>
+                      )}
                     </div>
-                    {selectedRequest.redeem_limit_available < 0 && (
-                      <p className="text-red-600 text-xs font-semibold mt-1">WARNING: User's redeem limit is NEGATIVE. Request was made before limits were enforced.</p>
-                    )}
-                    <p className="text-slate-400 text-[10px] mt-0.5">Unlock: {selectedRequest.redeem_limit_percent || 0}% | Total Limit: {Number(selectedRequest.redeem_limit_total || 0).toLocaleString()} PRC</p>
-                  </div>
-                )}
+                  );
+                })()}
                 
                 {/* Account Holder Name */}
                 <div className="flex items-center justify-between bg-white px-3 py-2 rounded border border-slate-200">

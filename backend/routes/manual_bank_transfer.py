@@ -695,11 +695,15 @@ async def get_all_requests(
                 if uid:
                     try:
                         limit_info = await calculate_redeem_limit_func(uid)
+                        raw_total = limit_info.get("total_limit", 0)
+                        raw_used = limit_info.get("total_redeemed", 0)
                         req["redeem_limit_available"] = limit_info.get("available", 0)
                         req["redeem_limit_effective"] = limit_info.get("effective_available", 0)
-                        req["redeem_limit_total"] = limit_info.get("total_limit", 0)
-                        req["redeem_limit_used"] = limit_info.get("total_redeemed", 0)
+                        req["redeem_limit_total"] = raw_total
+                        req["redeem_limit_used"] = raw_used
                         req["redeem_limit_percent"] = limit_info.get("unlock_percent", 0)
+                        # Raw difference (can be negative for over-limit users)
+                        req["redeem_limit_raw"] = round(raw_total - raw_used, 2)
                     except Exception as e:
                         logging.warning(f"Failed to get redeem limit for {uid}: {e}")
                         req["redeem_limit_available"] = None
