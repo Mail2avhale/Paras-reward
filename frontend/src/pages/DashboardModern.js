@@ -1008,6 +1008,19 @@ const DashboardModern = ({ user, onLogout }) => {
                   </p>
                 </div>
               </div>
+
+              {/* Today's Expected PRC */}
+              <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(129,140,248,0.15)' }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-indigo-300/50 text-[10px] uppercase tracking-widest font-medium">Today's Expected</p>
+                  <p className="text-sm font-bold text-green-400">
+                    +{((stats.poolWallet?.core_team_count || 0) > 0
+                      ? Number((stats.poolWallet?.balance || 0) / (stats.poolWallet?.core_team_count || 1)).toLocaleString('en-IN', { maximumFractionDigits: 2 })
+                      : '0')}
+                    <span className="text-[10px] text-green-400/60 ml-1 font-medium">PRC</span>
+                  </p>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
