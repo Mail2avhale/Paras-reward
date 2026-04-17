@@ -141,16 +141,16 @@ const AdminCoreTeam = () => {
 
       {/* Settings + Distribute */}
       <div className="grid grid-cols-1 gap-3">
-        <div className="rounded-xl p-4" style={{ background: 'rgba(24,24,27,0.6)', border: '1px solid rgba(63,63,70,0.4)' }}>
-          <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">Pool Rate</p>
+        <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #e5e7eb' }}>
+          <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">Pool Rate</p>
           <div className="flex items-center gap-3">
             <input
               type="number" min="0" max="100" value={poolRate}
               onChange={(e) => setPoolRate(Number(e.target.value))}
-              className="w-20 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-center text-sm"
+              className="w-20 bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-center text-sm"
               data-testid="pool-rate-input"
             />
-            <span className="text-zinc-500 text-xs flex-1">% of mining collect → pool</span>
+            <span className="text-gray-500 text-xs flex-1">% of mining collect → pool</span>
             <button onClick={saveRate} disabled={savingRate}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg disabled:opacity-50"
               data-testid="save-rate-btn">
@@ -161,7 +161,7 @@ const AdminCoreTeam = () => {
         <button onClick={distribute} disabled={distributing || (poolData?.balance || 0) <= 0}
           className="w-full py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
           style={{
-            background: (poolData?.balance || 0) > 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'rgba(63,63,70,0.4)',
+            background: (poolData?.balance || 0) > 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'rgba(209,213,219,1)',
             border: '1px solid rgba(16,185,129,0.3)',
           }}
           data-testid="distribute-btn">
@@ -171,17 +171,17 @@ const AdminCoreTeam = () => {
       </div>
 
       {/* Add Member */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5" data-testid="add-member-section">
+      <div className="bg-white rounded-xl p-5" style={{ border: '1px solid #e5e7eb' }} data-testid="add-member-section">
         <div className="flex items-center gap-2 mb-4">
-          <UserPlus className="w-4 h-4 text-indigo-400" />
-          <h3 className="text-sm font-semibold text-white">Add Core Team Member</h3>
+          <UserPlus className="w-4 h-4 text-indigo-600" />
+          <h3 className="text-sm font-semibold text-gray-900">Add Core Team Member</h3>
         </div>
         <div className="flex gap-2 mb-3">
           <input
             type="text" placeholder="Search by name, mobile, or email..."
             value={searchUid} onChange={(e) => setSearchUid(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && searchUser()}
-            className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-zinc-600"
+            className="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 text-sm placeholder-gray-400"
             data-testid="search-user-input"
           />
           <button onClick={searchUser} disabled={searching}
@@ -196,13 +196,13 @@ const AdminCoreTeam = () => {
             {searchResults.map((u) => {
               const alreadyMember = members.some(m => m.uid === u.uid);
               return (
-                <div key={u.uid} className="flex items-center justify-between bg-zinc-800/50 rounded-lg px-4 py-3">
+                <div key={u.uid} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
                   <div>
-                    <p className="text-white text-sm font-medium">{u.name}</p>
-                    <p className="text-zinc-500 text-xs">{u.mobile} | {u.subscription_plan || 'explorer'}</p>
+                    <p className="text-gray-900 text-sm font-medium">{u.name}</p>
+                    <p className="text-gray-500 text-xs">{u.mobile} | {u.subscription_plan || 'explorer'}</p>
                   </div>
                   {alreadyMember ? (
-                    <span className="text-xs text-green-400 font-medium">Already Member</span>
+                    <span className="text-xs text-green-600 font-medium">Already Member</span>
                   ) : (
                     <button onClick={() => addMember(u.uid)}
                       className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-lg"
@@ -218,30 +218,30 @@ const AdminCoreTeam = () => {
       </div>
 
       {/* Members List */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5" data-testid="members-list-section">
+      <div className="bg-white rounded-xl p-5" style={{ border: '1px solid #e5e7eb' }} data-testid="members-list-section">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-indigo-400" />
-            <h3 className="text-sm font-semibold text-white">Core Team Members ({members.length})</h3>
+            <Users className="w-4 h-4 text-indigo-600" />
+            <h3 className="text-sm font-semibold text-gray-900">Core Team Members ({members.length})</h3>
           </div>
         </div>
         {members.length === 0 ? (
-          <p className="text-zinc-600 text-sm text-center py-8">No core team members yet. Search and add users above.</p>
+          <p className="text-gray-400 text-sm text-center py-8">No core team members yet. Search and add users above.</p>
         ) : (
           <div className="space-y-2">
             {members.map((m, idx) => (
-              <div key={m.uid} className="flex items-center justify-between bg-zinc-800/40 rounded-lg px-4 py-3 hover:bg-zinc-800/60 transition-colors" data-testid={`member-row-${idx}`}>
+              <div key={m.uid} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 hover:bg-gray-100 transition-colors border border-gray-200" data-testid={`member-row-${idx}`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold">
                     {(m.name || '?')[0]}
                   </div>
                   <div>
-                    <p className="text-white text-sm font-medium">{m.name || 'Unknown'}</p>
-                    <p className="text-zinc-500 text-xs">{m.mobile || 'N/A'} | Added {m.added_at ? new Date(m.added_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'N/A'}</p>
+                    <p className="text-gray-900 text-sm font-medium">{m.name || 'Unknown'}</p>
+                    <p className="text-gray-500 text-xs">{m.mobile || 'N/A'} | Added {m.added_at ? new Date(m.added_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'N/A'}</p>
                   </div>
                 </div>
                 <button onClick={() => removeMember(m.uid, m.name)}
-                  className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
                   data-testid={`remove-member-btn-${idx}`}>
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -253,18 +253,18 @@ const AdminCoreTeam = () => {
 
       {/* Recent Transactions */}
       {poolData?.recent_transactions?.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5" data-testid="pool-transactions">
-          <h3 className="text-sm font-semibold text-white mb-3">Recent Pool Transactions</h3>
+        <div className="bg-white rounded-xl p-5" style={{ border: '1px solid #e5e7eb' }} data-testid="pool-transactions">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Recent Pool Transactions</h3>
           <div className="space-y-2">
             {poolData.recent_transactions.slice(0, 10).map((t, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-zinc-800/30 rounded-lg px-3 py-2 text-xs">
+              <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5 text-xs border border-gray-100">
                 <div>
-                  <span className={`font-medium ${t.type === 'credit' ? 'text-green-400' : 'text-cyan-400'}`}>
+                  <span className={`font-medium ${t.type === 'credit' ? 'text-green-600' : 'text-cyan-600'}`}>
                     {t.type === 'credit' ? '+' : '-'}{Number(t.amount || 0).toFixed(4)} PRC
                   </span>
-                  <p className="text-zinc-600 mt-0.5">{t.description?.substring(0, 60)}</p>
+                  <p className="text-gray-500 mt-0.5">{t.description?.substring(0, 60)}</p>
                 </div>
-                <span className="text-zinc-600">{t.timestamp ? new Date(t.timestamp).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                <span className="text-gray-400">{t.timestamp ? new Date(t.timestamp).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</span>
               </div>
             ))}
           </div>
