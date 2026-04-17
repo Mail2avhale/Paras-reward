@@ -951,6 +951,31 @@ const DashboardModern = ({ user, onLogout }) => {
               background: 'radial-gradient(circle, rgba(167,139,250,0.5) 0%, transparent 70%)',
             }} />
 
+            {/* Background geometric pattern — squares, circles, ₹ */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ borderRadius: 'inherit' }}>
+              {/* Squares */}
+              <div className="absolute" style={{ top: '12%', right: '8%', width: 28, height: 28, border: '1.5px solid rgba(129,140,248,0.15)', borderRadius: 4, transform: 'rotate(15deg)' }} />
+              <div className="absolute" style={{ bottom: '18%', right: '22%', width: 18, height: 18, border: '1.5px solid rgba(167,139,250,0.12)', borderRadius: 3, transform: 'rotate(-20deg)' }} />
+              <div className="absolute" style={{ top: '45%', right: '42%', width: 14, height: 14, background: 'rgba(129,140,248,0.06)', borderRadius: 2, transform: 'rotate(35deg)' }} />
+              <div className="absolute" style={{ top: '8%', left: '35%', width: 22, height: 22, border: '1px solid rgba(99,102,241,0.1)', borderRadius: 3, transform: 'rotate(45deg)' }} />
+              
+              {/* Circles */}
+              <div className="absolute" style={{ top: '20%', right: '30%', width: 20, height: 20, border: '1.5px solid rgba(167,139,250,0.13)', borderRadius: '50%' }} />
+              <div className="absolute" style={{ bottom: '25%', left: '15%', width: 12, height: 12, background: 'rgba(129,140,248,0.08)', borderRadius: '50%' }} />
+              <div className="absolute" style={{ top: '55%', right: '12%', width: 16, height: 16, border: '1px solid rgba(129,140,248,0.1)', borderRadius: '50%' }} />
+              <div className="absolute" style={{ bottom: '40%', right: '55%', width: 8, height: 8, background: 'rgba(167,139,250,0.1)', borderRadius: '50%' }} />
+              
+              {/* ₹ Symbols */}
+              <span className="absolute font-bold select-none" style={{ top: '15%', right: '18%', fontSize: 18, color: 'rgba(129,140,248,0.1)', transform: 'rotate(-10deg)' }}>₹</span>
+              <span className="absolute font-bold select-none" style={{ bottom: '20%', left: '30%', fontSize: 14, color: 'rgba(167,139,250,0.08)', transform: 'rotate(15deg)' }}>₹</span>
+              <span className="absolute font-bold select-none" style={{ top: '40%', right: '50%', fontSize: 22, color: 'rgba(99,102,241,0.07)', transform: 'rotate(5deg)' }}>₹</span>
+              
+              {/* Dots pattern */}
+              <div className="absolute" style={{ top: '30%', left: '8%', width: 4, height: 4, background: 'rgba(129,140,248,0.15)', borderRadius: '50%' }} />
+              <div className="absolute" style={{ top: '65%', left: '45%', width: 3, height: 3, background: 'rgba(167,139,250,0.12)', borderRadius: '50%' }} />
+              <div className="absolute" style={{ top: '10%', left: '60%', width: 5, height: 5, background: 'rgba(129,140,248,0.1)', borderRadius: '50%' }} />
+            </div>
+
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
