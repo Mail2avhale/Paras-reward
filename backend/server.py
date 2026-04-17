@@ -102,6 +102,7 @@ from routes.eko_callback import router as eko_callback_router, set_db as set_eko
 from routes.eko_recharge import router as eko_recharge_router, set_db as set_eko_recharge_db, set_recharge_redeem_check, set_recharge_log_transaction, set_recharge_calculate_charges, set_cache as set_eko_recharge_cache
 from routes.growth_economy import router as growth_economy_router, set_db as set_growth_economy_db
 from routes.admin_subscription import router as admin_subscription_router
+from routes.pool_wallet import router as pool_wallet_router, set_db as set_pool_wallet_db, set_cache as set_pool_wallet_cache, distribute_pool_to_core_team
 
 # ========== SECURITY CONFIGURATION ==========
 # SECURITY: Use stable JWT secret from env, fallback to fixed secret for consistency
@@ -7755,6 +7756,20 @@ async def get_user_dashboard_combined(uid: str, request: Request):
         "pending_refund_count": pending_refund_count,
         "cached_at": now.isoformat()
     }
+    
+    # Add pool wallet info
+    try:
+        pool_wallet = await db.pool_wallet.find_one({"wallet_id": "main"}, {"_id": 0, "balance": 1})
+        pool_balance = round(float(pool_wallet.get("balance", 0)), 4) if pool_wallet else 0
+        core_team_count = await db.core_team_members.count_documents({"status": "active"})
+        is_core_team = await db.core_team_members.find_one({"uid": uid, "status": "active"}) is not None
+        result["pool_wallet"] = {
+            "balance": pool_balance,
+            "core_team_count": core_team_count,
+            "is_core_member": is_core_team,
+        }
+    except Exception:
+        result["pool_wallet"] = {"balance": 0, "core_team_count": 0, "is_core_member": False}
     
     # Cache for 60 seconds
     await cache.set(cache_key, result, ttl=60)
@@ -32755,6 +32770,7 @@ set_admin_misc_helpers({'log_admin_action': log_admin_action, 'hash_password': h
 api_router.include_router(admin_misc_router)
 
 api_router.include_router(admin_subscription_router)
+api_router.include_router(pool_wallet_router)
 # Include bank redeem router (NEW - Bank Account Withdrawal)
 set_bank_redeem_db(db)
 set_bank_redeem_cache(cache)
@@ -32791,6 +32807,8 @@ api_router.include_router(eko_callback_router)
 
 # Growth Economy Router (Mining, Referral, Redeem formulas)
 set_growth_economy_db(db)
+set_pool_wallet_db(db)
+set_pool_wallet_cache(cache)
 
 # Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
 # set_eko_db(db)
@@ -33704,6 +33722,24 @@ async def startup_db():
             minutes=5,
             id='emergency_auto_pause_check',
             name='Emergency redeem auto-pause monitor',
+            replace_existing=True
+        )
+        
+        # Pool Wallet Daily Distribution at midnight
+        async def pool_wallet_daily_distribute():
+            try:
+                result = await distribute_pool_to_core_team(triggered_by="daily_cron")
+                logging.info(f"[POOL WALLET CRON] Distribution result: {result}")
+            except Exception as e:
+                logging.error(f"[POOL WALLET CRON] Distribution error: {e}")
+        
+        scheduler.add_job(
+            pool_wallet_daily_distribute,
+            'cron',
+            hour=0,
+            minute=0,
+            id='pool_wallet_daily_distribute',
+            name='Pool Wallet Daily Distribution (Midnight)',
             replace_existing=True
         )
         

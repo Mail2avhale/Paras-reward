@@ -108,8 +108,9 @@ const DashboardModern = ({ user, onLogout }) => {
     subscriptionStart: user?.subscription_start || user?.vip_activation_date || null,
     upcomingPlan: user?.upcoming_plan || null,
     upcomingPlansCount: user?.upcoming_plans_count || 0,
-    prcRate: 10, // Default PRC rate
-    categoryLimits: { utility: { remaining: 0 }, shopping: { remaining: 0 }, bank: { remaining: 0 } }
+    prcRate: 10,
+    categoryLimits: { utility: { remaining: 0 }, shopping: { remaining: 0 }, bank: { remaining: 0 } },
+    poolWallet: { balance: 0, core_team_count: 0, is_core_member: false },
   });
 
   // Helper function to get plan display name
@@ -182,7 +183,8 @@ const DashboardModern = ({ user, onLogout }) => {
             subscriptionPlan: userData.subscription_plan || 'explorer',
             subscriptionExpiry: userData.subscription_expiry || null,
             subscriptionStart: userData.subscription_start || null,
-            prcRate: prcRate
+            prcRate: prcRate,
+            poolWallet: combinedRes.data.pool_wallet || { balance: 0, core_team_count: 0, is_core_member: false },
           });
           
           // Set recent activity from combined response
@@ -238,7 +240,8 @@ const DashboardModern = ({ user, onLogout }) => {
           subscriptionStart: fetchedUserData.subscription_start || fetchedUserData.vip_activation_date || null,
           upcomingPlan: fetchedUserData.upcoming_plan || null,
           upcomingPlansCount: fetchedUserData.upcoming_plans_count || 0,
-          prcRate: prcRate
+          prcRate: prcRate,
+          poolWallet: fetchedUserData.pool_wallet || { balance: 0, core_team_count: 0, is_core_member: false },
         });
       } else {
         // Fallback to user prop data
@@ -912,6 +915,44 @@ const DashboardModern = ({ user, onLogout }) => {
       )}
 
       {/* Mining Widget - Reward collection on dashboard */}
+      {/* Pool Wallet & Core Team Card */}
+      <div className="px-5 mb-4" data-testid="pool-wallet-card">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-2xl p-4 border border-zinc-800/60"
+          style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(79,70,229,0.04) 100%)' }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 14h.01"/></svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Core Pool Wallet</p>
+                <p className="text-[10px] text-zinc-500">{stats.poolWallet?.core_team_count || 0} Team Members</p>
+              </div>
+            </div>
+            {stats.poolWallet?.is_core_member && (
+              <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" data-testid="core-team-badge">
+                Core Team
+              </span>
+            )}
+          </div>
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-zinc-500 text-[10px] uppercase tracking-wider">Pool Balance</p>
+              <p className="text-2xl font-bold text-white mt-0.5">
+                {Number(stats.poolWallet?.balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                <span className="text-xs text-zinc-500 ml-1 font-normal">PRC</span>
+              </p>
+            </div>
+            <p className="text-zinc-600 text-[10px]">Distributed daily at midnight</p>
+          </div>
+        </motion.div>
+      </div>
+
       <div className="px-5 mb-4" data-testid="dashboard-mining-widget">
         <MiningWidget user={user} onBalanceUpdate={(newBalance) => {
           setStats(prev => ({ ...prev, prcBalance: newBalance }));

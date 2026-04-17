@@ -656,6 +656,13 @@ async def collect_mining(uid: str):
             "timestamp": now.isoformat()
         })
         
+        # Pool Wallet: Credit % of mining collect to core team pool
+        try:
+            from routes.pool_wallet import credit_pool_wallet
+            await credit_pool_wallet(uid, mined_coins, user.get("name", ""))
+        except Exception as pool_err:
+            logging.error(f"[MINING] Pool wallet credit error: {pool_err}")
+        
         # Invalidate ALL user-related caches so all pages see updated balance
         if cache:
             await cache.delete(f"user_data:{uid}")

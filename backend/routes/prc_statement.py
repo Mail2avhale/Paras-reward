@@ -39,9 +39,10 @@ TYPE_MAP = {
     "gift_subscription": "Subscription",
     "redeem": "Redeem", "retry_debit": "Redeem",
     "dmt_transfer": "Redeem",
+    "core_team_bonus": "Core Team Bonus",
 }
 
-FILTER_CATEGORIES = ["All", "Reward", "Recharge", "Bill Pay", "Redeem", "Bank Redeem", "Voucher Redeem", "Subscription", "Refund", "Burn", "Admin"]
+FILTER_CATEGORIES = ["All", "Reward", "Recharge", "Bill Pay", "Redeem", "Bank Redeem", "Voucher Redeem", "Subscription", "Refund", "Burn", "Admin", "Core Team Bonus"]
 
 
 def classify_type(raw_type: str) -> str:
