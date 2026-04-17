@@ -257,6 +257,7 @@ const AdminLedgerView = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunk
 const AdminPopupMessages = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminPopupMessages"));
 const AdminBankTransfers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBankTransfers"));
 const AdminHolidays = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminHolidays"));
+const AdminCoreTeam = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCoreTeam"));
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
 // GiftVoucherRedemption - REMOVED (deprecated April 2026)
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
@@ -492,6 +493,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/vip-verification" element={<Navigate to="/admin/subscriptions" replace />} />
                 <Route path="/admin/subscriptions" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminSubscriptionManagement user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/members" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminMembers user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/core-team" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminCoreTeam user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
               </>
             )}
             

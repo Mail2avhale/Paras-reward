@@ -915,43 +915,73 @@ const DashboardModern = ({ user, onLogout }) => {
       )}
 
       {/* Mining Widget - Reward collection on dashboard */}
-      {/* Pool Wallet & Core Team Card */}
-      <div className="px-5 mb-4" data-testid="pool-wallet-card">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="rounded-2xl p-4 border border-zinc-800/60"
-          style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(79,70,229,0.04) 100%)' }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 14h.01"/></svg>
+      {/* Core Team Pool Wallet Card — Only visible to Core Team members */}
+      {stats.poolWallet?.is_core_member && (
+        <div className="px-5 mb-4" data-testid="pool-wallet-card">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="relative rounded-2xl p-5 overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(30,27,75,0.95) 0%, rgba(49,46,129,0.85) 40%, rgba(67,56,202,0.7) 100%)',
+              border: '1px solid rgba(129,140,248,0.25)',
+              boxShadow: '0 8px 32px rgba(67,56,202,0.2), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 1px rgba(99,102,241,0.1)',
+              backdropFilter: 'blur(16px)',
+            }}
+          >
+            {/* Glass reflection overlay */}
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: 'linear-gradient(160deg, rgba(255,255,255,0.08) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.03) 100%)',
+              borderRadius: 'inherit',
+            }} />
+            {/* Subtle glow orbs */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-20" style={{
+              background: 'radial-gradient(circle, rgba(129,140,248,0.6) 0%, transparent 70%)',
+            }} />
+            <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full opacity-15" style={{
+              background: 'radial-gradient(circle, rgba(167,139,250,0.5) 0%, transparent 70%)',
+            }} />
+
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
+                    background: 'linear-gradient(135deg, rgba(129,140,248,0.3) 0%, rgba(99,102,241,0.2) 100%)',
+                    border: '1px solid rgba(129,140,248,0.3)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
+                  }}>
+                    <svg className="w-5 h-5 text-indigo-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 14h.01"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white tracking-wide">Core Team Pool Wallet</p>
+                    <p className="text-[10px] text-indigo-300/60">{stats.poolWallet?.core_team_count || 0} Team Members</p>
+                  </div>
+                </div>
+                <span className="text-[10px] px-3 py-1 rounded-full font-bold tracking-wider" style={{
+                  background: 'linear-gradient(135deg, rgba(129,140,248,0.25) 0%, rgba(167,139,250,0.2) 100%)',
+                  border: '1px solid rgba(129,140,248,0.35)',
+                  color: '#a5b4fc',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+                }} data-testid="core-team-badge">
+                  CORE TEAM
+                </span>
               </div>
-              <div>
-                <p className="text-sm font-bold text-white">Core Pool Wallet</p>
-                <p className="text-[10px] text-zinc-500">{stats.poolWallet?.core_team_count || 0} Team Members</p>
+
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-indigo-300/50 text-[10px] uppercase tracking-widest font-medium">Pool Balance</p>
+                  <p className="text-3xl font-black text-white mt-1" style={{ textShadow: '0 2px 8px rgba(129,140,248,0.3)' }}>
+                    {Number(stats.poolWallet?.balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    <span className="text-sm text-indigo-300/50 ml-1.5 font-medium">PRC</span>
+                  </p>
+                </div>
+                <p className="text-indigo-400/40 text-[9px] font-medium">Distributed daily at midnight</p>
               </div>
             </div>
-            {stats.poolWallet?.is_core_member && (
-              <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" data-testid="core-team-badge">
-                Core Team
-              </span>
-            )}
-          </div>
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-zinc-500 text-[10px] uppercase tracking-wider">Pool Balance</p>
-              <p className="text-2xl font-bold text-white mt-0.5">
-                {Number(stats.poolWallet?.balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                <span className="text-xs text-zinc-500 ml-1 font-normal">PRC</span>
-              </p>
-            </div>
-            <p className="text-zinc-600 text-[10px]">Distributed daily at midnight</p>
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
+        </div>
+      )}
 
       <div className="px-5 mb-4" data-testid="dashboard-mining-widget">
         <MiningWidget user={user} onBalanceUpdate={(newBalance) => {
