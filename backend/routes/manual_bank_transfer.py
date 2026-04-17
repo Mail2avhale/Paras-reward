@@ -35,6 +35,9 @@ check_redeem_limit_func = None
 # Weekly one service limit check function (set by server.py)
 check_weekly_one_service_func = None
 
+# Full redeem limit calculator (set by server.py)
+calculate_redeem_limit_func = None
+
 def set_db(database):
     global db
     db = database
@@ -46,6 +49,10 @@ def set_redeem_limit_check(func):
 def set_weekly_one_service_check(func):
     global check_weekly_one_service_func
     check_weekly_one_service_func = func
+
+def set_calculate_redeem_limit(func):
+    global calculate_redeem_limit_func
+    calculate_redeem_limit_func = func
 
 # ==================== CONSTANTS ====================
 
@@ -96,6 +103,11 @@ class AdminActionRequest(BaseModel):
     admin_id: str
     remark: Optional[str] = None
     utr_number: Optional[str] = None  # For paid requests
+
+class EditAmountRequest(BaseModel):
+    request_id: str
+    admin_id: str
+    new_amount: int = Field(..., ge=1)
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -676,6 +688,22 @@ async def get_all_requests(
             req["user_redeem_count"] = totals["redeem_count"]
             req["is_first_redeem"] = totals["redeem_count"] <= 1
         
+        # Enrich: user's current redeem limit (available, effective_available)
+        if calculate_redeem_limit_func and user_ids:
+            for req in requests:
+                uid = req.get("user_id")
+                if uid:
+                    try:
+                        limit_info = await calculate_redeem_limit_func(uid)
+                        req["redeem_limit_available"] = limit_info.get("available", 0)
+                        req["redeem_limit_effective"] = limit_info.get("effective_available", 0)
+                        req["redeem_limit_total"] = limit_info.get("total_limit", 0)
+                        req["redeem_limit_used"] = limit_info.get("total_redeemed", 0)
+                        req["redeem_limit_percent"] = limit_info.get("unlock_percent", 0)
+                    except Exception as e:
+                        logging.warning(f"Failed to get redeem limit for {uid}: {e}")
+                        req["redeem_limit_available"] = None
+        
         # Post-filter by redeem range
         if redeem_min is not None:
             requests = [r for r in requests if r.get("user_total_redeemed_prc", 0) >= redeem_min]
@@ -891,6 +919,55 @@ async def mark_request_failed(action: AdminActionRequest):
         logging.error(f"Error marking failed: {e}")
         import traceback
         logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Server error")
+
+
+@router.post("/admin/edit-amount")
+async def edit_withdrawal_amount(data: EditAmountRequest):
+    """Admin can edit the withdrawal amount of a pending request."""
+    try:
+        request_doc = await db.bank_transfer_requests.find_one({"request_id": data.request_id})
+        if not request_doc:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        if request_doc.get("status") != "pending":
+            raise HTTPException(status_code=400, detail=f"Cannot edit - request is already {request_doc.get('status')}")
+        
+        old_amount = request_doc.get("withdrawal_amount", 0)
+        new_amount = data.new_amount
+        
+        if new_amount == old_amount:
+            raise HTTPException(status_code=400, detail="New amount is same as current amount")
+        
+        if new_amount > old_amount:
+            raise HTTPException(status_code=400, detail="New amount cannot be more than original amount")
+        
+        await db.bank_transfer_requests.update_one(
+            {"request_id": data.request_id},
+            {
+                "$set": {
+                    "withdrawal_amount": new_amount,
+                    "original_amount": old_amount,
+                    "amount_edited_by": data.admin_id,
+                    "amount_edited_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        logging.info(f"[BANK TRANSFER] Amount edited: {data.request_id} | ₹{old_amount} → ₹{new_amount} | Admin: {data.admin_id}")
+        
+        return {
+            "success": True,
+            "message": f"Amount updated: ₹{old_amount:,} → ₹{new_amount:,}",
+            "old_amount": old_amount,
+            "new_amount": new_amount
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error editing amount: {e}")
         raise HTTPException(status_code=500, detail="Server error")
 
 

@@ -77,7 +77,7 @@ from routes.razorpay_payments import router as razorpay_router, set_db as set_ra
 from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check, set_weekly_one_service_check as set_redeem_v2_weekly_check
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router, set_db as set_bbps_db, set_redeem_limit_check as set_bbps_redeem_limit_check
-from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check
+from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check, set_calculate_redeem_limit as set_bank_transfer_calc_limit
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
@@ -32828,6 +32828,7 @@ api_router.include_router(redeem_v2_router)
 set_bank_transfer_db(db)
 set_bank_transfer_limit_check(check_redeem_limit)
 set_bank_transfer_weekly_check(check_weekly_one_service_limit)
+set_bank_transfer_calc_limit(calculate_user_redeem_limit)
 api_router.include_router(bank_transfer_router)
 
 # Error Monitor Router

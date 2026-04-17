@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/input';
 import {
   Banknote, CheckCircle, XCircle, Clock, Search, Filter, RefreshCw,
   ChevronLeft, ChevronRight, Eye, IndianRupee, Building2, User,
-  Calendar, AlertCircle, Download, ArrowUpDown, Loader2, Copy
+  Calendar, AlertCircle, Download, ArrowUpDown, Loader2, Copy, Pencil
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -108,6 +108,11 @@ const AdminBankTransfers = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
 
+  // Edit amount state
+  const [editingAmountId, setEditingAmountId] = useState(null);
+  const [editAmountValue, setEditAmountValue] = useState('');
+  const [savingAmount, setSavingAmount] = useState(false);
+
   // Toggle single selection
   const toggleSelect = (requestId) => {
     setSelectedIds(prev => 
@@ -187,6 +192,34 @@ const AdminBankTransfers = () => {
       toast.error(err.response?.data?.detail || 'Bulk action failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Edit withdrawal amount
+  const handleSaveAmount = async (requestId) => {
+    const newAmount = parseInt(editAmountValue);
+    if (!newAmount || newAmount <= 0) {
+      toast.error('Enter a valid amount');
+      return;
+    }
+    setSavingAmount(true);
+    try {
+      const admin = JSON.parse(localStorage.getItem('user') || '{}');
+      const res = await axios.post(`${API}/bank-transfer/admin/edit-amount`, {
+        request_id: requestId,
+        admin_id: admin.uid || 'admin',
+        new_amount: newAmount
+      });
+      if (res.data.success) {
+        toast.success(res.data.message);
+        setEditingAmountId(null);
+        setEditAmountValue('');
+        loadRequests();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to update amount');
+    } finally {
+      setSavingAmount(false);
     }
   };
 
@@ -603,6 +636,7 @@ const AdminBankTransfers = () => {
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">Request ID</th>
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">User</th>
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">Amount</th>
+                      <th className="text-left p-4 text-slate-600 font-semibold text-sm">Redeem Limit</th>
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">Lifetime Redeemed</th>
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">Bank Details</th>
                       <th className="text-left p-4 text-slate-600 font-semibold text-sm">Created / Processed</th>
@@ -639,9 +673,79 @@ const AdminBankTransfers = () => {
                             <span className="text-slate-400 text-xs">({req.subscription_plan || 'N/A'})</span>
                           </div>
                         </td>
-                        <td className="p-4">
-                          <p className="text-emerald-600 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</p>
-                          <p className="text-slate-500 text-xs">{req.prc_deducted?.toLocaleString()} PRC</p>
+                        <td className="p-4" data-testid={`amount-cell-${req.request_id}`}>
+                          {editingAmountId === req.request_id ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-500 text-xs">₹</span>
+                                <input
+                                  type="number"
+                                  value={editAmountValue}
+                                  onChange={(e) => setEditAmountValue(e.target.value)}
+                                  className="w-20 px-2 py-1 border border-slate-300 rounded text-sm text-slate-900 bg-white"
+                                  autoFocus
+                                  data-testid={`edit-amount-input-${req.request_id}`}
+                                />
+                              </div>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => handleSaveAmount(req.request_id)}
+                                  disabled={savingAmount}
+                                  className="px-2 py-0.5 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 disabled:opacity-50"
+                                  data-testid={`save-amount-btn-${req.request_id}`}
+                                >
+                                  {savingAmount ? '...' : 'Save'}
+                                </button>
+                                <button
+                                  onClick={() => { setEditingAmountId(null); setEditAmountValue(''); }}
+                                  className="px-2 py-0.5 bg-slate-200 text-slate-700 text-xs rounded hover:bg-slate-300"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                              {req.original_amount && (
+                                <p className="text-slate-400 text-[10px]">Original: ₹{req.original_amount?.toLocaleString()}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="flex items-center gap-1">
+                                <p className="text-emerald-600 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</p>
+                                {req.status === 'pending' && (
+                                  <button
+                                    onClick={() => { setEditingAmountId(req.request_id); setEditAmountValue(req.withdrawal_amount?.toString() || ''); }}
+                                    className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700"
+                                    title="Edit Amount"
+                                    data-testid={`edit-amount-btn-${req.request_id}`}
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-slate-500 text-xs">{req.prc_deducted?.toLocaleString()} PRC</p>
+                              {req.original_amount && req.original_amount !== req.withdrawal_amount && (
+                                <p className="text-orange-500 text-[10px]">Was: ₹{req.original_amount?.toLocaleString()}</p>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-4" data-testid={`redeem-limit-${req.request_id}`}>
+                          {req.redeem_limit_available != null ? (
+                            <div>
+                              <p className={`font-bold text-sm ${req.redeem_limit_available < 0 ? 'text-red-600' : req.redeem_limit_available === 0 ? 'text-orange-500' : 'text-emerald-600'}`}>
+                                {req.redeem_limit_available < 0 ? '⚠ ' : ''}{Number(req.redeem_limit_available || 0).toLocaleString()} PRC
+                              </p>
+                              {req.redeem_limit_available < 0 && (
+                                <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded border border-red-300">
+                                  NEGATIVE LIMIT
+                                </span>
+                              )}
+                              <p className="text-slate-400 text-[10px]">Unlock: {req.redeem_limit_percent || 0}%</p>
+                              <p className="text-slate-400 text-[10px]">Total Limit: {Number(req.redeem_limit_total || 0).toLocaleString()}</p>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs">N/A</span>
+                          )}
                         </td>
                         <td className="p-4" data-testid={`lifetime-redeemed-${req.request_id}`}>
                           <p className={`font-bold text-sm ${req.user_total_redeemed_prc <= 0 ? 'text-blue-600' : req.user_total_redeemed_prc < 5000 ? 'text-emerald-600' : 'text-orange-500'}`}>
@@ -845,18 +949,76 @@ const AdminBankTransfers = () => {
                         </button>
                       </div>
                       {/* Amount */}
-                      <div className="flex items-center justify-between bg-emerald-50 -mx-3 px-3 py-2 border-t border-emerald-200">
-                        <div>
-                          <span className="text-slate-500 text-xs">Amount: </span>
-                          <span className="text-emerald-600 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</span>
-                        </div>
-                        <button
-                          onClick={() => copyToClipboard(req.withdrawal_amount?.toString(), 'Amount')}
-                          className="p-1.5 hover:bg-emerald-100 rounded"
-                        >
-                          <Copy className="w-4 h-4 text-emerald-600" />
-                        </button>
+                      <div className="bg-emerald-50 -mx-3 px-3 py-2 border-t border-emerald-200">
+                        {editingAmountId === req.request_id ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-500 text-xs">₹</span>
+                              <input
+                                type="number"
+                                value={editAmountValue}
+                                onChange={(e) => setEditAmountValue(e.target.value)}
+                                className="w-24 px-2 py-1 border border-slate-300 rounded text-sm text-slate-900 bg-white"
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => handleSaveAmount(req.request_id)}
+                                disabled={savingAmount}
+                                className="px-2 py-1 bg-emerald-600 text-white text-xs rounded"
+                              >
+                                {savingAmount ? '...' : 'Save'}
+                              </button>
+                              <button
+                                onClick={() => { setEditingAmountId(null); setEditAmountValue(''); }}
+                                className="px-2 py-1 bg-slate-200 text-slate-700 text-xs rounded"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-500 text-xs">Amount: </span>
+                              <span className="text-emerald-600 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</span>
+                              {req.status === 'pending' && (
+                                <button
+                                  onClick={() => { setEditingAmountId(req.request_id); setEditAmountValue(req.withdrawal_amount?.toString() || ''); }}
+                                  className="p-1 hover:bg-emerald-100 rounded"
+                                  title="Edit Amount"
+                                >
+                                  <Pencil className="w-3 h-3 text-slate-500" />
+                                </button>
+                              )}
+                              {req.original_amount && req.original_amount !== req.withdrawal_amount && (
+                                <span className="text-orange-500 text-[10px]">(Was: ₹{req.original_amount?.toLocaleString()})</span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => copyToClipboard(req.withdrawal_amount?.toString(), 'Amount')}
+                              className="p-1.5 hover:bg-emerald-100 rounded"
+                            >
+                              <Copy className="w-4 h-4 text-emerald-600" />
+                            </button>
+                          </div>
+                        )}
                       </div>
+                      {/* Redeem Limit */}
+                      {req.redeem_limit_available != null && (
+                        <div className={`-mx-3 px-3 py-2 border-t ${req.redeem_limit_available < 0 ? 'bg-red-50 border-red-200' : 'border-slate-200'}`}>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 text-xs">Redeem Limit: </span>
+                            <div className="flex items-center gap-1">
+                              <span className={`font-semibold text-sm ${req.redeem_limit_available < 0 ? 'text-red-600' : req.redeem_limit_available === 0 ? 'text-orange-500' : 'text-emerald-600'}`}>
+                                {Number(req.redeem_limit_available || 0).toLocaleString()} PRC
+                              </span>
+                              {req.redeem_limit_available < 0 && (
+                                <span className="px-1 py-0.5 bg-red-100 text-red-700 text-[9px] font-bold rounded border border-red-300">NEGATIVE</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {/* Lifetime Redeemed */}
                       <div className="flex items-center justify-between -mx-3 px-3 py-2 rounded-b-lg border-t border-slate-200">
                         <div className="flex items-center gap-2">
@@ -973,6 +1135,22 @@ const AdminBankTransfers = () => {
                   </div>
                 </div>
                 
+                {/* Redeem Limit Warning */}
+                {selectedRequest.redeem_limit_available != null && (
+                  <div className={`px-3 py-2 rounded border ${selectedRequest.redeem_limit_available < 0 ? 'bg-red-50 border-red-300' : selectedRequest.redeem_limit_available === 0 ? 'bg-orange-50 border-orange-300' : 'bg-emerald-50 border-emerald-200'}`} data-testid="modal-redeem-limit">
+                    <div className="flex items-center justify-between">
+                      <p className="text-slate-600 text-xs font-medium">Redeem Limit Available</p>
+                      <p className={`font-bold text-sm ${selectedRequest.redeem_limit_available < 0 ? 'text-red-600' : selectedRequest.redeem_limit_available === 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                        {Number(selectedRequest.redeem_limit_available).toLocaleString()} PRC
+                      </p>
+                    </div>
+                    {selectedRequest.redeem_limit_available < 0 && (
+                      <p className="text-red-600 text-xs font-semibold mt-1">WARNING: User's redeem limit is NEGATIVE. Request was made before limits were enforced.</p>
+                    )}
+                    <p className="text-slate-400 text-[10px] mt-0.5">Unlock: {selectedRequest.redeem_limit_percent || 0}% | Total Limit: {Number(selectedRequest.redeem_limit_total || 0).toLocaleString()} PRC</p>
+                  </div>
+                )}
+                
                 {/* Account Holder Name */}
                 <div className="flex items-center justify-between bg-white px-3 py-2 rounded border border-slate-200">
                   <div>
@@ -1019,18 +1197,23 @@ const AdminBankTransfers = () => {
                 </div>
                 
                 {/* Amount */}
-                <div className="flex items-center justify-between bg-emerald-50 px-3 py-2 rounded border border-emerald-200">
-                  <div>
-                    <p className="text-slate-500 text-xs">Amount to Transfer</p>
-                    <p className="text-emerald-600 font-bold text-xl">₹{selectedRequest.withdrawal_amount?.toLocaleString()}</p>
+                <div className="bg-emerald-50 px-3 py-2 rounded border border-emerald-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-slate-500 text-xs">Amount to Transfer</p>
+                      <p className="text-emerald-600 font-bold text-xl">₹{selectedRequest.withdrawal_amount?.toLocaleString()}</p>
+                      {selectedRequest.original_amount && selectedRequest.original_amount !== selectedRequest.withdrawal_amount && (
+                        <p className="text-orange-500 text-xs">Original: ₹{selectedRequest.original_amount?.toLocaleString()}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(selectedRequest.withdrawal_amount?.toString(), 'Amount')}
+                      className="p-2 hover:bg-emerald-100 rounded"
+                      title="Copy Amount"
+                    >
+                      <Copy className="w-4 h-4 text-emerald-600 hover:text-emerald-700" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => copyToClipboard(selectedRequest.withdrawal_amount?.toString(), 'Amount')}
-                    className="p-2 hover:bg-emerald-100 rounded"
-                    title="Copy Amount"
-                  >
-                    <Copy className="w-4 h-4 text-emerald-600 hover:text-emerald-700" />
-                  </button>
                 </div>
                 
                 {/* Bank Name */}
