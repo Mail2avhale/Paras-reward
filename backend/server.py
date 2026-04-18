@@ -25131,37 +25131,45 @@ async def get_detailed_prc_analytics(period: str = "month"):
         prev_start_str = prev_start.isoformat()
         prev_end_str = prev_end.isoformat()
         
-        # Get all transactions for current period (check both timestamp and created_at fields)
-        current_transactions = await db.transactions.find({
-            "$or": [
-                {"timestamp": {"$gte": start_str}},
-                {"created_at": {"$gte": start_str}}
-            ]
-        }, {"_id": 0}).to_list(length=1000)
-        
-        # Get all transactions for previous period (for comparison)
-        prev_transactions = await db.transactions.find({
-            "$or": [
-                {"timestamp": {"$gte": prev_start_str, "$lt": prev_end_str}},
-                {"created_at": {"$gte": prev_start_str, "$lt": prev_end_str}}
-            ]
-        }, {"_id": 0}).to_list(length=1000)
-        
-        # Calculate PRC Created (mining, referral bonuses, cashback, admin credits)
+        # Use aggregation for efficiency instead of loading all transactions into memory
         credit_types = ["mining", "referral_bonus", "cashback", "admin_credit", "vip_bonus", "signup_bonus", "prc_rain_gain"]
-        
-        prc_created_current = sum(t.get("amount", 0) for t in current_transactions if t.get("type") in credit_types)
-        prc_created_prev = sum(t.get("amount", 0) for t in prev_transactions if t.get("type") in credit_types)
-        
-        # Calculate PRC Used (orders, games, services)
         debit_types = ["order", "withdrawal", "bill_payment_request", "gift_voucher_request", "delivery_charge", "prc_rain_loss", "prc_burn"]
         
-        prc_used_current = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("type") in debit_types)
-        prc_used_prev = sum(abs(t.get("amount", 0)) for t in prev_transactions if t.get("type") in debit_types)
+        async def aggregate_period(start, end=None):
+            match = {"$or": [{"timestamp": {"$gte": start}}, {"created_at": {"$gte": start}}]}
+            if end:
+                match = {"$or": [
+                    {"timestamp": {"$gte": start, "$lt": end}},
+                    {"created_at": {"$gte": start, "$lt": end}}
+                ]}
+            
+            pipeline = [
+                {"$match": match},
+                {"$group": {
+                    "_id": "$type",
+                    "total": {"$sum": "$amount"},
+                    "abs_total": {"$sum": {"$abs": "$amount"}},
+                    "count": {"$sum": 1}
+                }}
+            ]
+            results = await db.transactions.aggregate(pipeline).to_list(100)
+            type_map = {r["_id"]: r for r in results if r["_id"]}
+            
+            created = sum(type_map.get(t, {}).get("total", 0) for t in credit_types)
+            used = sum(type_map.get(t, {}).get("abs_total", 0) for t in debit_types)
+            burned = type_map.get("prc_burn", {}).get("abs_total", 0)
+            
+            return {"created": created, "used": used, "burned": burned, "type_map": type_map}
         
-        # Calculate PRC Burned
-        prc_burned_current = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("type") == "prc_burn")
-        prc_burned_prev = sum(abs(t.get("amount", 0)) for t in prev_transactions if t.get("type") == "prc_burn")
+        current_stats = await aggregate_period(start_str)
+        prev_stats = await aggregate_period(prev_start_str, prev_end_str)
+        
+        prc_created_current = current_stats["created"]
+        prc_created_prev = prev_stats["created"]
+        prc_used_current = current_stats["used"]
+        prc_used_prev = prev_stats["used"]
+        prc_burned_current = current_stats["burned"]
+        prc_burned_prev = prev_stats["burned"]
         
         # Get all users for balance calculation - FIXED: Use aggregation instead of loading all users
         user_stats_pipeline = [
@@ -25180,27 +25188,30 @@ async def get_detailed_prc_analytics(period: str = "month"):
         profit_loss_current = (prc_used_current + prc_burned_current) - prc_created_current
         profit_loss_prev = (prc_used_prev + prc_burned_prev) - prc_created_prev
         
-        # Get revenue from VIP memberships (actual money) - FIXED: Added limit
-        # Check both approved_at and created_at fields for date filtering
-        vip_payments = await db.vip_payments.find({
-            "status": "approved",
-            "$or": [
-                {"approved_at": {"$gte": start_str}},
-                {"created_at": {"$gte": start_str}},
-                {"updated_at": {"$gte": start_str}}
-            ]
-        }, {"_id": 0, "amount": 1}).limit(1000).to_list(length=1000)
-        vip_revenue_current = sum(p.get("amount", 0) for p in vip_payments)
-        
-        vip_payments_prev = await db.vip_payments.find({
-            "status": "approved",
-            "$or": [
-                {"approved_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
-                {"created_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
-                {"updated_at": {"$gte": prev_start_str, "$lt": prev_end_str}}
-            ]
-        }, {"_id": 0, "amount": 1}).to_list(length=1000)
-        vip_revenue_prev = sum(p.get("amount", 0) for p in vip_payments_prev)
+        # Get revenue from VIP memberships (actual money)
+        try:
+            vip_payments = await db.vip_payments.find({
+                "status": "approved",
+                "$or": [
+                    {"approved_at": {"$gte": start_str}},
+                    {"created_at": {"$gte": start_str}},
+                    {"updated_at": {"$gte": start_str}}
+                ]
+            }, {"_id": 0, "amount": 1}).limit(1000).to_list(length=1000)
+            vip_revenue_current = sum(p.get("amount", 0) for p in vip_payments)
+            
+            vip_payments_prev = await db.vip_payments.find({
+                "status": "approved",
+                "$or": [
+                    {"approved_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
+                    {"created_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
+                    {"updated_at": {"$gte": prev_start_str, "$lt": prev_end_str}}
+                ]
+            }, {"_id": 0, "amount": 1}).to_list(length=1000)
+            vip_revenue_prev = sum(p.get("amount", 0) for p in vip_payments_prev)
+        except Exception:
+            vip_revenue_current = 0
+            vip_revenue_prev = 0
         
         # Calculate percentage changes
         def calc_change(current, prev):
@@ -25208,62 +25219,73 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 return 100 if current > 0 else 0
             return round(((current - prev) / prev) * 100, 1)
         
-        # Build daily/weekly chart data based on period
+        # Build daily/weekly chart data using aggregation
         chart_data = []
         if period == "day":
-            # Hourly data for last 24 hours
+            # Hourly aggregation for last 24 hours
+            hourly_pipeline = [
+                {"$match": {"$or": [{"timestamp": {"$gte": start_str}}, {"created_at": {"$gte": start_str}}]}},
+                {"$addFields": {"ts": {"$ifNull": ["$timestamp", "$created_at"]}}},
+                {"$addFields": {"hour_str": {"$substr": ["$ts", 11, 2]}}},
+                {"$group": {
+                    "_id": {"hour": "$hour_str", "type": "$type"},
+                    "total": {"$sum": "$amount"},
+                    "abs_total": {"$sum": {"$abs": "$amount"}}
+                }}
+            ]
+            hourly_data = await db.transactions.aggregate(hourly_pipeline).to_list(500)
+            hourly_map = {}
+            for h in hourly_data:
+                hr = h["_id"]["hour"]
+                t = h["_id"]["type"]
+                if hr not in hourly_map:
+                    hourly_map[hr] = {}
+                hourly_map[hr][t] = h
+            
             for i in range(24):
-                hour_start = now - timedelta(hours=24-i)
-                hour_end = now - timedelta(hours=23-i)
-                hour_str_start = hour_start.isoformat()
-                hour_str_end = hour_end.isoformat()
-                
-                hour_created = sum(t.get("amount", 0) for t in current_transactions 
-                    if t.get("type") in credit_types and 
-                    hour_str_start <= t.get("timestamp", t.get("created_at", "")) < hour_str_end)
-                hour_used = sum(abs(t.get("amount", 0)) for t in current_transactions 
-                    if t.get("type") in debit_types and 
-                    hour_str_start <= t.get("timestamp", t.get("created_at", "")) < hour_str_end)
-                hour_burned = sum(abs(t.get("amount", 0)) for t in current_transactions 
-                    if t.get("type") == "prc_burn" and 
-                    hour_str_start <= t.get("timestamp", t.get("created_at", "")) < hour_str_end)
-                
-                chart_data.append({
-                    "label": hour_start.strftime("%H:00"),
-                    "created": round(hour_created, 2),
-                    "used": round(hour_used, 2),
-                    "burned": round(hour_burned, 2)
-                })
+                hour_label = f"{i:02d}:00"
+                hr_key = f"{i:02d}"
+                hr_data = hourly_map.get(hr_key, {})
+                created = sum(hr_data.get(t, {}).get("total", 0) for t in credit_types)
+                used = sum(hr_data.get(t, {}).get("abs_total", 0) for t in debit_types)
+                burned = hr_data.get("prc_burn", {}).get("abs_total", 0)
+                chart_data.append({"label": hour_label, "created": round(created, 2), "used": round(used, 2), "burned": round(burned, 2)})
         else:
-            # Daily data
+            # Daily aggregation
+            daily_pipeline = [
+                {"$match": {"$or": [{"timestamp": {"$gte": start_str}}, {"created_at": {"$gte": start_str}}]}},
+                {"$addFields": {"ts": {"$ifNull": ["$timestamp", "$created_at"]}}},
+                {"$addFields": {"date_str": {"$substr": ["$ts", 0, 10]}}},
+                {"$group": {
+                    "_id": {"date": "$date_str", "type": "$type"},
+                    "total": {"$sum": "$amount"},
+                    "abs_total": {"$sum": {"$abs": "$amount"}}
+                }},
+                {"$sort": {"_id.date": 1}}
+            ]
+            daily_data = await db.transactions.aggregate(daily_pipeline).to_list(5000)
+            daily_map = {}
+            for d in daily_data:
+                dt = d["_id"]["date"]
+                t = d["_id"]["type"]
+                if dt not in daily_map:
+                    daily_map[dt] = {}
+                daily_map[dt][t] = d
+            
             days_count = 7 if period == "week" else (365 if period == "year" else 30)
             step = 1 if period in ["day", "week"] else (30 if period == "year" else 1)
             
             for i in range(0, days_count, step):
-                day_start = now - timedelta(days=days_count-i)
-                day_end = now - timedelta(days=days_count-i-step)
-                day_str_start = day_start.isoformat()[:10]
-                day_str_end = day_end.isoformat()[:10]
-                
-                day_created = sum(t.get("amount", 0) for t in current_transactions 
-                    if t.get("type") in credit_types and 
-                    t.get("timestamp", t.get("created_at", ""))[:10] >= day_str_start and t.get("timestamp", t.get("created_at", ""))[:10] < day_str_end)
-                day_used = sum(abs(t.get("amount", 0)) for t in current_transactions 
-                    if t.get("type") in debit_types and 
-                    t.get("timestamp", t.get("created_at", ""))[:10] >= day_str_start and t.get("timestamp", t.get("created_at", ""))[:10] < day_str_end)
-                day_burned = sum(abs(t.get("amount", 0)) for t in current_transactions 
-                    if t.get("type") == "prc_burn" and 
-                    t.get("timestamp", t.get("created_at", ""))[:10] >= day_str_start and t.get("timestamp", t.get("created_at", ""))[:10] < day_str_end)
-                
-                label = day_start.strftime("%d %b") if period != "year" else day_start.strftime("%b %Y")
-                chart_data.append({
-                    "label": label,
-                    "created": round(day_created, 2),
-                    "used": round(day_used, 2),
-                    "burned": round(day_burned, 2)
-                })
+                day_start_dt = now - timedelta(days=days_count-i)
+                day_str = day_start_dt.isoformat()[:10]
+                day_data = daily_map.get(day_str, {})
+                created = sum(day_data.get(t, {}).get("total", 0) for t in credit_types)
+                used = sum(day_data.get(t, {}).get("abs_total", 0) for t in debit_types)
+                burned = day_data.get("prc_burn", {}).get("abs_total", 0)
+                label = day_start_dt.strftime("%d %b") if period != "year" else day_start_dt.strftime("%b %Y")
+                chart_data.append({"label": label, "created": round(created, 2), "used": round(used, 2), "burned": round(burned, 2)})
         
-        # Usage breakdown by category
+        # Usage breakdown by category (from aggregated data)
         usage_breakdown = []
         category_map = {
             "order": "Marketplace Orders",
@@ -25275,14 +25297,11 @@ async def get_detailed_prc_analytics(period: str = "month"):
         }
         
         for txn_type, label in category_map.items():
-            amount = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("type") == txn_type)
+            amount = current_stats["type_map"].get(txn_type, {}).get("abs_total", 0)
             if amount > 0:
-                usage_breakdown.append({
-                    "category": label,
-                    "amount": round(amount, 2)
-                })
+                usage_breakdown.append({"category": label, "amount": round(amount, 2)})
         
-        # Source breakdown (where PRC comes from)
+        # Source breakdown (from aggregated data)
         source_breakdown = []
         source_map = {
             "mining": "Mining",
@@ -25295,12 +25314,9 @@ async def get_detailed_prc_analytics(period: str = "month"):
         }
         
         for txn_type, label in source_map.items():
-            amount = sum(t.get("amount", 0) for t in current_transactions if t.get("type") == txn_type)
+            amount = current_stats["type_map"].get(txn_type, {}).get("total", 0)
             if amount > 0:
-                source_breakdown.append({
-                    "source": label,
-                    "amount": round(amount, 2)
-                })
+                source_breakdown.append({"source": label, "amount": round(amount, 2)})
         
         total_user_count = await db.users.count_documents({})
         
