@@ -95,7 +95,7 @@ from routes.manager_routes import router as manager_router, set_db as set_manage
 from routes.ai_routes import router as ai_router, set_db as set_ai_db
 from routes.admin_prc_economy import router as admin_prc_economy_router, set_db as set_admin_prc_economy_db
 from routes.admin_prc_balance import router as admin_prc_balance_router, set_db as set_admin_prc_balance_db
-from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers
+from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers, assign_subscription_position
 # DMT V1, V3 and Fund Transfer routes REMOVED - Eko API not working
 from routes.gst_invoice import router as invoice_router, set_db as set_invoice_db
 from routes.eko_callback import router as eko_callback_router, set_db as set_eko_callback_db
@@ -2164,6 +2164,12 @@ async def auto_sync_razorpay_payments():
                             }
                         )
                         
+                        # Assign subscription position for mining network
+                        try:
+                            await assign_subscription_position(user_id)
+                        except Exception as pos_err:
+                            logging.warning(f"[AUTO-SYNC] Sub position error: {pos_err}")
+                        
                         # Update order status to paid
                         await db.razorpay_orders.update_one(
                             {"order_id": order_id},
@@ -2427,6 +2433,12 @@ async def auto_sync_captured_from_razorpay():
                         "$unset": {"_captured_sync_claiming": ""}
                     }
                 )
+                
+                # Assign subscription position for mining network
+                try:
+                    await assign_subscription_position(user_id)
+                except Exception as pos_err:
+                    logging.warning(f"[CAPTURED-SYNC] Sub position error: {pos_err}")
                 
                 # Check if vip_payment already exists
                 existing_vip_check = await db.vip_payments.find_one({"payment_id": payment_id})
@@ -9218,6 +9230,12 @@ async def manual_sync_razorpay_payments():
                             }
                         )
                         
+                        # Assign subscription position for mining network
+                        try:
+                            await assign_subscription_position(user_id)
+                        except Exception as pos_err:
+                            logging.warning(f"[MANUAL-ACTIVATE] Sub position error: {pos_err}")
+                        
                         synced_count += 1
                         results.append({
                             "order_id": order_id,
@@ -11824,6 +11842,12 @@ async def subscription_pay_with_prc(request: Request):
             if cache:
                 await cache.delete(f"user_data:{user_id}")
                 await cache.delete(f"user:dashboard:{user_id}")
+            
+            # Assign subscription position for mining network
+            try:
+                await assign_subscription_position(user_id)
+            except Exception as pos_err:
+                logging.warning(f"[PRC-SUB] Sub position error: {pos_err}")
         
         # CREDIT COMPANY WALLETS
         try:
@@ -17733,6 +17757,13 @@ async def admin_update_user_subscription(uid: str, request: Request):
     
     await db.vip_payments.insert_one(payment_record)
     
+    # Assign subscription position for mining network
+    if plan in ["elite", "startup", "growth"]:
+        try:
+            await assign_subscription_position(uid)
+        except Exception as pos_err:
+            logging.warning(f"[ADMIN-SUB-MANUAL] Sub position error: {pos_err}")
+    
     # Create notification for the user
     await create_social_notification(
         user_uid=uid,
@@ -21750,6 +21781,13 @@ async def user_360_quick_action(request: Request):
         })
         
         result_message = f"Subscription updated to {plan.capitalize()} plan. Expires: {expiry_date}"
+        
+        # Assign subscription position for mining network
+        if plan in ["elite", "startup", "growth"]:
+            try:
+                await assign_subscription_position(user_id)
+            except Exception as pos_err:
+                logging.warning(f"[ADMIN-SUB] Sub position error: {pos_err}")
     
     elif action == "approve_kyc":
         # Admin approves user KYC directly
@@ -25417,6 +25455,53 @@ async def get_detailed_prc_analytics(period: str = "month"):
         raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)[:200]}")
 
 # ========== END ADMIN PRC ANALYTICS ENDPOINTS ==========
+
+
+@api_router.post("/admin/migrate-subscription-positions")
+async def migrate_subscription_positions():
+    """One-time migration: Assign subscription_position to all active subscribers."""
+    try:
+        now = datetime.now(timezone.utc)
+        now_str = now.isoformat()
+        
+        active_filter = {
+            "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP", "Startup", "Growth", "Pro"]},
+            "$or": [
+                {"subscription_expiry": {"$gt": now_str}},
+                {"subscription_expiry": {"$gt": now}},
+                {"subscription_expires": {"$gt": now_str}},
+                {"subscription_expires": {"$gt": now}}
+            ]
+        }
+        
+        active_users = await db.users.find(
+            active_filter,
+            {"_id": 0, "uid": 1, "name": 1, "tree_position": 1}
+        ).sort("tree_position", 1).to_list(100000)
+        
+        position = 0
+        for user in active_users:
+            position += 1
+            await db.users.update_one(
+                {"uid": user["uid"]},
+                {"$set": {"subscription_position": position, "subscription_position_at": now_str}}
+            )
+        
+        await db.app_settings.update_one(
+            {"_id": "subscription_position_counter"},
+            {"$set": {"counter": position}},
+            upsert=True
+        )
+        
+        return {
+            "success": True,
+            "message": f"Migration complete. Assigned {position} positions.",
+            "total_assigned": position
+        }
+    except Exception as e:
+        logging.error(f"Migration error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ========== ADVANCED ADMIN SYSTEMS ==========
 

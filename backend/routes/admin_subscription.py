@@ -454,6 +454,13 @@ async def check_and_activate_upcoming(uid: str):
 
     logging.info(f"[UPCOMING-SUB] Activated upcoming plan for {uid}: {upcoming.get('plan_name')} until {end.isoformat()[:10]}")
 
+    # Assign subscription position for mining network
+    try:
+        from routes.mining import assign_subscription_position
+        await assign_subscription_position(uid)
+    except Exception as pos_err:
+        logging.warning(f"[UPCOMING-SUB] Sub position error: {pos_err}")
+
     return {
         "activated": True,
         "plan_name": upcoming.get("plan_name", "elite"),

@@ -2,16 +2,16 @@
 Reward Routes - GROWTH ECONOMY SYSTEM (April 2026)
 ====================================================
 
-FORMULA LOCK v1.0 (April 9, 2026)
-===================================
-3 Core Formulas are LOCKED to Single Leg Tree:
-1. Network Size → Single Leg Tree (get_active_network_size / get_network_size)
-2. Mining Speed → Single Leg Tree (calculate_mining_rate)
-3. Redeem Unlock % → Single Leg Tree (growth_economy.py:get_user_unlock_percent)
-DO NOT MODIFY without admin confirmation.
+FORMULA v2.0 (April 18, 2026) - Subscription Position Based Mining
+===================================================================
+CHANGE: Mining network now based on subscription purchase/renewal ORDER,
+not user joining date. Each subscription/renewal assigns a new position.
+Network = active subscriptions after your position.
+
+Referrals & Redeem Limit: UNCHANGED (still tree_position based)
 
 Reward Formula (Single Source of Truth):
-- Base: 500 PRC/day (below 250 network), 0 (above 250)
+- Base: 1000 PRC/day (below 250 network), 0 (above 250)
 - Team Bonus: N x PRC_per_user(N)
 - PRC_per_user(N) = max(2.5, 5 x (21 - log2(N)) / 14)
 
@@ -64,6 +64,87 @@ NETWORK_CAP_MAX = 6000  # Tier 3: Max cap from L1 indirect referrals
 CAP_PER_DIRECT = 16  # +16 cap per direct referral
 CAP_PER_L1_INDIRECT = 5  # +5 cap per L1 indirect referral
 SESSION_DURATION_HOURS = 24  # Mining session duration
+
+
+# ==================== SUBSCRIPTION POSITION SYSTEM ====================
+# v2.0 (April 2026) - Mining network based on subscription order, not join order
+# Position assigned on every subscription purchase/renewal
+# Network = count of active subscriptions with position > yours
+
+async def assign_subscription_position(user_id: str) -> int:
+    """
+    Assign next subscription_position to a user on subscription purchase/renewal.
+    Returns the new position number.
+    """
+    try:
+        # Get next position (atomic increment on a counter doc)
+        counter = await db.app_settings.find_one_and_update(
+            {"_id": "subscription_position_counter"},
+            {"$inc": {"counter": 1}},
+            upsert=True,
+            return_document=True
+        )
+        new_position = counter.get("counter", 1)
+        
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        # Update user's subscription_position
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "subscription_position": new_position,
+                "subscription_position_at": now_iso
+            }}
+        )
+        
+        logging.info(f"[SUB-POSITION] Assigned position {new_position} to user {user_id}")
+        return new_position
+    except Exception as e:
+        logging.error(f"[SUB-POSITION] Error assigning position for {user_id}: {e}")
+        return 0
+
+
+async def get_subscription_network_size(user_id: str) -> int:
+    """
+    v2.0 Mining Network Size - Subscription Order Based.
+    
+    Network = count of users with:
+    - subscription_position > my position
+    - subscription_expiry > now (active subscription)
+    
+    This replaces get_network_size() for MINING ONLY.
+    Redeem limit still uses old tree_position system.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        now_str = now.isoformat()
+        
+        user = await db.users.find_one(
+            {"uid": user_id},
+            {"_id": 0, "subscription_position": 1}
+        )
+        if not user or not user.get("subscription_position"):
+            return 0
+        
+        my_position = user["subscription_position"]
+        
+        # Count active subscriptions with higher position
+        active_filter = {
+            "subscription_position": {"$gt": my_position},
+            "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP", "Startup", "Growth", "Pro"]},
+            "$or": [
+                {"subscription_expiry": {"$gt": now_str}},
+                {"subscription_expiry": {"$gt": now}},
+                {"subscription_expires": {"$gt": now_str}},
+                {"subscription_expires": {"$gt": now}}
+            ]
+        }
+        
+        count = await db.users.count_documents(active_filter)
+        return count
+    except Exception as e:
+        logging.error(f"[SUB-POSITION] Error getting subscription network for {user_id}: {e}")
+        return 0
 
 
 # ==================== HELPER FUNCTIONS ====================
@@ -328,10 +409,11 @@ async def calculate_mining_rate(user_id: str) -> dict:
         return {"error": "User not found"}
     
     # Get direct referrals count + L1 indirect count in parallel
+    # v2.0: Use subscription_position based network for mining
     direct_referrals, l1_indirect_referrals, network_size = await asyncio.gather(
         db.users.count_documents({"referred_by": user_id}),
         get_l1_indirect_count(user_id),
-        get_network_size(user_id)
+        get_subscription_network_size(user_id)
     )
     
     # Calculate 3-tier network cap
