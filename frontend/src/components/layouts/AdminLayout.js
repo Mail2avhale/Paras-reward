@@ -161,6 +161,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'core-team', label: 'Core Team', icon: Shield, path: '/admin/core-team' },
+    { id: 'employees', label: 'Employees', icon: Users, path: '/admin/employees' },
     { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },

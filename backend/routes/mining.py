@@ -745,6 +745,13 @@ async def collect_mining(uid: str):
         except Exception as pool_err:
             logging.error(f"[MINING] Pool wallet credit error: {pool_err}")
         
+        # Employee Pool: Credit % of mining collect to employee pool
+        try:
+            from routes.employee_management import credit_employee_pool
+            await credit_employee_pool(mined_coins, uid, user.get("name", ""))
+        except Exception as emp_pool_err:
+            logging.error(f"[MINING] Employee pool credit error: {emp_pool_err}")
+        
         # Invalidate ALL user-related caches so all pages see updated balance
         if cache:
             await cache.delete(f"user_data:{uid}")

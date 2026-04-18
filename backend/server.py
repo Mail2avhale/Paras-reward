@@ -103,6 +103,7 @@ from routes.eko_recharge import router as eko_recharge_router, set_db as set_eko
 from routes.growth_economy import router as growth_economy_router, set_db as set_growth_economy_db
 from routes.admin_subscription import router as admin_subscription_router
 from routes.pool_wallet import router as pool_wallet_router, set_db as set_pool_wallet_db, set_cache as set_pool_wallet_cache, distribute_pool_to_core_team
+from routes.employee_management import router as employee_router, set_db as set_employee_db, set_cache as set_employee_cache, distribute_employee_pool, credit_employee_pool
 
 # ========== SECURITY CONFIGURATION ==========
 # SECURITY: Use stable JWT secret from env, fallback to fixed secret for consistency
@@ -32996,6 +32997,7 @@ api_router.include_router(admin_misc_router)
 
 api_router.include_router(admin_subscription_router)
 api_router.include_router(pool_wallet_router)
+api_router.include_router(employee_router)
 # Include bank redeem router (NEW - Bank Account Withdrawal)
 set_bank_redeem_db(db)
 set_bank_redeem_cache(cache)
@@ -33034,6 +33036,8 @@ api_router.include_router(eko_callback_router)
 set_growth_economy_db(db)
 set_pool_wallet_db(db)
 set_pool_wallet_cache(cache)
+set_employee_db(db)
+set_employee_cache(cache)
 
 # Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
 # set_eko_db(db)
@@ -33969,6 +33973,23 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Employee Pool Daily Distribution (Midnight IST = 18:30 UTC)
+        async def employee_pool_daily_distribute():
+            try:
+                await distribute_employee_pool()
+            except Exception as e:
+                logging.error(f"Employee pool distribution error: {e}")
+        
+        scheduler.add_job(
+            employee_pool_daily_distribute,
+            'cron',
+            hour=18,
+            minute=35,
+            id='employee_pool_daily_distribute',
+            name='Employee Pool Daily Distribution (Midnight IST)',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
@@ -33982,6 +34003,7 @@ async def startup_db():
         print("   - 🏦 Eko status update: Every 5 minutes")
         print("   - 💓 DB keep-alive ping: Every 2 minutes (prevents cold start)")
         print("   - 🚨 Emergency auto-pause: Every 5 minutes (200% spike detection)")
+        print("   - 👥 Employee pool distribution: Daily at midnight IST")
         
         # Trigger initial Razorpay sync 30 seconds after startup
         import asyncio
