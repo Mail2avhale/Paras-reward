@@ -30,7 +30,8 @@ const AdminPRCAnalytics = ({ user }) => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/admin/prc-analytics/detailed?period=${period}`);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/admin/prc-analytics/detailed?period=${period}`, { headers: { Authorization: `Bearer ${token}` } });
       setData(response.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
