@@ -25136,6 +25136,7 @@ async def get_detailed_prc_analytics(period: str = "month"):
         debit_types = ["order", "withdrawal", "bill_payment_request", "gift_voucher_request", "delivery_charge", "prc_rain_loss", "prc_burn"]
         
         async def aggregate_period(start, end=None):
+            # Handle both string and Date types for timestamp/created_at
             match = {"$or": [{"timestamp": {"$gte": start}}, {"created_at": {"$gte": start}}]}
             if end:
                 match = {"$or": [
@@ -25147,12 +25148,16 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 {"$match": match},
                 {"$group": {
                     "_id": "$type",
-                    "total": {"$sum": "$amount"},
-                    "abs_total": {"$sum": {"$abs": "$amount"}},
+                    "total": {"$sum": {"$ifNull": ["$amount", 0]}},
+                    "abs_total": {"$sum": {"$abs": {"$ifNull": ["$amount", 0]}}},
                     "count": {"$sum": 1}
                 }}
             ]
-            results = await db.transactions.aggregate(pipeline).to_list(100)
+            try:
+                results = await db.transactions.aggregate(pipeline).to_list(100)
+            except Exception as agg_err:
+                logging.warning(f"Aggregation error: {agg_err}")
+                results = []
             type_map = {r["_id"]: r for r in results if r["_id"]}
             
             created = sum(type_map.get(t, {}).get("total", 0) for t in credit_types)
@@ -25171,17 +25176,21 @@ async def get_detailed_prc_analytics(period: str = "month"):
         prc_burned_current = current_stats["burned"]
         prc_burned_prev = prev_stats["burned"]
         
-        # Get all users for balance calculation - FIXED: Use aggregation instead of loading all users
-        user_stats_pipeline = [
-            {"$group": {
-                "_id": None,
-                "total_prc_balance": {"$sum": "$prc_balance"},
-                "vip_count": {"$sum": {"$cond": [{"$eq": ["$membership_type", "vip"]}, 1, 0]}}
-            }}
-        ]
-        user_stats = await db.users.aggregate(user_stats_pipeline).to_list(1)
-        total_in_circulation = user_stats[0]["total_prc_balance"] if user_stats else 0
-        vip_user_count = user_stats[0]["vip_count"] if user_stats else 0
+        # Get all users for balance calculation
+        try:
+            user_stats_pipeline = [
+                {"$group": {
+                    "_id": None,
+                    "total_prc_balance": {"$sum": {"$ifNull": ["$prc_balance", 0]}},
+                    "vip_count": {"$sum": {"$cond": [{"$eq": ["$membership_type", "vip"]}, 1, 0]}}
+                }}
+            ]
+            user_stats = await db.users.aggregate(user_stats_pipeline).to_list(1)
+            total_in_circulation = user_stats[0]["total_prc_balance"] if user_stats else 0
+            vip_user_count = user_stats[0]["vip_count"] if user_stats else 0
+        except Exception:
+            total_in_circulation = 0
+            vip_user_count = 0
         
         # Calculate Profit/Loss (Platform perspective)
         # Profit = PRC Used + PRC Burned - PRC Created (ideally should be positive or balanced)
@@ -25221,19 +25230,32 @@ async def get_detailed_prc_analytics(period: str = "month"):
         
         # Build daily/weekly chart data using aggregation
         chart_data = []
+        
+        # Use $toString to handle both Date and String timestamp fields
+        ts_field = {"$ifNull": ["$timestamp", "$created_at"]}
+        # Convert to string if it's a Date object, keep as-is if string
+        ts_as_string = {"$cond": {
+            "if": {"$eq": [{"$type": ts_field}, "date"]},
+            "then": {"$dateToString": {"format": "%Y-%m-%dT%H:%M:%S", "date": ts_field}},
+            "else": {"$toString": ts_field}
+        }}
+        
         if period == "day":
-            # Hourly aggregation for last 24 hours
+            # Hourly aggregation
             hourly_pipeline = [
                 {"$match": {"$or": [{"timestamp": {"$gte": start_str}}, {"created_at": {"$gte": start_str}}]}},
-                {"$addFields": {"ts": {"$ifNull": ["$timestamp", "$created_at"]}}},
-                {"$addFields": {"hour_str": {"$substr": ["$ts", 11, 2]}}},
+                {"$addFields": {"ts_str": ts_as_string}},
+                {"$addFields": {"hour_str": {"$substr": ["$ts_str", 11, 2]}}},
                 {"$group": {
                     "_id": {"hour": "$hour_str", "type": "$type"},
-                    "total": {"$sum": "$amount"},
-                    "abs_total": {"$sum": {"$abs": "$amount"}}
+                    "total": {"$sum": {"$ifNull": ["$amount", 0]}},
+                    "abs_total": {"$sum": {"$abs": {"$ifNull": ["$amount", 0]}}}
                 }}
             ]
-            hourly_data = await db.transactions.aggregate(hourly_pipeline).to_list(500)
+            try:
+                hourly_data = await db.transactions.aggregate(hourly_pipeline).to_list(500)
+            except Exception:
+                hourly_data = []
             hourly_map = {}
             for h in hourly_data:
                 hr = h["_id"]["hour"]
@@ -25254,16 +25276,19 @@ async def get_detailed_prc_analytics(period: str = "month"):
             # Daily aggregation
             daily_pipeline = [
                 {"$match": {"$or": [{"timestamp": {"$gte": start_str}}, {"created_at": {"$gte": start_str}}]}},
-                {"$addFields": {"ts": {"$ifNull": ["$timestamp", "$created_at"]}}},
-                {"$addFields": {"date_str": {"$substr": ["$ts", 0, 10]}}},
+                {"$addFields": {"ts_str": ts_as_string}},
+                {"$addFields": {"date_str": {"$substr": ["$ts_str", 0, 10]}}},
                 {"$group": {
                     "_id": {"date": "$date_str", "type": "$type"},
-                    "total": {"$sum": "$amount"},
-                    "abs_total": {"$sum": {"$abs": "$amount"}}
+                    "total": {"$sum": {"$ifNull": ["$amount", 0]}},
+                    "abs_total": {"$sum": {"$abs": {"$ifNull": ["$amount", 0]}}}
                 }},
                 {"$sort": {"_id.date": 1}}
             ]
-            daily_data = await db.transactions.aggregate(daily_pipeline).to_list(5000)
+            try:
+                daily_data = await db.transactions.aggregate(daily_pipeline).to_list(5000)
+            except Exception:
+                daily_data = []
             daily_map = {}
             for d in daily_data:
                 dt = d["_id"]["date"]
@@ -25350,7 +25375,9 @@ async def get_detailed_prc_analytics(period: str = "month"):
         
     except Exception as e:
         logging.error(f"Error in detailed PRC analytics: {e}")
-        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)[:200]}")
 
 # ========== END ADMIN PRC ANALYTICS ENDPOINTS ==========
 
