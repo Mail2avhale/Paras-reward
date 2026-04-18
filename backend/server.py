@@ -21397,6 +21397,43 @@ async def user_360_quick_action(request: Request):
         
         result_message = f"Balance adjusted by {amount} PRC. New balance: {new_balance} PRC"
         
+    elif action in ("add_prc", "deduct_prc"):
+        amount = float(data.get("value", 0))
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be positive")
+        
+        current_balance = float(user.get("prc_balance", 0) or 0)
+        
+        if action == "deduct_prc":
+            if current_balance < amount:
+                raise HTTPException(status_code=400, detail=f"Insufficient balance. Current: {current_balance} PRC")
+            new_balance = current_balance - amount
+            txn_type = "admin_debit"
+            txn_amount = -amount
+        else:
+            new_balance = current_balance + amount
+            txn_type = "admin_credit"
+            txn_amount = amount
+        
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {"prc_balance": new_balance, "updated_at": now.isoformat()}}
+        )
+        
+        await db.transactions.insert_one({
+            "transaction_id": f"TXN-{now.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+            "user_id": user_id,
+            "type": txn_type,
+            "amount": txn_amount,
+            "balance_before": current_balance,
+            "balance_after": new_balance,
+            "description": data.get("reason") or f"Admin {'credit' if action == 'add_prc' else 'debit'}",
+            "admin_id": admin_id,
+            "created_at": now.isoformat()
+        })
+        
+        result_message = f"{'Added' if action == 'add_prc' else 'Deducted'} {amount} PRC. New balance: {new_balance} PRC"
+    
     elif action == "set_cap":
         cap = data.get("cap", 0)
         await db.users.update_one(
@@ -33840,10 +33877,10 @@ async def startup_db():
         scheduler.add_job(
             pool_wallet_daily_distribute,
             'cron',
-            hour=0,
-            minute=0,
+            hour=18,
+            minute=30,
             id='pool_wallet_daily_distribute',
-            name='Pool Wallet Daily Distribution (Midnight)',
+            name='Pool Wallet Daily Distribution (Midnight IST)',
             replace_existing=True
         )
         
