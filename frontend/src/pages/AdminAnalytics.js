@@ -38,7 +38,8 @@ const AdminAnalytics = ({ user }) => {
       if (startDate && endDate) {
         url += `?start_date=${startDate}&end_date=${endDate}`;
       }
-      const res = await axios.get(url);
+      const token = localStorage.getItem('token');
+      const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
       setData(res.data);
       setLastUpdated(new Date());
     } catch (error) {
