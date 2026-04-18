@@ -47,6 +47,15 @@ const AdminEmployees = () => {
   
   // Detail view
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [detailData, setDetailData] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [editDocs, setEditDocs] = useState({});
+  const [editEmergency, setEditEmergency] = useState({});
+  const [savingDetail, setSavingDetail] = useState(false);
+  // Leave
+  const [leaveForm, setLeaveForm] = useState({ leave_type: 'casual_leave', start_date: '', end_date: '', reason: '' });
+  const [applyingLeave, setApplyingLeave] = useState(false);
+  const [leaveData, setLeaveData] = useState(null);
 
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('paras_user') || '{}');
@@ -190,6 +199,62 @@ const AdminEmployees = () => {
 
   const activeEmployees = employees.filter(e => e.status === 'active');
 
+  const fetchDetail = async (empId) => {
+    setLoadingDetail(true);
+    try {
+      const [detailRes, leaveRes] = await Promise.all([
+        axios.get(`${API}/employees/detail/${empId}`, { headers }),
+        axios.get(`${API}/employees/leave/${empId}`, { headers })
+      ]);
+      setDetailData(detailRes.data);
+      setLeaveData(leaveRes.data);
+      const docs = detailRes.data?.employee?.documents || {};
+      setEditDocs(docs);
+      const ec = detailRes.data?.employee?.emergency_contact || {};
+      setEditEmergency(ec);
+      setSelectedEmployee(empId);
+      setActiveTab('detail');
+    } catch { toast.error('Failed to load details'); }
+    finally { setLoadingDetail(false); }
+  };
+
+  const saveDocuments = async () => {
+    setSavingDetail(true);
+    try {
+      await axios.put(`${API}/employees/update-documents/${selectedEmployee}`, editDocs, { headers });
+      toast.success('Documents saved');
+    } catch { toast.error('Failed'); }
+    finally { setSavingDetail(false); }
+  };
+
+  const saveEmergencyContact = async () => {
+    setSavingDetail(true);
+    try {
+      await axios.put(`${API}/employees/update-emergency/${selectedEmployee}`, editEmergency, { headers });
+      toast.success('Emergency contact saved');
+    } catch { toast.error('Failed'); }
+    finally { setSavingDetail(false); }
+  };
+
+  const applyLeave = async () => {
+    if (!leaveForm.start_date) { toast.error('Select start date'); return; }
+    setApplyingLeave(true);
+    try {
+      const res = await axios.post(`${API}/employees/leave/apply`, {
+        employee_id: selectedEmployee,
+        ...leaveForm,
+        end_date: leaveForm.end_date || leaveForm.start_date,
+        admin_id: user?.uid || 'admin'
+      }, { headers });
+      if (res.data?.success) {
+        toast.success(res.data.message);
+        setLeaveForm({ leave_type: 'casual_leave', start_date: '', end_date: '', reason: '' });
+        fetchDetail(selectedEmployee);
+      }
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+    finally { setApplyingLeave(false); }
+  };
+
   const statusColors = {
     present: 'bg-emerald-100 text-emerald-700 border-emerald-300',
     absent: 'bg-red-100 text-red-700 border-red-300',
@@ -306,6 +371,9 @@ const AdminEmployees = () => {
                     </div>
                   </div>
                   <div className="flex gap-1">
+                    <button onClick={() => fetchDetail(emp.employee_id)} className="p-1.5 hover:bg-slate-100 rounded text-slate-500" title="View Details">
+                      <Eye className="w-4 h-4" />
+                    </button>
                     <button onClick={() => generateSlip(emp.employee_id)} className="p-1.5 hover:bg-blue-50 rounded text-blue-500" title="Generate Salary Slip">
                       <FileText className="w-4 h-4" />
                     </button>
@@ -641,6 +709,146 @@ const AdminEmployees = () => {
               {savingSettings ? 'Saving...' : 'Save Settings'}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* EMPLOYEE DETAIL VIEW */}
+      {activeTab === 'detail' && detailData && (
+        <div className="space-y-4" data-testid="detail-section">
+          <div className="flex items-center gap-2 mb-2">
+            <button onClick={() => setActiveTab('employees')} className="text-sm text-blue-600 hover:underline">&larr; Back to list</button>
+            <span className="text-slate-400">|</span>
+            <span className="font-semibold text-slate-900">{detailData.employee?.name} ({detailData.employee?.employee_id})</span>
+          </div>
+
+          {/* Profile Card */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <h3 className="font-semibold text-slate-900 mb-3">Profile</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div><span className="text-slate-400 text-xs block">Department</span><span className="text-slate-900 font-medium">{detailData.employee?.department}</span></div>
+              <div><span className="text-slate-400 text-xs block">Designation</span><span className="text-slate-900 font-medium">{detailData.employee?.designation}</span></div>
+              <div><span className="text-slate-400 text-xs block">Salary</span><span className="text-slate-900 font-medium">₹{detailData.employee?.monthly_salary?.toLocaleString()}</span></div>
+              <div><span className="text-slate-400 text-xs block">Joining Date</span><span className="text-slate-900 font-medium">{detailData.employee?.joining_date?.slice(0,10)}</span></div>
+              <div><span className="text-slate-400 text-xs block">Email</span><span className="text-slate-900">{detailData.employee?.email || '-'}</span></div>
+              <div><span className="text-slate-400 text-xs block">Mobile</span><span className="text-slate-900">{detailData.employee?.mobile || '-'}</span></div>
+              <div><span className="text-slate-400 text-xs block">Status</span><span className={`font-bold ${detailData.employee?.status === 'active' ? 'text-emerald-600' : 'text-red-600'}`}>{detailData.employee?.status?.toUpperCase()}</span></div>
+              <div><span className="text-slate-400 text-xs block">Earned (PRC)</span><span className="text-slate-900">{detailData.employee?.earned_this_month?.toFixed(2) || 0}</span></div>
+            </div>
+          </div>
+
+          {/* Documents */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <h3 className="font-semibold text-slate-900 mb-3">Documents</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[
+                { key: 'aadhar_number', label: 'Aadhar Number' },
+                { key: 'pan_number', label: 'PAN Number' },
+                { key: 'bank_account', label: 'Bank Account' },
+                { key: 'bank_name', label: 'Bank Name' },
+                { key: 'ifsc_code', label: 'IFSC Code' },
+                { key: 'uan_number', label: 'UAN Number' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="text-xs text-slate-500 mb-1 block">{f.label}</label>
+                  <input
+                    type="text"
+                    value={editDocs[f.key] || ''}
+                    onChange={e => setEditDocs(p => ({ ...p, [f.key]: e.target.value }))}
+                    className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white"
+                    placeholder={f.label}
+                  />
+                </div>
+              ))}
+            </div>
+            <button onClick={saveDocuments} disabled={savingDetail} className="mt-3 px-4 py-1.5 bg-slate-900 text-white rounded-lg text-sm hover:bg-slate-800 disabled:opacity-50">
+              {savingDetail ? 'Saving...' : 'Save Documents'}
+            </button>
+          </div>
+
+          {/* Emergency Contact */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <h3 className="font-semibold text-slate-900 mb-3">Emergency Contact</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Name</label>
+                <input type="text" value={editEmergency.name || ''} onChange={e => setEditEmergency(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Relation</label>
+                <input type="text" value={editEmergency.relation || ''} onChange={e => setEditEmergency(p => ({ ...p, relation: e.target.value }))} className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Phone</label>
+                <input type="text" value={editEmergency.phone || ''} onChange={e => setEditEmergency(p => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" />
+              </div>
+            </div>
+            <button onClick={saveEmergencyContact} disabled={savingDetail} className="mt-3 px-4 py-1.5 bg-slate-900 text-white rounded-lg text-sm hover:bg-slate-800 disabled:opacity-50">
+              {savingDetail ? 'Saving...' : 'Save Emergency Contact'}
+            </button>
+          </div>
+
+          {/* Leave Management */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <h3 className="font-semibold text-slate-900 mb-3">Leave Management</h3>
+            {leaveData && (
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {Object.entries(leaveData.balance || {}).map(([key, val]) => (
+                  <div key={key} className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-500">{key.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>
+                    <p className="text-lg font-bold text-slate-900">{val.remaining} <span className="text-xs text-slate-400 font-normal">/ {val.annual}</span></p>
+                    <p className="text-[10px] text-slate-400">Used: {val.used}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="border-t border-slate-100 pt-3">
+              <p className="text-sm font-medium text-slate-700 mb-2">Apply Leave</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <select value={leaveForm.leave_type} onChange={e => setLeaveForm(p => ({ ...p, leave_type: e.target.value }))} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white">
+                  <option value="casual_leave">Casual Leave</option>
+                  <option value="sick_leave">Sick Leave</option>
+                  <option value="earned_leave">Earned Leave</option>
+                </select>
+                <input type="date" value={leaveForm.start_date} onChange={e => setLeaveForm(p => ({ ...p, start_date: e.target.value }))} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" placeholder="Start" />
+                <input type="date" value={leaveForm.end_date} onChange={e => setLeaveForm(p => ({ ...p, end_date: e.target.value }))} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" placeholder="End" />
+                <input type="text" value={leaveForm.reason} onChange={e => setLeaveForm(p => ({ ...p, reason: e.target.value }))} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" placeholder="Reason" />
+              </div>
+              <button onClick={applyLeave} disabled={applyingLeave} className="mt-2 px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                {applyingLeave ? 'Applying...' : 'Apply Leave'}
+              </button>
+            </div>
+            {/* Leave History */}
+            {leaveData?.leaves?.length > 0 && (
+              <div className="mt-4 border-t border-slate-100 pt-3">
+                <p className="text-sm font-medium text-slate-700 mb-2">Leave History</p>
+                <div className="space-y-2">
+                  {leaveData.leaves.map(l => (
+                    <div key={l.leave_id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-sm">
+                      <div>
+                        <span className="font-medium text-slate-900">{l.leave_label}</span>
+                        <span className="text-slate-400 mx-2">|</span>
+                        <span className="text-slate-600">{l.start_date} to {l.end_date} ({l.days}d)</span>
+                      </div>
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">{l.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Attendance Summary */}
+          {detailData.attendance && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <h3 className="font-semibold text-slate-900 mb-2">Attendance (This Month)</h3>
+              <div className="flex gap-4 text-sm">
+                <span className="text-emerald-600 font-medium">Present: {detailData.attendance.summary?.present}</span>
+                <span className="text-red-600 font-medium">Absent: {detailData.attendance.summary?.absent}</span>
+                <span className="text-amber-600 font-medium">Half Day: {detailData.attendance.summary?.half_day}</span>
+                <span className="text-blue-600 font-medium">Leave: {detailData.attendance.summary?.leave}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

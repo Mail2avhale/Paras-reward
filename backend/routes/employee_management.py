@@ -369,6 +369,35 @@ async def add_employee(data: AddEmployeeRequest):
             "joining_date": joining,
             "status": "active",
             "photo_url": None,
+            # Leave balance (annual allocation)
+            "leave_balance": {
+                "casual_leave": 12,
+                "sick_leave": 12,
+                "earned_leave": 15,
+                "used_casual": 0,
+                "used_sick": 0,
+                "used_earned": 0
+            },
+            # Documents
+            "documents": {
+                "aadhar_number": None,
+                "pan_number": None,
+                "bank_account": None,
+                "bank_name": None,
+                "ifsc_code": None,
+                "uan_number": None
+            },
+            # Emergency contact
+            "emergency_contact": {
+                "name": None,
+                "relation": None,
+                "phone": None
+            },
+            # Address
+            "address": {
+                "current": None,
+                "permanent": None
+            },
             "earned_this_month": 0,
             "total_earned": 0,
             "added_by": data.admin_id,
@@ -472,6 +501,214 @@ async def resign_employee(data: ResignEmployeeRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== DOCUMENTS & PERSONAL INFO ====================
+
+@router.put("/update-documents/{employee_id}")
+async def update_employee_documents(employee_id: str, request: Request):
+    """Update employee documents (Aadhar, PAN, Bank, UAN)."""
+    try:
+        emp = await db.employees.find_one({"employee_id": employee_id})
+        if not emp:
+            raise HTTPException(status_code=404, detail="Employee not found")
+
+        data = await request.json()
+        docs = emp.get("documents", {})
+        for key in ["aadhar_number", "pan_number", "bank_account", "bank_name", "ifsc_code", "uan_number"]:
+            if key in data:
+                docs[key] = data[key]
+
+        await db.employees.update_one(
+            {"employee_id": employee_id},
+            {"$set": {"documents": docs, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        return {"success": True, "message": "Documents updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/update-emergency/{employee_id}")
+async def update_emergency_contact(employee_id: str, request: Request):
+    """Update emergency contact details."""
+    try:
+        emp = await db.employees.find_one({"employee_id": employee_id})
+        if not emp:
+            raise HTTPException(status_code=404, detail="Employee not found")
+
+        data = await request.json()
+        contact = emp.get("emergency_contact", {})
+        for key in ["name", "relation", "phone"]:
+            if key in data:
+                contact[key] = data[key]
+
+        await db.employees.update_one(
+            {"employee_id": employee_id},
+            {"$set": {"emergency_contact": contact, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        return {"success": True, "message": "Emergency contact updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/update-address/{employee_id}")
+async def update_address(employee_id: str, request: Request):
+    """Update employee address."""
+    try:
+        emp = await db.employees.find_one({"employee_id": employee_id})
+        if not emp:
+            raise HTTPException(status_code=404, detail="Employee not found")
+
+        data = await request.json()
+        address = emp.get("address", {})
+        for key in ["current", "permanent"]:
+            if key in data:
+                address[key] = data[key]
+
+        await db.employees.update_one(
+            {"employee_id": employee_id},
+            {"$set": {"address": address, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        return {"success": True, "message": "Address updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== LEAVE MANAGEMENT ====================
+
+LEAVE_TYPES = {
+    "casual_leave": {"label": "Casual Leave", "annual": 12},
+    "sick_leave": {"label": "Sick Leave", "annual": 12},
+    "earned_leave": {"label": "Earned Leave", "annual": 15}
+}
+
+
+@router.post("/leave/apply")
+async def apply_leave(request: Request):
+    """Apply for leave (admin on behalf of employee)."""
+    try:
+        data = await request.json()
+        employee_id = data.get("employee_id")
+        leave_type = data.get("leave_type")  # casual_leave, sick_leave, earned_leave
+        start_date = data.get("start_date")
+        end_date = data.get("end_date", start_date)
+        reason = data.get("reason", "")
+
+        if leave_type not in LEAVE_TYPES:
+            raise HTTPException(status_code=400, detail=f"Invalid leave type. Use: {list(LEAVE_TYPES.keys())}")
+
+        emp = await db.employees.find_one({"employee_id": employee_id, "status": "active"})
+        if not emp:
+            raise HTTPException(status_code=404, detail="Active employee not found")
+
+        # Calculate days
+        from datetime import date as date_type
+        start = datetime.fromisoformat(start_date).date() if isinstance(start_date, str) else start_date
+        end = datetime.fromisoformat(end_date).date() if isinstance(end_date, str) else end_date
+        days = (end - start).days + 1
+        if days <= 0:
+            raise HTTPException(status_code=400, detail="Invalid date range")
+
+        # Check leave balance
+        balance = emp.get("leave_balance", {})
+        used_key = f"used_{leave_type.replace('_leave', '')}"
+        annual = LEAVE_TYPES[leave_type]["annual"]
+        used = balance.get(used_key, 0)
+        remaining = annual - used
+
+        if days > remaining:
+            raise HTTPException(status_code=400, detail=f"Insufficient {LEAVE_TYPES[leave_type]['label']} balance. Remaining: {remaining} days")
+
+        now = datetime.now(timezone.utc).isoformat()
+        leave_id = f"LV-{employee_id}-{now[:10].replace('-', '')}-{str(uuid.uuid4())[:4]}"
+
+        leave_record = {
+            "leave_id": leave_id,
+            "employee_id": employee_id,
+            "user_id": emp.get("user_id"),
+            "employee_name": emp.get("name"),
+            "leave_type": leave_type,
+            "leave_label": LEAVE_TYPES[leave_type]["label"],
+            "start_date": start_date,
+            "end_date": end_date,
+            "days": days,
+            "reason": reason,
+            "status": "approved",  # Auto-approved by admin
+            "approved_by": data.get("admin_id", "admin"),
+            "created_at": now
+        }
+
+        await db.employee_leaves.insert_one(leave_record)
+
+        # Update leave balance
+        await db.employees.update_one(
+            {"employee_id": employee_id},
+            {"$inc": {f"leave_balance.{used_key}": days}}
+        )
+
+        # Auto-mark attendance as "leave" for those dates
+        current = start
+        while current <= end:
+            date_str = current.isoformat()
+            await db.employee_attendance.update_one(
+                {"employee_id": employee_id, "date": date_str},
+                {"$set": {
+                    "employee_id": employee_id,
+                    "user_id": emp.get("user_id"),
+                    "name": emp.get("name"),
+                    "date": date_str,
+                    "status": "leave",
+                    "note": f"{LEAVE_TYPES[leave_type]['label']}: {reason}",
+                    "marked_by": "leave_system",
+                    "marked_at": now
+                }},
+                upsert=True
+            )
+            current += timedelta(days=1)
+
+        leave_record.pop("_id", None)
+        return {"success": True, "message": f"{days} day(s) {LEAVE_TYPES[leave_type]['label']} approved", "leave": leave_record}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[LEAVE] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/leave/{employee_id}")
+async def get_employee_leaves(employee_id: str, year: Optional[int] = None):
+    """Get leave history for an employee."""
+    try:
+        y = year or datetime.now(timezone.utc).year
+        start = f"{y}-01-01"
+        end = f"{y}-12-31"
+
+        leaves = await db.employee_leaves.find(
+            {"employee_id": employee_id, "start_date": {"$gte": start, "$lte": end}},
+            {"_id": 0}
+        ).sort("start_date", -1).to_list(100)
+
+        emp = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0, "leave_balance": 1})
+        balance = emp.get("leave_balance", {}) if emp else {}
+
+        return {
+            "leaves": leaves,
+            "balance": {
+                "casual_leave": {"annual": 12, "used": balance.get("used_casual", 0), "remaining": 12 - balance.get("used_casual", 0)},
+                "sick_leave": {"annual": 12, "used": balance.get("used_sick", 0), "remaining": 12 - balance.get("used_sick", 0)},
+                "earned_leave": {"annual": 15, "used": balance.get("used_earned", 0), "remaining": 15 - balance.get("used_earned", 0)}
+            },
+            "year": y
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.get("/detail/{employee_id}")
