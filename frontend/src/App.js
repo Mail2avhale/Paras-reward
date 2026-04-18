@@ -60,16 +60,23 @@ axios.interceptors.request.use(
     const url = config.url || '';
     
     // Add auth token to all API requests
-    const storedUser = localStorage.getItem("paras_user");
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
-        if (user.token) {
-          config.headers = config.headers || {};
-          config.headers['Authorization'] = `Bearer ${user.token}`;
+    if (!config.headers?.['Authorization']) {
+      let token = null;
+      const storedUser = localStorage.getItem("paras_user");
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          if (user.token) token = user.token;
+        } catch (e) {
+          // ignore parse errors
         }
-      } catch (e) {
-        console.error('Error parsing user from localStorage:', e);
+      }
+      // Fallback: check direct token keys
+      if (!token) token = localStorage.getItem("token") || localStorage.getItem("paras_session_token");
+      
+      if (token) {
+        config.headers = config.headers || {};
+        config.headers['Authorization'] = `Bearer ${token}`;
       }
     }
     
@@ -588,6 +595,7 @@ function App() {
         console.warn('[SECURITY] Token invalid, clearing session');
         localStorage.removeItem("paras_user");
         localStorage.removeItem("paras_session_token");
+        localStorage.removeItem("token");
         return null;
       }
     } catch (error) {
@@ -722,6 +730,10 @@ function App() {
     if (userData.session_token) {
       localStorage.setItem("paras_session_token", userData.session_token);
     }
+    // Save token directly for reliable access across components
+    if (userData.token) {
+      localStorage.setItem("token", userData.token);
+    }
     setUser(userData);
     // Strip sensitive fields before persisting to localStorage
     const { hashed_pin, pin_hash, password, ...safeUserData } = userData;
@@ -752,6 +764,7 @@ function App() {
     setUser(null);
     localStorage.removeItem("paras_user");
     localStorage.removeItem("paras_session_token");
+    localStorage.removeItem("token");
     
     if (showMessage) {
       if (reason === 'session_expired') {
