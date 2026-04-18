@@ -23090,6 +23090,62 @@ async def get_comprehensive_analytics(
         {"$sort": {"_id": 1}}
     ]).to_list(30)
     
+    # Daily Mining trend (last 30 days) from transactions collection
+    mining_trend = await db.transactions.aggregate([
+        {"$match": {"transaction_type": "mining", "timestamp": {"$gte": thirty_days_ago.isoformat()}}},
+        {"$addFields": {
+            "date_str": {"$substr": ["$timestamp", 0, 10]}
+        }},
+        {"$group": {
+            "_id": "$date_str",
+            "total_prc": {"$sum": {"$ifNull": ["$amount", 0]}},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]).to_list(30)
+    
+    # Daily Redeem trend (last 30 days) from prc_ledger (all redeems) + bank_transfer_requests
+    redeem_trend_ledger = await db.prc_ledger.aggregate([
+        {"$match": {"type": "redeem", "entry_type": "debit", "created_at": {"$gte": thirty_days_ago.isoformat()}}},
+        {"$addFields": {
+            "date_str": {"$substr": ["$created_at", 0, 10]}
+        }},
+        {"$group": {
+            "_id": "$date_str",
+            "total_prc": {"$sum": {"$abs": "$amount"}},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]).to_list(30)
+    
+    # Also include bank transfers (paid) in redeem trend
+    bank_redeem_trend = await db.bank_transfer_requests.aggregate([
+        {"$match": {"status": "paid", "processed_at": {"$gte": thirty_days_ago.isoformat()}}},
+        {"$addFields": {
+            "date_str": {"$substr": ["$processed_at", 0, 10]}
+        }},
+        {"$group": {
+            "_id": "$date_str",
+            "total_prc": {"$sum": {"$ifNull": ["$prc_deducted", 0]}},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]).to_list(30)
+    
+    # Merge redeem trends (ledger + bank transfers)
+    redeem_by_date = {}
+    for item in redeem_trend_ledger:
+        d = item["_id"]
+        redeem_by_date[d] = {"_id": d, "total_prc": item["total_prc"], "count": item["count"]}
+    for item in bank_redeem_trend:
+        d = item["_id"]
+        if d in redeem_by_date:
+            redeem_by_date[d]["total_prc"] += item["total_prc"]
+            redeem_by_date[d]["count"] += item["count"]
+        else:
+            redeem_by_date[d] = {"_id": d, "total_prc": item["total_prc"], "count": item["count"]}
+    daily_redeem_trend = sorted(redeem_by_date.values(), key=lambda x: x["_id"])
+    
     # Plan distribution for pie chart
     plan_distribution = [
         {"name": "Explorer (Free)", "value": user_stats[3], "color": "#6b7280"},
@@ -23107,6 +23163,8 @@ async def get_comprehensive_analytics(
     charts = {
         "user_growth": user_growth_data,
         "redemption_trend": redemption_trend,
+        "mining_trend": mining_trend,
+        "daily_redeem_trend": daily_redeem_trend,
         "plan_distribution": plan_distribution,
         "activity_distribution": activity_distribution
     }

@@ -137,6 +137,20 @@ const AdminAnalytics = ({ user }) => {
     count: item.count
   }));
 
+  // Daily Mining trend data
+  const miningTrendData = (charts.mining_trend || []).map(item => ({
+    date: item._id?.substring(5) || item._id,
+    prc: Math.round(item.total_prc * 100) / 100,
+    collects: item.count
+  }));
+
+  // Daily Redeem trend data
+  const dailyRedeemData = (charts.daily_redeem_trend || []).map(item => ({
+    date: item._id?.substring(5) || item._id,
+    prc: Math.round(item.total_prc * 100) / 100,
+    count: item.count
+  }));
+
   return (
     <div className="space-y-6 p-4 md:p-6 pb-24">
       {/* Header */}
@@ -274,6 +288,106 @@ const AdminAnalytics = ({ user }) => {
             <p className="text-2xl font-bold text-slate-800">₹0.1</p>
             <p className="text-xs text-slate-500 mt-1">1 PRC = ₹0.1 (10 PRC = ₹1)</p>
             <p className="text-sm text-emerald-400 mt-2 font-medium">Fixed Rate</p>
+          </Card>
+        </div>
+      </div>
+
+      {/* ===== DAILY MINING & REDEEM SECTION ===== */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <Zap className="w-5 h-5 text-blue-500" />
+          Daily PRC Mining & Redeem (Last 30 Days)
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Daily Mining Chart */}
+          <Card className="bg-white border-slate-200 p-4" data-testid="daily-mining-chart">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-slate-800 font-medium">Daily PRC Mining</h3>
+              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium">
+                {miningTrendData.reduce((sum, d) => sum + d.prc, 0).toLocaleString()} PRC total
+              </span>
+            </div>
+            {miningTrendData.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-slate-400 text-sm">No mining data in last 30 days</div>
+            ) : (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={miningTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} />
+                    <YAxis stroke="#9ca3af" fontSize={11} />
+                    <Tooltip 
+                      contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                      formatter={(value, name) => [name === 'prc' ? `${Number(value).toLocaleString()} PRC` : `${value} collects`, name === 'prc' ? 'Mined' : 'Collects']}
+                    />
+                    <Bar dataKey="prc" fill="#3b82f6" radius={[4, 4, 0, 0]} name="prc" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {/* Mining summary row */}
+            <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-xs text-slate-400">Days Active</p>
+                <p className="text-sm font-bold text-slate-800">{miningTrendData.length}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Total Collects</p>
+                <p className="text-sm font-bold text-slate-800">{miningTrendData.reduce((sum, d) => sum + d.collects, 0)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Avg / Day</p>
+                <p className="text-sm font-bold text-blue-600">
+                  {miningTrendData.length > 0 ? (miningTrendData.reduce((sum, d) => sum + d.prc, 0) / miningTrendData.length).toFixed(2) : 0} PRC
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Daily Redeem Chart */}
+          <Card className="bg-white border-slate-200 p-4" data-testid="daily-redeem-chart">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-slate-800 font-medium">Daily PRC Redeem</h3>
+              <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full font-medium">
+                {dailyRedeemData.reduce((sum, d) => sum + d.prc, 0).toLocaleString()} PRC total
+              </span>
+            </div>
+            {dailyRedeemData.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-slate-400 text-sm">No redeem data in last 30 days</div>
+            ) : (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyRedeemData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} />
+                    <YAxis stroke="#9ca3af" fontSize={11} />
+                    <Tooltip 
+                      contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                      formatter={(value, name) => [name === 'prc' ? `${Number(value).toLocaleString()} PRC` : `${value} redeems`, name === 'prc' ? 'Redeemed' : 'Count']}
+                    />
+                    <Bar dataKey="prc" fill="#10b981" radius={[4, 4, 0, 0]} name="prc" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {/* Redeem summary row */}
+            <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-xs text-slate-400">Days Active</p>
+                <p className="text-sm font-bold text-slate-800">{dailyRedeemData.length}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Total Redeems</p>
+                <p className="text-sm font-bold text-slate-800">{dailyRedeemData.reduce((sum, d) => sum + d.count, 0)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Avg / Day</p>
+                <p className="text-sm font-bold text-emerald-600">
+                  {dailyRedeemData.length > 0 ? (dailyRedeemData.reduce((sum, d) => sum + d.prc, 0) / dailyRedeemData.length).toFixed(2) : 0} PRC
+                </p>
+              </div>
+            </div>
           </Card>
         </div>
       </div>
