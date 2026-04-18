@@ -23,7 +23,7 @@ const AdminEmployees = () => {
   const [searching, setSearching] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
-  const [addForm, setAddForm] = useState({ department: '', designation: '', monthly_salary: '', joining_date: '' });
+  const [addForm, setAddForm] = useState({ department: '', designation: '', monthly_salary: '', joining_date: '', date_of_birth: '', gender: '', father_name: '', blood_group: '', employment_type: 'full_time' });
   const [selectedUser, setSelectedUser] = useState(null);
   const [adding, setAdding] = useState(false);
   
@@ -108,6 +108,11 @@ const AdminEmployees = () => {
         designation: addForm.designation,
         monthly_salary: parseFloat(addForm.monthly_salary),
         joining_date: addForm.joining_date || undefined,
+        date_of_birth: addForm.date_of_birth || undefined,
+        gender: addForm.gender || undefined,
+        father_name: addForm.father_name || undefined,
+        blood_group: addForm.blood_group || undefined,
+        employment_type: addForm.employment_type || 'full_time',
         admin_id: user?.uid || 'admin'
       }, { headers });
       if (res.data?.success) {
@@ -479,6 +484,39 @@ const AdminEmployees = () => {
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white"
                   />
                 </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Date of Birth</label>
+                  <input type="date" value={addForm.date_of_birth} onChange={e => setAddForm(p => ({ ...p, date_of_birth: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Gender</label>
+                  <select value={addForm.gender} onChange={e => setAddForm(p => ({ ...p, gender: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white">
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Father/Husband Name</label>
+                  <input type="text" value={addForm.father_name} onChange={e => setAddForm(p => ({ ...p, father_name: e.target.value }))} placeholder="Father/Husband Name" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Blood Group</label>
+                  <select value={addForm.blood_group} onChange={e => setAddForm(p => ({ ...p, blood_group: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white">
+                    <option value="">Select</option>
+                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Employment Type</label>
+                  <select value={addForm.employment_type} onChange={e => setAddForm(p => ({ ...p, employment_type: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white">
+                    <option value="full_time">Full Time</option>
+                    <option value="part_time">Part Time</option>
+                    <option value="contract">Contract</option>
+                    <option value="intern">Intern</option>
+                  </select>
+                </div>
               </div>
               <button
                 onClick={handleAddEmployee}
@@ -648,6 +686,21 @@ const AdminEmployees = () => {
                 <span className="font-bold">NET SALARY</span>
                 <span className="text-xl font-bold">₹{viewSlip.net_salary?.toLocaleString()}</span>
               </div>
+              {viewSlip.net_salary_words && (
+                <p className="text-xs text-slate-500 italic mt-1 px-1">{viewSlip.net_salary_words}</p>
+              )}
+              
+              {/* Employer Contributions (for reference) */}
+              {viewSlip.employer_contributions && (
+                <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
+                  <p className="text-xs font-semibold text-blue-700 mb-1">Employer Contributions (Not deducted from salary)</p>
+                  <div className="flex gap-4 text-xs text-blue-600">
+                    <span>PF (Employer): ₹{viewSlip.employer_contributions.pf_employer?.toLocaleString()}</span>
+                    <span>ESI (Employer): ₹{viewSlip.employer_contributions.esi_employer?.toLocaleString()}</span>
+                    <span>Gratuity: ₹{viewSlip.employer_contributions.gratuity?.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-3 flex justify-end">
                 <button onClick={() => setViewSlip(null)} className="px-4 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-sm hover:bg-slate-300">
@@ -729,9 +782,17 @@ const AdminEmployees = () => {
               <div><span className="text-slate-400 text-xs block">Designation</span><span className="text-slate-900 font-medium">{detailData.employee?.designation}</span></div>
               <div><span className="text-slate-400 text-xs block">Salary</span><span className="text-slate-900 font-medium">₹{detailData.employee?.monthly_salary?.toLocaleString()}</span></div>
               <div><span className="text-slate-400 text-xs block">Joining Date</span><span className="text-slate-900 font-medium">{detailData.employee?.joining_date?.slice(0,10)}</span></div>
+              <div><span className="text-slate-400 text-xs block">Date of Birth</span><span className="text-slate-900">{detailData.employee?.date_of_birth || '-'}</span></div>
+              <div><span className="text-slate-400 text-xs block">Gender</span><span className="text-slate-900">{detailData.employee?.gender || '-'}</span></div>
+              <div><span className="text-slate-400 text-xs block">Father/Husband</span><span className="text-slate-900">{detailData.employee?.father_name || '-'}</span></div>
+              <div><span className="text-slate-400 text-xs block">Blood Group</span><span className="text-slate-900">{detailData.employee?.blood_group || '-'}</span></div>
               <div><span className="text-slate-400 text-xs block">Email</span><span className="text-slate-900">{detailData.employee?.email || '-'}</span></div>
               <div><span className="text-slate-400 text-xs block">Mobile</span><span className="text-slate-900">{detailData.employee?.mobile || '-'}</span></div>
+              <div><span className="text-slate-400 text-xs block">Employment Type</span><span className="text-slate-900 capitalize">{detailData.employee?.employment_type?.replace('_', ' ') || '-'}</span></div>
               <div><span className="text-slate-400 text-xs block">Status</span><span className={`font-bold ${detailData.employee?.status === 'active' ? 'text-emerald-600' : 'text-red-600'}`}>{detailData.employee?.status?.toUpperCase()}</span></div>
+              {detailData.employee?.ctc && (
+                <div><span className="text-slate-400 text-xs block">CTC (Annual)</span><span className="text-slate-900 font-medium">₹{detailData.employee?.ctc?.annual?.toLocaleString()}</span></div>
+              )}
               <div><span className="text-slate-400 text-xs block">Earned (PRC)</span><span className="text-slate-900">{detailData.employee?.earned_this_month?.toFixed(2) || 0}</span></div>
             </div>
           </div>
@@ -747,6 +808,7 @@ const AdminEmployees = () => {
                 { key: 'bank_name', label: 'Bank Name' },
                 { key: 'ifsc_code', label: 'IFSC Code' },
                 { key: 'uan_number', label: 'UAN Number' },
+                { key: 'esic_number', label: 'ESIC Number' },
               ].map(f => (
                 <div key={f.key}>
                   <label className="text-xs text-slate-500 mb-1 block">{f.label}</label>

@@ -69,6 +69,13 @@ class AddEmployeeRequest(BaseModel):
     designation: str
     monthly_salary: float = Field(..., ge=1000)
     joining_date: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None  # Male, Female, Other
+    father_name: Optional[str] = None
+    blood_group: Optional[str] = None
+    reporting_manager: Optional[str] = None  # employee_id of manager
+    probation_months: Optional[int] = 6
+    employment_type: Optional[str] = "full_time"  # full_time, part_time, contract, intern
     admin_id: str
 
 class UpdateEmployeeRequest(BaseModel):
@@ -123,18 +130,13 @@ def calculate_salary_breakdown(monthly_salary: float) -> dict:
         medical = 0
         special_allowance = round(monthly_salary - basic - hra - conveyance, 2)
 
-    # Deductions
-    # PF: 12% of Basic (capped at 15000 basic)
+    # Employee Deductions
     pf_basic = min(basic, 15000)
     pf_employee = round(pf_basic * 0.12, 2)
-
-    # ESI: 0.75% of gross if gross < 21000
     esi_employee = round(monthly_salary * 0.0075, 2) if monthly_salary <= 21000 else 0
-
-    # Professional Tax (Maharashtra): 200/month for salary > 10000
     professional_tax = 200 if monthly_salary > 10000 else 0
 
-    # TDS estimate (simplified): 0 for < 25000/month, 5% for 25K-50K, 10% above
+    # TDS estimate
     annual = monthly_salary * 12
     if annual <= 300000:
         tds = 0
@@ -144,6 +146,11 @@ def calculate_salary_breakdown(monthly_salary: float) -> dict:
         tds = round(((annual - 600000) * 0.10 + 300000 * 0.05) / 12, 2)
     else:
         tds = round(((annual - 900000) * 0.15 + 300000 * 0.10 + 300000 * 0.05) / 12, 2)
+
+    # Employer contributions (not deducted from employee, but part of CTC)
+    pf_employer = round(pf_basic * 0.12, 2)  # 12% employer PF
+    esi_employer = round(monthly_salary * 0.0325, 2) if monthly_salary <= 21000 else 0  # 3.25% employer ESI
+    gratuity = round(basic * 15 / 26 / 12, 2)  # Gratuity = (Basic * 15) / 26 / 12 per month
 
     total_earnings = round(basic + hra + conveyance + special_allowance + medical, 2)
     total_deductions = round(pf_employee + esi_employee + professional_tax + tds, 2)
@@ -165,8 +172,73 @@ def calculate_salary_breakdown(monthly_salary: float) -> dict:
             "tds": tds,
             "total_deductions": total_deductions
         },
+        "employer_contributions": {
+            "pf_employer": pf_employer,
+            "esi_employer": esi_employer,
+            "gratuity": gratuity,
+            "total_employer": round(pf_employer + esi_employer + gratuity, 2)
+        },
         "net_salary": net_salary
     }
+
+
+def calculate_ctc(monthly_salary: float) -> dict:
+    """Calculate annual CTC including employer contributions."""
+    breakdown = calculate_salary_breakdown(monthly_salary)
+    employer = breakdown.get("employer_contributions", {})
+    monthly_ctc = monthly_salary + employer.get("total_employer", 0)
+    return {
+        "monthly": round(monthly_ctc, 2),
+        "annual": round(monthly_ctc * 12, 2),
+        "gross_monthly": monthly_salary,
+        "gross_annual": monthly_salary * 12
+    }
+
+
+def number_to_words_inr(amount: float) -> str:
+    """Convert number to Indian Rupees in words."""
+    ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+            'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+            'Seventeen', 'Eighteen', 'Nineteen']
+    tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+
+    def two_digits(n):
+        if n < 20:
+            return ones[n]
+        return tens[n // 10] + (' ' + ones[n % 10] if n % 10 else '')
+
+    def three_digits(n):
+        if n >= 100:
+            return ones[n // 100] + ' Hundred' + (' and ' + two_digits(n % 100) if n % 100 else '')
+        return two_digits(n)
+
+    if amount < 0:
+        return 'Minus ' + number_to_words_inr(-amount)
+
+    rupees = int(amount)
+    paise = round((amount - rupees) * 100)
+
+    if rupees == 0:
+        return 'Zero Rupees' + (f' and {two_digits(paise)} Paise' if paise else ' Only')
+
+    parts = []
+    if rupees >= 10000000:
+        parts.append(two_digits(rupees // 10000000) + ' Crore')
+        rupees %= 10000000
+    if rupees >= 100000:
+        parts.append(two_digits(rupees // 100000) + ' Lakh')
+        rupees %= 100000
+    if rupees >= 1000:
+        parts.append(two_digits(rupees // 1000) + ' Thousand')
+        rupees %= 1000
+    if rupees > 0:
+        parts.append(three_digits(rupees))
+
+    result = 'Rupees ' + ' '.join(parts)
+    if paise:
+        result += f' and {two_digits(paise)} Paise'
+    result += ' Only'
+    return result
 
 
 # ==================== EMPLOYEE POOL WALLET ====================
@@ -362,11 +434,20 @@ async def add_employee(data: AddEmployeeRequest):
             "name": user.get("name", ""),
             "email": user.get("email", ""),
             "mobile": user.get("mobile", ""),
+            "date_of_birth": data.date_of_birth,
+            "gender": data.gender,
+            "father_name": data.father_name,
+            "blood_group": data.blood_group,
             "department": data.department,
             "designation": data.designation,
+            "reporting_manager": data.reporting_manager,
+            "employment_type": data.employment_type or "full_time",
+            "probation_months": data.probation_months or 6,
             "monthly_salary": data.monthly_salary,
             "salary_breakdown": breakdown,
+            "ctc": calculate_ctc(data.monthly_salary),
             "joining_date": joining,
+            "confirmation_date": None,
             "status": "active",
             "photo_url": None,
             # Leave balance (annual allocation)
@@ -385,7 +466,10 @@ async def add_employee(data: AddEmployeeRequest):
                 "bank_account": None,
                 "bank_name": None,
                 "ifsc_code": None,
-                "uan_number": None
+                "uan_number": None,
+                "esic_number": None,
+                "pf_eligible": True,
+                "esi_eligible": data.monthly_salary <= 21000
             },
             # Emergency contact
             "emergency_contact": {
@@ -515,7 +599,7 @@ async def update_employee_documents(employee_id: str, request: Request):
 
         data = await request.json()
         docs = emp.get("documents", {})
-        for key in ["aadhar_number", "pan_number", "bank_account", "bank_name", "ifsc_code", "uan_number"]:
+        for key in ["aadhar_number", "pan_number", "bank_account", "bank_name", "ifsc_code", "uan_number", "esic_number", "pf_eligible", "esi_eligible"]:
             if key in data:
                 docs[key] = data[key]
 
@@ -1003,7 +1087,13 @@ async def generate_salary_slip(data: GenerateSalarySlipRequest):
                 "loss_of_pay": loss_of_pay,
                 "total_deductions": total_deductions
             },
+            "employer_contributions": {
+                "pf_employer": round(min(adjusted_basic, 15000) * 0.12, 2),
+                "esi_employer": round(adjusted_gross * 0.0325, 2) if adjusted_gross <= 21000 else 0,
+                "gratuity": round(adjusted_basic * 15 / 26 / 12, 2)
+            },
             "net_salary": net_salary,
+            "net_salary_words": number_to_words_inr(net_salary),
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "generated_by": data.admin_id
         }
@@ -1051,13 +1141,18 @@ async def get_id_card_data(employee_id: str):
                 "company_website": COMPANY_WEBSITE,
                 "employee_id": emp["employee_id"],
                 "name": emp.get("name", ""),
+                "father_name": emp.get("father_name", ""),
+                "date_of_birth": emp.get("date_of_birth", ""),
+                "gender": emp.get("gender", ""),
+                "blood_group": emp.get("blood_group", ""),
                 "designation": emp.get("designation", ""),
                 "department": emp.get("department", ""),
                 "joining_date": emp.get("joining_date", ""),
                 "mobile": emp.get("mobile", ""),
                 "email": emp.get("email", ""),
                 "photo_url": emp.get("photo_url"),
-                "status": emp.get("status", "active")
+                "status": emp.get("status", "active"),
+                "emergency_contact": emp.get("emergency_contact", {})
             }
         }
     except HTTPException:
