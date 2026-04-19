@@ -91,7 +91,19 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - Eko Refund, Subscription Fixes, Core Team Pool Wallet
 - Admin Bank Transfer, PRC Analytics, Chatbot Removed
 
+### Employee Self-Service Portal (DONE - April 19, 2026)
+- `/my-reports` route wired in App.js with lazy-load
+- `/employee/my-reports` alias -> `/my-reports`
+- Profile page shows "My Employee Portal" card (data-testid='my-employee-portal-card') for employee-linked users only (non-blocking probe to /api/employees/reports/my/profile)
+- Portal tabs: Overview, Downloads (Payslips/Form16), YTD, Attendance, Leaves, Pool History
+- Tested 13/13 backend + 4/4 frontend flows (test_reports/iteration_211.json)
+
+### Bug Fixes (DONE - April 19, 2026)
+- **Dashboard Pool Wallet "Total Distributed" always 0**: Fixed MongoDB projection in /api/user/{uid}/dashboard — projection was `{"balance":1}` only, now includes `total_distributed`. Verified returns 2.8905 PRC correctly.
+- **Community comment count not refreshing in post list**: Added `fetchPosts()` call in `handleComment` and `handleDeleteComment` on CommunityPage.js so list view reflects updated count immediately.
+
 ## Upcoming Tasks
+- P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
 - P2: WhatsApp Share Receipt
 

@@ -154,7 +154,7 @@ const MyReports = ({ user }) => {
             </Link>
             <div className="flex-1">
               <h1 className="text-xl sm:text-2xl font-bold">My Employee Portal</h1>
-              <p className="text-xs text-white/80">Payslips · YTD Earnings · Form 16 · Attendance · Leaves</p>
+              <p className="text-xs text-white/90 font-medium">Payslips · YTD Earnings · Form 16 · Attendance · Leaves</p>
             </div>
             <button onClick={fetchProfile} data-testid="refresh-btn" className="p-2 bg-white/10 hover:bg-white/20 rounded-lg">
               <RefreshCw className="w-4 h-4" />
