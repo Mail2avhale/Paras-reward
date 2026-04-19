@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, User, Crown, MessageCircle } from 'lucide-react';
+import { Home, Users, User, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const BottomNav = () => {
@@ -13,7 +13,6 @@ const BottomNav = () => {
     if (path === '/dashboard') return 'home';
     if (path === '/referrals') return 'referrals';
     if (path === '/community') return 'community';
-    if (path === '/subscription') return 'subscription';
     if (path === '/profile' || path === '/profile-advanced') return 'profile';
     return 'home';
   };
@@ -24,7 +23,6 @@ const BottomNav = () => {
     { id: 'home', label: 'Home', icon: Home, route: '/dashboard', activeColor: 'from-amber-400 to-amber-600', textColor: 'text-amber-400', glowColor: 'shadow-amber-500/30' },
     { id: 'referrals', label: 'Invite', icon: Users, route: '/referrals', activeColor: 'from-cyan-400 to-blue-500', textColor: 'text-cyan-400', glowColor: 'shadow-cyan-500/30' },
     { id: 'community', label: 'Community', icon: MessageCircle, route: '/community', activeColor: 'from-rose-400 to-pink-500', textColor: 'text-rose-400', glowColor: 'shadow-rose-500/30' },
-    { id: 'subscription', label: 'Plan', icon: Crown, route: '/subscription', activeColor: 'from-purple-400 to-violet-600', textColor: 'text-purple-400', glowColor: 'shadow-purple-500/30' },
     { id: 'profile', label: 'Profile', icon: User, route: '/profile', activeColor: 'from-emerald-400 to-green-500', textColor: 'text-emerald-400', glowColor: 'shadow-emerald-500/30' },
   ];
 
