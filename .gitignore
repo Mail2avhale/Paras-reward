@@ -44,6 +44,7 @@ dump.rdb
 # System files
 .DS_Store
 *.pem
+*.key
 
 # Python
 __pycache__/
@@ -71,97 +72,11 @@ chainlit.md
 
 # Build caches
 .cache/
+frontend/node_modules/.cache/
 
 # Mobile development
 android-sdk/
-frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/19.pack
-frontend/node_modules/.cache/default-development/19.pack
-frontend/node_modules/.cache/default-development/19.pack
-frontend/node_modules/.cache/default-development/8.pack
-frontend/node_modules/.cache/default-development/1.pack
--e 
-frontend/node_modules/.cache/default-development/5.pack
-frontend/node_modules/.cache/default-development/7.pack
-frontend/node_modules/.cache/default-development/9.pack
-frontend/node_modules/.cache/default-development/10.pack
-frontend/node_modules/.cache/default-development/2.pack
-frontend/node_modules/.cache/default-development/4.pack
-frontend/node_modules/.cache/default-development/6.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/18.pack
-frontend/node_modules/.cache/default-development/14.pack
-frontend/node_modules/.cache/default-development/24.pack
-frontend/node_modules/.cache/default-development/26.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/27.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/28.pack
-frontend/node_modules/.cache/default-development/29.pack
-frontend/node_modules/.cache/default-development/25.pack
-frontend/node_modules/.cache/default-development/21.pack
-frontend/node_modules/.cache/default-development/30.pack
-frontend/node_modules/.cache/default-development/31.pack
-frontend/node_modules/.cache/default-development/37.pack
-frontend/node_modules/.cache/default-development/38.pack
-frontend/node_modules/.cache/default-development/41.pack
-frontend/node_modules/.cache/default-development/40.pack
-frontend/node_modules/.cache/default-development/43.pack
-frontend/node_modules/.cache/default-development/45.pack
-frontend/node_modules/.cache/default-development/47.pack
-frontend/node_modules/.cache/default-development/48.pack
-frontend/node_modules/.cache/default-development/49.pack
-frontend/node_modules/.cache/default-development/55.pack
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/61.pack
-frontend/node_modules/.cache/default-development/67.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/75.pack
-frontend/node_modules/.cache/default-development/74.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/95.pack
+
+# NOTE: .env files are INTENTIONALLY tracked for Emergent deployment.
+# Emergent auto-updates them with production values at deploy time.
 frontend/node_modules/.cache/default-development/93.pack
-frontend/node_modules/.cache/default-development/94.pack
--e 
-# Environment and credential files
-.env
-.env.*
-*.env
-credentials.json
-*.pem
-*.key
-.credentials
-frontend/node_modules/.cache/default-development/81.pack
-frontend/node_modules/.cache/default-development/98.pack
-frontend/node_modules/.cache/default-development/53.pack
-frontend/node_modules/.cache/default-development/114.pack
-frontend/node_modules/.cache/default-development/118.pack
-frontend/node_modules/.cache/default-development/123.pack
-frontend/node_modules/.cache/default-development/109.pack
-frontend/node_modules/.cache/default-development/109.pack
-frontend/node_modules/.cache/default-development/131.pack
-frontend/node_modules/.cache/default-development/135.pack
