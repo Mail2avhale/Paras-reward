@@ -291,6 +291,199 @@ async def download_resume(app_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== CAREER: APPLICATION STATUS CHECK (Public) ====================
+
+@router.get("/careers/check-status")
+async def check_application_status(email: str):
+    """Public: Applicant can check their application status by email."""
+    try:
+        if not email:
+            raise HTTPException(status_code=400, detail="Email required")
+        
+        apps = await db.job_applications.find(
+            {"email": email.lower().strip()},
+            {"_id": 0, "application_id": 1, "job_title": 1, "status": 1, "created_at": 1, "name": 1}
+        ).sort("created_at", -1).to_list(20)
+        
+        if not apps:
+            return {"found": False, "message": "No applications found for this email", "applications": []}
+        
+        return {"found": True, "applications": apps}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== CAREER: ADMIN NOTES ====================
+
+@router.post("/careers/applications/{app_id}/note")
+async def add_application_note(app_id: str, request: Request):
+    """Admin: Add note/feedback to an application."""
+    try:
+        data = await request.json()
+        note = data.get("note", "")
+        admin_id = data.get("admin_id", "admin")
+        
+        app = await db.job_applications.find_one({"application_id": app_id})
+        if not app:
+            raise HTTPException(status_code=404, detail="Application not found")
+        
+        now = datetime.now(timezone.utc).isoformat()
+        note_entry = {
+            "note": note,
+            "admin_id": admin_id,
+            "created_at": now
+        }
+        
+        await db.job_applications.update_one(
+            {"application_id": app_id},
+            {"$push": {"admin_notes": note_entry}, "$set": {"updated_at": now}}
+        )
+        return {"success": True, "message": "Note added"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== INVESTORS: FAQ ====================
+
+@router.get("/investors/faq")
+async def get_investor_faq():
+    """Public: Get investor FAQ."""
+    try:
+        faqs = await db.investor_faqs.find({}, {"_id": 0}).sort("order", 1).to_list(50)
+        if not faqs:
+            faqs = [
+                {"question": "What is Paras Reward?", "answer": "Paras Reward is India's first PRC-powered digital reward ecosystem with subscription-based mining, integrated bill payments, and a community-driven platform.", "order": 1},
+                {"question": "What is PRC?", "answer": "PRC (Paras Reward Coin) is our digital reward token. Users earn PRC through mining, referrals, and platform activities. PRC can be used for bill payments, recharges, and marketplace purchases.", "order": 2},
+                {"question": "What is the business model?", "answer": "Revenue comes from monthly subscriptions (Elite/VIP plans), transaction fees on BBPS/bill payments, PRC marketplace commissions, and platform service charges.", "order": 3},
+                {"question": "What stage is the company at?", "answer": "We are in the growth phase with an established product, active user base, and multiple revenue streams. We are looking for strategic investors to scale operations.", "order": 4},
+                {"question": "What is the minimum investment?", "answer": "We welcome investors across all ranges. Please connect with our team through the contact form to discuss opportunities that match your investment goals.", "order": 5},
+                {"question": "Is the platform compliant?", "answer": "Yes. We are fully compliant with Indian regulations including GST, PF, ESI, TDS, and operate as a registered Private Limited company in Maharashtra.", "order": 6}
+            ]
+            for faq in faqs:
+                await db.investor_faqs.insert_one(faq)
+        return {"faqs": faqs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/investors/faq")
+async def add_or_update_faq(request: Request):
+    """Admin: Add/update FAQ."""
+    try:
+        data = await request.json()
+        question = data.get("question")
+        answer = data.get("answer")
+        order = data.get("order", 99)
+        faq_id = data.get("faq_id")
+        
+        if faq_id:
+            await db.investor_faqs.update_one(
+                {"faq_id": faq_id},
+                {"$set": {"question": question, "answer": answer, "order": order}}
+            )
+        else:
+            await db.investor_faqs.insert_one({
+                "faq_id": f"FAQ-{str(uuid.uuid4())[:6]}",
+                "question": question,
+                "answer": answer,
+                "order": order
+            })
+        return {"success": True, "message": "FAQ saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== INVESTORS: TEAM ====================
+
+@router.get("/investors/team")
+async def get_team():
+    """Public: Get leadership team."""
+    try:
+        team = await db.investor_team.find({}, {"_id": 0}).sort("order", 1).to_list(20)
+        if not team:
+            team = [
+                {
+                    "member_id": "TM-001",
+                    "name": "Founder",
+                    "role": "CEO & Founder",
+                    "bio": "Visionary entrepreneur building India's first PRC-powered digital reward ecosystem.",
+                    "photo_url": None,
+                    "linkedin": "",
+                    "order": 1
+                }
+            ]
+            for t in team:
+                await db.investor_team.insert_one(t)
+        return {"team": team}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/investors/team")
+async def add_or_update_team_member(request: Request):
+    """Admin: Add/update team member."""
+    try:
+        data = await request.json()
+        member_id = data.get("member_id")
+        
+        entry = {
+            "name": data.get("name", ""),
+            "role": data.get("role", ""),
+            "bio": data.get("bio", ""),
+            "photo_url": data.get("photo_url"),
+            "linkedin": data.get("linkedin", ""),
+            "order": data.get("order", 99),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        if member_id:
+            await db.investor_team.update_one({"member_id": member_id}, {"$set": entry})
+        else:
+            entry["member_id"] = f"TM-{str(uuid.uuid4())[:6]}"
+            await db.investor_team.insert_one(entry)
+        
+        return {"success": True, "message": "Team member saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== INVESTORS: PRESS/NEWS ====================
+
+@router.get("/investors/press")
+async def get_press():
+    """Public: Get press releases and news."""
+    try:
+        press = await db.investor_press.find({}, {"_id": 0}).sort("date", -1).to_list(20)
+        return {"press": press}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/investors/press")
+async def add_press(request: Request):
+    """Admin: Add press release."""
+    try:
+        data = await request.json()
+        entry = {
+            "press_id": f"PR-{str(uuid.uuid4())[:6]}",
+            "title": data.get("title", ""),
+            "summary": data.get("summary", ""),
+            "url": data.get("url", ""),
+            "source": data.get("source", ""),
+            "date": data.get("date", datetime.now(timezone.utc).isoformat()[:10]),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.investor_press.insert_one(entry)
+        return {"success": True, "message": "Press release added"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 # ==================== INVESTORS: REAL METRICS ====================
 
 @router.get("/investors/metrics")

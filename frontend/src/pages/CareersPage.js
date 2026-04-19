@@ -34,6 +34,10 @@ const CareersPage = () => {
   const [showApply, setShowApply] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [showStatusCheck, setShowStatusCheck] = useState(false);
+  const [statusEmail, setStatusEmail] = useState('');
+  const [statusResults, setStatusResults] = useState(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
   const fileRef = useRef(null);
 
   const [form, setForm] = useState({
@@ -51,6 +55,16 @@ const CareersPage = () => {
   }, []);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
+
+  const checkApplicationStatus = async () => {
+    if (!statusEmail) { toast.error('Enter your email'); return; }
+    setCheckingStatus(true);
+    try {
+      const res = await axios.get(`${API}/public/careers/check-status?email=${encodeURIComponent(statusEmail)}`);
+      setStatusResults(res.data);
+    } catch { toast.error('Failed to check status'); }
+    finally { setCheckingStatus(false); }
+  };
 
   const handleApply = async () => {
     if (!form.name || !form.email || !form.phone || !resume) {
@@ -212,10 +226,64 @@ const CareersPage = () => {
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">Join Our Mission</h1>
           <p className="text-slate-300 text-lg max-w-2xl mx-auto mb-2">Build the future of digital rewards with Paras Reward Technologies</p>
           <p className="text-slate-400 text-sm">B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra</p>
+          <div className="flex gap-3 justify-center mt-4">
+            <a href="#positions" className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">View Open Positions</a>
+            <button onClick={() => setShowStatusCheck(!showStatusCheck)} className="px-6 py-2.5 border border-slate-600 text-slate-300 rounded-lg font-medium hover:border-slate-400" data-testid="check-status-btn">
+              Check Application Status
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-10 space-y-12">
+        {/* Application Status Check */}
+        {showStatusCheck && (
+          <div className="bg-white border border-slate-200 rounded-xl p-6" data-testid="status-check-section">
+            <h3 className="font-bold text-slate-900 mb-3">Check Your Application Status</h3>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={statusEmail}
+                onChange={e => setStatusEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && checkApplicationStatus()}
+                placeholder="Enter your email address"
+                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white"
+                data-testid="status-email-input"
+              />
+              <button onClick={checkApplicationStatus} disabled={checkingStatus} className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium disabled:opacity-50">
+                {checkingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Check'}
+              </button>
+            </div>
+            {statusResults && (
+              <div className="mt-4">
+                {!statusResults.found ? (
+                  <p className="text-slate-500 text-sm">No applications found for this email.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {statusResults.applications.map(app => (
+                      <div key={app.application_id} className="p-3 bg-slate-50 rounded-lg flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-slate-900 text-sm">{app.job_title}</p>
+                          <p className="text-xs text-slate-400">Applied: {app.created_at?.slice(0, 10)}</p>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          app.status === 'new' ? 'bg-blue-100 text-blue-700' :
+                          app.status === 'reviewed' ? 'bg-yellow-100 text-yellow-700' :
+                          app.status === 'shortlisted' ? 'bg-emerald-100 text-emerald-700' :
+                          app.status === 'interview' ? 'bg-purple-100 text-purple-700' :
+                          app.status === 'hired' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {app.status?.charAt(0).toUpperCase() + app.status?.slice(1)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {/* Values */}
         <div>
           <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">Our Values</h2>
@@ -244,7 +312,7 @@ const CareersPage = () => {
         </div>
 
         {/* Open Positions */}
-        <div>
+        <div id="positions">
           <h2 className="text-xl font-bold text-slate-900 mb-4 text-center">Open Positions</h2>
 
           {/* Filter */}

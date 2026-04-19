@@ -34,6 +34,10 @@ const InvestorsPage = () => {
   const [metrics, setMetrics] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [faqs, setFaqs] = useState([]);
+  const [team, setTeam] = useState([]);
+  const [press, setPress] = useState([]);
+  const [openFaq, setOpenFaq] = useState(null);
   const [showContact, setShowContact] = useState(false);
   const [contacting, setContacting] = useState(false);
   const [contacted, setContacted] = useState(false);
@@ -48,12 +52,18 @@ const InvestorsPage = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [metricsRes, docsRes] = await Promise.all([
+      const [metricsRes, docsRes, faqRes, teamRes, pressRes] = await Promise.all([
         axios.get(`${API}/public/investors/metrics`),
-        axios.get(`${API}/public/investors/documents`)
+        axios.get(`${API}/public/investors/documents`),
+        axios.get(`${API}/public/investors/faq`),
+        axios.get(`${API}/public/investors/team`),
+        axios.get(`${API}/public/investors/press`)
       ]);
       setMetrics(metricsRes.data?.metrics || {});
       setDocuments(docsRes.data?.documents || []);
+      setFaqs(faqRes.data?.faqs || []);
+      setTeam(teamRes.data?.team || []);
+      setPress(pressRes.data?.press || []);
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, []);
@@ -213,6 +223,74 @@ const InvestorsPage = () => {
             </div>
           </div>
         </div>
+
+        {/* Leadership Team */}
+        {team.length > 0 && (
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">Leadership Team</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {team.map((t, i) => (
+                <div key={i} className="bg-white border border-slate-200 rounded-xl p-5 text-center">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-xl font-bold mx-auto mb-3">
+                    {t.name?.charAt(0)?.toUpperCase()}
+                  </div>
+                  <h3 className="font-bold text-slate-900">{t.name}</h3>
+                  <p className="text-blue-600 text-sm font-medium">{t.role}</p>
+                  <p className="text-slate-500 text-xs mt-2">{t.bio}</p>
+                  {t.linkedin && (
+                    <a href={t.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-500 text-xs hover:underline mt-2 inline-block">LinkedIn Profile</a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Press & News */}
+        {press.length > 0 && (
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">Press & News</h2>
+            <div className="space-y-3">
+              {press.map((p, i) => (
+                <a key={i} href={p.url || '#'} target="_blank" rel="noopener noreferrer" className="block bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-slate-900 text-sm">{p.title}</h3>
+                      <p className="text-slate-500 text-xs mt-1">{p.summary}</p>
+                      <p className="text-slate-400 text-[10px] mt-1">{p.source} | {p.date}</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* FAQ */}
+        {faqs.length > 0 && (
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">Frequently Asked Questions</h2>
+            <div className="space-y-2">
+              {faqs.map((faq, i) => (
+                <div key={i} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full p-4 text-left flex items-center justify-between"
+                  >
+                    <span className="font-medium text-slate-900 text-sm pr-4">{faq.question}</span>
+                    <ChevronRight className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform ${openFaq === i ? 'rotate-90' : ''}`} />
+                  </button>
+                  {openFaq === i && (
+                    <div className="px-4 pb-4 text-slate-600 text-sm border-t border-slate-100 pt-3">
+                      {faq.answer}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Documents */}
         {documents.length > 0 && (
