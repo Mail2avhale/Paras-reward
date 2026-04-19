@@ -530,55 +530,74 @@ async def delete_press(press_id: str):
 
 @router.get("/investors/metrics")
 async def get_investor_metrics():
-    """Public: Get real platform metrics for investors."""
+    """Public: Get real platform metrics for investors. Uses cached/estimated counts to avoid timeouts on large prod collections."""
+    from datetime import timedelta
+
+    # Defaults for safety — any individual failure shouldn't break the whole page
+    total_users = 0
+    active_subs = 0
+    monthly_active = 0
+    total_transactions = 0
+    prc_circulation = 0
+    this_month_users = 0
+    last_month_users = 0
+
     try:
         total_users = await db.users.count_documents({})
+    except Exception as e:
+        logging.warning(f"[INVESTORS] total_users failed: {e}")
+
+    try:
         active_subs = await db.users.count_documents({
             "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro"]}
         })
+    except Exception as e:
+        logging.warning(f"[INVESTORS] active_subs failed: {e}")
 
-        # Monthly active (users who logged in last 30 days)
-        from datetime import timedelta
+    try:
         thirty_days = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
         monthly_active = await db.users.count_documents({"last_login": {"$gte": thirty_days}})
+    except Exception as e:
+        logging.warning(f"[INVESTORS] monthly_active failed: {e}")
 
-        # Transaction volume
-        total_transactions = await db.transactions.count_documents({})
+    # Use estimated_document_count to avoid COLLSCAN on large transactions collection
+    try:
+        total_transactions = await db.transactions.estimated_document_count()
+    except Exception as e:
+        logging.warning(f"[INVESTORS] total_transactions failed: {e}")
 
-        # Total PRC in circulation
-        try:
-            circ = await db.users.aggregate([
-                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_balance", 0]}}}}
-            ]).to_list(1)
-            prc_circulation = circ[0]["total"] if circ else 0
-        except Exception:
-            prc_circulation = 0
+    try:
+        circ = await db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_balance", 0]}}}}
+        ]).to_list(1)
+        prc_circulation = circ[0]["total"] if circ else 0
+    except Exception as e:
+        logging.warning(f"[INVESTORS] prc_circulation failed: {e}")
 
-        # Growth rate (new users this month vs last month)
+    try:
         this_month_start = datetime.now(timezone.utc).replace(day=1).isoformat()
         last_month_start = (datetime.now(timezone.utc).replace(day=1) - timedelta(days=1)).replace(day=1).isoformat()
-        
         this_month_users = await db.users.count_documents({"created_at": {"$gte": this_month_start}})
         last_month_users = await db.users.count_documents({
             "created_at": {"$gte": last_month_start, "$lt": this_month_start}
         })
-        growth_rate = round(((this_month_users - last_month_users) / max(last_month_users, 1)) * 100, 1)
-
-        return {
-            "metrics": {
-                "total_users": total_users,
-                "active_subscribers": active_subs,
-                "monthly_active_users": monthly_active,
-                "total_transactions": total_transactions,
-                "prc_in_circulation": round(prc_circulation, 2),
-                "user_growth_rate": growth_rate,
-                "this_month_signups": this_month_users
-            },
-            "company": COMPANY
-        }
     except Exception as e:
-        logging.error(f"[INVESTORS] Metrics error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.warning(f"[INVESTORS] growth rate failed: {e}")
+
+    growth_rate = round(((this_month_users - last_month_users) / max(last_month_users, 1)) * 100, 1) if last_month_users > 0 else 0
+
+    return {
+        "metrics": {
+            "total_users": total_users,
+            "active_subscribers": active_subs,
+            "monthly_active_users": monthly_active,
+            "total_transactions": total_transactions,
+            "prc_in_circulation": round(prc_circulation, 2),
+            "user_growth_rate": growth_rate,
+            "this_month_signups": this_month_users
+        },
+        "company": COMPANY
+    }
 
 
 # ==================== INVESTORS: DOCUMENTS ====================
