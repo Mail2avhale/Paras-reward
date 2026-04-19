@@ -1,0 +1,31 @@
+{
+  "summary": "Phase 1 refactor regression test - routes/social_profile.py extraction. All 9 extracted endpoints (public-profile, privacy-settings, follow, unfollow, check-follow, followers, following, feed/global, feed/network) + 5 regression endpoints (dashboard, user, community/posts, recent-activity, auth/login) + 1 cross-endpoint follows consistency check all PASSED. 19/19 pytest cases green on first run.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/users/{uid}/follow (routes/social_profile.py)", "issue": "When 'Already following' idempotent path is taken, no new social_activities record or notification is written - but also no duplicate follow_id row. Matches original server.py behaviour; not a regression."},
+      {"endpoint": "GET /api/feed/network/{uid}", "issue": "If user follows >1000 users, the following list is silently truncated by .to_list(1000). Pre-existing behaviour, carried over as-is from server.py."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_social_profile_refactor.py",
+    "/app/test_reports/pytest/social_profile_refactor.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/social_profile.py (413 lines) is clean, self-contained, and follows the DRY rule - the _list_relations() helper correctly deduplicates followers/following logic which was duplicated in original server.py. Good refactor quality.",
+    "Local helper _create_social_notification in social_profile.py duplicates (partially) the global create_social_notification in server.py. Ok for phase 1 isolation but should be consolidated in phase 2 into a shared /app/backend/utils/notifications.py module to avoid drift.",
+    "set_db(database) global mutation pattern is used (same as other extracted routers). Works for FastAPI single-process but makes unit testing harder - future phases should consider passing db via FastAPI dependency injection (Depends).",
+    "Router registered without a prefix (api_router.include_router(social_profile_router) - paths in file already start with /users/... and /feed/...). Matches existing pattern; verified endpoints resolve correctly with /api prefix via api_router.",
+    "Badge/level computation is embedded inline in get_public_profile; consider extracting a pure util so it can be reused by /api/feed/* if needed (minor)."
+  ],
+  "updated_files": ["/app/backend/tests/test_social_profile_refactor.py (new)"],
+  "success_rate": {"backend": "100% (19/19)", "frontend": "N/A (skipped per request)"},
+  "test_credentials": "User 9970100782 / PIN 997010 (uid 76b75808-47fa-48dd-ad7c-8074678e3607). Secondary uid 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21 used as follower in follow/unfollow lifecycle.",
+  "seed_data_creation": "Test creates & tears down a follow edge between the two known test UIDs during lifecycle test; followers_count before/after consistency check also cleans up its own follow.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase 1 refactor VERIFIED ZERO REGRESSION. /app/backend/tests/test_social_profile_refactor.py is the regression suite for routes/social_profile.py - reuse for future phases touching the follow system or feeds. server.py confirmed: line 105 import, line 30897/30905 placeholder comments, lines 32570-32571 router registration. No frontend testing performed (not requested).",
+  "rca_of_the_issue": "N/A - no bugs found. Refactor is clean. All extracted endpoints return identical shape to pre-refactor; follows collection reads/writes remain consistent across the extracted module and cross-endpoint users (public-profile followers_count correctly increments/decrements after follow/unfollow in the extracted module)."
+}
