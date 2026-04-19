@@ -10,6 +10,22 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 
 ## What's Been Implemented
 
+### Major Code Cleanup & Lint Fixes (DONE - April 19, 2026)
+- **1.9 GB disk space saved** — deleted dead `admin-frontend/`, `frontend-admin/`, `admin-deploy/` folders
+- Deleted duplicate logos & unused images (paras-logo-new/light/dark, abstract-growth, guilloche-bg)
+- Deleted `support_chatbot.py`, `ai_routes.py`, `server.py.backup`, 19 scratch test files
+- Removed 3 commented-out imports in `server.py`
+- Production `console.log/debug/info` silenced in `index.js` (Play Store compliance)
+- Fixed 182 F821 undefined name errors → **0 remaining**
+- Total lint reduction: 94% (543 → 33 cosmetic-only warnings)
+
+### User-Side Community Comment Delete (DONE - April 19, 2026)
+- Added Delete button on comments and replies (author OR moderator)
+- Confirmation popup + auto-refresh on success
+
+### Bottom Nav Cleanup (DONE - April 19, 2026)
+- Removed "Plan" (Crown) icon from BottomNav — now 4 tabs: Home, Invite, Community, Profile
+
 ### Admin Management Panels for Public Pages (DONE - April 19, 2026)
 - **Admin Community Forum** (`/admin/community`, top-level sidebar)
   - Posts: list/search/filter by category/sort, Pin/Unpin, Delete, View with comments, Delete comments, Block author
