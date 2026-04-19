@@ -830,6 +830,569 @@ async def hr_analytics():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== 6. PF MONTHLY ECR (Phase B) ====================
+@router.get("/pf-ecr")
+async def pf_monthly_ecr(month: int = Query(..., ge=1, le=12), year: int = Query(..., ge=2020, le=2100)):
+    """PF Electronic Challan Return (ECR) — monthly Excel for EPFO upload."""
+    try:
+        employees = await db.employees.find({"status": "active"}, {"_id": 0}).to_list(10000)
+        if not employees:
+            raise HTTPException(status_code=404, detail="No active employees")
+
+        month_name = calendar.month_name[month]
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "PF ECR"
+
+        header_row = write_company_header(ws, 1, 11, f"PF MONTHLY ECR — {month_name} {year}")
+
+        headers = [
+            "UAN", "Member Name", "Gross Wages", "EPF Wages", "EPS Wages", "EDLI Wages",
+            "EPF Contribution (12%)", "EPS Contribution (8.33%)", "EPF Employer Share",
+            "NCP Days", "Refund of Advances"
+        ]
+        for col, h in enumerate(headers, 1):
+            ws.cell(row=header_row + 1, column=col, value=h)
+        apply_header_row(ws, header_row + 1, len(headers))
+
+        totals = {"gross": 0, "epf_wages": 0, "eps_wages": 0, "edli": 0,
+                   "epf_emp": 0, "eps": 0, "epf_empr": 0}
+        for i, emp in enumerate(employees):
+            att = await get_month_attendance_summary(emp["employee_id"], month, year)
+            monthly = emp.get("monthly_salary", 0)
+            bd = calculate_salary_breakdown(monthly)
+            adj_basic = round(bd["earnings"]["basic_salary"] * att["attendance_ratio"], 2)
+            adj_gross = round(monthly * att["attendance_ratio"], 2)
+
+            epf_wages = min(adj_basic, 15000)
+            eps_wages = min(adj_basic, 15000)
+            edli_wages = min(adj_basic, 15000)
+            epf_employee = round(epf_wages * 0.12, 2)
+            eps_contrib = round(eps_wages * 0.0833, 2)
+            epf_employer = round(epf_wages * 0.12 - eps_contrib, 2)
+            ncp_days = max(0, att["total_working_days"] - att["effective_days"])
+
+            vals = [
+                emp.get("pf_uan", ""),
+                emp.get("name", ""),
+                adj_gross,
+                epf_wages, eps_wages, edli_wages,
+                epf_employee, eps_contrib, epf_employer,
+                int(ncp_days), 0
+            ]
+            for col, v in enumerate(vals, 1):
+                c = ws.cell(row=header_row + 2 + i, column=col, value=v)
+                c.border = BORDER_THIN
+                c.font = CELL_FONT
+                if col >= 3:
+                    c.alignment = Alignment(horizontal="right")
+
+            totals["gross"] += adj_gross
+            totals["epf_wages"] += epf_wages
+            totals["eps_wages"] += eps_wages
+            totals["edli"] += edli_wages
+            totals["epf_emp"] += epf_employee
+            totals["eps"] += eps_contrib
+            totals["epf_empr"] += epf_employer
+
+        total_row = header_row + 2 + len(employees)
+        ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=2)
+        ws.cell(row=total_row, column=1, value="TOTAL").font = Font(bold=True)
+        for col, key in [(3, "gross"), (4, "epf_wages"), (5, "eps_wages"), (6, "edli"),
+                          (7, "epf_emp"), (8, "eps"), (9, "epf_empr")]:
+            c = ws.cell(row=total_row, column=col, value=round(totals[key], 2))
+            c.font = Font(bold=True)
+            c.fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+
+        autosize_columns(ws)
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="PF_ECR_{month_name}_{year}.xlsx"'}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REPORTS] PF ECR error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 7. ESI MONTHLY RETURN (Phase B) ====================
+@router.get("/esi-return")
+async def esi_monthly_return(month: int = Query(..., ge=1, le=12), year: int = Query(..., ge=2020, le=2100)):
+    """ESI Monthly Return Excel (covered employees only — wages <= 21000)."""
+    try:
+        employees = await db.employees.find({"status": "active"}, {"_id": 0}).to_list(10000)
+        if not employees:
+            raise HTTPException(status_code=404, detail="No active employees")
+
+        month_name = calendar.month_name[month]
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "ESI Return"
+
+        header_row = write_company_header(ws, 1, 8, f"ESI MONTHLY RETURN — {month_name} {year}")
+        headers = [
+            "ESI IP Number", "Name", "Working Days", "Total Wages",
+            "ESI Wages", "Employee Contrib (0.75%)", "Employer Contrib (3.25%)", "Total ESI"
+        ]
+        for col, h in enumerate(headers, 1):
+            ws.cell(row=header_row + 1, column=col, value=h)
+        apply_header_row(ws, header_row + 1, len(headers))
+
+        totals = {"wages": 0, "emp": 0, "empr": 0}
+        row_idx = header_row + 2
+        covered_count = 0
+        for emp in employees:
+            att = await get_month_attendance_summary(emp["employee_id"], month, year)
+            monthly = emp.get("monthly_salary", 0)
+            adj_gross = round(monthly * att["attendance_ratio"], 2)
+            if adj_gross > 21000:
+                continue  # not ESI-covered
+            covered_count += 1
+            esi_employee = round(adj_gross * 0.0075, 2)
+            esi_employer = round(adj_gross * 0.0325, 2)
+
+            vals = [
+                emp.get("esi_ip", ""),
+                emp.get("name", ""),
+                int(att["effective_days"]),
+                adj_gross, adj_gross,
+                esi_employee, esi_employer,
+                round(esi_employee + esi_employer, 2)
+            ]
+            for col, v in enumerate(vals, 1):
+                c = ws.cell(row=row_idx, column=col, value=v)
+                c.border = BORDER_THIN
+                c.font = CELL_FONT
+                if col >= 3:
+                    c.alignment = Alignment(horizontal="right")
+            totals["wages"] += adj_gross
+            totals["emp"] += esi_employee
+            totals["empr"] += esi_employer
+            row_idx += 1
+
+        if covered_count == 0:
+            ws.cell(row=row_idx, column=1, value="No employees under ESI wage ceiling (<= INR 21000)").font = Font(italic=True, color="64748B")
+        else:
+            ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=3)
+            ws.cell(row=row_idx, column=1, value=f"TOTAL ({covered_count} covered)").font = Font(bold=True)
+            for col, key in [(4, "wages"), (6, "emp"), (7, "empr")]:
+                c = ws.cell(row=row_idx, column=col, value=round(totals[key], 2))
+                c.font = Font(bold=True)
+                c.fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+            ws.cell(row=row_idx, column=8, value=round(totals["emp"] + totals["empr"], 2)).font = Font(bold=True)
+
+        autosize_columns(ws)
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="ESI_Return_{month_name}_{year}.xlsx"'}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REPORTS] ESI return error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 8. TDS REPORT (Phase B) ====================
+@router.get("/tds")
+async def tds_report(fy_start_year: int = Query(..., description="Financial year start (e.g., 2025 for FY25-26)")):
+    """Financial Year TDS report — all employees summed Apr-Mar."""
+    try:
+        employees = await db.employees.find({"status": "active"}, {"_id": 0}).to_list(10000)
+        if not employees:
+            raise HTTPException(status_code=404, detail="No active employees")
+
+        months = [(fy_start_year, m) for m in range(4, 13)] + [(fy_start_year + 1, m) for m in range(1, 4)]
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "TDS Report"
+        header_row = write_company_header(ws, 1, 8, f"TDS REPORT — FY {fy_start_year}-{str(fy_start_year + 1)[-2:]}")
+
+        headers = ["Emp ID", "Name", "PAN", "Annual Gross", "Annual Basic",
+                    "Total TDS (FY)", "Avg Monthly TDS", "Months Processed"]
+        for col, h in enumerate(headers, 1):
+            ws.cell(row=header_row + 1, column=col, value=h)
+        apply_header_row(ws, header_row + 1, len(headers))
+
+        row_idx = header_row + 2
+        grand_tds = 0
+        grand_gross = 0
+        for emp in employees:
+            monthly_tds_total = 0
+            gross_total = 0
+            basic_total = 0
+            months_processed = 0
+            for yr, m in months:
+                att = await get_month_attendance_summary(emp["employee_id"], m, yr)
+                if att["effective_days"] == 0:
+                    continue
+                monthly = emp.get("monthly_salary", 0)
+                bd = calculate_salary_breakdown(monthly)
+                adj_basic = round(bd["earnings"]["basic_salary"] * att["attendance_ratio"], 2)
+                adj_gross = round(monthly * att["attendance_ratio"], 2)
+                ded = calculate_deductions(adj_gross, adj_basic)
+                monthly_tds_total += ded["tds"]
+                gross_total += adj_gross
+                basic_total += adj_basic
+                months_processed += 1
+
+            vals = [
+                emp.get("employee_id", ""),
+                emp.get("name", ""),
+                emp.get("pan", "—"),
+                round(gross_total, 2),
+                round(basic_total, 2),
+                round(monthly_tds_total, 2),
+                round(monthly_tds_total / max(months_processed, 1), 2),
+                months_processed
+            ]
+            for col, v in enumerate(vals, 1):
+                c = ws.cell(row=row_idx, column=col, value=v)
+                c.border = BORDER_THIN
+                c.font = CELL_FONT
+                if col >= 4:
+                    c.alignment = Alignment(horizontal="right")
+            grand_tds += monthly_tds_total
+            grand_gross += gross_total
+            row_idx += 1
+
+        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=3)
+        ws.cell(row=row_idx, column=1, value="GRAND TOTAL").font = Font(bold=True)
+        ws.cell(row=row_idx, column=4, value=round(grand_gross, 2)).font = Font(bold=True)
+        c = ws.cell(row=row_idx, column=6, value=round(grand_tds, 2))
+        c.font = Font(bold=True)
+        c.fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+
+        autosize_columns(ws)
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="TDS_FY{fy_start_year}_{str(fy_start_year+1)[-2:]}.xlsx"'}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REPORTS] TDS error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 9. FORM 16 PDF (Phase B) ====================
+@router.get("/form-16/{employee_id}")
+async def form_16_pdf(employee_id: str, fy_start_year: int = Query(...)):
+    """Form 16 Part A + B PDF — annual TDS certificate."""
+    try:
+        emp = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
+        if not emp:
+            raise HTTPException(status_code=404, detail="Employee not found")
+
+        months = [(fy_start_year, m) for m in range(4, 13)] + [(fy_start_year + 1, m) for m in range(1, 4)]
+
+        total_gross = 0
+        total_basic = 0
+        total_pf = 0
+        total_tds = 0
+        total_pt = 0
+        quarterly_tds = {"Q1": 0, "Q2": 0, "Q3": 0, "Q4": 0}
+
+        for idx, (yr, m) in enumerate(months):
+            att = await get_month_attendance_summary(employee_id, m, yr)
+            if att["effective_days"] == 0:
+                continue
+            monthly = emp.get("monthly_salary", 0)
+            bd = calculate_salary_breakdown(monthly)
+            adj_basic = round(bd["earnings"]["basic_salary"] * att["attendance_ratio"], 2)
+            adj_gross = round(monthly * att["attendance_ratio"], 2)
+            ded = calculate_deductions(adj_gross, adj_basic)
+            total_gross += adj_gross
+            total_basic += adj_basic
+            total_pf += ded["pf_employee"]
+            total_tds += ded["tds"]
+            total_pt += ded["professional_tax"]
+            q = "Q1" if idx < 3 else "Q2" if idx < 6 else "Q3" if idx < 9 else "Q4"
+            quarterly_tds[q] += ded["tds"]
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=15 * mm, leftMargin=15 * mm,
+                                 topMargin=12 * mm, bottomMargin=12 * mm,
+                                 title=f"Form 16 FY{fy_start_year}-{str(fy_start_year+1)[-2:]}")
+        styles = getSampleStyleSheet()
+        story = []
+
+        title_style = ParagraphStyle('t', parent=styles['Title'], fontSize=13, alignment=1)
+        small_center = ParagraphStyle('s', parent=styles['Normal'], fontSize=9, alignment=1, textColor=colors.HexColor("#475569"))
+
+        story.append(Paragraph(f"FORM NO. 16 [See rule 31(1)(a)]", title_style))
+        story.append(Paragraph(f"Certificate under section 203 of the Income-tax Act, 1961", small_center))
+        story.append(Paragraph(f"for tax deducted at source from income chargeable under the head 'Salaries'", small_center))
+        story.append(Spacer(1, 8))
+
+        story.append(Paragraph(f"<b>PART A — Details of Tax Deducted and Deposited</b>",
+                                ParagraphStyle('h', parent=styles['Heading3'], fontSize=10)))
+
+        fy = f"{fy_start_year}-{fy_start_year + 1}"
+        ay = f"{fy_start_year + 1}-{fy_start_year + 2}"
+
+        # Employer/Employee block
+        header_tbl = Table([
+            ["Name of the Employer", COMPANY_NAME],
+            ["Address", COMPANY_ADDRESS],
+            ["PAN of Deductor", emp.get("employer_pan", "—")],
+            ["TAN of Deductor", emp.get("employer_tan", "—")],
+            ["", ""],
+            ["Name of the Employee", emp.get("name", "")],
+            ["Employee PAN", emp.get("pan", "—")],
+            ["Employee ID", emp.get("employee_id", "")],
+            ["Financial Year", fy],
+            ["Assessment Year", ay],
+        ], colWidths=[60 * mm, 120 * mm])
+        header_tbl.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#F1F5F9")),
+            ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#E2E8F0")),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        story.append(header_tbl)
+        story.append(Spacer(1, 8))
+
+        # Quarterly TDS
+        story.append(Paragraph("<b>Quarterly TDS Summary</b>",
+                                ParagraphStyle('q', parent=styles['Heading4'], fontSize=9)))
+        qtbl = Table([
+            ["Quarter", "Amount Deducted (INR)", "Amount Deposited (INR)"],
+            ["Q1 (Apr-Jun)", f"{quarterly_tds['Q1']:,.2f}", f"{quarterly_tds['Q1']:,.2f}"],
+            ["Q2 (Jul-Sep)", f"{quarterly_tds['Q2']:,.2f}", f"{quarterly_tds['Q2']:,.2f}"],
+            ["Q3 (Oct-Dec)", f"{quarterly_tds['Q3']:,.2f}", f"{quarterly_tds['Q3']:,.2f}"],
+            ["Q4 (Jan-Mar)", f"{quarterly_tds['Q4']:,.2f}", f"{quarterly_tds['Q4']:,.2f}"],
+            ["TOTAL", f"{total_tds:,.2f}", f"{total_tds:,.2f}"],
+        ], colWidths=[60 * mm, 60 * mm, 60 * mm])
+        qtbl.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#DBEAFE")),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#FEF3C7")),
+            ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#E2E8F0")),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ]))
+        story.append(qtbl)
+        story.append(Spacer(1, 12))
+
+        story.append(Paragraph("<b>PART B — Details of Salary Paid and Tax Deducted</b>",
+                                ParagraphStyle('h', parent=styles['Heading3'], fontSize=10)))
+
+        # Salary details
+        income_tax_payable = total_tds
+        net_taxable = max(0, total_gross - 50000 - total_pf)  # Standard deduction + PF
+        sal_tbl = Table([
+            ["1.", "Gross Salary", f"{total_gross:,.2f}"],
+            ["2.", "Less: Allowances exempt u/s 10", "0.00"],
+            ["3.", "Balance (1-2)", f"{total_gross:,.2f}"],
+            ["4.", "Deductions u/s 16:", ""],
+            ["", "  (a) Standard deduction u/s 16(ia)", "50,000.00"],
+            ["", "  (b) Professional Tax u/s 16(iii)", f"{total_pt:,.2f}"],
+            ["5.", "Income chargeable under head 'Salaries' (3-4)", f"{max(0, total_gross - 50000 - total_pt):,.2f}"],
+            ["6.", "Less: Deduction u/s 80C (PF)", f"{total_pf:,.2f}"],
+            ["7.", "Total Taxable Income", f"{net_taxable:,.2f}"],
+            ["8.", "Tax on total income (TDS Deducted)", f"{income_tax_payable:,.2f}"],
+            ["9.", "Rebate u/s 87A", "—"],
+            ["10.", "Net Tax Payable (TDS)", f"{income_tax_payable:,.2f}"],
+        ], colWidths=[12 * mm, 108 * mm, 60 * mm])
+        sal_tbl.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 8.5),
+            ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor("#E2E8F0")),
+            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#F1F5F9")),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        story.append(sal_tbl)
+        story.append(Spacer(1, 16))
+
+        # Declaration
+        decl_style = ParagraphStyle('d', parent=styles['Normal'], fontSize=8.5,
+                                     textColor=colors.HexColor("#334155"), leading=12)
+        story.append(Paragraph(
+            "I, <b>Authorized Signatory</b>, working in the capacity of Finance Manager, do hereby certify that "
+            "the information given above is true, complete and correct and is based on the books of accounts, "
+            "documents, TDS statements and other available records.",
+            decl_style
+        ))
+        story.append(Spacer(1, 20))
+        sig_tbl = Table([
+            ["Place:", COMPANY_ADDRESS.split(",")[-2].strip() if "," in COMPANY_ADDRESS else "", "", "Signature of Person Responsible"],
+            ["Date:", datetime.now(timezone.utc).strftime("%d %b %Y"), "", f"Designation: HR / Finance"]
+        ], colWidths=[20 * mm, 70 * mm, 20 * mm, 70 * mm])
+        sig_tbl.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 8.5),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (3, 0), (3, 0), 'Helvetica-Bold'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LINEABOVE', (3, 0), (3, 0), 0.5, colors.HexColor("#94A3B8")),
+        ]))
+        story.append(sig_tbl)
+
+        doc.build(story)
+        buf.seek(0)
+        return StreamingResponse(
+            buf, media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="Form16_{emp.get("name","emp").replace(" ","_")}_FY{fy_start_year}-{str(fy_start_year+1)[-2:]}.pdf"'}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REPORTS] Form 16 error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 10. LEAVE BALANCE REPORT (Phase C) ====================
+@router.get("/leave-balance")
+async def leave_balance_report():
+    """Leave balances summary Excel — all active employees with CL/SL/EL balances + used."""
+    try:
+        employees = await db.employees.find({"status": "active"}, {"_id": 0}).to_list(10000)
+        if not employees:
+            raise HTTPException(status_code=404, detail="No active employees")
+
+        year_start = f"{datetime.now(timezone.utc).year}-01-01"
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Leave Balance"
+
+        header_row = write_company_header(ws, 1, 11, f"LEAVE BALANCE REPORT — as on {datetime.now(timezone.utc).strftime('%d %b %Y')}")
+        headers = ["Emp ID", "Name", "Department", "DOJ",
+                    "CL Total", "CL Used", "CL Balance",
+                    "SL Total", "SL Used", "SL Balance",
+                    "EL Balance"]
+        for col, h in enumerate(headers, 1):
+            ws.cell(row=header_row + 1, column=col, value=h)
+        apply_header_row(ws, header_row + 1, len(headers))
+
+        for i, emp in enumerate(employees):
+            lb = emp.get("leave_balance", {"cl": 12, "sl": 12, "el": 21})
+            # Used this year
+            used = await db.employee_leaves.aggregate([
+                {"$match": {"employee_id": emp["employee_id"], "status": "approved", "from_date": {"$gte": year_start}}},
+                {"$group": {"_id": "$leave_type", "days": {"$sum": {"$ifNull": ["$days", 1]}}}}
+            ]).to_list(10)
+            used_map = {u["_id"]: u.get("days", 0) for u in used}
+            cl_used = used_map.get("casual", 0) + used_map.get("cl", 0)
+            sl_used = used_map.get("sick", 0) + used_map.get("sl", 0)
+            el_bal = lb.get("el", 0) if isinstance(lb, dict) else 0
+
+            vals = [
+                emp["employee_id"], emp.get("name", ""), emp.get("department", ""),
+                str(emp.get("joining_date", ""))[:10],
+                lb.get("cl", 12), cl_used, lb.get("cl", 12) - cl_used,
+                lb.get("sl", 12), sl_used, lb.get("sl", 12) - sl_used,
+                el_bal
+            ]
+            for col, v in enumerate(vals, 1):
+                c = ws.cell(row=header_row + 2 + i, column=col, value=v)
+                c.border = BORDER_THIN
+                c.font = CELL_FONT
+                if col >= 5:
+                    c.alignment = Alignment(horizontal="center")
+
+        autosize_columns(ws)
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="Leave_Balance_{datetime.now().strftime("%Y%m%d")}.xlsx"'}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REPORTS] Leave balance error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 11. YTD EARNINGS (Phase C) ====================
+@router.get("/ytd-earnings/{employee_id}")
+async def ytd_earnings(employee_id: str, fy_start_year: int = Query(...)):
+    """Year-to-date earnings breakdown for one employee (JSON) — useful for self-service."""
+    try:
+        emp = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
+        if not emp:
+            raise HTTPException(status_code=404, detail="Employee not found")
+
+        months = [(fy_start_year, m) for m in range(4, 13)] + [(fy_start_year + 1, m) for m in range(1, 4)]
+        monthly_data = []
+        totals = {"gross": 0, "net": 0, "pf": 0, "tds": 0, "pt": 0, "esi": 0}
+
+        for yr, m in months:
+            att = await get_month_attendance_summary(employee_id, m, yr)
+            if att["effective_days"] == 0:
+                continue
+            monthly = emp.get("monthly_salary", 0)
+            bd = calculate_salary_breakdown(monthly)
+            adj_basic = round(bd["earnings"]["basic_salary"] * att["attendance_ratio"], 2)
+            adj_gross = round(monthly * att["attendance_ratio"], 2)
+            ded = calculate_deductions(adj_gross, adj_basic)
+            lop = round(monthly - (monthly * att["attendance_ratio"]), 2) if att["attendance_ratio"] < 1 else 0
+            total_ded = ded["total"] + lop
+            net = round(adj_gross - total_ded, 2)
+
+            monthly_data.append({
+                "month": calendar.month_abbr[m],
+                "year": yr,
+                "gross": adj_gross, "net": net,
+                "pf": ded["pf_employee"], "esi": ded["esi_employee"],
+                "pt": ded["professional_tax"], "tds": ded["tds"],
+                "lop": lop, "days_paid": att["effective_days"]
+            })
+            totals["gross"] += adj_gross
+            totals["net"] += net
+            totals["pf"] += ded["pf_employee"]
+            totals["tds"] += ded["tds"]
+            totals["pt"] += ded["professional_tax"]
+            totals["esi"] += ded["esi_employee"]
+
+        return {
+            "success": True,
+            "employee": {
+                "employee_id": emp.get("employee_id"),
+                "name": emp.get("name"),
+                "designation": emp.get("designation"),
+                "department": emp.get("department"),
+                "pan": emp.get("pan"),
+                "doj": str(emp.get("joining_date", ""))[:10]
+            },
+            "financial_year": f"{fy_start_year}-{str(fy_start_year + 1)[-2:]}",
+            "monthly": monthly_data,
+            "totals": {k: round(v, 2) for k, v in totals.items()},
+            "ytd_days": sum(m["days_paid"] for m in monthly_data),
+            "months_processed": len(monthly_data)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REPORTS] YTD error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== HELPERS ====================
 def number_to_words_inr(amount: float) -> str:
     """Convert number to Indian-format words (e.g., 1,25,340 -> One Lakh Twenty Five Thousand Three Hundred Forty Rupees)."""

@@ -29,6 +29,9 @@ const AdminEmployeeReports = () => {
 
   const [employees, setEmployees] = useState([]);
   const [selectedEmp, setSelectedEmp] = useState('');
+  const [selectedFY, setSelectedFY] = useState(now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1);
+  const [ytdData, setYtdData] = useState(null);
+  const [loadingYtd, setLoadingYtd] = useState(false);
 
   const fetchAnalytics = useCallback(async () => {
     try {
@@ -260,15 +263,195 @@ const AdminEmployeeReports = () => {
           />
         </div>
 
-        {/* Phase B preview (coming soon) */}
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
-          <h3 className="font-bold text-slate-100 mb-2 flex items-center gap-2"><Briefcase className="w-4 h-4 text-amber-400" />Coming Soon — Statutory Reports</h3>
-          <p className="text-xs text-slate-400 mb-2">Phase B will add:</p>
-          <div className="flex flex-wrap gap-2">
-            {['PF Monthly ECR', 'ESI Monthly Return', 'TDS Report', 'Form 16 PDF', 'Leave Balance Report', 'YTD Earnings'].map(t => (
-              <span key={t} className="px-2 py-1 bg-slate-700/50 text-slate-400 text-[10px] rounded-full">{t}</span>
-            ))}
+        {/* Phase B — Statutory Reports */}
+        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 mb-4">
+          <h3 className="font-bold text-slate-100 mb-3 flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-amber-400" /> Statutory Compliance (India)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <ReportCard
+              icon={FileSpreadsheet} color="emerald"
+              title="PF Monthly ECR"
+              description="EPFO Electronic Challan Return — UAN, EPF/EPS/EDLI wages, contributions, NCP days. Upload to unifiedportal-emp.epfindia.gov.in"
+              btnLabel="Download Excel"
+              isLoading={downloading === 'pf-ecr'}
+              onDownload={() => downloadReport(
+                `/employees/reports/pf-ecr?month=${selectedMonth}&year=${selectedYear}`,
+                `PF_ECR_${MONTHS[selectedMonth - 1]}_${selectedYear}.xlsx`,
+                'pf-ecr'
+              )}
+              testid="dl-pf-ecr"
+            />
+            <ReportCard
+              icon={FileSpreadsheet} color="blue"
+              title="ESI Monthly Return"
+              description="ESIC return — covered employees (wages ≤ INR 21,000). Employee + Employer contributions."
+              btnLabel="Download Excel"
+              isLoading={downloading === 'esi-return'}
+              onDownload={() => downloadReport(
+                `/employees/reports/esi-return?month=${selectedMonth}&year=${selectedYear}`,
+                `ESI_Return_${MONTHS[selectedMonth - 1]}_${selectedYear}.xlsx`,
+                'esi-return'
+              )}
+              testid="dl-esi-return"
+            />
+            <ReportCard
+              icon={FileSpreadsheet} color="purple"
+              title="TDS Report (Financial Year)"
+              description="FY-wise TDS deducted per employee with quarterly breakdown — feeds TDS returns Form 24Q."
+              customContent={
+                <div>
+                  <label className="text-[10px] text-slate-500 block mb-0.5">FY Start Year</label>
+                  <select value={selectedFY} onChange={e => setSelectedFY(Number(e.target.value))} className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs" data-testid="fy-select">
+                    {years.map(y => <option key={y} value={y}>{y}-{(y + 1).toString().slice(-2)}</option>)}
+                  </select>
+                </div>
+              }
+              btnLabel="Download Excel"
+              isLoading={downloading === 'tds'}
+              onDownload={() => downloadReport(
+                `/employees/reports/tds?fy_start_year=${selectedFY}`,
+                `TDS_FY${selectedFY}-${(selectedFY + 1).toString().slice(-2)}.xlsx`,
+                'tds'
+              )}
+              testid="dl-tds"
+            />
+            <ReportCard
+              icon={FileDown} color="rose"
+              title="Form 16 (Annual TDS Certificate)"
+              description="Part A + Part B Form 16 PDF for selected employee. Requires PAN. Issued annually to every employee."
+              customContent={
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs" data-testid="form16-emp-select">
+                    <option value="">Select employee...</option>
+                    {employees.map(e => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}
+                  </select>
+                  <select value={selectedFY} onChange={e => setSelectedFY(Number(e.target.value))} className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs">
+                    {years.map(y => <option key={y} value={y}>FY {y}-{(y + 1).toString().slice(-2)}</option>)}
+                  </select>
+                </div>
+              }
+              btnLabel="Download PDF"
+              disabled={!selectedEmp}
+              isLoading={downloading === 'form-16'}
+              onDownload={() => downloadReport(
+                `/employees/reports/form-16/${selectedEmp}?fy_start_year=${selectedFY}`,
+                `Form16_${selectedEmp}_FY${selectedFY}-${(selectedFY + 1).toString().slice(-2)}.pdf`,
+                'form-16'
+              )}
+              testid="dl-form-16"
+            />
           </div>
+        </div>
+
+        {/* Phase C — Leave & Personal Reports */}
+        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+          <h3 className="font-bold text-slate-100 mb-3 flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-emerald-400" /> Leave & Employee Reports
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <ReportCard
+              icon={FileSpreadsheet} color="emerald"
+              title="Leave Balance Summary"
+              description="All employees' CL/SL/EL balances with used/remaining — point-in-time snapshot."
+              btnLabel="Download Excel"
+              isLoading={downloading === 'leave-balance'}
+              onDownload={() => downloadReport(
+                `/employees/reports/leave-balance`,
+                `Leave_Balance_${new Date().toISOString().slice(0, 10)}.xlsx`,
+                'leave-balance'
+              )}
+              testid="dl-leave-balance"
+            />
+            <ReportCard
+              icon={TrendingUp} color="purple"
+              title="YTD Earnings (Employee)"
+              description="Year-to-date earnings breakdown — monthly gross, net, deductions, days paid. Useful for loan/visa applications."
+              customContent={
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs" data-testid="ytd-emp-select">
+                    <option value="">Select employee...</option>
+                    {employees.map(e => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}
+                  </select>
+                  <select value={selectedFY} onChange={e => setSelectedFY(Number(e.target.value))} className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs">
+                    {years.map(y => <option key={y} value={y}>FY {y}-{(y + 1).toString().slice(-2)}</option>)}
+                  </select>
+                </div>
+              }
+              btnLabel={ytdData ? 'Refresh YTD' : 'View YTD Summary'}
+              disabled={!selectedEmp}
+              isLoading={loadingYtd}
+              onDownload={async () => {
+                if (!selectedEmp) return;
+                setLoadingYtd(true);
+                try {
+                  const res = await axios.get(`${API}/employees/reports/ytd-earnings/${selectedEmp}?fy_start_year=${selectedFY}`);
+                  setYtdData(res.data);
+                  toast.success('YTD data loaded');
+                } catch (e) { toast.error('Failed'); }
+                finally { setLoadingYtd(false); }
+              }}
+              testid="dl-ytd"
+            />
+          </div>
+
+          {/* YTD Data Preview */}
+          {ytdData && (
+            <div className="mt-4 bg-slate-900/50 border border-slate-700/50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div>
+                  <h4 className="font-bold text-slate-100">{ytdData.employee?.name} — FY {ytdData.financial_year}</h4>
+                  <p className="text-xs text-slate-400">{ytdData.employee?.designation} · {ytdData.employee?.department} · {ytdData.months_processed} months processed · {ytdData.ytd_days} days paid</p>
+                </div>
+                <button onClick={() => setYtdData(null)} className="text-xs text-slate-400 hover:text-white">× Close</button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
+                {[
+                  { label: 'Gross YTD', val: ytdData.totals?.gross, color: 'text-emerald-400' },
+                  { label: 'Net YTD', val: ytdData.totals?.net, color: 'text-blue-400' },
+                  { label: 'PF YTD', val: ytdData.totals?.pf, color: 'text-amber-400' },
+                  { label: 'ESI YTD', val: ytdData.totals?.esi, color: 'text-orange-400' },
+                  { label: 'TDS YTD', val: ytdData.totals?.tds, color: 'text-rose-400' },
+                  { label: 'PT YTD', val: ytdData.totals?.pt, color: 'text-purple-400' }
+                ].map(k => (
+                  <div key={k.label} className="bg-slate-800/50 rounded-lg p-2 text-center">
+                    <p className="text-[10px] text-slate-500">{k.label}</p>
+                    <p className={`text-sm font-bold ${k.color}`}>INR {k.val?.toLocaleString() || 0}</p>
+                  </div>
+                ))}
+              </div>
+              {ytdData.monthly?.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-700">
+                        <th className="py-2 px-2 text-left text-slate-400 font-normal">Month</th>
+                        <th className="py-2 px-2 text-right text-slate-400 font-normal">Days</th>
+                        <th className="py-2 px-2 text-right text-slate-400 font-normal">Gross</th>
+                        <th className="py-2 px-2 text-right text-slate-400 font-normal">PF</th>
+                        <th className="py-2 px-2 text-right text-slate-400 font-normal">TDS</th>
+                        <th className="py-2 px-2 text-right text-slate-400 font-normal">Net</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ytdData.monthly.map((m, i) => (
+                        <tr key={i} className="border-b border-slate-800/50">
+                          <td className="py-1.5 px-2 text-slate-200">{m.month} {m.year}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-300">{m.days_paid}</td>
+                          <td className="py-1.5 px-2 text-right text-emerald-400">{m.gross?.toLocaleString()}</td>
+                          <td className="py-1.5 px-2 text-right text-amber-400">{m.pf?.toLocaleString()}</td>
+                          <td className="py-1.5 px-2 text-right text-rose-400">{m.tds?.toLocaleString()}</td>
+                          <td className="py-1.5 px-2 text-right text-blue-400 font-semibold">{m.net?.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 italic text-center py-4">No monthly data available</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
