@@ -1,0 +1,33 @@
+{
+  "summary": "Retest iteration 214 - all 3 critical/high issues from iteration 213 confirmed FIXED. Backend 10/10 pytest cases PASS. Frontend amber 'Upcoming Plan Queued' badge (data-testid='admin-user-upcoming-plan') now renders correctly on Admin User 360 View after searching by UID. Verified: (1) create_notification generates unique notification_id - 3 sequential calls produce 3 distinct records in DB with non-null unique notification_ids; (2) notify_upcoming_subscription_starts sets upcoming_notify_sent.d3 ONLY after create_notification returns truthy id, and reminder notification has notification_id set; (3) PRIMARY GET /api/admin/user-360?query={uid} now injects user.upcoming_plan with plan_name/scheduled_start/scheduled_end/prc_amount; FALLBACK /api/admin/user360/full/{uid} still returns upcoming_plan; User dashboard returns upcoming_plan + upcoming_plans_count; regression endpoints (/api/user/{uid}, /api/community/posts, /api/auth/login, /api/users/{uid}/public-profile) all 200 OK.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_upcoming_plan_retest_214.py",
+    "/app/test_reports/pytest/iteration_214.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Verified routes/notifications.py line 97: notification_id = str(uuid.uuid4()) properly generates unique id on every insert.",
+    "server.py notify_upcoming_subscription_starts: payment record upcoming_notify_sent.d3/d1 flag is now set only after create_notification returns truthy notif_id.",
+    "server.py /api/admin/user-360 (primary) now fetches upcoming subscription_payments and injects into sanitized_user.upcoming_plan alongside routes/admin_user360.py fallback.",
+    "AdminUser360New.js ProfileHeader correctly renders the amber badge conditional block on user.upcoming_plan presence - visual confirmation shows 'Upcoming Plan Queued Elite · starts 22 Apr 2026, 10:32 pm · paid 9,999 PRC'."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_upcoming_plan_retest_214.py (new)"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% (badge renders + dashboard upcoming card unchanged)"},
+  "test_credentials": "Admin admin@test.com / PIN 153759; User 9970100782 / PIN 997010 (uid 76b75808-47fa-48dd-ad7c-8074678e3607). Admin login uses /api/auth/login with email+password fields.",
+  "seed_data_creation": "Temporary 'upcoming' subscription_payments docs created with _test_seed:true / _test_ui_seed:true for USER_UID; all cleaned up after tests (verified via /tmp/seed_upcoming.py cleanup).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 3 fixes from iteration 213 are verified green. The Upcoming Subscription Plan UX feature set is fully functional end-to-end. Pytest suite at /app/backend/tests/test_upcoming_plan_retest_214.py is the canonical regression test for this feature going forward - reuse for any future subscription flow changes. The older /app/backend/tests/test_upcoming_plan_ux.py still has one pre-existing failure in cron test harness (imports cron before db injection); the retest_214 suite supersedes it and explicitly injects db via routes.notifications.set_db before calling create_notification directly.",
+  "rca_of_the_issue": "All three iteration-213 RCAs confirmed resolved: (a) create_notification now always sets unique notification_id=uuid4, eliminating E11000 duplicate-key errors under the notifications.notification_id_1 unique index; (b) upcoming_notify_sent flag is now guarded behind a truthy notif_id check, so failed create_notification calls no longer prematurely stamp 'sent'; (c) primary admin /api/admin/user-360 now includes user.upcoming_plan in the response payload (matching the fallback /user360/full endpoint), so AdminUser360New.js ProfileHeader's conditional (user.upcoming_plan && ...) block renders the amber badge as designed."
+}

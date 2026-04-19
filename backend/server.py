@@ -2850,17 +2850,18 @@ async def notify_upcoming_subscription_starts():
             if 2.5 <= days_until <= 3.5 and not sent_flags.get("d3"):
                 try:
                     sched_display = sched_dt.strftime("%d %b %Y")
-                    await create_notification(
+                    notif_id = await create_notification(
                         user_id=uid,
                         title="Your new plan starts in 3 days",
                         message=f"Your queued {up.get('plan_name','Elite')} subscription will activate on {sched_display}.",
                         notification_type="subscription"
                     )
-                    await db.subscription_payments.update_one(
-                        {"payment_id": pid},
-                        {"$set": {"upcoming_notify_sent.d3": now.isoformat()}}
-                    )
-                    sent_count += 1
+                    if notif_id:
+                        await db.subscription_payments.update_one(
+                            {"payment_id": pid},
+                            {"$set": {"upcoming_notify_sent.d3": now.isoformat()}}
+                        )
+                        sent_count += 1
                 except Exception as n_err:
                     logging.error(f"[UPCOMING-NOTIFY] d3 error for {uid}: {n_err}")
 
@@ -2868,17 +2869,18 @@ async def notify_upcoming_subscription_starts():
             elif 0.5 <= days_until <= 1.5 and not sent_flags.get("d1"):
                 try:
                     sched_display = sched_dt.strftime("%d %b %Y")
-                    await create_notification(
+                    notif_id = await create_notification(
                         user_id=uid,
                         title="Your new plan starts tomorrow",
                         message=f"Your queued {up.get('plan_name','Elite')} subscription will activate on {sched_display}.",
                         notification_type="subscription"
                     )
-                    await db.subscription_payments.update_one(
-                        {"payment_id": pid},
-                        {"$set": {"upcoming_notify_sent.d1": now.isoformat()}}
-                    )
-                    sent_count += 1
+                    if notif_id:
+                        await db.subscription_payments.update_one(
+                            {"payment_id": pid},
+                            {"$set": {"upcoming_notify_sent.d1": now.isoformat()}}
+                        )
+                        sent_count += 1
                 except Exception as n_err:
                     logging.error(f"[UPCOMING-NOTIFY] d1 error for {uid}: {n_err}")
 
@@ -19406,8 +19408,25 @@ async def get_user_360_view(query: str, request: Request):
     
     # Sanitize all data before returning to avoid ObjectId serialization errors
     try:
+        # Fetch earliest upcoming subscription for quick admin visibility
+        upcoming_plan = None
+        try:
+            up = await db.subscription_payments.find_one(
+                {"user_id": uid, "status": "upcoming"},
+                {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1,
+                 "duration_days": 1, "payment_method": 1, "prc_amount": 1, "created_at": 1},
+                sort=[("scheduled_start", 1)]
+            )
+            upcoming_plan = sanitize_mongo_doc(up) if up else None
+        except Exception:
+            upcoming_plan = None
+        
+        sanitized_user = sanitize_mongo_doc(user)
+        if isinstance(sanitized_user, dict):
+            sanitized_user["upcoming_plan"] = upcoming_plan
+        
         response_data = {
-            "user": sanitize_mongo_doc(user),
+            "user": sanitized_user,
             "stats": sanitize_mongo_doc(stats),
             "referral": sanitize_mongo_doc(referral_data),
             "transactions": sanitize_mongo_doc(transactions),

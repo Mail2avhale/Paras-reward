@@ -12,6 +12,7 @@ Handles all user notifications:
 from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime, timezone, timedelta
 import logging
+import uuid
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -93,6 +94,7 @@ async def create_notification(
         type_info = NOTIFICATION_TYPES.get(notification_type, NOTIFICATION_TYPES["general"])
         
         notification = {
+            "notification_id": str(uuid.uuid4()),
             "user_id": user_id,
             "type": notification_type,
             "title": title or type_info["title"],
