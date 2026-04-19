@@ -13,7 +13,7 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 // Lazy load heavy components
-const SupportChatbot = lazy(() => import("@/components/SupportChatbot"));
+const SupportChatbot = null; // REMOVED - chatbot feature removed
 // HoliCelebration removed as per user request
 // import HoliCelebration from "@/components/HoliCelebration";
 
@@ -496,7 +496,6 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/marketplace" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/delivery-partners" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/support" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                {/* AdminChatbotWithdrawals REMOVED - feature deprecated (March 2026) */}
                 <Route path="/admin/chatbot-withdrawals" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/contact-submissions" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminContactSubmissions user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/contact-settings" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminContactSettings user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
@@ -530,9 +529,6 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
           <>
             <TopBar user={user} onLogout={handleLogout} />
             <BottomNav />
-            <Suspense fallback={null}>
-              <SupportChatbot user={user} />
-            </Suspense>
           </>
         )}
         {/* Admin Popup Message - Shows for logged-in users only */}

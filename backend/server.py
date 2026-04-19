@@ -92,7 +92,8 @@ from routes.prc_audit import router as prc_audit_router, set_db as set_prc_audit
 from routes.holidays import router as holidays_router, set_db as set_holidays_db, set_cache as set_holidays_cache, seed_holidays, is_holiday
 from routes.notifications_routes import router as notifications_router, set_db as set_notifications_db, set_helpers as set_notifications_helpers
 from routes.manager_routes import router as manager_router, set_db as set_manager_db
-from routes.ai_routes import router as ai_router, set_db as set_ai_db
+# AI Routes - REMOVED (chatbot deprecated)
+# from routes.ai_routes import router as ai_router, set_db as set_ai_db
 from routes.admin_prc_economy import router as admin_prc_economy_router, set_db as set_admin_prc_economy_db
 from routes.admin_prc_balance import router as admin_prc_balance_router, set_db as set_admin_prc_balance_db
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers, assign_subscription_position
@@ -33107,8 +33108,8 @@ set_manager_db(db)
 api_router.include_router(manager_router)
 
 # AI Chatbot Router (Extracted from server.py monolith)
-set_ai_db(db)
-api_router.include_router(ai_router)
+# set_ai_db(db)  # REMOVED - chatbot deprecated
+# api_router.include_router(ai_router)  # REMOVED - chatbot deprecated
 
 # Admin PRC Economy Router (Extracted from server.py monolith)
 set_admin_prc_economy_db(db)
@@ -33386,11 +33387,7 @@ async def admin_user_lookup(identifier: str):
 # Include all API routes (must be after all route definitions and sub-routers)
 api_router.include_router(growth_economy_router)
 
-# Support Chatbot
-from routes.support_chatbot import router as support_chatbot_router
-from routes.support_chatbot import set_db as set_chatbot_db
-set_chatbot_db(db)
-api_router.include_router(support_chatbot_router)
+# Support Chatbot - REMOVED (feature deprecated)
 
 # Auto-Burning - REMOVED (burning concept deprecated)
 
