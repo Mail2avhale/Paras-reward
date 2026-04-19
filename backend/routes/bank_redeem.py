@@ -9,10 +9,8 @@ Users can save bank details and request PRC withdrawal to bank account
 
 from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone, timedelta
-from typing import Optional
 import uuid
 import logging
-import os
 
 # Create router
 router = APIRouter(tags=["Bank Redeem"])

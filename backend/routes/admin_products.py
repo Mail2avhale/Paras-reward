@@ -5,9 +5,7 @@ Extracted from server.py for better code organization
 
 from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone
-from typing import Optional
 import uuid
-import logging
 
 # Create router
 router = APIRouter(prefix="/admin", tags=["Admin Products"])

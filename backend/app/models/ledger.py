@@ -6,7 +6,7 @@ Every financial transaction MUST have a ledger entry.
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 from enum import Enum
 import uuid

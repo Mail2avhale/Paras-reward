@@ -19,7 +19,7 @@ Features:
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 from bson import ObjectId
 import logging
@@ -621,7 +621,6 @@ async def execute_eko_dmt(request_doc: dict) -> dict:
     request_hash formula: timestamp + customer_id + recipient_id + amount + client_ref_id
     """
     try:
-        from routes.eko_payments import execute_dmt_transfer_v3
         
         details = request_doc.get("details", {})
         amount = int(request_doc["amount_inr"])

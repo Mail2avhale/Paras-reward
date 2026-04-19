@@ -6,7 +6,6 @@ All redemption is now unlimited (subject to PRC balance).
 """
 
 from fastapi import APIRouter, HTTPException
-from datetime import datetime, timezone
 
 router = APIRouter(prefix="", tags=["redeem-categories - DEPRECATED"])
 

@@ -3,11 +3,8 @@ PARAS REWARD V2 - Enhanced Backend
 Complete implementation with all new features
 """
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from typing import Optional, List, Dict
-from datetime import datetime, timezone, timedelta
-import uuid
+from typing import Optional, Dict
 
 # ========== ADDITIONAL MODELS FOR V2 ==========
 

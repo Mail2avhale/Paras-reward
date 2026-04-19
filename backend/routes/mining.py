@@ -29,8 +29,6 @@ Subscription:
 import math
 import logging
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime, timezone, timedelta
 import asyncio
 import uuid

@@ -17,8 +17,7 @@ a pending request for admin verification, not an instant activation.
 import pytest
 import requests
 import os
-import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://formula-audit-fix.preview.emergentagent.com').rstrip('/')
 

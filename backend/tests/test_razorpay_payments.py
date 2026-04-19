@@ -5,7 +5,6 @@ Tests for: Config, Order Creation, and Payment Flow
 import pytest
 import requests
 import os
-import json
 from datetime import datetime
 
 # Get the API URL from environment

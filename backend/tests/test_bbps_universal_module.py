@@ -6,7 +6,6 @@ Covers: Electricity, DTH, FASTag, EMI/Loan operators and bill fetch
 import pytest
 import requests
 import os
-import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 

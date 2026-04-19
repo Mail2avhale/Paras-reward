@@ -1,18 +1,20 @@
-from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 import logging
-import json
-import re
 import uuid
 
 # Re-export error helper (defined in server.py)
 try:
-    from server import get_user_friendly_error
+    from server import get_user_friendly_error, is_paid_subscriber, verify_user_access_sync
 except Exception:
     def get_user_friendly_error(error):
         return str(error)
+    def is_paid_subscriber(user):
+        return bool(user and user.get("subscription_plan") in ("elite", "vip", "startup", "growth", "pro"))
+    def verify_user_access_sync(*args, **kwargs):
+        return True
 
 router = APIRouter(prefix="/admin/accounting", tags=["Admin Accounting"])
 

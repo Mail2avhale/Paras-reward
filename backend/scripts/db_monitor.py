@@ -9,9 +9,7 @@ Usage:
 """
 
 import os
-import sys
 import argparse
-from datetime import datetime, timezone
 from pymongo import MongoClient
 
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")

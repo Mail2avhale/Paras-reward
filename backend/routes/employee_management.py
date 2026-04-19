@@ -16,9 +16,7 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 import calendar
-import math
 import os
-import base64
 
 router = APIRouter(prefix="/employees", tags=["Employee Management"])
 
@@ -692,7 +690,6 @@ async def apply_leave(request: Request):
             raise HTTPException(status_code=404, detail="Active employee not found")
 
         # Calculate days
-        from datetime import date as date_type
         start = datetime.fromisoformat(start_date).date() if isinstance(start_date, str) else start_date
         end = datetime.fromisoformat(end_date).date() if isinstance(end_date, str) else end_date
         days = (end - start).days + 1

@@ -10,7 +10,6 @@ import pytest
 import requests
 import os
 import uuid
-from datetime import datetime
 
 # Get BASE_URL from environment - NO default to fail fast if missing
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')

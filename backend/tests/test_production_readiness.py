@@ -340,7 +340,6 @@ class TestMobileResponsiveness:
     
     def test_api_response_time(self):
         """Test that critical APIs respond within acceptable time"""
-        import time
         
         # Health check
         start = time.time()

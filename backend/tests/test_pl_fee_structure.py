@@ -4,10 +4,8 @@ Tests the fee structure (10 Rs fixed processing fee + 20% admin charge)
 and service-wise breakdown in P&L report
 """
 
-import pytest
 import requests
 import os
-from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 

@@ -15,8 +15,7 @@ Features tested:
 import pytest
 import requests
 import os
-import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 

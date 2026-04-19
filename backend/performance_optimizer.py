@@ -9,7 +9,6 @@ import logging
 import time
 from datetime import datetime, timezone
 from typing import Optional, Any, Callable
-from functools import wraps
 
 # Circuit Breaker States
 CLOSED = "closed"  # Normal operation

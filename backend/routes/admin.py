@@ -16,7 +16,6 @@ Includes:
 
 from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List
 import logging
 
 # Create router

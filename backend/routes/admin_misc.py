@@ -5,7 +5,6 @@ Extracted from server.py for better code organization
 
 from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone, timedelta
-from typing import Optional
 import uuid
 import logging
 
@@ -1043,7 +1042,7 @@ async def admin_activate_prc_subscription(request: Request):
         current_balance = float(user.get("prc_balance", 0) or 0)
 
         # Calculate pricing
-        from server import calculate_elite_prc_price, get_dynamic_prc_rate, credit_company_wallets_for_subscription
+        from server import calculate_elite_prc_price, credit_company_wallets_for_subscription
         pricing = await calculate_elite_prc_price()
         prc_amount = pricing["total_prc"]
         prc_rate = pricing["prc_rate"]

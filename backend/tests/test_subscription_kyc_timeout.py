@@ -6,7 +6,6 @@ Focus on timeout handling and image validation
 import pytest
 import requests
 import os
-import base64
 
 # Use preview URL for testing (same as frontend sees)
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://formula-audit-fix.preview.emergentagent.com').rstrip('/')

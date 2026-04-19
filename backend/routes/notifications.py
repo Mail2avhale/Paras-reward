@@ -11,7 +11,6 @@ Handles all user notifications:
 
 from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List
 import logging
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])

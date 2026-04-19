@@ -14,9 +14,8 @@ Features:
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any, Callable, List
+from typing import Dict, Any, Callable, List
 from enum import Enum
-import traceback
 import uuid
 
 from app.core.database import get_sync_db

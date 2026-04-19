@@ -8,16 +8,9 @@ Every wallet change MUST go through this service.
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any
 
 from app.core.database import get_sync_db
-from app.models.ledger import (
-    LedgerEntry, 
-    LedgerAccountType, 
-    LedgerEntryType,
-    create_withdrawal_ledger_entries,
-    create_mining_ledger_entries
-)
 
 
 class WalletService:

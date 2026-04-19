@@ -1,15 +1,18 @@
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 from typing import Optional
-import logging
 import uuid
 
 try:
-    from server import get_user_friendly_error
+    from server import get_user_friendly_error, verify_management, create_notification
 except Exception:
     def get_user_friendly_error(error):
         return str(error)
+    async def verify_management(uid):
+        raise HTTPException(status_code=500, detail="verify_management helper unavailable")
+    async def create_notification(*args, **kwargs):
+        return None
 
 router = APIRouter(prefix="/manager", tags=["Manager"])
 

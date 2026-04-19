@@ -5,7 +5,6 @@ Tests the fix for active status checking using both 'created_at' and 'timestamp'
 import pytest
 import requests
 import os
-from datetime import datetime, timezone
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 

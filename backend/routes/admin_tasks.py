@@ -5,12 +5,10 @@ Admin endpoints for managing background tasks.
 NOTE: Auto-retry functionality has been REMOVED. Failed transactions are refunded immediately.
 """
 
-from fastapi import APIRouter, HTTPException, Query, Request
-from typing import Optional
+from fastapi import APIRouter, Query
 from datetime import datetime, timezone
-import os
 
-from app.services import TaskQueue, TaskStatus
+from app.services import TaskQueue
 
 router = APIRouter(prefix="/admin/tasks", tags=["Admin - Tasks"])
 

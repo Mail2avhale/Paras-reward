@@ -33,11 +33,10 @@ Common EKO Status Codes:
 - 544: Service temporarily unavailable
 """
 
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, HTTPException
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+from typing import Optional
 import logging
-import traceback
 import json
 
 router = APIRouter(prefix="/monitor", tags=["Error Monitor"])

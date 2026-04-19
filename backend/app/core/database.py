@@ -7,7 +7,6 @@ Usage:
     from app.core.database import get_db, get_sync_db
 """
 
-import os
 import logging
 from typing import Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase

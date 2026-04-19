@@ -3,10 +3,7 @@ Query Optimizer - Database query optimization utilities
 Provides caching, projection defaults, and query helpers
 """
 
-from functools import wraps
 from datetime import datetime, timezone, timedelta
-import asyncio
-import logging
 
 # In-memory cache for frequently accessed data
 _cache = {}

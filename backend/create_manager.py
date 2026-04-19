@@ -20,7 +20,6 @@ Usage:
 
 import asyncio
 import os
-import sys
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 from passlib.context import CryptContext

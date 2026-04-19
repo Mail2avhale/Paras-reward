@@ -49,10 +49,7 @@ SUCCESS CRITERIA:
 import requests
 import json
 import sys
-import os
 from datetime import datetime
-import time
-import uuid
 
 # Get backend URL from frontend .env file
 def get_backend_url():

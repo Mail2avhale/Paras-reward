@@ -13,7 +13,6 @@ Features to test:
 import pytest
 import requests
 import os
-from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 TEST_USER_ID = "73b95483-f36b-4637-a5ee-d447300c6835"  # mail2avhale@gmail.com

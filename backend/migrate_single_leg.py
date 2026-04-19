@@ -22,7 +22,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 from pymongo import MongoClient
 from dotenv import load_dotenv
 from pathlib import Path
-from datetime import datetime, timezone
 
 # Load env
 env_file = Path(__file__).parent / '.env'

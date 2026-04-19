@@ -4,7 +4,7 @@ PARAS REWARD - Pydantic Schemas/Models
 All request/response models for API endpoints
 """
 
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict
 from datetime import datetime, timezone
 import uuid

@@ -13,7 +13,7 @@ Real payments cannot be simulated.
 import pytest
 import requests
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://formula-audit-fix.preview.emergentagent.com').rstrip('/')
@@ -328,7 +328,6 @@ class TestAdminManualActivation:
         assert expiry is not None, "Subscription expiry should be set"
         
         # Verify expiry is in the future (subscription is active)
-        from datetime import datetime, timezone
         try:
             expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
             now = datetime.now(timezone.utc)

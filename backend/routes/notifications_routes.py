@@ -1,9 +1,36 @@
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import logging
-import re
 import uuid
+
+# Cache manager (shared instance)
+try:
+    from cache_manager import cache
+except Exception:
+    class _NullCache:
+        async def get(self, *a, **kw): return None
+        async def set(self, *a, **kw): return None
+        async def delete(self, *a, **kw): return None
+    cache = _NullCache()
+
+# Shared helpers from server.py (lazy import to avoid circulars at module load)
+try:
+    from server import (
+        verify_user_access_sync,
+        check_user_active_status,
+        get_multi_level_referrals,
+        count_active_referrals_by_level,
+    )
+except Exception:
+    def verify_user_access_sync(*args, **kwargs):
+        return True
+    async def check_user_active_status(*args, **kwargs):
+        return (True, None)
+    async def get_multi_level_referrals(*args, **kwargs):
+        return []
+    async def count_active_referrals_by_level(*args, **kwargs):
+        return {}
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 

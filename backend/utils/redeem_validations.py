@@ -8,7 +8,7 @@ Author: Paras Reward System
 Last Updated: March 2026
 """
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from fastapi import HTTPException
 import logging
 

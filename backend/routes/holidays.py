@@ -6,8 +6,7 @@ Holiday Calendar Routes
 """
 
 from fastapi import APIRouter, HTTPException
-from datetime import datetime, timezone, timedelta, date
-from typing import Optional
+from datetime import datetime, timezone, timedelta
 import logging
 
 router = APIRouter(prefix="/holidays", tags=["Holidays"])

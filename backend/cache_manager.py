@@ -6,7 +6,6 @@ Includes fallback to local Redis and in-memory cache
 
 import os
 import json
-import hashlib
 from datetime import datetime, timezone
 from typing import Optional, Any, Callable
 from functools import wraps

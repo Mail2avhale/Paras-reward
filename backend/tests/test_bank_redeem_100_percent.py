@@ -117,7 +117,6 @@ class TestCodeVerification:
     
     def test_verify_backend_100_percent_comment(self):
         """Verify backend code has 100% limit comment (not 50%)"""
-        import os
         backend_file = "/app/backend/routes/bank_redeem.py"
         
         with open(backend_file, 'r') as f:

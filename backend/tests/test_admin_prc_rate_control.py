@@ -9,7 +9,6 @@ Key Features Tested:
 import pytest
 import requests
 import os
-from datetime import datetime
 
 # Get the API URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')

@@ -3,9 +3,8 @@ Admin Dashboard Routes - Stats, charts, and dashboard data
 Extracted from server.py for better code organization
 """
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter
 from datetime import datetime, timezone, timedelta
-from typing import Optional
 import logging
 
 # Create router

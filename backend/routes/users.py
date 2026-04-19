@@ -12,7 +12,6 @@ Includes:
 
 from fastapi import APIRouter, HTTPException, Request, File, UploadFile
 from datetime import datetime, timezone, timedelta
-from typing import Optional
 import logging
 import base64
 

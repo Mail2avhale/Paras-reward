@@ -171,7 +171,7 @@ async def get_user_context(uid: str) -> str:
             return ""
         
         # Import mining functions
-        from routes.mining import calculate_mining_rate, get_l1_indirect_count
+        from routes.mining import calculate_mining_rate
         from routes.growth_economy import get_growth_network_stats, get_dynamic_prc_rate
         
         # Fetch all data in parallel

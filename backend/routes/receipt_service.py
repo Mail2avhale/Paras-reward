@@ -3,7 +3,6 @@ Receipt Generation Service
 Generates PDF receipts for BBPS and DMT transactions
 """
 
-import os
 import io
 import base64
 import logging
@@ -14,9 +13,8 @@ from pydantic import BaseModel
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch, mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.enums import TA_CENTER
 
 router = APIRouter(prefix="/receipt", tags=["Receipt"])
 

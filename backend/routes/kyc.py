@@ -4,7 +4,7 @@ Handles all KYC submission, verification, and admin management
 """
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime, timezone
 import asyncio
 import uuid

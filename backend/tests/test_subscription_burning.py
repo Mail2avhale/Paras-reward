@@ -13,7 +13,6 @@ Also tests burning on redeem requests (bank redeem + unified redeem)
 import pytest
 import requests
 import os
-import math
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://formula-audit-fix.preview.emergentagent.com').rstrip('/')
 

@@ -4,8 +4,7 @@ Extracted from server.py for better code organization
 """
 
 from fastapi import APIRouter, HTTPException, Request
-from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+from datetime import datetime, timezone
 import logging
 import uuid
 

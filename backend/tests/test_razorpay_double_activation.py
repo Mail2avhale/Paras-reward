@@ -11,7 +11,6 @@ Key Features Tested:
 import pytest
 import requests
 import os
-import json
 from datetime import datetime
 
 # Get the API URL from environment

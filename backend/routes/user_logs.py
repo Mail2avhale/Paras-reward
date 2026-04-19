@@ -9,7 +9,7 @@ Created: February 2026
 Purpose: Debug issues like paid users losing PRC balance
 """
 
-from fastapi import APIRouter, HTTPException, Request, Query
+from fastapi import APIRouter
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, List
 import uuid

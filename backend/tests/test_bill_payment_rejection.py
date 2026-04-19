@@ -13,7 +13,6 @@ import pytest
 import requests
 import os
 import uuid
-import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://formula-audit-fix.preview.emergentagent.com')
 

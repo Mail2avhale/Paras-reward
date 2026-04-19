@@ -17,7 +17,6 @@ import pytest
 import requests
 import os
 import uuid
-import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://formula-audit-fix.preview.emergentagent.com')
 ADMIN_UID = "8175c02a-4fbd-409c-8d47-d864e979f59f"

@@ -24,8 +24,7 @@ import logging
 import asyncio
 import hashlib
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Optional, Tuple
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/growth", tags=["Growth Economy"])

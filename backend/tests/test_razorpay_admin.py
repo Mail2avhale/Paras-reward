@@ -5,7 +5,6 @@ Tests for: GET /api/admin/razorpay-subscriptions, search, filter, stats, sync-pe
 import pytest
 import requests
 import os
-from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 

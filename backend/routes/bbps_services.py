@@ -22,7 +22,7 @@ Error Handling follows Eko Developer Documentation:
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, validator
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict
 import httpx  # ASYNC HTTP - replaces blocking 'requests' library
 import base64
 import hashlib
@@ -1678,7 +1678,6 @@ async def activate_service(service_code: int = 53):
     
     IMPORTANT: This must be called once to activate services before using them!
     """
-    import asyncio
     
     try:
         # Generate fresh headers with correct Content-Type for form data

@@ -10,8 +10,6 @@ import time
 import logging
 import httpx
 import base64
-import random
-from datetime import datetime, timezone
 from typing import Optional, Dict
 
 # Eko API Configuration

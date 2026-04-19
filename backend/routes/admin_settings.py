@@ -6,7 +6,6 @@ SECURITY: All endpoints require admin authentication
 
 from fastapi import APIRouter, HTTPException, Request, Depends
 from datetime import datetime, timezone
-from typing import Optional
 import logging
 
 # Import auth middleware

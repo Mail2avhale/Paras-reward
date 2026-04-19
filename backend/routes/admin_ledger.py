@@ -16,7 +16,6 @@ Contains:
 from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone, timedelta
 import uuid
-import logging
 
 router = APIRouter(prefix="/admin/ledger", tags=["Admin Ledger"])
 

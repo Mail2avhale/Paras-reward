@@ -11,7 +11,7 @@ Tests for:
 import pytest
 import requests
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 TEST_USER_UID = "cbdf46d7-7d66-4d43-8495-e1432a2ab071"

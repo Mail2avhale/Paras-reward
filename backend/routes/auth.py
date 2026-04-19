@@ -16,10 +16,10 @@ OPTIMIZATIONS (March 2026):
 - Independent database operations run in parallel with asyncio.gather
 """
 
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict
+from typing import Dict
 import logging
 import secrets
 import string

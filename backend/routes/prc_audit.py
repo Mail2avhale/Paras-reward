@@ -5,7 +5,6 @@ Complete audit trail of all PRC credits and debits for a user
 
 from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime, timezone
-from typing import Optional
 import logging
 
 router = APIRouter(prefix="/admin/audit", tags=["PRC Audit"])

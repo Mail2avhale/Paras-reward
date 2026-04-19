@@ -10,7 +10,7 @@ Tests for in-app notifications for events:
 import pytest
 import requests
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
@@ -85,7 +85,6 @@ class TestNotificationsAPI:
     def test_mark_all_read(self):
         """TC5: POST /api/notifications/mark-all-read/{user_id} marks all as read"""
         import pymongo
-        from bson import ObjectId
         client = pymongo.MongoClient(os.environ.get('MONGO_URL', 'mongodb://localhost:27017'))
         db = client['test_database']
         

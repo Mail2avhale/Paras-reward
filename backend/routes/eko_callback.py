@@ -16,7 +16,6 @@ Setup: Email callback URL to sales.engineer@eko.co.in
 from fastapi import APIRouter, Request, HTTPException
 from datetime import datetime
 import logging
-import uuid
 
 router = APIRouter(prefix="/eko", tags=["eko-callback"])
 

@@ -517,7 +517,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         
         # ==================== STEP 11: GENERATE GST INVOICE ====================
         try:
-            from routes.gst_invoice import generate_invoice, calculate_gst, get_next_invoice_number, generate_invoice_pdf
+            from routes.gst_invoice import calculate_gst, get_next_invoice_number, generate_invoice_pdf
             import base64
             
             # Check if invoice already exists

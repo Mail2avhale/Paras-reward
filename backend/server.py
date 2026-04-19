@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, File, UploadFile, Form, Request, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, File, UploadFile, Form, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from pathlib import Path
@@ -17,18 +17,16 @@ else:
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from pymongo import UpdateOne  # For bulk operations
 import os
 import logging
 import hashlib
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Tuple
 import uuid
 from datetime import datetime, timezone, timedelta
 import secrets
 import string
 import base64
-import re
 from passlib.context import CryptContext
 import asyncio
 from fastapi import BackgroundTasks
@@ -39,10 +37,10 @@ from collections import defaultdict
 import time
 
 # Import fraud detection
-from fraud_detection import FraudDetector, get_client_ip, generate_device_fingerprint
+from fraud_detection import FraudDetector, get_client_ip
 
 # Import cache manager and database indexes
-from cache_manager import cache, CacheTTL, user_cache_key, user_balance_key, admin_stats_key, leaderboard_key, global_stats_key
+from cache_manager import cache, admin_stats_key
 from db_indexes import create_performance_indexes, get_index_stats
 
 # Import routers
@@ -72,10 +70,10 @@ from routes.bank_redeem import router as bank_redeem_router, set_db as set_bank_
 # recurring_deposit REMOVED - feature deprecated (March 2026)
 from routes.user_logs import router as user_logs_router, set_db as set_user_logs_db, set_cache as set_user_logs_cache
 from routes.hdfc_bulk_export import router as hdfc_export_router, set_db as set_hdfc_export_db
-from routes.notifications import create_notification, notify_payment_status, notify_referral_joined, notify_prc_credited
+from routes.notifications import create_notification
 from routes.razorpay_payments import router as razorpay_router, set_db as set_razorpay_db
 from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check, set_weekly_one_service_check as set_redeem_v2_weekly_check
-from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
+from routes.error_monitor import router as monitor_router, set_db as set_monitor_db
 from routes.bbps_services import router as bbps_router, set_db as set_bbps_db, set_redeem_limit_check as set_bbps_redeem_limit_check
 from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check, set_calculate_redeem_limit as set_bank_transfer_calc_limit
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
@@ -87,9 +85,8 @@ from routes.admin_ledger import router as admin_ledger_router, set_db as set_adm
 from routes.admin_ledger_view import router as admin_ledger_view_router, set_db as set_admin_ledger_view_db
 from routes.admin_tasks import router as admin_tasks_router
 from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
-from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db, generate_daily_summary, hard_delete_expired_accounts
 from routes.prc_audit import router as prc_audit_router, set_db as set_prc_audit_db
-from routes.holidays import router as holidays_router, set_db as set_holidays_db, set_cache as set_holidays_cache, seed_holidays, is_holiday
+from routes.holidays import router as holidays_router, set_db as set_holidays_db, seed_holidays
 from routes.notifications_routes import router as notifications_router, set_db as set_notifications_db, set_helpers as set_notifications_helpers
 from routes.manager_routes import router as manager_router, set_db as set_manager_db
 # AI Routes - REMOVED (chatbot deprecated)
@@ -104,7 +101,7 @@ from routes.eko_recharge import router as eko_recharge_router, set_db as set_eko
 from routes.growth_economy import router as growth_economy_router, set_db as set_growth_economy_db
 from routes.admin_subscription import router as admin_subscription_router
 from routes.pool_wallet import router as pool_wallet_router, set_db as set_pool_wallet_db, set_cache as set_pool_wallet_cache, distribute_pool_to_core_team
-from routes.employee_management import router as employee_router, set_db as set_employee_db, set_cache as set_employee_cache, distribute_employee_pool, credit_employee_pool
+from routes.employee_management import router as employee_router, set_db as set_employee_db, set_cache as set_employee_cache, distribute_employee_pool
 from routes.community import router as community_router, set_db as set_community_db, set_cache as set_community_cache
 from routes.careers_investors import router as public_pages_router, set_db as set_public_pages_db
 
@@ -14999,7 +14996,7 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
     where redeeming PRC would reduce the user's future limit.
     """
     try:
-        from routes.growth_economy import get_user_unlock_percent, get_network_size, calculate_growth_level, get_tree_network_size, get_active_network_size
+        from routes.growth_economy import calculate_growth_level, get_active_network_size
         
         # Get user data
         user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "total_mined_prc": 1, "total_mined": 1})
@@ -19339,7 +19336,6 @@ async def admin_redeem_limits_overview():
     Returns aggregate totals + per-user breakdown.
     """
     try:
-        from routes.growth_economy import calculate_growth_level
         
         # Get all users with balance > 0
         users = await db.users.find(
@@ -20850,7 +20846,7 @@ async def admin_fix_user_issue(uid: str, request: Request):
     
     elif fix_action == "extend_subscription":
         # Extend subscription expiry by N days (for duplicate payment compensation)
-        days = body.get("days", 28)
+        days = data.get("days", 28)
         current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
         if current_expiry:
             try:

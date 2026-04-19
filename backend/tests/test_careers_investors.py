@@ -11,7 +11,6 @@ import requests
 import os
 import io
 import uuid
-from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 

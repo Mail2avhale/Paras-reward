@@ -9,7 +9,7 @@ Test: Unified Payment Dashboard Approve/Reject Functionality
 import pytest
 import requests
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://formula-audit-fix.preview.emergentagent.com').rstrip('/')
 

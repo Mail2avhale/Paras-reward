@@ -5,7 +5,6 @@ Extracted from server.py for better code organization
 
 from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone, timedelta
-from typing import Optional
 import logging
 
 # Create router
@@ -37,7 +36,6 @@ def set_helpers(helpers: dict):
 async def create_database_indexes():
     """Create ALL necessary database indexes for optimal performance"""
     try:
-        import asyncio
         indexes_created = []
         errors = []
         

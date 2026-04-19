@@ -113,7 +113,6 @@ class TestServiceTogglesAPI:
         print("✅ Invalid service toggle correctly returns 400 error")
 
 
-import time
 
 class TestDisabledServiceBlocking:
     """Test that disabled services correctly block requests with error message"""

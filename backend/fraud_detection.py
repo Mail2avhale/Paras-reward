@@ -5,9 +5,8 @@ Free, built-in fraud detection for Paras Reward Platform
 """
 
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, List, Tuple
+from typing import Dict, List, Tuple
 import hashlib
-import logging
 
 # ========== FRAUD RISK LEVELS ==========
 RISK_LOW = "low"

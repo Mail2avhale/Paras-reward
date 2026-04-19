@@ -7,7 +7,6 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
-import logging
 import uuid
 
 router = APIRouter(prefix="/admin/failed-transactions", tags=["Admin Failed Transactions"])

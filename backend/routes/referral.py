@@ -6,7 +6,6 @@ These endpoints return deprecation notices.
 """
 
 from fastapi import APIRouter, HTTPException
-from datetime import datetime, timezone
 
 router = APIRouter(prefix="/referral", tags=["Referral - DEPRECATED"])
 

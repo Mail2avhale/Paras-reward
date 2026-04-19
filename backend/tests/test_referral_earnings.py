@@ -5,7 +5,6 @@ Tests: referral-earnings API, level breakdown, top performers, summary data.
 import pytest
 import requests
 import os
-from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 TEST_USER_ID = "8175c02a-4fbd-409c-8d47-d864e979f59f"

@@ -19,7 +19,6 @@ All three now fixed to include bank_transfer_requests.
 import pytest
 import requests
 import os
-from datetime import datetime, timezone, timedelta
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 TEST_USER_UID = "cbdf46d7-7d66-4d43-8495-e1432a2ab071"

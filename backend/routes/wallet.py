@@ -8,9 +8,7 @@ Includes:
 - Withdrawal history
 """
 
-from fastapi import APIRouter, HTTPException, Request
-from datetime import datetime, timezone
-from typing import Optional
+from fastapi import APIRouter, HTTPException
 import logging
 
 # Create router

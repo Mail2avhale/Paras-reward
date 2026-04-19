@@ -13,7 +13,7 @@ Reference: PARAS REWARD TOKEN ECONOMY DOCUMENT
 """
 
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple
 import logging
 
 # ==================== CONSTANTS ====================

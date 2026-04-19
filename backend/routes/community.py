@@ -17,8 +17,8 @@ import logging
 import uuid
 import os
 from datetime import datetime, timezone
-from typing import Optional, List
-from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/community", tags=["Community"])

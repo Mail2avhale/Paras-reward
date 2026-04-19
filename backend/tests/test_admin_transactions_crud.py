@@ -7,7 +7,6 @@ Also tests PRC statement reading from 4 collections with soft-delete filtering
 import pytest
 import requests
 import os
-import uuid
 from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')

@@ -20,7 +20,6 @@ import requests
 import os
 import uuid
 import random
-from datetime import datetime
 
 # Get base URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')

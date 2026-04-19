@@ -216,7 +216,6 @@ async def diagnose_prc_double(user_id: str):
     
     Use this to find the root cause of PRC double credit issues.
     """
-    import logging
     
     result = {
         "user_id": user_id,

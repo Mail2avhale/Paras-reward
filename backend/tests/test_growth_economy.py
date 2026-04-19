@@ -9,8 +9,6 @@ Tests:
 
 import math
 import pytest
-import asyncio
-from datetime import datetime, timezone
 
 # Test Mining Formula
 def calculate_prc_per_user(network_size: int) -> float:
