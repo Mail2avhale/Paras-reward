@@ -3,9 +3,11 @@
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "cleartext": true
+    "androidScheme": "https",
+    "cleartext": false
   },
   "android": {
+    "allowMixedContent": false,
     "buildOptions": {
       "keystorePath": "",
       "keystoreAlias": ""
