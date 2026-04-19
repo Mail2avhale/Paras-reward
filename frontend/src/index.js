@@ -5,6 +5,15 @@ import "@/index.css";
 import App from "@/App";
 import './i18n/config'; // Initialize i18n
 
+// Silence console.log / console.debug / console.info in production
+// (keeps console.warn and console.error for real issues)
+if (process.env.NODE_ENV === 'production') {
+  const noop = () => {};
+  console.log = noop;
+  console.debug = noop;
+  console.info = noop;
+}
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>

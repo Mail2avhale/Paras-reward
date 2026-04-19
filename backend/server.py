@@ -49,7 +49,6 @@ from routes.auth import router as auth_router, set_db as set_auth_db, set_helper
 from routes.users import router as users_router, set_db as set_users_db, set_cache as set_users_cache, set_helpers as set_users_helpers
 from routes.wallet import router as wallet_router, set_db as set_wallet_db
 from routes.admin import router as admin_router, set_db as set_admin_db, set_cache as set_admin_cache, set_helpers as set_admin_helpers
-# DEPRECATED: from routes.admin_vip import router as admin_vip_router, set_db as set_admin_vip_db, set_cache as set_admin_vip_cache, set_helpers as set_admin_vip_helpers
 from routes.admin_delivery import router as admin_delivery_router, set_db as set_admin_delivery_db
 from routes.admin_system import router as admin_system_router, set_db as set_admin_system_db, set_cache as set_admin_system_cache, set_helpers as set_admin_system_helpers
 from routes.admin_finance import router as admin_finance_router, set_db as set_admin_finance_db, set_cache as set_admin_finance_cache
@@ -89,8 +88,6 @@ from routes.prc_audit import router as prc_audit_router, set_db as set_prc_audit
 from routes.holidays import router as holidays_router, set_db as set_holidays_db, seed_holidays
 from routes.notifications_routes import router as notifications_router, set_db as set_notifications_db, set_helpers as set_notifications_helpers
 from routes.manager_routes import router as manager_router, set_db as set_manager_db
-# AI Routes - REMOVED (chatbot deprecated)
-# from routes.ai_routes import router as ai_router, set_db as set_ai_db
 from routes.admin_prc_economy import router as admin_prc_economy_router, set_db as set_admin_prc_economy_db
 from routes.admin_prc_balance import router as admin_prc_balance_router, set_db as set_admin_prc_balance_db
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers, assign_subscription_position
