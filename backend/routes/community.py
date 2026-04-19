@@ -319,6 +319,39 @@ async def delete_post(post_id: str, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== EDIT POST ====================
+
+@router.put("/posts/{post_id}")
+async def edit_post(post_id: str, request: Request):
+    """Edit post (author only)."""
+    try:
+        data = await request.json()
+        user_id = data.get("user_id")
+
+        post = await db.community_posts.find_one({"post_id": post_id, "status": "active"})
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+
+        if post.get("user_id") != user_id:
+            raise HTTPException(status_code=403, detail="Only the author can edit this post")
+
+        update = {"updated_at": datetime.now(timezone.utc).isoformat(), "is_edited": True}
+        if "title" in data:
+            update["title"] = data["title"]
+        if "content" in data:
+            update["content"] = data["content"]
+        if "category" in data and data["category"] in CATEGORIES:
+            update["category"] = data["category"]
+
+        await db.community_posts.update_one({"post_id": post_id}, {"$set": update})
+        return {"success": True, "message": "Post updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 # ==================== LIKES ====================
 
 @router.post("/posts/{post_id}/like")
@@ -457,6 +490,31 @@ async def delete_comment(comment_id: str, request: Request):
         return {"success": True, "message": "Comment deleted"}
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ==================== COMMENT LIKE ====================
+
+@router.post("/comments/{comment_id}/like")
+async def toggle_comment_like(comment_id: str, request: Request):
+    try:
+        data = await request.json()
+        user_id = data.get("user_id")
+
+        existing = await db.community_comment_likes.find_one({"comment_id": comment_id, "user_id": user_id})
+        if existing:
+            await db.community_comment_likes.delete_one({"comment_id": comment_id, "user_id": user_id})
+            await db.community_comments.update_one({"comment_id": comment_id}, {"$inc": {"like_count": -1}})
+            return {"success": True, "liked": False}
+        else:
+            await db.community_comment_likes.insert_one({
+                "comment_id": comment_id, "user_id": user_id,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            await db.community_comments.update_one({"comment_id": comment_id}, {"$inc": {"like_count": 1}})
+            return {"success": True, "liked": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
