@@ -10,7 +10,7 @@ import {
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
   AlertTriangle, Smartphone, Building, Crown, AlertOctagon, Database, Eye,
   ShieldAlert, CheckCircle, Building2, Zap, Receipt, Send, MessageSquare, Banknote,
-  Coins, Flame
+  Coins, Flame, Briefcase
 } from 'lucide-react';
 
 const LOGO_URL = "/paras-logo.png";
@@ -162,6 +162,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'core-team', label: 'Core Team', icon: Shield, path: '/admin/core-team' },
     { id: 'employees', label: 'Employees', icon: Users, path: '/admin/employees' },
+    { id: 'community', label: 'Community Forum', icon: MessageSquare, path: '/admin/community' },
+    { id: 'careers', label: 'Careers', icon: Briefcase, path: '/admin/careers' },
     { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },

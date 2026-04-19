@@ -1,0 +1,44 @@
+{
+  "summary": "Backend testing of Admin Careers panel endpoints (/api/public/careers/*). Built comprehensive pytest suite covering full CRUD lifecycle for job postings and applications, plus validation/edge cases. 27/27 tests PASSED.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/public/careers/jobs/create", "issue": "Returns 200 on success — convention would be 201 Created, but consistent with rest of project."},
+      {"endpoint": "PUT /api/public/careers/jobs/{job_id}", "issue": "No Pydantic model for partial update; relies on request.json() filtering — no validation of field values (e.g., could set is_active to a non-bool). Low risk since admin-only."},
+      {"endpoint": "GET /api/public/careers/applications", "issue": "Stats are computed only from filtered result set, so when filtering by status='new', stats['reviewed']/'hired' etc. all become 0. Frontend stats pills must call this endpoint without filters to get accurate global counts."},
+      {"endpoint": "PUT /api/public/careers/applications/{app_id}/status", "issue": "No admin_id/audit trail captured in status update (only updated_at). Consider logging who changed status."},
+      {"endpoint": "DELETE /api/public/careers/jobs/{job_id}", "issue": "Does not cascade-delete associated job_applications. Orphan applications remain referencing a deleted job_id."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_careers_crud.py",
+    "/app/test_reports/pytest/admin_careers_results.xml"
+  ],
+  "action_items": [
+    "Consider cascade-deleting job_applications when a job is deleted, OR mark them orphaned (soft-delete).",
+    "Frontend: When calling /api/public/careers/applications with status/job filter, global stats pills will be wrong — fetch stats unfiltered once, and use filtered list only for the table.",
+    "Optional: add admin_id audit field on PUT /status for traceability."
+  ],
+  "critical_code_review_comments": [
+    "Stats computation in list_applications is based on filtered results — misleading when filters applied (see action items).",
+    "No authentication check on any /api/public/careers/* admin-facing endpoint (create/update/delete jobs, update status, add note, list applications). Since prefix is 'public', these are callable by anyone. Non-blocking for MVP but should gate with admin PIN/JWT in production.",
+    "update_job strips '_id','job_id','created_at','created_by' but allows arbitrary unknown fields to be written into the document — consider whitelist instead of blacklist to keep schema clean.",
+    "Resume files saved under /app/backend/uploads/resumes (local disk) — not persistent across container restarts/redeploys. Consider S3/GridFS for production.",
+    "job_applications documents lack an 'updated_at' by default (only added when status/note changes); consider adding it at creation for consistency."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_careers_crud.py (new)"
+  ],
+  "success_rate": {"backend": "100% (27/27)", "frontend": "not tested (per request)"},
+  "test_credentials": "Admin: admin@test.com / 153759 (not required — /public/careers/* endpoints have no auth gate)",
+  "seed_data_creation": "Suite creates TEST_ prefixed jobs + one applicant per run and cleans up jobs. Applications linger (no public delete endpoint) but are TEST_ tagged via unique email.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend CRUD for Admin Careers is solid — 27/27 pytest passing. Endpoints live under /api/public/careers (no auth). Known quirk: list_applications stats are post-filter, so frontend should use an unfiltered call for the stats pills. Frontend UI not tested (rate limit bypass issue noted in review_request). Re-run: pytest /app/backend/tests/test_admin_careers_crud.py -v",
+  "rca of the issue": "N/A — no bugs found. All create/read/update/delete/toggle/list/filter/status-transition/note/resume-download/validation flows work as expected."
+}
