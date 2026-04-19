@@ -1973,8 +1973,9 @@ async def root():
     """Root endpoint"""
     return {"status": "ok", "message": "Paras Reward API is running"}
 
-# Create scheduler for automated tasks
-scheduler = AsyncIOScheduler()
+# Create scheduler for automated tasks (explicit UTC timezone for deterministic cron math)
+import pytz
+scheduler = AsyncIOScheduler(timezone=pytz.utc)
 
 # ========== AUTO SYNC RAZORPAY PAYMENTS FUNCTION ==========
 async def auto_sync_razorpay_payments():
@@ -33967,7 +33968,9 @@ async def startup_db():
             minute=30,
             id='pool_wallet_daily_distribute',
             name='Pool Wallet Daily Distribution (Midnight IST)',
-            replace_existing=True
+            replace_existing=True,
+            misfire_grace_time=3600,
+            coalesce=True
         )
         
         # Employee Pool Daily Distribution (Midnight IST = 18:30 UTC)
@@ -33984,8 +33987,67 @@ async def startup_db():
             minute=35,
             id='employee_pool_daily_distribute',
             name='Employee Pool Daily Distribution (Midnight IST)',
-            replace_existing=True
+            replace_existing=True,
+            misfire_grace_time=3600,
+            coalesce=True
         )
+        
+        # STARTUP CATCH-UP: If last distribution > 24h ago, run once at boot
+        # This guards against deployments that restart backend after 18:30 UTC
+        # and would otherwise skip that day's distribution entirely.
+        async def catch_up_pool_distributions():
+            try:
+                await asyncio.sleep(45)  # wait for app fully initialized
+                now = datetime.now(timezone.utc)
+                one_day_ago = now - timedelta(hours=24)
+                
+                # Pool Wallet catch-up
+                pool_wallet = await db.pool_wallet.find_one(
+                    {"wallet_id": "main"}, {"_id": 0, "last_distributed": 1, "balance": 1}
+                )
+                if pool_wallet:
+                    last = pool_wallet.get("last_distributed")
+                    balance = float(pool_wallet.get("balance", 0))
+                    needs_run = False
+                    if balance > 0:
+                        if not last:
+                            needs_run = True
+                        else:
+                            try:
+                                last_dt = datetime.fromisoformat(last.replace('Z', '+00:00'))
+                                if last_dt < one_day_ago:
+                                    needs_run = True
+                            except Exception:
+                                needs_run = True
+                    if needs_run:
+                        logging.warning(f"[POOL WALLET CATCH-UP] Last run: {last}, balance: {balance} - running NOW")
+                        result = await distribute_pool_to_core_team(triggered_by="startup_catchup")
+                        logging.info(f"[POOL WALLET CATCH-UP] Result: {result}")
+                
+                # Employee Pool catch-up
+                emp_settings = await db.employee_pool_settings.find_one({}, {"_id": 0})
+                if emp_settings:
+                    last = emp_settings.get("last_distributed")
+                    balance = float(emp_settings.get("pool_balance", 0))
+                    needs_run = False
+                    if balance > 0:
+                        if not last:
+                            needs_run = True
+                        else:
+                            try:
+                                last_dt = datetime.fromisoformat(last.replace('Z', '+00:00'))
+                                if last_dt < one_day_ago:
+                                    needs_run = True
+                            except Exception:
+                                needs_run = True
+                    if needs_run:
+                        logging.warning(f"[EMPLOYEE POOL CATCH-UP] Last run: {last}, balance: {balance} - running NOW")
+                        await distribute_employee_pool()
+                        logging.info("[EMPLOYEE POOL CATCH-UP] Completed")
+            except Exception as e:
+                logging.error(f"[POOL CATCH-UP] Error: {e}", exc_info=True)
+        
+        asyncio.create_task(catch_up_pool_distributions())
         
         # Start the scheduler
         scheduler.start()
