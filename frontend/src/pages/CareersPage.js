@@ -6,6 +6,7 @@ import {
   Building2, Users, Heart, Star, Zap, BookOpen, Award,
   Loader2, X, CheckCircle, ArrowLeft
 } from 'lucide-react';
+import { HiringBadge } from '../components/HiringBadge';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -223,10 +224,20 @@ const CareersPage = () => {
       {/* Hero */}
       <div className="bg-slate-900 text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
+          <div className="flex justify-center mb-5">
+            <HiringBadge
+              variant="ribbon"
+              jobCount={jobs.length}
+              onClick={() => {
+                const el = document.getElementById('positions');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+            />
+          </div>
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">Join Our Mission</h1>
           <p className="text-slate-300 text-lg max-w-2xl mx-auto mb-2">Build the future of digital rewards with Paras Reward Technologies</p>
           <p className="text-slate-400 text-sm">B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra</p>
-          <div className="flex gap-3 justify-center mt-4">
+          <div className="flex gap-3 justify-center mt-4 flex-wrap">
             <a href="#positions" className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">View Open Positions</a>
             <button onClick={() => setShowStatusCheck(!showStatusCheck)} className="px-6 py-2.5 border border-slate-600 text-slate-300 rounded-lg font-medium hover:border-slate-400" data-testid="check-status-btn">
               Check Application Status

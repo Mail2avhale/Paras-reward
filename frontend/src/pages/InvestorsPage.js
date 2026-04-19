@@ -6,6 +6,7 @@ import {
   ArrowUpRight, Lock, Download, Send, Loader2, CheckCircle,
   Building2, DollarSign, Layers, Award, ChevronRight, Eye
 } from 'lucide-react';
+import { HiringBadge } from '../components/HiringBadge';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -421,6 +422,9 @@ const InvestorsPage = () => {
         <p className="text-slate-500 text-xs mt-1">B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra 431006</p>
         <p className="text-slate-500 text-xs mt-1">www.parasreward.com</p>
       </div>
+
+      {/* Floating We're Hiring CTA */}
+      <HiringBadge variant="floating" />
     </div>
   );
 };
