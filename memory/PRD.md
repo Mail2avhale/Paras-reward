@@ -10,38 +10,39 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 
 ## What's Been Implemented
 
-### Employee Management System (DONE - April 18, 2026)
-- **Employee CRUD**: Add from existing users, Edit, Resign/Terminate with EMP-XXXX IDs
-- **Employee Pool Wallet**: Separate 20% from mining (total 40% = 20% core + 20% employee)
-- **Salary-Based Distribution**: Proportional to monthly salary, capped at salary value in PRC
-- **Attendance**: Present/Absent/Half-day/Leave/Holiday with bulk marking
-- **Salary Slip**: Indian standard (Basic 40%, HRA 20%, Conveyance, Special Allowance, Medical + PF, ESI, PT, TDS, LOP deductions)
-- **ID Card**: Digital with company details (Paras Reward Technologies Pvt Ltd)
-- **Photo Upload**: Employee photos for ID cards
-- **Daily Auto Distribution**: Cron at midnight IST (18:35 UTC)
-- **Monthly Post Salary**: Admin action to distribute + reset cycle
-- **Dynamic PRC-INR Rate**: Admin configurable
-- Backend: `/app/backend/routes/employee_management.py`
-- Frontend: `/app/frontend/src/pages/Admin/AdminEmployees.js`
-- Route: `/admin/employees`
+### Community Help Page (DONE - April 19, 2026)
+- Posts with text + 1 image, 6 categories
+- Like/React, Comment (nested replies), Bookmark, Report
+- Mark as Helpful, Pin posts
+- Moderation: Add/Remove moderators, Block/Unblock users, Resolve reports
+- Announcements (mod/admin only)
+- Search, Filter by category, Sort (latest/popular/helpful)
+- User reputation tracking (post count, helpful count, likes)
+- Backend: `/app/backend/routes/community.py` - 20+ endpoints
+- Frontend: `/app/frontend/src/pages/CommunityPage.js`
+- Route: `/community` (user-facing, bottom nav)
 
-### Mining Formula v2.0 - Subscription Position Based (DONE - April 18, 2026)
-- Mining network based on subscription purchase/renewal ORDER
-- Each renewal = new position. Network = active subs after your position
-- Referrals & Redeem Limit: UNCHANGED
-- Migration API: `POST /admin/migrate-subscription-positions` (1822 positions assigned on prod)
+### Employee Management System (DONE - April 18, 2026)
+- Full CRUD with DOB, Gender, Father Name, Blood Group, Employment Type, Probation
+- Documents: Aadhar, PAN, Bank, IFSC, UAN, ESIC, PF/ESI eligibility
+- Leave Management: CL(12)/SL(12)/EL(15), auto-attendance marking
+- Salary Slip: Indian standard + Employer PF/ESI/Gratuity + Net Pay in Words + CTC
+- Employee Pool Wallet: 20% from mining, salary-proportional, daily cron
+- Attendance, Photo Upload, Digital ID Card, Emergency Contact, Address
+
+### Mining Formula v2.0 (DONE - April 18, 2026)
+- Subscription position-based network (not join order)
+- 1822 positions migrated on production
 
 ### Previous Features (DONE)
-- Eko Refund Flow, Subscription Fixes, Core Team Pool Wallet
-- Admin Bank Transfer (edit amount + redeem limit display)
-- PRC Analytics (aggregation-based for production scale)
-- Admin PRC Add/Deduct from User 360
+- Eko Refund, Subscription Fixes, Core Team Pool Wallet
+- Admin Bank Transfer (edit amount + redeem limit)
+- PRC Analytics (aggregation-based), Admin PRC Add/Deduct
 
 ## Upcoming Tasks
 - P1: Invoice PDF Download
-- P1: Community Help Page (paused)
+- P2: WhatsApp Share Receipt
 
 ## Future/Backlog
-- P2: WhatsApp Share Receipt
 - P2: server.py monolith refactor
 - P3: MongoDB -> PostgreSQL migration

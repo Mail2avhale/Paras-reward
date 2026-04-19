@@ -266,6 +266,7 @@ const AdminBankTransfers = IS_USER_BUILD ? null : lazy(() => import(/* webpackCh
 const AdminHolidays = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminHolidays"));
 const AdminCoreTeam = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCoreTeam"));
 const AdminEmployees = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminEmployees"));
+const CommunityPage = lazy(() => import(/* webpackChunkName: "community" */ "@/pages/CommunityPage"));
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
 // GiftVoucherRedemption - REMOVED (deprecated April 2026)
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
@@ -349,6 +350,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             
             {/* Protected Routes - User Only (Admin/Manager redirected to /admin) */}
             <Route path="/dashboard" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DashboardModern user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/community" element={user ? <Suspense fallback={<LoadingFallback />}><CommunityPage user={user} /></Suspense> : <Navigate to="/login" />} />
             {/* fintech route removed - not in use */}
             <Route path="/support" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SupportTickets user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/daily-rewards" element={<Navigate to="/dashboard" />} /> {/* Rewards integrated into Dashboard */}
