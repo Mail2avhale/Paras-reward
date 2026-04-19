@@ -219,6 +219,15 @@ const CommunityPage = ({ user }) => {
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed to edit'); }
   };
 
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Delete this comment?')) return;
+    try {
+      await axios.delete(`${API}/community/comments/${commentId}`, { data: { user_id: currentUserId }, headers });
+      toast.success('Comment deleted');
+      openPostDetail(selectedPost);
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+  };
+
   const handleCommentLike = async (commentId) => {
     try {
       await axios.post(`${API}/community/comments/${commentId}/like`, { user_id: currentUserId }, { headers });
@@ -440,6 +449,11 @@ const CommunityPage = ({ user }) => {
                             <Heart className="w-3 h-3" />{comment.like_count || 0}
                           </button>
                           <button onClick={() => setReplyTo(comment)} className="text-[10px] text-blue-500 hover:underline">Reply</button>
+                          {(comment.user_id === currentUserId || userStats?.is_moderator) && (
+                            <button onClick={() => handleDeleteComment(comment.comment_id)} data-testid={`delete-comment-${comment.comment_id}`} className="text-[10px] text-slate-400 hover:text-red-500 flex items-center gap-0.5">
+                              <Trash2 className="w-3 h-3" />Delete
+                            </button>
+                          )}
                         </div>
                         {/* Nested replies */}
                         {(postDetail.comments || []).filter(c => c.parent_comment_id === comment.comment_id).map(reply => (
@@ -450,7 +464,14 @@ const CommunityPage = ({ user }) => {
                             <div className="bg-slate-50 rounded-lg px-3 py-1.5 flex-1">
                               <p className="text-[10px] font-medium text-slate-900">{reply.user_name}</p>
                               <p className="text-[10px] text-slate-700">{reply.content}</p>
-                              <span className="text-[9px] text-slate-400">{timeAgo(reply.created_at)}</span>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[9px] text-slate-400">{timeAgo(reply.created_at)}</span>
+                                {(reply.user_id === currentUserId || userStats?.is_moderator) && (
+                                  <button onClick={() => handleDeleteComment(reply.comment_id)} data-testid={`delete-reply-${reply.comment_id}`} className="text-[9px] text-slate-400 hover:text-red-500 flex items-center gap-0.5">
+                                    <Trash2 className="w-2.5 h-2.5" />Delete
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
