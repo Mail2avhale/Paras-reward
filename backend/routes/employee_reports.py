@@ -19,10 +19,12 @@ Phase C (Analytics):
   11. YTD Earnings
 """
 import io
+import os
 import calendar
 import logging
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, HTTPException, Query
+import jwt
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -36,6 +38,39 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 router = APIRouter(prefix="/employees/reports", tags=["Employee Reports"])
 
 db = None
+
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'paras-reward-secret-key-2024')
+JWT_ALGORITHM = "HS256"
+
+
+def _auth_uid_from_request(request: Request) -> str:
+    """Extract and verify JWT from Authorization header, return uid."""
+    auth = request.headers.get("Authorization") or request.headers.get("authorization")
+    if not auth or not auth.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = auth.split(" ", 1)[1].strip()
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    uid = payload.get("uid")
+    if not uid:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+    return uid
+
+
+async def _require_self_or_admin(request: Request, user_id: str):
+    """Ensure JWT uid matches the requested user_id, or caller is admin/manager."""
+    uid = _auth_uid_from_request(request)
+    if uid == user_id:
+        return uid
+    # Allow admin/manager to access any employee's data
+    caller = await db.users.find_one({"uid": uid}, {"_id": 0, "role": 1})
+    if caller and caller.get("role") in ("admin", "sub_admin", "manager"):
+        return uid
+    raise HTTPException(status_code=403, detail="Forbidden: cannot access another user's data")
 
 
 def set_db(database):
@@ -1460,8 +1495,9 @@ async def _resolve_employee_for_user(user_id: str):
 
 
 @router.get("/my/profile")
-async def my_profile(user_id: str = Query(..., description="Caller's user uid")):
+async def my_profile(request: Request, user_id: str = Query(..., description="Caller's user uid")):
     """Employee's own HR profile + leave balance + pool earnings summary."""
+    await _require_self_or_admin(request, user_id)
     emp = await _resolve_employee_for_user(user_id)
 
     # Current month pool earnings
@@ -1509,11 +1545,13 @@ async def my_profile(user_id: str = Query(..., description="Caller's user uid"))
 
 @router.get("/my/payslip")
 async def my_payslip(
+    request: Request,
     user_id: str = Query(...),
     month: int = Query(..., ge=1, le=12),
     year: int = Query(..., ge=2020, le=2100)
 ):
     """Employee's own payslip PDF (auto-resolves emp_id from user_id)."""
+    await _require_self_or_admin(request, user_id)
     emp = await _resolve_employee_for_user(user_id)
     # Delegate to admin endpoint logic (reuse)
     return await salary_slip_pdf(emp["employee_id"], month=month, year=year)
@@ -1521,30 +1559,36 @@ async def my_payslip(
 
 @router.get("/my/ytd")
 async def my_ytd(
+    request: Request,
     user_id: str = Query(...),
     fy_start_year: int = Query(...)
 ):
     """Employee's own YTD earnings JSON."""
+    await _require_self_or_admin(request, user_id)
     emp = await _resolve_employee_for_user(user_id)
     return await ytd_earnings(emp["employee_id"], fy_start_year=fy_start_year)
 
 
 @router.get("/my/form-16")
 async def my_form_16(
+    request: Request,
     user_id: str = Query(...),
     fy_start_year: int = Query(...)
 ):
     """Employee's own Form 16 PDF."""
+    await _require_self_or_admin(request, user_id)
     emp = await _resolve_employee_for_user(user_id)
     return await form_16_pdf(emp["employee_id"], fy_start_year=fy_start_year)
 
 
 @router.get("/my/pool-history")
 async def my_pool_history(
+    request: Request,
     user_id: str = Query(...),
     limit: int = Query(50, ge=1, le=500)
 ):
     """Employee's own pool distribution history (PRC credits)."""
+    await _require_self_or_admin(request, user_id)
     emp = await _resolve_employee_for_user(user_id)
     txns = await db.employee_pool_transactions.find(
         {"employee_id": emp["employee_id"], "type": "distribution"},
@@ -1561,8 +1605,9 @@ async def my_pool_history(
 
 
 @router.get("/my/leave-history")
-async def my_leave_history(user_id: str = Query(...), limit: int = Query(50, ge=1, le=500)):
+async def my_leave_history(request: Request, user_id: str = Query(...), limit: int = Query(50, ge=1, le=500)):
     """Employee's own leave requests history."""
+    await _require_self_or_admin(request, user_id)
     emp = await _resolve_employee_for_user(user_id)
     leaves = await db.employee_leaves.find(
         {"employee_id": emp["employee_id"]},
@@ -1573,11 +1618,13 @@ async def my_leave_history(user_id: str = Query(...), limit: int = Query(50, ge=
 
 @router.get("/my/attendance")
 async def my_attendance(
+    request: Request,
     user_id: str = Query(...),
     month: int = Query(..., ge=1, le=12),
     year: int = Query(..., ge=2020, le=2100)
 ):
     """Employee's own attendance for a month (daily status list)."""
+    await _require_self_or_admin(request, user_id)
     emp = await _resolve_employee_for_user(user_id)
     days_in_month = calendar.monthrange(year, month)[1]
     start = f"{year}-{month:02d}-01"
