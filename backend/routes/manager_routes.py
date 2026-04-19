@@ -5,6 +5,12 @@ from typing import Optional
 import logging
 import uuid
 
+try:
+    from server import get_user_friendly_error
+except Exception:
+    def get_user_friendly_error(error):
+        return str(error)
+
 router = APIRouter(prefix="/manager", tags=["Manager"])
 
 db = None

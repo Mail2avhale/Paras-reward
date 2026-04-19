@@ -2,6 +2,12 @@ from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime, timezone, timedelta
 import logging
 
+try:
+    from server import get_user_friendly_error
+except Exception:
+    def get_user_friendly_error(error):
+        return str(error)
+
 router = APIRouter(prefix="/admin/prc-economy", tags=["Admin PRC Economy"])
 
 db = None

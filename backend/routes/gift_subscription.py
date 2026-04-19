@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import logging
+import uuid
 
 router = APIRouter(prefix="/gift", tags=["Gift Subscription"])
 

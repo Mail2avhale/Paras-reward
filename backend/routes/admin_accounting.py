@@ -5,6 +5,14 @@ from typing import Optional, List
 import logging
 import json
 import re
+import uuid
+
+# Re-export error helper (defined in server.py)
+try:
+    from server import get_user_friendly_error
+except Exception:
+    def get_user_friendly_error(error):
+        return str(error)
 
 router = APIRouter(prefix="/admin/accounting", tags=["Admin Accounting"])
 
