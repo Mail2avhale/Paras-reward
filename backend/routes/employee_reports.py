@@ -1442,3 +1442,149 @@ def number_to_words_inr(amount: float) -> str:
     if paise:
         result += f" and {_below_thousand(paise)} Paise"
     return result + " Only"
+
+
+# ==================== EMPLOYEE SELF-SERVICE (Phase C) ====================
+"""
+Self-service endpoints: user must pass their own user_id (uid from auth).
+Server validates employee.user_id == caller_uid before returning.
+"""
+
+
+async def _resolve_employee_for_user(user_id: str):
+    """Find active employee record for a user uid. Returns dict or raises 404."""
+    emp = await db.employees.find_one({"user_id": user_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="No employee profile linked to this account")
+    return emp
+
+
+@router.get("/my/profile")
+async def my_profile(user_id: str = Query(..., description="Caller's user uid")):
+    """Employee's own HR profile + leave balance + pool earnings summary."""
+    emp = await _resolve_employee_for_user(user_id)
+
+    # Current month pool earnings
+    month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+    pool_agg = await db.employee_pool_transactions.aggregate([
+        {"$match": {"employee_id": emp["employee_id"], "type": "distribution", "timestamp": {"$gte": month_start}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+    ]).to_list(1)
+    pool_this_month = pool_agg[0] if pool_agg else {"total": 0, "count": 0}
+
+    # Year-to-date pool
+    year_start = f"{datetime.now(timezone.utc).year}-01-01"
+    ytd_agg = await db.employee_pool_transactions.aggregate([
+        {"$match": {"employee_id": emp["employee_id"], "type": "distribution", "timestamp": {"$gte": year_start}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+    ]).to_list(1)
+    pool_ytd = ytd_agg[0] if ytd_agg else {"total": 0, "count": 0}
+
+    # Leave balance + used
+    lb = emp.get("leave_balance") or {"cl": 12, "sl": 12, "el": 21}
+    leave_used = await db.employee_leaves.aggregate([
+        {"$match": {"employee_id": emp["employee_id"], "status": "approved", "from_date": {"$gte": year_start}}},
+        {"$group": {"_id": "$leave_type", "days": {"$sum": {"$ifNull": ["$days", 1]}}}}
+    ]).to_list(10)
+    used_map = {u["_id"]: u.get("days", 0) for u in leave_used}
+
+    # Remove sensitive server fields
+    emp.pop("documents", None)
+
+    return {
+        "success": True,
+        "employee": emp,
+        "pool_this_month": {"amount": round(pool_this_month.get("total", 0), 4), "count": pool_this_month.get("count", 0)},
+        "pool_ytd": {"amount": round(pool_ytd.get("total", 0), 4), "count": pool_ytd.get("count", 0)},
+        "leave_balance": {
+            "cl": {"total": lb.get("cl", 12), "used": used_map.get("casual", 0) + used_map.get("cl", 0),
+                   "remaining": lb.get("cl", 12) - used_map.get("casual", 0) - used_map.get("cl", 0)},
+            "sl": {"total": lb.get("sl", 12), "used": used_map.get("sick", 0) + used_map.get("sl", 0),
+                   "remaining": lb.get("sl", 12) - used_map.get("sick", 0) - used_map.get("sl", 0)},
+            "el": {"total": lb.get("el", 21), "used": used_map.get("earned", 0) + used_map.get("el", 0),
+                   "remaining": lb.get("el", 21) - used_map.get("earned", 0) - used_map.get("el", 0)}
+        }
+    }
+
+
+@router.get("/my/payslip")
+async def my_payslip(
+    user_id: str = Query(...),
+    month: int = Query(..., ge=1, le=12),
+    year: int = Query(..., ge=2020, le=2100)
+):
+    """Employee's own payslip PDF (auto-resolves emp_id from user_id)."""
+    emp = await _resolve_employee_for_user(user_id)
+    # Delegate to admin endpoint logic (reuse)
+    return await salary_slip_pdf(emp["employee_id"], month=month, year=year)
+
+
+@router.get("/my/ytd")
+async def my_ytd(
+    user_id: str = Query(...),
+    fy_start_year: int = Query(...)
+):
+    """Employee's own YTD earnings JSON."""
+    emp = await _resolve_employee_for_user(user_id)
+    return await ytd_earnings(emp["employee_id"], fy_start_year=fy_start_year)
+
+
+@router.get("/my/form-16")
+async def my_form_16(
+    user_id: str = Query(...),
+    fy_start_year: int = Query(...)
+):
+    """Employee's own Form 16 PDF."""
+    emp = await _resolve_employee_for_user(user_id)
+    return await form_16_pdf(emp["employee_id"], fy_start_year=fy_start_year)
+
+
+@router.get("/my/pool-history")
+async def my_pool_history(
+    user_id: str = Query(...),
+    limit: int = Query(50, ge=1, le=500)
+):
+    """Employee's own pool distribution history (PRC credits)."""
+    emp = await _resolve_employee_for_user(user_id)
+    txns = await db.employee_pool_transactions.find(
+        {"employee_id": emp["employee_id"], "type": "distribution"},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(limit).to_list(limit)
+    total = sum(float(t.get("amount", 0)) for t in txns)
+    return {
+        "success": True,
+        "employee_id": emp["employee_id"],
+        "total_earned": round(total, 4),
+        "count": len(txns),
+        "transactions": txns
+    }
+
+
+@router.get("/my/leave-history")
+async def my_leave_history(user_id: str = Query(...), limit: int = Query(50, ge=1, le=500)):
+    """Employee's own leave requests history."""
+    emp = await _resolve_employee_for_user(user_id)
+    leaves = await db.employee_leaves.find(
+        {"employee_id": emp["employee_id"]},
+        {"_id": 0}
+    ).sort("from_date", -1).limit(limit).to_list(limit)
+    return {"success": True, "leaves": leaves, "count": len(leaves)}
+
+
+@router.get("/my/attendance")
+async def my_attendance(
+    user_id: str = Query(...),
+    month: int = Query(..., ge=1, le=12),
+    year: int = Query(..., ge=2020, le=2100)
+):
+    """Employee's own attendance for a month (daily status list)."""
+    emp = await _resolve_employee_for_user(user_id)
+    days_in_month = calendar.monthrange(year, month)[1]
+    start = f"{year}-{month:02d}-01"
+    end = f"{year}-{month:02d}-{days_in_month:02d}"
+    recs = await db.employee_attendance.find(
+        {"employee_id": emp["employee_id"], "date": {"$gte": start, "$lte": end}},
+        {"_id": 0}
+    ).sort("date", 1).to_list(31)
+    att = await get_month_attendance_summary(emp["employee_id"], month, year)
+    return {"success": True, "month": month, "year": year, "days": recs, "summary": att}
