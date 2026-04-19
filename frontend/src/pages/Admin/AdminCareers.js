@@ -41,7 +41,6 @@ const AdminCareers = () => {
   const [filterJob, setFilterJob] = useState('');
   const [appSearch, setAppSearch] = useState('');
   const [viewApp, setViewApp] = useState(null);
-
   const newJobForm = {
     title: '', department: '', location: 'Chatrapati Sambhaji Nagar, Maharashtra',
     job_type: 'Full-time', experience_min: 0, experience_max: 0,
@@ -76,7 +75,13 @@ const AdminCareers = () => {
       if (filterJob) params.append('job_id', filterJob);
       const res = await axios.get(`${API}/public/careers/applications?${params}`);
       setApplications(res.data?.applications || []);
-      setAppStats(res.data?.stats || {});
+      // Fetch unfiltered stats separately to keep pill counts global
+      if (filterStatus || filterJob) {
+        const statsRes = await axios.get(`${API}/public/careers/applications`);
+        setAppStats(statsRes.data?.stats || {});
+      } else {
+        setAppStats(res.data?.stats || {});
+      }
     } catch { toast.error('Failed to load applications'); }
     finally { setLoading(false); }
   }, [filterStatus, filterJob]);
