@@ -105,6 +105,16 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 ### Security Hardening (DONE - April 19, 2026)
 - **Auth guard on `/api/employees/reports/my/*`**: Added `_require_self_or_admin(request, user_id)` helper in `routes/employee_reports.py` — decodes JWT from Authorization header, asserts `payload.uid == query user_id` (or caller has admin/sub_admin/manager role). Prevents employee A from downloading employee B's payslip / Form 16 / pool history / attendance / leave records. Verified: 401 on missing/invalid token, 403 on cross-user access, 200 on self-access and admin-bypass.
 
+### server.py Refactor — Phase 1 (DONE - April 19, 2026)
+- **Extracted 9 social endpoints** from `server.py` into new `routes/social_profile.py` (~330 lines):
+  - `/users/{uid}/public-profile`, `/users/{uid}/privacy-settings`
+  - `/users/{uid}/follow`, `/users/{uid}/unfollow`, `/users/{uid}/check-follow/{target}`
+  - `/users/{uid}/followers`, `/users/{uid}/following`
+  - `/feed/global`, `/feed/network/{uid}`
+- **server.py reduced: 34,091 → 33,661 lines (–430 lines)**
+- Regression verified: **19/19 backend pytest cases PASSED** (iteration_212.json) — zero regressions across extracted, unrelated, cross-endpoint consistency, and auth flows
+- Pattern establishes safe template for Phase 2 (Subscription, VIP, BBPS domain extractions)
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
