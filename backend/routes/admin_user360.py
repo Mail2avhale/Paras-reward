@@ -231,11 +231,21 @@ async def get_user_full_360(uid: str):
     
     # ========== 6. SUBSCRIPTION HISTORY ==========
     subscription_history = []
+    upcoming_plan = None
     try:
         subs = await db.subscription_payments.find(
             {"user_id": uid}
         ).sort("created_at", -1).limit(20).to_list(20)
         subscription_history = sanitize_doc(subs)
+
+        # Fetch earliest upcoming plan for quick admin visibility
+        up = await db.subscription_payments.find_one(
+            {"user_id": uid, "status": "upcoming"},
+            {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1,
+             "duration_days": 1, "payment_method": 1, "prc_amount": 1, "created_at": 1},
+            sort=[("scheduled_start", 1)]
+        )
+        upcoming_plan = sanitize_doc(up) if up else None
     except Exception as e:
         logging.warning(f"[USER360] Subscription history error for {uid}: {e}")
     
@@ -268,7 +278,7 @@ async def get_user_full_360(uid: str):
     
     response = {
         "success": True,
-        "user": sanitize_doc(user),
+        "user": {**sanitize_doc(user), "upcoming_plan": upcoming_plan},
         "stats": stats,
         "redeem_limit": redeem_limit_data,
         "referral": referral_data,

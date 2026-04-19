@@ -221,6 +221,23 @@ const UserProfileCard = ({ user, onEditClick }) => {
           <span className="text-slate-500">Expiry:</span>
           <span className="text-slate-600 text-xs">{formatDate(user.subscription_expiry || user.subscription_expires)}</span>
         </div>
+        {user.upcoming_plan && (
+          <div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5" data-testid="admin-user-upcoming-plan">
+            <Clock className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <span className="text-amber-700 font-semibold text-xs">Upcoming Plan Queued</span>
+              <div className="text-[11px] text-amber-800 mt-0.5">
+                <span className="font-medium capitalize">{user.upcoming_plan.plan_name || 'elite'}</span>
+                {user.upcoming_plan.scheduled_start && (
+                  <> · starts <span className="font-semibold">{formatDate(user.upcoming_plan.scheduled_start)}</span></>
+                )}
+                {user.upcoming_plan.prc_amount && (
+                  <> · paid <span className="font-semibold">{Number(user.upcoming_plan.prc_amount).toLocaleString()} PRC</span></>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {user.referred_by && (
           <div className="flex items-center gap-2 text-sm">
             <Users className="h-4 w-4 text-blue-400" />

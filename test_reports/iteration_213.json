@@ -1,0 +1,45 @@
+{
+  "summary": "Tested Upcoming Subscription Plan UX improvements. Backend: 10/11 pytest cases pass. Dashboard upcoming_plan injection, user endpoint upcoming_plan, admin user360/full upcoming_plan, PRC transaction description format, regression endpoints - all PASSED. notify_upcoming_subscription_starts cron test FAILED due to pre-existing infrastructure bug (notifications.notification_id_1 unique index + create_notification doesn't set notification_id). Frontend: Dashboard 'Next Renewal: Paid & Confirmed' card (data-testid='upcoming-plan-card') renders correctly with Start/End/Paid amount and auto-renew text. Admin User 360 'admin-user-upcoming-plan' amber badge NOT rendering on UI despite backend returning upcoming_plan field correctly.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "notify_upcoming_subscription_starts cron / create_notification (routes/notifications.py:75)", "issue": "CRITICAL: Collection `notifications` has unique index `notification_id_1` (non-sparse), but create_notification() never sets notification_id. Only ONE notification without notification_id can exist in DB globally; all subsequent inserts fail with E11000 duplicate key. This silently breaks the new upcoming-plan reminder notifications AND check_and_activate_upcoming activation notification. Additionally, the cron sets upcoming_notify_sent.d3 flag even when create_notification fails (returns None) — so the notification will never be retried AND never delivered.", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "notify_upcoming_subscription_starts", "issue": "Cron uses window 2.5-3.5 days and 0.5-1.5 days for reminders. If cron misses (downtime, deploy), notification is lost - flag-based dedupe means it won't catch up. Consider 'unsent AND past threshold' logic."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminUser360New.js ProfileHeader (lines 224-240)", "issue": "Amber 'Upcoming Plan Queued' badge (data-testid='admin-user-upcoming-plan') does not render on /admin/user360 even though backend /api/admin/user360/full/{uid} correctly returns user.upcoming_plan (confirmed via pytest). The rest of the user header renders fine (KYC, Mining, Expiry rows visible). Suggest main agent verify (a) the `user` prop passed into the header JSX block actually contains `upcoming_plan` after setUserData, (b) no memoization cache or stale data, (c) possibly a react key issue forcing stale user object.", "selector": "[data-testid='admin-user-upcoming-plan']", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_upcoming_plan_ux.py",
+    "/app/test_reports/pytest/upcoming_plan_ux.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Fix create_notification in routes/notifications.py to set a unique notification_id = str(uuid.uuid4()) on every insert. OR drop the notification_id_1 unique index in Mongo / make it sparse/partial. Without this fix, the new upcoming-plan reminder cron AND the check_and_activate_upcoming activation notification will NOT deliver to users after the 1st null-id doc exists in DB (it already does).",
+    "CRITICAL: In notify_upcoming_subscription_starts (server.py:2808-2888), only set upcoming_notify_sent.d3/d1 flag AFTER confirming create_notification returned a truthy id. Otherwise failed notifications are marked as 'sent' and user is never notified.",
+    "HIGH: Debug why AdminUser360New.js ProfileHeader doesn't render upcoming_plan amber badge — backend sends the data, but UI conditional fails. Verify user prop wiring from userData.user into the header component.",
+    "MINOR: Consider replacing day-window dedupe with 'not sent AND past threshold' to tolerate cron misses."
+  ],
+  "critical_code_review_comments": [
+    "routes/notifications.py:create_notification missing notification_id causes silent notification loss under unique index constraint. High-risk latent bug affecting ALL notification-emitting flows, not just upcoming-plan.",
+    "server.py:2859-2862 & 2877-2880: payment_record flag set outside try/except guarding notification — flag gets stamped even on notification failure.",
+    "server.py:7947-7964: upcoming_plan fetched via sort scheduled_start:1 — good. But response is cached 60s (L7967). If user just purchased a new upcoming plan, they may see stale 'no upcoming' for up to 60s. Consider cache invalidation on subscription_payments insert.",
+    "admin_subscription.py:check_and_activate_upcoming sends activation notification via create_notification — same broken path; activation notification will also silently fail post-fix-required.",
+    "DashboardModern.js:970-973 uses toLocaleDateString with only day+month (no year) for Starts/Ends — for multi-year queued plans could confuse users. Only the auto-renew footer line shows year."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_upcoming_plan_ux.py (new)"
+  ],
+  "success_rate": {"backend": "91% (10/11 — 1 failure is pre-existing infra bug, not code defect in new feature)", "frontend": "50% (dashboard card OK; admin badge not rendering)"},
+  "test_credentials": "User 9970100782 / PIN 997010 (uid 76b75808-47fa-48dd-ad7c-8074678e3607); Admin admin@test.com / PIN 153759 (login uses /api/auth/login with `password` field, not /api/admin/login).",
+  "seed_data_creation": "Test creates & cleans stub subscription_payments doc with _test_seed:true and status='upcoming' for USER_UID. UI-seed from browser test also cleaned up. No orphan test data left.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Upcoming-plan feature backend wiring verified via /app/backend/tests/test_upcoming_plan_ux.py. Known pre-existing bug: notifications.notification_id_1 is a non-sparse unique index and create_notification() does not set notification_id — blocks all new notifications once one null-id doc exists. 1 such doc currently exists in DB. Frontend: Dashboard upcoming-plan-card renders correctly; admin-user-upcoming-plan on AdminUser360New does NOT render despite backend returning data — needs investigation. E1 should fix notification_id bug first, then debug why admin badge doesn't render (inspect network response in browser for /api/admin/user360/full, verify user.upcoming_plan key is present in the actual browser response).",
+  "rca_of_the_issue": "create_notification never sets notification_id field. Mongo notifications collection has index notification_id_1 with unique:true (not sparse). First notification with notification_id:null succeeds. Second attempt gets E11000 duplicate key. Fix: add notification_id = str(uuid.uuid4()) to the notification dict in routes/notifications.py:95 OR recreate the index as sparse/partialFilterExpression. Additionally move the payment-record update_one call into the try-block after create_notification success check to avoid stamping 'sent' on failure."
+}

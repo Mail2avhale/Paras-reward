@@ -183,6 +183,8 @@ const DashboardModern = ({ user, onLogout }) => {
             subscriptionPlan: userData.subscription_plan || 'explorer',
             subscriptionExpiry: userData.subscription_expiry || null,
             subscriptionStart: userData.subscription_start || null,
+            upcomingPlan: combinedRes.data.upcoming_plan || null,
+            upcomingPlansCount: combinedRes.data.upcoming_plans_count || 0,
             prcRate: prcRate,
             poolWallet: combinedRes.data.pool_wallet || { balance: 0, core_team_count: 0, is_core_member: false },
           });

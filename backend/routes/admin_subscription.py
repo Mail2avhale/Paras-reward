@@ -461,6 +461,19 @@ async def check_and_activate_upcoming(uid: str):
     except Exception as pos_err:
         logging.warning(f"[UPCOMING-SUB] Sub position error: {pos_err}")
 
+    # Send "activated" notification to user
+    try:
+        from routes.notifications import create_notification as _notify
+        end_display = end.strftime("%d %b %Y")
+        await _notify(
+            user_id=uid,
+            title="Your new plan is now active!",
+            message=f"Your {upcoming.get('plan_name', 'Elite')} subscription is active until {end_display}. Enjoy all premium benefits!",
+            notification_type="subscription"
+        )
+    except Exception as notify_err:
+        logging.warning(f"[UPCOMING-SUB] Activation notification error for {uid}: {notify_err}")
+
     return {
         "activated": True,
         "plan_name": upcoming.get("plan_name", "elite"),

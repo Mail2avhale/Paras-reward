@@ -2805,6 +2805,89 @@ async def auto_expire_subscriptions():
         logging.error(f"[AUTO-EXPIRE] Job error: {e}")
 
 
+async def notify_upcoming_subscription_starts():
+    """
+    Daily cron: Send reminder notifications for users with upcoming subscription plans.
+    - 3 days before activation
+    - 1 day before activation
+    Prevents duplicate notifications via `upcoming_notify_sent` field on payment record.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        upcomings = await db.subscription_payments.find(
+            {"status": "upcoming"},
+            {"_id": 0, "payment_id": 1, "user_id": 1, "plan_name": 1,
+             "scheduled_start": 1, "upcoming_notify_sent": 1}
+        ).to_list(1000)
+
+        if not upcomings:
+            return
+
+        sent_count = 0
+        for up in upcomings:
+            uid = up.get("user_id")
+            pid = up.get("payment_id")
+            sched_start = up.get("scheduled_start")
+            if not uid or not pid or not sched_start:
+                continue
+
+            try:
+                if isinstance(sched_start, str):
+                    sched_dt = datetime.fromisoformat(sched_start.replace('Z', '+00:00'))
+                elif isinstance(sched_start, datetime):
+                    sched_dt = sched_start
+                else:
+                    continue
+                if sched_dt.tzinfo is None:
+                    sched_dt = sched_dt.replace(tzinfo=timezone.utc)
+            except Exception:
+                continue
+
+            days_until = (sched_dt - now).total_seconds() / 86400
+            sent_flags = up.get("upcoming_notify_sent") or {}
+
+            # 3-day reminder
+            if 2.5 <= days_until <= 3.5 and not sent_flags.get("d3"):
+                try:
+                    sched_display = sched_dt.strftime("%d %b %Y")
+                    await create_notification(
+                        user_id=uid,
+                        title="Your new plan starts in 3 days",
+                        message=f"Your queued {up.get('plan_name','Elite')} subscription will activate on {sched_display}.",
+                        notification_type="subscription"
+                    )
+                    await db.subscription_payments.update_one(
+                        {"payment_id": pid},
+                        {"$set": {"upcoming_notify_sent.d3": now.isoformat()}}
+                    )
+                    sent_count += 1
+                except Exception as n_err:
+                    logging.error(f"[UPCOMING-NOTIFY] d3 error for {uid}: {n_err}")
+
+            # 1-day reminder
+            elif 0.5 <= days_until <= 1.5 and not sent_flags.get("d1"):
+                try:
+                    sched_display = sched_dt.strftime("%d %b %Y")
+                    await create_notification(
+                        user_id=uid,
+                        title="Your new plan starts tomorrow",
+                        message=f"Your queued {up.get('plan_name','Elite')} subscription will activate on {sched_display}.",
+                        notification_type="subscription"
+                    )
+                    await db.subscription_payments.update_one(
+                        {"payment_id": pid},
+                        {"$set": {"upcoming_notify_sent.d1": now.isoformat()}}
+                    )
+                    sent_count += 1
+                except Exception as n_err:
+                    logging.error(f"[UPCOMING-NOTIFY] d1 error for {uid}: {n_err}")
+
+        if sent_count > 0:
+            logging.info(f"[UPCOMING-NOTIFY] Sent {sent_count} reminder notifications")
+    except Exception as e:
+        logging.error(f"[UPCOMING-NOTIFY] Job error: {e}")
+
+
 
 async def database_keep_alive_ping():
     """
@@ -7861,6 +7944,25 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     except Exception:
         result["pool_wallet"] = {"balance": 0, "total_distributed": 0, "core_team_count": 0, "is_core_member": False}
     
+    # Add upcoming subscription plan info (for Dashboard "Queued Plan" card)
+    try:
+        upcoming_count = await db.subscription_payments.count_documents({"user_id": uid, "status": "upcoming"})
+        if upcoming_count > 0:
+            upcoming_plan = await db.subscription_payments.find_one(
+                {"user_id": uid, "status": "upcoming"},
+                {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1,
+                 "duration_days": 1, "payment_method": 1, "prc_amount": 1, "created_at": 1},
+                sort=[("scheduled_start", 1)]
+            )
+            result["upcoming_plan"] = upcoming_plan
+            result["upcoming_plans_count"] = upcoming_count
+        else:
+            result["upcoming_plan"] = None
+            result["upcoming_plans_count"] = 0
+    except Exception:
+        result["upcoming_plan"] = None
+        result["upcoming_plans_count"] = 0
+    
     # Cache for 60 seconds
     await cache.set(cache_key, result, ttl=60)
     
@@ -11969,7 +12071,16 @@ async def subscription_pay_with_prc(request: Request):
         await db.subscription_payments.insert_one(payment_record)
         
         # Log to transactions
-        desc_suffix = "(Upcoming - starts after current plan)" if is_upcoming else f"- ₹{pricing['base_inr']} + GST + Fees"
+        if is_upcoming:
+            # Format scheduled_start as "DD MMM YYYY" for clear statement display
+            try:
+                sched_dt = datetime.fromisoformat(scheduled_start.replace('Z', '+00:00'))
+                sched_display = sched_dt.strftime("%d %b %Y")
+            except Exception:
+                sched_display = scheduled_start[:10]
+            desc_suffix = f"(Starts on {sched_display} after current plan expires)"
+        else:
+            desc_suffix = f"- ₹{pricing['base_inr']} + GST + Fees"
         # Fetch updated balance for statement
         updated_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
         balance_after = round(float(updated_user.get("prc_balance", 0)), 2) if updated_user else 0
@@ -33542,6 +33653,15 @@ async def startup_db():
             minutes=30,
             id='auto_expire_subscriptions',
             name='Auto expire and downgrade subscriptions to explorer',
+            replace_existing=True
+        )
+        
+        # Upcoming subscription reminders - daily at 10:00 AM IST (4:30 UTC)
+        scheduler.add_job(
+            notify_upcoming_subscription_starts,
+            CronTrigger(hour=4, minute=30),
+            id='notify_upcoming_subscription_starts',
+            name='Send 3-day and 1-day reminders for queued upcoming plans',
             replace_existing=True
         )
         
