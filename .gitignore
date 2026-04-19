@@ -81,3 +81,5 @@ android-sdk/
 # Emergent auto-updates them with production values at deploy time.
 frontend/node_modules/.cache/default-development/93.pack
 frontend/node_modules/.cache/default-development/58.pack
+frontend/node_modules/.cache/default-development/136.pack
+frontend/node_modules/.cache/default-development/140.pack
