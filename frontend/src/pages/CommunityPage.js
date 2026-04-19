@@ -34,9 +34,12 @@ const CommunityPage = ({ user }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('latest');
+  const [timeFilter, setTimeFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState({});
+  const [trending, setTrending] = useState([]);
+  const [viewMode, setViewMode] = useState('feed'); // feed, my_posts, bookmarks, trending
 
   // Create post
   const [showCreate, setShowCreate] = useState(false);
@@ -62,6 +65,10 @@ const CommunityPage = ({ user }) => {
 
   const [userStats, setUserStats] = useState(null);
 
+  // Profile view
+  const [profileData, setProfileData] = useState(null);
+  const [viewingProfile, setViewingProfile] = useState(null);
+
   const token = localStorage.getItem('token');
   const paras_user = JSON.parse(localStorage.getItem('paras_user') || '{}');
   const headers = { Authorization: `Bearer ${token || paras_user?.token}` };
@@ -77,22 +84,26 @@ const CommunityPage = ({ user }) => {
       if (activeCategory !== 'All') params.append('category', activeCategory);
       if (searchQuery) params.append('search', searchQuery);
       if (currentUserId) params.append('user_id', currentUserId);
+      if (timeFilter) params.append('time_filter', timeFilter);
+      if (viewMode === 'my_posts') params.append('author_id', currentUserId);
 
       const res = await axios.get(`${API}/community/posts?${params}`, { headers });
       setPosts(res.data?.posts || []);
       setTotalPages(res.data?.pages || 1);
     } catch { toast.error('Failed to load posts'); }
     finally { setLoading(false); }
-  }, [page, activeCategory, searchQuery, sortBy]);
+  }, [page, activeCategory, searchQuery, sortBy, timeFilter, viewMode]);
 
   const fetchStats = useCallback(async () => {
     try {
-      const [statsRes, userRes] = await Promise.all([
+      const [statsRes, userRes, trendRes] = await Promise.all([
         axios.get(`${API}/community/stats`, { headers }),
-        currentUserId ? axios.get(`${API}/community/user/${currentUserId}/stats`, { headers }) : Promise.resolve({ data: null })
+        currentUserId ? axios.get(`${API}/community/user/${currentUserId}/stats`, { headers }) : Promise.resolve({ data: null }),
+        axios.get(`${API}/community/trending?limit=5`, { headers })
       ]);
       setStats(statsRes.data || {});
       setUserStats(userRes.data);
+      setTrending(trendRes.data?.trending || []);
     } catch {}
   }, [currentUserId]);
 
@@ -156,6 +167,8 @@ const CommunityPage = ({ user }) => {
     try {
       const res = await axios.get(`${API}/community/posts/${postId}?user_id=${currentUserId}`, { headers });
       setPostDetail(res.data);
+      // Track view
+      axios.post(`${API}/community/posts/${postId}/view`, {}, { headers }).catch(() => {});
     } catch { toast.error('Failed to load post'); }
     finally { setLoadingDetail(false); }
   };
@@ -213,6 +226,19 @@ const CommunityPage = ({ user }) => {
     } catch {}
   };
 
+  const handleSharePost = (postId) => {
+    const url = `${window.location.origin}/community?post=${postId}`;
+    navigator.clipboard.writeText(url).then(() => toast.success('Link copied!')).catch(() => toast.error('Failed to copy'));
+  };
+
+  const openProfile = async (userId) => {
+    try {
+      const res = await axios.get(`${API}/community/profile/${userId}`, { headers });
+      setProfileData(res.data);
+      setViewingProfile(userId);
+    } catch { toast.error('Failed to load profile'); }
+  };
+
   const timeAgo = (dateStr) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
@@ -241,8 +267,8 @@ const CommunityPage = ({ user }) => {
               {post.user_name?.charAt(0)?.toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-900">{post.user_name}</p>
-              <p className="text-[10px] text-slate-400">{timeAgo(post.created_at)}</p>
+              <p className="text-sm font-medium text-slate-900 hover:text-blue-600 cursor-pointer" onClick={(e) => { e.stopPropagation(); openProfile(post.user_id); }}>{post.user_name}</p>
+              <p className="text-[10px] text-slate-400">{timeAgo(post.created_at)} {post.view_count > 0 ? `· ${post.view_count} views` : ''}</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -358,6 +384,12 @@ const CommunityPage = ({ user }) => {
                 <button onClick={(e) => handleBookmark(postDetail.post.post_id, e)} className={`flex items-center gap-1.5 text-sm ${postDetail.post.user_bookmarked ? 'text-blue-500' : 'text-slate-500 hover:text-blue-400'}`}>
                   <Bookmark className={`w-4 h-4 ${postDetail.post.user_bookmarked ? 'fill-current' : ''}`} />Save
                 </button>
+                <button onClick={() => handleSharePost(postDetail.post.post_id)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700">
+                  <Send className="w-4 h-4" />Share
+                </button>
+                {postDetail.post.view_count > 0 && (
+                  <span className="text-sm text-slate-400 ml-auto">{postDetail.post.view_count} views</span>
+                )}
               </div>
             </div>
 
@@ -478,9 +510,29 @@ const CommunityPage = ({ user }) => {
         ))}
       </div>
 
-      {/* Search + Sort */}
-      <div className="flex gap-2">
-        <div className="flex-1 relative">
+      {/* View Mode Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {[
+          { id: 'feed', label: 'Feed' },
+          { id: 'trending', label: 'Trending' },
+          { id: 'my_posts', label: 'My Posts' },
+          { id: 'bookmarks', label: 'Saved' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => { setViewMode(tab.id); setPage(1); }}
+            className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
+              viewMode === tab.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search + Sort + Time Filter */}
+      <div className="flex gap-2 flex-wrap">
+        <div className="flex-1 min-w-[150px] relative">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
           <input
             type="text"
@@ -495,8 +547,16 @@ const CommunityPage = ({ user }) => {
         <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white">
           <option value="latest">Latest</option>
           <option value="popular">Most Liked</option>
+          <option value="most_commented">Most Commented</option>
+          <option value="most_viewed">Most Viewed</option>
           <option value="helpful">Helpful</option>
           <option value="oldest">Oldest</option>
+        </select>
+        <select value={timeFilter} onChange={e => { setTimeFilter(e.target.value); setPage(1); }} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white">
+          <option value="">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
         </select>
       </div>
 
@@ -527,9 +587,74 @@ const CommunityPage = ({ user }) => {
         </div>
       )}
 
+      {/* User Profile Modal */}
+      {viewingProfile && profileData && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setViewingProfile(null)}>
+          <div className="bg-white rounded-xl w-full max-w-md p-5 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-slate-900">Community Profile</h2>
+              <button onClick={() => setViewingProfile(null)}><X className="w-5 h-5 text-slate-400" /></button>
+            </div>
+            <div className="text-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-xl font-bold mx-auto mb-2">
+                {profileData.profile?.name?.charAt(0)?.toUpperCase()}
+              </div>
+              <p className="font-bold text-slate-900">{profileData.profile?.name}</p>
+              <div className="flex items-center justify-center gap-2 mt-1">
+                <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-purple-100 text-purple-700">{profileData.profile?.plan?.toUpperCase()}</span>
+                {profileData.profile?.is_moderator && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 text-blue-700">MODERATOR</span>}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2 mb-4 text-center">
+              <div className="bg-slate-50 rounded-lg p-2">
+                <p className="text-lg font-bold text-slate-900">{profileData.profile?.post_count || 0}</p>
+                <p className="text-[10px] text-slate-400">Posts</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-2">
+                <p className="text-lg font-bold text-slate-900">{profileData.profile?.comment_count || 0}</p>
+                <p className="text-[10px] text-slate-400">Comments</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-2">
+                <p className="text-lg font-bold text-slate-900">{profileData.profile?.total_likes_received || 0}</p>
+                <p className="text-[10px] text-slate-400">Likes</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-2">
+                <p className="text-lg font-bold text-emerald-600">{profileData.profile?.helpful_count || 0}</p>
+                <p className="text-[10px] text-slate-400">Helpful</p>
+              </div>
+            </div>
+            {profileData.posts?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-2">Recent Posts</p>
+                <div className="space-y-2">
+                  {profileData.posts.slice(0, 5).map(p => (
+                    <div key={p.post_id} onClick={() => { setViewingProfile(null); openPostDetail(p.post_id); }} className="p-2 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100">
+                      <p className="text-sm font-medium text-slate-900 line-clamp-1">{p.title}</p>
+                      <p className="text-[10px] text-slate-400">{timeAgo(p.created_at)} · {p.like_count} likes · {p.comment_count} comments</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Posts Feed */}
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
+      ) : viewMode === 'trending' ? (
+        trending.length === 0 ? (
+          <div className="text-center py-16">
+            <Lightbulb className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-500 font-medium">No trending posts yet</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-slate-500">Trending this week</p>
+            {trending.map(post => <PostCard key={post.post_id} post={post} />)}
+          </div>
+        )
       ) : posts.length === 0 ? (
         <div className="text-center py-16">
           <MessageCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />

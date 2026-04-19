@@ -138,6 +138,7 @@ async def create_post(data: CreatePostRequest):
             "comment_count": 0,
             "bookmark_count": 0,
             "report_count": 0,
+            "view_count": 0,
             "created_at": now,
             "updated_at": now
         }
@@ -205,7 +206,9 @@ async def get_posts(
     sort: str = "latest",
     page: int = 1,
     limit: int = 20,
-    user_id: Optional[str] = None
+    user_id: Optional[str] = None,
+    time_filter: Optional[str] = None,
+    author_id: Optional[str] = None
 ):
     """Get community posts with filters."""
     try:
@@ -217,11 +220,32 @@ async def get_posts(
                 {"title": {"$regex": search, "$options": "i"}},
                 {"content": {"$regex": search, "$options": "i"}}
             ]
+        if author_id:
+            query["user_id"] = author_id
+
+        # Time filter
+        if time_filter:
+            from datetime import timedelta
+            now = datetime.now(timezone.utc)
+            if time_filter == "today":
+                cutoff = (now - timedelta(days=1)).isoformat()
+            elif time_filter == "week":
+                cutoff = (now - timedelta(weeks=1)).isoformat()
+            elif time_filter == "month":
+                cutoff = (now - timedelta(days=30)).isoformat()
+            else:
+                cutoff = None
+            if cutoff:
+                query["created_at"] = {"$gte": cutoff}
 
         sort_field = "created_at"
         sort_order = -1
         if sort == "popular":
             sort_field = "like_count"
+        elif sort == "most_commented":
+            sort_field = "comment_count"
+        elif sort == "most_viewed":
+            sort_field = "view_count"
         elif sort == "helpful":
             query["is_helpful"] = True
         elif sort == "oldest":
@@ -800,6 +824,95 @@ async def get_user_stats(user_id: str):
             "is_moderator": is_mod,
             "is_blocked": is_blocked
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ==================== VIEW COUNT ====================
+
+@router.post("/posts/{post_id}/view")
+async def track_view(post_id: str, request: Request):
+    """Track post view (increment view count)."""
+    try:
+        await db.community_posts.update_one(
+            {"post_id": post_id, "status": "active"},
+            {"$inc": {"view_count": 1}}
+        )
+        return {"success": True}
+    except Exception:
+        return {"success": True}  # Silent fail
+
+
+# ==================== TRENDING ====================
+
+@router.get("/trending")
+async def get_trending_posts(limit: int = 10):
+    """Get trending posts based on recent engagement (likes + comments in last 7 days)."""
+    try:
+        from datetime import timedelta
+        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+
+        # Posts with most engagement in last 7 days
+        trending = await db.community_posts.find(
+            {"status": "active", "created_at": {"$gte": week_ago}},
+            {"_id": 0}
+        ).sort([("like_count", -1), ("comment_count", -1), ("view_count", -1)]).limit(limit).to_list(limit)
+
+        # If not enough recent posts, fill with all-time popular
+        if len(trending) < limit:
+            all_time = await db.community_posts.find(
+                {"status": "active", "post_id": {"$nin": [p["post_id"] for p in trending]}},
+                {"_id": 0}
+            ).sort([("like_count", -1), ("comment_count", -1)]).limit(limit - len(trending)).to_list(limit)
+            trending.extend(all_time)
+
+        return {"trending": trending}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== USER COMMUNITY PROFILE ====================
+
+@router.get("/profile/{user_id}")
+async def get_community_profile(user_id: str):
+    """Get user's community profile with posts, reputation, and activity."""
+    try:
+        user = await db.users.find_one(
+            {"uid": user_id},
+            {"_id": 0, "uid": 1, "name": 1, "subscription_plan": 1, "email": 1}
+        )
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        reputation = await get_user_reputation(user_id)
+        is_mod = await is_moderator_or_admin(user_id)
+
+        # Recent posts
+        recent_posts = await db.community_posts.find(
+            {"user_id": user_id, "status": "active"},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(20).to_list(20)
+
+        # Join date (first post date)
+        first_post = await db.community_posts.find_one(
+            {"user_id": user_id, "status": "active"},
+            {"_id": 0, "created_at": 1}
+        )
+
+        return {
+            "profile": {
+                "user_id": user_id,
+                "name": user.get("name", ""),
+                "plan": user.get("subscription_plan", "explorer"),
+                "is_moderator": is_mod,
+                "member_since": first_post.get("created_at") if first_post else None,
+                **reputation
+            },
+            "posts": recent_posts
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
