@@ -164,6 +164,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'employees', label: 'Employees', icon: Users, path: '/admin/employees' },
     { id: 'community', label: 'Community Forum', icon: MessageSquare, path: '/admin/community' },
     { id: 'careers', label: 'Careers', icon: Briefcase, path: '/admin/careers' },
+    { id: 'investors', label: 'Investors', icon: TrendingUp, path: '/admin/investors' },
     { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },

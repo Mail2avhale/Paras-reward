@@ -1,0 +1,50 @@
+{
+  "summary": "Backend testing of Admin Investors panel endpoints (/api/public/investors/*). Comprehensive pytest suite covering FAQ, Team, Press CRUD; multipart document upload + password-protected download + file deletion from disk; inquiries list/status-update (all 5 valid statuses + invalid + not-found) / delete; and metrics shape. 32/32 tests PASSED.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/public/investors/faq", "issue": "Same endpoint handles create and update based on presence of faq_id — no validation that question/answer are non-empty; also doesn't return the created/updated faq_id in response, so frontend must re-fetch to get it."},
+      {"endpoint": "POST /api/public/investors/faq (update path)", "issue": "When faq_id is provided but does not exist, silently returns success (matched_count=0 not checked). Should return 404."},
+      {"endpoint": "POST /api/public/investors/team", "issue": "Same silent-no-op when member_id provided doesn't exist. Also no response payload with member_id on create — frontend must re-fetch /team to get generated id."},
+      {"endpoint": "POST /api/public/investors/press", "issue": "No update path — only create. Press entries are immutable once created. If that's intentional, fine; otherwise a PUT endpoint is missing."},
+      {"endpoint": "POST /api/public/investors/documents/upload", "issue": "Password stored in PLAINTEXT in MongoDB. Consider hashing (bcrypt) or at minimum server-side encryption. For an 'investor document' containing financials this is a meaningful risk."},
+      {"endpoint": "POST /api/public/investors/documents/{doc_id}/download", "issue": "No rate limiting on password attempts — brute-forceable since endpoint is public with no auth gate."},
+      {"endpoint": "DELETE /api/public/investors/documents/{doc_id}", "issue": "Returns 200 even when doc_id does not exist (no 404). Also lacks the HTTPException re-raise pattern used elsewhere."},
+      {"endpoint": "GET /api/public/investors/metrics", "issue": "last_login comparison uses ISO string (string compare). Works only because created_at/last_login are written in ISO-8601 UTC format — any deviation breaks MAU calc. Also divides by max(last_month_users, 1) which hides the 'no baseline' case (returns misleading growth_rate when last month = 0)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_investors_crud.py",
+    "/app/test_reports/pytest/admin_investors_results.xml"
+  ],
+  "action_items": [
+    "Consider hashing/encrypting document passwords at rest (currently plaintext in db.investor_documents).",
+    "Return faq_id / member_id in POST response so frontend doesn't need an extra GET to refresh state.",
+    "Return 404 from POST /faq and POST /team when supplied id doesn't match any record (silent no-op today).",
+    "Add 404 handling to DELETE /documents/{doc_id} for consistency with other delete endpoints.",
+    "Optional: rate-limit password attempts on /documents/{doc_id}/download since route is public.",
+    "Optional: add PUT endpoint for /investors/press if editing is required."
+  ],
+  "critical_code_review_comments": [
+    "No authentication on any /api/public/investors/* admin-facing endpoint (create/update/delete FAQ/team/press/documents/inquiries). Prefix says 'public' so these are callable by anyone on the internet. Must be gated with admin JWT/PIN before production.",
+    "Document passwords stored in plaintext alongside the document metadata — escalating concern given documents are financial (pitch_deck, financials).",
+    "Growth-rate divisor uses max(last_month_users, 1) — when a month has zero signups the growth_rate becomes misleading (treats 0 as 1).",
+    "List endpoints use to_list(N) hard caps (50 FAQs, 20 team, 20 press, 50 docs, 200 inquiries) with no pagination — OK for MVP but will silently truncate at scale.",
+    "careers_investors.py is now 754 lines mixing careers + investors domains; consider splitting into careers.py and investors.py for maintainability."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_investors_crud.py (new)"
+  ],
+  "success_rate": {"backend": "100% (32/32)", "frontend": "not tested (per request)"},
+  "test_credentials": "Admin: admin@test.com / 153759 (not required — /public/investors/* endpoints have no auth gate)",
+  "seed_data_creation": "Suite creates TEST_ prefixed FAQ/team/press/document/inquiry, verifies full lifecycle, and deletes them at end of each class. No residual test data after run (verified via list endpoints).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Admin Investors backend panel CRUD complete — 32/32 pytest passing. Covered: FAQ (list/create/update/delete + 404), Team (same), Press (list/create/delete + 404), Documents (multipart upload, sensitive-field exclusion on list, wrong/correct password download, not-found download, delete + physical file removal), Inquiries (create-via-contact, list, status update for all 5 valid statuses, invalid-status 400, not-found 404, delete + 404), Metrics (shape + required keys). Endpoints are under /api/public/investors (no auth). Re-run: pytest /app/backend/tests/test_admin_investors_crud.py -v. Frontend not tested per main agent's pattern.",
+  "rca of the issue": "N/A — no bugs found. All endpoints including the NEW delete/put endpoints (DELETE FAQ, DELETE team, DELETE press, PUT inquiry status with 5 valid statuses, DELETE inquiry) behave correctly. Non-existent IDs return 404, invalid inquiry status returns 400, document upload persists to disk, delete removes both db record and physical file, password protection enforces 403 on wrong password."
+}

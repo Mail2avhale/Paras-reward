@@ -397,6 +397,20 @@ async def add_or_update_faq(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.delete("/investors/faq/{faq_id}")
+async def delete_faq(faq_id: str):
+    """Admin: Delete FAQ."""
+    try:
+        result = await db.investor_faqs.delete_one({"faq_id": faq_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="FAQ not found")
+        return {"success": True, "message": "FAQ deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== INVESTORS: TEAM ====================
 
 @router.get("/investors/team")
@@ -451,6 +465,20 @@ async def add_or_update_team_member(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.delete("/investors/team/{member_id}")
+async def delete_team_member(member_id: str):
+    """Admin: Delete team member."""
+    try:
+        result = await db.investor_team.delete_one({"member_id": member_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Team member not found")
+        return {"success": True, "message": "Team member deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== INVESTORS: PRESS/NEWS ====================
 
 @router.get("/investors/press")
@@ -479,6 +507,20 @@ async def add_press(request: Request):
         }
         await db.investor_press.insert_one(entry)
         return {"success": True, "message": "Press release added"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/investors/press/{press_id}")
+async def delete_press(press_id: str):
+    """Admin: Delete press release."""
+    try:
+        result = await db.investor_press.delete_one({"press_id": press_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Press release not found")
+        return {"success": True, "message": "Press release deleted"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -668,5 +710,44 @@ async def list_investor_inquiries():
     try:
         inquiries = await db.investor_inquiries.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
         return {"inquiries": inquiries}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/investors/inquiries/{inquiry_id}")
+async def update_inquiry_status(inquiry_id: str, request: Request):
+    """Admin: Update investor inquiry status."""
+    try:
+        data = await request.json()
+        valid_statuses = ["new", "contacted", "in_discussion", "closed", "rejected"]
+        new_status = data.get("status")
+        if new_status not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Use: {valid_statuses}")
+        note = data.get("note", "")
+
+        update = {"status": new_status, "updated_at": datetime.now(timezone.utc).isoformat()}
+        if note:
+            update["admin_note"] = note
+
+        result = await db.investor_inquiries.update_one({"inquiry_id": inquiry_id}, {"$set": update})
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Inquiry not found")
+        return {"success": True, "message": f"Status updated to {new_status}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/investors/inquiries/{inquiry_id}")
+async def delete_inquiry(inquiry_id: str):
+    """Admin: Delete investor inquiry."""
+    try:
+        result = await db.investor_inquiries.delete_one({"inquiry_id": inquiry_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Inquiry not found")
+        return {"success": True, "message": "Inquiry deleted"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

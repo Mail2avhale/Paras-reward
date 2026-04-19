@@ -268,6 +268,7 @@ const AdminCoreTeam = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkNa
 const AdminEmployees = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminEmployees"));
 const AdminCommunity = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminCommunity"));
 const AdminCareers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminCareers"));
+const AdminInvestors = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminInvestors"));
 const CommunityPage = lazy(() => import(/* webpackChunkName: "community" */ "@/pages/CommunityPage"));
 const CareersPage = lazy(() => import(/* webpackChunkName: "public" */ "@/pages/CareersPage"));
 const InvestorsPage = lazy(() => import(/* webpackChunkName: "public" */ "@/pages/InvestorsPage"));
@@ -511,6 +512,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/core-team" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminCoreTeam user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/employees" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEmployees user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/community" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminCommunity user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/careers" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminCareers user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/investors" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminInvestors user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
               </>
             )}
             
