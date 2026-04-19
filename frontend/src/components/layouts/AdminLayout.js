@@ -162,6 +162,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'core-team', label: 'Core Team', icon: Shield, path: '/admin/core-team' },
     { id: 'employees', label: 'Employees', icon: Users, path: '/admin/employees' },
+    { id: 'employee-reports', label: 'Employee Reports', icon: FileText, path: '/admin/employees/reports' },
     { id: 'community', label: 'Community Forum', icon: MessageSquare, path: '/admin/community' },
     { id: 'careers', label: 'Careers', icon: Briefcase, path: '/admin/careers' },
     { id: 'investors', label: 'Investors', icon: TrendingUp, path: '/admin/investors' },

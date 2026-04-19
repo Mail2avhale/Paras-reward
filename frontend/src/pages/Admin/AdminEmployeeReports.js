@@ -1,0 +1,336 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { toast } from 'sonner';
+import {
+  FileText, Download, Users, Briefcase, TrendingUp, Calendar,
+  Loader2, RefreshCw, DollarSign, Award, Building2, PieChart,
+  FileSpreadsheet, FileDown, UserCheck, Clock
+} from 'lucide-react';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+const AdminEmployeeReports = () => {
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [poolFromDate, setPoolFromDate] = useState(
+    new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+  );
+  const [poolToDate, setPoolToDate] = useState(now.toISOString().slice(0, 10));
+
+  const [analytics, setAnalytics] = useState(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [downloading, setDownloading] = useState('');
+
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmp, setSelectedEmp] = useState('');
+
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      setLoadingAnalytics(true);
+      const res = await axios.get(`${API}/employees/reports/analytics`);
+      setAnalytics(res.data);
+    } catch (e) { toast.error('Failed to load analytics'); }
+    finally { setLoadingAnalytics(false); }
+  }, []);
+
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/employees/list`);
+      const list = res.data?.employees || [];
+      setEmployees(list);
+      if (list.length && !selectedEmp) setSelectedEmp(list[0].employee_id);
+    } catch {}
+  }, [selectedEmp]);
+
+  useEffect(() => { fetchAnalytics(); fetchEmployees(); }, [fetchAnalytics, fetchEmployees]);
+
+  const downloadReport = async (endpoint, filename, key) => {
+    setDownloading(key);
+    try {
+      const res = await axios.get(`${API}${endpoint}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`${filename} downloaded`);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || 'Download failed');
+    } finally {
+      setDownloading('');
+    }
+  };
+
+  const years = [];
+  for (let y = now.getFullYear() - 2; y <= now.getFullYear() + 1; y++) years.push(y);
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-indigo-400" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">Employee Reports</h1>
+              <p className="text-xs text-slate-400">Salary, Attendance, Pool Distribution & HR Analytics</p>
+            </div>
+          </div>
+          <button onClick={fetchAnalytics} data-testid="refresh-btn" className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm">
+            <RefreshCw className={`w-4 h-4 ${loadingAnalytics ? 'animate-spin' : ''}`} /> Refresh
+          </button>
+        </div>
+
+        {/* Analytics Dashboard */}
+        {analytics && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <KPI icon={Users} color="emerald" label="Active Employees" value={analytics.headcount?.active || 0} />
+              <KPI icon={UserCheck} color="blue" label="Total Headcount" value={analytics.headcount?.total || 0} sub={`${analytics.headcount?.attrition_rate || 0}% attrition`} />
+              <KPI icon={DollarSign} color="amber" label="Monthly Cost" value={`INR ${(analytics.salary?.total_monthly_cost / 100000).toFixed(2)} L`} sub={`Avg: INR ${analytics.salary?.avg_salary?.toLocaleString() || 0}`} />
+              <KPI icon={Award} color="purple" label="Pool (This Month)" value={`${analytics.pool?.this_month_distributed?.toFixed(4) || 0} PRC`} sub={`INR ${(analytics.pool?.this_month_distributed * analytics.pool?.prc_to_inr_rate || 0).toFixed(2)} disbursed`} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6">
+              {/* Departments */}
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+                <h3 className="font-bold text-slate-100 mb-3 flex items-center gap-2"><Building2 className="w-4 h-4 text-indigo-400" />Department Distribution</h3>
+                {analytics.departments?.length === 0 ? (
+                  <p className="text-sm text-slate-400">No employees</p>
+                ) : (
+                  <div className="space-y-2">
+                    {analytics.departments.map(d => {
+                      const pct = (d.count / (analytics.headcount?.active || 1)) * 100;
+                      return (
+                        <div key={d.department}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-slate-300">{d.department}</span>
+                            <span className="text-slate-400">{d.count} · INR {(d.total_salary / 1000).toFixed(0)}K</span>
+                          </div>
+                          <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Top Earners */}
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+                <h3 className="font-bold text-slate-100 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-emerald-400" />Top Pool Earners (This Month)</h3>
+                {analytics.top_earners_this_month?.length === 0 ? (
+                  <p className="text-sm text-slate-400">No pool distributions this month</p>
+                ) : (
+                  <div className="space-y-2">
+                    {analytics.top_earners_this_month.map((e, i) => (
+                      <div key={e.employee_id} className="flex items-center gap-3 p-2 bg-slate-900/40 rounded-lg">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                          i === 0 ? 'bg-amber-500/20 text-amber-400' :
+                          i === 1 ? 'bg-slate-400/20 text-slate-300' :
+                          i === 2 ? 'bg-orange-500/20 text-orange-400' :
+                          'bg-slate-700 text-slate-400'
+                        }`}>{i + 1}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-100 truncate">{e.name}</p>
+                          <p className="text-xs text-slate-500">{e.department} · {e.employee_id}</p>
+                        </div>
+                        <span className="text-sm font-bold text-emerald-400">{e.total_prc?.toFixed(4)} PRC</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Period Selector */}
+        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 mb-4">
+          <h3 className="font-bold text-slate-100 mb-3 flex items-center gap-2"><Calendar className="w-4 h-4 text-indigo-400" />Report Period</h3>
+          <div className="flex flex-wrap gap-3">
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Month</label>
+              <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm" data-testid="month-select">
+                {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Year</label>
+              <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm" data-testid="year-select">
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Report Download Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          <ReportCard
+            icon={FileSpreadsheet}
+            color="emerald"
+            title="Salary Register"
+            description={`Monthly salary sheet — all active employees with CTC breakup, deductions (PF, ESI, PT, TDS, LOP), net salary & employer contributions.`}
+            btnLabel="Download Excel"
+            isLoading={downloading === 'salary-register'}
+            onDownload={() => downloadReport(
+              `/employees/reports/salary-register?month=${selectedMonth}&year=${selectedYear}`,
+              `Salary_Register_${MONTHS[selectedMonth - 1]}_${selectedYear}.xlsx`,
+              'salary-register'
+            )}
+            testid="dl-salary-register"
+          />
+
+          <ReportCard
+            icon={Clock}
+            color="blue"
+            title="Attendance Sheet"
+            description={`Day-wise attendance matrix for all employees. Color-coded Present/Absent/Half-day/Leave/Holiday with monthly summary.`}
+            btnLabel="Download Excel"
+            isLoading={downloading === 'attendance'}
+            onDownload={() => downloadReport(
+              `/employees/reports/attendance?month=${selectedMonth}&year=${selectedYear}`,
+              `Attendance_${MONTHS[selectedMonth - 1]}_${selectedYear}.xlsx`,
+              'attendance'
+            )}
+            testid="dl-attendance"
+          />
+
+          <ReportCard
+            icon={FileDown}
+            color="rose"
+            title="Individual Salary Slip (PDF)"
+            description="Professional payslip PDF for one employee. Select from the list below and download."
+            customContent={
+              <div className="flex gap-2 mt-2">
+                <select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm" data-testid="slip-emp-select">
+                  <option value="">Select employee...</option>
+                  {employees.map(e => <option key={e.employee_id} value={e.employee_id}>{e.name} ({e.employee_id})</option>)}
+                </select>
+              </div>
+            }
+            btnLabel="Download PDF"
+            isLoading={downloading === 'salary-slip'}
+            disabled={!selectedEmp}
+            onDownload={() => downloadReport(
+              `/employees/reports/salary-slip-pdf/${selectedEmp}?month=${selectedMonth}&year=${selectedYear}`,
+              `Payslip_${selectedEmp}_${MONTHS[selectedMonth - 1]}_${selectedYear}.pdf`,
+              'salary-slip'
+            )}
+            testid="dl-salary-slip"
+          />
+
+          <ReportCard
+            icon={Award}
+            color="purple"
+            title="Pool Distribution"
+            description="PRC pool earnings per employee across any date range. Use custom dates below."
+            customContent={
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div>
+                  <label className="text-[10px] text-slate-500 block mb-0.5">From</label>
+                  <input type="date" value={poolFromDate} onChange={e => setPoolFromDate(e.target.value)} className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs" data-testid="pool-from" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 block mb-0.5">To</label>
+                  <input type="date" value={poolToDate} onChange={e => setPoolToDate(e.target.value)} className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs" data-testid="pool-to" />
+                </div>
+              </div>
+            }
+            btnLabel="Download Excel"
+            isLoading={downloading === 'pool-dist'}
+            onDownload={() => downloadReport(
+              `/employees/reports/pool-distribution?from_date=${poolFromDate}&to_date=${poolToDate}`,
+              `Pool_Distribution_${poolFromDate}_to_${poolToDate}.xlsx`,
+              'pool-dist'
+            )}
+            testid="dl-pool-distribution"
+          />
+        </div>
+
+        {/* Phase B preview (coming soon) */}
+        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+          <h3 className="font-bold text-slate-100 mb-2 flex items-center gap-2"><Briefcase className="w-4 h-4 text-amber-400" />Coming Soon — Statutory Reports</h3>
+          <p className="text-xs text-slate-400 mb-2">Phase B will add:</p>
+          <div className="flex flex-wrap gap-2">
+            {['PF Monthly ECR', 'ESI Monthly Return', 'TDS Report', 'Form 16 PDF', 'Leave Balance Report', 'YTD Earnings'].map(t => (
+              <span key={t} className="px-2 py-1 bg-slate-700/50 text-slate-400 text-[10px] rounded-full">{t}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ============== Components ============== */
+const KPI = ({ icon: Icon, color, label, value, sub }) => {
+  const colors = {
+    emerald: 'bg-emerald-500/20 text-emerald-400',
+    blue: 'bg-blue-500/20 text-blue-400',
+    amber: 'bg-amber-500/20 text-amber-400',
+    purple: 'bg-purple-500/20 text-purple-400'
+  };
+  return (
+    <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${colors[color]}`}>
+        <Icon className="w-4 h-4" />
+      </div>
+      <p className="text-lg font-bold">{value}</p>
+      <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+      {sub && <p className="text-[10px] text-slate-500 mt-0.5">{sub}</p>}
+    </div>
+  );
+};
+
+const ReportCard = ({ icon: Icon, color, title, description, customContent, btnLabel, isLoading, disabled, onDownload, testid }) => {
+  const colors = {
+    emerald: 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30',
+    blue: 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30',
+    rose: 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30',
+    purple: 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+  };
+  const iconBg = {
+    emerald: 'bg-emerald-500/10 text-emerald-400',
+    blue: 'bg-blue-500/10 text-blue-400',
+    rose: 'bg-rose-500/10 text-rose-400',
+    purple: 'bg-purple-500/10 text-purple-400'
+  };
+  return (
+    <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 flex flex-col">
+      <div className="flex items-start gap-3 mb-2">
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg[color]}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-slate-100">{title}</h4>
+          <p className="text-xs text-slate-400 mt-1">{description}</p>
+        </div>
+      </div>
+      {customContent}
+      <button
+        onClick={onDownload}
+        disabled={isLoading || disabled}
+        data-testid={testid}
+        className={`mt-auto w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${colors[color]}`}
+      >
+        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+        {isLoading ? 'Preparing...' : btnLabel}
+      </button>
+    </div>
+  );
+};
+
+export default AdminEmployeeReports;

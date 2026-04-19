@@ -99,6 +99,7 @@ from routes.growth_economy import router as growth_economy_router, set_db as set
 from routes.admin_subscription import router as admin_subscription_router
 from routes.pool_wallet import router as pool_wallet_router, set_db as set_pool_wallet_db, set_cache as set_pool_wallet_cache, distribute_pool_to_core_team
 from routes.employee_management import router as employee_router, set_db as set_employee_db, set_cache as set_employee_cache, distribute_employee_pool
+from routes.employee_reports import router as employee_reports_router, set_db as set_employee_reports_db
 from routes.community import router as community_router, set_db as set_community_db, set_cache as set_community_cache
 from routes.careers_investors import router as public_pages_router, set_db as set_public_pages_db
 
@@ -32995,6 +32996,7 @@ api_router.include_router(admin_misc_router)
 api_router.include_router(admin_subscription_router)
 api_router.include_router(pool_wallet_router)
 api_router.include_router(employee_router)
+api_router.include_router(employee_reports_router)
 api_router.include_router(community_router)
 api_router.include_router(public_pages_router)
 # Include bank redeem router (NEW - Bank Account Withdrawal)
@@ -33036,6 +33038,7 @@ set_growth_economy_db(db)
 set_pool_wallet_db(db)
 set_pool_wallet_cache(cache)
 set_employee_db(db)
+set_employee_reports_db(db)
 set_employee_cache(cache)
 set_community_db(db)
 set_community_cache(cache)
