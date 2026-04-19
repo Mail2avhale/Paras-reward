@@ -267,6 +267,8 @@ const AdminHolidays = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkNa
 const AdminCoreTeam = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCoreTeam"));
 const AdminEmployees = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminEmployees"));
 const CommunityPage = lazy(() => import(/* webpackChunkName: "community" */ "@/pages/CommunityPage"));
+const CareersPage = lazy(() => import(/* webpackChunkName: "public" */ "@/pages/CareersPage"));
+const InvestorsPage = lazy(() => import(/* webpackChunkName: "public" */ "@/pages/InvestorsPage"));
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
 // GiftVoucherRedemption - REMOVED (deprecated April 2026)
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
@@ -332,6 +334,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogArticle />} />
             <Route path="/login" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <Login onLogin={handleLogin} />} />
+            <Route path="/careers" element={<Suspense fallback={<LoadingFallback />}><CareersPage /></Suspense>} />
+            <Route path="/investors" element={<Suspense fallback={<LoadingFallback />}><InvestorsPage /></Suspense>} />
             <Route path="/register" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RegisterSimple />} />
             <Route path="/set-new-pin" element={<SetNewPin onLogin={handleLogin} />} />
             <Route path="/forgot-password" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <ForgotPassword />} />
