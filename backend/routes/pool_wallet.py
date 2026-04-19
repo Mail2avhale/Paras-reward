@@ -137,15 +137,46 @@ async def distribute_pool_to_core_team(triggered_by: str = "auto"):
             return {"success": True, "distributed": 0, "members": 0, "message": "No active core team members"}
 
         # Filter: only Elite subscription active
+        # Check actual expiry date + status (not just stale subscription_expired flag)
         eligible_uids = []
         for m in active_members:
             uid = m.get("uid")
             user = await db.users.find_one(
                 {"uid": uid, "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro"]}},
-                {"_id": 0, "uid": 1, "name": 1, "subscription_expired": 1}
+                {"_id": 0, "uid": 1, "name": 1, "subscription_expired": 1, "subscription_expiry": 1, "subscription_expires": 1, "subscription_status": 1}
             )
-            if user and not user.get("subscription_expired"):
+            if not user:
+                continue
+
+            # Check real subscription validity using expiry date
+            expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+            expiry_dt = None
+            if expiry:
+                try:
+                    if isinstance(expiry, str):
+                        expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00').replace(' ', 'T'))
+                    else:
+                        expiry_dt = expiry
+                    if expiry_dt.tzinfo is None:
+                        expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                except Exception:
+                    expiry_dt = None
+
+            is_really_active = (
+                expiry_dt is not None and expiry_dt > now
+                and user.get("subscription_status") != "expired"
+                and user.get("subscription_status") != "cancelled"
+            )
+
+            if is_really_active:
                 eligible_uids.append({"uid": uid, "name": user.get("name", "")})
+                # Auto-heal stale subscription_expired flag if plan is actually active
+                if user.get("subscription_expired"):
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {"subscription_expired": False, "subscription_status": "active"}}
+                    )
+                    logging.info(f"[POOL WALLET] Cleared stale subscription_expired flag for {uid}")
 
         if not eligible_uids:
             logging.info("[POOL WALLET] No eligible core team members (need active Elite)")
