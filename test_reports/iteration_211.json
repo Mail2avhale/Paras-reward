@@ -1,0 +1,39 @@
+{
+  "summary": "Tested MyReports routing wire-up, Profile employee portal card, Dashboard pool_wallet.total_distributed bug fix, and Community comment refresh. 13/13 new backend pytest cases PASSED (self-service /my/* endpoints + dashboard projection). Frontend: login worked, /my-reports loads with all 5 tabs (Overview, YTD, Pool, Leaves, Attendance) showing EMP-0001 data (0.1373 PRC pool, 12/12 CL, 21/21 EL), Profile 'My Employee Portal' card renders & navigates to /my-reports, Dashboard Core Team Pool Wallet now shows 'TOTAL DISTRIBUTED 2.89 PRC' (was 0 before fix), Community post list shows updated comment count (7 comments on pinned post). All 4 targeted features/bugs verified working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/employees/reports/my/*", "issue": "No auth guard — user_id is trusted as a query param. Any caller can read any linked employee's profile/pool/leave/attendance by guessing uid. Acceptable for MVP but must be protected before production (add JWT requirement and assert payload.uid == user_id)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/my-reports header", "issues": ["Hidden top toolbar/tabs row (Payslips YTD Earnings Form 16 Attendance Leaves) has low contrast — text is very faint against gradient header. Visible only on scroll-top screenshot."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_my_reports_and_pool_bugs.py",
+    "/app/test_reports/pytest/my_reports_bugs.xml"
+  ],
+  "action_items": [
+    "(Pre-prod) Add auth guard to /api/employees/reports/my/* — verify JWT uid == user_id query param.",
+    "(Minor) Improve contrast of top header tab strip on /my-reports page (Payslips / YTD Earnings / Form 16 / Attendance / Leaves labels are barely visible)."
+  ],
+  "critical_code_review_comments": [
+    "employee_reports.py is now ~1590 lines — split strongly recommended (noted in iteration 210 also).",
+    "my/* endpoints take user_id as a query param without any auth verification. This is an IDOR risk — any authenticated user can enumerate uids and read another employee's HR data. Must add JWT+authorization before launch.",
+    "Dashboard projection fix (server.py:7774) correctly added total_distributed; however the except fallback still returns total_distributed:0 — good defensive default.",
+    "CommunityPage.js handleComment now calls fetchPosts() on success — correct fix for comment-count staleness. handleDeleteComment also calls fetchPosts() — consistent behaviour.",
+    "ProfileAdvanced.js probes /api/employees/reports/my/profile on mount with 4s timeout to set isEmployee. Good UX but adds a network call on every profile page view; consider caching in localStorage by uid for faster subsequent loads."
+  ],
+  "updated_files": ["/app/backend/tests/test_my_reports_and_pool_bugs.py (new)"],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% (4/4 target flows verified)"},
+  "test_credentials": "User mobile 9970100782 / PIN 997010 (uid 76b75808-47fa-48dd-ad7c-8074678e3607, linked to EMP-0001). Non-employee uid 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21 used for 404 tests.",
+  "seed_data_creation": "None — relied on existing EMP-0001 (monthly_salary=25000, 1 pool distribution=0.1373 PRC on 2026-04-19, totals to 2.89 PRC on pool_wallet aggregate).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Test file /app/backend/tests/test_my_reports_and_pool_bugs.py covers all 7 self-service endpoints + dashboard pool_wallet projection. EMP-0001 has 2.89 PRC total_distributed as of testing. Login flow: enter mobile -> click Sign In -> fill 6 individual PIN boxes (input[maxlength='1']) -> click Sign In again. Frontend verified at https://formula-audit-fix.preview.emergentagent.com.",
+  "rca_of_the_issue": "All 4 reported fixes are correctly implemented and verified: (1) /my-reports route wired into App.js (lines 188, 386-387) with lazy load, (2) ProfileAdvanced.js probes /my/profile and renders card only if 200, card onClick navigates to /my-reports, (3) server.py:7774 projection now includes 'total_distributed:1' so dashboard returns actual value 2.89 instead of 0, (4) CommunityPage.js handleComment+handleDeleteComment call fetchPosts() to refresh list comment counts."
+}

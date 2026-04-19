@@ -7771,7 +7771,7 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     
     # Add pool wallet info
     try:
-        pool_wallet = await db.pool_wallet.find_one({"wallet_id": "main"}, {"_id": 0, "balance": 1})
+        pool_wallet = await db.pool_wallet.find_one({"wallet_id": "main"}, {"_id": 0, "balance": 1, "total_distributed": 1})
         pool_balance = round(float(pool_wallet.get("balance", 0)), 4) if pool_wallet else 0
         pool_total_dist = round(float(pool_wallet.get("total_distributed", 0)), 4) if pool_wallet else 0
         core_team_count = await db.core_team_members.count_documents({"status": "active"})

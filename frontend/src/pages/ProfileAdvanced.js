@@ -7,7 +7,7 @@ import {
   User, Lock, ArrowLeft, Eye, EyeOff, Camera, 
   Save, Phone, Mail, Crown, ChevronRight, 
   LogOut, Trash2, Settings, CreditCard, Shield, FileText, Globe, Info,
-  HelpCircle, CheckCircle, Receipt, KeyRound
+  HelpCircle, CheckCircle, Receipt, KeyRound, Briefcase
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -263,6 +263,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   
   // Privacy settings removed (April 2026)
 
+  // Employee status probe (for "My Employee Portal" link visibility)
+  const [isEmployee, setIsEmployee] = useState(false);
+
   // FAST LOAD: Fetch user data + profile picture in parallel on mount
   useEffect(() => {
     if (user?.uid) {
@@ -298,6 +301,15 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         }
         setLoading(false);
       });
+    }
+  }, [user]);
+
+  // Probe employee status (non-blocking)
+  useEffect(() => {
+    if (user?.uid) {
+      axios.get(`${API}/employees/reports/my/profile?user_id=${user.uid}`, { timeout: 4000 })
+        .then(() => setIsEmployee(true))
+        .catch(() => setIsEmployee(false));
     }
   }, [user]);
 
@@ -788,6 +800,26 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             <ChevronRight className="w-5 h-5 text-gray-500" />
           </div>
         </div>
+
+        {/* My Employee Portal (only visible for linked employees) */}
+        {isEmployee && (
+          <div
+            onClick={() => navigate('/my-reports')}
+            role="button"
+            tabIndex={0}
+            data-testid="my-employee-portal-card"
+            className="w-full bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/40 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:from-indigo-600/30 hover:to-purple-600/30 transition"
+          >
+            <span className="flex items-center gap-3 text-white">
+              <Briefcase className="w-5 h-5 text-indigo-400" />
+              <span>
+                My Employee Portal
+                <span className="block text-[11px] text-indigo-300 font-normal">Payslips · YTD · Form 16 · Attendance</span>
+              </span>
+            </span>
+            <ChevronRight className="w-5 h-5 text-gray-500" />
+          </div>
+        )}
 
         {/* Security PIN - Important for PIN Reset */}
         <SecurityPinCard user={user} />

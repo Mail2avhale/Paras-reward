@@ -105,7 +105,7 @@ const MyReports = ({ user }) => {
     else if (activeTab === 'pool' && poolHistory.length === 0) fetchPoolHistory();
     else if (activeTab === 'leave' && leaveHistory.length === 0) fetchLeaveHistory();
     else if (activeTab === 'attendance' && !attendance) fetchAttendance();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [activeTab]);
 
   useEffect(() => {

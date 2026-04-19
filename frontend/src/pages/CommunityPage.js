@@ -186,6 +186,7 @@ const CommunityPage = ({ user }) => {
       setNewComment('');
       setReplyTo(null);
       openPostDetail(selectedPost);
+      fetchPosts();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
     finally { setCommenting(false); }
   };
@@ -225,6 +226,7 @@ const CommunityPage = ({ user }) => {
       await axios.delete(`${API}/community/comments/${commentId}`, { data: { user_id: currentUserId }, headers });
       toast.success('Comment deleted');
       openPostDetail(selectedPost);
+      fetchPosts();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
 

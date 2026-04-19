@@ -185,6 +185,7 @@ const Notifications = lazy(() => import("@/pages/Notifications"));
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 // RedeemPageV2, BBPSServices - REMOVED (Redeem PRC feature deprecated April 2026)
 const MyInvoices = lazy(() => import("@/pages/MyInvoices"));
+const MyReports = lazy(() => import("@/pages/MyReports"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
 // These pages are only loaded when admin users access them (~1% of users)
@@ -382,6 +383,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/vip" element={<Navigate to="/dashboard" replace />} />
             <Route path="/subscription" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Suspense fallback={<LoadingFallback />}><SubscriptionPlans user={user} onLogout={handleLogout} onBalanceUpdate={onBalanceUpdate} /></Suspense>) : <Navigate to="/login" />} />
             <Route path="/my-invoices" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <MyInvoices user={user} />) : <Navigate to="/login" />} />
+            <Route path="/my-reports" element={user ? <Suspense fallback={<LoadingFallback />}><MyReports user={user} /></Suspense> : <Navigate to="/login" />} />
+            <Route path="/employee/my-reports" element={<Navigate to="/my-reports" replace />} />
             <Route path="/invoices" element={<Navigate to="/my-invoices" replace />} />
             <Route path="/kyc" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <KYCVerification user={user} />) : <Navigate to="/login" />} />
             {/* Removed: Wallet/Withdrawal functionality */}
