@@ -2726,6 +2726,81 @@ async def auto_expire_subscriptions():
         
         if expired_count > 0:
             logging.info(f"[AUTO-EXPIRE] Downgraded {expired_count} expired subscriptions to explorer")
+        
+        # ========== SECONDARY SWEEP: Activate stuck upcoming plans ==========
+        # Edge case: Users already on explorer/free with an "upcoming" paid plan
+        # (they could have been manually downgraded, or plan expired before this cron caught them).
+        # Directly activate their upcoming plan so they don't lose paid-for days.
+        try:
+            stuck_upcomings = await db.subscription_payments.find(
+                {"status": "upcoming"},
+                {"_id": 0, "user_id": 1, "scheduled_start": 1, "plan_name": 1}
+            ).to_list(500)
+            
+            activated_count = 0
+            for up in stuck_upcomings:
+                uid = up.get("user_id")
+                if not uid:
+                    continue
+                
+                # Check if scheduled_start has passed
+                sched_start = up.get("scheduled_start")
+                if sched_start:
+                    try:
+                        if isinstance(sched_start, str):
+                            sched_dt = datetime.fromisoformat(sched_start.replace('Z', '+00:00'))
+                        elif isinstance(sched_start, datetime):
+                            sched_dt = sched_start
+                        else:
+                            continue
+                        if sched_dt.tzinfo is None:
+                            sched_dt = sched_dt.replace(tzinfo=timezone.utc)
+                        if sched_dt > now:
+                            continue  # Not yet due to start
+                    except Exception:
+                        pass
+                
+                # Check user state: is it safe to activate?
+                u = await db.users.find_one({"uid": uid}, {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expires": 1, "subscription_expired": 1})
+                if not u:
+                    continue
+                
+                u_plan = u.get("subscription_plan")
+                u_exp_val = u.get("subscription_expiry") or u.get("subscription_expires")
+                u_exp_dt = None
+                if u_exp_val:
+                    try:
+                        if isinstance(u_exp_val, str):
+                            u_exp_dt = datetime.fromisoformat(u_exp_val.replace('Z', '+00:00'))
+                        elif isinstance(u_exp_val, datetime):
+                            u_exp_dt = u_exp_val
+                        if u_exp_dt and u_exp_dt.tzinfo is None:
+                            u_exp_dt = u_exp_dt.replace(tzinfo=timezone.utc)
+                    except Exception:
+                        u_exp_dt = None
+                
+                # Safe to activate if: on explorer/free OR current expiry already passed OR explicitly expired
+                is_on_free = u_plan in ["explorer", "free", "", None]
+                is_past_expiry = u_exp_dt and u_exp_dt <= now
+                is_expired_flag = u.get("subscription_expired") == True
+                
+                if is_on_free or is_past_expiry or is_expired_flag:
+                    try:
+                        from routes.admin_subscription import check_and_activate_upcoming
+                        activation = await check_and_activate_upcoming(uid)
+                        if activation:
+                            activated_count += 1
+                            logging.info(f"[AUTO-EXPIRE sweep] Stuck upcoming activated for {uid}: {activation.get('plan_name')}")
+                            if cache:
+                                await cache.delete(f"user_data:{uid}")
+                                await cache.delete(f"user:dashboard:{uid}")
+                    except Exception as sweep_err:
+                        logging.error(f"[AUTO-EXPIRE sweep] Error for {uid}: {sweep_err}")
+            
+            if activated_count > 0:
+                logging.info(f"[AUTO-EXPIRE sweep] Activated {activated_count} stuck upcoming plans")
+        except Exception as sweep_outer:
+            logging.error(f"[AUTO-EXPIRE sweep] Outer error: {sweep_outer}")
     except Exception as e:
         logging.error(f"[AUTO-EXPIRE] Job error: {e}")
 
@@ -33621,6 +33696,21 @@ async def startup_db():
                 logging.error(f"[POOL CATCH-UP] Error: {e}", exc_info=True)
         
         asyncio.create_task(catch_up_pool_distributions())
+        
+        # ========== SUBSCRIPTION AUTO-EXPIRE CATCH-UP ==========
+        # Critical fix (Apr 2026): If server was down when a user's subscription
+        # expired, upcoming plans may not have auto-activated. Run immediately on
+        # startup + again after a short delay to catch anything missed.
+        async def subscription_catch_up():
+            try:
+                await asyncio.sleep(15)  # Let DB + indexes warm up
+                logging.info("[SUBSCRIPTION CATCH-UP] Running immediate auto-expire sweep on startup")
+                await auto_expire_subscriptions()
+                logging.info("[SUBSCRIPTION CATCH-UP] Completed")
+            except Exception as e:
+                logging.error(f"[SUBSCRIPTION CATCH-UP] Error: {e}", exc_info=True)
+        
+        asyncio.create_task(subscription_catch_up())
         
         # Start the scheduler
         scheduler.start()
