@@ -141,13 +141,16 @@ def calculate_salary_breakdown(monthly_salary: float) -> dict:
     }
 
 
-def calculate_deductions(gross: float, basic: float) -> dict:
+def calculate_deductions(gross: float, basic: float, full_monthly_for_tds: float = None) -> dict:
     pf_basic = min(basic, 15000)
     pf_employee = round(pf_basic * 0.12, 2)
     esi_employee = round(gross * 0.0075, 2) if gross <= 21000 else 0
     professional_tax = 200 if gross > 10000 else 0
 
-    annual = gross * 12
+    # Use FULL monthly salary for TDS projection when available (not ratio-adjusted)
+    # This prevents TDS under-projection on months with LOP
+    tds_basis = full_monthly_for_tds if full_monthly_for_tds is not None else gross
+    annual = tds_basis * 12
     if annual <= 300000:
         tds = 0
     elif annual <= 600000:
@@ -1040,7 +1043,7 @@ async def tds_report(fy_start_year: int = Query(..., description="Financial year
                 bd = calculate_salary_breakdown(monthly)
                 adj_basic = round(bd["earnings"]["basic_salary"] * att["attendance_ratio"], 2)
                 adj_gross = round(monthly * att["attendance_ratio"], 2)
-                ded = calculate_deductions(adj_gross, adj_basic)
+                ded = calculate_deductions(adj_gross, adj_basic, full_monthly_for_tds=monthly)
                 monthly_tds_total += ded["tds"]
                 gross_total += adj_gross
                 basic_total += adj_basic
@@ -1115,7 +1118,7 @@ async def form_16_pdf(employee_id: str, fy_start_year: int = Query(...)):
             bd = calculate_salary_breakdown(monthly)
             adj_basic = round(bd["earnings"]["basic_salary"] * att["attendance_ratio"], 2)
             adj_gross = round(monthly * att["attendance_ratio"], 2)
-            ded = calculate_deductions(adj_gross, adj_basic)
+            ded = calculate_deductions(adj_gross, adj_basic, full_monthly_for_tds=monthly)
             total_gross += adj_gross
             total_basic += adj_basic
             total_pf += ded["pf_employee"]
@@ -1350,7 +1353,7 @@ async def ytd_earnings(employee_id: str, fy_start_year: int = Query(...)):
             bd = calculate_salary_breakdown(monthly)
             adj_basic = round(bd["earnings"]["basic_salary"] * att["attendance_ratio"], 2)
             adj_gross = round(monthly * att["attendance_ratio"], 2)
-            ded = calculate_deductions(adj_gross, adj_basic)
+            ded = calculate_deductions(adj_gross, adj_basic, full_monthly_for_tds=monthly)
             lop = round(monthly - (monthly * att["attendance_ratio"]), 2) if att["attendance_ratio"] < 1 else 0
             total_ded = ded["total"] + lop
             net = round(adj_gross - total_ded, 2)
