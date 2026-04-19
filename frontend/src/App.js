@@ -848,10 +848,3 @@ function App() {
 }
 
 export default App;
-UserData={refreshUserData} setUser={setUser} />
-      </NotificationProvider>
-    </LanguageProvider>
-  );
-}
-
-export default App;
