@@ -127,71 +127,72 @@ const UserProfileCard = ({ user, onEditClick }) => {
   return (
     <Card className="bg-white border-slate-200 p-6 shadow-sm">
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-            <span className="text-2xl font-bold text-slate-800">
+        <div className="flex items-center gap-5">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0">
+            <span className="text-3xl font-bold text-white">
               {user.name?.charAt(0)?.toUpperCase() || 'U'}
             </span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
               {user.name || 'Unknown User'}
               {user.is_banned && (
-                <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1">
-                  <Ban className="h-3 w-3" /> BLOCKED
+                <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full inline-flex items-center gap-1">
+                  <Ban className="h-3.5 w-3.5" /> BLOCKED
                 </span>
               )}
               {user.kyc_status === 'verified' && (
-                <BadgeCheck className="h-5 w-5 text-green-400" />
+                <BadgeCheck className="h-6 w-6 text-green-600" />
               )}
             </h2>
-            <p className="text-sm text-slate-500 flex items-center gap-2">
-              UID: {user.uid}
-              <button onClick={() => copyToClipboard(user.uid)} className="hover:text-slate-800 transition-colors">
-                <Copy className="h-3 w-3" />
+            <p className="text-sm text-slate-700 flex items-center gap-2 mt-1.5 font-mono">
+              <span className="text-slate-500">UID:</span>
+              <span className="text-slate-900 font-semibold">{user.uid}</span>
+              <button onClick={() => copyToClipboard(user.uid)} className="text-slate-400 hover:text-slate-800 transition-colors" data-testid="copy-uid-btn">
+                <Copy className="h-3.5 w-3.5" />
               </button>
             </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Role: <span className={`text-${roleColor}-400 font-medium uppercase`}>{user.role || 'user'}</span>
+            <p className="text-sm text-slate-700 mt-1.5">
+              Role: <span className={`text-${roleColor}-700 font-bold uppercase tracking-wide`}>{user.role || 'user'}</span>
             </p>
           </div>
         </div>
         
         <div className="flex flex-col gap-2 items-end">
-          <div className={`px-3 py-1.5 rounded-full bg-${planColor}-500/20 border border-${planColor}-500/30`}>
-            <span className={`text-${planColor}-400 font-semibold capitalize flex items-center gap-1`}>
+          <div className={`px-3 py-1.5 rounded-full bg-${planColor}-100 border border-${planColor}-300`}>
+            <span className={`text-${planColor}-800 font-bold capitalize inline-flex items-center gap-1.5 text-sm`}>
               <Crown className="h-4 w-4" />
               {user.subscription_plan || 'Explorer'}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-sm bg-amber-500/10 px-3 py-1 rounded-lg">
-            <Wallet className="h-4 w-4 text-amber-500" />
-            <span className="text-amber-400 font-bold">{formatNumber((user.prc_balance || 0).toFixed(2))} PRC</span>
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
+            <Wallet className="h-4 w-4 text-amber-600" />
+            <span className="text-amber-700 font-bold text-base">{formatNumber((user.prc_balance || 0).toFixed(2))} PRC</span>
           </div>
-          <Button size="sm" variant="outline" onClick={onEditClick} className="border-slate-300 text-slate-600">
-            <Edit className="h-3 w-3 mr-1" /> Edit Profile
+          <Button size="sm" variant="outline" onClick={onEditClick} className="border-slate-300 text-slate-700" data-testid="edit-profile-btn">
+            <Edit className="h-3.5 w-3.5 mr-1" /> Edit Profile
           </Button>
         </div>
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-200/50">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-200">
         <div className="flex items-center gap-2 text-sm">
-          <Mail className="h-4 w-4 text-slate-500" />
-          <span className="text-slate-600 truncate">{user.email || 'N/A'}</span>
+          <Mail className="h-4 w-4 text-slate-500 flex-shrink-0" />
+          <span className="text-slate-800 font-medium truncate">{user.email || 'N/A'}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Phone className="h-4 w-4 text-slate-500" />
-          <span className="text-slate-600">{user.mobile || 'N/A'}</span>
+          <Phone className="h-4 w-4 text-slate-500 flex-shrink-0" />
+          <span className="text-slate-800 font-medium">{user.mobile || 'N/A'}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Calendar className="h-4 w-4 text-slate-500" />
-          <span className="text-slate-600">
+          <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
+          <span className="text-slate-800 font-medium">
             {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
           </span>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Link className="h-4 w-4 text-blue-500" />
-          <span className="text-blue-400">
+          <Link className="h-4 w-4 text-blue-600 flex-shrink-0" />
+          <span className="text-blue-700 font-semibold">
             Ref: {user.referral_code || 'N/A'}
           </span>
         </div>
@@ -943,10 +944,9 @@ const AdminUser360New = ({ user: adminUser }) => {
               <UserProfileCard user={userData.user} onEditClick={openEditProfile} />
               
               {/* Stats Row */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard icon={Coins} label="Total Mined" value={`${formatNumber((userData.stats?.total_mined || 0).toFixed(2))} PRC`} color="green" />
                 <StatCard icon={TrendingDown} label="Total Redeemed" value={`${formatNumber((userData.stats?.total_redeemed || 0).toFixed(2))} PRC`} color="blue" />
-                <StatCard icon={Gift} label="Referral Bonus" value={`${formatNumber((userData.stats?.total_referral_bonus || 0).toFixed(2))} PRC`} color="purple" />
                 <StatCard icon={Users} label="Total Referrals" value={userData.referral?.total_referrals || 0} color="cyan" />
                 {/* Risk Score */}
                 {(() => {
@@ -1136,49 +1136,6 @@ const AdminUser360New = ({ user: adminUser }) => {
                       <Crown className="h-4 w-4 mr-1" /> Activate Elite (PRC)
                     </Button>
                   </div>
-
-                  {/* Create Redeem to Bank */}
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm font-semibold text-green-700 mb-2">Redeem to Bank</p>
-                    <p className="text-xs text-slate-500 mb-1">Available Limit: {userData?.redeem_limit?.effective_available?.toFixed(0) || 0} PRC</p>
-                    <div className="flex gap-2 mb-2">
-                      <input id="admin-redeem-amount" type="number" placeholder="PRC Amount" className="flex-1 p-1.5 text-sm border border-slate-300 rounded" data-testid="admin-redeem-amount" />
-                    </div>
-                    <div className="flex gap-2 mb-2">
-                      <input id="admin-redeem-account" type="text" placeholder="Account No." className="flex-1 p-1.5 text-sm border border-slate-300 rounded" data-testid="admin-redeem-account" />
-                      <input id="admin-redeem-ifsc" type="text" placeholder="IFSC" className="w-28 p-1.5 text-sm border border-slate-300 rounded" data-testid="admin-redeem-ifsc" />
-                    </div>
-                    <Button
-                      data-testid="admin-create-redeem-btn"
-                      size="sm"
-                      className="w-full bg-green-600 hover:bg-green-700"
-                      disabled={actionLoading}
-                      onClick={async () => {
-                        const amount = parseFloat(document.getElementById('admin-redeem-amount')?.value);
-                        const account = document.getElementById('admin-redeem-account')?.value;
-                        const ifsc = document.getElementById('admin-redeem-ifsc')?.value;
-                        if (!amount || amount <= 0) { toast.error('Enter valid amount'); return; }
-                        if (!account || !ifsc) { toast.error('Enter account number and IFSC'); return; }
-                        if (!window.confirm(`Create bank redeem of ${amount} PRC for ${userData?.user?.name}?`)) return;
-                        setActionLoading(true);
-                        try {
-                          const res = await axios.post(`${API}/admin/create-redeem-request`, {
-                            admin_uid: adminUser?.uid,
-                            target_uid: userData?.user?.uid,
-                            amount, account_number: account, ifsc_code: ifsc, bank_name: 'Admin Created'
-                          }, { headers: { Authorization: `Bearer ${adminUser?.token}` } });
-                          if (res.data.success) {
-                            toast.success(`Redeem request created! ID: ${res.data.redeem.request_id}, INR: ₹${res.data.redeem.inr_value}`);
-                            handleSearch();
-                          }
-                        } catch (err) {
-                          toast.error(err.response?.data?.detail || 'Failed to create redeem request');
-                        } finally { setActionLoading(false); }
-                      }}
-                    >
-                      <Banknote className="h-4 w-4 mr-1" /> Create Redeem Request
-                    </Button>
-                  </div>
                 </div>
               </Card>
               
@@ -1191,7 +1148,6 @@ const AdminUser360New = ({ user: adminUser }) => {
                     { id: 'referrals', label: 'Referrals', icon: Users, count: userData.referral?.total_referrals || 0 },
                     { id: 'subscriptions', label: 'Subscription', icon: Crown, count: subDetails ? (subDetails.upcoming_plans?.length || 0) + (subDetails.current_plan ? 1 : 0) : (userData.subscription_history?.length || 0) },
                     { id: 'audit', label: 'PRC Audit', icon: FileText },
-                    { id: 'logins', label: 'Logins', icon: Activity, count: userData.login_history?.length || 0 },
                     { id: 'kyc', label: 'KYC Data', icon: Shield }
                   ].map(tab => (
                     <button
@@ -1621,36 +1577,147 @@ const AdminUser360New = ({ user: adminUser }) => {
                   )}
                   
                   {activeTab === 'kyc' && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 bg-white rounded-lg">
-                          <p className="text-slate-500 text-xs mb-1">PAN Number</p>
-                          <p className="text-slate-800 font-mono">{userData.user?.pan_number || userData.kyc?.pan_number || 'Not Provided'}</p>
-                        </div>
-                        <div className="p-3 bg-white rounded-lg">
-                          <p className="text-slate-500 text-xs mb-1">Aadhaar Number</p>
-                          <p className="text-slate-800 font-mono">{userData.user?.aadhaar_number ? `XXXX-XXXX-${userData.user.aadhaar_number.slice(-4)}` : 'Not Provided'}</p>
-                        </div>
-                        <div className="p-3 bg-white rounded-lg">
-                          <p className="text-slate-500 text-xs mb-1">Bank Account</p>
-                          <p className="text-slate-800">{userData.user?.bank_name || 'N/A'}</p>
-                          <p className="text-slate-500 text-xs">{userData.user?.bank_account_number || ''}</p>
-                        </div>
-                        <div className="p-3 bg-white rounded-lg">
-                          <p className="text-slate-500 text-xs mb-1">UPI ID</p>
-                          <p className="text-slate-800">{userData.user?.upi_id || 'Not Provided'}</p>
+                    <div className="space-y-4" data-testid="user-360-kyc-tab">
+                      {/* Status banner */}
+                      <div className={`p-4 rounded-lg border ${
+                        (userData.kyc?.status || userData.user?.kyc_status) === 'verified' ? 'bg-green-50 border-green-200' :
+                        (userData.kyc?.status || userData.user?.kyc_status) === 'pending' ? 'bg-yellow-50 border-yellow-200' :
+                        'bg-slate-50 border-slate-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-slate-500 text-xs mb-1">KYC Status</p>
+                            <span className={`px-3 py-1 rounded text-sm font-semibold uppercase tracking-wide ${
+                              (userData.kyc?.status || userData.user?.kyc_status) === 'verified' ? 'bg-green-100 text-green-800' :
+                              (userData.kyc?.status || userData.user?.kyc_status) === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-slate-200 text-slate-700'
+                            }`}>{userData.kyc?.status || userData.user?.kyc_status || 'Not Submitted'}</span>
+                          </div>
+                          {(userData.kyc?.verified_at || userData.kyc?.submitted_at) && (
+                            <div className="text-right text-xs text-slate-600">
+                              {userData.kyc?.verified_at && <div>Verified: {formatDate(userData.kyc.verified_at)}</div>}
+                              {userData.kyc?.submitted_at && <div>Submitted: {formatDate(userData.kyc.submitted_at)}</div>}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      {userData.kyc && (
-                        <div className="p-4 bg-white rounded-lg">
-                          <p className="text-slate-500 text-xs mb-2">KYC Status</p>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-3 py-1 rounded text-sm ${
-                              userData.kyc.status === 'verified' ? 'bg-green-500/20 text-green-400' :
-                              userData.kyc.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                              'bg-red-500/20 text-red-400'
-                            }`}>{userData.kyc.status || userData.user?.kyc_status || 'Not Submitted'}</span>
-                            {userData.kyc.verified_at && <span className="text-slate-500 text-xs">Verified: {formatDate(userData.kyc.verified_at)}</span>}
+
+                      {/* Identity documents */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                          <p className="text-slate-500 text-xs mb-1">PAN Number</p>
+                          <p className="text-slate-900 font-mono font-semibold">{userData.user?.pan_number || userData.kyc?.pan_number || 'Not Provided'}</p>
+                        </div>
+                        <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                          <p className="text-slate-500 text-xs mb-1">Aadhaar Number</p>
+                          <p className="text-slate-900 font-mono font-semibold">{userData.user?.aadhaar_number ? `XXXX-XXXX-${userData.user.aadhaar_number.slice(-4)}` : (userData.kyc?.aadhaar_number ? `XXXX-XXXX-${userData.kyc.aadhaar_number.slice(-4)}` : 'Not Provided')}</p>
+                        </div>
+                        <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                          <p className="text-slate-500 text-xs mb-1">Date of Birth</p>
+                          <p className="text-slate-900 font-medium">{userData.user?.date_of_birth || userData.kyc?.date_of_birth || 'Not Provided'}</p>
+                        </div>
+                        <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                          <p className="text-slate-500 text-xs mb-1">Gender</p>
+                          <p className="text-slate-900 font-medium capitalize">{userData.user?.gender || userData.kyc?.gender || 'Not Provided'}</p>
+                        </div>
+                      </div>
+
+                      {/* Banking details */}
+                      <div>
+                        <p className="text-xs uppercase text-slate-500 font-semibold mb-2 mt-4">Banking & Payout</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                            <p className="text-slate-500 text-xs mb-1">Bank Name</p>
+                            <p className="text-slate-900 font-medium">{userData.user?.bank_name || 'N/A'}</p>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                            <p className="text-slate-500 text-xs mb-1">Account Number</p>
+                            <p className="text-slate-900 font-mono">{userData.user?.bank_account_number || 'N/A'}</p>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                            <p className="text-slate-500 text-xs mb-1">IFSC Code</p>
+                            <p className="text-slate-900 font-mono">{userData.user?.bank_ifsc || userData.user?.ifsc_code || 'N/A'}</p>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                            <p className="text-slate-500 text-xs mb-1">UPI ID</p>
+                            <p className="text-slate-900 font-medium">{userData.user?.upi_id || 'Not Provided'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Address */}
+                      <div>
+                        <p className="text-xs uppercase text-slate-500 font-semibold mb-2 mt-4">Address</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="p-3 bg-white border border-slate-200 rounded-lg sm:col-span-2">
+                            <p className="text-slate-500 text-xs mb-1">Full Address</p>
+                            <p className="text-slate-900">{userData.user?.address || userData.kyc?.address || 'Not Provided'}</p>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                            <p className="text-slate-500 text-xs mb-1">City</p>
+                            <p className="text-slate-900 font-medium">{userData.user?.city || userData.kyc?.city || 'N/A'}</p>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                            <p className="text-slate-500 text-xs mb-1">State</p>
+                            <p className="text-slate-900 font-medium">{userData.user?.state || userData.kyc?.state || 'N/A'}</p>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                            <p className="text-slate-500 text-xs mb-1">Pincode</p>
+                            <p className="text-slate-900 font-mono">{userData.user?.pincode || userData.kyc?.pincode || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Nominee */}
+                      {(userData.user?.nominee_name || userData.user?.nominee_mobile) && (
+                        <div>
+                          <p className="text-xs uppercase text-slate-500 font-semibold mb-2 mt-4">Nominee</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                              <p className="text-slate-500 text-xs mb-1">Name</p>
+                              <p className="text-slate-900 font-medium">{userData.user?.nominee_name || '-'}</p>
+                            </div>
+                            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                              <p className="text-slate-500 text-xs mb-1">Relation</p>
+                              <p className="text-slate-900 font-medium capitalize">{userData.user?.nominee_relation || '-'}</p>
+                            </div>
+                            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                              <p className="text-slate-500 text-xs mb-1">Mobile</p>
+                              <p className="text-slate-900 font-mono">{userData.user?.nominee_mobile || '-'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Document images (if uploaded) */}
+                      {(userData.kyc?.pan_image_url || userData.kyc?.aadhaar_front_url || userData.kyc?.aadhaar_back_url || userData.kyc?.selfie_url) && (
+                        <div>
+                          <p className="text-xs uppercase text-slate-500 font-semibold mb-2 mt-4">Uploaded Documents</p>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {userData.kyc?.pan_image_url && (
+                              <a href={userData.kyc.pan_image_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 rounded-lg hover:border-purple-400 transition">
+                                <p className="text-xs text-slate-500 mb-1">PAN Card</p>
+                                <img src={userData.kyc.pan_image_url} alt="PAN" className="w-full h-24 object-cover rounded" />
+                              </a>
+                            )}
+                            {userData.kyc?.aadhaar_front_url && (
+                              <a href={userData.kyc.aadhaar_front_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 rounded-lg hover:border-purple-400 transition">
+                                <p className="text-xs text-slate-500 mb-1">Aadhaar Front</p>
+                                <img src={userData.kyc.aadhaar_front_url} alt="Aadhaar Front" className="w-full h-24 object-cover rounded" />
+                              </a>
+                            )}
+                            {userData.kyc?.aadhaar_back_url && (
+                              <a href={userData.kyc.aadhaar_back_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 rounded-lg hover:border-purple-400 transition">
+                                <p className="text-xs text-slate-500 mb-1">Aadhaar Back</p>
+                                <img src={userData.kyc.aadhaar_back_url} alt="Aadhaar Back" className="w-full h-24 object-cover rounded" />
+                              </a>
+                            )}
+                            {userData.kyc?.selfie_url && (
+                              <a href={userData.kyc.selfie_url} target="_blank" rel="noopener noreferrer" className="p-2 bg-white border border-slate-200 rounded-lg hover:border-purple-400 transition">
+                                <p className="text-xs text-slate-500 mb-1">Selfie</p>
+                                <img src={userData.kyc.selfie_url} alt="Selfie" className="w-full h-24 object-cover rounded" />
+                              </a>
+                            )}
                           </div>
                         </div>
                       )}
