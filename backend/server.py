@@ -103,6 +103,7 @@ from routes.employee_reports import router as employee_reports_router, set_db as
 from routes.community import router as community_router, set_db as set_community_db, set_cache as set_community_cache
 from routes.careers_investors import router as public_pages_router, set_db as set_public_pages_db
 from routes.social_profile import router as social_profile_router, set_db as set_social_profile_db
+from routes.live_ticker import router as live_ticker_router, set_db as set_live_ticker_db, set_cache as set_live_ticker_cache
 
 # ========== SECURITY CONFIGURATION ==========
 # SECURITY: Use stable JWT secret from env, fallback to fixed secret for consistency
@@ -32774,6 +32775,11 @@ api_router.include_router(public_pages_router)
 # Social Profile Router (Phase 1 refactor - extracted from server.py April 2026)
 set_social_profile_db(db)
 api_router.include_router(social_profile_router)
+
+# Live Transaction Ticker Router (public feed for bottom strip)
+set_live_ticker_db(db)
+set_live_ticker_cache(cache)
+api_router.include_router(live_ticker_router)
 # Include bank redeem router (NEW - Bank Account Withdrawal)
 set_bank_redeem_db(db)
 set_bank_redeem_cache(cache)

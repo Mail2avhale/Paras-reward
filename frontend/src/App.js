@@ -12,6 +12,7 @@ import { PageTitleUpdater } from "@/hooks/usePageTitle";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
+import LiveTickerStrip from "@/components/LiveTickerStrip";
 // Lazy load heavy components
 const SupportChatbot = null; // REMOVED - chatbot feature removed
 // HoliCelebration removed as per user request
@@ -544,6 +545,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
           <>
             <TopBar user={user} onLogout={handleLogout} />
             <BottomNav />
+            <LiveTickerStrip />
           </>
         )}
         {/* Admin Popup Message - Shows for logged-in users only */}
