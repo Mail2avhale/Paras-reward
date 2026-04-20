@@ -9,6 +9,7 @@ POOL WALLET & CORE TEAM SYSTEM
 """
 
 import logging
+import math
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -19,6 +20,10 @@ router = APIRouter(prefix="/pool-wallet", tags=["Pool Wallet"])
 
 db = None
 cache = None
+
+# Concurrency guard: prevents multiple concurrent distribution runs
+# (e.g., startup catch-up firing simultaneously with the regular cron)
+_distribution_lock = None  # Lazy-init in distribute_pool_to_core_team
 
 
 def set_db(database):
@@ -116,7 +121,26 @@ async def distribute_pool_to_core_team(triggered_by: str = "auto"):
     """
     Distribute pool wallet balance equally to all active core team members.
     Only Elite subscription members receive distribution.
+    
+    Concurrency-safe:
+    - Uses asyncio lock to prevent concurrent runs (startup catch-up + cron collision).
+    - Uses math.floor + conditional atomic $inc to guarantee balance never goes negative.
     """
+    global _distribution_lock
+    if _distribution_lock is None:
+        import asyncio
+        _distribution_lock = asyncio.Lock()
+    
+    # Try to acquire lock; if already running, skip this invocation
+    if _distribution_lock.locked():
+        logging.warning("[POOL WALLET] Distribution already in progress - skipping concurrent run")
+        return {"success": False, "skipped": True, "message": "Already running"}
+    
+    async with _distribution_lock:
+        return await _distribute_pool_to_core_team_inner(triggered_by)
+
+
+async def _distribute_pool_to_core_team_inner(triggered_by: str = "auto"):
     try:
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
@@ -124,6 +148,13 @@ async def distribute_pool_to_core_team(triggered_by: str = "auto"):
         pool_balance = await get_pool_balance()
         if pool_balance <= 0:
             logging.info("[POOL WALLET] No balance to distribute")
+            # Defensive heal: if balance is negative, reset to 0 (data integrity)
+            if pool_balance < 0:
+                await db.pool_wallet.update_one(
+                    {"wallet_id": "main"},
+                    {"$set": {"balance": 0.0, "last_updated": now_iso}}
+                )
+                logging.warning(f"[POOL WALLET] Negative balance {pool_balance} auto-healed to 0")
             return {"success": True, "distributed": 0, "members": 0, "message": "No balance to distribute"}
 
         # Get active core team members with active Elite subscription
@@ -182,15 +213,37 @@ async def distribute_pool_to_core_team(triggered_by: str = "auto"):
             logging.info("[POOL WALLET] No eligible core team members (need active Elite)")
             return {"success": True, "distributed": 0, "members": 0, "message": "No eligible members with active Elite subscription"}
 
-        # Calculate per-member share
-        per_member = round(pool_balance / len(eligible_uids), 6)
+        # CRITICAL: Use math.floor (NOT round) to prevent over-distribution
+        # Example: pool=10.000001 / 3 members:
+        #   round(3.333333667, 6) = 3.333334  → 3.333334 * 3 = 10.000002 (OVER!)
+        #   floor(3.333333667 * 1e6)/1e6 = 3.333333 → 3.333333 * 3 = 9.999999 (SAFE)
+        member_count = len(eligible_uids)
+        raw_share = pool_balance / member_count
+        per_member = math.floor(raw_share * 1_000_000) / 1_000_000  # 6-decimal floor
         if per_member <= 0:
-            return {"success": True, "distributed": 0, "members": len(eligible_uids), "message": "Amount too small to distribute"}
+            return {"success": True, "distributed": 0, "members": member_count, "message": "Amount too small to distribute"}
 
-        # Distribute to each member
+        # Compute total_distributed UP-FRONT (never exceeds pool_balance due to floor)
+        total_distributed = round(per_member * member_count, 6)
+        if total_distributed > pool_balance:
+            # Should never happen with floor, but defensive clamp
+            per_member = math.floor(pool_balance / member_count * 1_000_000) / 1_000_000
+            total_distributed = round(per_member * member_count, 6)
+
+        # ATOMIC CONDITIONAL DEDUCT: only succeeds if current balance >= total_distributed
+        deduct_result = await db.pool_wallet.update_one(
+            {"wallet_id": "main", "balance": {"$gte": total_distributed}},
+            {
+                "$inc": {"balance": -total_distributed, "total_distributed": total_distributed},
+                "$set": {"last_distributed": now_iso, "last_updated": now_iso}
+            }
+        )
+        if deduct_result.modified_count == 0:
+            logging.error(f"[POOL WALLET] Atomic deduct failed - balance changed during run (expected>={total_distributed}). Aborting.")
+            return {"success": False, "distributed": 0, "members": member_count, "message": "Balance changed - aborted to prevent negative"}
+
+        # Distribute to each member (credits happen AFTER successful deduct)
         distributed_count = 0
-        total_distributed = 0
-
         for member in eligible_uids:
             uid = member["uid"]
             try:
@@ -213,7 +266,6 @@ async def distribute_pool_to_core_team(triggered_by: str = "auto"):
                 })
 
                 distributed_count += 1
-                total_distributed += per_member
 
                 # Clear cache
                 if cache:
@@ -222,15 +274,6 @@ async def distribute_pool_to_core_team(triggered_by: str = "auto"):
 
             except Exception as e:
                 logging.error(f"[POOL WALLET] Distribution error for {uid}: {e}")
-
-        # Deduct from pool wallet
-        await db.pool_wallet.update_one(
-            {"wallet_id": "main"},
-            {
-                "$inc": {"balance": -total_distributed, "total_distributed": total_distributed},
-                "$set": {"last_distributed": now_iso, "last_updated": now_iso}
-            }
-        )
 
         # Log distribution transaction
         await db.pool_wallet_transactions.insert_one({
@@ -404,3 +447,32 @@ async def admin_trigger_distribution():
     """Admin: Manually trigger pool distribution."""
     result = await distribute_pool_to_core_team(triggered_by="admin_manual")
     return result
+
+
+@router.post("/admin/heal-negative-balance")
+async def admin_heal_negative_balance():
+    """Admin: Reset pool wallet balance to 0 if it has gone negative (data integrity fix)."""
+    now = datetime.now(timezone.utc).isoformat()
+    wallet = await db.pool_wallet.find_one({"wallet_id": "main"}, {"_id": 0})
+    if not wallet:
+        return {"success": False, "message": "Pool wallet not initialized"}
+    current = float(wallet.get("balance", 0))
+    if current >= 0:
+        return {"success": True, "healed": False, "balance": current, "message": "Balance is non-negative, no healing needed"}
+    await db.pool_wallet.update_one(
+        {"wallet_id": "main"},
+        {"$set": {"balance": 0.0, "last_updated": now}}
+    )
+    # Log the heal event for audit
+    await db.pool_wallet_transactions.insert_one({
+        "txn_id": str(uuid.uuid4()),
+        "type": "balance_heal",
+        "amount": -current,  # Positive amount "added" to bring negative back to 0
+        "balance_before": current,
+        "balance_after": 0.0,
+        "description": f"Admin healed negative balance {current} → 0 (floating-point rounding fix)",
+        "triggered_by": "admin_heal",
+        "timestamp": now,
+    })
+    logging.warning(f"[POOL WALLET] Admin healed negative balance: {current} → 0")
+    return {"success": True, "healed": True, "previous_balance": current, "new_balance": 0.0, "message": "Balance healed from {:.4f} to 0".format(current)}
