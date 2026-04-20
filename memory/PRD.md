@@ -165,6 +165,13 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
   - User with 10 referrals: fallback now returns `total_referrals=10, active_referrals=7, l1_count=10` (both schemas)
   - User with 2 referrals: fallback+primary both show `total_referrals=2, referred_by_name='SANTOSH AVHALE'` — identical schema
 
+### Live Transaction Ticker Strip (DONE - April 20, 2026)
+- **Feature**: Social-proof bottom-fixed strip showing latest 50 SUCCESSFUL transactions across 4 types: Mobile Recharge, DTH, Bank Redeem, Subscription.
+- **Format**: `🔴 LIVE • 98******20 • Mobile Recharge • ₹199 ✓ • Pune` (no timestamps, no names)
+- **Backend** (`/app/backend/routes/live_ticker.py`): `GET /api/public/live-transactions` merges data from `redeem_requests` (mobile/DTH) + `bank_withdrawal_requests` + `chatbot_withdrawal_requests` + `subscription_payments (status=paid)`. Masks mobile as `XX******XX` format. Enriches with user city (best-effort from users.city or address). Cached 30s. No PII fields (uid/name/email) in response.
+- **Frontend** (`/app/frontend/src/components/LiveTickerStrip.js`): Fixed-bottom strip with vertical slide animation (3.2s per item), LIVE red pulse badge, service icon, green checkmark, dismiss (×) button. Mounted in `App.js` alongside BottomNav, visible only for logged-in regular users (roles admin/sub_admin/manager excluded via role check).
+- **Tested (iteration_217 - 100% PASSED)**: 12/12 backend + all frontend acceptance criteria: visible on /dashboard, hidden on /login (pre-auth), hidden on /admin (role-guarded), 3.2s rotation works, close button dismisses, mobile+city render correctly, no PII leak.
+
 ### CRITICAL Production Bug Fix — Subscription Auto-Start (DONE - April 19, 2026)
 - **Issue**: Many users complained their "upcoming" subscription (already paid-for in PRC) did NOT auto-activate when their current plan expired. Root cause:
   1. `auto_expire_subscriptions` cron only processes users whose `subscription_plan != explorer` AND `subscription_expired != True`. If a user was already on explorer (manually downgraded or previous cron ran) with a stuck `"upcoming"` payment, it was **never activated**.
