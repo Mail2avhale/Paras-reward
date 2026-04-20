@@ -10,6 +10,7 @@ EMPLOYEE MANAGEMENT SYSTEM
 """
 
 import logging
+import math
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
@@ -22,6 +23,10 @@ router = APIRouter(prefix="/employees", tags=["Employee Management"])
 
 db = None
 cache = None
+
+# Concurrency guard: prevents multiple concurrent distribution runs
+# (e.g., startup catch-up firing simultaneously with the regular cron)
+_employee_distribution_lock = None  # Lazy-init in distribute_employee_pool
 
 COMPANY_NAME = "Paras Reward Technologies Private Limited"
 COMPANY_ADDRESS = "B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra 431006"
@@ -287,17 +292,45 @@ async def credit_employee_pool(amount: float, user_id: str, description: str = "
 
 
 async def distribute_employee_pool():
-    """Distribute pool balance proportionally based on salary. Called by cron daily."""
+    """
+    Distribute pool balance proportionally based on salary. Called by cron daily.
+    
+    Concurrency-safe:
+    - Uses asyncio lock to prevent concurrent runs (startup catch-up + cron collision).
+    - Uses math.floor on each share + atomic conditional $inc to guarantee balance never goes negative.
+    """
+    global _employee_distribution_lock
+    if _employee_distribution_lock is None:
+        import asyncio
+        _employee_distribution_lock = asyncio.Lock()
+    
+    if _employee_distribution_lock.locked():
+        logging.warning("[EMPLOYEE POOL] Distribution already in progress - skipping concurrent run")
+        return {"success": False, "skipped": True, "message": "Already running"}
+    
+    async with _employee_distribution_lock:
+        return await _distribute_employee_pool_inner()
+
+
+async def _distribute_employee_pool_inner():
     try:
         settings = await get_employee_pool_settings()
-        pool_balance = settings.get("pool_balance", 0)
+        pool_balance = float(settings.get("pool_balance", 0))
         prc_to_inr = settings.get("prc_to_inr_rate", 0.10)
+
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
 
         if pool_balance <= 0:
             logging.info("[EMPLOYEE POOL] No balance to distribute")
-            return
+            # Defensive heal: if negative, reset to 0 (data integrity)
+            if pool_balance < 0:
+                await db.employee_pool_settings.update_one(
+                    {}, {"$set": {"pool_balance": 0.0, "last_updated": now_iso}}, upsert=True
+                )
+                logging.warning(f"[EMPLOYEE POOL] Negative balance {pool_balance} auto-healed to 0")
+            return {"success": True, "distributed": 0, "employees": 0, "message": "No balance to distribute"}
 
-        now = datetime.now(timezone.utc)
         current_month = now.month
         current_year = now.year
 
@@ -309,23 +342,23 @@ async def distribute_employee_pool():
 
         if not active_employees:
             logging.info("[EMPLOYEE POOL] No active employees")
-            return
+            return {"success": True, "distributed": 0, "employees": 0, "message": "No active employees"}
 
         total_salary = sum(e.get("monthly_salary", 0) for e in active_employees)
         if total_salary <= 0:
-            return
+            return {"success": True, "distributed": 0, "employees": 0, "message": "Total salary is zero"}
 
-        distributed_count = 0
-        total_distributed = 0
-
+        # Pass 1: Compute each employee's floored share + cumulative total
+        plan = []  # list of (emp, actual_share_floored)
         for emp in active_employees:
             salary = emp.get("monthly_salary", 0)
             if salary <= 0:
                 continue
 
-            # Proportional share
+            # Proportional share (floored to 6 decimals to prevent over-distribution)
             share_ratio = salary / total_salary
-            share_prc = round(pool_balance * share_ratio, 6)
+            raw_share = pool_balance * share_ratio
+            share_prc = math.floor(raw_share * 1_000_000) / 1_000_000
 
             # Check monthly cap (salary in PRC = salary_inr / prc_to_inr)
             salary_cap_prc = salary / prc_to_inr if prc_to_inr > 0 else salary * 10
@@ -344,59 +377,98 @@ async def distribute_employee_pool():
 
             remaining_cap = max(0, salary_cap_prc - already_earned)
             actual_share = min(share_prc, remaining_cap)
+            # Re-floor after cap application
+            actual_share = math.floor(actual_share * 1_000_000) / 1_000_000
 
             if actual_share <= 0:
                 continue
 
-            # Credit to user's PRC balance
-            user_id = emp.get("user_id")
-            await db.users.update_one(
-                {"uid": user_id},
-                {"$inc": {"prc_balance": actual_share}}
-            )
+            plan.append((emp, actual_share))
 
-            # Record transaction
-            await db.employee_pool_transactions.insert_one({
-                "txn_id": f"EPD-{now.strftime('%Y%m%d%H%M%S')}-{str(uuid.uuid4())[:6]}",
-                "type": "distribution",
-                "amount": actual_share,
-                "employee_id": emp["employee_id"],
-                "user_id": user_id,
-                "employee_name": emp.get("name", ""),
-                "salary_ratio": round(share_ratio, 4),
-                "description": "Daily salary distribution",
-                "timestamp": now.isoformat()
-            })
+        if not plan:
+            return {"success": True, "distributed": 0, "employees": 0, "message": "No employees eligible after caps"}
 
-            # Update employee earned this month
-            await db.employees.update_one(
-                {"employee_id": emp["employee_id"]},
-                {"$inc": {"earned_this_month": actual_share}}
-            )
+        # Total to distribute (guaranteed <= pool_balance due to floor + individual cap)
+        total_distributed = round(sum(a for _, a in plan), 6)
 
-            distributed_count += 1
-            total_distributed += actual_share
+        # Defensive clamp (should never trigger after floor)
+        if total_distributed > pool_balance:
+            logging.warning(f"[EMPLOYEE POOL] Defensive clamp: total {total_distributed} > pool {pool_balance}")
+            total_distributed = pool_balance
 
-        # Deduct from pool
-        if total_distributed > 0:
-            await db.employee_pool_settings.update_one(
-                {},
-                {"$inc": {"pool_balance": -total_distributed}}
-            )
+        # ATOMIC CONDITIONAL DEDUCT: only succeeds if pool_balance >= total_distributed
+        deduct_result = await db.employee_pool_settings.update_one(
+            {"pool_balance": {"$gte": total_distributed}},
+            {"$inc": {"pool_balance": -total_distributed},
+             "$set": {"last_updated": now_iso}}
+        )
+        if deduct_result.modified_count == 0:
+            logging.error(f"[EMPLOYEE POOL] Atomic deduct failed - balance changed during run (expected>={total_distributed}). Aborting.")
+            return {"success": False, "distributed": 0, "employees": 0, "message": "Balance changed - aborted to prevent negative"}
 
-            await db.employee_pool_transactions.insert_one({
-                "txn_id": f"EPD-BATCH-{now.strftime('%Y%m%d%H%M%S')}",
-                "type": "batch_distribution",
-                "amount": total_distributed,
-                "employees_count": distributed_count,
-                "description": f"Daily distribution to {distributed_count} employees",
-                "timestamp": now.isoformat()
-            })
+        # Pass 2: Credit each employee (happens only AFTER successful deduct)
+        distributed_count = 0
+        for emp, actual_share in plan:
+            try:
+                # Credit to user's PRC balance
+                user_id = emp.get("user_id")
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {"$inc": {"prc_balance": actual_share}}
+                )
+
+                # Record transaction
+                await db.employee_pool_transactions.insert_one({
+                    "txn_id": f"EPD-{now.strftime('%Y%m%d%H%M%S')}-{str(uuid.uuid4())[:6]}",
+                    "type": "distribution",
+                    "amount": actual_share,
+                    "employee_id": emp["employee_id"],
+                    "user_id": user_id,
+                    "employee_name": emp.get("name", ""),
+                    "salary_ratio": round((emp.get("monthly_salary", 0) / total_salary) if total_salary else 0, 4),
+                    "description": "Daily salary distribution",
+                    "timestamp": now_iso
+                })
+
+                # Update employee earned this month
+                await db.employees.update_one(
+                    {"employee_id": emp["employee_id"]},
+                    {"$inc": {"earned_this_month": actual_share}}
+                )
+
+                distributed_count += 1
+
+                if cache:
+                    try:
+                        await cache.delete(f"user_data:{user_id}")
+                        await cache.delete(f"user:dashboard:{user_id}")
+                    except Exception:
+                        pass
+
+            except Exception as emp_err:
+                logging.error(f"[EMPLOYEE POOL] Credit error for emp {emp.get('employee_id')}: {emp_err}")
+
+        # Log batch distribution
+        await db.employee_pool_transactions.insert_one({
+            "txn_id": f"EPD-BATCH-{now.strftime('%Y%m%d%H%M%S')}",
+            "type": "batch_distribution",
+            "amount": total_distributed,
+            "employees_count": distributed_count,
+            "description": f"Daily distribution to {distributed_count} employees",
+            "timestamp": now_iso
+        })
 
         logging.info(f"[EMPLOYEE POOL] Distributed {total_distributed:.4f} PRC to {distributed_count} employees")
+        return {
+            "success": True,
+            "distributed": round(total_distributed, 4),
+            "employees": distributed_count,
+            "message": f"Distributed {total_distributed:.4f} PRC to {distributed_count} employees"
+        }
 
     except Exception as e:
         logging.error(f"[EMPLOYEE POOL] Distribution error: {e}")
+        return {"success": False, "error": str(e)}
 
 
 # ==================== EMPLOYEE CRUD ENDPOINTS ====================
@@ -1204,10 +1276,36 @@ async def update_pool_settings(request: Request):
 @router.post("/pool/distribute")
 async def manual_distribute():
     try:
-        await distribute_employee_pool()
-        return {"success": True, "message": "Distribution completed"}
+        result = await distribute_employee_pool()
+        return {"success": True, "message": "Distribution completed", "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/pool/heal-negative-balance")
+async def heal_employee_pool_negative_balance():
+    """Admin: Reset employee pool balance to 0 if it has gone negative (data integrity fix)."""
+    now = datetime.now(timezone.utc).isoformat()
+    settings = await db.employee_pool_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {"success": False, "message": "Employee pool not initialized"}
+    current = float(settings.get("pool_balance", 0))
+    if current >= 0:
+        return {"success": True, "healed": False, "balance": current, "message": "Balance is non-negative, no healing needed"}
+    await db.employee_pool_settings.update_one(
+        {}, {"$set": {"pool_balance": 0.0, "last_updated": now}}, upsert=True
+    )
+    await db.employee_pool_transactions.insert_one({
+        "txn_id": f"EPH-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
+        "type": "balance_heal",
+        "amount": -current,
+        "balance_before": current,
+        "balance_after": 0.0,
+        "description": f"Admin healed negative balance {current} -> 0 (floating-point rounding fix)",
+        "timestamp": now,
+    })
+    logging.warning(f"[EMPLOYEE POOL] Admin healed negative balance: {current} -> 0")
+    return {"success": True, "healed": True, "previous_balance": current, "new_balance": 0.0, "message": "Balance healed from {:.4f} to 0".format(current)}
 
 
 @router.post("/pool/post-salary")
