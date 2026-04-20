@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { CheckCircle2, Smartphone, Tv, Banknote, Crown, MapPin } from 'lucide-react';
+import { CheckCircle2, Smartphone, Tv, Banknote, Crown, MapPin, Zap, Flame, Droplet, Wifi, Shield, Receipt } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -9,6 +9,12 @@ const ICON_MAP = {
   dth: Tv,
   bank: Banknote,
   crown: Crown,
+  bolt: Zap,
+  fire: Flame,
+  droplet: Droplet,
+  wifi: Wifi,
+  shield: Shield,
+  receipt: Receipt,
 };
 
 const ICON_BG = {
@@ -16,6 +22,12 @@ const ICON_BG = {
   dth: 'bg-purple-500/20 text-purple-400',
   bank: 'bg-emerald-500/20 text-emerald-400',
   crown: 'bg-amber-500/20 text-amber-400',
+  bolt: 'bg-yellow-500/20 text-yellow-400',
+  fire: 'bg-orange-500/20 text-orange-400',
+  droplet: 'bg-sky-500/20 text-sky-400',
+  wifi: 'bg-cyan-500/20 text-cyan-400',
+  shield: 'bg-rose-500/20 text-rose-400',
+  receipt: 'bg-slate-500/20 text-slate-400',
 };
 
 const LiveTickerItem = ({ item }) => {
