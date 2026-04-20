@@ -169,8 +169,23 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Feature**: Social-proof bottom-fixed strip showing latest 50 SUCCESSFUL transactions across 4 types: Mobile Recharge, DTH, Bank Redeem, Subscription.
 - **Format**: `🔴 LIVE • 98******20 • Mobile Recharge • ₹199 ✓ • Pune` (no timestamps, no names)
 - **Backend** (`/app/backend/routes/live_ticker.py`): `GET /api/public/live-transactions` merges data from `redeem_requests` (mobile/DTH) + `bank_withdrawal_requests` + `chatbot_withdrawal_requests` + `subscription_payments (status=paid)`. Masks mobile as `XX******XX` format. Enriches with user city (best-effort from users.city or address). Cached 30s. No PII fields (uid/name/email) in response.
-- **Frontend** (`/app/frontend/src/components/LiveTickerStrip.js`): Fixed-bottom strip with vertical slide animation (3.2s per item), LIVE red pulse badge, service icon, green checkmark, dismiss (×) button. Mounted in `App.js` alongside BottomNav, visible only for logged-in regular users (roles admin/sub_admin/manager excluded via role check).
-- **Tested (iteration_217 - 100% PASSED)**: 12/12 backend + all frontend acceptance criteria: visible on /dashboard, hidden on /login (pre-auth), hidden on /admin (role-guarded), 3.2s rotation works, close button dismisses, mobile+city render correctly, no PII leak.
+- **Frontend** (`/app/frontend/src/components/LiveTickerStrip.js`): Fixed-bottom strip with horizontal marquee (right→left) animation, LIVE red pulse badge, service icon, green checkmark, dismiss (×) button, hover/touch-to-pause. Adaptive duration (~50px/sec). Mounted in `App.js` alongside BottomNav, visible only for logged-in regular users (roles admin/sub_admin/manager excluded via role check).
+- **Tested (iteration_217 - 100% PASSED)**: 12/12 backend + all frontend acceptance criteria.
+
+### CRITICAL User Block/Unblock Bug Fix (DONE - April 20, 2026)
+- **Issue**: Admin User 360° → Block/Unblock button appeared to "work" (toast success) but user was NOT actually blocked — they could continue logging in normally.
+- **Root Cause**: 3-way field mismatch:
+  - Backend `block_user` action set `is_blocked: true` and `is_active: false`
+  - Frontend `AdminUser360New.js` checked `userData?.user?.is_banned` (wrong field — always `undefined`)
+  - Auth middleware at login (server.py ~L1403) checks `is_banned` — never set by the block action, so blocked users still logged in
+- **Fix** (`server.py` ~L21878): `block_user` action now atomically sets `is_banned=True`, `is_blocked=True`, `is_active=False`, `banned_at`, `banned_by` (plus `blocked_at`, `blocked_by` for backward compat). Also unsets `session_token` + `refresh_token` to kick out active sessions. Clears user cache. Symmetric cleanup in `unblock_user` — clears all 3 flags and cache.
+- **Verified end-to-end**:
+  - Before block: login returns 200 ✅
+  - Block action: `is_banned=True, is_blocked=True, is_active=False` in DB ✅
+  - `/admin/user-360` endpoint exposes `is_banned=True` to frontend ✅
+  - Login after block: **403 "Account suspended: Contact support"** ✅
+  - Unblock action: all 3 flags cleared ✅
+  - Login after unblock: 200 ✅
 
 ### CRITICAL Production Bug Fix — Subscription Auto-Start (DONE - April 19, 2026)
 - **Issue**: Many users complained their "upcoming" subscription (already paid-for in PRC) did NOT auto-activate when their current plan expired. Root cause:

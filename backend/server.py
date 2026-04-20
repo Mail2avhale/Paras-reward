@@ -21881,11 +21881,29 @@ async def user_360_quick_action(request: Request):
             {"$set": {
                 "is_active": False,
                 "is_blocked": True,
+                "is_banned": True,  # Auth middleware checks this field (line ~1403) — must be set for login to be blocked
+                "banned_at": now.isoformat(),
+                "banned_by": admin_id,
                 "blocked_at": now.isoformat(),
                 "blocked_by": admin_id,
                 "updated_at": now.isoformat()
             }}
         )
+        # Invalidate session so blocked user can't continue an active session
+        try:
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$unset": {"session_token": "", "refresh_token": ""}}
+            )
+        except Exception:
+            pass
+        # Clear any caches
+        try:
+            if cache:
+                await cache.delete(f"user_data:{user_id}")
+                await cache.delete(f"user:dashboard:{user_id}")
+        except Exception:
+            pass
         result_message = "User has been blocked"
     
     elif action == "unblock_user":
@@ -21894,11 +21912,18 @@ async def user_360_quick_action(request: Request):
             {"$set": {
                 "is_active": True,
                 "is_blocked": False,
+                "is_banned": False,  # Must clear so auth middleware allows login again
                 "unblocked_at": now.isoformat(),
                 "unblocked_by": admin_id,
                 "updated_at": now.isoformat()
             }}
         )
+        try:
+            if cache:
+                await cache.delete(f"user_data:{user_id}")
+                await cache.delete(f"user:dashboard:{user_id}")
+        except Exception:
+            pass
         result_message = "User has been unblocked"
         
     elif action == "save_notes":
