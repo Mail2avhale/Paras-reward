@@ -359,6 +359,9 @@ const AdminUser360New = ({ user: adminUser }) => {
   
   // PRC Audit State
   const [auditData, setAuditData] = useState(null);
+  const [allServicesData, setAllServicesData] = useState(null);
+  const [allServicesLoading, setAllServicesLoading] = useState(false);
+  const [allServicesFilter, setAllServicesFilter] = useState('all');
   const [auditLoading, setAuditLoading] = useState(false);
   
   // Subscription Form
@@ -763,6 +766,30 @@ const AdminUser360New = ({ user: adminUser }) => {
       setAuditLoading(false);
     }
   };
+
+  // All Services (merged transactions across mobile/DTH/BBPS/bank/subscription)
+  const fetchAllServices = async (status = 'success') => {
+    if (!userData?.user?.uid) return;
+    setAllServicesLoading(true);
+    try {
+      const response = await axios.get(`${API}/admin/user360/${userData.user.uid}/all-transactions?status=${status}&limit=300`, {
+        headers: { Authorization: `Bearer ${adminUser?.token}` }
+      });
+      setAllServicesData(response.data);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to load transactions');
+    } finally {
+      setAllServicesLoading(false);
+    }
+  };
+
+  // Auto-fetch All Services when tab is opened
+  useEffect(() => {
+    if (activeTab === 'all-services' && userData?.user?.uid && !allServicesData && !allServicesLoading) {
+      fetchAllServices(allServicesFilter === 'all' ? 'all' : 'success');
+    }
+    // eslint-disable-next-line
+  }, [activeTab, userData?.user?.uid]);
 
   // Calculate Risk Score
   const getRiskScore = () => {
@@ -1177,6 +1204,7 @@ const AdminUser360New = ({ user: adminUser }) => {
                 <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
                   {[
                     { id: 'transactions', label: 'Transactions', icon: Coins, count: userData.transactions?.length || 0 },
+                    { id: 'all-services', label: 'All Services', icon: Receipt },
                     { id: 'redeem', label: 'Redemptions', icon: Receipt, count: userData.redeem_requests?.length || 0 },
                     { id: 'referrals', label: 'Referrals', icon: Users, count: userData.referral?.total_referrals || 0 },
                     { id: 'subscriptions', label: 'Subscription', icon: Crown, count: subDetails ? (subDetails.upcoming_plans?.length || 0) + (subDetails.current_plan ? 1 : 0) : (userData.subscription_history?.length || 0) },
@@ -1478,6 +1506,98 @@ const AdminUser360New = ({ user: adminUser }) => {
                     </div>
                   )}
                   
+                  {activeTab === 'all-services' && (
+                    <div className="space-y-4" data-testid="user-360-all-services-tab">
+                      {/* Summary row */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                          <p className="text-xs text-slate-500 mb-1">Total Transactions</p>
+                          <p className="text-xl font-bold text-slate-900" data-testid="all-svc-count">{allServicesData?.count || 0}</p>
+                        </div>
+                        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                          <p className="text-xs text-emerald-700 mb-1">Total Value</p>
+                          <p className="text-xl font-bold text-emerald-700" data-testid="all-svc-total">₹{formatNumber((allServicesData?.total_amount || 0).toFixed(2))}</p>
+                        </div>
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-xs text-blue-700 mb-1">Unique Services</p>
+                          <p className="text-xl font-bold text-blue-700">{Object.keys(allServicesData?.by_category || {}).length}</p>
+                        </div>
+                        <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                          <p className="text-xs text-purple-700 mb-1">Filter</p>
+                          <select
+                            value={allServicesFilter}
+                            onChange={(e) => { setAllServicesFilter(e.target.value); fetchAllServices(e.target.value === 'all' ? 'all' : 'success'); }}
+                            className="w-full text-sm font-semibold text-purple-800 bg-transparent outline-none cursor-pointer"
+                            data-testid="all-svc-filter"
+                          >
+                            <option value="success">Success only</option>
+                            <option value="all">All (incl. failed)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Category pills */}
+                      {allServicesData?.by_category && Object.keys(allServicesData.by_category).length > 0 && (
+                        <div className="flex flex-wrap gap-2" data-testid="all-svc-categories">
+                          {Object.entries(allServicesData.by_category).map(([cat, cnt]) => (
+                            <span key={cat} className="px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-xs font-medium text-slate-700">
+                              {cat} <span className="text-slate-500">({cnt})</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Transactions table */}
+                      {allServicesLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="h-6 w-6 animate-spin text-purple-400 mr-2" />
+                          <span className="text-slate-500">Loading all transactions...</span>
+                        </div>
+                      ) : allServicesData?.items?.length > 0 ? (
+                        <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                          <table className="min-w-full text-sm" data-testid="all-svc-table">
+                            <thead className="bg-slate-50 text-slate-700">
+                              <tr>
+                                <th className="px-3 py-2 text-left font-semibold">Service</th>
+                                <th className="px-3 py-2 text-left font-semibold">Account/Consumer</th>
+                                <th className="px-3 py-2 text-left font-semibold">Operator / Method</th>
+                                <th className="px-3 py-2 text-right font-semibold">Amount (INR)</th>
+                                <th className="px-3 py-2 text-left font-semibold">Status</th>
+                                <th className="px-3 py-2 text-left font-semibold">Date</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {allServicesData.items.map((it, idx) => (
+                                <tr key={idx} className="hover:bg-slate-50">
+                                  <td className="px-3 py-2 font-medium text-slate-900">{it.service}</td>
+                                  <td className="px-3 py-2 text-slate-700 font-mono text-xs">{it.account || '—'}</td>
+                                  <td className="px-3 py-2 text-slate-700 capitalize">{it.operator || '—'}</td>
+                                  <td className="px-3 py-2 text-right font-semibold text-slate-900">₹{formatNumber(Number(it.amount).toFixed(2))}</td>
+                                  <td className="px-3 py-2">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                      ['paid','completed','approved','success'].includes((it.status || '').toLowerCase())
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-slate-100 text-slate-700'
+                                    }`}>{it.status || '—'}</span>
+                                  </td>
+                                  <td className="px-3 py-2 text-slate-600 text-xs">{formatDate(it.created_at)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="text-center py-10 bg-slate-50 border border-slate-200 rounded-lg">
+                          <Receipt className="h-10 w-10 mx-auto text-slate-400 mb-3" />
+                          <p className="text-slate-500">No transactions yet for this user</p>
+                          <Button onClick={() => fetchAllServices(allServicesFilter === 'all' ? 'all' : 'success')} size="sm" className="mt-3 bg-slate-700 hover:bg-slate-800" data-testid="all-svc-retry">
+                            Reload
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {activeTab === 'audit' && (
                     <div className="space-y-4">
                       {!auditData && !auditLoading && (

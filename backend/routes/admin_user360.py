@@ -599,3 +599,208 @@ async def get_quick_stats(uid: str):
             "referrals": referral_count
         }
     }
+
+
+
+SUCCESS_STATUSES = ["completed", "approved", "success", "paid"]
+
+_SERVICE_LABELS = {
+    "mobile_recharge": ("Mobile Recharge", "mobile"),
+    "mobile_prepaid": ("Mobile Recharge", "mobile"),
+    "prepaid": ("Mobile Recharge", "mobile"),
+    "mobile_postpaid": ("Mobile Postpaid", "mobile"),
+    "postpaid": ("Mobile Postpaid", "mobile"),
+    "dth": ("DTH Recharge", "dth"),
+    "dth_recharge": ("DTH Recharge", "dth"),
+    "bank_transfer": ("Bank Redeem", "bank"),
+    "bank_withdrawal": ("Bank Redeem", "bank"),
+    "electricity": ("Electricity Bill", "bolt"),
+    "gas": ("Gas Bill", "fire"),
+    "piped_gas": ("Gas Bill", "fire"),
+    "lpg_gas": ("LPG Booking", "fire"),
+    "water": ("Water Bill", "droplet"),
+    "broadband": ("Broadband Bill", "wifi"),
+    "landline": ("Landline Bill", "wifi"),
+    "loan": ("Loan EMI", "receipt"),
+    "loan_repayment": ("Loan EMI", "receipt"),
+    "insurance": ("Insurance Premium", "shield"),
+    "fastag": ("FASTag Recharge", "receipt"),
+    "cable": ("Cable TV Bill", "dth"),
+    "housing_society": ("Society Bill", "receipt"),
+    "municipal": ("Municipal Tax", "receipt"),
+    "education": ("Education Fee", "receipt"),
+}
+
+
+def _resolve_svc(stype: str):
+    if not stype:
+        return ("Transaction", "receipt")
+    k = stype.lower().strip().replace(" ", "_")
+    return _SERVICE_LABELS.get(k, (k.replace("_", " ").title(), "receipt"))
+
+
+def _pick_ts(d: dict) -> str:
+    for k in ("created_at", "approved_at", "timestamp", "updated_at"):
+        v = d.get(k)
+        if v:
+            return v if isinstance(v, str) else v.isoformat()
+    return ""
+
+
+@router.get("/{uid}/all-transactions")
+async def get_user_all_transactions(uid: str, status: str = "success", limit: int = 200):
+    """
+    Admin: Get all successful transactions for a specific user across all services.
+    Merges: redeem_requests, bill_payment_requests, bank_withdrawal_requests,
+    chatbot_withdrawal_requests, and subscription_payments.
+
+    Query params:
+      status: "all" returns all statuses; default "success" = completed/approved/success/paid
+      limit: max items returned (default 200)
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+
+    status_filter = SUCCESS_STATUSES if status != "all" else None
+
+    def _mk_status_q():
+        return {"$in": status_filter} if status_filter else {"$exists": True}
+
+    items = []
+
+    # 1. redeem_requests
+    try:
+        docs = await db.redeem_requests.find(
+            {"user_id": uid, "status": _mk_status_q()},
+            {"_id": 0, "request_id": 1, "service_type": 1, "account_number": 1,
+             "amount": 1, "amount_inr": 1, "created_at": 1, "approved_at": 1,
+             "status": 1, "details": 1, "operator_name": 1},
+        ).sort("created_at", -1).limit(80).to_list(80)
+        for d in docs:
+            label, icon = _resolve_svc(d.get("service_type"))
+            acct = d.get("account_number") or (d.get("details", {}) or {}).get("mobile_number", "") or ""
+            amt = d.get("amount_inr") or d.get("amount") or 0
+            items.append({
+                "txn_id": d.get("request_id") or "",
+                "source": "redeem_requests",
+                "service": label, "icon": icon,
+                "account": acct,
+                "operator": d.get("operator_name", ""),
+                "amount": round(float(amt or 0), 2),
+                "status": d.get("status", ""),
+                "created_at": _pick_ts(d),
+            })
+    except Exception as e:
+        logging.warning(f"[USER360-TXN] redeem_requests error: {e}")
+
+    # 2. bill_payment_requests (BBPS - electricity/gas/water/etc.)
+    try:
+        docs = await db.bill_payment_requests.find(
+            {"user_id": uid, "status": _mk_status_q()},
+            {"_id": 0, "request_id": 1, "consumer_number": 1, "amount_inr": 1,
+             "created_at": 1, "approved_at": 1, "operator_name": 1,
+             "bill_type": 1, "status": 1},
+        ).sort("created_at", -1).limit(80).to_list(80)
+        for d in docs:
+            label, icon = _resolve_svc(d.get("bill_type"))
+            items.append({
+                "txn_id": d.get("request_id") or "",
+                "source": "bill_payment_requests",
+                "service": label, "icon": icon,
+                "account": d.get("consumer_number", ""),
+                "operator": d.get("operator_name", ""),
+                "amount": round(float(d.get("amount_inr", 0) or 0), 2),
+                "status": d.get("status", ""),
+                "created_at": _pick_ts(d),
+            })
+    except Exception as e:
+        logging.warning(f"[USER360-TXN] bill_payment_requests error: {e}")
+
+    # 3. bank_withdrawal_requests
+    try:
+        docs = await db.bank_withdrawal_requests.find(
+            {"user_id": uid, "status": _mk_status_q()},
+            {"_id": 0, "request_id": 1, "user_mobile": 1, "amount_inr": 1,
+             "account_number": 1, "bank_name": 1, "created_at": 1, "approved_at": 1, "status": 1},
+        ).sort("created_at", -1).limit(50).to_list(50)
+        for d in docs:
+            items.append({
+                "txn_id": d.get("request_id") or "",
+                "source": "bank_withdrawal_requests",
+                "service": "Bank Redeem", "icon": "bank",
+                "account": d.get("account_number", "") or d.get("user_mobile", ""),
+                "operator": d.get("bank_name", ""),
+                "amount": round(float(d.get("amount_inr", 0) or 0), 2),
+                "status": d.get("status", ""),
+                "created_at": _pick_ts(d),
+            })
+    except Exception as e:
+        logging.warning(f"[USER360-TXN] bank_withdrawal error: {e}")
+
+    # 4. chatbot_withdrawal_requests (legacy)
+    try:
+        docs = await db.chatbot_withdrawal_requests.find(
+            {"uid": uid, "status": _mk_status_q()},
+            {"_id": 0, "request_id": 1, "mobile": 1, "inr_amount": 1,
+             "bank_name": 1, "account_number": 1, "created_at": 1, "approved_at": 1, "status": 1},
+        ).sort("created_at", -1).limit(30).to_list(30)
+        for d in docs:
+            items.append({
+                "txn_id": d.get("request_id") or "",
+                "source": "chatbot_withdrawal_requests",
+                "service": "Bank Redeem", "icon": "bank",
+                "account": d.get("account_number", "") or d.get("mobile", ""),
+                "operator": d.get("bank_name", ""),
+                "amount": round(float(d.get("inr_amount", 0) or 0), 2),
+                "status": d.get("status", ""),
+                "created_at": _pick_ts(d),
+            })
+    except Exception as e:
+        logging.warning(f"[USER360-TXN] chatbot_withdrawal error: {e}")
+
+    # 5. subscription_payments
+    try:
+        sub_statuses = ["paid"] if status != "all" else None
+        q = {"user_id": uid}
+        if sub_statuses:
+            q["status"] = {"$in": sub_statuses}
+        docs = await db.subscription_payments.find(
+            q,
+            {"_id": 0, "payment_id": 1, "plan_name": 1, "plan_type": 1,
+             "inr_equivalent": 1, "prc_amount": 1, "created_at": 1, "status": 1,
+             "payment_method": 1},
+        ).sort("created_at", -1).limit(30).to_list(30)
+        for d in docs:
+            plan = (d.get("plan_name") or d.get("plan_type") or "plan").title()
+            amt = d.get("inr_equivalent") or d.get("prc_amount") or 0
+            items.append({
+                "txn_id": d.get("payment_id") or "",
+                "source": "subscription_payments",
+                "service": f"{plan} Subscription", "icon": "crown",
+                "account": "",
+                "operator": d.get("payment_method", ""),
+                "amount": round(float(amt or 0), 2),
+                "status": d.get("status", ""),
+                "created_at": _pick_ts(d),
+            })
+    except Exception as e:
+        logging.warning(f"[USER360-TXN] subscription error: {e}")
+
+    # Sort newest first, drop bad items
+    items = [i for i in items if i.get("service") and i["service"] != "Transaction"]
+    items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    items = items[:max(1, min(limit, 500))]
+
+    # Category counts
+    from collections import Counter
+    by_category = dict(Counter(i["service"] for i in items))
+    total_amount = round(sum(i["amount"] for i in items), 2)
+
+    return {
+        "success": True,
+        "uid": uid,
+        "count": len(items),
+        "total_amount": total_amount,
+        "by_category": by_category,
+        "items": items,
+    }
