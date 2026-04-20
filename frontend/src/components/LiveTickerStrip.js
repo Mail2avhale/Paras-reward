@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Smartphone, Tv, Banknote, Crown, MapPin } from 'lucide-react';
 
@@ -18,11 +18,42 @@ const ICON_BG = {
   crown: 'bg-amber-500/20 text-amber-400',
 };
 
+const LiveTickerItem = ({ item }) => {
+  const IconCmp = ICON_MAP[item?.icon] || CheckCircle2;
+  const iconBg = ICON_BG[item?.icon] || 'bg-slate-500/20 text-slate-400';
+  return (
+    <span
+      data-testid="live-ticker-item"
+      className="inline-flex items-center gap-2 px-4 whitespace-nowrap"
+    >
+      <span className={`flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0 ${iconBg}`}>
+        <IconCmp className="w-3 h-3" />
+      </span>
+      <span className="text-xs sm:text-sm">
+        <span className="font-mono font-semibold text-white">{item?.mobile}</span>
+        <span className="text-white/50 mx-1.5">•</span>
+        <span className="text-white/90">{item?.service}</span>
+        <span className="text-white/50 mx-1.5">•</span>
+        <span className="font-semibold text-amber-300">₹{Number(item?.amount || 0).toLocaleString('en-IN')}</span>
+        {item?.city && (
+          <>
+            <span className="text-white/50 mx-1.5">•</span>
+            <span className="inline-flex items-center gap-0.5 text-white/70">
+              <MapPin className="w-2.5 h-2.5" />{item.city}
+            </span>
+          </>
+        )}
+      </span>
+      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+      <span className="text-white/20 mx-2">|</span>
+    </span>
+  );
+};
+
 const LiveTickerStrip = () => {
   const [items, setItems] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [hidden, setHidden] = useState(false);
-  const intervalRef = useRef(null);
+  const [paused, setPaused] = useState(false);
 
   // Fetch ticker items (refresh every 45s)
   useEffect(() => {
@@ -42,26 +73,16 @@ const LiveTickerStrip = () => {
     return () => { mounted = false; clearInterval(refreshTimer); };
   }, []);
 
-  // Vertical slide: cycle every 3.2 seconds
-  useEffect(() => {
-    if (items.length === 0) return;
-    intervalRef.current = setInterval(() => {
-      setCurrentIndex(i => (i + 1) % items.length);
-    }, 3200);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [items.length]);
-
   if (hidden || items.length === 0) return null;
 
-  const current = items[currentIndex];
-  const IconCmp = ICON_MAP[current?.icon] || CheckCircle2;
-  const iconBg = ICON_BG[current?.icon] || 'bg-slate-500/20 text-slate-400';
+  // Calculate animation duration proportional to content length (readable pace ~50px/s)
+  const totalItems = items.length;
+  const durationSec = Math.max(30, totalItems * 6);
 
   return (
     <div
       data-testid="live-ticker-strip"
       className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none"
-      style={{ marginBottom: 'var(--bottom-nav-height, 0px)' }}
     >
       <div className="pointer-events-auto mx-auto max-w-3xl mb-[76px] sm:mb-0 px-2 sm:px-4">
         <div className="bg-black/85 backdrop-blur-sm border border-emerald-500/20 rounded-t-xl sm:rounded-xl shadow-lg overflow-hidden">
@@ -75,32 +96,24 @@ const LiveTickerStrip = () => {
               <span className="text-[10px] font-bold text-rose-400 tracking-wider">LIVE</span>
             </div>
 
-            {/* Vertical slide window */}
-            <div className="relative flex-1 overflow-hidden h-[24px]">
+            {/* Marquee: horizontal scroll, right → left */}
+            <div
+              className="relative flex-1 overflow-hidden"
+              onMouseEnter={() => setPaused(true)}
+              onMouseLeave={() => setPaused(false)}
+              onTouchStart={() => setPaused(true)}
+              onTouchEnd={() => setPaused(false)}
+            >
               <div
-                key={currentIndex}
-                data-testid="live-ticker-item"
-                className="flex items-center gap-2 h-full animate-slideUpFadeIn"
+                className="inline-flex items-center whitespace-nowrap animate-marquee"
+                style={{
+                  animationDuration: `${durationSec}s`,
+                  animationPlayState: paused ? 'paused' : 'running',
+                }}
               >
-                <span className={`flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0 ${iconBg}`}>
-                  <IconCmp className="w-3 h-3" />
-                </span>
-                <span className="text-white/90 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis min-w-0">
-                  <span className="font-mono font-semibold text-white">{current?.mobile}</span>
-                  <span className="text-white/50 mx-1.5">•</span>
-                  <span className="text-white/90">{current?.service}</span>
-                  <span className="text-white/50 mx-1.5">•</span>
-                  <span className="font-semibold text-amber-300">₹{Number(current?.amount || 0).toLocaleString('en-IN')}</span>
-                  {current?.city && (
-                    <>
-                      <span className="text-white/50 mx-1.5">•</span>
-                      <span className="inline-flex items-center gap-0.5 text-white/70">
-                        <MapPin className="w-2.5 h-2.5" />{current.city}
-                      </span>
-                    </>
-                  )}
-                </span>
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                {/* Duplicate items for seamless loop */}
+                {items.map((it, idx) => <LiveTickerItem key={`a-${idx}`} item={it} />)}
+                {items.map((it, idx) => <LiveTickerItem key={`b-${idx}`} item={it} />)}
               </div>
             </div>
 
@@ -118,14 +131,14 @@ const LiveTickerStrip = () => {
       </div>
 
       <style>{`
-        @keyframes slideUpFadeIn {
-          0% { transform: translateY(100%); opacity: 0; }
-          15% { transform: translateY(0); opacity: 1; }
-          85% { transform: translateY(0); opacity: 1; }
-          100% { transform: translateY(-100%); opacity: 0; }
+        @keyframes marquee-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
         }
-        .animate-slideUpFadeIn {
-          animation: slideUpFadeIn 3.2s ease-in-out both;
+        .animate-marquee {
+          animation-name: marquee-scroll;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
         }
       `}</style>
     </div>
