@@ -186,17 +186,31 @@ async def get_user_full_360(uid: str):
         logging.warning(f"[USER360] Stats error for {uid}: {e}")
     
     # ========== 3. REFERRAL DATA ==========
-    referral_data = {"l1_count": 0, "l2_count": 0, "l1_users": [], "total_network": 0}
+    # NOTE: Return BOTH schemas (new: l1_count/l1_users/l2_count/total_network;
+    #       old: total_referrals/active_referrals/referrals) so frontend
+    #       AdminUser360New.js (which reads total_referrals/referrals) stays compatible
+    #       whether it calls this fallback endpoint or the primary /admin/user-360.
+    referral_data = {
+        "l1_count": 0, "l2_count": 0, "l1_users": [], "total_network": 0,
+        "total_referrals": 0, "active_referrals": 0, "total_earnings": 0.0,
+        "referrals": [], "referred_by_name": None,
+    }
     
     try:
-        # L1 referrals
+        # L1 referrals (direct)
         l1_users = await db.users.find(
             {"referred_by": uid},
-            {"_id": 0, "uid": 1, "name": 1, "email": 1, "created_at": 1, "subscription_plan": 1}
-        ).limit(50).to_list(50)
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "created_at": 1,
+             "subscription_plan": 1, "mining_active": 1}
+        ).sort("created_at", -1).limit(50).to_list(50)
         
         referral_data["l1_count"] = len(l1_users)
         referral_data["l1_users"] = sanitize_doc(l1_users)
+        referral_data["total_referrals"] = len(l1_users)
+        referral_data["referrals"] = sanitize_doc(l1_users)[:10]
+        referral_data["active_referrals"] = sum(
+            1 for u in l1_users if u.get("mining_active")
+        )
         
         # L2 count
         if l1_users:
@@ -205,6 +219,26 @@ async def get_user_full_360(uid: str):
             referral_data["l2_count"] = l2_count
         
         referral_data["total_network"] = referral_data["l1_count"] + referral_data["l2_count"]
+        
+        # Referred by (upline)
+        if user and user.get("referred_by"):
+            referrer = await db.users.find_one(
+                {"uid": user["referred_by"]},
+                {"_id": 0, "name": 1, "email": 1}
+            )
+            if referrer:
+                referral_data["referred_by_name"] = referrer.get("name") or (referrer.get("email") or "").split("@")[0]
+        
+        # Referral earnings
+        try:
+            earnings_agg = await db.transactions.aggregate([
+                {"$match": {"user_id": uid, "type": {"$in": ["referral", "referral_bonus", "referral_reward"]}}},
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+            ]).to_list(1)
+            if earnings_agg:
+                referral_data["total_earnings"] = round(float(earnings_agg[0].get("total", 0) or 0), 2)
+        except Exception:
+            pass
         
     except Exception as e:
         logging.warning(f"[USER360] Referral error for {uid}: {e}")
