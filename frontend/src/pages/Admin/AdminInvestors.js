@@ -11,11 +11,11 @@ import {
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const INQUIRY_STATUS = {
-  new: 'bg-blue-500/20 text-blue-400',
-  contacted: 'bg-yellow-500/20 text-yellow-400',
-  in_discussion: 'bg-purple-500/20 text-purple-400',
-  closed: 'bg-green-500/30 text-green-400',
-  rejected: 'bg-red-500/20 text-red-400'
+  new: 'bg-blue-500/20 text-blue-600',
+  contacted: 'bg-yellow-500/20 text-yellow-600',
+  in_discussion: 'bg-purple-500/20 text-purple-600',
+  closed: 'bg-green-500/30 text-green-600',
+  rejected: 'bg-red-500/20 text-red-600'
 };
 const INQUIRY_STATUSES = ['new', 'contacted', 'in_discussion', 'closed', 'rejected'];
 
@@ -274,20 +274,20 @@ const AdminInvestors = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-4 sm:p-6">
+    <div className="min-h-screen bg-white text-slate-900 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-cyan-400" />
+              <TrendingUp className="w-5 h-5 text-cyan-600" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold">Investors Management</h1>
-              <p className="text-xs text-slate-400">FAQ • Team • Press • Documents • Inquiries</p>
+              <p className="text-xs text-slate-500">FAQ • Team • Press • Documents • Inquiries</p>
             </div>
           </div>
-          <button onClick={refreshCurrent} data-testid="refresh-btn" className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm">
+          <button onClick={refreshCurrent} data-testid="refresh-btn" className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm">
             <RefreshCw className="w-4 h-4" /> Refresh
           </button>
         </div>
@@ -303,14 +303,14 @@ const AdminInvestors = () => {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-slate-800/50 p-1 rounded-lg mb-4 overflow-x-auto">
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-lg mb-4 overflow-x-auto">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
               data-testid={`tab-${t.id}`}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all ${
-                activeTab === t.id ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'
+                activeTab === t.id ? 'bg-slate-200 text-white' : 'text-slate-500 hover:text-slate-200'
               }`}
             >
               <t.icon className="w-4 h-4" /> {t.label}
@@ -320,15 +320,15 @@ const AdminInvestors = () => {
         </div>
 
         {/* Content */}
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
           {activeTab === 'faq' && (
             <SectionList title="Frequently Asked Questions" loading={loading} items={faqs} onAdd={() => openFaqModal()} addLabel="Add FAQ" emptyText="No FAQs yet">
               {faqs.map(f => (
                 <Row key={f.faq_id} testid={`faq-${f.faq_id}`}>
                   <div className="flex-1">
                     <p className="text-xs text-slate-500 mb-0.5">Order {f.order}</p>
-                    <p className="font-semibold text-slate-100">{f.question}</p>
-                    <p className="text-sm text-slate-400 line-clamp-2 mt-1">{f.answer}</p>
+                    <p className="font-semibold text-slate-900">{f.question}</p>
+                    <p className="text-sm text-slate-500 line-clamp-2 mt-1">{f.answer}</p>
                   </div>
                   <RowActions onEdit={() => openFaqModal(f)} onDelete={() => deleteFaq(f.faq_id)} testidPrefix={`faq-${f.faq_id}`} />
                 </Row>
@@ -344,11 +344,11 @@ const AdminInvestors = () => {
                     {m.photo_url ? (
                       <img src={m.photo_url} alt={m.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 text-sm font-bold">{m.name?.[0]}</div>
+                      <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 text-sm font-bold">{m.name?.[0]}</div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-100">{m.name}</p>
-                      <p className="text-xs text-slate-400">{m.role}</p>
+                      <p className="font-semibold text-slate-900">{m.name}</p>
+                      <p className="text-xs text-slate-500">{m.role}</p>
                       {m.bio && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{m.bio}</p>}
                     </div>
                   </div>
@@ -363,14 +363,14 @@ const AdminInvestors = () => {
               {press.map(p => (
                 <Row key={p.press_id} testid={`press-${p.press_id}`}>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-100">{p.title}</p>
-                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                    <p className="font-semibold text-slate-900">{p.title}</p>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                       <span>{p.source || 'Unknown source'}</span>
                       <span>•</span>
                       <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{p.date}</span>
                     </div>
                     {p.summary && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{p.summary}</p>}
-                    <a href={p.url} target="_blank" rel="noreferrer" className="text-xs text-cyan-400 hover:underline mt-1 inline-flex items-center gap-1"><LinkIcon className="w-3 h-3" />Open article</a>
+                    <a href={p.url} target="_blank" rel="noreferrer" className="text-xs text-cyan-600 hover:underline mt-1 inline-flex items-center gap-1"><LinkIcon className="w-3 h-3" />Open article</a>
                   </div>
                   <RowActions onDelete={() => deletePress(p.press_id)} testidPrefix={`press-${p.press_id}`} />
                 </Row>
@@ -383,13 +383,13 @@ const AdminInvestors = () => {
               {documents.map(d => (
                 <Row key={d.doc_id} testid={`doc-${d.doc_id}`}>
                   <div className="flex items-center gap-3 flex-1">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${d.is_protected ? 'bg-amber-500/20 text-amber-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${d.is_protected ? 'bg-amber-500/20 text-amber-600' : 'bg-cyan-500/20 text-cyan-600'}`}>
                       {d.is_protected ? <Lock className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-100 truncate">{d.title}</p>
-                      <div className="flex gap-2 text-xs text-slate-400 flex-wrap">
-                        <span className="px-2 py-0.5 bg-slate-700 rounded-full">{d.doc_type}</span>
+                      <p className="font-semibold text-slate-900 truncate">{d.title}</p>
+                      <div className="flex gap-2 text-xs text-slate-500 flex-wrap">
+                        <span className="px-2 py-0.5 bg-slate-200 rounded-full">{d.doc_type}</span>
                         <span>{d.filename}</span>
                         <span className="flex items-center gap-1"><Download className="w-3 h-3" />{d.download_count || 0}</span>
                         <span>{d.created_at?.slice(0, 10)}</span>
@@ -405,34 +405,34 @@ const AdminInvestors = () => {
           {activeTab === 'inquiries' && (
             <div>
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <h2 className="font-bold text-slate-100">Investor Inquiries</h2>
-                <select value={inquiryFilter} onChange={e => setInquiryFilter(e.target.value)} className="px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-sm" data-testid="filter-inquiry">
+                <h2 className="font-bold text-slate-900">Investor Inquiries</h2>
+                <select value={inquiryFilter} onChange={e => setInquiryFilter(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" data-testid="filter-inquiry">
                   <option value="all">All ({inquiries.length})</option>
                   {INQUIRY_STATUSES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)} ({inquiries.filter(i => (i.status||'new') === s).length})</option>)}
                 </select>
               </div>
               {loading ? (
-                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-500" /></div>
               ) : filteredInquiries.length === 0 ? (
-                <div className="text-center py-12 text-slate-400">No inquiries</div>
+                <div className="text-center py-12 text-slate-500">No inquiries</div>
               ) : (
                 <div className="space-y-2">
                   {filteredInquiries.map(i => (
-                    <div key={i.inquiry_id} onClick={() => setViewInquiry(i)} className="bg-slate-900/40 border border-slate-700/40 rounded-lg p-3 hover:border-slate-600 cursor-pointer" data-testid={`inquiry-${i.inquiry_id}`}>
+                    <div key={i.inquiry_id} onClick={() => setViewInquiry(i)} className="bg-slate-50 border border-slate-200 rounded-lg p-3 hover:border-slate-600 cursor-pointer" data-testid={`inquiry-${i.inquiry_id}`}>
                       <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <p className="font-semibold text-slate-100">{i.name}</p>
+                            <p className="font-semibold text-slate-900">{i.name}</p>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${INQUIRY_STATUS[i.status || 'new']}`}>{i.status || 'new'}</span>
-                            {i.investment_range && <span className="text-[10px] text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full">{i.investment_range}</span>}
+                            {i.investment_range && <span className="text-[10px] text-cyan-600 bg-cyan-500/10 px-2 py-0.5 rounded-full">{i.investment_range}</span>}
                           </div>
-                          <div className="flex gap-3 text-xs text-slate-400 flex-wrap">
+                          <div className="flex gap-3 text-xs text-slate-500 flex-wrap">
                             <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{i.email}</span>
                             {i.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{i.phone}</span>}
                             {i.organization && <span className="flex items-center gap-1"><Building className="w-3 h-3" />{i.organization}</span>}
                             <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{i.created_at?.slice(0, 10)}</span>
                           </div>
-                          <p className="text-sm text-slate-300 mt-1 line-clamp-2">{i.message}</p>
+                          <p className="text-sm text-slate-700 mt-1 line-clamp-2">{i.message}</p>
                         </div>
                       </div>
                     </div>
@@ -481,8 +481,8 @@ const AdminInvestors = () => {
         <Modal title="Upload Document" onClose={() => setShowDocModal(false)} onSave={uploadDoc} saveLabel={uploading ? 'Uploading...' : 'Upload'} saveDisabled={uploading}>
           <Input label="Title *" value={docForm.title} onChange={v => setDocForm(p => ({ ...p, title: v }))} testid="doc-title" />
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Type</label>
-            <select value={docForm.doc_type} onChange={e => setDocForm(p => ({ ...p, doc_type: e.target.value }))} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100" data-testid="doc-type">
+            <label className="text-xs text-slate-500 mb-1 block">Type</label>
+            <select value={docForm.doc_type} onChange={e => setDocForm(p => ({ ...p, doc_type: e.target.value }))} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="doc-type">
               <option value="pitch_deck">Pitch Deck</option>
               <option value="financials">Financial Report</option>
               <option value="business_plan">Business Plan</option>
@@ -492,9 +492,9 @@ const AdminInvestors = () => {
           </div>
           <Input label="Password (optional, leave blank for public)" type="password" value={docForm.password} onChange={v => setDocForm(p => ({ ...p, password: v }))} testid="doc-password" />
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">File * (PDF/DOC, max 20MB)</label>
+            <label className="text-xs text-slate-500 mb-1 block">File * (PDF/DOC, max 20MB)</label>
             <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={e => setDocForm(p => ({ ...p, file: e.target.files?.[0] }))} className="hidden" data-testid="doc-file-input" />
-            <button onClick={() => fileRef.current?.click()} className="w-full px-3 py-3 border-2 border-dashed border-slate-600 rounded-lg text-sm text-slate-400 hover:border-cyan-400 hover:text-cyan-400 transition-colors flex items-center justify-center gap-2" data-testid="doc-file-btn">
+            <button onClick={() => fileRef.current?.click()} className="w-full px-3 py-3 border-2 border-dashed border-slate-600 rounded-lg text-sm text-slate-500 hover:border-cyan-400 hover:text-cyan-600 transition-colors flex items-center justify-center gap-2" data-testid="doc-file-btn">
               <Upload className="w-4 h-4" /> {docForm.file?.name || 'Click to select file'}
             </button>
           </div>
@@ -515,29 +515,29 @@ const AdminInvestors = () => {
             </div>
             <div>
               <p className="text-xs text-slate-500 mb-1">Message</p>
-              <div className="bg-slate-800/40 border border-slate-700/40 rounded-lg p-3 text-sm text-slate-300 whitespace-pre-wrap">{viewInquiry.message}</div>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-700 whitespace-pre-wrap">{viewInquiry.message}</div>
             </div>
             {viewInquiry.admin_note && (
               <div>
                 <p className="text-xs text-slate-500 mb-1">Admin Note</p>
-                <div className="bg-slate-800/40 border border-slate-700/40 rounded-lg p-3 text-sm text-slate-300 whitespace-pre-wrap">{viewInquiry.admin_note}</div>
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-700 whitespace-pre-wrap">{viewInquiry.admin_note}</div>
               </div>
             )}
             <div>
               <p className="text-xs text-slate-500 mb-1">Update Status</p>
               <div className="flex gap-2 flex-wrap">
                 {INQUIRY_STATUSES.map(s => (
-                  <button key={s} onClick={() => updateInquiryStatus(viewInquiry.inquiry_id, s)} data-testid={`inq-status-${s}`} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${viewInquiry.status === s ? INQUIRY_STATUS[s] + ' ring-2 ring-current' : 'bg-slate-800 text-slate-400 hover:text-white'}`}>
+                  <button key={s} onClick={() => updateInquiryStatus(viewInquiry.inquiry_id, s)} data-testid={`inq-status-${s}`} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${viewInquiry.status === s ? INQUIRY_STATUS[s] + ' ring-2 ring-current' : 'bg-white text-slate-500 hover:text-white'}`}>
                     {s.charAt(0).toUpperCase()+s.slice(1)}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="flex justify-between gap-2 pt-2 border-t border-slate-700">
-              <button onClick={() => deleteInquiry(viewInquiry.inquiry_id)} className="flex items-center gap-1.5 px-3 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg text-sm" data-testid="delete-inquiry-btn">
+            <div className="flex justify-between gap-2 pt-2 border-t border-slate-200">
+              <button onClick={() => deleteInquiry(viewInquiry.inquiry_id)} className="flex items-center gap-1.5 px-3 py-2 bg-red-500/20 text-red-600 hover:bg-red-500/30 rounded-lg text-sm" data-testid="delete-inquiry-btn">
                 <Trash2 className="w-4 h-4" /> Delete
               </button>
-              <a href={`mailto:${viewInquiry.email}`} className="flex items-center gap-1.5 px-3 py-2 bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 rounded-lg text-sm">
+              <a href={`mailto:${viewInquiry.email}`} className="flex items-center gap-1.5 px-3 py-2 bg-cyan-500/20 text-cyan-600 hover:bg-cyan-500/30 rounded-lg text-sm">
                 <Mail className="w-4 h-4" /> Email Reply
               </a>
             </div>
@@ -550,8 +550,8 @@ const AdminInvestors = () => {
 
 /* ==================== Helper Components ==================== */
 const Mini = ({ label, value }) => (
-  <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3">
-    <p className="text-xs text-slate-400">{label}</p>
+  <div className="bg-slate-100 border border-slate-200 rounded-xl p-3">
+    <p className="text-xs text-slate-500">{label}</p>
     <p className="text-xl font-bold mt-0.5">{value}</p>
   </div>
 );
@@ -559,15 +559,15 @@ const Mini = ({ label, value }) => (
 const SectionList = ({ title, loading, items, onAdd, addLabel, emptyText, children }) => (
   <div>
     <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-      <h2 className="font-bold text-slate-100">{title}</h2>
+      <h2 className="font-bold text-slate-900">{title}</h2>
       <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-2 bg-cyan-500 hover:bg-cyan-600 text-slate-900 rounded-lg text-sm font-semibold" data-testid="add-btn">
         <Plus className="w-4 h-4" /> {addLabel}
       </button>
     </div>
     {loading ? (
-      <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+      <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-500" /></div>
     ) : items.length === 0 ? (
-      <div className="text-center py-12 text-slate-400">{emptyText}</div>
+      <div className="text-center py-12 text-slate-500">{emptyText}</div>
     ) : (
       <div className="space-y-2">{children}</div>
     )}
@@ -575,7 +575,7 @@ const SectionList = ({ title, loading, items, onAdd, addLabel, emptyText, childr
 );
 
 const Row = ({ children, testid }) => (
-  <div className="bg-slate-900/40 border border-slate-700/40 rounded-lg p-3 flex items-start justify-between gap-3 flex-wrap" data-testid={testid}>
+  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-start justify-between gap-3 flex-wrap" data-testid={testid}>
     {children}
   </div>
 );
@@ -583,12 +583,12 @@ const Row = ({ children, testid }) => (
 const RowActions = ({ onEdit, onDelete, testidPrefix }) => (
   <div className="flex items-center gap-1 flex-shrink-0">
     {onEdit && (
-      <button onClick={onEdit} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg" data-testid={`${testidPrefix}-edit`}>
+      <button onClick={onEdit} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg" data-testid={`${testidPrefix}-edit`}>
         <Edit2 className="w-4 h-4" />
       </button>
     )}
     {onDelete && (
-      <button onClick={onDelete} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg" data-testid={`${testidPrefix}-delete`}>
+      <button onClick={onDelete} className="p-2 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded-lg" data-testid={`${testidPrefix}-delete`}>
         <Trash2 className="w-4 h-4" />
       </button>
     )}
@@ -597,15 +597,15 @@ const RowActions = ({ onEdit, onDelete, testidPrefix }) => (
 
 const Modal = ({ title, children, onClose, onSave, saveLabel = 'Save', saveDisabled, hideFooter }) => (
   <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-    <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-      <div className="flex items-center justify-between p-4 border-b border-slate-700">
-        <h3 className="font-bold text-slate-100">{title}</h3>
-        <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"><X className="w-5 h-5" /></button>
+    <div className="bg-white border border-slate-200 rounded-xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="flex items-center justify-between p-4 border-b border-slate-200">
+        <h3 className="font-bold text-slate-900">{title}</h3>
+        <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-white hover:bg-slate-50 rounded-lg"><X className="w-5 h-5" /></button>
       </div>
       <div className="p-4 overflow-y-auto flex-1 space-y-3">{children}</div>
       {!hideFooter && (
-        <div className="flex justify-end gap-2 p-4 border-t border-slate-700">
-          <button onClick={onClose} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">Cancel</button>
+        <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
+          <button onClick={onClose} className="px-4 py-2 bg-slate-200 hover:bg-slate-600 rounded-lg text-sm">Cancel</button>
           <button onClick={onSave} disabled={saveDisabled} className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-slate-900 disabled:opacity-50 rounded-lg text-sm font-semibold" data-testid="modal-save">{saveLabel}</button>
         </div>
       )}
@@ -615,14 +615,14 @@ const Modal = ({ title, children, onClose, onSave, saveLabel = 'Save', saveDisab
 
 const Input = ({ label, value, onChange, type = 'text', testid }) => (
   <div>
-    <label className="text-xs text-slate-400 mb-1 block">{label}</label>
-    <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100" data-testid={testid} />
+    <label className="text-xs text-slate-500 mb-1 block">{label}</label>
+    <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900" data-testid={testid} />
   </div>
 );
 const Textarea = ({ label, value, onChange, rows = 2, testid }) => (
   <div>
-    <label className="text-xs text-slate-400 mb-1 block">{label}</label>
-    <textarea value={value ?? ''} onChange={e => onChange(e.target.value)} rows={rows} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100 resize-none" data-testid={testid} />
+    <label className="text-xs text-slate-500 mb-1 block">{label}</label>
+    <textarea value={value ?? ''} onChange={e => onChange(e.target.value)} rows={rows} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 resize-none" data-testid={testid} />
   </div>
 );
 const Field = ({ label, value }) => (

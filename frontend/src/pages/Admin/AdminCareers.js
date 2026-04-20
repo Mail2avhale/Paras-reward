@@ -11,12 +11,12 @@ import {
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const STATUS_COLORS = {
-  new: 'bg-blue-500/20 text-blue-400',
-  reviewed: 'bg-yellow-500/20 text-yellow-400',
-  shortlisted: 'bg-emerald-500/20 text-emerald-400',
-  interview: 'bg-purple-500/20 text-purple-400',
-  hired: 'bg-green-500/30 text-green-400',
-  rejected: 'bg-red-500/20 text-red-400'
+  new: 'bg-blue-500/20 text-blue-600',
+  reviewed: 'bg-yellow-500/20 text-yellow-600',
+  shortlisted: 'bg-emerald-500/20 text-emerald-600',
+  interview: 'bg-purple-500/20 text-purple-600',
+  hired: 'bg-green-500/30 text-green-600',
+  rejected: 'bg-red-500/20 text-red-600'
 };
 
 const AdminCareers = () => {
@@ -198,21 +198,21 @@ const AdminCareers = () => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-4 sm:p-6">
+    <div className="min-h-screen bg-white text-slate-900 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-amber-400" />
+              <Briefcase className="w-5 h-5 text-amber-600" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold">Careers Management</h1>
-              <p className="text-xs text-slate-400">Manage job postings & applicants</p>
+              <p className="text-xs text-slate-500">Manage job postings & applicants</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => { fetchJobs(); if (activeTab === 'applications') fetchApplications(); }} data-testid="refresh-btn" className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm">
+            <button onClick={() => { fetchJobs(); if (activeTab === 'applications') fetchApplications(); }} data-testid="refresh-btn" className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm">
               <RefreshCw className="w-4 h-4" /> Refresh
             </button>
             {activeTab === 'jobs' && (
@@ -243,7 +243,7 @@ const AdminCareers = () => {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-slate-800/50 p-1 rounded-lg mb-4">
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-lg mb-4">
           {[
             { id: 'jobs', label: 'Job Postings', icon: Briefcase },
             { id: 'applications', label: 'Applications', icon: Users }
@@ -253,7 +253,7 @@ const AdminCareers = () => {
               onClick={() => setActiveTab(t.id)}
               data-testid={`tab-${t.id}`}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                activeTab === t.id ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'
+                activeTab === t.id ? 'bg-slate-200 text-white' : 'text-slate-500 hover:text-slate-200'
               }`}
             >
               <t.icon className="w-4 h-4" /> {t.label}
@@ -262,7 +262,7 @@ const AdminCareers = () => {
         </div>
 
         {/* Content */}
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
           {activeTab === 'jobs' ? (
             <JobsTab
               jobs={filteredJobs} loading={loading}
@@ -310,7 +310,7 @@ const AdminCareers = () => {
 /* ========== Sub-Components ========== */
 const StatPill = ({ label, value, color }) => {
   const colors = {
-    slate: 'bg-slate-800 border-slate-700',
+    slate: 'bg-white border-slate-200',
     blue: 'bg-blue-500/10 border-blue-500/30',
     yellow: 'bg-yellow-500/10 border-yellow-500/30',
     emerald: 'bg-emerald-500/10 border-emerald-500/30',
@@ -320,7 +320,7 @@ const StatPill = ({ label, value, color }) => {
   };
   return (
     <div className={`rounded-xl border p-3 ${colors[color]}`}>
-      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-xs text-slate-500">{label}</p>
       <p className="text-xl font-bold mt-0.5">{value}</p>
     </div>
   );
@@ -330,10 +330,10 @@ const JobsTab = ({ jobs, loading, filterActive, setFilterActive, search, setSear
   <div>
     <div className="flex flex-wrap gap-2 mb-4">
       <div className="relative flex-1 min-w-[200px]">
-        <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search jobs by title..." className="w-full pl-9 pr-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-sm" data-testid="search-jobs" />
+        <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search jobs by title..." className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" data-testid="search-jobs" />
       </div>
-      <select value={filterActive} onChange={e => setFilterActive(e.target.value)} className="px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-sm" data-testid="filter-active">
+      <select value={filterActive} onChange={e => setFilterActive(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" data-testid="filter-active">
         <option value="all">All</option>
         <option value="active">Active only</option>
         <option value="inactive">Inactive only</option>
@@ -341,38 +341,38 @@ const JobsTab = ({ jobs, loading, filterActive, setFilterActive, search, setSear
     </div>
 
     {loading ? (
-      <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+      <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-500" /></div>
     ) : jobs.length === 0 ? (
-      <div className="text-center py-12 text-slate-400">No jobs found. Click "New Job" to create one.</div>
+      <div className="text-center py-12 text-slate-500">No jobs found. Click "New Job" to create one.</div>
     ) : (
       <div className="space-y-2">
         {jobs.map(j => (
-          <div key={j.job_id} className="bg-slate-900/40 border border-slate-700/40 rounded-lg p-4 hover:border-slate-600" data-testid={`job-${j.job_id}`}>
+          <div key={j.job_id} className="bg-slate-50 border border-slate-200 rounded-lg p-4 hover:border-slate-600" data-testid={`job-${j.job_id}`}>
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <span className={`w-2 h-2 rounded-full ${j.is_active ? 'bg-emerald-400' : 'bg-slate-500'}`} />
-                  <h3 className="font-semibold text-slate-100">{j.title}</h3>
+                  <h3 className="font-semibold text-slate-900">{j.title}</h3>
                   <span className="text-xs text-slate-500">• {j.job_id}</span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+                <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
                   <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{j.department}</span>
                   <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{j.job_type}</span>
                   <span className="flex items-center gap-1"><Users className="w-3 h-3" />{j.application_count || 0} applied</span>
                   {j.show_salary && j.salary_min && (
-                    <span className="text-emerald-400">{j.salary_min?.toLocaleString()} - {j.salary_max?.toLocaleString()} INR</span>
+                    <span className="text-emerald-600">{j.salary_min?.toLocaleString()} - {j.salary_max?.toLocaleString()} INR</span>
                   )}
                 </div>
-                <p className="text-sm text-slate-400 line-clamp-1 mt-2">{j.description}</p>
+                <p className="text-sm text-slate-500 line-clamp-1 mt-2">{j.description}</p>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button onClick={() => onToggle(j)} title={j.is_active ? 'Deactivate' : 'Activate'} className={`p-2 rounded-lg ${j.is_active ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-slate-500 hover:bg-slate-700'}`} data-testid={`toggle-${j.job_id}`}>
+                <button onClick={() => onToggle(j)} title={j.is_active ? 'Deactivate' : 'Activate'} className={`p-2 rounded-lg ${j.is_active ? 'text-emerald-600 hover:bg-emerald-500/10' : 'text-slate-500 hover:bg-slate-100'}`} data-testid={`toggle-${j.job_id}`}>
                   {j.is_active ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
                 </button>
-                <button onClick={() => onEdit(j)} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg" data-testid={`edit-${j.job_id}`}>
+                <button onClick={() => onEdit(j)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg" data-testid={`edit-${j.job_id}`}>
                   <Edit2 className="w-4 h-4" />
                 </button>
-                <button onClick={() => onDelete(j.job_id)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg" data-testid={`delete-${j.job_id}`}>
+                <button onClick={() => onDelete(j.job_id)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded-lg" data-testid={`delete-${j.job_id}`}>
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -388,37 +388,37 @@ const ApplicationsTab = ({ apps, loading, jobs, filterStatus, setFilterStatus, f
   <div>
     <div className="flex flex-wrap gap-2 mb-4">
       <div className="relative flex-1 min-w-[200px]">
-        <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email, phone..." className="w-full pl-9 pr-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-sm" data-testid="search-applications" />
+        <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email, phone..." className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" data-testid="search-applications" />
       </div>
-      <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-sm" data-testid="filter-status">
+      <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" data-testid="filter-status">
         <option value="">All Statuses</option>
         {['new','reviewed','shortlisted','interview','hired','rejected'].map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
       </select>
-      <select value={filterJob} onChange={e => setFilterJob(e.target.value)} className="px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-sm" data-testid="filter-job">
+      <select value={filterJob} onChange={e => setFilterJob(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" data-testid="filter-job">
         <option value="">All Jobs</option>
         {jobs.map(j => <option key={j.job_id} value={j.job_id}>{j.title}</option>)}
       </select>
     </div>
 
     {loading ? (
-      <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+      <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-500" /></div>
     ) : apps.length === 0 ? (
-      <div className="text-center py-12 text-slate-400">No applications found</div>
+      <div className="text-center py-12 text-slate-500">No applications found</div>
     ) : (
       <div className="space-y-2">
         {apps.map(a => (
-          <div key={a.application_id} className="bg-slate-900/40 border border-slate-700/40 rounded-lg p-3 hover:border-slate-600 cursor-pointer" onClick={() => onView(a)} data-testid={`app-${a.application_id}`}>
+          <div key={a.application_id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 hover:border-slate-600 cursor-pointer" onClick={() => onView(a)} data-testid={`app-${a.application_id}`}>
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <h4 className="font-semibold text-slate-100">{a.name}</h4>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[a.status] || 'bg-slate-700 text-slate-300'}`}>
+                  <h4 className="font-semibold text-slate-900">{a.name}</h4>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[a.status] || 'bg-slate-200 text-slate-700'}`}>
                     {a.status}
                   </span>
                   <span className="text-xs text-slate-500">• Applied for {a.job_title}</span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+                <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
                   <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{a.email}</span>
                   <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{a.phone}</span>
                   <span>{a.experience_years}y exp</span>
@@ -429,12 +429,12 @@ const ApplicationsTab = ({ apps, loading, jobs, filterStatus, setFilterStatus, f
                 <select
                   value={a.status}
                   onChange={e => onUpdateStatus(a.application_id, e.target.value)}
-                  className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs"
+                  className="px-2 py-1 bg-white border border-slate-200 rounded text-xs"
                   data-testid={`status-${a.application_id}`}
                 >
                   {['new','reviewed','shortlisted','interview','hired','rejected'].map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <button onClick={() => onDownloadResume(a.application_id)} title="Download Resume" className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg" data-testid={`resume-${a.application_id}`}>
+                <button onClick={() => onDownloadResume(a.application_id)} title="Download Resume" className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg" data-testid={`resume-${a.application_id}`}>
                   <Download className="w-4 h-4" />
                 </button>
               </div>
@@ -448,10 +448,10 @@ const ApplicationsTab = ({ apps, loading, jobs, filterStatus, setFilterStatus, f
 
 const JobModal = ({ form, setForm, meta, editJob, onSave, onClose }) => (
   <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-    <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-      <div className="flex items-center justify-between p-4 border-b border-slate-700">
-        <h3 className="font-bold text-slate-100">{editJob ? 'Edit Job' : 'Create New Job'}</h3>
-        <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"><X className="w-5 h-5" /></button>
+    <div className="bg-white border border-slate-200 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="flex items-center justify-between p-4 border-b border-slate-200">
+        <h3 className="font-bold text-slate-900">{editJob ? 'Edit Job' : 'Create New Job'}</h3>
+        <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-white hover:bg-slate-50 rounded-lg"><X className="w-5 h-5" /></button>
       </div>
       <div className="p-4 overflow-y-auto flex-1 space-y-3">
         <Input label="Title *" value={form.title} onChange={v => setForm(p => ({ ...p, title: v }))} testid="job-title" />
@@ -468,7 +468,7 @@ const JobModal = ({ form, setForm, meta, editJob, onSave, onClose }) => (
           <Input label="Salary Min (INR/mo)" type="number" value={form.salary_min} onChange={v => setForm(p => ({ ...p, salary_min: v }))} />
           <Input label="Salary Max (INR/mo)" type="number" value={form.salary_max} onChange={v => setForm(p => ({ ...p, salary_max: v }))} />
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={form.show_salary} onChange={e => setForm(p => ({ ...p, show_salary: e.target.checked }))} />
           Show salary publicly
         </label>
@@ -476,13 +476,13 @@ const JobModal = ({ form, setForm, meta, editJob, onSave, onClose }) => (
         <Textarea label="Responsibilities" value={form.responsibilities} onChange={v => setForm(p => ({ ...p, responsibilities: v }))} rows={3} />
         <Textarea label="Requirements" value={form.requirements} onChange={v => setForm(p => ({ ...p, requirements: v }))} rows={3} />
         <Textarea label="Benefits" value={form.benefits} onChange={v => setForm(p => ({ ...p, benefits: v }))} rows={2} />
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} data-testid="job-active" />
           Active (visible on public Careers page)
         </label>
       </div>
-      <div className="flex justify-end gap-2 p-4 border-t border-slate-700">
-        <button onClick={onClose} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">Cancel</button>
+      <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
+        <button onClick={onClose} className="px-4 py-2 bg-slate-200 hover:bg-slate-600 rounded-lg text-sm">Cancel</button>
         <button onClick={onSave} className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-lg text-sm font-semibold" data-testid="save-job-btn">
           {editJob ? 'Update Job' : 'Create Job'}
         </button>
@@ -495,10 +495,10 @@ const ApplicationModal = ({ app, onClose, onUpdateStatus, onAddNote, onDownloadR
   const [note, setNote] = useState('');
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b border-slate-700">
-          <h3 className="font-bold text-slate-100">{app.name}</h3>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"><X className="w-5 h-5" /></button>
+      <div className="bg-white border border-slate-200 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+          <h3 className="font-bold text-slate-900">{app.name}</h3>
+          <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-white hover:bg-slate-50 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-4 overflow-y-auto flex-1 space-y-3">
           <div className="grid grid-cols-2 gap-3 text-sm">
@@ -512,7 +512,7 @@ const ApplicationModal = ({ app, onClose, onUpdateStatus, onAddNote, onDownloadR
           {app.cover_letter && (
             <div>
               <p className="text-xs text-slate-500 mb-1">Cover Letter</p>
-              <div className="bg-slate-800/40 border border-slate-700/40 rounded-lg p-3 text-sm text-slate-300 whitespace-pre-wrap">{app.cover_letter}</div>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-700 whitespace-pre-wrap">{app.cover_letter}</div>
             </div>
           )}
 
@@ -520,7 +520,7 @@ const ApplicationModal = ({ app, onClose, onUpdateStatus, onAddNote, onDownloadR
             <p className="text-xs text-slate-500 mb-1">Status</p>
             <div className="flex gap-2 flex-wrap">
               {['new','reviewed','shortlisted','interview','hired','rejected'].map(s => (
-                <button key={s} onClick={() => onUpdateStatus(app.application_id, s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${app.status === s ? STATUS_COLORS[s] + ' ring-2 ring-current' : 'bg-slate-800 text-slate-400 hover:text-white'}`} data-testid={`modal-status-${s}`}>
+                <button key={s} onClick={() => onUpdateStatus(app.application_id, s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${app.status === s ? STATUS_COLORS[s] + ' ring-2 ring-current' : 'bg-white text-slate-500 hover:text-white'}`} data-testid={`modal-status-${s}`}>
                   {s.charAt(0).toUpperCase()+s.slice(1)}
                 </button>
               ))}
@@ -532,20 +532,20 @@ const ApplicationModal = ({ app, onClose, onUpdateStatus, onAddNote, onDownloadR
             {app.admin_notes?.length > 0 && (
               <div className="space-y-2 mb-2 max-h-40 overflow-y-auto">
                 {app.admin_notes.map((n, i) => (
-                  <div key={i} className="bg-slate-800/40 border border-slate-700/40 rounded-lg p-2 text-xs">
-                    <p className="text-slate-300">{n.note}</p>
+                  <div key={i} className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs">
+                    <p className="text-slate-700">{n.note}</p>
                     <p className="text-slate-500 mt-1">— {n.admin_id} • {n.created_at?.slice(0, 16).replace('T', ' ')}</p>
                   </div>
                 ))}
               </div>
             )}
             <div className="flex gap-2">
-              <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Add internal note..." className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm" data-testid="note-input" />
+              <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Add internal note..." className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" data-testid="note-input" />
               <button onClick={() => { onAddNote(app.application_id, note); setNote(''); }} className="px-3 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm text-white" data-testid="add-note-btn">Add</button>
             </div>
           </div>
         </div>
-        <div className="flex justify-end gap-2 p-4 border-t border-slate-700">
+        <div className="flex justify-end gap-2 p-4 border-t border-slate-200">
           <button onClick={onDownloadResume} className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm" data-testid="download-resume-btn">
             <Download className="w-4 h-4" /> Download Resume
           </button>
@@ -557,18 +557,18 @@ const ApplicationModal = ({ app, onClose, onUpdateStatus, onAddNote, onDownloadR
 
 const Input = ({ label, value, onChange, type = 'text', testid }) => (
   <div>
-    <label className="text-xs text-slate-400 mb-1 block">{label}</label>
+    <label className="text-xs text-slate-500 mb-1 block">{label}</label>
     <input
       type={type} value={value ?? ''} onChange={e => onChange(e.target.value)}
-      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100"
+      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900"
       data-testid={testid}
     />
   </div>
 );
 const Select = ({ label, value, onChange, options, testid }) => (
   <div>
-    <label className="text-xs text-slate-400 mb-1 block">{label}</label>
-    <select value={value} onChange={e => onChange(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100" data-testid={testid}>
+    <label className="text-xs text-slate-500 mb-1 block">{label}</label>
+    <select value={value} onChange={e => onChange(e.target.value)} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900" data-testid={testid}>
       <option value="">Select...</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
@@ -576,11 +576,11 @@ const Select = ({ label, value, onChange, options, testid }) => (
 );
 const Textarea = ({ label, value, onChange, rows = 2, testid }) => (
   <div>
-    <label className="text-xs text-slate-400 mb-1 block">{label}</label>
+    <label className="text-xs text-slate-500 mb-1 block">{label}</label>
     <textarea
       value={value ?? ''} onChange={e => onChange(e.target.value)}
       rows={rows}
-      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100 resize-none"
+      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 resize-none"
       data-testid={testid}
     />
   </div>

@@ -77,20 +77,20 @@ const AdminEmployeeReports = () => {
   for (let y = now.getFullYear() - 2; y <= now.getFullYear() + 1; y++) years.push(y);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-4 sm:p-6">
+    <div className="min-h-screen bg-white text-slate-900 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-indigo-400" />
+              <FileText className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold">Employee Reports</h1>
-              <p className="text-xs text-slate-400">Salary, Attendance, Pool Distribution & HR Analytics</p>
+              <p className="text-xs text-slate-500">Salary, Attendance, Pool Distribution & HR Analytics</p>
             </div>
           </div>
-          <button onClick={fetchAnalytics} data-testid="refresh-btn" className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm">
+          <button onClick={fetchAnalytics} data-testid="refresh-btn" className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-sm">
             <RefreshCw className={`w-4 h-4 ${loadingAnalytics ? 'animate-spin' : ''}`} /> Refresh
           </button>
         </div>
@@ -107,10 +107,10 @@ const AdminEmployeeReports = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6">
               {/* Departments */}
-              <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
-                <h3 className="font-bold text-slate-100 mb-3 flex items-center gap-2"><Building2 className="w-4 h-4 text-indigo-400" />Department Distribution</h3>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2"><Building2 className="w-4 h-4 text-indigo-600" />Department Distribution</h3>
                 {analytics.departments?.length === 0 ? (
-                  <p className="text-sm text-slate-400">No employees</p>
+                  <p className="text-sm text-slate-500">No employees</p>
                 ) : (
                   <div className="space-y-2">
                     {analytics.departments.map(d => {
@@ -118,10 +118,10 @@ const AdminEmployeeReports = () => {
                       return (
                         <div key={d.department}>
                           <div className="flex justify-between text-xs mb-1">
-                            <span className="text-slate-300">{d.department}</span>
-                            <span className="text-slate-400">{d.count} · INR {(d.total_salary / 1000).toFixed(0)}K</span>
+                            <span className="text-slate-700">{d.department}</span>
+                            <span className="text-slate-500">{d.count} · INR {(d.total_salary / 1000).toFixed(0)}K</span>
                           </div>
-                          <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                          <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                             <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
@@ -132,25 +132,25 @@ const AdminEmployeeReports = () => {
               </div>
 
               {/* Top Earners */}
-              <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
-                <h3 className="font-bold text-slate-100 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-emerald-400" />Top Pool Earners (This Month)</h3>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-emerald-600" />Top Pool Earners (This Month)</h3>
                 {analytics.top_earners_this_month?.length === 0 ? (
-                  <p className="text-sm text-slate-400">No pool distributions this month</p>
+                  <p className="text-sm text-slate-500">No pool distributions this month</p>
                 ) : (
                   <div className="space-y-2">
                     {analytics.top_earners_this_month.map((e, i) => (
-                      <div key={e.employee_id} className="flex items-center gap-3 p-2 bg-slate-900/40 rounded-lg">
+                      <div key={e.employee_id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg">
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                          i === 0 ? 'bg-amber-500/20 text-amber-400' :
-                          i === 1 ? 'bg-slate-400/20 text-slate-300' :
-                          i === 2 ? 'bg-orange-500/20 text-orange-400' :
-                          'bg-slate-700 text-slate-400'
+                          i === 0 ? 'bg-amber-500/20 text-amber-600' :
+                          i === 1 ? 'bg-slate-400/20 text-slate-700' :
+                          i === 2 ? 'bg-orange-500/20 text-orange-600' :
+                          'bg-slate-200 text-slate-500'
                         }`}>{i + 1}</div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-100 truncate">{e.name}</p>
+                          <p className="text-sm font-medium text-slate-900 truncate">{e.name}</p>
                           <p className="text-xs text-slate-500">{e.department} · {e.employee_id}</p>
                         </div>
-                        <span className="text-sm font-bold text-emerald-400">{e.total_prc?.toFixed(4)} PRC</span>
+                        <span className="text-sm font-bold text-emerald-600">{e.total_prc?.toFixed(4)} PRC</span>
                       </div>
                     ))}
                   </div>
@@ -161,18 +161,18 @@ const AdminEmployeeReports = () => {
         )}
 
         {/* Period Selector */}
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 mb-4">
-          <h3 className="font-bold text-slate-100 mb-3 flex items-center gap-2"><Calendar className="w-4 h-4 text-indigo-400" />Report Period</h3>
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+          <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2"><Calendar className="w-4 h-4 text-indigo-600" />Report Period</h3>
           <div className="flex flex-wrap gap-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Month</label>
-              <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm" data-testid="month-select">
+              <label className="text-xs text-slate-500 mb-1 block">Month</label>
+              <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" data-testid="month-select">
                 {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Year</label>
-              <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm" data-testid="year-select">
+              <label className="text-xs text-slate-500 mb-1 block">Year</label>
+              <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" data-testid="year-select">
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
@@ -218,7 +218,7 @@ const AdminEmployeeReports = () => {
             description="Professional payslip PDF for one employee. Select from the list below and download."
             customContent={
               <div className="flex gap-2 mt-2">
-                <select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm" data-testid="slip-emp-select">
+                <select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" data-testid="slip-emp-select">
                   <option value="">Select employee...</option>
                   {employees.map(e => <option key={e.employee_id} value={e.employee_id}>{e.name} ({e.employee_id})</option>)}
                 </select>
@@ -244,11 +244,11 @@ const AdminEmployeeReports = () => {
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <div>
                   <label className="text-[10px] text-slate-500 block mb-0.5">From</label>
-                  <input type="date" value={poolFromDate} onChange={e => setPoolFromDate(e.target.value)} className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs" data-testid="pool-from" />
+                  <input type="date" value={poolFromDate} onChange={e => setPoolFromDate(e.target.value)} className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" data-testid="pool-from" />
                 </div>
                 <div>
                   <label className="text-[10px] text-slate-500 block mb-0.5">To</label>
-                  <input type="date" value={poolToDate} onChange={e => setPoolToDate(e.target.value)} className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs" data-testid="pool-to" />
+                  <input type="date" value={poolToDate} onChange={e => setPoolToDate(e.target.value)} className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" data-testid="pool-to" />
                 </div>
               </div>
             }
@@ -264,9 +264,9 @@ const AdminEmployeeReports = () => {
         </div>
 
         {/* Phase B — Statutory Reports */}
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 mb-4">
-          <h3 className="font-bold text-slate-100 mb-3 flex items-center gap-2">
-            <Briefcase className="w-4 h-4 text-amber-400" /> Statutory Compliance (India)
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+          <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-amber-600" /> Statutory Compliance (India)
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <ReportCard
@@ -302,7 +302,7 @@ const AdminEmployeeReports = () => {
               customContent={
                 <div>
                   <label className="text-[10px] text-slate-500 block mb-0.5">FY Start Year</label>
-                  <select value={selectedFY} onChange={e => setSelectedFY(Number(e.target.value))} className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs" data-testid="fy-select">
+                  <select value={selectedFY} onChange={e => setSelectedFY(Number(e.target.value))} className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" data-testid="fy-select">
                     {years.map(y => <option key={y} value={y}>{y}-{(y + 1).toString().slice(-2)}</option>)}
                   </select>
                 </div>
@@ -322,11 +322,11 @@ const AdminEmployeeReports = () => {
               description="Part A + Part B Form 16 PDF for selected employee. Requires PAN. Issued annually to every employee."
               customContent={
                 <div className="grid grid-cols-2 gap-2 mt-2">
-                  <select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs" data-testid="form16-emp-select">
+                  <select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" data-testid="form16-emp-select">
                     <option value="">Select employee...</option>
                     {employees.map(e => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}
                   </select>
-                  <select value={selectedFY} onChange={e => setSelectedFY(Number(e.target.value))} className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs">
+                  <select value={selectedFY} onChange={e => setSelectedFY(Number(e.target.value))} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
                     {years.map(y => <option key={y} value={y}>FY {y}-{(y + 1).toString().slice(-2)}</option>)}
                   </select>
                 </div>
@@ -345,9 +345,9 @@ const AdminEmployeeReports = () => {
         </div>
 
         {/* Phase C — Leave & Personal Reports */}
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
-          <h3 className="font-bold text-slate-100 mb-3 flex items-center gap-2">
-            <UserCheck className="w-4 h-4 text-emerald-400" /> Leave & Employee Reports
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-emerald-600" /> Leave & Employee Reports
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <ReportCard
@@ -369,11 +369,11 @@ const AdminEmployeeReports = () => {
               description="Year-to-date earnings breakdown — monthly gross, net, deductions, days paid. Useful for loan/visa applications."
               customContent={
                 <div className="grid grid-cols-2 gap-2 mt-2">
-                  <select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs" data-testid="ytd-emp-select">
+                  <select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" data-testid="ytd-emp-select">
                     <option value="">Select employee...</option>
                     {employees.map(e => <option key={e.employee_id} value={e.employee_id}>{e.name}</option>)}
                   </select>
-                  <select value={selectedFY} onChange={e => setSelectedFY(Number(e.target.value))} className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs">
+                  <select value={selectedFY} onChange={e => setSelectedFY(Number(e.target.value))} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
                     {years.map(y => <option key={y} value={y}>FY {y}-{(y + 1).toString().slice(-2)}</option>)}
                   </select>
                 </div>
@@ -397,24 +397,24 @@ const AdminEmployeeReports = () => {
 
           {/* YTD Data Preview */}
           {ytdData && (
-            <div className="mt-4 bg-slate-900/50 border border-slate-700/50 rounded-lg p-4">
+            <div className="mt-4 bg-slate-50 border border-slate-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <div>
-                  <h4 className="font-bold text-slate-100">{ytdData.employee?.name} — FY {ytdData.financial_year}</h4>
-                  <p className="text-xs text-slate-400">{ytdData.employee?.designation} · {ytdData.employee?.department} · {ytdData.months_processed} months processed · {ytdData.ytd_days} days paid</p>
+                  <h4 className="font-bold text-slate-900">{ytdData.employee?.name} — FY {ytdData.financial_year}</h4>
+                  <p className="text-xs text-slate-500">{ytdData.employee?.designation} · {ytdData.employee?.department} · {ytdData.months_processed} months processed · {ytdData.ytd_days} days paid</p>
                 </div>
-                <button onClick={() => setYtdData(null)} className="text-xs text-slate-400 hover:text-white">× Close</button>
+                <button onClick={() => setYtdData(null)} className="text-xs text-slate-500 hover:text-white">× Close</button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
                 {[
-                  { label: 'Gross YTD', val: ytdData.totals?.gross, color: 'text-emerald-400' },
-                  { label: 'Net YTD', val: ytdData.totals?.net, color: 'text-blue-400' },
-                  { label: 'PF YTD', val: ytdData.totals?.pf, color: 'text-amber-400' },
-                  { label: 'ESI YTD', val: ytdData.totals?.esi, color: 'text-orange-400' },
-                  { label: 'TDS YTD', val: ytdData.totals?.tds, color: 'text-rose-400' },
-                  { label: 'PT YTD', val: ytdData.totals?.pt, color: 'text-purple-400' }
+                  { label: 'Gross YTD', val: ytdData.totals?.gross, color: 'text-emerald-600' },
+                  { label: 'Net YTD', val: ytdData.totals?.net, color: 'text-blue-600' },
+                  { label: 'PF YTD', val: ytdData.totals?.pf, color: 'text-amber-600' },
+                  { label: 'ESI YTD', val: ytdData.totals?.esi, color: 'text-orange-600' },
+                  { label: 'TDS YTD', val: ytdData.totals?.tds, color: 'text-rose-600' },
+                  { label: 'PT YTD', val: ytdData.totals?.pt, color: 'text-purple-600' }
                 ].map(k => (
-                  <div key={k.label} className="bg-slate-800/50 rounded-lg p-2 text-center">
+                  <div key={k.label} className="bg-slate-100 rounded-lg p-2 text-center">
                     <p className="text-[10px] text-slate-500">{k.label}</p>
                     <p className={`text-sm font-bold ${k.color}`}>INR {k.val?.toLocaleString() || 0}</p>
                   </div>
@@ -424,31 +424,31 @@ const AdminEmployeeReports = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-slate-700">
-                        <th className="py-2 px-2 text-left text-slate-400 font-normal">Month</th>
-                        <th className="py-2 px-2 text-right text-slate-400 font-normal">Days</th>
-                        <th className="py-2 px-2 text-right text-slate-400 font-normal">Gross</th>
-                        <th className="py-2 px-2 text-right text-slate-400 font-normal">PF</th>
-                        <th className="py-2 px-2 text-right text-slate-400 font-normal">TDS</th>
-                        <th className="py-2 px-2 text-right text-slate-400 font-normal">Net</th>
+                      <tr className="border-b border-slate-200">
+                        <th className="py-2 px-2 text-left text-slate-500 font-normal">Month</th>
+                        <th className="py-2 px-2 text-right text-slate-500 font-normal">Days</th>
+                        <th className="py-2 px-2 text-right text-slate-500 font-normal">Gross</th>
+                        <th className="py-2 px-2 text-right text-slate-500 font-normal">PF</th>
+                        <th className="py-2 px-2 text-right text-slate-500 font-normal">TDS</th>
+                        <th className="py-2 px-2 text-right text-slate-500 font-normal">Net</th>
                       </tr>
                     </thead>
                     <tbody>
                       {ytdData.monthly.map((m, i) => (
-                        <tr key={i} className="border-b border-slate-800/50">
+                        <tr key={i} className="border-b border-slate-200/50">
                           <td className="py-1.5 px-2 text-slate-200">{m.month} {m.year}</td>
-                          <td className="py-1.5 px-2 text-right text-slate-300">{m.days_paid}</td>
-                          <td className="py-1.5 px-2 text-right text-emerald-400">{m.gross?.toLocaleString()}</td>
-                          <td className="py-1.5 px-2 text-right text-amber-400">{m.pf?.toLocaleString()}</td>
-                          <td className="py-1.5 px-2 text-right text-rose-400">{m.tds?.toLocaleString()}</td>
-                          <td className="py-1.5 px-2 text-right text-blue-400 font-semibold">{m.net?.toLocaleString()}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-700">{m.days_paid}</td>
+                          <td className="py-1.5 px-2 text-right text-emerald-600">{m.gross?.toLocaleString()}</td>
+                          <td className="py-1.5 px-2 text-right text-amber-600">{m.pf?.toLocaleString()}</td>
+                          <td className="py-1.5 px-2 text-right text-rose-600">{m.tds?.toLocaleString()}</td>
+                          <td className="py-1.5 px-2 text-right text-blue-600 font-semibold">{m.net?.toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               ) : (
-                <p className="text-sm text-slate-400 italic text-center py-4">No monthly data available</p>
+                <p className="text-sm text-slate-500 italic text-center py-4">No monthly data available</p>
               )}
             </div>
           )}
@@ -461,18 +461,18 @@ const AdminEmployeeReports = () => {
 /* ============== Components ============== */
 const KPI = ({ icon: Icon, color, label, value, sub }) => {
   const colors = {
-    emerald: 'bg-emerald-500/20 text-emerald-400',
-    blue: 'bg-blue-500/20 text-blue-400',
-    amber: 'bg-amber-500/20 text-amber-400',
-    purple: 'bg-purple-500/20 text-purple-400'
+    emerald: 'bg-emerald-500/20 text-emerald-600',
+    blue: 'bg-blue-500/20 text-blue-600',
+    amber: 'bg-amber-500/20 text-amber-600',
+    purple: 'bg-purple-500/20 text-purple-600'
   };
   return (
-    <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-3">
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${colors[color]}`}>
         <Icon className="w-4 h-4" />
       </div>
       <p className="text-lg font-bold">{value}</p>
-      <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+      <p className="text-xs text-slate-500 mt-0.5">{label}</p>
       {sub && <p className="text-[10px] text-slate-500 mt-0.5">{sub}</p>}
     </div>
   );
@@ -480,26 +480,26 @@ const KPI = ({ icon: Icon, color, label, value, sub }) => {
 
 const ReportCard = ({ icon: Icon, color, title, description, customContent, btnLabel, isLoading, disabled, onDownload, testid }) => {
   const colors = {
-    emerald: 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30',
-    blue: 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30',
-    rose: 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30',
-    purple: 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+    emerald: 'bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500/30',
+    blue: 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30',
+    rose: 'bg-rose-500/20 text-rose-600 hover:bg-rose-500/30',
+    purple: 'bg-purple-500/20 text-purple-600 hover:bg-purple-500/30'
   };
   const iconBg = {
-    emerald: 'bg-emerald-500/10 text-emerald-400',
-    blue: 'bg-blue-500/10 text-blue-400',
-    rose: 'bg-rose-500/10 text-rose-400',
-    purple: 'bg-purple-500/10 text-purple-400'
+    emerald: 'bg-emerald-500/10 text-emerald-600',
+    blue: 'bg-blue-500/10 text-blue-600',
+    rose: 'bg-rose-500/10 text-rose-600',
+    purple: 'bg-purple-500/10 text-purple-600'
   };
   return (
-    <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 flex flex-col">
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col">
       <div className="flex items-start gap-3 mb-2">
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg[color]}`}>
           <Icon className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="font-bold text-slate-100">{title}</h4>
-          <p className="text-xs text-slate-400 mt-1">{description}</p>
+          <h4 className="font-bold text-slate-900">{title}</h4>
+          <p className="text-xs text-slate-500 mt-1">{description}</p>
         </div>
       </div>
       {customContent}
