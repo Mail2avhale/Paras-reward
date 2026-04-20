@@ -137,6 +137,17 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - New admin endpoint: `POST /api/employees/pool/heal-negative-balance` with audit log in `employee_pool_transactions`.
 - **Manually verified**: (1) negative -1234.56 → auto-heals to 0; (2) 3 concurrent calls → 1 success + 2 skipped; (3) pool=1000.000001 across 4 employees → distributed=1000.0, remainder=9.99e-7 (positive); (4) admin heal endpoint returns correct response.
 
+### Admin Employee Pool % Configuration UI (DONE - April 20, 2026)
+- Backend `POST /api/employees/pool/settings` now validates: pool_rate must be 0-100, prc_to_inr_rate must be > 0; returns 400 with clear error message on invalid input. Logs admin updates with timestamp.
+- Admin UI (`/admin/employees` → Pool tab) redesigned:
+  - Pool Rate input with % suffix, step=0.5, preset-pill buttons for common values (10/15/20/25/30)
+  - PRC → INR Rate input with ₹ prefix and `salary_cap_prc = monthly_salary / {rate}` formula preview
+  - "Current: X% from mining" badge in section header
+  - **"⚠️ Heal Negative Balance" button** appears only when `poolData.pool_balance < 0` for safety
+  - Toast feedback shows actual values saved: `Settings saved — Pool 25%, 1 PRC = ₹0.12`
+  - data-testids: `pool-rate-input`, `pool-rate-preset-{N}`, `prc-inr-rate-input`, `save-pool-settings-btn`, `heal-pool-balance-btn`
+- **Tested via curl**: settings update succeeds with valid values, rejects -5 and 150 with HTTP 400.
+
 ### CRITICAL Production Bug Fix — Subscription Auto-Start (DONE - April 19, 2026)
 - **Issue**: Many users complained their "upcoming" subscription (already paid-for in PRC) did NOT auto-activate when their current plan expired. Root cause:
   1. `auto_expire_subscriptions` cron only processes users whose `subscription_plan != explorer` AND `subscription_expired != True`. If a user was already on explorer (manually downgraded or previous cron ran) with a stuck `"upcoming"` payment, it was **never activated**.

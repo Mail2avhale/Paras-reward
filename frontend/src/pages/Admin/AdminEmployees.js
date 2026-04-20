@@ -172,13 +172,34 @@ const AdminEmployees = () => {
   };
 
   const savePoolSettings = async () => {
+    if (isNaN(poolRate) || poolRate < 0 || poolRate > 100) {
+      toast.error('Pool rate must be between 0 and 100');
+      return;
+    }
+    if (isNaN(prcToInr) || prcToInr <= 0) {
+      toast.error('PRC to INR rate must be positive');
+      return;
+    }
     setSavingSettings(true);
     try {
       await axios.post(`${API}/employees/pool/settings`, { pool_rate: poolRate, prc_to_inr_rate: prcToInr }, { headers });
-      toast.success('Settings saved');
+      toast.success(`Settings saved — Pool ${poolRate}%, 1 PRC = ₹${prcToInr}`);
       fetchData();
-    } catch { toast.error('Failed'); }
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
     finally { setSavingSettings(false); }
+  };
+
+  const handleHealPoolBalance = async () => {
+    if (!window.confirm('Reset employee pool balance to 0? (Only if balance is currently negative.)')) return;
+    try {
+      const res = await axios.post(`${API}/employees/pool/heal-negative-balance`, {}, { headers });
+      if (res.data?.healed) {
+        toast.success(`Balance healed from ${res.data.previous_balance} → 0`);
+      } else {
+        toast.info(res.data?.message || 'Balance is non-negative, no healing needed');
+      }
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.detail || 'Heal failed'); }
   };
 
   const handleDistribute = async () => {
@@ -747,20 +768,86 @@ const AdminEmployees = () => {
 
           {/* Pool Settings */}
           <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <h3 className="font-semibold text-slate-900 mb-3">Pool Settings</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-slate-900">Pool Settings</h3>
+              <span className="text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                Current: {poolData?.pool_rate}% from mining
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Pool Rate (%)</label>
-                <input type="number" value={poolRate} onChange={e => setPoolRate(parseFloat(e.target.value))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" />
+                <label className="text-xs text-slate-500 mb-1 block">
+                  Pool Rate (% of mining → employee pool)
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min="0" max="100" step="0.5"
+                    value={poolRate}
+                    onChange={e => setPoolRate(parseFloat(e.target.value))}
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white focus:ring-2 focus:ring-purple-400"
+                    data-testid="pool-rate-input"
+                  />
+                  <span className="text-slate-500 text-sm font-medium">%</span>
+                </div>
+                <div className="flex gap-1 mt-1.5">
+                  {[10, 15, 20, 25, 30].map(v => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setPoolRate(v)}
+                      className={`text-[11px] px-2 py-0.5 rounded-full border ${poolRate === v ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-purple-400'}`}
+                      data-testid={`pool-rate-preset-${v}`}
+                    >
+                      {v}%
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1.5">
+                  Every mining collect allocates this % to the employee pool wallet.
+                </p>
               </div>
+
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">PRC to INR Rate (₹)</label>
-                <input type="number" step="0.01" value={prcToInr} onChange={e => setPrcToInr(parseFloat(e.target.value))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" />
+                <label className="text-xs text-slate-500 mb-1 block">PRC → INR Conversion Rate</label>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500 text-sm font-medium">₹</span>
+                  <input
+                    type="number"
+                    step="0.01" min="0.01"
+                    value={prcToInr}
+                    onChange={e => setPrcToInr(parseFloat(e.target.value))}
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white focus:ring-2 focus:ring-emerald-400"
+                    data-testid="prc-inr-rate-input"
+                  />
+                  <span className="text-slate-500 text-xs">per PRC</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1.5">
+                  Used to compute monthly salary cap: <span className="font-semibold">salary_cap_prc = monthly_salary / {prcToInr || 0.10}</span>
+                </p>
               </div>
             </div>
-            <button onClick={savePoolSettings} disabled={savingSettings} className="mt-3 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 disabled:opacity-50">
-              {savingSettings ? 'Saving...' : 'Save Settings'}
-            </button>
+
+            <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-slate-100">
+              <button
+                onClick={savePoolSettings}
+                disabled={savingSettings}
+                className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
+                data-testid="save-pool-settings-btn"
+              >
+                {savingSettings ? 'Saving...' : 'Save Settings'}
+              </button>
+              {(poolData?.pool_balance || 0) < 0 && (
+                <button
+                  onClick={handleHealPoolBalance}
+                  className="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700"
+                  data-testid="heal-pool-balance-btn"
+                >
+                  ⚠️ Heal Negative Balance
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

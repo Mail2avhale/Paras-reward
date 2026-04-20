@@ -1259,16 +1259,28 @@ async def update_pool_settings(request: Request):
         data = await request.json()
         update = {}
         if "pool_rate" in data:
-            update["pool_rate"] = float(data["pool_rate"])
+            rate = float(data["pool_rate"])
+            if rate < 0 or rate > 100:
+                raise HTTPException(status_code=400, detail="Pool rate must be between 0 and 100")
+            update["pool_rate"] = rate
         if "prc_to_inr_rate" in data:
-            update["prc_to_inr_rate"] = float(data["prc_to_inr_rate"])
+            prc_rate = float(data["prc_to_inr_rate"])
+            if prc_rate <= 0:
+                raise HTTPException(status_code=400, detail="PRC-to-INR rate must be positive")
+            update["prc_to_inr_rate"] = prc_rate
         if "enabled" in data:
             update["enabled"] = bool(data["enabled"])
 
-        if update:
-            await db.employee_pool_settings.update_one({}, {"$set": update}, upsert=True)
+        if not update:
+            raise HTTPException(status_code=400, detail="No settings provided to update")
 
-        return {"success": True, "message": "Settings updated"}
+        update["last_updated"] = datetime.now(timezone.utc).isoformat()
+        await db.employee_pool_settings.update_one({}, {"$set": update}, upsert=True)
+
+        logging.info(f"[EMPLOYEE POOL] Admin updated settings: {update}")
+        return {"success": True, "message": "Settings updated", "updated": update}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
