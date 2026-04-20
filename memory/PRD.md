@@ -172,6 +172,19 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Frontend** (`/app/frontend/src/components/LiveTickerStrip.js`): Fixed-bottom strip with horizontal marquee (right→left) animation, LIVE red pulse badge, service icon, green checkmark, dismiss (×) button, hover/touch-to-pause. Adaptive duration (~50px/sec). Mounted in `App.js` alongside BottomNav, visible only for logged-in regular users (roles admin/sub_admin/manager excluded via role check).
 - **Tested (iteration_217 - 100% PASSED)**: 12/12 backend + all frontend acceptance criteria.
 
+### Admin User 360° — 5 UX Cleanup + Badges (DONE - April 20, 2026)
+- **User-requested cleanup:**
+  1. Profile section: avatar enlarged (16→20), name `text-2xl/3xl`, UID prominent mono, contact fields in solid slate-800
+  2. Removed "Redeem to Bank" admin action section (45-line block)
+  3. Removed "Referral Bonus" StatCard (grid 5→4 cols)
+  4. Removed "Logins" tab
+  5. KYC Data tab enriched: status banner + identity/banking/address/nominee blocks + clickable document thumbnails (PAN/Aadhaar Front/Back/Selfie)
+- **NEW Badges** (`core_team` + `employee`):
+  - Backend: both `/admin/user-360` (primary) and `/admin/user360/full/{uid}` (fallback) now enrich `response.user` with `core_team` object (member_id, designation, added_at) and `employee` object (employee_id, designation, department, monthly_salary, joined_at). Returns `null` if not a member.
+  - Frontend: Profile card renders amber-orange "CORE TEAM" badge (Crown icon) + indigo-violet "EMPLOYEE" badge (Briefcase icon). Tooltips show designation/department on hover. data-testids: `core-team-badge`, `employee-badge`
+- **Quick Copy buttons**: Added on Email/Mobile/Referral Code fields — visible on hover (opacity-0 → group-hover:opacity-100). data-testids: `copy-email-btn`, `copy-mobile-btn`, `copy-ref-btn`
+- **Verified via curl**: test user uid=`76b75808` (both CTM + Employee) returns both objects; regular user returns both as `null`. No regression on `total_referrals=10` field.
+
 ### CRITICAL User Block/Unblock Bug Fix (DONE - April 20, 2026)
 - **Issue**: Admin User 360° → Block/Unblock button appeared to "work" (toast success) but user was NOT actually blocked — they could continue logging in normally.
 - **Root Cause**: 3-way field mismatch:

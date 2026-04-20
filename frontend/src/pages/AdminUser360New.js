@@ -13,7 +13,7 @@ import {
   CheckCircle, XCircle, AlertTriangle, Activity, RefreshCw, FileText,
   Loader2, ArrowLeft, Copy, Ban, Wallet, Receipt, BadgeCheck, Zap,
   Plus, Minus, History, Send, Key, UserX, Trash2, Edit, ShoppingBag,
-  Link, Unlink, X, Check, Eye, EyeOff, Settings, Lock, Network, Play, Pause, Pencil
+  Link, Unlink, X, Check, Eye, EyeOff, Settings, Lock, Network, Play, Pause, Pencil, Briefcase
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -144,6 +144,24 @@ const UserProfileCard = ({ user, onEditClick }) => {
               {user.kyc_status === 'verified' && (
                 <BadgeCheck className="h-6 w-6 text-green-600" />
               )}
+              {user.core_team && (
+                <span
+                  title={`Core Team${user.core_team?.designation ? ' · ' + user.core_team.designation : ''}${user.core_team?.added_at ? ' · since ' + new Date(user.core_team.added_at).toLocaleDateString() : ''}`}
+                  data-testid="core-team-badge"
+                  className="px-2.5 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-bold rounded-full inline-flex items-center gap-1 shadow-sm"
+                >
+                  <Crown className="h-3.5 w-3.5" /> CORE TEAM
+                </span>
+              )}
+              {user.employee && (
+                <span
+                  title={`Employee${user.employee?.designation ? ' · ' + user.employee.designation : ''}${user.employee?.department ? ' · ' + user.employee.department : ''}${user.employee?.employee_id ? ' · ID ' + user.employee.employee_id : ''}`}
+                  data-testid="employee-badge"
+                  className="px-2.5 py-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-[11px] font-bold rounded-full inline-flex items-center gap-1 shadow-sm"
+                >
+                  <Briefcase className="h-3.5 w-3.5" /> EMPLOYEE
+                </span>
+              )}
             </h2>
             <p className="text-sm text-slate-700 flex items-center gap-2 mt-1.5 font-mono">
               <span className="text-slate-500">UID:</span>
@@ -176,13 +194,23 @@ const UserProfileCard = ({ user, onEditClick }) => {
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-200">
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm group">
           <Mail className="h-4 w-4 text-slate-500 flex-shrink-0" />
-          <span className="text-slate-800 font-medium truncate">{user.email || 'N/A'}</span>
+          <span className="text-slate-800 font-medium truncate flex-1">{user.email || 'N/A'}</span>
+          {user.email && (
+            <button onClick={() => copyToClipboard(user.email)} className="text-slate-400 hover:text-slate-800 transition-colors opacity-0 group-hover:opacity-100" data-testid="copy-email-btn" title="Copy email">
+              <Copy className="h-3 w-3" />
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm group">
           <Phone className="h-4 w-4 text-slate-500 flex-shrink-0" />
-          <span className="text-slate-800 font-medium">{user.mobile || 'N/A'}</span>
+          <span className="text-slate-800 font-medium flex-1">{user.mobile || 'N/A'}</span>
+          {user.mobile && (
+            <button onClick={() => copyToClipboard(user.mobile)} className="text-slate-400 hover:text-slate-800 transition-colors opacity-0 group-hover:opacity-100" data-testid="copy-mobile-btn" title="Copy mobile">
+              <Copy className="h-3 w-3" />
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
@@ -190,11 +218,16 @@ const UserProfileCard = ({ user, onEditClick }) => {
             {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm group">
           <Link className="h-4 w-4 text-blue-600 flex-shrink-0" />
-          <span className="text-blue-700 font-semibold">
+          <span className="text-blue-700 font-semibold flex-1">
             Ref: {user.referral_code || 'N/A'}
           </span>
+          {user.referral_code && (
+            <button onClick={() => copyToClipboard(user.referral_code)} className="text-slate-400 hover:text-slate-800 transition-colors opacity-0 group-hover:opacity-100" data-testid="copy-ref-btn" title="Copy referral code">
+              <Copy className="h-3 w-3" />
+            </button>
+          )}
         </div>
       </div>
       

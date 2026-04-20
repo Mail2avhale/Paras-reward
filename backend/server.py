@@ -19425,6 +19425,18 @@ async def get_user_360_view(query: str, request: Request):
         sanitized_user = sanitize_mongo_doc(user)
         if isinstance(sanitized_user, dict):
             sanitized_user["upcoming_plan"] = upcoming_plan
+            # Core Team membership flag
+            try:
+                ctm = await db.core_team_members.find_one({"uid": uid, "status": "active"}, {"_id": 0, "member_id": 1, "designation": 1, "added_at": 1})
+                sanitized_user["core_team"] = sanitize_mongo_doc(ctm) if ctm else None
+            except Exception:
+                sanitized_user["core_team"] = None
+            # Employee membership flag
+            try:
+                emp = await db.employees.find_one({"user_id": uid, "status": "active"}, {"_id": 0, "employee_id": 1, "designation": 1, "department": 1, "monthly_salary": 1, "joined_at": 1})
+                sanitized_user["employee"] = sanitize_mongo_doc(emp) if emp else None
+            except Exception:
+                sanitized_user["employee"] = None
         
         response_data = {
             "user": sanitized_user,
