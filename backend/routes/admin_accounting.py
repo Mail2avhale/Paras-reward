@@ -18,6 +18,10 @@ except Exception:
 
 router = APIRouter(prefix="/admin/accounting", tags=["Admin Accounting"])
 
+# Secondary router for permission endpoints (no /admin/accounting prefix)
+# so they live at /api/admin/permissions/* and /api/admin/user/{uid}/permissions etc.
+permissions_router = APIRouter(tags=["Admin Permissions"])
+
 db = None
 
 def set_db(database):
@@ -941,31 +945,43 @@ async def update_accounting_settings(request: Request):
 
 # ==================== MANAGER ROLE ACCESS CONTROL ====================
 
-# Default permissions for manager role
+# Default permissions for manager role (safe subset — payments & KYC, no finance/HR)
 DEFAULT_MANAGER_PERMISSIONS = [
-    "dashboard", "members", "users", "user360", "subscription_payment", "kyc", 
-    "gift_vouchers",
-    # Manager can access these payment pages
-    "bank-transfers", "razorpay-subs", "bbps-dashboard", "eko-services"
+    "dashboard", "members", "user360", "kyc",
+    # Payment approvals
+    "subscriptions", "bank-transfers", "razorpay-subs", "bbps-dashboard",
+    "eko-services", "gift-vouchers",
+    # Operational
+    "support", "contact-submissions", "popup-messages",
 ]
 
-# All available admin pages/permissions (Cleaned - March 2026)
+# All available admin pages/permissions (Synced April 21, 2026 with actual App.js routes)
 ALL_ADMIN_PERMISSIONS = [
     # General
     {"id": "dashboard", "label": "Dashboard", "category": "General"},
     {"id": "members", "label": "Members Dashboard", "category": "General"},
     {"id": "user360", "label": "User 360° View", "category": "General"},
-    {"id": "users", "label": "Users Management", "category": "General"},
-    {"id": "analytics", "label": "Analytics", "category": "General"},
+    {"id": "core-team", "label": "Core Team", "category": "General"},
+    {"id": "failed-transactions", "label": "Failed Transactions", "category": "General"},
+    {"id": "transaction-manager", "label": "Transaction Manager", "category": "General"},
     {"id": "performance-report", "label": "Admin Performance", "category": "General"},
-    
+
+    # HR & Community
+    {"id": "employees", "label": "Employees (HRMS)", "category": "HR & Community"},
+    {"id": "employee-reports", "label": "Employee Reports", "category": "HR & Community"},
+    {"id": "community", "label": "Community Forum", "category": "HR & Community"},
+    {"id": "careers", "label": "Careers", "category": "HR & Community"},
+    {"id": "investors", "label": "Investors", "category": "HR & Community"},
+
     # Operations
     {"id": "kyc", "label": "KYC Verification", "category": "Operations"},
     {"id": "support", "label": "Support Tickets", "category": "Operations"},
     {"id": "contact-submissions", "label": "Contact Inquiries", "category": "Operations"},
+    {"id": "contact-settings", "label": "Contact Page Settings", "category": "Operations"},
     {"id": "popup-messages", "label": "Popup Messages", "category": "Operations"},
-    {"id": "error-monitor", "label": "System Monitor", "category": "Operations"},
-    
+    {"id": "service-toggles", "label": "Service Toggles", "category": "Operations"},
+    {"id": "policies", "label": "Policies (Terms/Privacy)", "category": "Operations"},
+
     # Payments - Active
     {"id": "subscriptions", "label": "Subscription Payments", "category": "Payments"},
     {"id": "bank-transfers", "label": "Redeem to Bank", "category": "Payments"},
@@ -973,28 +989,28 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "bbps-dashboard", "label": "BBPS Instant", "category": "Payments"},
     {"id": "eko-services", "label": "Eko Direct Services", "category": "Payments"},
     {"id": "gift-vouchers", "label": "Gift Vouchers", "category": "Payments"},
-    
+    {"id": "service-charges", "label": "Service Charges Config", "category": "Payments"},
+
     # Finance
     {"id": "accounting", "label": "Accounting Dashboard", "category": "Finance"},
-    {"id": "company-wallets", "label": "Company Wallets", "category": "Finance"},
-    {"id": "prc-analytics", "label": "PRC Analytics", "category": "Finance"},
-    {"id": "prc-ledger", "label": "PRC Ledger", "category": "Finance"},
     {"id": "profit-loss", "label": "Profit & Loss", "category": "Finance"},
-    {"id": "user-ledger", "label": "User Ledger", "category": "Finance"},
-    {"id": "liquidity", "label": "Liquidity Status", "category": "Finance"},
-    
-    # Security
-    {"id": "fraud-dashboard", "label": "Fraud Dashboard", "category": "Security"},
-    {"id": "fraud-alerts", "label": "Fraud Alerts", "category": "Security"},
-    {"id": "security", "label": "Security Dashboard", "category": "Security"},
-    {"id": "prc-economy", "label": "PRC Token Economy", "category": "Security"},
-    {"id": "data-backup", "label": "Data Backup & Archive", "category": "Security"},
-    
-    # Settings
-    {"id": "settings-hub", "label": "All Settings", "category": "Settings"},
+    {"id": "cash-bank-book", "label": "Cash & Bank Book", "category": "Finance"},
+    {"id": "prc-ledger", "label": "PRC Ledger", "category": "Finance"},
+    {"id": "ledger", "label": "Ledger View", "category": "Finance"},
+    {"id": "capital-management", "label": "Capital Management", "category": "Finance"},
+    {"id": "financial-reports", "label": "Financial Reports", "category": "Finance"},
+    {"id": "financial-ratios", "label": "Financial Ratios", "category": "Finance"},
+    {"id": "trial-balance", "label": "Trial Balance", "category": "Finance"},
+    {"id": "accounts-receivable", "label": "Accounts Receivable", "category": "Finance"},
+    {"id": "accounts-payable", "label": "Accounts Payable", "category": "Finance"},
+
+    # Security & Economy
+    {"id": "prc-economy", "label": "PRC Token Economy", "category": "Security & Economy"},
+    {"id": "economy-settings", "label": "Economy Settings", "category": "Security & Economy"},
+    {"id": "data-backup", "label": "Data Backup & Archive", "category": "Security & Economy"},
 ]
 
-@router.get("/admin/permissions/list")
+@permissions_router.get("/admin/permissions/list")
 async def get_all_permissions():
     """Get list of all available permissions for manager role"""
     return {
@@ -1002,7 +1018,7 @@ async def get_all_permissions():
         "default_manager": DEFAULT_MANAGER_PERMISSIONS
     }
 
-@router.get("/admin/user/{uid}/permissions")
+@permissions_router.get("/admin/user/{uid}/permissions")
 async def get_user_permissions(uid: str):
     """Get permissions for a specific user (manager)"""
     try:
@@ -1029,7 +1045,7 @@ async def get_user_permissions(uid: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
-@router.put("/admin/user/{uid}/permissions")
+@permissions_router.put("/admin/user/{uid}/permissions")
 async def update_user_permissions(uid: str, request: Request):
     """Update permissions for a manager"""
     try:
@@ -1059,37 +1075,48 @@ async def update_user_permissions(uid: str, request: Request):
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
-@router.post("/admin/managers/sync-permissions")
+@permissions_router.post("/admin/managers/sync-permissions")
 async def sync_manager_permissions():
     """
-    Sync all managers to have the default permissions.
-    This updates existing managers with new default permissions.
+    Sync all managers' permissions to match the latest ALL_ADMIN_PERMISSIONS list.
+    - Removes permissions for pages that no longer exist (prevents dead links)
+    - Adds default permissions for any manager that has fewer than default set
     """
     try:
-        # Find all managers
         managers = await db.users.find({"role": "manager"}).to_list(1000)
-        
+
+        valid_permission_ids = {p["id"] for p in ALL_ADMIN_PERMISSIONS}
+        default_perms = set(DEFAULT_MANAGER_PERMISSIONS)
+
         updated_count = 0
+        removed_stale_total = 0
         for manager in managers:
-            current_perms = set(manager.get("allowed_pages", []))
-            default_perms = set(DEFAULT_MANAGER_PERMISSIONS)
-            
-            # Add any missing default permissions
-            new_perms = list(current_perms | default_perms)
-            
-            if set(new_perms) != current_perms:
+            current = set(manager.get("allowed_pages", []) or [])
+            # Drop permissions that no longer exist in the catalog
+            cleaned = current & valid_permission_ids
+            removed_stale = len(current) - len(cleaned)
+            # If a manager has NO permissions yet, seed with defaults
+            final = cleaned if cleaned else default_perms.copy()
+
+            if set(final) != current:
                 await db.users.update_one(
                     {"uid": manager.get("uid")},
-                    {"$set": {"allowed_pages": new_perms}}
+                    {"$set": {
+                        "allowed_pages": sorted(final),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    }},
                 )
                 updated_count += 1
-        
+                removed_stale_total += removed_stale
+
         return {
             "success": True,
             "total_managers": len(managers),
             "updated": updated_count,
+            "stale_removed": removed_stale_total,
+            "valid_permissions_count": len(valid_permission_ids),
             "default_permissions": DEFAULT_MANAGER_PERMISSIONS,
-            "message": f"Synced permissions for {updated_count} managers"
+            "message": f"Synced {updated_count}/{len(managers)} managers. Removed {removed_stale_total} stale permissions.",
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))

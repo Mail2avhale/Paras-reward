@@ -268,6 +268,25 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
   - Previously (before fix) same period showed: ₹0 revenue, -₹78.86 "breakeven" (wrong).
 - **Frontend**: No changes needed — `AdminProfitLoss.js` already renders every field correctly. Screenshot captured showing PROFIT card, insights, revenue/expense breakdown.
 
+### Manager Role — Permissions Sync with Live Admin Pages (DONE - April 21, 2026)
+- **User request**: "manager का सर्व नवीन पेजेस access allow/disallow कर. काही पेजेस डिलिट केलेले आहे ते manager role मध्ये दिसत आहे — सर्व latest stage प्रमाणे कर."
+- **Three critical issues found**:
+  1. **Endpoint URL mismatch (always broken)**: `admin_accounting.py` router has prefix `/admin/accounting` but the 4 permission endpoints were defined as `@router.get("/admin/permissions/list")` → actual URL became `/api/admin/accounting/admin/permissions/list`. Frontend `ManagerPermissions.js` called `/api/admin/permissions/list` → always 404. Manager permissions UI silently broken since inception.
+     - **Fix**: Created a secondary `permissions_router = APIRouter()` (no prefix) in `admin_accounting.py` and moved the 4 endpoints (`/admin/permissions/list`, `/admin/user/{uid}/permissions` GET+PUT, `/admin/managers/sync-permissions` POST) to it. Wired in `server.py` as `api_router.include_router(admin_permissions_router)`.
+  2. **Out-of-date permissions list**: `ALL_ADMIN_PERMISSIONS` had only 28 entries and was stale — 10 entries pointed to dead routes (redirect to `/dashboard`): `analytics`, `error-monitor`, `company-wallets`, `prc-analytics`, `liquidity`, `user-ledger`, `security`, `fraud-alerts`, `fraud-dashboard`, `settings-hub`. Missing 22 live admin pages: `core-team`, `employees`, `employee-reports`, `community`, `careers`, `investors`, `failed-transactions`, `transaction-manager`, `contact-settings`, `service-toggles`, `policies`, `service-charges`, `cash-bank-book`, `ledger`, `capital-management`, `financial-reports`, `financial-ratios`, `trial-balance`, `accounts-receivable`, `accounts-payable`, `economy-settings`.
+     - **Fix**: Rewrote `ALL_ADMIN_PERMISSIONS` with 40 entries grouped into 6 categories (General / HR & Community / Operations / Payments / Finance / Security & Economy) — all verified against actual React routes in `App.js`.
+  3. **Invalid default permissions**: `DEFAULT_MANAGER_PERMISSIONS` contained non-existent keys `subscription_payment` (actual ID is `subscriptions`), `gift_vouchers` (actual is `gift-vouchers`), `users` (route redirects to user360).
+     - **Fix**: Rewrote default list to 13 valid keys for a standard ops manager (dashboard, members, user360, kyc, subscriptions, bank-transfers, razorpay-subs, bbps-dashboard, eko-services, gift-vouchers, support, contact-submissions, popup-messages).
+- **Sync endpoint upgrade**: `/admin/managers/sync-permissions` now REMOVES stale permissions from existing managers (previously only added missing defaults) so deleted pages disappear from manager accounts. Returns `stale_removed` count for audit.
+- **Frontend** (`AdminLayout.js`):
+  - `MENU_TO_PERMISSION` rewritten to match new 40-permission catalog.
+  - `ROUTE_TO_PERMISSION` rewritten to map every working `/admin/*` route to its permission ID.
+  - Sidebar `menuGroups.finance` purged of 4 dead links; added 8 new working finance pages.
+  - Sidebar `menuGroups.controls` purged of dead links; kept popup-messages, prc-economy, economy-settings, data-backup.
+  - `settings` group renamed to "Operations & Settings" with 4 working pages (service-toggles, service-charges, contact-settings, policies) — all `/settings-hub` variants were dead and removed.
+  - Top-level `analytics` menu item removed.
+- **Verified via curl (preview)**: `/api/admin/permissions/list` returns 200 with 40 permissions + 13 defaults. `/api/admin/managers/sync-permissions` returns 200 with `stale_removed` field. Sidebar screenshot shows all new links working, no dead links.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

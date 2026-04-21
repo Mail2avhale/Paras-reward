@@ -16,55 +16,59 @@ import {
 const LOGO_URL = "/paras-logo.png";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Mapping of menu item IDs to permission IDs (Cleaned - March 2026)
+// Mapping of menu item IDs to permission IDs (Synced April 21, 2026)
 const MENU_TO_PERMISSION = {
   // General
   'dashboard': 'dashboard',
-  'users': 'users',
   'user360': 'user360',
   'members': 'members',
-  'analytics': 'analytics',
+  'core-team': 'core-team',
+  'failed-transactions': 'failed-transactions',
+  'transaction-manager': 'transaction-manager',
   'performance-report': 'performance-report',
-  
+
+  // HR & Community
+  'employees': 'employees',
+  'employee-reports': 'employee-reports',
+  'community': 'community',
+  'careers': 'careers',
+  'investors': 'investors',
+
   // Operations
   'kyc': 'kyc',
   'support': 'support',
   'contact-submissions': 'contact-submissions',
+  'contact-settings': 'contact-settings',
   'popup-messages': 'popup-messages',
-  'error-monitor': 'error-monitor',
-  
-  // Payments - Active
+  'service-toggles': 'service-toggles',
+  'policies': 'policies',
+
+  // Payments
   'subscriptions': 'subscriptions',
   'bank-transfers': 'bank-transfers',
   'razorpay-subs': 'razorpay-subs',
   'bbps-dashboard': 'bbps-dashboard',
   'eko-services': 'eko-services',
   'gift-vouchers': 'gift-vouchers',
-  
+  'service-charges': 'service-charges',
+
   // Finance
   'accounting': 'accounting',
-  'company-wallets': 'company-wallets',
-  'prc-analytics': 'prc-analytics',
-  'prc-ledger': 'prc-ledger',
   'profit-loss': 'profit-loss',
-  'user-ledger': 'user-ledger',
-  'liquidity': 'liquidity',
-  
-  // Security
-  'fraud-alerts': 'fraud-alerts',
-  'fraud-dashboard': 'fraud-dashboard',
-  'security-dashboard': 'security',
+  'cash-bank-book': 'cash-bank-book',
+  'prc-ledger': 'prc-ledger',
+  'ledger': 'ledger',
+  'capital-management': 'capital-management',
+  'financial-reports': 'financial-reports',
+  'financial-ratios': 'financial-ratios',
+  'trial-balance': 'trial-balance',
+  'accounts-receivable': 'accounts-receivable',
+  'accounts-payable': 'accounts-payable',
+
+  // Security & Economy
   'prc-economy': 'prc-economy',
+  'economy-settings': 'economy-settings',
   'data-backup': 'data-backup',
-  
-  // Settings
-  'settings-hub': 'settings-hub',
-  'payment-settings': 'settings-hub',
-  'system-settings': 'settings-hub',
-  'web-settings': 'settings-hub',
-  'social-settings': 'settings-hub',
-  'redeem-settings': 'settings-hub',
-  'video-ads': 'settings-hub'
 };
 
 const AdminLayout = ({ children, user, onLogout }) => {
@@ -170,7 +174,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },
     { id: 'transaction-manager', label: 'Transaction Manager', icon: FileText, path: '/admin/transaction-manager' },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
     { id: 'performance-report', label: 'Admin Performance', icon: Award, path: '/admin/performance-report' },
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
     { id: 'contact-submissions', label: 'Contact Inquiries', icon: Mail, path: '/admin/contact-submissions' },
@@ -206,12 +209,16 @@ const AdminLayout = ({ children, user, onLogout }) => {
       icon: DollarSign,
       subItems: [
         { id: 'accounting', label: 'Accounting Dashboard', icon: BarChart2, path: '/admin/accounting' },
-        { id: 'company-wallets', label: 'Company Wallets', icon: Wallet, path: '/admin/company-wallets' },
-        { id: 'prc-analytics', label: 'PRC Analytics', icon: Activity, path: '/admin/prc-analytics' },
+        { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss', highlight: true },
+        { id: 'cash-bank-book', label: 'Cash & Bank Book', icon: Wallet, path: '/admin/cash-bank-book' },
         { id: 'prc-ledger', label: 'PRC Ledger', icon: Activity, path: '/admin/prc-ledger' },
-        { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss' },
-        { id: 'user-ledger', label: 'User Ledger', icon: FileText, path: '/admin/user-ledger' },
-        { id: 'liquidity', label: 'Liquidity', icon: DollarSign, path: '/admin/liquidity' },
+        { id: 'ledger', label: 'Ledger View', icon: FileText, path: '/admin/ledger' },
+        { id: 'trial-balance', label: 'Trial Balance', icon: BarChart3, path: '/admin/trial-balance' },
+        { id: 'financial-reports', label: 'Financial Reports', icon: FileText, path: '/admin/financial-reports' },
+        { id: 'financial-ratios', label: 'Financial Ratios', icon: BarChart2, path: '/admin/financial-ratios' },
+        { id: 'accounts-receivable', label: 'Accounts Receivable', icon: DollarSign, path: '/admin/accounts-receivable' },
+        { id: 'accounts-payable', label: 'Accounts Payable', icon: DollarSign, path: '/admin/accounts-payable' },
+        { id: 'capital-management', label: 'Capital Management', icon: Wallet, path: '/admin/capital-management' },
       ]
     },
     controls: {
@@ -219,59 +226,75 @@ const AdminLayout = ({ children, user, onLogout }) => {
       icon: Shield,
       subItems: [
         { id: 'popup-messages', label: 'Popup Messages', icon: MessageSquare, path: '/admin/popup-messages', highlight: true },
-        { id: 'error-monitor', label: 'System Monitor', icon: Activity, path: '/admin/error-monitor', highlight: true },
         { id: 'prc-economy', label: 'PRC Token Economy', icon: Coins, path: '/admin/prc-economy', highlight: true },
-        { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/admin/security' },
-        { id: 'fraud-dashboard', label: 'Fraud Detection', icon: ShieldAlert, path: '/admin/fraud-dashboard' },
-        { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
+        { id: 'economy-settings', label: 'Economy Settings', icon: Cpu, path: '/admin/economy-settings' },
         { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/admin/data-backup' },
       ]
     },
     settings: {
-      label: 'Settings',
+      label: 'Operations & Settings',
       icon: Settings,
       subItems: [
-        { id: 'settings-hub', label: 'All Settings', icon: Settings, path: '/admin/settings-hub' },
-        { id: 'payment-settings', label: 'Payment Settings', icon: CreditCard, path: '/admin/settings-hub?tab=payment' },
-        { id: 'system-settings', label: 'System Settings', icon: Cpu, path: '/admin/settings-hub?tab=system' },
-        { id: 'web-settings', label: 'Web Settings', icon: Globe, path: '/admin/settings-hub?tab=web' },
-        { id: 'social-settings', label: 'Social Media', icon: Share2, path: '/admin/settings-hub?tab=social' },
-        { id: 'redeem-settings', label: 'Redeem Safety', icon: Shield, path: '/admin/settings-hub?tab=redeem' },
-        { id: 'video-ads', label: 'Video Ads', icon: Video, path: '/admin/settings-hub?tab=video-ads' },
+        { id: 'service-toggles', label: 'Service Toggles', icon: ToggleLeft, path: '/admin/service-toggles' },
+        { id: 'service-charges', label: 'Service Charges', icon: CreditCard, path: '/admin/service-charges' },
+        { id: 'contact-settings', label: 'Contact Page', icon: Phone, path: '/admin/contact-settings' },
+        { id: 'policies', label: 'Policies (T&C)', icon: FileText, path: '/admin/policies' },
       ]
     }
   };
 
   const ROUTE_TO_PERMISSION = {
+    // General
     '/admin/members': 'members',
     '/admin/user360': 'user360',
-    '/admin/analytics': 'analytics',
+    '/admin/core-team': 'core-team',
+    '/admin/failed-transactions': 'failed-transactions',
+    '/admin/transaction-manager': 'transaction-manager',
     '/admin/performance-report': 'performance-report',
+
+    // HR & Community
+    '/admin/employees': 'employees',
+    '/admin/employees/reports': 'employee-reports',
+    '/admin/community': 'community',
+    '/admin/careers': 'careers',
+    '/admin/investors': 'investors',
+
+    // Operations
     '/admin/kyc': 'kyc',
     '/admin/support': 'support',
     '/admin/contact-submissions': 'contact-submissions',
+    '/admin/contact-settings': 'contact-settings',
     '/admin/popup-messages': 'popup-messages',
-    '/admin/error-monitor': 'error-monitor',
+    '/admin/service-toggles': 'service-toggles',
+    '/admin/policies': 'policies',
+
+    // Payments
     '/admin/subscriptions': 'subscriptions',
     '/admin/bank-transfers': 'bank-transfers',
     '/admin/razorpay-subscriptions': 'razorpay-subs',
     '/admin/bbps': 'bbps-dashboard',
     '/admin/eko-services': 'eko-services',
     '/admin/gift-vouchers': 'gift-vouchers',
+    '/admin/service-charges': 'service-charges',
+
+    // Finance
     '/admin/accounting': 'accounting',
-    '/admin/company-wallets': 'company-wallets',
-    '/admin/prc-analytics': 'prc-analytics',
-    '/admin/prc-ledger': 'prc-ledger',
     '/admin/profit-loss': 'profit-loss',
-    '/admin/user-ledger': 'user-ledger',
-    '/admin/liquidity': 'liquidity',
-    '/admin/fraud-dashboard': 'fraud-dashboard',
-    '/admin/fraud-alerts': 'fraud-alerts',
-    '/admin/security': 'security',
+    '/admin/cash-bank-book': 'cash-bank-book',
+    '/admin/prc-ledger': 'prc-ledger',
+    '/admin/ledger': 'ledger',
+    '/admin/capital': 'capital-management',
+    '/admin/capital-management': 'capital-management',
+    '/admin/financial-reports': 'financial-reports',
+    '/admin/financial-ratios': 'financial-ratios',
+    '/admin/trial-balance': 'trial-balance',
+    '/admin/accounts-receivable': 'accounts-receivable',
+    '/admin/accounts-payable': 'accounts-payable',
+
+    // Security & Economy
     '/admin/prc-economy': 'prc-economy',
+    '/admin/economy-settings': 'economy-settings',
     '/admin/data-backup': 'data-backup',
-    '/admin/settings-hub': 'settings-hub',
-    '/admin/transaction-manager': 'transaction-manager',
   };
 
   useEffect(() => {

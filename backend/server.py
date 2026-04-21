@@ -58,7 +58,7 @@ from routes.admin_failed_transactions import router as admin_failed_txn_router, 
 from routes.admin_transactions import router as admin_txn_router, set_db as set_admin_txn_db
 from routes.admin_fraud import router as admin_fraud_router, set_db as set_admin_fraud_db, set_helpers as set_admin_fraud_helpers
 from routes.admin_reports import router as admin_reports_router, set_db as set_admin_reports_db, set_cache as set_admin_reports_cache
-from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db, generate_daily_summary, hard_delete_expired_accounts
+from routes.admin_accounting import router as admin_accounting_router, permissions_router as admin_permissions_router, set_db as set_admin_accounting_db, generate_daily_summary, hard_delete_expired_accounts
 from routes.admin_orders import router as admin_orders_router, set_db as set_admin_orders_db, set_helpers as set_admin_orders_helpers, set_cache as set_admin_orders_cache
 from routes.admin_settings import router as admin_settings_router, set_db as set_admin_settings_db, set_helpers as set_admin_settings_helpers
 from routes.admin_withdrawals import router as admin_withdrawals_router, set_db as set_admin_withdrawals_db, set_helpers as set_admin_withdrawals_helpers, set_cache as set_admin_withdrawals_cache
@@ -32770,6 +32770,7 @@ api_router.include_router(admin_reports_router)
 # Include admin accounting router (refactored)
 set_admin_accounting_db(db)
 api_router.include_router(admin_accounting_router)
+api_router.include_router(admin_permissions_router)
 
 # Include admin orders router (refactored)
 set_admin_orders_db(db)
