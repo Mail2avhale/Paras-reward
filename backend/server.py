@@ -21576,6 +21576,93 @@ async def bulk_restore_prc(request: Request):
     }
 
 
+@api_router.post("/admin/impersonate/{target_uid}")
+async def admin_impersonate_user(target_uid: str, request: Request):
+    """
+    SENSITIVE: Admin impersonates a user without requiring their PIN.
+    Returns a short-lived token (30 minutes) scoped to the target user.
+    Every impersonation is audit-logged with admin_uid, target_uid, reason, IP.
+    """
+    auth = request.headers.get("Authorization") or request.headers.get("authorization") or ""
+    if not auth.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Authorization required")
+    try:
+        payload = jwt.decode(auth.split(" ", 1)[1].strip(), JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    admin_uid = payload.get("uid")
+    admin_role = payload.get("role", "")
+    if not admin_uid or admin_role not in ("admin", "sub_admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Only admins can impersonate")
+
+    target = await db.users.find_one({"uid": target_uid}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="Target user not found")
+    if target.get("is_banned") or target.get("is_blocked"):
+        raise HTTPException(status_code=400, detail="Cannot impersonate a blocked/banned user")
+    if target.get("role") in ("admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Cannot impersonate another admin")
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    reason = (body.get("reason") or "Admin support").strip()[:200]
+
+    real_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown").split(",")[0].strip()
+    user_agent = request.headers.get("user-agent", "")[:300]
+    now = datetime.now(timezone.utc)
+    audit_doc = {
+        "audit_id": str(uuid.uuid4()),
+        "type": "admin_impersonation",
+        "admin_uid": admin_uid,
+        "admin_email": payload.get("email"),
+        "target_uid": target_uid,
+        "target_mobile": target.get("mobile"),
+        "target_name": target.get("name"),
+        "reason": reason,
+        "ip_address": real_ip,
+        "user_agent": user_agent,
+        "timestamp": now.isoformat(),
+    }
+    try:
+        await db.admin_audit_log.insert_one(audit_doc)
+    except Exception as e:
+        logging.warning(f"[IMPERSONATE] audit log error: {e}")
+
+    token_id = str(uuid.uuid4())
+    token_data = {
+        "uid": target_uid,
+        "email": target.get("email"),
+        "role": target.get("role", "user"),
+        "token_id": token_id,
+        "impersonated_by": admin_uid,
+    }
+    access_token = create_access_token(token_data, expires_delta=timedelta(minutes=30))
+
+    logging.warning(
+        f"[IMPERSONATE] admin={admin_uid} is now acting as user={target_uid} "
+        f"(mobile={target.get('mobile')}, reason={reason}, ip={real_ip})"
+    )
+
+    safe_user = {k: v for k, v in target.items() if k not in ("pin_hash", "password_hash", "session_token", "refresh_token", "reset_token")}
+
+    return {
+        "success": True,
+        "message": f"Now acting as {target.get('name', 'user')}",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in_minutes": 30,
+        "impersonation": True,
+        "impersonated_by": admin_uid,
+        "user": safe_user,
+    }
+
+
+
 
 @api_router.post("/admin/user-360/action")
 async def user_360_quick_action(request: Request):
