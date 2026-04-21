@@ -60,7 +60,14 @@ SERVICE_LABELS = {
     "education": ("Education Fee", "receipt"),
 }
 
-SUCCESS_STATUSES = ["completed", "approved", "success", "paid", "Paid", "Completed", "Approved", "Success", "PAID", "COMPLETED"]
+SUCCESS_STATUSES = [
+    # lowercase
+    "completed", "approved", "success", "paid",
+    # PascalCase
+    "Paid", "Completed", "Approved", "Success",
+    # UPPERCASE (unified_redeem_v2 uses these)
+    "PAID", "COMPLETED", "SUCCESS", "APPROVED",
+]
 
 
 def _mask_account(v: str) -> str:
@@ -94,8 +101,8 @@ def _resolve_service(stype: str) -> tuple:
 
 @router.get("/public/live-transactions")
 async def get_live_transactions():
-    """Public endpoint: latest 50 successful transactions for live ticker strip."""
-    cache_key = "live_ticker:latest_50:v4_nozero"
+    """Public endpoint: latest 100 SUCCESSFUL transactions (time-desc) across ALL services."""
+    cache_key = "live_ticker:latest_100:v5_timedesc"
     if cache:
         try:
             cached = await cache.get(cache_key)
@@ -114,7 +121,7 @@ async def get_live_transactions():
             {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
             {"_id": 0, "user_id": 1, "service_type": 1, "account_number": 1,
              "amount": 1, "amount_inr": 1, "created_at": 1, "approved_at": 1, "details": 1},
-        ).sort("created_at", -1).limit(40).to_list(40)
+        ).sort("created_at", -1).limit(120).to_list(120)
         for d in rr_docs:
             label, icon = _resolve_service(d.get("service_type"))
             acct = d.get("account_number") or (d.get("details", {}) or {}).get("mobile_number", "") or ""
@@ -135,7 +142,7 @@ async def get_live_transactions():
             {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
             {"_id": 0, "user_id": 1, "consumer_number": 1, "amount_inr": 1,
              "created_at": 1, "approved_at": 1, "operator_name": 1, "bill_type": 1},
-        ).sort("created_at", -1).limit(40).to_list(40)
+        ).sort("created_at", -1).limit(120).to_list(120)
         for d in bp_docs:
             label, icon = _resolve_service(d.get("bill_type"))
             items.append({
@@ -153,7 +160,7 @@ async def get_live_transactions():
         bw_docs = await db.bank_withdrawal_requests.find(
             {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
             {"_id": 0, "user_id": 1, "user_mobile": 1, "amount_inr": 1, "created_at": 1, "approved_at": 1, "completed_at": 1},
-        ).sort("created_at", -1).limit(30).to_list(30)
+        ).sort("created_at", -1).limit(80).to_list(80)
         for d in bw_docs:
             items.append({
                 "uid": d.get("user_id"),
@@ -172,7 +179,7 @@ async def get_live_transactions():
             {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
             {"_id": 0, "user_id": 1, "user_mobile": 1, "amount": 1, "amount_inr": 1,
              "created_at": 1, "approved_at": 1, "completed_at": 1, "paid_at": 1},
-        ).sort("created_at", -1).limit(30).to_list(30)
+        ).sort("created_at", -1).limit(80).to_list(80)
         for d in bt_docs:
             amt = d.get("amount_inr") or d.get("amount") or 0
             items.append({
@@ -191,7 +198,7 @@ async def get_live_transactions():
         cw_docs = await db.chatbot_withdrawal_requests.find(
             {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
             {"_id": 0, "uid": 1, "mobile": 1, "inr_amount": 1, "created_at": 1, "approved_at": 1},
-        ).sort("created_at", -1).limit(20).to_list(20)
+        ).sort("created_at", -1).limit(50).to_list(50)
         for d in cw_docs:
             items.append({
                 "uid": d.get("uid"),
@@ -209,7 +216,7 @@ async def get_live_transactions():
             {"status": "paid", "created_at": {"$gte": since}},
             {"_id": 0, "user_id": 1, "plan_name": 1, "plan_type": 1,
              "inr_equivalent": 1, "prc_amount": 1, "created_at": 1},
-        ).sort("created_at", -1).limit(30).to_list(30)
+        ).sort("created_at", -1).limit(80).to_list(80)
         for d in sub_docs:
             plan = (d.get("plan_name") or d.get("plan_type") or "plan").title()
             amt = d.get("inr_equivalent") or d.get("prc_amount") or 0
@@ -224,47 +231,11 @@ async def get_live_transactions():
     except Exception as e:
         logging.warning(f"[LIVE-TICKER] subscription error: {e}")
 
-    # ----- ROUND-ROBIN INTERLEAVE by category (latest-first within each bucket) -----
-    # User requirement: rotate categories like 1 Subscription → 1 Mobile → 1 Bank Redeem → 1 DTH → 1 BBPS → repeat.
+    # ----- LATEST-FIRST (time-desc), top 100 across ALL services -----
     # Drop items with missing service label or zero amount (incomplete legacy data)
     items = [i for i in items if i.get("service") and i["service"] != "Transaction" and (i.get("amount") or 0) > 0]
-
-    def _bucket(item):
-        icon = (item.get("icon") or "").lower()
-        if icon == "crown":
-            return "subscription"
-        if icon == "mobile":
-            return "mobile"
-        if icon == "bank":
-            return "bank"
-        if icon == "dth":
-            return "dth"
-        return "bbps"  # bolt, fire, droplet, wifi, receipt, shield, etc.
-
-    # Group + sort each bucket newest-first
-    buckets = {"subscription": [], "mobile": [], "bank": [], "dth": [], "bbps": []}
-    for it in items:
-        buckets[_bucket(it)].append(it)
-    for key in buckets:
-        buckets[key].sort(key=lambda x: x.get("created_at", ""), reverse=True)
-
-    # Round-robin pick in the requested order until we hit 50 or all buckets empty
-    rotation = ["subscription", "mobile", "bank", "dth", "bbps"]
-    cursors = {k: 0 for k in rotation}
-    interleaved = []
-    while len(interleaved) < 50:
-        advanced = False
-        for key in rotation:
-            idx = cursors[key]
-            if idx < len(buckets[key]):
-                interleaved.append(buckets[key][idx])
-                cursors[key] = idx + 1
-                advanced = True
-                if len(interleaved) >= 50:
-                    break
-        if not advanced:
-            break
-    items = interleaved
+    items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    items = items[:100]
 
     # Enrich: mobile fallback for subscriptions + city from user profile
     uids = list({i["uid"] for i in items if i.get("uid")})
