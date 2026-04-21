@@ -102,7 +102,7 @@ def _resolve_service(stype: str) -> tuple:
 @router.get("/public/live-transactions")
 async def get_live_transactions():
     """Public endpoint: latest 100 SUCCESSFUL transactions (time-desc) across ALL services."""
-    cache_key = "live_ticker:latest_100:v5_timedesc"
+    cache_key = "live_ticker:latest_100:v6_recharge_fix"
     if cache:
         try:
             cached = await cache.get(cache_key)
@@ -136,24 +136,52 @@ async def get_live_transactions():
     except Exception as e:
         logging.warning(f"[LIVE-TICKER] redeem_requests error: {e}")
 
-    # 2. bill_payment_requests — all BBPS bill_types (electricity/gas/water/etc.)
+    # 2. bill_payment_requests — all BBPS bill_types (electricity/gas/water/etc.) + mobile/DTH recharges via Eko
     try:
         bp_docs = await db.bill_payment_requests.find(
             {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
-            {"_id": 0, "user_id": 1, "consumer_number": 1, "amount_inr": 1,
-             "created_at": 1, "approved_at": 1, "operator_name": 1, "bill_type": 1},
+            {"_id": 0, "user_id": 1, "consumer_number": 1, "amount_inr": 1, "amount": 1,
+             "created_at": 1, "approved_at": 1, "operator_name": 1,
+             "bill_type": 1, "service_type": 1, "request_type": 1, "details": 1, "user_mobile": 1},
         ).sort("created_at", -1).limit(120).to_list(120)
         for d in bp_docs:
-            label, icon = _resolve_service(d.get("bill_type"))
+            # Prefer specific labels: bill_type (electricity/gas/…) → service_type/request_type (mobile/dth) → details.recharge_type
+            details = d.get("details") or {}
+            stype = d.get("bill_type") or d.get("service_type") or d.get("request_type") or details.get("recharge_type")
+            label, icon = _resolve_service(stype)
+            # Mobile/DTH: consumer_number is empty; use details.number or details.mobile_number
+            acct = (d.get("consumer_number") or details.get("number") or details.get("mobile_number")
+                    or details.get("customer_number") or d.get("user_mobile") or "")
+            amt = d.get("amount_inr") or d.get("amount") or 0
             items.append({
                 "uid": d.get("user_id"),
-                "mobile": _mask_account(d.get("consumer_number", "")),
+                "mobile": _mask_account(acct),
+                "service": label, "icon": icon,
+                "amount": round(float(amt or 0), 2),
+                "created_at": _pick_created_at(d),
+            })
+    except Exception as e:
+        logging.warning(f"[LIVE-TICKER] bill_payment_requests error: {e}")
+
+    # 2b. recharge_transactions — Eko mobile/DTH recharges (authoritative source, paid within last 90d)
+    try:
+        rt_docs = await db.recharge_transactions.find(
+            {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
+            {"_id": 0, "user_id": 1, "number": 1, "recharge_type": 1,
+             "amount_inr": 1, "created_at": 1, "updated_at": 1, "approved_at": 1},
+        ).sort("created_at", -1).limit(120).to_list(120)
+        for d in rt_docs:
+            rtype = d.get("recharge_type") or "mobile_recharge"
+            label, icon = _resolve_service(rtype)
+            items.append({
+                "uid": d.get("user_id"),
+                "mobile": _mask_account(d.get("number", "")),
                 "service": label, "icon": icon,
                 "amount": round(float(d.get("amount_inr", 0) or 0), 2),
                 "created_at": _pick_created_at(d),
             })
     except Exception as e:
-        logging.warning(f"[LIVE-TICKER] bill_payment_requests error: {e}")
+        logging.warning(f"[LIVE-TICKER] recharge_transactions error: {e}")
 
     # 3. bank_withdrawal_requests — modern bank redeems
     try:
@@ -234,6 +262,19 @@ async def get_live_transactions():
     # ----- LATEST-FIRST (time-desc), top 100 across ALL services -----
     # Drop items with missing service label or zero amount (incomplete legacy data)
     items = [i for i in items if i.get("service") and i["service"] != "Transaction" and (i.get("amount") or 0) > 0]
+
+    # Dedupe: same user + created_at + amount can appear in both bill_payment_requests and recharge_transactions.
+    # Keep the first (mobile/DTH-specific label ordering: bill_payment_requests runs first after redeem_requests).
+    seen = set()
+    deduped = []
+    for it in items:
+        key = (it.get("uid") or "", (it.get("created_at") or "")[:19], round(float(it.get("amount") or 0), 2), it.get("icon", ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(it)
+    items = deduped
+
     items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     items = items[:100]
 
