@@ -31,6 +31,7 @@ def set_cache(cache_instance):
 # Maps service_type / bill_type → (display label, icon)
 SERVICE_LABELS = {
     # Mobile
+    "mobile": ("Mobile Recharge", "mobile"),
     "mobile_recharge": ("Mobile Recharge", "mobile"),
     "mobile_prepaid": ("Mobile Recharge", "mobile"),
     "prepaid": ("Mobile Recharge", "mobile"),
@@ -102,7 +103,7 @@ def _resolve_service(stype: str) -> tuple:
 @router.get("/public/live-transactions")
 async def get_live_transactions():
     """Public endpoint: latest 100 SUCCESSFUL transactions (time-desc) across ALL services."""
-    cache_key = "live_ticker:latest_100:v6_recharge_fix"
+    cache_key = "live_ticker:latest_100:v7_dedup"
     if cache:
         try:
             cached = await cache.get(cache_key)
@@ -136,7 +137,8 @@ async def get_live_transactions():
     except Exception as e:
         logging.warning(f"[LIVE-TICKER] redeem_requests error: {e}")
 
-    # 2. bill_payment_requests — all BBPS bill_types (electricity/gas/water/etc.) + mobile/DTH recharges via Eko
+    # 2. bill_payment_requests — BBPS bills ONLY (electricity/gas/water/broadband/loan/etc.).
+    # Skip mobile/DTH — those are authoritatively sourced from recharge_transactions (step 2b) to avoid duplicates.
     try:
         bp_docs = await db.bill_payment_requests.find(
             {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
@@ -144,12 +146,15 @@ async def get_live_transactions():
              "created_at": 1, "approved_at": 1, "operator_name": 1,
              "bill_type": 1, "service_type": 1, "request_type": 1, "details": 1, "user_mobile": 1},
         ).sort("created_at", -1).limit(120).to_list(120)
+        MOBILE_DTH_TYPES = {"mobile", "mobile_recharge", "mobile_prepaid", "prepaid",
+                            "mobile_postpaid", "postpaid", "dth", "dth_recharge"}
         for d in bp_docs:
-            # Prefer specific labels: bill_type (electricity/gas/…) → service_type/request_type (mobile/dth) → details.recharge_type
             details = d.get("details") or {}
-            stype = d.get("bill_type") or d.get("service_type") or d.get("request_type") or details.get("recharge_type")
-            label, icon = _resolve_service(stype)
-            # Mobile/DTH: consumer_number is empty; use details.number or details.mobile_number
+            stype_raw = (d.get("bill_type") or d.get("service_type") or d.get("request_type")
+                         or details.get("recharge_type") or "")
+            if (stype_raw or "").lower().strip() in MOBILE_DTH_TYPES:
+                continue  # dedup: comes from recharge_transactions
+            label, icon = _resolve_service(stype_raw)
             acct = (d.get("consumer_number") or details.get("number") or details.get("mobile_number")
                     or details.get("customer_number") or d.get("user_mobile") or "")
             amt = d.get("amount_inr") or d.get("amount") or 0
@@ -263,12 +268,24 @@ async def get_live_transactions():
     # Drop items with missing service label or zero amount (incomplete legacy data)
     items = [i for i in items if i.get("service") and i["service"] != "Transaction" and (i.get("amount") or 0) > 0]
 
-    # Dedupe: same user + created_at + amount can appear in both bill_payment_requests and recharge_transactions.
-    # Keep the first (mobile/DTH-specific label ordering: bill_payment_requests runs first after redeem_requests).
+    # Dedupe: same user + same mobile + same amount within a 5-minute window = single transaction
+    # (handles edge cases where one event is written across two collections with slight time skew).
+    from math import floor
     seen = set()
     deduped = []
-    for it in items:
-        key = (it.get("uid") or "", (it.get("created_at") or "")[:19], round(float(it.get("amount") or 0), 2), it.get("icon", ""))
+    for it in sorted(items, key=lambda x: x.get("created_at", ""), reverse=True):
+        ct = it.get("created_at", "")
+        try:
+            ts = datetime.fromisoformat(ct.replace('Z', '+00:00')) if ct else None
+            bucket_5min = floor(ts.timestamp() / 300) if ts else 0
+        except Exception:
+            bucket_5min = 0
+        key = (
+            it.get("uid") or "",
+            it.get("mobile") or "",
+            round(float(it.get("amount") or 0), 2),
+            bucket_5min,
+        )
         if key in seen:
             continue
         seen.add(key)
