@@ -226,6 +226,11 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **UX**: Added orange sticky impersonation banner at top of every page in impersonation tab — "IMPERSONATION MODE: You are viewing as {name} ({mobile})" with an "Exit Impersonation" button that logs out and closes the tab. data-testids: `impersonation-banner`, `impersonation-exit-btn`, `admin-login-as-user-btn`, `impersonation-search-input/btn`, `impersonation-result-<uid>`, `impersonation-confirm-login-btn`.
 - **Verified (iteration_220 - 100% PASS)**: 13/13 frontend E2E assertions — new tab hydrates correctly with SANTOSH data, banner visible, sessionStorage populated, admin's localStorage unchanged (admin-test-123 intact), Exit button closes impersonation tab. 18/18 backend pytest still green.
 
+### Live Ticker Round-Robin Rotation (DONE - April 21, 2026)
+- **User request**: "Live ticker strip मध्ये transaction randomly दाखव — 1 subscription then 1 mobile then 1 bank redeem... like this, latest transaction first".
+- **Fix** (`routes/live_ticker.py`): Replaced flat time-desc sort with category round-robin. Items grouped into 5 buckets (subscription/mobile/bank/dth/bbps) by icon. Each bucket sorted newest-first. Round-robin picker iterates `[subscription, mobile, bank, dth, bbps]` until 50 items or all buckets empty. Cache key bumped to `v2_interleaved` to bust old payloads.
+- **Verified via curl**: Ticker order now reads `crown → mobile → bank → bolt(bbps) → crown → crown → ...` — first round correctly rotates one of each category; remaining subscriptions fill after all other buckets exhausted.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

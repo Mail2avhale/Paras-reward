@@ -95,7 +95,7 @@ def _resolve_service(stype: str) -> tuple:
 @router.get("/public/live-transactions")
 async def get_live_transactions():
     """Public endpoint: latest 50 successful transactions for live ticker strip."""
-    cache_key = "live_ticker:latest_50"
+    cache_key = "live_ticker:latest_50:v2_interleaved"
     if cache:
         try:
             cached = await cache.get(cache_key)
@@ -203,10 +203,47 @@ async def get_live_transactions():
     except Exception as e:
         logging.warning(f"[LIVE-TICKER] subscription error: {e}")
 
-    # Sort newest first, drop any items with missing service label ("Transaction" fallback)
+    # ----- ROUND-ROBIN INTERLEAVE by category (latest-first within each bucket) -----
+    # User requirement: rotate categories like 1 Subscription → 1 Mobile → 1 Bank Redeem → 1 DTH → 1 BBPS → repeat.
+    # Drop items with missing service label ("Transaction" fallback)
     items = [i for i in items if i.get("service") and i["service"] != "Transaction"]
-    items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-    items = items[:50]
+
+    def _bucket(item):
+        icon = (item.get("icon") or "").lower()
+        if icon == "crown":
+            return "subscription"
+        if icon == "mobile":
+            return "mobile"
+        if icon == "bank":
+            return "bank"
+        if icon == "dth":
+            return "dth"
+        return "bbps"  # bolt, fire, droplet, wifi, receipt, shield, etc.
+
+    # Group + sort each bucket newest-first
+    buckets = {"subscription": [], "mobile": [], "bank": [], "dth": [], "bbps": []}
+    for it in items:
+        buckets[_bucket(it)].append(it)
+    for key in buckets:
+        buckets[key].sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+    # Round-robin pick in the requested order until we hit 50 or all buckets empty
+    rotation = ["subscription", "mobile", "bank", "dth", "bbps"]
+    cursors = {k: 0 for k in rotation}
+    interleaved = []
+    while len(interleaved) < 50:
+        advanced = False
+        for key in rotation:
+            idx = cursors[key]
+            if idx < len(buckets[key]):
+                interleaved.append(buckets[key][idx])
+                cursors[key] = idx + 1
+                advanced = True
+                if len(interleaved) >= 50:
+                    break
+        if not advanced:
+            break
+    items = interleaved
 
     # Enrich: mobile fallback for subscriptions + city from user profile
     uids = list({i["uid"] for i in items if i.get("uid")})
