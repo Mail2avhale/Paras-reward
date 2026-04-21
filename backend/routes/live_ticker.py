@@ -60,7 +60,7 @@ SERVICE_LABELS = {
     "education": ("Education Fee", "receipt"),
 }
 
-SUCCESS_STATUSES = ["completed", "approved", "success", "paid"]
+SUCCESS_STATUSES = ["completed", "approved", "success", "paid", "Paid", "Completed", "Approved", "Success", "PAID", "COMPLETED"]
 
 
 def _mask_account(v: str) -> str:
@@ -95,7 +95,7 @@ def _resolve_service(stype: str) -> tuple:
 @router.get("/public/live-transactions")
 async def get_live_transactions():
     """Public endpoint: latest 50 successful transactions for live ticker strip."""
-    cache_key = "live_ticker:latest_50:v2_interleaved"
+    cache_key = "live_ticker:latest_50:v4_nozero"
     if cache:
         try:
             cached = await cache.get(cache_key)
@@ -152,7 +152,7 @@ async def get_live_transactions():
     try:
         bw_docs = await db.bank_withdrawal_requests.find(
             {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
-            {"_id": 0, "user_id": 1, "user_mobile": 1, "amount_inr": 1, "created_at": 1, "approved_at": 1},
+            {"_id": 0, "user_id": 1, "user_mobile": 1, "amount_inr": 1, "created_at": 1, "approved_at": 1, "completed_at": 1},
         ).sort("created_at", -1).limit(30).to_list(30)
         for d in bw_docs:
             items.append({
@@ -161,9 +161,30 @@ async def get_live_transactions():
                 "service": "Bank Redeem", "icon": "bank",
                 "amount": round(float(d.get("amount_inr", 0) or 0), 2),
                 "created_at": _pick_created_at(d),
+                "_needs_mobile": True,  # enrich from users.mobile if user_mobile is empty
             })
     except Exception as e:
         logging.warning(f"[LIVE-TICKER] bank_withdrawal error: {e}")
+
+    # 3b. bank_transfer_requests — admin-completed manual bank redeems (AdminBankTransfers page source)
+    try:
+        bt_docs = await db.bank_transfer_requests.find(
+            {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
+            {"_id": 0, "user_id": 1, "user_mobile": 1, "amount": 1, "amount_inr": 1,
+             "created_at": 1, "approved_at": 1, "completed_at": 1, "paid_at": 1},
+        ).sort("created_at", -1).limit(30).to_list(30)
+        for d in bt_docs:
+            amt = d.get("amount_inr") or d.get("amount") or 0
+            items.append({
+                "uid": d.get("user_id"),
+                "mobile": _mask_account(d.get("user_mobile", "")),
+                "service": "Bank Redeem", "icon": "bank",
+                "amount": round(float(amt or 0), 2),
+                "created_at": _pick_created_at(d),
+                "_needs_mobile": True,
+            })
+    except Exception as e:
+        logging.warning(f"[LIVE-TICKER] bank_transfer error: {e}")
 
     # 4. chatbot_withdrawal_requests — legacy bank redeems
     try:
@@ -205,8 +226,8 @@ async def get_live_transactions():
 
     # ----- ROUND-ROBIN INTERLEAVE by category (latest-first within each bucket) -----
     # User requirement: rotate categories like 1 Subscription → 1 Mobile → 1 Bank Redeem → 1 DTH → 1 BBPS → repeat.
-    # Drop items with missing service label ("Transaction" fallback)
-    items = [i for i in items if i.get("service") and i["service"] != "Transaction"]
+    # Drop items with missing service label or zero amount (incomplete legacy data)
+    items = [i for i in items if i.get("service") and i["service"] != "Transaction" and (i.get("amount") or 0) > 0]
 
     def _bucket(item):
         icon = (item.get("icon") or "").lower()
@@ -260,8 +281,11 @@ async def get_live_transactions():
 
     for it in items:
         u = user_map.get(it.get("uid") or "", {})
-        if it.pop("_needs_mobile", False):
-            it["mobile"] = _mask_account(u.get("mobile", ""))
+        # Enrich mobile from user profile if flagged OR current mask is the all-X fallback (empty source)
+        if it.pop("_needs_mobile", False) or it.get("mobile") == "XX******XX":
+            enriched = _mask_account(u.get("mobile", ""))
+            if enriched != "XX******XX":
+                it["mobile"] = enriched
         city = u.get("city")
         if not city and isinstance(u.get("address"), str):
             parts = [p.strip() for p in u["address"].replace(",", " ").split() if p.strip()]

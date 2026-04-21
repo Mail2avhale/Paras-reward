@@ -231,6 +231,22 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Fix** (`routes/live_ticker.py`): Replaced flat time-desc sort with category round-robin. Items grouped into 5 buckets (subscription/mobile/bank/dth/bbps) by icon. Each bucket sorted newest-first. Round-robin picker iterates `[subscription, mobile, bank, dth, bbps]` until 50 items or all buckets empty. Cache key bumped to `v2_interleaved` to bust old payloads.
 - **Verified via curl**: Ticker order now reads `crown → mobile → bank → bolt(bbps) → crown → crown → ...` — first round correctly rotates one of each category; remaining subscriptions fill after all other buckets exhausted.
 
+### Live Ticker — Bank Redeem Fix (DONE - April 21, 2026)
+- **User reports**: (1) Ticker showed `Bank Redeem XX******XX ₹0`, (2) Admin-completed bank redeems from `/admin/bank-transfers` page were not appearing.
+- **Root causes** (`routes/live_ticker.py`):
+  1. `bank_transfer_requests` collection (source of `/admin/bank-transfers` page) was not queried at all — only `bank_withdrawal_requests` and `chatbot_withdrawal_requests` were.
+  2. `bank_transfer_requests` status field uses PascalCase `"Paid"` but `SUCCESS_STATUSES` only matched lowercase `"paid"`.
+  3. Amount field names differ across collections — `amount_inr` vs `amount` — code only read `amount_inr`.
+  4. `bank_withdrawal_requests.user_mobile` is often empty; no fallback enrichment from `users.mobile`.
+  5. Legacy redeem_requests docs with only `prc_amount` (no `amount_inr`) rendered as `₹0`.
+- **Fixes**:
+  1. Added `db.bank_transfer_requests` query block that reads `amount_inr` OR `amount` with `_needs_mobile=True` flag for downstream enrichment.
+  2. Extended `SUCCESS_STATUSES` to include PascalCase variants: `"Paid", "Completed", "Approved", "Success", "PAID", "COMPLETED"`.
+  3. Enrichment logic upgraded: re-fetch mobile from `users` collection whenever `_needs_mobile` is set OR current mask is the all-X fallback (`XX******XX`) — but only overwrite if the enriched mask is not the same fallback (preserves mask for test-data edge cases).
+  4. Drop any item with `amount <= 0` before round-robin interleaving — prevents ₹0 entries from polluting the ticker.
+  5. Cache key bumped to `v4_nozero` to bust stale payload.
+- **Verified via curl**: 11 items returned. Bank Redeem entries now show real admin-completed amounts `₹1900`, `₹2000`, `₹2000` with `99******82` mobile mask. Round-robin order: crown → mobile → bank → bolt → crown → bank → crown → bank → crown → bank → crown.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
