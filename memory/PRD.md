@@ -247,6 +247,27 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
   5. Cache key bumped to `v4_nozero` to bust stale payload.
 - **Verified via curl**: 11 items returned. Bank Redeem entries now show real admin-completed amounts `₹1900`, `₹2000`, `₹2000` with `99******82` mobile mask. Round-robin order: crown → mobile → bank → bolt → crown → bank → crown → bank → crown → bank → crown.
 
+### P&L Dashboard — Critical Bug Fixes (DONE - April 21, 2026)
+- **User request**: "App प्रॉफिट मध्ये आहे का लॉस मध्ये आहे हे समजायला पाहिजे. अगोदर code check कर — बरोबर आहे का?"
+- **Audit**: `routes/admin_finance.py#get_profit_loss_statement` (`/api/admin/finance/profit-loss`) and `pages/AdminProfitLoss.js` (`/admin/profit-loss`) were already built, but showed ₹0 revenue / wrong loss numbers in production due to six data-source mismatches:
+  1. **Subscription revenue**: queried empty `vip_payments` (legacy) instead of current `subscription_payments` with status `"paid"`. Primary revenue source entirely missing.
+  2. **Bank withdrawal status**: filtered by `"approved"` only, but actual statuses are `"completed"` / `"Paid"` / `"PAID"`.
+  3. **`bank_transfer_requests`** collection (admin-completed manual redeems, source of `/admin/bank-transfers` page) not queried at all — revenue and payout both missing.
+  4. **Gift vouchers**: used `"completed"` but actual delivered records use `"delivered"` status.
+  5. **Status case-sensitivity**: MongoDB `$in` is case-sensitive; `"PAID"`, `"Paid"`, `"SUCCESS"`, `"Delivered"` etc. all missed.
+  6. **PRC → INR liability rate** hardcoded at `0.10`; should read from `settings.prc_economy.prc_to_inr_rate`.
+- **Fixes applied**:
+  - Added `SUCCESS_STATUSES` array with lowercase + PascalCase + UPPERCASE variants (similar to live_ticker fix).
+  - Replaced primary subscription source: query `subscription_payments` first (inr_equivalent / amount_inr / amount / prc_amount*rate fallback), keep `vip_payments` as legacy fallback.
+  - Bank redeems now sum from BOTH `bank_withdrawal_requests` + `bank_transfer_requests` with additive date clause for `paid_at/completed_at/approved_at`.
+  - Per-txn fees: prefer stored `processing_fee_inr`/`admin_charge_inr`; fall back to computed (₹10 + 20%) only if missing.
+  - PRC_TO_INR loaded dynamically from `settings.prc_economy`.
+  - Increased `.to_list()` caps (10k → 50k-200k) to avoid truncated aggregations on heavy months.
+- **Verified on preview**: P&L for April 2026 now returns:
+  - Status: **PROFIT 📈**, Net ₹2,647.08, Revenue ₹3,606 (3 subscriptions + ₹70 fees), Expenses ₹959 (prc_rewards ₹788 + gateway ₹71 + bank payout ₹100), Margin 73.4%, Health Score 100
+  - Previously (before fix) same period showed: ₹0 revenue, -₹78.86 "breakeven" (wrong).
+- **Frontend**: No changes needed — `AdminProfitLoss.js` already renders every field correctly. Screenshot captured showing PROFIT card, insights, revenue/expense breakdown.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

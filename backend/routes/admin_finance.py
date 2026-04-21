@@ -82,13 +82,27 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         
         start_str = start_date.isoformat()
         end_str = end_date.isoformat()
+
+        # Accept common status variants (case-insensitive data in production)
+        SUCCESS_STATUSES = [
+            "completed", "approved", "success", "paid", "delivered",
+            "Completed", "Approved", "Success", "Paid", "Delivered",
+            "COMPLETED", "APPROVED", "SUCCESS", "PAID", "DELIVERED",
+        ]
+
+        # Load PRC→INR rate from settings (fallback 0.10 INR/PRC)
+        try:
+            prc_econ = await db.settings.find_one({"key": "prc_economy"}, {"_id": 0})
+            PRC_TO_INR = float((prc_econ or {}).get("prc_to_inr_rate", 0.10)) or 0.10
+        except Exception:
+            PRC_TO_INR = 0.10
         
         # ===== REVENUE CALCULATION =====
         revenue = {
             "vip_memberships": 0,
             "service_charges": 0,
-            "processing_fees": 0,  # NEW: Fixed 10 Rs processing fee
-            "admin_charges": 0,    # NEW: 20% admin charge
+            "processing_fees": 0,  # Fixed per-txn processing fees (INR)
+            "admin_charges": 0,    # Per-txn admin charges (INR)
             "delivery_charges": 0,
             "ad_revenue": 0,
             "other_income": 0
@@ -100,6 +114,9 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             "bill_service_charges": 0,
             "bill_processing_fees": 0,
             "bill_admin_charges": 0,
+            "recharge_count": 0,
+            "recharge_processing_fees": 0,
+            "recharge_admin_charges": 0,
             "gift_voucher_count": 0,
             "gift_service_charges": 0,
             "gift_processing_fees": 0,
@@ -110,9 +127,9 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             "withdrawal_count": 0,
             "withdrawal_processing_fees": 0,
             "withdrawal_admin_charges": 0,
-            "bank_withdrawal_rev_count": 0,        # NEW: Bank Withdrawal Revenue
-            "bank_withdrawal_processing_fees": 0,  # NEW
-            "bank_withdrawal_admin_charges": 0,    # NEW
+            "bank_withdrawal_rev_count": 0,
+            "bank_withdrawal_processing_fees": 0,
+            "bank_withdrawal_admin_charges": 0,
             "orders_count": 0
         }
         
@@ -120,9 +137,29 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         PROCESSING_FEE_INR = 10
         ADMIN_CHARGE_PERCENT = 20
         
-        # 1. VIP Membership Revenue
+        # 1. Subscription Revenue (PRIMARY: subscription_payments with status="paid")
+        subscription_payments = await db.subscription_payments.find({
+            "status": {"$in": SUCCESS_STATUSES},
+            "$or": [
+                {"paid_at": {"$gte": start_str, "$lte": end_str}},
+                {"approved_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "inr_equivalent": 1, "amount": 1, "amount_inr": 1, "prc_amount": 1,
+            "plan_name": 1, "plan_type": 1}).to_list(50000)
+
+        for p in subscription_payments:
+            # Subscriptions are paid in PRC; convert to INR (user's committed value)
+            amount = (p.get("inr_equivalent") or p.get("amount_inr") or p.get("amount")
+                      or (float(p.get("prc_amount") or 0) * PRC_TO_INR))
+            revenue["vip_memberships"] += float(amount or 0)
+            revenue_details["vip_count"] += 1
+            plan = p.get("plan_type") or p.get("plan_name") or "unknown"
+            revenue_details["vip_plans"][plan] = revenue_details["vip_plans"].get(plan, 0) + 1
+
+        # 1b. Legacy VIP Membership Revenue (fallback)
         vip_payments = await db.vip_payments.find({
-            "status": "approved",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
                 {"approved_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
@@ -138,16 +175,23 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         
         # 2. Bill Payment Fees (10 Rs processing + 20% admin charge)
         bill_payments = await db.bill_payment_requests.find({
-            "status": "completed",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
                 {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"processed_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "service_charge": 1, "amount_inr": 1, "processing_fee": 1, "admin_charge": 1}).to_list(10000)
+        }, {"_id": 0, "service_charge": 1, "amount_inr": 1, "processing_fee_inr": 1,
+            "admin_charge_inr": 1, "processing_fee": 1, "admin_charge": 1}).to_list(50000)
         
         bill_count = len(bill_payments)
-        bill_processing_fees = bill_count * PROCESSING_FEE_INR
-        bill_admin_charges = sum(bp.get("admin_charge", bp.get("amount_inr", 0) * ADMIN_CHARGE_PERCENT / 100) for bp in bill_payments)
+        # Prefer explicit stored fees; fall back to computed defaults (fixed ₹10 + 20%)
+        bill_processing_fees = sum(bp.get("processing_fee_inr", bp.get("processing_fee", PROCESSING_FEE_INR)) for bp in bill_payments)
+        bill_admin_charges = sum(
+            bp.get("admin_charge_inr",
+                   bp.get("admin_charge", bp.get("amount_inr", 0) * ADMIN_CHARGE_PERCENT / 100))
+            for bp in bill_payments
+        )
         bill_service_charges = sum(bp.get("service_charge", 0) for bp in bill_payments)
         
         revenue["processing_fees"] += bill_processing_fees
@@ -160,16 +204,22 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         
         # 3. Gift Voucher Fees (10 Rs processing + 20% admin charge)
         gift_vouchers = await db.gift_voucher_requests.find({
-            "status": "completed",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
                 {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"delivered_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "service_charge": 1, "denomination": 1, "processing_fee": 1, "admin_charge": 1}).to_list(10000)
+        }, {"_id": 0, "service_charge": 1, "denomination": 1, "processing_fee": 1,
+            "admin_charge": 1, "processing_fee_inr": 1, "admin_charge_inr": 1}).to_list(50000)
         
         gift_count = len(gift_vouchers)
-        gift_processing_fees = gift_count * PROCESSING_FEE_INR
-        gift_admin_charges = sum(gv.get("admin_charge", gv.get("denomination", 0) * ADMIN_CHARGE_PERCENT / 100) for gv in gift_vouchers)
+        gift_processing_fees = sum(gv.get("processing_fee_inr", gv.get("processing_fee", PROCESSING_FEE_INR)) for gv in gift_vouchers)
+        gift_admin_charges = sum(
+            gv.get("admin_charge_inr",
+                   gv.get("admin_charge", gv.get("denomination", 0) * ADMIN_CHARGE_PERCENT / 100))
+            for gv in gift_vouchers
+        )
         gift_service_charges = sum(gv.get("service_charge", 0) for gv in gift_vouchers)
         
         revenue["processing_fees"] += gift_processing_fees
@@ -182,16 +232,21 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         
         # 4. Luxury Life Claims Fees (10 Rs processing + 20% admin charge)
         luxury_claims = await db.luxury_life_claims.find({
-            "status": "completed",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
                 {"completed_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "claim_amount": 1, "processing_fee": 1, "admin_charge": 1}).to_list(10000)
+        }, {"_id": 0, "claim_amount": 1, "processing_fee": 1, "admin_charge": 1,
+            "processing_fee_inr": 1, "admin_charge_inr": 1}).to_list(50000)
         
         luxury_count = len(luxury_claims)
-        luxury_processing_fees = luxury_count * PROCESSING_FEE_INR
-        luxury_admin_charges = sum(lc.get("admin_charge", lc.get("claim_amount", 0) * ADMIN_CHARGE_PERCENT / 100) for lc in luxury_claims)
+        luxury_processing_fees = sum(lc.get("processing_fee_inr", lc.get("processing_fee", PROCESSING_FEE_INR)) for lc in luxury_claims)
+        luxury_admin_charges = sum(
+            lc.get("admin_charge_inr",
+                   lc.get("admin_charge", lc.get("claim_amount", 0) * ADMIN_CHARGE_PERCENT / 100))
+            for lc in luxury_claims
+        )
         
         revenue["processing_fees"] += luxury_processing_fees
         revenue["admin_charges"] += luxury_admin_charges
@@ -201,16 +256,21 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         
         # 5. Withdrawal Fees (10 Rs processing + 20% admin charge)
         withdrawals = await db.cashback_withdrawals.find({
-            "status": "completed",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
                 {"completed_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "amount": 1, "processing_fee": 1, "admin_charge": 1}).to_list(10000)
+        }, {"_id": 0, "amount": 1, "processing_fee": 1, "admin_charge": 1,
+            "processing_fee_inr": 1, "admin_charge_inr": 1}).to_list(50000)
         
         withdrawal_count = len(withdrawals)
-        withdrawal_processing_fees = withdrawal_count * PROCESSING_FEE_INR
-        withdrawal_admin_charges = sum(w.get("admin_charge", w.get("amount", 0) * ADMIN_CHARGE_PERCENT / 100) for w in withdrawals)
+        withdrawal_processing_fees = sum(w.get("processing_fee_inr", w.get("processing_fee", PROCESSING_FEE_INR)) for w in withdrawals)
+        withdrawal_admin_charges = sum(
+            w.get("admin_charge_inr",
+                  w.get("admin_charge", w.get("amount", 0) * ADMIN_CHARGE_PERCENT / 100))
+            for w in withdrawals
+        )
         
         revenue["processing_fees"] += withdrawal_processing_fees
         revenue["admin_charges"] += withdrawal_admin_charges
@@ -218,19 +278,38 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         revenue_details["withdrawal_processing_fees"] = round(withdrawal_processing_fees, 2)
         revenue_details["withdrawal_admin_charges"] = round(withdrawal_admin_charges, 2)
         
-        # 6. Bank Withdrawal Fees (PRC to Bank) - NEW
-        # Processing fee + 20% admin charge from bank_withdrawal_requests
+        # 6. Bank Withdrawal Fees (PRC to Bank) - includes both bank_withdrawal_requests and bank_transfer_requests
         bank_withdrawals = await db.bank_withdrawal_requests.find({
-            "status": "approved",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
+                {"approved_at": {"$gte": start_str, "$lte": end_str}},
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "amount_inr": 1, "processing_fee_inr": 1, "admin_charge_inr": 1,
+            "processing_fee": 1, "admin_charge": 1}).to_list(50000)
+
+        # Also include admin-completed manual bank transfers
+        bank_transfers = await db.bank_transfer_requests.find({
+            "status": {"$in": SUCCESS_STATUSES},
+            "$or": [
+                {"paid_at": {"$gte": start_str, "$lte": end_str}},
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
                 {"approved_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "amount_inr": 1, "processing_fee_inr": 1, "admin_charge_inr": 1}).to_list(10000)
-        
-        bank_withdrawal_rev_count = len(bank_withdrawals)
-        bank_withdrawal_processing_fees = sum(bw.get("processing_fee_inr", 0) for bw in bank_withdrawals)
-        bank_withdrawal_admin_charges = sum(bw.get("admin_charge_inr", 0) for bw in bank_withdrawals)
+        }, {"_id": 0, "amount": 1, "amount_inr": 1, "processing_fee_inr": 1, "admin_charge_inr": 1,
+            "processing_fee": 1, "admin_charge": 1, "total_prc_deducted": 1}).to_list(50000)
+
+        # Combine both collections
+        all_bank = bank_withdrawals + bank_transfers
+        bank_withdrawal_rev_count = len(all_bank)
+        bank_withdrawal_processing_fees = sum(
+            bw.get("processing_fee_inr", bw.get("processing_fee", 0)) for bw in all_bank
+        )
+        bank_withdrawal_admin_charges = sum(
+            bw.get("admin_charge_inr", bw.get("admin_charge", 0)) for bw in all_bank
+        )
         
         revenue["processing_fees"] += bank_withdrawal_processing_fees
         revenue["admin_charges"] += bank_withdrawal_admin_charges
@@ -240,12 +319,12 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         
         # 7. Delivery Charges from Orders
         orders = await db.orders.find({
-            "status": "delivered",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
                 {"delivered_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "delivery_charge": 1}).to_list(10000)
+        }, {"_id": 0, "delivery_charge": 1}).to_list(50000)
         
         revenue["delivery_charges"] = sum(o.get("delivery_charge", 0) for o in orders)
         revenue_details["orders_count"] = len(orders)
@@ -299,12 +378,13 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         
         # 1. User Payout Expenses - Bill Payments (actual INR paid out)
         bill_payout_data = await db.bill_payment_requests.find({
-            "status": "completed",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
                 {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"processed_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "amount_inr": 1, "payout_amount": 1}).to_list(10000)
+        }, {"_id": 0, "amount_inr": 1, "payout_amount": 1}).to_list(50000)
         
         bill_payout_total = sum(bp.get("payout_amount", bp.get("amount_inr", 0)) for bp in bill_payout_data)
         expenses["bill_payment_payouts"] = round(bill_payout_total, 2)
@@ -313,12 +393,13 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         
         # 2. User Payout Expenses - Gift Vouchers (actual INR paid out)
         gift_payout_data = await db.gift_voucher_requests.find({
-            "status": "completed",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
                 {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"delivered_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "denomination": 1, "payout_amount": 1}).to_list(10000)
+        }, {"_id": 0, "denomination": 1, "payout_amount": 1}).to_list(50000)
         
         gift_payout_total = sum(gv.get("payout_amount", gv.get("denomination", 0)) for gv in gift_payout_data)
         expenses["gift_voucher_payouts"] = round(gift_payout_total, 2)
@@ -327,12 +408,12 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         
         # 3. User Payout Expenses - Withdrawals (actual INR paid out)
         withdrawal_payout_data = await db.cashback_withdrawals.find({
-            "status": "completed",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
                 {"completed_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "amount": 1, "payout_amount": 1, "net_amount": 1}).to_list(10000)
+        }, {"_id": 0, "amount": 1, "payout_amount": 1, "net_amount": 1}).to_list(50000)
         
         withdrawal_payout_total = sum(w.get("payout_amount", w.get("net_amount", w.get("amount", 0))) for w in withdrawal_payout_data)
         expenses["withdrawal_payouts"] = round(withdrawal_payout_total, 2)
@@ -341,32 +422,49 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         
         # 4. User Payout Expenses - Luxury Life Claims (actual INR paid out)
         luxury_payout_data = await db.luxury_life_claims.find({
-            "status": "completed",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
                 {"completed_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "claim_amount": 1, "payout_amount": 1}).to_list(10000)
+        }, {"_id": 0, "claim_amount": 1, "payout_amount": 1}).to_list(50000)
         
         luxury_payout_total = sum(lc.get("payout_amount", lc.get("claim_amount", 0)) for lc in luxury_payout_data)
         expenses["luxury_claim_payouts"] = round(luxury_payout_total, 2)
         expense_details["luxury_claim_count"] = len(luxury_payout_data)
         expense_details["luxury_claim_total_inr"] = round(luxury_payout_total, 2)
         
-        # 5. Bank Withdrawal Payouts (PRC to Bank - NEW)
-        # Approved bank withdrawals - user receives INR amount, we deduct total PRC
+        # 5. Bank Withdrawal Payouts (PRC to Bank) - includes both collections
         bank_withdrawal_data = await db.bank_withdrawal_requests.find({
-            "status": "approved",
+            "status": {"$in": SUCCESS_STATUSES},
             "$or": [
+                {"approved_at": {"$gte": start_str, "$lte": end_str}},
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "amount_inr": 1, "total_prc_deducted": 1, "prc_used": 1, "prc_amount": 1,
+            "processing_fee_inr": 1, "admin_charge_inr": 1}).to_list(50000)
+
+        bank_transfer_data = await db.bank_transfer_requests.find({
+            "status": {"$in": SUCCESS_STATUSES},
+            "$or": [
+                {"paid_at": {"$gte": start_str, "$lte": end_str}},
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
                 {"approved_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "amount_inr": 1, "total_prc_deducted": 1, "prc_used": 1, "prc_amount": 1, "processing_fee_inr": 1, "admin_charge_inr": 1}).to_list(10000)
-        
-        bank_withdrawal_count = len(bank_withdrawal_data)
-        # Expense = amount actually transferred to user's bank (amount_inr only)
-        bank_withdrawal_payout_total = sum(bw.get("amount_inr", 0) for bw in bank_withdrawal_data)
-        bank_withdrawal_total_prc = sum(bw.get("total_prc_deducted") or bw.get("prc_used") or bw.get("prc_amount") or 0 for bw in bank_withdrawal_data)
+        }, {"_id": 0, "amount_inr": 1, "amount": 1, "total_prc_deducted": 1}).to_list(50000)
+
+        all_bank_payouts = bank_withdrawal_data + bank_transfer_data
+        bank_withdrawal_count = len(all_bank_payouts)
+        # Expense = actual INR paid to user's bank account
+        bank_withdrawal_payout_total = sum(
+            bw.get("amount_inr") or bw.get("amount") or 0 for bw in all_bank_payouts
+        )
+        bank_withdrawal_total_prc = sum(
+            bw.get("total_prc_deducted") or bw.get("prc_used") or bw.get("prc_amount") or 0
+            for bw in all_bank_payouts
+        )
         
         expenses["bank_withdrawal_payouts"] = round(bank_withdrawal_payout_total, 2)
         expense_details["bank_withdrawal_count"] = bank_withdrawal_count
@@ -401,26 +499,26 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         else:
             expenses["fixed_expenses"] = round(fixed_total, 2)  # Full month
         
-        # 4. Auto: Cashback/Referral bonuses
+        # 4. Auto: Cashback/Referral bonuses (PRC liability → INR @ PRC_TO_INR)
         referral_txns = await db.transactions.find({
             "transaction_type": {"$in": ["referral_bonus", "cashback", "referral"]},
             "$or": [
                 {"timestamp": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "amount": 1}).to_list(50000)
-        expenses["cashback_referral"] = round(sum(abs(t.get("amount", 0)) for t in referral_txns) * 0.10, 2)  # PRC value
+        }, {"_id": 0, "amount": 1}).to_list(100000)
+        expenses["cashback_referral"] = round(sum(abs(t.get("amount", 0)) for t in referral_txns) * PRC_TO_INR, 2)
         
-        # 5. Auto: PRC Mining rewards (liability at ₹0.10 per PRC) - tap_game, prc_rain_gain removed
+        # 5. Auto: PRC Mining rewards (liability at current PRC→INR rate)
         mining_txns = await db.transactions.find({
             "transaction_type": {"$in": ["mining"]},
             "$or": [
                 {"timestamp": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "amount": 1}).to_list(100000)
+        }, {"_id": 0, "amount": 1}).to_list(200000)
         prc_given = sum(abs(t.get("amount", 0)) for t in mining_txns)
-        expenses["prc_rewards"] = round(prc_given * 0.10, 2)
+        expenses["prc_rewards"] = round(prc_given * PRC_TO_INR, 2)
         
         total_expenses = sum(expenses.values())
         
