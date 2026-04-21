@@ -654,6 +654,13 @@ function App() {
   // SECURITY: Validate user role via API instead of trusting localStorage
   const validateUserRole = async (storedUser) => {
     if (!storedUser?.token) return null;
+
+    // Impersonation sessions use opaque IMP_ tokens (not JWTs).
+    // They are validated via /api/auth/validate-session instead.
+    // Skip /auth/me here to avoid a 401 that would clear the session.
+    if (storedUser.is_impersonation || (typeof storedUser.token === 'string' && storedUser.token.startsWith('IMP_'))) {
+      return storedUser;
+    }
     
     try {
       const response = await fetch(`${BACKEND_URL}/api/auth/me`, {

@@ -503,7 +503,7 @@ async def set_new_pin(request: Request):
 @router.get("/me")
 async def get_current_user_info(request: Request):
     """
-    SECURITY: Validate current user session via JWT token
+    SECURITY: Validate current user session via JWT token (or IMP_ impersonation token)
     Returns user info if token is valid, 401 if not
     Used by frontend to verify admin role via API instead of localStorage
     """
@@ -513,8 +513,54 @@ async def get_current_user_info(request: Request):
     if not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authentication required")
     
-    token = auth_header.replace("Bearer ", "")
-    
+    token = auth_header.replace("Bearer ", "").strip()
+
+    # ----- Admin Impersonation tokens (IMP_<hex>) -----
+    # These are opaque session tokens issued by /api/admin/login-as-user.
+    # They are NOT JWTs — look them up in admin_impersonation_sessions.
+    if token.startswith("IMP_"):
+        imp_session = await db.admin_impersonation_sessions.find_one(
+            {"token": token, "is_active": True},
+            {"_id": 0}
+        )
+        if not imp_session:
+            raise HTTPException(status_code=401, detail="Impersonation session expired or invalid")
+        # Check expiry
+        expires_at = imp_session.get("expires_at")
+        if expires_at:
+            try:
+                from dateutil.parser import parse as parse_date
+                exp_dt = parse_date(expires_at) if isinstance(expires_at, str) else expires_at
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) > exp_dt:
+                    await db.admin_impersonation_sessions.update_one(
+                        {"token": token}, {"$set": {"is_active": False}}
+                    )
+                    raise HTTPException(status_code=401, detail="Impersonation session expired")
+            except HTTPException:
+                raise
+            except Exception:
+                pass
+        target_uid = imp_session.get("target_uid")
+        user = await db.users.find_one(
+            {"uid": target_uid},
+            {"_id": 0, "password": 0, "pin_hash": 0, "hashed_pin": 0, "password_hash": 0}
+        )
+        if not user:
+            raise HTTPException(status_code=404, detail="Impersonated user not found")
+        return {
+            "uid": user.get("uid"),
+            "email": user.get("email"),
+            "name": user.get("name"),
+            "role": "user",  # Force non-admin role for impersonation safety
+            "is_admin": False,
+            "is_active": user.get("is_active", True),
+            "verified": True,
+            "is_impersonation": True,
+            "impersonated_by_admin": imp_session.get("admin_name")
+        }
+
     try:
         import jwt
         JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'paras-reward-secret-key-2024')
