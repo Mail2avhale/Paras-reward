@@ -1,0 +1,43 @@
+{
+  "summary": "E2E retest of admin 'Login As User' impersonation after iteration_218 race-condition fix (URL hash + sessionStorage handoff). Backend 18/18 pytest tests PASS. Frontend hash handoff IS reached (new tab initial URL contains `#imp=<base64>` with correct SANTOSH payload), but the new tab still ends up at /login with empty sessionStorage. ROOT CAUSE FOUND: /api/auth/me (JWT-only) returns 401 for IMP_ tokens, causing App.js validateUserRole() to call removeStoredUser() which clears the just-written sessionStorage and redirects to /login. The race-condition fix is correct in isolation, but the impersonation flow is broken by a different bug in the auth-me handler. Duplicate POST /api/admin/impersonate/{target_uid} confirmed removed.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "/api/auth/me", "issue": "Returns 401 'Invalid token' for IMP_<hex> impersonation tokens because it only decodes JWT. This silently breaks the entire frontend impersonation flow: App.js useEffect -> validateUserRole() -> fetch /api/auth/me -> 401 -> removeStoredUser() clears sessionStorage (paras_user + paras_imp_active) -> setUser(null) -> redirect to /login. Verified by direct curl: IMP_9bf3eef0... -> {\"detail\":\"Invalid token\"} HTTP 401.", "priority": "CRITICAL"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminDashboard", "issue": "React warning persists: 'Each child in a list should have a unique key prop. Check the render method of AdminDashboard.' (carried over from iteration_218)", "selector": "AdminDashboard.js render", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Admin -> Login As User -> new tab hydration", "issue": "Hash-handoff IIFE in App.js correctly receives `/dashboard#imp=<base64>` and writes to sessionStorage (design is sound), BUT App.js useEffect immediately calls validateUserRole(user) which fetches /api/auth/me. Because IMP_ tokens are not JWT, /api/auth/me returns 401. App.js line 685-691 treats 401 as 'token invalid' -> removeStoredUser() -> sessionStorage.paras_user / paras_imp_active cleared -> user becomes null -> navigated to /login. Observed: new tab final URL = /login, sessionStorage.paras_imp_active=None, paras_user=None, impersonation-banner absent.", "affected_selectors": ["[data-testid='impersonation-banner']", "/app/frontend/src/App.js validateUserRole (lines 655-697)", "/app/backend/routes/auth.py get_current_user_info (lines 503-553)"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_login_as_user.py",
+    "/app/test_reports/pytest/iter219_admin_login_as_user.xml"
+  ],
+  "action_items": [
+    "PRIMARY FIX (backend): Update /api/auth/me in /app/backend/routes/auth.py (lines 503-553) to recognize IMP_ tokens. If token starts with 'IMP_', look it up in the impersonation_sessions collection (see admin_misc.py around line 647 for the collection name), load the target user, and return the same shape {uid,email,name,role:'user',is_admin:false,verified:true}. Do NOT attempt jwt.decode on IMP_ tokens.",
+    "ALTERNATIVE / DEFENSE-IN-DEPTH FIX (frontend): In /app/frontend/src/App.js validateUserRole (line 655), short-circuit when storedUser.is_impersonation === true OR storedUser.token startsWith 'IMP_' — skip the /api/auth/me call entirely (return storedUser as-is) since impersonation sessions are validated via /api/auth/validate-session, not /auth/me.",
+    "Also consider: App.js refreshUserData may have the same issue for IMP_ tokens — verify and apply similar skip-logic.",
+    "Fix unique key prop React warning in AdminDashboard render (pre-existing, not blocking)."
+  ],
+  "critical_code_review_comments": [
+    "The race-condition fix (hash handoff + tab-scoped sessionStorage via IIFE + isImpersonationTab()) is correctly implemented in App.js (lines 37-85) and AdminLoginAsUser.js (lines 61-116). It would work perfectly — except that validateUserRole kills the session immediately. The fix is NOT racy; it is deterministic 401 -> logout.",
+    "/api/auth/me is used as the root-of-trust for session validation on app mount. It MUST understand every token format the app emits. Currently it only understands JWT; IMP_ tokens and any other custom session tokens will fail open (logout). Recommend unified session validator that delegates: IMP_ -> impersonation_sessions, JWT -> jwt.decode, TOK_ -> (whatever).",
+    "AdminLoginAsUser.js does NOT call handleLogin or touch localStorage anymore, so admin's original tab is safe (confirmed: admin localStorage.paras_user still contains admin-test-123 after impersonation). Design is correct.",
+    "Backend: admin_pin is optional on /api/admin/login-as-user (confirmed via test_07 pass without pin) — matches requirement.",
+    "Regression: grep for 'impersonate' in server.py/admin_misc.py shows only non-route references (admin_misc.py:756, 831). Duplicate POST /api/admin/impersonate/{target_uid} is removed. ✓"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (18/18 pytest)", "frontend": "40% — admin login, dashboard, search, select, confirm all work; but new-tab hydration fails due to /api/auth/me rejecting IMP_ tokens, so banner never appears and tab lands on /login"},
+  "test_credentials": "Admin admin@test.com / PIN 153759 (uid admin-test-123); Target user mobile 9970100782 (uid cbdf46d7-7d66-4d43-8495-e1432a2ab071, name SANTOSH AVHALE) — per /app/memory/test_credentials.md",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend 18/18 pass (including TestImpersonationUserAccess - IMP tokens work for /api/dashboard, /api/mining, /api/network etc.). The bug is ONLY in /api/auth/me. E2E Playwright reproduction: admin login (email+6-digit PIN testids login-pin-0..5) -> /admin -> click [data-testid=admin-login-as-user-btn] -> fill [data-testid=impersonation-search-input] with 9970100782 -> click [data-testid=impersonation-search-btn] -> click [data-testid=impersonation-result-<uid>] -> click [data-testid=impersonation-confirm-login-btn] -> capture new page via context.expect_page(). New page opens at /dashboard#imp=<base64> correctly. After ~2s it redirects to /login. To verify fix: in new tab, sessionStorage.paras_imp_active should be '1' and [data-testid=impersonation-banner] should contain 'IMPERSONATION MODE: You are viewing as SANTOSH AVHALE (9970100782)'. Also verify admin tab localStorage.paras_user still contains admin-test-123 (already verified working).",
+  "rca of the issue": "ROOT CAUSE: /api/auth/me (auth.py:503-553) only handles JWT tokens (jwt.decode). The impersonation flow emits IMP_<32hex> session tokens (admin_misc.py:~647 /login-as-user). When the new impersonation tab mounts, the IIFE (App.js:37-54) correctly parses the URL hash and writes payload to sessionStorage. App's useState initializer reads it and sets `user` with is_impersonation=true and token='IMP_...'. Then useEffect (App.js:765-796) runs initializeUser -> validateUserRole(user) -> fetch('/api/auth/me', {Authorization: 'Bearer IMP_...'}) -> server tries jwt.decode('IMP_9bf3...') -> raises InvalidTokenError -> 401. Frontend (App.js:685-691) interprets 401 as 'token invalid, clearing session' -> removeStoredUser() (which for impersonation tab clears sessionStorage.paras_user AND paras_imp_active) -> setUser(null). After that, the route guard sends user to /login. REPRODUCTION (backend only): (1) POST /api/auth/login admin -> get admin JWT. (2) POST /api/admin/login-as-user with admin token -> get IMP_xxx. (3) GET /api/auth/me with 'Authorization: Bearer IMP_xxx' -> 401 'Invalid token'. MITIGATION (preferred, backend): in auth.py get_current_user_info, detect `token.startswith('IMP_')` and resolve via impersonation_sessions collection instead of jwt.decode; return role='user', is_admin=false. MITIGATION (frontend fallback): in App.js validateUserRole, early-return storedUser if storedUser.is_impersonation or storedUser.token.startsWith('IMP_')."
+}

@@ -73,43 +73,38 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
         setStep('success');
         toast.success(`Logged in as ${selectedUser.name}!`);
         
-        // Store impersonation data
+        // Build impersonation payload (will be read by new tab from URL hash)
         const impersonationData = {
           ...response.data.user,
           session_token: response.data.session_token,
+          token: response.data.session_token, // axios interceptor reads .token
           expires_at: response.data.expires_at,
           is_impersonation: true,
-          admin_name: adminUser?.name
+          admin_name: adminUser?.name,
+          // Ensure role is never elevated via impersonation
+          role: response.data.user?.role || 'user'
         };
-        
-        // Save current admin session BEFORE opening new window
-        const adminSessionBackup = localStorage.getItem('paras_user');
-        
-        // Set impersonation user data (will be read by new window on load)
-        localStorage.setItem('paras_user', JSON.stringify(impersonationData));
-        localStorage.setItem('paras_impersonation', 'true');
-        
-        // Open new window - it will read the impersonation data from localStorage
-        const newWindow = window.open('/dashboard', '_blank');
-        
-        // Immediately restore admin session in current window (within 300ms)
-        setTimeout(() => {
-          if (adminSessionBackup) {
-            localStorage.setItem('paras_user', adminSessionBackup);
-          }
-          localStorage.removeItem('paras_impersonation');
-        }, 300);
-        
-        if (!newWindow) {
-          // Popup blocked - restore admin session and inform user
-          if (adminSessionBackup) {
-            localStorage.setItem('paras_user', adminSessionBackup);
-          }
-          localStorage.removeItem('paras_impersonation');
-          navigator.clipboard.writeText(response.data.session_token);
-          toast.info('Pop-up blocked! Token copied to clipboard.');
+
+        // Encode payload into URL hash (tab-scoped handoff - NO localStorage touch)
+        let encoded = '';
+        try {
+          encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(impersonationData)))));
+        } catch (e) {
+          console.error('[IMP] Failed to encode payload:', e);
+          toast.error('Failed to prepare impersonation session.');
+          setLoading(false);
+          return;
         }
-        
+
+        // Open new tab with hash handoff - admin's localStorage stays untouched
+        const newWindow = window.open(`/dashboard#imp=${encoded}`, '_blank');
+
+        if (!newWindow) {
+          // Popup blocked - copy session token as a fallback convenience
+          try { navigator.clipboard.writeText(response.data.session_token); } catch {}
+          toast.info('Pop-up blocked! Please allow popups and try again.');
+        }
+
         // Close dialog after 2 seconds
         setTimeout(() => {
           resetAndClose();
@@ -164,11 +159,13 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && searchUsers()}
+                data-testid="impersonation-search-input"
                 className="bg-slate-50 border-slate-200 text-slate-800"
               />
               <Button 
                 onClick={searchUsers} 
                 disabled={searching}
+                data-testid="impersonation-search-btn"
                 className="bg-orange-600 hover:bg-orange-700"
               >
                 {searching ? '...' : <Search className="w-4 h-4" />}
@@ -182,6 +179,7 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
                   <div
                     key={user.uid}
                     onClick={() => selectUser(user)}
+                    data-testid={`impersonation-result-${user.uid}`}
                     className="p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors border border-slate-200 hover:border-purple-500"
                   >
                     <div className="flex items-center justify-between">
@@ -283,6 +281,7 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
               <Button 
                 onClick={loginAsUser}
                 disabled={loading}
+                data-testid="impersonation-confirm-login-btn"
                 className="bg-orange-600 hover:bg-orange-700 flex items-center gap-2"
               >
                 {loading ? 'Processing...' : (

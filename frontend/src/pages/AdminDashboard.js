@@ -256,6 +256,7 @@ const AdminDashboard = ({ user }) => {
             variant="outline" 
             size="sm" 
             onClick={() => setShowLoginAsUser(true)}
+            data-testid="admin-login-as-user-btn"
             className="text-orange-600 border-orange-200 bg-orange-50 hover:bg-orange-100 rounded-xl"
           >
             <UserCog className="w-4 h-4 mr-2" />

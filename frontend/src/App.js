@@ -27,6 +27,63 @@ const AdminLayout = IS_USER_BUILD ? null : lazy(() => import("@/components/layou
 // ManagerLayout removed - Manager uses AdminLayout with permission-based access
 // StockistLayout removed - stockist system deprecated
 
+// ============================================================
+// ADMIN IMPERSONATION: per-tab storage + URL hash handoff
+// New impersonation tabs open with URL hash `#imp=<base64(json)>`.
+// We parse it here (before any React render or localStorage read),
+// store payload in sessionStorage (tab-scoped), then clear the hash.
+// This avoids any race with admin's shared localStorage.
+// ============================================================
+(function handleImpersonationHash() {
+  try {
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    if (!hash || hash.indexOf('imp=') === -1) return;
+    const m = hash.match(/imp=([^&]+)/);
+    if (!m) return;
+    const payload = JSON.parse(atob(decodeURIComponent(m[1])));
+    if (!payload || !payload.uid || !payload.session_token) return;
+    sessionStorage.setItem('paras_imp_active', '1');
+    sessionStorage.setItem('paras_user', JSON.stringify(payload));
+    // Remove hash from URL without reloading
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  } catch (e) {
+    console.warn('[IMP] hash parse failed', e);
+  }
+})();
+
+// Tab-scoped storage helpers: prefer sessionStorage when impersonating
+const isImpersonationTab = () => {
+  try { return sessionStorage.getItem('paras_imp_active') === '1'; } catch { return false; }
+};
+const getStoredUserRaw = () => {
+  try {
+    if (isImpersonationTab()) return sessionStorage.getItem('paras_user');
+    return localStorage.getItem('paras_user');
+  } catch { return null; }
+};
+const setStoredUserRaw = (value) => {
+  try {
+    if (isImpersonationTab()) sessionStorage.setItem('paras_user', value);
+    else localStorage.setItem('paras_user', value);
+  } catch {}
+};
+const removeStoredUser = () => {
+  try {
+    if (isImpersonationTab()) {
+      sessionStorage.removeItem('paras_user');
+      sessionStorage.removeItem('paras_imp_active');
+    } else {
+      localStorage.removeItem('paras_user');
+    }
+  } catch {}
+};
+// Expose for non-React callers if needed
+if (typeof window !== 'undefined') {
+  window.__parasStorage = { isImpersonationTab, getStoredUserRaw, setStoredUserRaw, removeStoredUser };
+}
+
 // Axios defaults for mobile - longer timeout
 axios.defaults.timeout = 30000; // 30 seconds for slow mobile networks
 
@@ -63,7 +120,7 @@ axios.interceptors.request.use(
     // Add auth token to all API requests
     if (!config.headers?.['Authorization']) {
       let token = null;
-      const storedUser = localStorage.getItem("paras_user");
+      const storedUser = getStoredUserRaw();
       if (storedUser) {
         try {
           const user = JSON.parse(storedUser);
@@ -302,12 +359,12 @@ const API = `${BACKEND_URL}/api`;
 function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser }) {
   const { toasts, removeToast } = useNotification();
 
-  // Global balance update callback - updates user state + localStorage immediately
+  // Global balance update callback - updates user state + storage immediately
   const onBalanceUpdate = (newBalance) => {
     if (newBalance === undefined || newBalance === null) return;
     const updatedUser = { ...user, prc_balance: newBalance };
     setUser(updatedUser);
-    localStorage.setItem("paras_user", JSON.stringify(updatedUser));
+    setStoredUserRaw(JSON.stringify(updatedUser));
   };
 
   // Helper function to get role-based default route
@@ -329,6 +386,24 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
     <>
       <OfflineIndicator />
       {/* HoliCelebration removed as per user request */}
+      {user?.is_impersonation && (
+        <div
+          data-testid="impersonation-banner"
+          className="w-full bg-orange-500 text-white text-xs sm:text-sm px-3 py-2 flex items-center justify-center gap-3 flex-wrap sticky top-0 z-[100] shadow-md"
+        >
+          <span className="font-semibold">
+            IMPERSONATION MODE: You are viewing as {user.name} ({user.mobile})
+          </span>
+          <button
+            type="button"
+            onClick={() => { handleLogout(false); window.close(); }}
+            data-testid="impersonation-exit-btn"
+            className="bg-white text-orange-700 px-3 py-1 rounded-md font-medium hover:bg-orange-50 transition-colors"
+          >
+            Exit Impersonation
+          </button>
+        </div>
+      )}
       <BrowserRouter>
         <PageTitleUpdater />
         <Suspense fallback={<LoadingFallback />}>
@@ -568,9 +643,9 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
 }
 
 function App() {
-  // Initialize user from localStorage synchronously
+  // Initialize user from storage (sessionStorage if impersonation tab, else localStorage)
   const [user, setUser] = useState(() => {
-    const storedUser = localStorage.getItem("paras_user");
+    const storedUser = getStoredUserRaw();
     return storedUser ? JSON.parse(storedUser) : null;
   });
   const [loading, setLoading] = useState(true);
@@ -597,20 +672,20 @@ function App() {
           verified: verifiedUser.verified
         };
         
-        // If role mismatch, update localStorage
+        // If role mismatch, update storage
         if (storedUser.role !== verifiedUser.role) {
           console.warn('[SECURITY] Role mismatch detected:', {
             stored: storedUser.role,
             verified: verifiedUser.role
           });
-          localStorage.setItem("paras_user", JSON.stringify(updatedUser));
+          setStoredUserRaw(JSON.stringify(updatedUser));
         }
         
         return updatedUser;
       } else if (response.status === 401) {
         // Token expired or invalid - logout
         console.warn('[SECURITY] Token invalid, clearing session');
-        localStorage.removeItem("paras_user");
+        removeStoredUser();
         localStorage.removeItem("paras_session_token");
         localStorage.removeItem("token");
         return null;
@@ -637,7 +712,7 @@ function App() {
         const freshData = await response.json();
         // CRITICAL: Preserve admin/sub_admin/manager role from stored user
         // API might return 'user' as default, but we must keep elevated roles
-        const storedUser = JSON.parse(localStorage.getItem("paras_user") || "{}");
+        const storedUser = JSON.parse(getStoredUserRaw() || "{}");
         const storedRole = storedUser.role;
         const freshRole = freshData.role;
         
@@ -670,9 +745,9 @@ function App() {
           role: finalRole
         };
         setUser(updatedUser);
-        // Strip sensitive fields before persisting to localStorage
+        // Strip sensitive fields before persisting to storage
         const { hashed_pin: _hp, pin_hash: _ph, password: _pw, ...safeData } = updatedUser;
-        localStorage.setItem("paras_user", JSON.stringify(safeData));
+        setStoredUserRaw(JSON.stringify(safeData));
         // console.log('[REFRESH] Final user role set to:', finalRole);
         return updatedUser;
       }
@@ -752,9 +827,9 @@ function App() {
       localStorage.setItem("token", userData.token);
     }
     setUser(userData);
-    // Strip sensitive fields before persisting to localStorage
+    // Strip sensitive fields before persisting to storage
     const { hashed_pin, pin_hash, password, ...safeUserData } = userData;
-    localStorage.setItem("paras_user", JSON.stringify(safeUserData));
+    setStoredUserRaw(JSON.stringify(safeUserData));
     
     // console.log('[LOGIN] User saved to state and localStorage with role:', userData.role);
     
@@ -763,7 +838,7 @@ function App() {
   };
 
   const handleLogout = async (showMessage = true, reason = null) => {
-    const storedUser = JSON.parse(localStorage.getItem("paras_user") || "{}");
+    const storedUser = JSON.parse(getStoredUserRaw() || "{}");
     
     // Clear session on server
     if (storedUser?.uid) {
@@ -779,7 +854,7 @@ function App() {
     }
     
     setUser(null);
-    localStorage.removeItem("paras_user");
+    removeStoredUser();
     localStorage.removeItem("paras_session_token");
     localStorage.removeItem("token");
     
