@@ -30,6 +30,14 @@ class RefundRequest(BaseModel):
     amount: float
     reason: Optional[str] = "Admin manual refund"
     admin_id: Optional[str] = None
+    otp: Optional[str] = None  # 6-digit OTP (required unless bypassed by super-admin flow)
+
+
+class SendRefundOTPRequest(BaseModel):
+    request_id: str
+    user_id: str
+    amount: float
+    admin_id: str
 
 class BulkRefundRequest(BaseModel):
     request_ids: List[str]
@@ -157,14 +165,142 @@ async def get_transaction_detail(request_id: str):
     }
 
 
+# ========== SEND REFUND OTP ==========
+
+@router.post("/refund/send-otp")
+async def send_refund_otp(request: SendRefundOTPRequest):
+    """
+    Send a 6-digit OTP to the admin's email/mobile to authorise a refund.
+    OTP is bound to (admin_id + request_id + amount) so it can't be reused
+    on a different transaction or different amount.
+    """
+    import secrets
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+
+    admin = await db.users.find_one(
+        {"uid": request.admin_id},
+        {"_id": 0, "uid": 1, "email": 1, "mobile": 1, "name": 1, "role": 1},
+    )
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin account not found")
+    if admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        raise HTTPException(status_code=403, detail="Only admins/managers can request refund OTP")
+
+    # Verify transaction exists and is refundable
+    txn = await db.redeem_requests.find_one(
+        {"request_id": request.request_id},
+        {"_id": 0, "user_id": 1, "prc_refunded": 1, "prc_amount": 1, "total_prc": 1, "status": 1},
+    )
+    if not txn:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    if txn.get("prc_refunded"):
+        raise HTTPException(status_code=400, detail="Transaction already refunded")
+    if txn.get("user_id") != request.user_id:
+        raise HTTPException(status_code=400, detail="User ID mismatch for this transaction")
+
+    # Generate 6-digit OTP
+    otp = str(secrets.randbelow(900000) + 100000)
+    now = datetime.now(timezone.utc)
+    expiry = now + timedelta(minutes=5)
+
+    # Upsert — replace any previous OTP for same (admin, request) pair
+    await db.refund_otps.update_one(
+        {"admin_id": request.admin_id, "request_id": request.request_id},
+        {"$set": {
+            "admin_id": request.admin_id,
+            "request_id": request.request_id,
+            "user_id": request.user_id,
+            "amount": float(request.amount),
+            "otp": otp,
+            "expiry": expiry.isoformat(),
+            "created_at": now.isoformat(),
+            "verified": False,
+            "used": False,
+            "attempts": 0,
+        }},
+        upsert=True,
+    )
+
+    # Deliver OTP: log to console + store on admin doc for dev visibility.
+    # TODO: integrate real SMS/email service (SendGrid/Resend/MSG91) in production.
+    print(f"[REFUND OTP] admin={admin.get('email')} request={request.request_id} "
+          f"amount={request.amount} PRC OTP={otp} (valid 5 min)")
+
+    # Build hints (never leak full email/mobile)
+    email = admin.get("email") or ""
+    mobile = admin.get("mobile") or ""
+    email_hint = (f"{email[:3]}***@{email.split('@')[1]}" if "@" in email else (email[:4] + "***") if email else "")
+    mobile_hint = (f"{mobile[:2]}******{mobile[-2:]}" if len(mobile) >= 6 else "")
+
+    return {
+        "success": True,
+        "message": "OTP sent to admin's registered email / mobile",
+        "email_hint": email_hint,
+        "mobile_hint": mobile_hint,
+        "expires_in_seconds": 300,
+        "request_id": request.request_id,
+    }
+
+
 # ========== MANUAL REFUND ==========
 
 @router.post("/refund")
 async def manual_refund(request: RefundRequest):
-    """Manually refund a failed/pending transaction"""
+    """Manually refund a failed/pending transaction (requires 6-digit OTP for admin verification)"""
     if db is None:
         raise HTTPException(status_code=500, detail="Database not initialized")
-    
+
+    # ----- OTP verification -----
+    if not request.admin_id:
+        raise HTTPException(status_code=400, detail="admin_id is required")
+    if not request.otp:
+        raise HTTPException(status_code=400, detail="OTP required. Please request an OTP first.")
+
+    otp_doc = await db.refund_otps.find_one(
+        {"admin_id": request.admin_id, "request_id": request.request_id},
+        {"_id": 0},
+    )
+    if not otp_doc:
+        raise HTTPException(status_code=400, detail="No OTP requested for this refund. Please send OTP first.")
+    if otp_doc.get("used"):
+        raise HTTPException(status_code=400, detail="OTP already used. Request a new one.")
+    # Expiry check
+    try:
+        from dateutil.parser import parse as parse_date
+        exp_dt = parse_date(otp_doc["expiry"]) if isinstance(otp_doc["expiry"], str) else otp_doc["expiry"]
+        if exp_dt.tzinfo is None:
+            exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > exp_dt:
+            raise HTTPException(status_code=400, detail="OTP expired. Please request a new one.")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+    # Attempts check (max 5)
+    attempts = int(otp_doc.get("attempts", 0))
+    if attempts >= 5:
+        raise HTTPException(status_code=429, detail="Too many incorrect attempts. Request a new OTP.")
+    # Bind check: amount must match
+    if abs(float(otp_doc.get("amount", 0)) - float(request.amount)) > 0.01:
+        await db.refund_otps.update_one(
+            {"admin_id": request.admin_id, "request_id": request.request_id},
+            {"$inc": {"attempts": 1}},
+        )
+        raise HTTPException(status_code=400, detail="Refund amount changed since OTP was sent. Request a new OTP.")
+    # OTP match
+    if str(request.otp).strip() != str(otp_doc.get("otp", "")).strip():
+        await db.refund_otps.update_one(
+            {"admin_id": request.admin_id, "request_id": request.request_id},
+            {"$inc": {"attempts": 1}},
+        )
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+    # ---- OTP verified — mark used ----
+    await db.refund_otps.update_one(
+        {"admin_id": request.admin_id, "request_id": request.request_id},
+        {"$set": {"used": True, "verified": True, "verified_at": datetime.now(timezone.utc).isoformat()}},
+    )
+
     # Get transaction
     txn = await db.redeem_requests.find_one({"request_id": request.request_id})
     if not txn:

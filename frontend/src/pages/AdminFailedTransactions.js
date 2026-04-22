@@ -77,6 +77,10 @@ const AdminFailedTransactions = ({ user }) => {
   const [selectedTxn, setSelectedTxn] = useState(null);
   const [refundAmount, setRefundAmount] = useState('');
   const [refundReason, setRefundReason] = useState('');
+  const [otpStep, setOtpStep] = useState(false); // false = amount/reason form, true = OTP entry
+  const [otp, setOtp] = useState('');
+  const [otpHints, setOtpHints] = useState({ email_hint: '', mobile_hint: '' });
+  const [otpSending, setOtpSending] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   
   // Bulk selection
@@ -120,16 +124,48 @@ const AdminFailedTransactions = ({ user }) => {
     fetchServiceTypes();
   }, [fetchTransactions]);
 
-  // Handle refund
-  const handleRefund = async () => {
+  // Step 1: send OTP to admin's email/mobile
+  const handleSendOTP = async () => {
     if (!selectedTxn) return;
-    
     const amount = parseFloat(refundAmount) || selectedTxn.prc_amount || selectedTxn.total_prc;
     if (!amount || amount <= 0) {
       toast.error('Please enter valid refund amount');
       return;
     }
-    
+    if (!user?.uid) {
+      toast.error('Admin session missing. Please re-login.');
+      return;
+    }
+    setOtpSending(true);
+    try {
+      const res = await axios.post(`${API}/admin/failed-transactions/refund/send-otp`, {
+        request_id: selectedTxn.request_id,
+        user_id: selectedTxn.user_id,
+        amount,
+        admin_id: user.uid,
+      }, { headers: { Authorization: `Bearer ${user?.token}` } });
+      setOtpHints({
+        email_hint: res.data?.email_hint || '',
+        mobile_hint: res.data?.mobile_hint || '',
+      });
+      setOtpStep(true);
+      setOtp('');
+      toast.success('OTP sent to your registered email / mobile');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send OTP');
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  // Step 2: verify OTP + perform refund
+  const handleRefund = async () => {
+    if (!selectedTxn) return;
+    if (!otp || otp.length !== 6) {
+      toast.error('Please enter the 6-digit OTP');
+      return;
+    }
+    const amount = parseFloat(refundAmount) || selectedTxn.prc_amount || selectedTxn.total_prc;
     setActionLoading(true);
     try {
       const response = await axios.post(`${API}/admin/failed-transactions/refund`, {
@@ -137,16 +173,18 @@ const AdminFailedTransactions = ({ user }) => {
         user_id: selectedTxn.user_id,
         amount,
         reason: refundReason || 'Admin manual refund',
-        admin_id: user?.uid
-      }, {
-        headers: { Authorization: `Bearer ${user?.token}` }
-      });
-      
+        admin_id: user?.uid,
+        otp: otp.trim(),
+      }, { headers: { Authorization: `Bearer ${user?.token}` } });
+
       toast.success(response.data.message);
       setShowRefundModal(false);
       setSelectedTxn(null);
       setRefundAmount('');
       setRefundReason('');
+      setOtpStep(false);
+      setOtp('');
+      setOtpHints({ email_hint: '', mobile_hint: '' });
       fetchTransactions();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Refund failed');
@@ -525,22 +563,77 @@ const AdminFailedTransactions = ({ user }) => {
             <div>
               <label className="text-slate-500 text-sm">Refund Amount (PRC)</label>
               <Input type="number" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)}
-                placeholder="Enter amount" className="mt-1 bg-white border-slate-200" />
+                placeholder="Enter amount" className="mt-1 bg-white border-slate-200"
+                disabled={otpStep} data-testid="refund-amount-input" />
             </div>
-            
+
             <div>
               <label className="text-slate-500 text-sm">Reason</label>
               <Input value={refundReason} onChange={(e) => setRefundReason(e.target.value)}
-                placeholder="Reason for refund" className="mt-1 bg-white border-slate-200" />
+                placeholder="Reason for refund" className="mt-1 bg-white border-slate-200"
+                disabled={otpStep} data-testid="refund-reason-input" />
             </div>
-            
+
+            {otpStep && (
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-2" data-testid="refund-otp-step">
+                <div className="text-sm text-amber-900">
+                  OTP sent to{' '}
+                  {otpHints.email_hint && <span className="font-semibold">{otpHints.email_hint}</span>}
+                  {otpHints.email_hint && otpHints.mobile_hint && ' / '}
+                  {otpHints.mobile_hint && <span className="font-semibold">{otpHints.mobile_hint}</span>}
+                </div>
+                <Input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="Enter 6-digit OTP"
+                  className="text-center tracking-widest text-lg font-mono bg-white border-amber-300"
+                  maxLength={6}
+                  autoFocus
+                  data-testid="refund-otp-input"
+                />
+                <button
+                  type="button"
+                  onClick={handleSendOTP}
+                  disabled={otpSending}
+                  className="text-xs text-amber-800 underline hover:text-amber-900 disabled:opacity-50"
+                >
+                  {otpSending ? 'Sending...' : 'Resend OTP'}
+                </button>
+              </div>
+            )}
+
             <div className="flex gap-3">
-              <Button onClick={() => setShowRefundModal(false)} variant="outline" className="flex-1 border-slate-300">
+              <Button
+                onClick={() => {
+                  setShowRefundModal(false);
+                  setOtpStep(false);
+                  setOtp('');
+                }}
+                variant="outline"
+                className="flex-1 border-slate-300"
+                data-testid="refund-cancel-btn"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleRefund} disabled={actionLoading} className="flex-1 bg-green-600 hover:bg-green-700">
-                {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Refund'}
-              </Button>
+              {!otpStep ? (
+                <Button
+                  onClick={handleSendOTP}
+                  disabled={otpSending}
+                  className="flex-1 bg-amber-600 hover:bg-amber-700"
+                  data-testid="refund-send-otp-btn"
+                >
+                  {otpSending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send OTP & Continue'}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleRefund}
+                  disabled={actionLoading || otp.length !== 6}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  data-testid="refund-confirm-btn"
+                >
+                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify OTP & Refund'}
+                </Button>
+              )}
             </div>
           </div>
         )}

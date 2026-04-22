@@ -341,6 +341,27 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
   Row 4: 2 | SANTOSH AVHALE  | 98765432101234 | SBIN0002345 | ₹2000 | Active | 21-03-2026 20:30 IST
   ```
 
+### Eko Failed Transaction Refund — OTP Secured (DONE - April 22, 2026)
+- **User request**: "Refund साठी OTP पाठवायचा आहे — Eko failed transaction refund OTP."
+- **Security before**: Refund was 1-click (`POST /admin/failed-transactions/refund`). Any admin/manager could refund any transaction instantly — no out-of-band verification. High-risk fraud vector.
+- **New backend flow** (`routes/admin_failed_transactions.py`):
+  1. `POST /admin/failed-transactions/refund/send-otp` — generates 6-digit OTP via `secrets.randbelow`, binds it to `(admin_id + request_id + amount)` in new `refund_otps` collection with 5-min expiry. Verifies transaction exists and isn't already refunded. Returns email/mobile hint (masked).
+  2. `POST /admin/failed-transactions/refund` (updated) — now REQUIRES `otp` in payload. Validates: (a) OTP exists for this admin+request, (b) not expired, (c) not already used, (d) max 5 attempts, (e) amount wasn't tampered between send-otp and verify-refund. On success, marks OTP as `used: true` so it can't be replayed.
+- **New `RefundRequest.otp` field** and new `SendRefundOTPRequest` model added.
+- **Delivery** (dev/staging): OTP printed to backend stdout (`[REFUND OTP] admin=... OTP=...`) + stored in DB. Production integration note (Resend/SendGrid/MSG91) documented as TODO.
+- **Frontend** (`pages/AdminFailedTransactions.js`):
+  - Refund modal is now 2-step: amount + reason → **"Send OTP & Continue"** (amber) → OTP entry panel (autofocus, 6-digit, digits-only) → **"Verify OTP & Refund"** (green).
+  - Amount/Reason inputs disable during OTP step so no tampering.
+  - "Resend OTP" link if user misses it.
+  - All fields + buttons have `data-testid` for automation.
+- **Verified E2E via curl** (5 assertions all pass):
+  1. Send OTP → 200 with email_hint + mobile_hint
+  2. Refund without OTP → 400 "OTP required"
+  3. Refund with wrong OTP → 400 "Invalid OTP" (attempt counter++)
+  4. Refund with correct OTP → 200 "Refunded 1000.0 PRC to user", balance credited
+  5. Replay same OTP → 400 "OTP already used"
+- **Audit trail**: `refund_otps` collection keeps a permanent record of every OTP issued (who, when, which txn, amount, attempts) — useful for compliance investigations.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
