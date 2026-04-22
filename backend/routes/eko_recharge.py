@@ -1890,3 +1890,74 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
     except Exception as e:
         logging.error(f"[USER REFUND] Manual verify error for TID {tid}: {e}")
         return {"success": False, "error": "Refund verification failed. Please try again later."}
+
+
+# ========================================================================
+# DEBUG / DIAGNOSTICS — Admin-only raw Eko response for refund OTP flow
+# ========================================================================
+
+class AdminRefundDiagnoseRequest(BaseModel):
+    admin_id: str
+    tid: str  # can be eko_tid OR client_ref_id
+
+
+@router.post("/refund/debug-send-otp")
+async def admin_debug_refund_otp(data: AdminRefundDiagnoseRequest):
+    """Admin-only: hit Eko Resend Refund OTP and return FULL raw response.
+    Useful to see which mobile Eko will SMS (data.customer_id_number) and status codes.
+    Ref: https://developers.eko.in/v1/reference/resend-refund-otp-1
+    """
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+    admin = await db.users.find_one({"uid": data.admin_id}, {"_id": 0, "role": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        return {"success": False, "error": "Admin only"}
+    if not _eko_credentials_valid():
+        return {"success": False, "error": "Eko not configured"}
+
+    # Find txn across 4 collections (no user-ownership filter — admin debugging)
+    collections = ["recharge_transactions", "bill_payment_requests", "dmt_transactions", "bank_transfer_requests"]
+    txn_doc = None
+    txn_source = None
+    for coll_name in collections:
+        doc = await db[coll_name].find_one({
+            "$or": [{"eko_tid": data.tid}, {"client_ref_id": data.tid}, {"eko_client_ref_id": data.tid}]
+        }, {"_id": 0})
+        if doc:
+            txn_doc = doc
+            txn_source = coll_name
+            break
+
+    eko_api_tid = (txn_doc or {}).get("eko_tid") or data.tid
+
+    try:
+        headers = _build_eko_headers()
+        url = f"{BASE_URL}/v1/transactions/{eko_api_tid}/refund/otp"
+        body = {"initiator_id": INITIATOR_ID, "developer_key": DEVELOPER_KEY}
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(url, headers=headers, data=body)
+        try:
+            raw = resp.json()
+        except Exception:
+            raw = {"raw_text": resp.text[:1000]}
+        return {
+            "success": True,
+            "requested_tid": data.tid,
+            "resolved_eko_tid": eko_api_tid,
+            "txn_found_in": txn_source,
+            "txn_user_id": (txn_doc or {}).get("user_id"),
+            "txn_status": (txn_doc or {}).get("status"),
+            "txn_created_at": (txn_doc or {}).get("created_at"),
+            "txn_mobile_fields": {
+                k: (txn_doc or {}).get(k) for k in [
+                    "beneficiary_mobile", "recipient_mobile", "customer_mobile",
+                    "phone", "consumer_number", "user_mobile", "sender_mobile",
+                    "mobile", "mobile_number",
+                ] if (txn_doc or {}).get(k)
+            },
+            "eko_url": url,
+            "eko_http_status": resp.status_code,
+            "eko_raw_response": raw,
+        }
+    except Exception as e:
+        return {"success": False, "error": f"Eko API error: {e}"}
