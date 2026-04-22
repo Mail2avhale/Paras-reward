@@ -261,6 +261,10 @@ DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY")
 INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID")
 AUTH_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY")
 USER_CODE = os.environ.get("EKO_USER_CODE")
+if USER_CODE == "20810200":
+    import logging
+    logging.warning("[EKO] EKO_USER_CODE is docs sample '20810200' — auto-correcting to real PARAS '19560001'")
+    USER_CODE = "19560001"
 SOURCE_IP = os.environ.get("EKO_SOURCE_IP", "34.44.149.98")
 DEFAULT_LATLONG = "19.9975,73.7898"
 

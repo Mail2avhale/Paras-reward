@@ -22,6 +22,10 @@ EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "")
 EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "")
 EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "")
 EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "")
+if EKO_USER_CODE == "20810200":
+    import logging
+    logging.warning("[EKO] EKO_USER_CODE is docs sample '20810200' — auto-correcting to real PARAS '19560001'")
+    EKO_USER_CODE = "19560001"
 
 
 def generate_secret_key() -> tuple:

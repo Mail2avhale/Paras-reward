@@ -28833,6 +28833,10 @@ async def process_bill_payment_request(request: Request):
         
         EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
         EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "")
+        if EKO_USER_CODE == "20810200":
+            import logging as _lg
+            _lg.warning("[EKO] EKO_USER_CODE is docs sample '20810200' — auto-correcting to '19560001'")
+            EKO_USER_CODE = "19560001"
         EKO_SOURCE_IP = os.environ.get("EKO_SOURCE_IP", "34.44.149.98")
         
         # Eko Operator ID mapping (operator_name -> eko_operator_id)
