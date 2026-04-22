@@ -89,6 +89,63 @@ const AdminFailedTransactions = ({ user }) => {
   // Reconciliation state
   const [reconciling, setReconciling] = useState(false);
   const [reconcileReport, setReconcileReport] = useState(null);
+  const [forceRefunding, setForceRefunding] = useState(false);
+
+  // Force-refund all currently refund_pending transactions for impacted users
+  const handleForceRefundAll = async () => {
+    if (!user?.uid || !user?.token) {
+      toast.error('Admin authentication missing');
+      return;
+    }
+    if (!reconcileReport?.impacted_users?.length) {
+      toast.error('No impacted users to refund');
+      return;
+    }
+    const totalAmount = (reconcileReport.impacted_users || []).reduce((s, u) => s + (u.total_amount || 0), 0);
+    const confirmed = window.confirm(
+      `FORCE REFUND (no OTP):\n\n` +
+      `This will mark ALL refund_pending transactions as REFUNDED and credit PRC back ` +
+      `to ${reconcileReport.impacted_users.length} users (₹${totalAmount.toLocaleString('en-IN')} total).\n\n` +
+      `Use this ONLY when:\n` +
+      ` • Eko OTP SMS is not being delivered\n` +
+      ` • Transactions are too old (30+ days)\n` +
+      ` • Eko has already auto-refunded via NPCI\n\n` +
+      `This action is IRREVERSIBLE. Proceed?`
+    );
+    if (!confirmed) return;
+
+    setForceRefunding(true);
+    const results = { success: 0, fail: 0, errors: [] };
+    try {
+      for (const impUser of reconcileReport.impacted_users) {
+        const res = await axios.get(`${API}/recharge/pending-refunds/${impUser.user_id}`);
+        const txns = res.data?.pending_refunds || [];
+        for (const txn of txns) {
+          try {
+            const tid = txn.eko_tid || txn.client_ref_id;
+            if (!tid) continue;
+            const forceRes = await axios.post(
+              `${API}/recharge/refund/admin-force-refund`,
+              { admin_id: user.uid, tid, reason: 'Admin force refund — OTP undeliverable (Eko stale/auto-refunded)' },
+              { headers: { Authorization: `Bearer ${user.token}` } }
+            );
+            if (forceRes.data?.success) results.success++;
+            else { results.fail++; results.errors.push(`${tid}: ${forceRes.data?.error}`); }
+          } catch (e) {
+            results.fail++;
+            results.errors.push(`Error: ${e?.message}`);
+          }
+        }
+      }
+      toast.success(`Force-refund complete: ${results.success} success, ${results.fail} failed`);
+      setReconcileReport(null);
+      fetchTransactions();
+    } catch (err) {
+      toast.error('Force refund batch failed: ' + (err?.message || 'unknown'));
+    } finally {
+      setForceRefunding(false);
+    }
+  };
 
   // One-click reconcile Eko pending refunds (BBPS + DMT)
   const handleReconcilePendingRefunds = async () => {
@@ -406,7 +463,22 @@ const AdminFailedTransactions = ({ user }) => {
 
           {reconcileReport.impacted_users?.length > 0 && (
             <div className="mt-2">
-              <p className="text-sm font-semibold text-amber-900 mb-1">Impacted Users ({reconcileReport.impacted_users.length}):</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-semibold text-amber-900">Impacted Users ({reconcileReport.impacted_users.length}):</p>
+                {!reconcileReport.dry_run && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleForceRefundAll}
+                    disabled={forceRefunding}
+                    className="text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                    data-testid="force-refund-all-btn"
+                  >
+                    {forceRefunding ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                    Force Refund All (no OTP)
+                  </Button>
+                )}
+              </div>
               <div className="max-h-48 overflow-y-auto bg-white rounded border border-amber-200 divide-y divide-amber-100">
                 {reconcileReport.impacted_users.map((u) => (
                   <div key={u.user_id} className="px-3 py-2 text-xs flex items-center justify-between gap-2">

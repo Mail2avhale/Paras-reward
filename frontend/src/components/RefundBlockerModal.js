@@ -200,6 +200,17 @@ const RefundBlockerModal = ({ userId, onAllRefundsComplete }) => {
                       <span className="font-mono text-gray-900 break-all">{txn.client_ref_id}</span>
                     </div>
                   )}
+                  {txn.customer_mobile && (
+                    <div className="sm:col-span-2 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 -mx-1">
+                      <span className="text-amber-700 block flex items-center gap-1 font-semibold">
+                        <Phone className="w-3 h-3" />OTP will be sent to:
+                      </span>
+                      <span className="font-mono text-amber-900 text-sm">+91 {txn.customer_mobile}</span>
+                      <span className="block text-[10px] text-amber-600 mt-0.5">
+                        (Mobile registered with Eko for this transaction)
+                      </span>
+                    </div>
+                  )}
                   {!isDmt && txn.phone && (
                     <div>
                       <span className="text-gray-500 block flex items-center gap-1">

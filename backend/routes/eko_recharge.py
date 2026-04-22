@@ -18,6 +18,7 @@ Business Rules:
 
 from fastapi import APIRouter
 from pydantic import BaseModel
+from typing import Optional
 import os
 import time
 import logging
@@ -1651,6 +1652,7 @@ async def get_user_pending_refunds(user_id: str):
                 "request_id": txn.get("request_id", ""),
                 "amount_inr": txn.get("amount_inr", txn.get("amount", 0)),
                 "phone": txn.get("beneficiary_mobile", txn.get("recipient_mobile", "")),
+                "customer_mobile": txn.get("customer_mobile", txn.get("sender_mobile", "")),
                 "account_number": txn.get("account_number", txn.get("beneficiary_account", "")),
                 "ifsc": txn.get("ifsc", txn.get("beneficiary_ifsc", "")),
                 "bank_name": txn.get("bank_name", txn.get("beneficiary_bank", "")),
@@ -1961,3 +1963,120 @@ async def admin_debug_refund_otp(data: AdminRefundDiagnoseRequest):
         }
     except Exception as e:
         return {"success": False, "error": f"Eko API error: {e}"}
+
+
+class AdminForceRefundRequest(BaseModel):
+    admin_id: str
+    tid: str
+    reason: Optional[str] = "OTP delivery failed / transaction too old / DMT auto-refunded by NPCI"
+
+
+@router.post("/refund/admin-force-refund")
+async def admin_force_refund(data: AdminForceRefundRequest):
+    """
+    Admin-only: Skip Eko OTP flow entirely. Marks status=refunded, credits PRC back to user.
+    Use when:
+    - DMT transactions where OTP goes to unreachable customer mobile
+    - Transactions too old (Eko SMS window expired)
+    - Eko has already auto-refunded via NPCI but our DB not synced
+    """
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+    admin = await db.users.find_one({"uid": data.admin_id}, {"_id": 0, "role": 1, "name": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        return {"success": False, "error": "Admin only"}
+
+    # Find txn
+    collections = ["recharge_transactions", "bill_payment_requests", "dmt_transactions", "bank_transfer_requests"]
+    txn = None
+    source = None
+    for coll_name in collections:
+        doc = await db[coll_name].find_one({
+            "$or": [{"eko_tid": data.tid}, {"client_ref_id": data.tid}, {"eko_client_ref_id": data.tid}]
+        }, {"_id": 0})
+        if doc:
+            txn = doc
+            source = coll_name
+            break
+    if not txn:
+        return {"success": False, "error": "Transaction not found"}
+    if txn.get("status") == "refunded":
+        return {"success": False, "error": "Already refunded", "already_refunded": True}
+
+    user_id = txn.get("user_id")
+    now_iso = datetime.now(timezone.utc).isoformat()
+    eko_api_tid = txn.get("eko_tid") or data.tid
+
+    # Mark refunded across all collections
+    refund_patch = {
+        "status": "refunded",
+        "refund_method": "admin_force",
+        "refund_reason": data.reason,
+        "refund_admin_id": data.admin_id,
+        "refund_admin_name": admin.get("name"),
+        "refunded_amount": txn.get("amount_inr", txn.get("amount", 0)),
+        "eko_refunded_at": now_iso,
+        "updated_at": now_iso,
+    }
+    match_q = {"$or": [
+        {"eko_tid": eko_api_tid},
+        {"client_ref_id": data.tid},
+        {"eko_client_ref_id": data.tid},
+    ]}
+    for coll_name in collections:
+        await db[coll_name].update_many(match_q, {"$set": refund_patch})
+
+    # Credit PRC back if not already
+    prc_amt = (
+        txn.get("total_prc_deducted")
+        or txn.get("prc_deducted")
+        or txn.get("prc_amount")
+        or txn.get("total_prc")
+        or 0
+    )
+    prc_credited = False
+    if user_id and not txn.get("prc_refunded") and prc_amt > 0:
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$inc": {"prc_balance": prc_amt}}
+        )
+        for coll_name in collections:
+            await db[coll_name].update_many(
+                match_q,
+                {"$set": {"prc_refunded": True, "refund_at": now_iso}}
+            )
+        prc_credited = True
+
+    # Audit
+    await db.eko_refund_logs.insert_one({
+        "tid": eko_api_tid,
+        "refund_method": "admin_force",
+        "admin_id": data.admin_id,
+        "admin_name": admin.get("name"),
+        "user_id": user_id,
+        "source_collection": source,
+        "refunded_amount": refund_patch["refunded_amount"],
+        "prc_credited": prc_credited,
+        "prc_amount": prc_amt,
+        "reason": data.reason,
+        "timestamp": now_iso,
+    })
+
+    # Invalidate cache
+    if cache and user_id:
+        try:
+            await cache.delete(f"user:dashboard:{user_id}")
+            await cache.delete(f"user_data:{user_id}")
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "tid": eko_api_tid,
+        "user_id": user_id,
+        "refunded_amount": refund_patch["refunded_amount"],
+        "prc_credited": prc_credited,
+        "prc_amount": prc_amt,
+        "message": f"Transaction force-refunded. PRC {prc_amt} credited to user." if prc_credited else "Transaction marked refunded. No PRC to credit (already done or zero).",
+    }
+
