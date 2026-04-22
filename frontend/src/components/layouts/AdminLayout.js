@@ -24,6 +24,7 @@ const MENU_TO_PERMISSION = {
   'members': 'members',
   'core-team': 'core-team',
   'failed-transactions': 'failed-transactions',
+  'bulk-refund-otp': 'bulk-refund-otp',
   'transaction-manager': 'transaction-manager',
   'performance-report': 'performance-report',
 
@@ -174,6 +175,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },
+    { id: 'bulk-refund-otp', label: 'Bulk Refund OTP (Eko)', icon: Send, path: '/admin/bulk-refund-otp' },
     { id: 'transaction-manager', label: 'Transaction Manager', icon: FileText, path: '/admin/transaction-manager' },
     { id: 'performance-report', label: 'Admin Performance', icon: Award, path: '/admin/performance-report' },
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
@@ -251,6 +253,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/user360': 'user360',
     '/admin/core-team': 'core-team',
     '/admin/failed-transactions': 'failed-transactions',
+    '/admin/bulk-refund-otp': 'bulk-refund-otp',
     '/admin/transaction-manager': 'transaction-manager',
     '/admin/performance-report': 'performance-report',
 

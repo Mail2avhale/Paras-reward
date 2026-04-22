@@ -963,6 +963,7 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "user360", "label": "User 360° View", "category": "General"},
     {"id": "core-team", "label": "Core Team", "category": "General"},
     {"id": "failed-transactions", "label": "Failed Transactions", "category": "General"},
+    {"id": "bulk-refund-otp", "label": "Bulk Refund OTP (Eko)", "category": "General"},
     {"id": "transaction-manager", "label": "Transaction Manager", "category": "General"},
     {"id": "performance-report", "label": "Admin Performance", "category": "General"},
 

@@ -39,6 +39,13 @@ class SendRefundOTPRequest(BaseModel):
     amount: float
     admin_id: str
 
+
+class BulkSendRefundOTPRequest(BaseModel):
+    admin_id: str
+    # Either OR both — supply request_ids (lookup in redeem_requests) OR eko_tids (direct Eko call)
+    request_ids: Optional[List[str]] = None
+    eko_tids: Optional[List[str]] = None
+
 class BulkRefundRequest(BaseModel):
     request_ids: List[str]
     admin_id: Optional[str] = None
@@ -271,6 +278,165 @@ async def send_refund_otp(request: SendRefundOTPRequest):
         "eko_tid": eko_tid,
         "eko_status": body.get("status"),
         "http_status": resp.status_code,
+    }
+
+
+# ========== BULK SEND REFUND OTP (Eko BBPS) ==========
+
+@router.post("/refund/bulk-send-otp")
+async def bulk_send_refund_otp(request: BulkSendRefundOTPRequest):
+    """
+    Bulk trigger Eko refund-OTP send for many transactions at once.
+    Accepts either `request_ids` (looked up in redeem_requests) OR `eko_tids` (pasted directly
+    e.g. from Eko Connect portal / Excel export). Processes with concurrency=5 to avoid
+    overwhelming Eko. Returns per-txn success/failure summary.
+    """
+    import httpx
+    import asyncio as _asyncio
+    import time as _time
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+
+    admin = await db.users.find_one(
+        {"uid": request.admin_id},
+        {"_id": 0, "uid": 1, "role": 1, "name": 1},
+    )
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        raise HTTPException(status_code=403, detail="Only admins/managers can initiate bulk refund OTP")
+
+    # Build work list: each item = (label, eko_tid, request_id_or_None)
+    work = []
+
+    if request.request_ids:
+        txns = await db.redeem_requests.find(
+            {"request_id": {"$in": request.request_ids}},
+            {"_id": 0, "request_id": 1, "eko_tid": 1, "tid": 1,
+             "provider_response": 1, "details": 1, "prc_refunded": 1, "user_id": 1},
+        ).to_list(len(request.request_ids))
+        found_ids = set()
+        for t in txns:
+            found_ids.add(t.get("request_id"))
+            if t.get("prc_refunded"):
+                continue
+            tid = (
+                t.get("eko_tid") or t.get("tid")
+                or (t.get("provider_response") or {}).get("tid")
+                or (t.get("provider_response") or {}).get("data", {}).get("tid")
+                or (t.get("details") or {}).get("tid")
+                or (t.get("details") or {}).get("eko_tid")
+            )
+            if tid:
+                work.append({
+                    "label": t.get("request_id"),
+                    "eko_tid": str(tid),
+                    "request_id": t.get("request_id"),
+                    "user_id": t.get("user_id"),
+                })
+            else:
+                work.append({
+                    "label": t.get("request_id"),
+                    "eko_tid": None,
+                    "error": "No Eko TID on transaction",
+                })
+        for rid in request.request_ids:
+            if rid not in found_ids:
+                work.append({"label": rid, "eko_tid": None, "error": "Transaction not found"})
+
+    if request.eko_tids:
+        for tid in request.eko_tids:
+            tid_clean = str(tid).strip()
+            if tid_clean:
+                work.append({"label": tid_clean, "eko_tid": tid_clean, "request_id": None})
+
+    if not work:
+        raise HTTPException(status_code=400, detail="No request_ids or eko_tids provided")
+
+    # Eko config
+    try:
+        from routes.bbps_services import BASE_URL, DEVELOPER_KEY, INITIATOR_ID, generate_headers_for_payment
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Eko config not loaded: {e}")
+    if not DEVELOPER_KEY or not INITIATOR_ID:
+        raise HTTPException(status_code=500, detail="Eko credentials not configured")
+
+    sem = _asyncio.Semaphore(5)  # cap concurrency
+    results = []
+
+    async def _one(item):
+        if not item.get("eko_tid"):
+            return {**item, "success": False}
+        async with sem:
+            timestamp = str(round(_time.time() * 1000))
+            headers = generate_headers_for_payment(timestamp)
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+            url = f"{BASE_URL}/transactions/{item['eko_tid']}/refund/otp"
+            form_data = {"initiator_id": INITIATOR_ID, "developer_key": DEVELOPER_KEY}
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    resp = await client.post(url, data=form_data, headers=headers)
+                body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"raw": resp.text}
+                ok = resp.status_code < 400 and body.get("status") in (0, "0", None)
+                # Persist audit trail
+                try:
+                    await db.refund_otps.update_one(
+                        {"admin_id": request.admin_id, "eko_tid": item["eko_tid"]},
+                        {"$set": {
+                            "admin_id": request.admin_id,
+                            "eko_tid": item["eko_tid"],
+                            "request_id": item.get("request_id"),
+                            "user_id": item.get("user_id"),
+                            "eko_status": body.get("status"),
+                            "eko_message": body.get("message"),
+                            "eko_response": body,
+                            "http_status": resp.status_code,
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                            "bulk": True,
+                        }},
+                        upsert=True,
+                    )
+                except Exception:
+                    pass
+                return {
+                    "label": item["label"],
+                    "eko_tid": item["eko_tid"],
+                    "request_id": item.get("request_id"),
+                    "success": ok,
+                    "http_status": resp.status_code,
+                    "eko_status": body.get("status"),
+                    "message": body.get("message") or ("OTP sent" if ok else "Eko rejected"),
+                }
+            except Exception as e:
+                return {
+                    "label": item["label"],
+                    "eko_tid": item.get("eko_tid"),
+                    "success": False,
+                    "error": str(e)[:200],
+                }
+
+    results = await _asyncio.gather(*[_one(item) for item in work])
+
+    sent = sum(1 for r in results if r.get("success"))
+    failed = len(results) - sent
+
+    # Log one summary audit row
+    try:
+        await db.admin_audit_logs.insert_one({
+            "admin_id": request.admin_id,
+            "action": "bulk_eko_refund_otp",
+            "total": len(results),
+            "sent": sent,
+            "failed": failed,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "total": len(results),
+        "sent": sent,
+        "failed": failed,
+        "results": results,
     }
 
 

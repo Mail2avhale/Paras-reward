@@ -389,6 +389,19 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
   - (C) eko_tid but no OTP provided → 400 "OTP required for Eko refund"
   - On real production Eko TIDs, the OTP will actually fire to the customer's registered mobile (as per Eko's BBPS flow).
 
+### Bulk Eko Refund OTP (DONE - April 22, 2026)
+- **User report (2 screenshots)**: 100+ transactions stuck in "Refund Pending" on Eko Connect portal (DMT/Money Remittance + Mobile/DTH recharges). Bulk OTP needed — one-by-one is impractical.
+- **Backend**: New endpoint `POST /admin/failed-transactions/refund/bulk-send-otp` accepting either `request_ids` (looked up in redeem_requests) or `eko_tids` (pasted from Eko Connect). Uses `asyncio.gather` with `Semaphore(5)` for controlled concurrency, calls Eko `POST /transactions/{tid}/refund/otp` per-TID with existing auth headers from `bbps_services.generate_headers_for_payment`. Returns per-TID result (success, http_status, eko_status, message, error) plus sent/failed counts. Persists audit trail to `refund_otps` collection with `bulk: true` flag and summary to `admin_audit_logs` as `bulk_eko_refund_otp`.
+- **Frontend**: New admin page `/admin/bulk-refund-otp` (`AdminBulkRefundOTP.js` - 230 lines):
+  - Paste-area accepts TIDs separated by lines/commas/spaces/tabs/semicolons — auto-parses and counts valid TIDs (length 6-50).
+  - "How to get Eko TIDs" guide card linking to `connect.eko.in/#!/history`.
+  - Confirm dialog before dispatching (prevents accidental 500-TID Eko hit).
+  - Max 500 TIDs per batch guard rail.
+  - Results panel with 3 summary cards (Total / Sent / Failed), expandable tables for Failed (with HTTP status + reason) and Sent (with copy button for each TID).
+  - Download CSV button for audit trail.
+- **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
+- **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
