@@ -856,3 +856,255 @@ async def get_service_types():
         "success": True,
         "service_types": results
     }
+
+# ========================================================================
+# PENDING REFUNDS RECONCILIATION (Eko stuck refunds → user self-service)
+# ========================================================================
+# Hardcoded list from Eko portal (Refund Pending status): 53 BBPS + 7 DMT
+# Admin triggers once → records are marked status=refund_pending in our DB
+# → users see RefundBlockerModal on login → complete via OTP.
+# Idempotent (safe to re-run).
+
+_BBPS_PENDING_REFUNDS = [
+    # (eko_tid, client_ref_id, cell_number, amount_inr)
+    ("3554878505", "PAY1775482475430", "9198297047", 1849),
+    ("3554878178", "PAY1775482130303", "6393331527", 799),
+    ("3554878012", "PAY1775481945055", "6393331527", 799),
+    ("3554860600", "PAY1775467163388", "9322003822", 3599),
+    ("3554860530", "PAY1775467098363", "9322003822", 3599),
+    ("3554860154", "PAY1775466645138", "9936222482", 3599),
+    ("3554859979", "PAY1775466414764", "9936222482", 3599),
+    ("3554859939", "PAY1775466371055", "8692951107", 859),
+    ("3554859834", "PAY1775466237770", "8692951107", 859),
+    ("3554859724", "PAY1775466102916", "9936222482", 899),
+    ("3554857368", "PAY1775465891150", "9936222482", 3599),
+    ("3554856923", "PAY1775465810914", "8181812092", 3599),
+    ("3554856915", "PAY1775465804388", "9936222482", 3599),
+    ("3554856828", "PAY1775465722709", "9198297047", 859),
+    ("3554856565", "PAY1775465462312", "9198297047", 859),
+    ("3554856498", "PAY1775465360029", "8874137317", 868),
+    ("3554856445", "PAY1775465324846", "8181812092", 3999),
+    ("3554856393", "PAY1775465282839", "8874137317", 868),
+    ("3554856270", "PAY1775465073662", "9451763818", 899),
+    ("3554856224", "PAY1775465023292", "9872893817", 629),
+    ("3554852928", "PAY1775463953829", "9026811652", 2249),
+    ("3554852872", "PAY1775463884026", "9819646232", 899),
+    ("3554852849", "PAY1775463841110", "7310437020", 859),
+    ("3554852540", "PAY1775463492983", "8400132628", 859),
+    ("3554852416", "PAY1775463322504", "9630092037", 3599),
+    ("3554852371", "PAY1775463259069", "7310437020", 739),
+    ("3554852309", "PAY1775463200496", "8400132628", 859),
+    ("3554852267", "PAY1775463136054", "8400132628", 859),
+    ("3554852230", "PAY1775463085600", "7310437020", 859),
+    ("3554851948", "PAY1775462767698", "9651151524", 3599),
+    ("3554851752", "PAY1775462599601", "9340997838", 599),
+    ("3554851704", "PAY1775462517547", "6393331527", 899),
+    ("3554851644", "PAY1775462424589", "6393331527", 999),
+    ("3554851593", "PAY1775462368187", "8874137317", 868),
+    ("3554851488", "PAY1775462349498", "8692951107", 859),
+    ("3554848887", "PAY1775462163295", "8692951107", 859),
+    ("3554848687", "PAY1775461945136", "9651151524", 3599),
+    ("3554848505", "PAY1775461753913", "9309486358", 599),
+    ("3554848222", "PAY1775461450514", "9651151524", 3599),
+    ("3554847903", "PAY1775461093283", "7431928072", 859),
+    ("3554847795", "PAY1775460955497", "7620548792", 599),
+    ("3554847749", "PAY1775460890558", "7620548792", 899),
+    ("3554847652", "PAY1775460813083", "9987046822", 1640),
+    ("3554847505", "PAY1775460639686", "9152157173", 1800),
+    ("3554846950", "PAY1775460601376", "9765290412", 579),
+    ("3554846767", "PAY1775460596811", "9765290412", 579),
+    ("3554844652", "PAY1775460300543", "9765290412", 899),
+    ("3554785323", "PAY1775429914367", "9404776221", 1419),
+    ("3554779182", "PAY1775426721174", "9404944504", 711),
+    ("3554779049", "PAY1775426423214", "9423832894", 1098),
+    ("3554769912", "PAY1775421948813", "8419975797", 3599),
+    ("3554761303", "PAY1775417178524", "9987474443", 1199),
+    ("3554757276", "PAY1775414982465", "6355517524", 1099),
+]
+
+_DMT_PENDING_REFUNDS = [
+    # (eko_client_ref_id, amount_inr, phone, beneficiary_name, account_number, bank_name)
+    ("DMT1E6F098CA229", 1000, "917385613884", "SIDDHALI MAHESH SAL", "51000000039879", "Saraswat Co-Op Bank"),
+    ("DMT94C4A3C3CE21", 100, "919421331342", "Test User", "04588100009023", "Bank Of Baroda"),
+    ("DMTEAFE9F326F00", 1000, "918001755185", "", "110401000020411", "Indian Overseas Bank"),
+    ("DMTE3D21184173E", 100, "919421331342", "Test User", "8829010000024578", "DBS Bank"),
+    ("DMT8C89EF7B6725", 100, "919970100782", "SANTOSH AVHALE", "04588100009023", "Bank Of Baroda"),
+    ("DMTE250F395235F", 100, "919970100782", "SANTOSH AVHALE", "31277621502", "State Bank Of India"),
+    ("TEST123456",     100, "919970100782", "SANTOSH AVHALE", "31277621502", "State Bank Of India"),
+]
+
+_REFUND_COLLECTIONS = [
+    "recharge_transactions",
+    "bill_payment_requests",
+    "dmt_transactions",
+    "bank_transfer_requests",
+]
+
+
+async def _mark_single_as_refund_pending(eko_tid: str, client_ref_id: str = None):
+    """Find a txn across 4 collections by eko_tid or client_ref_id, mark status=refund_pending.
+    Idempotent: skips records that are already refunded."""
+    ids_to_try = [v for v in [eko_tid, client_ref_id] if v]
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    for coll_name in _REFUND_COLLECTIONS:
+        coll = db[coll_name]
+        for ident in ids_to_try:
+            q = {"$or": [
+                {"eko_tid": ident},
+                {"client_ref_id": ident},
+                {"eko_client_ref_id": ident},
+            ]}
+            txn = await coll.find_one(q, {"_id": 0, "user_id": 1, "status": 1})
+            if not txn:
+                continue
+            user_id = txn.get("user_id")
+            user = await db.users.find_one({"uid": user_id}, {"_id": 0, "name": 1, "mobile": 1}) if user_id else None
+            already_refunded = txn.get("status") == "refunded"
+            if not already_refunded:
+                await coll.update_one(q, {"$set": {
+                    "status": "refund_pending",
+                    "refund_pending_marked_at": now_iso,
+                    "refund_pending_source": "eko_reconciliation",
+                }})
+            return {
+                "matched": True,
+                "collection": coll_name,
+                "user_id": user_id or "",
+                "user_name": (user or {}).get("name", ""),
+                "user_mobile": (user or {}).get("mobile", ""),
+                "already_refunded": already_refunded,
+            }
+    return {"matched": False}
+
+
+class ReconcilePendingRefundsRequest(BaseModel):
+    admin_id: str
+    dry_run: Optional[bool] = False
+
+
+@router.post("/reconcile-pending-refunds")
+async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
+    """One-click reconciliation: marks 53 BBPS + 7 DMT Eko refund-pending txns as
+    status=refund_pending in our DB. Users see RefundBlockerModal on login.
+    Idempotent. Safe to re-run."""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+
+    admin = await db.users.find_one(
+        {"uid": request.admin_id},
+        {"_id": 0, "role": 1, "name": 1, "email": 1},
+    )
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        raise HTTPException(status_code=403, detail="Only admins can trigger reconciliation")
+
+    matched = []
+    unmatched = []
+
+    for eko_tid, client_ref_id, cell_number, amount in _BBPS_PENDING_REFUNDS:
+        result = await _mark_single_as_refund_pending(eko_tid, client_ref_id) if not request.dry_run else {"matched": False}
+        if request.dry_run:
+            found_doc = None
+            for coll_name in _REFUND_COLLECTIONS:
+                q = {"$or": [
+                    {"eko_tid": eko_tid}, {"client_ref_id": eko_tid},
+                    {"eko_tid": client_ref_id}, {"client_ref_id": client_ref_id},
+                    {"eko_client_ref_id": client_ref_id},
+                ]}
+                doc = await db[coll_name].find_one(q, {"_id": 0, "user_id": 1})
+                if doc:
+                    found_doc = {"collection": coll_name, "user_id": doc.get("user_id", "")}
+                    break
+            if found_doc:
+                matched.append({"type": "BBPS", "eko_tid": eko_tid,
+                                "client_ref_id": client_ref_id, "amount": amount,
+                                **found_doc})
+            else:
+                unmatched.append({"type": "BBPS", "eko_tid": eko_tid,
+                                  "client_ref_id": client_ref_id,
+                                  "cell_number": cell_number, "amount": amount})
+        else:
+            if result["matched"]:
+                matched.append({"type": "BBPS", "eko_tid": eko_tid,
+                                "client_ref_id": client_ref_id, "amount": amount,
+                                **result})
+            else:
+                unmatched.append({"type": "BBPS", "eko_tid": eko_tid,
+                                  "client_ref_id": client_ref_id,
+                                  "cell_number": cell_number, "amount": amount})
+
+    for cl_id, amount, phone, bname, account, bank in _DMT_PENDING_REFUNDS:
+        if request.dry_run:
+            found_doc = None
+            for coll_name in _REFUND_COLLECTIONS:
+                q = {"$or": [
+                    {"eko_tid": cl_id}, {"client_ref_id": cl_id},
+                    {"eko_client_ref_id": cl_id},
+                ]}
+                doc = await db[coll_name].find_one(q, {"_id": 0, "user_id": 1})
+                if doc:
+                    found_doc = {"collection": coll_name, "user_id": doc.get("user_id", "")}
+                    break
+            if found_doc:
+                matched.append({"type": "DMT", "client_ref_id": cl_id,
+                                "amount": amount, **found_doc})
+            else:
+                unmatched.append({"type": "DMT", "client_ref_id": cl_id,
+                                  "amount": amount, "phone": phone,
+                                  "beneficiary_name": bname,
+                                  "account_number": account, "bank_name": bank})
+        else:
+            result = await _mark_single_as_refund_pending(cl_id, None)
+            if result["matched"]:
+                matched.append({"type": "DMT", "client_ref_id": cl_id,
+                                "amount": amount, "phone": phone,
+                                "beneficiary_name": bname,
+                                "account_number": account, "bank_name": bank,
+                                **result})
+            else:
+                unmatched.append({"type": "DMT", "client_ref_id": cl_id,
+                                  "amount": amount, "phone": phone,
+                                  "beneficiary_name": bname,
+                                  "account_number": account, "bank_name": bank})
+
+    user_impact = {}
+    for m in matched:
+        if not m.get("user_id"):
+            continue
+        k = m["user_id"]
+        if k not in user_impact:
+            user_impact[k] = {
+                "user_id": m["user_id"],
+                "user_name": m.get("user_name", ""),
+                "user_mobile": m.get("user_mobile", ""),
+                "bbps_count": 0, "dmt_count": 0, "total_amount": 0,
+            }
+        if m["type"] == "BBPS":
+            user_impact[k]["bbps_count"] += 1
+        else:
+            user_impact[k]["dmt_count"] += 1
+        user_impact[k]["total_amount"] += m.get("amount", 0)
+
+    if not request.dry_run:
+        await db.admin_audit_logs.insert_one({
+            "admin_id": request.admin_id,
+            "admin_name": admin.get("name"),
+            "action": "reconcile_pending_refunds",
+            "total_candidates": len(_BBPS_PENDING_REFUNDS) + len(_DMT_PENDING_REFUNDS),
+            "matched": len(matched),
+            "unmatched": len(unmatched),
+            "impacted_users": len(user_impact),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
+    return {
+        "success": True,
+        "dry_run": request.dry_run,
+        "total_candidates": len(_BBPS_PENDING_REFUNDS) + len(_DMT_PENDING_REFUNDS),
+        "matched_count": len(matched),
+        "unmatched_count": len(unmatched),
+        "impacted_users_count": len(user_impact),
+        "impacted_users": list(user_impact.values()),
+        "unmatched": unmatched,
+    }
+
