@@ -993,6 +993,60 @@ async def _mark_single_as_refund_pending(eko_tid: str, client_ref_id: str = None
 class ReconcilePendingRefundsRequest(BaseModel):
     admin_id: str
     dry_run: Optional[bool] = False
+    create_missing: Optional[bool] = False
+    owner_uid: Optional[str] = None  # UID to attribute newly-created records to (the retailer)
+
+
+async def _create_bbps_record(eko_tid: str, client_ref_id: str, cell_number: str,
+                               amount: int, owner_uid: str):
+    """Create a bare BBPS recharge record so it appears in user's modal."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "eko_tid": eko_tid,
+        "client_ref_id": client_ref_id,
+        "user_id": owner_uid,
+        "amount_inr": amount,
+        "amount": amount,
+        "phone": cell_number,
+        "consumer_number": cell_number,
+        "customer_mobile": cell_number,  # OTP goes here
+        "operator_name": "Mobile Recharge",
+        "operator": "Mobile Recharge",
+        "status": "refund_pending",
+        "created_at": now_iso,
+        "refund_pending_marked_at": now_iso,
+        "refund_pending_source": "eko_reconciliation_created",
+        "source": "reconciliation_created",
+    }
+    await db.recharge_transactions.insert_one(doc)
+    return doc
+
+
+async def _create_dmt_record(client_ref_id: str, amount: int, phone: str,
+                              beneficiary_name: str, account_number: str,
+                              bank_name: str, owner_uid: str):
+    """Create a bare DMT record so it appears in user's modal."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "eko_client_ref_id": client_ref_id,
+        "client_ref_id": client_ref_id,
+        "user_id": owner_uid,
+        "amount_inr": amount,
+        "amount": amount,
+        "phone": phone,
+        "beneficiary_mobile": phone,
+        "customer_mobile": phone,  # OTP goes here (sender mobile in DMT)
+        "beneficiary_name": beneficiary_name,
+        "account_number": account_number,
+        "bank_name": bank_name,
+        "status": "refund_pending",
+        "created_at": now_iso,
+        "refund_pending_marked_at": now_iso,
+        "refund_pending_source": "eko_reconciliation_created",
+        "source": "reconciliation_created",
+    }
+    await db.dmt_transactions.insert_one(doc)
+    return doc
 
 
 @router.post("/reconcile-pending-refunds")
@@ -1012,6 +1066,7 @@ async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
 
     matched = []
     unmatched = []
+    created = []  # newly-created records (when create_missing=True)
 
     for eko_tid, client_ref_id, cell_number, amount in _BBPS_PENDING_REFUNDS:
         # BBPS enrichment data
@@ -1046,6 +1101,17 @@ async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
                 matched.append({"type": "BBPS", "eko_tid": eko_tid,
                                 "client_ref_id": client_ref_id, "amount": amount,
                                 **result})
+            elif request.create_missing and request.owner_uid:
+                # Create a new record attributed to owner_uid
+                await _create_bbps_record(eko_tid, client_ref_id, cell_number, amount, request.owner_uid)
+                owner = await db.users.find_one({"uid": request.owner_uid}, {"_id": 0, "name": 1, "mobile": 1})
+                created.append({"type": "BBPS", "eko_tid": eko_tid,
+                                "client_ref_id": client_ref_id,
+                                "cell_number": cell_number, "amount": amount,
+                                "collection": "recharge_transactions",
+                                "user_id": request.owner_uid,
+                                "user_name": (owner or {}).get("name", ""),
+                                "user_mobile": (owner or {}).get("mobile", "")})
             else:
                 unmatched.append({"type": "BBPS", "eko_tid": eko_tid,
                                   "client_ref_id": client_ref_id,
@@ -1089,6 +1155,17 @@ async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
                                 "beneficiary_name": bname,
                                 "account_number": account, "bank_name": bank,
                                 **result})
+            elif request.create_missing and request.owner_uid:
+                await _create_dmt_record(cl_id, amount, phone, bname, account, bank, request.owner_uid)
+                owner = await db.users.find_one({"uid": request.owner_uid}, {"_id": 0, "name": 1, "mobile": 1})
+                created.append({"type": "DMT", "client_ref_id": cl_id,
+                                "amount": amount, "phone": phone,
+                                "beneficiary_name": bname,
+                                "account_number": account, "bank_name": bank,
+                                "collection": "dmt_transactions",
+                                "user_id": request.owner_uid,
+                                "user_name": (owner or {}).get("name", ""),
+                                "user_mobile": (owner or {}).get("mobile", "")})
             else:
                 unmatched.append({"type": "DMT", "client_ref_id": cl_id,
                                   "amount": amount, "phone": phone,
@@ -1096,7 +1173,7 @@ async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
                                   "account_number": account, "bank_name": bank})
 
     user_impact = {}
-    for m in matched:
+    for m in matched + created:
         if not m.get("user_id"):
             continue
         k = m["user_id"]
@@ -1120,16 +1197,22 @@ async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
             "action": "reconcile_pending_refunds",
             "total_candidates": len(_BBPS_PENDING_REFUNDS) + len(_DMT_PENDING_REFUNDS),
             "matched": len(matched),
+            "created": len(created),
             "unmatched": len(unmatched),
             "impacted_users": len(user_impact),
+            "create_missing": request.create_missing,
+            "owner_uid": request.owner_uid,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
     return {
         "success": True,
         "dry_run": request.dry_run,
+        "create_missing": request.create_missing,
+        "owner_uid": request.owner_uid,
         "total_candidates": len(_BBPS_PENDING_REFUNDS) + len(_DMT_PENDING_REFUNDS),
         "matched_count": len(matched),
+        "created_count": len(created),
         "unmatched_count": len(unmatched),
         "impacted_users_count": len(user_impact),
         "impacted_users": list(user_impact.values()),
