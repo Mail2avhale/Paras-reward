@@ -941,8 +941,10 @@ _REFUND_COLLECTIONS = [
 ]
 
 
-async def _mark_single_as_refund_pending(eko_tid: str, client_ref_id: str = None):
+async def _mark_single_as_refund_pending(eko_tid: str, client_ref_id: str = None, enrichment: dict = None):
     """Find a txn across 4 collections by eko_tid or client_ref_id, mark status=refund_pending.
+    If `enrichment` dict is provided, also populates missing metadata fields (beneficiary_name,
+    account_number, bank_name, phone, customer_mobile, etc.) on the matched record.
     Idempotent: skips records that are already refunded."""
     ids_to_try = [v for v in [eko_tid, client_ref_id] if v]
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -955,18 +957,28 @@ async def _mark_single_as_refund_pending(eko_tid: str, client_ref_id: str = None
                 {"client_ref_id": ident},
                 {"eko_client_ref_id": ident},
             ]}
-            txn = await coll.find_one(q, {"_id": 0, "user_id": 1, "status": 1})
+            txn = await coll.find_one(q, {"_id": 0})
             if not txn:
                 continue
             user_id = txn.get("user_id")
             user = await db.users.find_one({"uid": user_id}, {"_id": 0, "name": 1, "mobile": 1}) if user_id else None
             already_refunded = txn.get("status") == "refunded"
             if not already_refunded:
-                await coll.update_one(q, {"$set": {
+                update_doc = {
                     "status": "refund_pending",
                     "refund_pending_marked_at": now_iso,
                     "refund_pending_source": "eko_reconciliation",
-                }})
+                }
+                # Enrichment: set fields only if currently missing/empty
+                if enrichment:
+                    for k, v in enrichment.items():
+                        if not v:
+                            continue
+                        existing = txn.get(k)
+                        is_empty = (existing is None) or (isinstance(existing, str) and not existing.strip())
+                        if is_empty:
+                            update_doc[k] = v
+                await coll.update_one(q, {"$set": update_doc})
             return {
                 "matched": True,
                 "collection": coll_name,
@@ -1002,7 +1014,13 @@ async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
     unmatched = []
 
     for eko_tid, client_ref_id, cell_number, amount in _BBPS_PENDING_REFUNDS:
-        result = await _mark_single_as_refund_pending(eko_tid, client_ref_id) if not request.dry_run else {"matched": False}
+        # BBPS enrichment data
+        bbps_enrichment = {
+            "amount_inr": amount,
+            "phone": cell_number,
+            "consumer_number": cell_number,
+        }
+        result = await _mark_single_as_refund_pending(eko_tid, client_ref_id, bbps_enrichment) if not request.dry_run else {"matched": False}
         if request.dry_run:
             found_doc = None
             for coll_name in _REFUND_COLLECTIONS:
@@ -1054,7 +1072,17 @@ async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
                                   "beneficiary_name": bname,
                                   "account_number": account, "bank_name": bank})
         else:
-            result = await _mark_single_as_refund_pending(cl_id, None)
+            # DMT enrichment data from Eko Connect authoritative source
+            dmt_enrichment = {
+                "amount_inr": amount,
+                "phone": phone,
+                "beneficiary_mobile": phone,
+                "customer_mobile": phone,  # DMT OTP goes to this mobile
+                "beneficiary_name": bname,
+                "account_number": account,
+                "bank_name": bank,
+            }
+            result = await _mark_single_as_refund_pending(cl_id, None, dmt_enrichment)
             if result["matched"]:
                 matched.append({"type": "DMT", "client_ref_id": cl_id,
                                 "amount": amount, "phone": phone,
