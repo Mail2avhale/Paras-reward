@@ -994,7 +994,26 @@ class ReconcilePendingRefundsRequest(BaseModel):
     admin_id: str
     dry_run: Optional[bool] = False
     create_missing: Optional[bool] = False
-    owner_uid: Optional[str] = None  # UID to attribute newly-created records to (the retailer)
+    owner_uid: Optional[str] = None  # Fallback UID when no mobile match
+    match_by_mobile: Optional[bool] = True  # Try to attribute to user by mobile first
+
+
+async def _find_user_by_mobile(mobile: str):
+    """Lookup user by mobile across common normalizations."""
+    if not mobile:
+        return None
+    norm = str(mobile).strip().lstrip("+")
+    # Strip 91 prefix if present
+    stripped = norm[2:] if norm.startswith("91") and len(norm) > 10 else norm
+    candidates = {norm, stripped, f"91{stripped}", f"+91{stripped}"}
+    for m in candidates:
+        user = await db.users.find_one(
+            {"$or": [{"mobile": m}, {"phone": m}]},
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1}
+        )
+        if user:
+            return user
+    return None
 
 
 async def _create_bbps_record(eko_tid: str, client_ref_id: str, cell_number: str,
@@ -1102,16 +1121,26 @@ async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
                                 "client_ref_id": client_ref_id, "amount": amount,
                                 **result})
             elif request.create_missing and request.owner_uid:
-                # Create a new record attributed to owner_uid
-                await _create_bbps_record(eko_tid, client_ref_id, cell_number, amount, request.owner_uid)
-                owner = await db.users.find_one({"uid": request.owner_uid}, {"_id": 0, "name": 1, "mobile": 1})
+                # Try to attribute to actual user by cell_number (mobile being recharged)
+                target_uid = request.owner_uid
+                target_user = None
+                target_source = "fallback_owner"
+                if request.match_by_mobile:
+                    target_user = await _find_user_by_mobile(cell_number)
+                    if target_user:
+                        target_uid = target_user["uid"]
+                        target_source = "mobile_match"
+                await _create_bbps_record(eko_tid, client_ref_id, cell_number, amount, target_uid)
+                if not target_user:
+                    target_user = await db.users.find_one({"uid": target_uid}, {"_id": 0, "name": 1, "mobile": 1})
                 created.append({"type": "BBPS", "eko_tid": eko_tid,
                                 "client_ref_id": client_ref_id,
                                 "cell_number": cell_number, "amount": amount,
                                 "collection": "recharge_transactions",
-                                "user_id": request.owner_uid,
-                                "user_name": (owner or {}).get("name", ""),
-                                "user_mobile": (owner or {}).get("mobile", "")})
+                                "user_id": target_uid,
+                                "user_name": (target_user or {}).get("name", ""),
+                                "user_mobile": (target_user or {}).get("mobile", ""),
+                                "attribution": target_source})
             else:
                 unmatched.append({"type": "BBPS", "eko_tid": eko_tid,
                                   "client_ref_id": client_ref_id,
@@ -1156,16 +1185,27 @@ async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
                                 "account_number": account, "bank_name": bank,
                                 **result})
             elif request.create_missing and request.owner_uid:
-                await _create_dmt_record(cl_id, amount, phone, bname, account, bank, request.owner_uid)
-                owner = await db.users.find_one({"uid": request.owner_uid}, {"_id": 0, "name": 1, "mobile": 1})
+                # Try to attribute to actual user by sender's mobile (phone field in DMT)
+                target_uid = request.owner_uid
+                target_user = None
+                target_source = "fallback_owner"
+                if request.match_by_mobile:
+                    target_user = await _find_user_by_mobile(phone)
+                    if target_user:
+                        target_uid = target_user["uid"]
+                        target_source = "mobile_match"
+                await _create_dmt_record(cl_id, amount, phone, bname, account, bank, target_uid)
+                if not target_user:
+                    target_user = await db.users.find_one({"uid": target_uid}, {"_id": 0, "name": 1, "mobile": 1})
                 created.append({"type": "DMT", "client_ref_id": cl_id,
                                 "amount": amount, "phone": phone,
                                 "beneficiary_name": bname,
                                 "account_number": account, "bank_name": bank,
                                 "collection": "dmt_transactions",
-                                "user_id": request.owner_uid,
-                                "user_name": (owner or {}).get("name", ""),
-                                "user_mobile": (owner or {}).get("mobile", "")})
+                                "user_id": target_uid,
+                                "user_name": (target_user or {}).get("name", ""),
+                                "user_mobile": (target_user or {}).get("mobile", ""),
+                                "attribution": target_source})
             else:
                 unmatched.append({"type": "DMT", "client_ref_id": cl_id,
                                   "amount": amount, "phone": phone,
