@@ -1593,9 +1593,27 @@ async def get_user_pending_refunds(user_id: str):
     """Get all refund_pending transactions for a user (dashboard blocker).
     Scans all 4 collections: recharge, bill_payment, DMT, bank_transfer.
     Returns rich data: amount, account, bank, beneficiary, service type.
+
+    Controlled by system_config.refund_blocker_modal_enabled flag (default: False/disabled).
+    When disabled, returns empty list so no modal blocks the dashboard.
     """
     if db is None:
         return {"success": False, "pending_refunds": []}
+
+    # Global kill switch — admin-controlled
+    cfg = await db.system_config.find_one(
+        {"key": "refund_blocker_modal_enabled"},
+        {"_id": 0, "value": 1}
+    )
+    enabled = bool(cfg and cfg.get("value"))
+    if not enabled:
+        return {
+            "success": True,
+            "pending_refunds": [],
+            "count": 0,
+            "requires_action": False,
+            "modal_disabled": True,
+        }
 
     all_pending = []
     seen_keys = set()

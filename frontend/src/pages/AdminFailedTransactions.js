@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
   AlertTriangle, RefreshCw, Search, Filter, Loader2, ArrowLeft,
-  CheckCircle, XCircle, Clock, RotateCcw, Wallet, User, Phone,
+  CheckCircle, CheckCircle2, XCircle, Clock, RotateCcw, Wallet, User, Phone,
   Mail, Calendar, CreditCard, Zap, Download, ChevronLeft, ChevronRight,
   Eye, Ban, Check, X, FileText, IndianRupee
 } from 'lucide-react';
@@ -89,6 +89,51 @@ const AdminFailedTransactions = ({ user }) => {
   // Reconciliation state
   const [reconciling, setReconciling] = useState(false);
   const [reconcileReport, setReconcileReport] = useState(null);
+
+  // Refund modal toggle state
+  const [modalEnabled, setModalEnabled] = useState(false);
+  const [toggling, setToggling] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      if (!user?.token) return;
+      try {
+        const res = await axios.get(`${API}/admin/failed-transactions/refund-modal-status`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        setModalEnabled(!!res.data?.enabled);
+      } catch { /* ignore */ }
+    })();
+  }, [user?.token]);
+
+  const handleToggleRefundModal = async () => {
+    if (!user?.uid || !user?.token) return;
+    const newState = !modalEnabled;
+    const confirmed = window.confirm(
+      newState
+        ? 'ENABLE the Refund Blocker Modal? All users with pending refunds will be blocked from dashboard until they complete refund OTP flow.'
+        : 'DISABLE the Refund Blocker Modal? No user will see the modal. Their dashboard will be unblocked immediately.'
+    );
+    if (!confirmed) return;
+    setToggling(true);
+    try {
+      const res = await axios.post(
+        `${API}/admin/failed-transactions/refund-modal-toggle`,
+        { admin_id: user.uid, enabled: newState },
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      if (res.data?.success) {
+        setModalEnabled(newState);
+        toast.success(res.data.message);
+      } else {
+        toast.error('Toggle failed');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'Toggle failed');
+    } finally {
+      setToggling(false);
+    }
+  };
 
   // One-click reconcile Eko pending refunds (BBPS + DMT)
   const handleReconcilePendingRefunds = async () => {
@@ -364,6 +409,23 @@ const AdminFailedTransactions = ({ user }) => {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            onClick={handleToggleRefundModal}
+            disabled={toggling}
+            className={modalEnabled
+              ? "bg-green-600 hover:bg-green-700 text-white"
+              : "bg-slate-400 hover:bg-slate-500 text-white"}
+            data-testid="toggle-refund-modal-btn"
+          >
+            {toggling ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : modalEnabled ? (
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+            ) : (
+              <XCircle className="h-4 w-4 mr-2" />
+            )}
+            Refund Modal: {modalEnabled ? 'ENABLED' : 'DISABLED'}
+          </Button>
           <Button
             onClick={handleReconcilePendingRefunds}
             disabled={reconciling}

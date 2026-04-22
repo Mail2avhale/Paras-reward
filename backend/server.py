@@ -7882,13 +7882,20 @@ async def get_user_dashboard_combined(uid: str, request: Request):
         logging.warning(f"[DASHBOARD] PRC rate fetch failed: {e}")
     
     # Check for pending refunds (dashboard blocker) — across all 4 collections
+    # Respects global kill switch system_config.refund_blocker_modal_enabled (default: disabled)
     pending_refund_count = 0
     try:
-        for coll_name in ["recharge_transactions", "bill_payment_requests",
-                          "dmt_transactions", "bank_transfer_requests"]:
-            pending_refund_count += await db[coll_name].count_documents(
-                {"user_id": uid, "status": "refund_pending"}
-            )
+        cfg = await db.system_config.find_one(
+            {"key": "refund_blocker_modal_enabled"},
+            {"_id": 0, "value": 1}
+        )
+        modal_enabled = bool(cfg and cfg.get("value"))
+        if modal_enabled:
+            for coll_name in ["recharge_transactions", "bill_payment_requests",
+                              "dmt_transactions", "bank_transfer_requests"]:
+                pending_refund_count += await db[coll_name].count_documents(
+                    {"user_id": uid, "status": "refund_pending"}
+                )
     except Exception as e:
         logging.warning(f"[DASHBOARD] Pending refund check failed: {e}")
 

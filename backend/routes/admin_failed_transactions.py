@@ -1317,3 +1317,68 @@ async def cleanup_invalid_refund_records(request: CleanupRequest):
         "removed": removed,
     }
 
+
+
+# ========================================================================
+# Refund Blocker Modal Toggle — system-wide admin control
+# ========================================================================
+
+class ToggleRefundModalRequest(BaseModel):
+    admin_id: str
+    enabled: bool
+
+
+@router.get("/refund-modal-status")
+async def get_refund_modal_status():
+    """Public-readable: returns whether RefundBlockerModal is globally enabled."""
+    if db is None:
+        return {"enabled": False}
+    cfg = await db.system_config.find_one(
+        {"key": "refund_blocker_modal_enabled"},
+        {"_id": 0, "value": 1, "updated_at": 1, "updated_by": 1}
+    )
+    return {
+        "enabled": bool(cfg and cfg.get("value")),
+        "updated_at": (cfg or {}).get("updated_at"),
+        "updated_by": (cfg or {}).get("updated_by"),
+    }
+
+
+@router.post("/refund-modal-toggle")
+async def toggle_refund_modal(request: ToggleRefundModalRequest):
+    """Admin-only: enable/disable the RefundBlockerModal globally.
+    When disabled, no user sees the modal regardless of their pending_refunds state.
+    Default is DISABLED — admin must explicitly enable it."""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    admin = await db.users.find_one({"uid": request.admin_id}, {"_id": 0, "role": 1, "name": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        raise HTTPException(status_code=403, detail="Only admins allowed")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    await db.system_config.update_one(
+        {"key": "refund_blocker_modal_enabled"},
+        {"$set": {
+            "key": "refund_blocker_modal_enabled",
+            "value": bool(request.enabled),
+            "updated_at": now_iso,
+            "updated_by": request.admin_id,
+            "updated_by_name": admin.get("name"),
+        }},
+        upsert=True,
+    )
+
+    await db.admin_audit_logs.insert_one({
+        "admin_id": request.admin_id,
+        "admin_name": admin.get("name"),
+        "action": "refund_modal_toggle",
+        "enabled": bool(request.enabled),
+        "timestamp": now_iso,
+    })
+
+    return {
+        "success": True,
+        "enabled": bool(request.enabled),
+        "message": f"Refund Blocker Modal is now {'ENABLED' if request.enabled else 'DISABLED'} for all users",
+    }
+
