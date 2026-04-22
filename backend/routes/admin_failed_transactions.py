@@ -1259,3 +1259,61 @@ async def reconcile_pending_refunds(request: ReconcilePendingRefundsRequest):
         "unmatched": unmatched,
     }
 
+
+
+class CleanupRequest(BaseModel):
+    admin_id: str
+
+
+@router.post("/cleanup-invalid-refund-records")
+async def cleanup_invalid_refund_records(request: CleanupRequest):
+    """Remove refund_pending records whose eko_tid is NOT a valid numeric Eko TID
+    (e.g., TEST123456, or records where only client_ref_id is stored as eko_tid).
+    These cannot be processed via Eko's /refund/otp API and clutter user's modal.
+    Admin-only. Idempotent."""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    admin = await db.users.find_one({"uid": request.admin_id}, {"_id": 0, "role": 1, "name": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        raise HTTPException(status_code=403, detail="Only admins allowed")
+
+    removed = []
+    for coll_name in ["recharge_transactions", "bill_payment_requests",
+                       "dmt_transactions", "bank_transfer_requests"]:
+        coll = db[coll_name]
+        async for txn in coll.find(
+            {"status": "refund_pending"},
+            {"_id": 0, "eko_tid": 1, "client_ref_id": 1, "user_id": 1, "amount_inr": 1,
+             "refund_pending_source": 1}
+        ):
+            tid = (txn.get("eko_tid") or "").strip()
+            # Valid Eko TID is strictly numeric (typically 9-11 digits)
+            if not tid or not tid.isdigit() or len(tid) < 8:
+                await coll.delete_one({
+                    "eko_tid": txn.get("eko_tid"),
+                    "client_ref_id": txn.get("client_ref_id"),
+                    "status": "refund_pending",
+                })
+                removed.append({
+                    "collection": coll_name,
+                    "eko_tid": txn.get("eko_tid"),
+                    "client_ref_id": txn.get("client_ref_id"),
+                    "user_id": txn.get("user_id"),
+                    "amount_inr": txn.get("amount_inr"),
+                    "source": txn.get("refund_pending_source"),
+                })
+
+    await db.admin_audit_logs.insert_one({
+        "admin_id": request.admin_id,
+        "admin_name": admin.get("name"),
+        "action": "cleanup_invalid_refund_records",
+        "removed_count": len(removed),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+
+    return {
+        "success": True,
+        "removed_count": len(removed),
+        "removed": removed,
+    }
+
