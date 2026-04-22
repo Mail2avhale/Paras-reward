@@ -235,13 +235,29 @@ async def send_refund_otp(request: SendRefundOTPRequest):
     headers = generate_headers_for_payment(timestamp)
     headers["Content-Type"] = "application/x-www-form-urlencoded"
 
-    url = f"{BASE_URL}/transactions/{eko_tid}/refund/otp"
+    # Determine v3 base URL from v1.2 base
+    if "staging" in BASE_URL.lower():
+        V3_BASE = "https://staging.eko.in/ekoapi/v3"
+    else:
+        V3_BASE = "https://api.eko.in/ekoapi/v3"
     form_data = {"initiator_id": INITIATOR_ID, "developer_key": DEVELOPER_KEY}
 
+    # Try v3 first (BBPS/Payment), fall back to v1 (DMT)
+    attempts = [
+        ("v3", f"{V3_BASE}/customer/payment/refund/{eko_tid}/otp"),
+        ("v1", f"{BASE_URL}/transactions/{eko_tid}/refund/otp"),
+    ]
+    resp = None
+    body = {}
+    used_version = None
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, data=form_data, headers=headers)
-        body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"raw": resp.text}
+            for api_ver, url in attempts:
+                resp = await client.post(url, data=form_data, headers=headers)
+                body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"raw": resp.text}
+                used_version = api_ver
+                if resp.status_code < 400 and body.get("status") in (0, "0", None):
+                    break
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Eko API error: {e}")
 
@@ -360,7 +376,6 @@ async def bulk_send_refund_otp(request: BulkSendRefundOTPRequest):
         raise HTTPException(status_code=500, detail="Eko credentials not configured")
 
     sem = _asyncio.Semaphore(5)  # cap concurrency
-    results = []
 
     async def _one(item):
         if not item.get("eko_tid"):
@@ -369,42 +384,13 @@ async def bulk_send_refund_otp(request: BulkSendRefundOTPRequest):
             timestamp = str(round(_time.time() * 1000))
             headers = generate_headers_for_payment(timestamp)
             headers["Content-Type"] = "application/x-www-form-urlencoded"
-            url = f"{BASE_URL}/transactions/{item['eko_tid']}/refund/otp"
+            # v1 URL (CONFIRMED working from existing eko_recharge.py)
+            url = f"{BASE_URL}/v1/transactions/{item['eko_tid']}/refund/otp"
             form_data = {"initiator_id": INITIATOR_ID, "developer_key": DEVELOPER_KEY}
             try:
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     resp = await client.post(url, data=form_data, headers=headers)
                 body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"raw": resp.text}
-                ok = resp.status_code < 400 and body.get("status") in (0, "0", None)
-                # Persist audit trail
-                try:
-                    await db.refund_otps.update_one(
-                        {"admin_id": request.admin_id, "eko_tid": item["eko_tid"]},
-                        {"$set": {
-                            "admin_id": request.admin_id,
-                            "eko_tid": item["eko_tid"],
-                            "request_id": item.get("request_id"),
-                            "user_id": item.get("user_id"),
-                            "eko_status": body.get("status"),
-                            "eko_message": body.get("message"),
-                            "eko_response": body,
-                            "http_status": resp.status_code,
-                            "created_at": datetime.now(timezone.utc).isoformat(),
-                            "bulk": True,
-                        }},
-                        upsert=True,
-                    )
-                except Exception:
-                    pass
-                return {
-                    "label": item["label"],
-                    "eko_tid": item["eko_tid"],
-                    "request_id": item.get("request_id"),
-                    "success": ok,
-                    "http_status": resp.status_code,
-                    "eko_status": body.get("status"),
-                    "message": body.get("message") or ("OTP sent" if ok else "Eko rejected"),
-                }
             except Exception as e:
                 return {
                     "label": item["label"],
@@ -412,6 +398,44 @@ async def bulk_send_refund_otp(request: BulkSendRefundOTPRequest):
                     "success": False,
                     "error": str(e)[:200],
                 }
+
+            # Eko success: status == 0. Response often contains the OTP directly in data.otp
+            eko_data = body.get("data", {}) or {}
+            otp_value = str(eko_data.get("otp") or eko_data.get("otp_ref_id") or "").strip()
+            ok = resp.status_code < 400 and body.get("status") in (0, "0")
+
+            # Persist audit trail + OTP (so admin can refund in one click from the same page)
+            try:
+                await db.refund_otps.update_one(
+                    {"admin_id": request.admin_id, "eko_tid": item["eko_tid"]},
+                    {"$set": {
+                        "admin_id": request.admin_id,
+                        "eko_tid": item["eko_tid"],
+                        "request_id": item.get("request_id"),
+                        "user_id": item.get("user_id"),
+                        "otp": otp_value or None,
+                        "eko_status": body.get("status"),
+                        "eko_message": body.get("message"),
+                        "eko_response": body,
+                        "http_status": resp.status_code,
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "bulk": True,
+                    }},
+                    upsert=True,
+                )
+            except Exception:
+                pass
+
+            return {
+                "label": item["label"],
+                "eko_tid": item["eko_tid"],
+                "request_id": item.get("request_id"),
+                "success": ok,
+                "http_status": resp.status_code,
+                "eko_status": body.get("status"),
+                "otp": otp_value if ok else None,  # pass-through so admin can see it immediately
+                "message": body.get("message") or ("OTP retrieved" if ok else "Eko rejected"),
+            }
 
     results = await _asyncio.gather(*[_one(item) for item in work])
 
@@ -506,7 +530,12 @@ async def manual_refund(request: RefundRequest):
         headers = generate_headers_for_payment(timestamp)
         headers["Content-Type"] = "application/x-www-form-urlencoded"
 
-        url = f"{BASE_URL}/transactions/{eko_tid}/refund"
+        # v3 base URL derivation
+        if "staging" in BASE_URL.lower():
+            V3_BASE = "https://staging.eko.in/ekoapi/v3"
+        else:
+            V3_BASE = "https://api.eko.in/ekoapi/v3"
+
         form_data = {
             "initiator_id": INITIATOR_ID,
             "otp": request.otp.strip(),
@@ -515,10 +544,20 @@ async def manual_refund(request: RefundRequest):
             "developer_key": DEVELOPER_KEY,
         }
 
+        # Try v3 first (modern BBPS/Payment), fall back to v1
+        attempts = [
+            ("v3", f"{V3_BASE}/customer/payment/refund/{eko_tid}"),
+            ("v1", f"{BASE_URL}/transactions/{eko_tid}/refund"),
+        ]
+        resp = None
+        body = {}
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(url, data=form_data, headers=headers)
-            body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"raw": resp.text}
+                for _ver, url in attempts:
+                    resp = await client.post(url, data=form_data, headers=headers)
+                    body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"raw": resp.text}
+                    if resp.status_code < 400 and body.get("status") in (0, "0"):
+                        break
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"Eko refund API error: {e}")
 
