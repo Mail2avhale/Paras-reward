@@ -79,7 +79,7 @@ const AdminFailedTransactions = ({ user }) => {
   const [refundReason, setRefundReason] = useState('');
   const [otpStep, setOtpStep] = useState(false); // false = amount/reason form, true = OTP entry
   const [otp, setOtp] = useState('');
-  const [otpHints, setOtpHints] = useState({ email_hint: '', mobile_hint: '' });
+  const [otpHints, setOtpHints] = useState({ eko_tid: '', eko_message: '' });
   const [otpSending, setOtpSending] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   
@@ -124,7 +124,7 @@ const AdminFailedTransactions = ({ user }) => {
     fetchServiceTypes();
   }, [fetchTransactions]);
 
-  // Step 1: send OTP to admin's email/mobile
+  // Step 1: Trigger Eko to send refund OTP to CUSTOMER's mobile
   const handleSendOTP = async () => {
     if (!selectedTxn) return;
     const amount = parseFloat(refundAmount) || selectedTxn.prc_amount || selectedTxn.total_prc;
@@ -145,12 +145,12 @@ const AdminFailedTransactions = ({ user }) => {
         admin_id: user.uid,
       }, { headers: { Authorization: `Bearer ${user?.token}` } });
       setOtpHints({
-        email_hint: res.data?.email_hint || '',
-        mobile_hint: res.data?.mobile_hint || '',
+        eko_tid: res.data?.eko_tid || '',
+        eko_message: res.data?.message || '',
       });
       setOtpStep(true);
       setOtp('');
-      toast.success('OTP sent to your registered email / mobile');
+      toast.success('OTP sent to customer\'s registered mobile (via Eko)');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to send OTP');
     } finally {
@@ -184,7 +184,7 @@ const AdminFailedTransactions = ({ user }) => {
       setRefundReason('');
       setOtpStep(false);
       setOtp('');
-      setOtpHints({ email_hint: '', mobile_hint: '' });
+      setOtpHints({ eko_tid: '', eko_message: '' });
       fetchTransactions();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Refund failed');
@@ -577,15 +577,16 @@ const AdminFailedTransactions = ({ user }) => {
             {otpStep && (
               <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-2" data-testid="refund-otp-step">
                 <div className="text-sm text-amber-900">
-                  OTP sent to{' '}
-                  {otpHints.email_hint && <span className="font-semibold">{otpHints.email_hint}</span>}
-                  {otpHints.email_hint && otpHints.mobile_hint && ' / '}
-                  {otpHints.mobile_hint && <span className="font-semibold">{otpHints.mobile_hint}</span>}
+                  <strong>OTP sent to customer&apos;s registered mobile by Eko.</strong><br />
+                  Please ask the customer to share the 6-digit OTP they received.
+                  {otpHints.eko_tid && (
+                    <div className="text-xs text-amber-700 mt-1">Eko TID: {otpHints.eko_tid}</div>
+                  )}
                 </div>
                 <Input
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="Enter 6-digit OTP"
+                  placeholder="Enter 6-digit OTP from customer"
                   className="text-center tracking-widest text-lg font-mono bg-white border-amber-300"
                   maxLength={6}
                   autoFocus
@@ -597,7 +598,7 @@ const AdminFailedTransactions = ({ user }) => {
                   disabled={otpSending}
                   className="text-xs text-amber-800 underline hover:text-amber-900 disabled:opacity-50"
                 >
-                  {otpSending ? 'Sending...' : 'Resend OTP'}
+                  {otpSending ? 'Resending...' : 'Resend OTP to customer'}
                 </button>
               </div>
             )}
@@ -622,7 +623,7 @@ const AdminFailedTransactions = ({ user }) => {
                   className="flex-1 bg-amber-600 hover:bg-amber-700"
                   data-testid="refund-send-otp-btn"
                 >
-                  {otpSending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send OTP & Continue'}
+                  {otpSending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send OTP to Customer'}
                 </Button>
               ) : (
                 <Button
@@ -631,7 +632,7 @@ const AdminFailedTransactions = ({ user }) => {
                   className="flex-1 bg-green-600 hover:bg-green-700"
                   data-testid="refund-confirm-btn"
                 >
-                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify OTP & Refund'}
+                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify OTP & Refund via Eko'}
                 </Button>
               )}
             </div>

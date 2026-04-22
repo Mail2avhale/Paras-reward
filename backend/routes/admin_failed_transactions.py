@@ -30,7 +30,7 @@ class RefundRequest(BaseModel):
     amount: float
     reason: Optional[str] = "Admin manual refund"
     admin_id: Optional[str] = None
-    otp: Optional[str] = None  # 6-digit OTP (required unless bypassed by super-admin flow)
+    otp: Optional[str] = None  # Eko-sent OTP (required for Eko/BBPS refunds)
 
 
 class SendRefundOTPRequest(BaseModel):
@@ -165,81 +165,112 @@ async def get_transaction_detail(request_id: str):
     }
 
 
-# ========== SEND REFUND OTP ==========
+# ========== SEND REFUND OTP (Eko BBPS) ==========
 
 @router.post("/refund/send-otp")
 async def send_refund_otp(request: SendRefundOTPRequest):
     """
-    Send a 6-digit OTP to the admin's email/mobile to authorise a refund.
-    OTP is bound to (admin_id + request_id + amount) so it can't be reused
-    on a different transaction or different amount.
+    Trigger Eko to (re)send a refund OTP to the CUSTOMER's registered mobile.
+    Eko API: POST /transactions/{tid}/refund/otp
+      - Automatically fired when a transaction fails
+      - This endpoint resends the OTP if admin needs a fresh one
+    Customer shares the OTP with admin, who then calls /refund with it.
     """
-    import secrets
+    import httpx
     if db is None:
         raise HTTPException(status_code=500, detail="Database not initialized")
 
+    # Auth: admin / manager only
     admin = await db.users.find_one(
         {"uid": request.admin_id},
-        {"_id": 0, "uid": 1, "email": 1, "mobile": 1, "name": 1, "role": 1},
+        {"_id": 0, "uid": 1, "role": 1, "email": 1, "name": 1},
     )
-    if not admin:
-        raise HTTPException(status_code=404, detail="Admin account not found")
-    if admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
-        raise HTTPException(status_code=403, detail="Only admins/managers can request refund OTP")
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        raise HTTPException(status_code=403, detail="Only admins/managers can initiate refund")
 
-    # Verify transaction exists and is refundable
+    # Fetch transaction and resolve Eko TID
     txn = await db.redeem_requests.find_one(
         {"request_id": request.request_id},
-        {"_id": 0, "user_id": 1, "prc_refunded": 1, "prc_amount": 1, "total_prc": 1, "status": 1},
+        {"_id": 0, "user_id": 1, "eko_tid": 1, "tid": 1, "transaction_id": 1,
+         "service_type": 1, "status": 1, "prc_refunded": 1, "prc_amount": 1,
+         "provider_response": 1, "details": 1},
     )
     if not txn:
         raise HTTPException(status_code=404, detail="Transaction not found")
     if txn.get("prc_refunded"):
         raise HTTPException(status_code=400, detail="Transaction already refunded")
-    if txn.get("user_id") != request.user_id:
-        raise HTTPException(status_code=400, detail="User ID mismatch for this transaction")
 
-    # Generate 6-digit OTP
-    otp = str(secrets.randbelow(900000) + 100000)
-    now = datetime.now(timezone.utc)
-    expiry = now + timedelta(minutes=5)
+    # Try multiple fields to find Eko TID
+    eko_tid = (
+        txn.get("eko_tid")
+        or txn.get("tid")
+        or (txn.get("provider_response") or {}).get("tid")
+        or (txn.get("provider_response") or {}).get("data", {}).get("tid")
+        or (txn.get("details") or {}).get("tid")
+        or (txn.get("details") or {}).get("eko_tid")
+    )
+    if not eko_tid:
+        raise HTTPException(
+            status_code=400,
+            detail="This transaction has no Eko TID — cannot request OTP. Use manual refund without OTP.",
+        )
 
-    # Upsert — replace any previous OTP for same (admin, request) pair
+    # Import Eko BBPS config from bbps_services
+    try:
+        from routes.bbps_services import BASE_URL, DEVELOPER_KEY, INITIATOR_ID, generate_headers_for_payment
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Eko config not loaded: {e}")
+    if not DEVELOPER_KEY or not INITIATOR_ID:
+        raise HTTPException(status_code=500, detail="Eko credentials not configured (EKO_DEVELOPER_KEY / EKO_INITIATOR_ID)")
+
+    import time
+    timestamp = str(round(time.time() * 1000))
+    headers = generate_headers_for_payment(timestamp)
+    headers["Content-Type"] = "application/x-www-form-urlencoded"
+
+    url = f"{BASE_URL}/transactions/{eko_tid}/refund/otp"
+    form_data = {"initiator_id": INITIATOR_ID, "developer_key": DEVELOPER_KEY}
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, data=form_data, headers=headers)
+        body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"raw": resp.text}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Eko API error: {e}")
+
+    # Log audit trail regardless of outcome
     await db.refund_otps.update_one(
         {"admin_id": request.admin_id, "request_id": request.request_id},
         {"$set": {
             "admin_id": request.admin_id,
             "request_id": request.request_id,
             "user_id": request.user_id,
+            "eko_tid": str(eko_tid),
             "amount": float(request.amount),
-            "otp": otp,
-            "expiry": expiry.isoformat(),
-            "created_at": now.isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "eko_status": body.get("status"),
+            "eko_message": body.get("message"),
+            "eko_response": body,
             "verified": False,
             "used": False,
-            "attempts": 0,
         }},
         upsert=True,
     )
 
-    # Deliver OTP: log to console + store on admin doc for dev visibility.
-    # TODO: integrate real SMS/email service (SendGrid/Resend/MSG91) in production.
-    print(f"[REFUND OTP] admin={admin.get('email')} request={request.request_id} "
-          f"amount={request.amount} PRC OTP={otp} (valid 5 min)")
-
-    # Build hints (never leak full email/mobile)
-    email = admin.get("email") or ""
-    mobile = admin.get("mobile") or ""
-    email_hint = (f"{email[:3]}***@{email.split('@')[1]}" if "@" in email else (email[:4] + "***") if email else "")
-    mobile_hint = (f"{mobile[:2]}******{mobile[-2:]}" if len(mobile) >= 6 else "")
+    if resp.status_code >= 400:
+        raise HTTPException(
+            status_code=400,
+            detail=body.get("message") or f"Eko rejected OTP request (HTTP {resp.status_code})",
+        )
+    if body.get("status") not in (0, "0", None):
+        raise HTTPException(status_code=400, detail=body.get("message") or "Eko rejected OTP request")
 
     return {
         "success": True,
-        "message": "OTP sent to admin's registered email / mobile",
-        "email_hint": email_hint,
-        "mobile_hint": mobile_hint,
-        "expires_in_seconds": 300,
-        "request_id": request.request_id,
+        "message": body.get("message") or "OTP sent to customer's registered mobile (via Eko)",
+        "eko_tid": eko_tid,
+        "eko_status": body.get("status"),
+        "http_status": resp.status_code,
     }
 
 
@@ -247,74 +278,106 @@ async def send_refund_otp(request: SendRefundOTPRequest):
 
 @router.post("/refund")
 async def manual_refund(request: RefundRequest):
-    """Manually refund a failed/pending transaction (requires 6-digit OTP for admin verification)"""
+    """
+    Manual refund a failed/pending transaction.
+
+    Flow for Eko BBPS/recharge transactions:
+      1. Call `/refund/send-otp` → Eko sends OTP to customer's mobile
+      2. Customer shares OTP with admin
+      3. Admin calls this endpoint with the OTP
+      4. We hit Eko `POST /transactions/{tid}/refund` with the OTP
+      5. On success: Eko refunds eValue to partner wallet AND we credit PRC back to user
+
+    For non-Eko transactions (legacy/manual), OTP is optional — admin can refund directly.
+    """
+    import httpx
     if db is None:
         raise HTTPException(status_code=500, detail="Database not initialized")
-
-    # ----- OTP verification -----
     if not request.admin_id:
         raise HTTPException(status_code=400, detail="admin_id is required")
-    if not request.otp:
-        raise HTTPException(status_code=400, detail="OTP required. Please request an OTP first.")
-
-    otp_doc = await db.refund_otps.find_one(
-        {"admin_id": request.admin_id, "request_id": request.request_id},
-        {"_id": 0},
-    )
-    if not otp_doc:
-        raise HTTPException(status_code=400, detail="No OTP requested for this refund. Please send OTP first.")
-    if otp_doc.get("used"):
-        raise HTTPException(status_code=400, detail="OTP already used. Request a new one.")
-    # Expiry check
-    try:
-        from dateutil.parser import parse as parse_date
-        exp_dt = parse_date(otp_doc["expiry"]) if isinstance(otp_doc["expiry"], str) else otp_doc["expiry"]
-        if exp_dt.tzinfo is None:
-            exp_dt = exp_dt.replace(tzinfo=timezone.utc)
-        if datetime.now(timezone.utc) > exp_dt:
-            raise HTTPException(status_code=400, detail="OTP expired. Please request a new one.")
-    except HTTPException:
-        raise
-    except Exception:
-        pass
-    # Attempts check (max 5)
-    attempts = int(otp_doc.get("attempts", 0))
-    if attempts >= 5:
-        raise HTTPException(status_code=429, detail="Too many incorrect attempts. Request a new OTP.")
-    # Bind check: amount must match
-    if abs(float(otp_doc.get("amount", 0)) - float(request.amount)) > 0.01:
-        await db.refund_otps.update_one(
-            {"admin_id": request.admin_id, "request_id": request.request_id},
-            {"$inc": {"attempts": 1}},
-        )
-        raise HTTPException(status_code=400, detail="Refund amount changed since OTP was sent. Request a new OTP.")
-    # OTP match
-    if str(request.otp).strip() != str(otp_doc.get("otp", "")).strip():
-        await db.refund_otps.update_one(
-            {"admin_id": request.admin_id, "request_id": request.request_id},
-            {"$inc": {"attempts": 1}},
-        )
-        raise HTTPException(status_code=400, detail="Invalid OTP")
-    # ---- OTP verified — mark used ----
-    await db.refund_otps.update_one(
-        {"admin_id": request.admin_id, "request_id": request.request_id},
-        {"$set": {"used": True, "verified": True, "verified_at": datetime.now(timezone.utc).isoformat()}},
-    )
 
     # Get transaction
     txn = await db.redeem_requests.find_one({"request_id": request.request_id})
     if not txn:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    
-    # Check if already refunded
     if txn.get("prc_refunded") == True:
         raise HTTPException(status_code=400, detail="Transaction already refunded")
-    
+    if txn.get("user_id") != request.user_id:
+        raise HTTPException(status_code=400, detail="User ID mismatch for this transaction")
+
+    # Try to resolve Eko TID
+    eko_tid = (
+        txn.get("eko_tid")
+        or txn.get("tid")
+        or (txn.get("provider_response") or {}).get("tid")
+        or (txn.get("provider_response") or {}).get("data", {}).get("tid")
+        or (txn.get("details") or {}).get("tid")
+        or (txn.get("details") or {}).get("eko_tid")
+    )
+
+    eko_api_called = False
+    eko_api_response = None
+
+    # ---- ATTEMPT EKO REFUND API CALL (only for Eko-backed txns with TID) ----
+    if eko_tid:
+        if not request.otp:
+            raise HTTPException(
+                status_code=400,
+                detail="OTP required for Eko refund. Call /refund/send-otp first to get OTP on customer's mobile.",
+            )
+
+        try:
+            from routes.bbps_services import (
+                BASE_URL, DEVELOPER_KEY, INITIATOR_ID, USER_CODE, generate_headers_for_payment,
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Eko config not loaded: {e}")
+        if not all([DEVELOPER_KEY, INITIATOR_ID, USER_CODE]):
+            raise HTTPException(status_code=500, detail="Eko credentials not configured")
+
+        import time
+        timestamp = str(round(time.time() * 1000))
+        headers = generate_headers_for_payment(timestamp)
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+
+        url = f"{BASE_URL}/transactions/{eko_tid}/refund"
+        form_data = {
+            "initiator_id": INITIATOR_ID,
+            "otp": request.otp.strip(),
+            "state": "1",
+            "user_code": USER_CODE,
+            "developer_key": DEVELOPER_KEY,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(url, data=form_data, headers=headers)
+            body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"raw": resp.text}
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Eko refund API error: {e}")
+
+        eko_api_called = True
+        eko_api_response = body
+
+        # Eko success: status == 0
+        if body.get("status") not in (0, "0"):
+            # Bump attempts on refund_otps for audit
+            await db.refund_otps.update_one(
+                {"admin_id": request.admin_id, "request_id": request.request_id},
+                {"$set": {"last_eko_response": body, "last_attempt_at": datetime.now(timezone.utc).isoformat()},
+                 "$inc": {"attempts": 1}},
+                upsert=True,
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=body.get("message") or f"Eko refund failed (status={body.get('status')})",
+            )
+
     # Get user
     user = await db.users.find_one({"uid": request.user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     # Calculate refund amount (use transaction's prc_amount or provided amount)
     refund_amount = request.amount or txn.get("prc_amount", 0) or txn.get("total_prc", 0)
     if refund_amount <= 0:
@@ -339,10 +402,25 @@ async def manual_refund(request: RefundRequest):
             "refund_reason": request.reason,
             "refunded_by": request.admin_id,
             "refunded_at": timestamp,
+            "eko_refund_response": eko_api_response,
+            "eko_refund_tid": (eko_api_response or {}).get("data", {}).get("refund_tid") if eko_api_response else None,
             "status": "refunded"
         }}
     )
-    
+
+    # Mark OTP record as used (audit trail)
+    if eko_api_called:
+        await db.refund_otps.update_one(
+            {"admin_id": request.admin_id, "request_id": request.request_id},
+            {"$set": {
+                "used": True,
+                "verified": True,
+                "verified_at": timestamp,
+                "last_eko_response": eko_api_response,
+            }},
+            upsert=True,
+        )
+
     # Log transaction
     await db.transactions.insert_one({
         "transaction_id": str(uuid.uuid4()),
@@ -356,23 +434,27 @@ async def manual_refund(request: RefundRequest):
         "admin_id": request.admin_id,
         "created_at": timestamp
     })
-    
+
     # Log admin action
     await db.admin_audit_logs.insert_one({
         "admin_id": request.admin_id,
-        "action": "manual_refund",
+        "action": "eko_refund" if eko_api_called else "manual_refund",
         "target_user": request.user_id,
         "request_id": request.request_id,
         "amount": refund_amount,
         "reason": request.reason,
+        "eko_api_called": eko_api_called,
+        "eko_response": eko_api_response,
         "timestamp": timestamp
     })
-    
+
     return {
         "success": True,
-        "message": f"Refunded {refund_amount} PRC to user",
+        "message": f"Refunded {refund_amount} PRC to user" + (" (Eko verified)" if eko_api_called else ""),
         "refund_amount": refund_amount,
-        "new_balance": new_balance
+        "new_balance": new_balance,
+        "eko_api_called": eko_api_called,
+        "eko_response": eko_api_response,
     }
 
 

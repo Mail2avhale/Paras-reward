@@ -362,6 +362,33 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
   5. Replay same OTP → 400 "OTP already used"
 - **Audit trail**: `refund_otps` collection keeps a permanent record of every OTP issued (who, when, which txn, amount, attempts) — useful for compliance investigations.
 
+### Eko BBPS Refund OTP Integration — REBUILT (DONE - April 22, 2026)
+- **User correction**: "मी Eko docs दिली होती — resend-refund-otp आणि refund. तू पुर्वीच admin-side OTP gate बनवला होता — पण तो हवे होते Eko चा native flow."
+- **References**:
+  - [POST /transactions/{tid}/refund/otp](https://developers.eko.in/v1/reference/resend-refund-otp-1) — Eko resends OTP to customer's mobile
+  - [POST /transactions/{tid}/refund](https://developers.eko.in/v1/reference/refund) — Admin posts OTP, Eko refunds eValue to partner wallet
+
+- **Flow replaced** in `routes/admin_failed_transactions.py`:
+  1. Previous "admin-local 6-digit OTP to admin's email" flow removed.
+  2. `POST /admin/failed-transactions/refund/send-otp` now **proxies directly to Eko** — builds `secret-key`/`timestamp` headers via `generate_headers_for_payment()` from `bbps_services.py`, posts form-urlencoded `{initiator_id, developer_key}` to `{BASE_URL}/transactions/{tid}/refund/otp`. Logs full Eko response in `refund_otps` collection for audit.
+  3. `POST /admin/failed-transactions/refund` now has a branch:
+     - If txn has `eko_tid` → **requires OTP**, calls `{BASE_URL}/transactions/{tid}/refund` with `{initiator_id, otp, state=1, user_code, developer_key}`. Only credits PRC back after Eko returns `status=0`.
+     - If no `eko_tid` (legacy/manual txns) → no OTP required, behaves like before (backward compatible).
+  4. On success, stores Eko `refund_tid` on the transaction for future reconciliation.
+  5. Audit log now records `action: "eko_refund"` vs `"manual_refund"` and full Eko response.
+
+- **Frontend** (`pages/AdminFailedTransactions.js`):
+  - Modal wording updated: "OTP sent to **customer's registered mobile by Eko**. Ask customer to share the 6-digit OTP."
+  - Shows Eko TID so admin can cross-reference
+  - Button label: "Send OTP to Customer" → "Verify OTP & Refund via Eko"
+  - "Resend OTP to customer" link
+
+- **Verified E2E via curl**:
+  - (A) Legacy txn without eko_tid → refunded without OTP (backward compatible)
+  - (B) Fake eko_tid → send-otp returns `HTTP 400: Eko rejected OTP request (HTTP 404)` (surfaces Eko's real response correctly)
+  - (C) eko_tid but no OTP provided → 400 "OTP required for Eko refund"
+  - On real production Eko TIDs, the OTP will actually fire to the customer's registered mobile (as per Eko's BBPS flow).
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
