@@ -10,6 +10,50 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 
 ## What's Been Implemented
 
+### Eko Pending Refunds — Smart Mobile Attribution + Production Reconciliation (DONE - April 22, 2026)
+
+**Business Goal**: ₹87,977 of real money stuck at Eko in "Refund Pending" state (60 transactions). Until Eko's Refund API is called with OTP, Eko won't release eValue back to retailer wallet. Priority: unblock this money flow.
+
+**Architecture Decision**: Pure user self-service via RefundBlockerModal. Each transaction attributed to the end-user (customer whose mobile is involved), not the retailer. Falls back to retailer (SANTOSH) only when no user match found.
+
+**Key Changes**:
+1. **`reconcile-pending-refunds` endpoint** extended with 2 new modes:
+   - `create_missing=true`: Creates DB records for transactions that exist on Eko side but not in our DB (53 BBPS from Eko Connect retailer portal)
+   - `match_by_mobile=true`: Looks up user by cell_number (BBPS) or sender_phone (DMT) before attributing. Falls back to `owner_uid` if no user found.
+
+2. **Helper functions added**:
+   - `_find_user_by_mobile(mobile)`: Normalizes +91/91 prefixes, matches against `users.mobile` or `users.phone`
+   - `_create_bbps_record(...)`: Creates record in `recharge_transactions` with full metadata + `customer_mobile` (where OTP goes)
+   - `_create_dmt_record(...)`: Creates record in `dmt_transactions` with beneficiary/account/bank/IFSC + `customer_mobile`
+
+3. **`pending-refunds` endpoint** now returns `customer_mobile` for BBPS too (was DMT-only). Modal shows prominent "OTP will be sent to +91 XXXXXXXXXX" amber box.
+
+4. **Admin UI** (`AdminFailedTransactions`): "Reconcile Eko Pending Refunds" button triggers dry-run → confirmation → actual run with smart defaults.
+
+**Production Reconciliation Executed (April 22, 2026, 13:55 UTC)**:
+- Total candidates: 60 (53 BBPS + 7 DMT)
+- Matched/Created: 60 (100%)
+- Impacted users: **31 total**
+  - **30 self-serve users** (₹87,477, 99.4%) — registered customers who will login and handle OTP themselves
+  - **1 fallback** (SANTOSH, ₹500, 0.6%) — his own DMT test transactions
+- Top users: Mohd Ameen (₹15,295), Shubham Bajpai (₹10,797), Sandeep Kumar (₹7,598)
+
+**Eko API Compliance (verified)**:
+- EKO_INITIATOR_ID = 9936606966 (PARAS retailer mobile) ✅
+- EKO_USER_CODE = 19560001 ✅
+- Refund APIs implemented per https://developers.eko.in/v1/reference/resend-refund-otp-1 and refund docs
+- OTP flow: Eko sends SMS to `customer_mobile` stored on transaction → user enters → v2 refund API → eValue returns to retailer wallet
+
+**User Flow (Per Impacted Customer)**:
+1. Customer logs in to parasreward.com with their own credentials
+2. RefundBlockerModal auto-opens (dashboard blocked)
+3. Sees their pending refunds with full metadata + OTP destination mobile
+4. Clicks "Send Refund OTP to My Mobile" → Eko SMSs their mobile
+5. Enters OTP → Verify → Refund completes → Eko releases eValue to PARAS wallet
+
+**Test Status**: 45/45 backend pytest pass. Lint clean. Production validated for Siddhali's DMT record (full data confirmed).
+
+
 ### Eko Refund APIs Final Verification + Customer Mobile Hint (DONE - April 22, 2026)
 **Context**: User reported OTP not delivering after deploying refund flow. Deep investigation revealed Eko sends OTP to transaction's stored `customer_mobile`, not user's login mobile.
 
