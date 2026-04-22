@@ -1,26 +1,39 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { AlertTriangle, RefreshCw, Shield, CheckCircle2, Loader2, Phone, IndianRupee, Clock, Send } from 'lucide-react';
+import {
+  AlertTriangle, RefreshCw, Shield, CheckCircle2, Loader2, Phone,
+  IndianRupee, Clock, Send, Building2, CreditCard, User, Tag
+} from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const SERVICE_COLORS = {
+  'Mobile Recharge': 'bg-blue-100 text-blue-700 border-blue-200',
+  'Bill Payment': 'bg-purple-100 text-purple-700 border-purple-200',
+  'Money Remittance (DMT)': 'bg-amber-100 text-amber-700 border-amber-200',
+  'Bank Transfer': 'bg-green-100 text-green-700 border-green-200',
+};
 
 const RefundBlockerModal = ({ userId, onAllRefundsComplete }) => {
   const [pendingRefunds, setPendingRefunds] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processingStates, setProcessingStates] = useState({});
+  // state[tid] = { sending, otpSent, otp, verifying, completed, error }
+  const [state, setState] = useState({});
 
   const fetchPendingRefunds = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${API}/recharge/pending-refunds/${userId}`);
       if (res.data?.success) {
-        setPendingRefunds(res.data.pending_refunds || []);
-        if ((res.data.pending_refunds || []).length === 0) {
+        const list = res.data.pending_refunds || [];
+        setPendingRefunds(list);
+        if (list.length === 0) {
           onAllRefundsComplete();
         }
       }
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Failed to fetch pending refunds:', err);
     } finally {
       setLoading(false);
@@ -31,58 +44,62 @@ const RefundBlockerModal = ({ userId, onAllRefundsComplete }) => {
     fetchPendingRefunds();
   }, [fetchPendingRefunds]);
 
-  // ONE-CLICK: Calls /refund/process/{tid} which does OTP + Refund in one shot
-  const handleProcessRefund = async (tid) => {
-    setProcessingStates(prev => ({ ...prev, [tid]: { processing: true } }));
+  const setTxn = (tid, patch) =>
+    setState((prev) => ({ ...prev, [tid]: { ...(prev[tid] || {}), ...patch } }));
+
+  // STEP 1: Send OTP (Eko sends SMS to user's registered mobile)
+  const handleSendOtp = async (tid) => {
+    setTxn(tid, { sending: true, error: '' });
     try {
       const res = await axios.post(`${API}/recharge/refund/process/${tid}`, { user_id: userId });
       if (res.data?.success) {
-        toast.success(`Refund of ₹${res.data.refunded_amount || ''} completed!`);
-        setProcessingStates(prev => ({ ...prev, [tid]: { processing: false, completed: true } }));
-        setTimeout(() => fetchPendingRefunds(), 1500);
-      } else if (res.data?.requires_manual_otp) {
-        // Fallback: API couldn't get OTP from response, need manual input
-        toast.info('OTP sent to customer mobile. Please enter OTP below.');
-        setProcessingStates(prev => ({
-          ...prev,
-          [tid]: { processing: false, manualOtp: true, otp: '', error: '' }
-        }));
+        if (res.data.auto_completed) {
+          // Staging: refund auto-completed
+          toast.success(`Refund of ₹${res.data.refunded_amount || ''} completed!`);
+          setTxn(tid, { sending: false, completed: true });
+          setTimeout(() => fetchPendingRefunds(), 1500);
+        } else {
+          // Production: OTP sent via SMS, user must enter
+          toast.success(res.data.message || 'OTP sent to your registered mobile');
+          setTxn(tid, { sending: false, otpSent: true, mobile_hint: res.data.mobile_hint });
+        }
       } else {
-        const msg = res.data?.message || res.data?.error || 'Refund failed';
+        const msg = res.data?.error || res.data?.message || 'Failed to send OTP';
         toast.error(msg);
-        setProcessingStates(prev => ({ ...prev, [tid]: { processing: false, error: msg } }));
+        setTxn(tid, { sending: false, error: msg });
       }
     } catch (err) {
-      toast.error('Refund failed. Please try again.');
-      setProcessingStates(prev => ({ ...prev, [tid]: { processing: false, error: 'Network error' } }));
+      const msg = err?.response?.data?.error || 'Network error. Please try again.';
+      toast.error(msg);
+      setTxn(tid, { sending: false, error: msg });
     }
   };
 
-  // MANUAL FALLBACK: If auto-process couldn't get OTP, user enters it manually
-  const handleManualVerify = async (tid) => {
-    const otp = processingStates[tid]?.otp || '';
+  // STEP 2: Verify OTP → complete refund
+  const handleVerifyOtp = async (tid) => {
+    const otp = (state[tid]?.otp || '').trim();
     if (!otp || otp.length < 4) {
       toast.error('Please enter a valid OTP');
       return;
     }
-    setProcessingStates(prev => ({ ...prev, [tid]: { ...prev[tid], verifying: true } }));
+    setTxn(tid, { verifying: true, error: '' });
     try {
       const res = await axios.post(`${API}/recharge/refund/verify-otp/${tid}`, {
-        user_id: userId,
-        otp: otp,
+        user_id: userId, otp,
       });
       if (res.data?.success) {
-        toast.success(`Refund completed for TID ${tid}!`);
-        setProcessingStates(prev => ({ ...prev, [tid]: { ...prev[tid], verifying: false, completed: true } }));
+        toast.success(`Refund of ₹${res.data.refunded_amount || ''} completed!`);
+        setTxn(tid, { verifying: false, completed: true });
         setTimeout(() => fetchPendingRefunds(), 1500);
       } else {
-        const msg = res.data?.message || res.data?.error || 'OTP verification failed';
+        const msg = res.data?.error || res.data?.message || 'OTP verification failed';
         toast.error(msg);
-        setProcessingStates(prev => ({ ...prev, [tid]: { ...prev[tid], verifying: false, error: msg } }));
+        setTxn(tid, { verifying: false, error: msg });
       }
     } catch (err) {
-      toast.error('Verification failed. Please try again.');
-      setProcessingStates(prev => ({ ...prev, [tid]: { ...prev[tid], verifying: false, error: 'Network error' } }));
+      const msg = err?.response?.data?.error || 'Verification failed. Please try again.';
+      toast.error(msg);
+      setTxn(tid, { verifying: false, error: msg });
     }
   };
 
@@ -99,22 +116,27 @@ const RefundBlockerModal = ({ userId, onAllRefundsComplete }) => {
 
   if (pendingRefunds.length === 0) return null;
 
+  const totalAmount = pendingRefunds.reduce(
+    (sum, t) => sum + (parseFloat(t.amount_inr) || 0), 0
+  );
+
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-md" data-testid="refund-blocker-modal">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4" data-testid="refund-blocker-modal">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-5 flex-shrink-0">
+        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 px-6 py-5 flex-shrink-0">
           <div className="flex items-center gap-3 mb-2">
             <div className="bg-white/20 rounded-full p-2">
               <AlertTriangle className="w-6 h-6 text-white" />
             </div>
             <h2 className="text-xl font-bold text-white" data-testid="refund-blocker-title">
-              Action Required: Pending Refunds
+              Action Required: Complete Pending Refunds
             </h2>
           </div>
           <p className="text-white/90 text-sm">
-            You have {pendingRefunds.length} transaction(s) requiring refund.
-            Click "Process Refund" to complete each one automatically.
+            You have <b>{pendingRefunds.length}</b> transaction(s) totalling
+            <b className="mx-1">₹{totalAmount.toLocaleString('en-IN')}</b>
+            awaiting refund. Complete all to unlock your dashboard.
           </p>
         </div>
 
@@ -122,86 +144,128 @@ const RefundBlockerModal = ({ userId, onAllRefundsComplete }) => {
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" data-testid="refund-list">
           {pendingRefunds.map((txn, idx) => {
             const tid = txn.eko_tid;
-            const state = processingStates[tid] || {};
+            const s = state[tid] || {};
+            const serviceClass = SERVICE_COLORS[txn.service_type] || 'bg-gray-100 text-gray-700 border-gray-200';
+            const isDmt = txn.source === 'dmt' || txn.source === 'bank_transfer';
 
             return (
               <div
                 key={tid}
-                className={`border rounded-xl p-4 transition-all ${
-                  state.completed
+                className={`border-2 rounded-xl p-4 transition-all ${
+                  s.completed
                     ? 'border-green-300 bg-green-50'
                     : 'border-gray-200 bg-gray-50 hover:border-amber-300'
                 }`}
                 data-testid={`refund-item-${tid}`}
               >
-                {/* Transaction info */}
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono bg-gray-200 text-gray-700 px-2 py-0.5 rounded">
-                        TID: {tid}
-                      </span>
-                      <span className="text-xs text-gray-400">#{idx + 1}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-3.5 h-3.5" />
-                        {txn.phone || 'N/A'}
-                      </span>
-                      <span className="flex items-center gap-1 font-semibold text-gray-800">
-                        <IndianRupee className="w-3.5 h-3.5" />
-                        {txn.amount_inr || 0}
-                      </span>
-                    </div>
-                    {txn.operator && (
-                      <p className="text-xs text-gray-500 mt-1">{txn.operator}</p>
-                    )}
+                {/* Header row: index + service badge + status */}
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-500">#{idx + 1}</span>
+                    <span className={`text-[11px] font-semibold px-2 py-1 rounded-full border ${serviceClass}`}>
+                      <Tag className="w-3 h-3 inline mr-1" />
+                      {txn.service_type || 'Transaction'}
+                    </span>
                   </div>
-
-                  {state.completed ? (
-                    <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
+                  {s.completed ? (
+                    <span className="flex items-center gap-1 text-green-600 text-sm font-semibold">
                       <CheckCircle2 className="w-5 h-5" />
                       Refunded
-                    </div>
+                    </span>
                   ) : (
-                    <div className="flex items-center gap-1 text-amber-600 text-xs font-medium">
+                    <span className="flex items-center gap-1 text-amber-600 text-xs font-medium">
                       <Clock className="w-4 h-4" />
-                      Pending
+                      Pending Refund
+                    </span>
+                  )}
+                </div>
+
+                {/* Amount — prominent */}
+                <div className="flex items-baseline gap-2 mb-3">
+                  <IndianRupee className="w-5 h-5 text-gray-600" />
+                  <span className="text-2xl font-bold text-gray-900" data-testid={`refund-amount-${tid}`}>
+                    {Number(txn.amount_inr || 0).toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                {/* Details grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-700 mb-3 bg-white rounded-lg p-3 border border-gray-100">
+                  <div>
+                    <span className="text-gray-500 block">Transaction ID</span>
+                    <span className="font-mono text-gray-900 break-all">{tid}</span>
+                  </div>
+                  {txn.client_ref_id && txn.client_ref_id !== tid && (
+                    <div>
+                      <span className="text-gray-500 block">Reference</span>
+                      <span className="font-mono text-gray-900 break-all">{txn.client_ref_id}</span>
+                    </div>
+                  )}
+                  {!isDmt && txn.phone && (
+                    <div>
+                      <span className="text-gray-500 block flex items-center gap-1">
+                        <Phone className="w-3 h-3" />Phone
+                      </span>
+                      <span className="font-medium text-gray-900">{txn.phone}</span>
+                    </div>
+                  )}
+                  {!isDmt && txn.operator && (
+                    <div>
+                      <span className="text-gray-500 block">Operator</span>
+                      <span className="font-medium text-gray-900">{txn.operator}</span>
+                    </div>
+                  )}
+                  {isDmt && txn.beneficiary_name && (
+                    <div className="sm:col-span-2">
+                      <span className="text-gray-500 block flex items-center gap-1">
+                        <User className="w-3 h-3" />Beneficiary
+                      </span>
+                      <span className="font-medium text-gray-900">{txn.beneficiary_name}</span>
+                    </div>
+                  )}
+                  {isDmt && txn.account_number && (
+                    <div>
+                      <span className="text-gray-500 block flex items-center gap-1">
+                        <CreditCard className="w-3 h-3" />Account
+                      </span>
+                      <span className="font-mono text-gray-900">{txn.account_number}</span>
+                    </div>
+                  )}
+                  {isDmt && (txn.bank_name || txn.ifsc) && (
+                    <div>
+                      <span className="text-gray-500 block flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />Bank
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {txn.bank_name}{txn.ifsc ? ` · ${txn.ifsc}` : ''}
+                      </span>
                     </div>
                   )}
                 </div>
 
                 {/* Action area */}
-                {!state.completed && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    {!state.manualOtp ? (
-                      /* ONE-CLICK Process Refund button */
-                      <div>
-                        <button
-                          onClick={() => handleProcessRefund(tid)}
-                          disabled={state.processing}
-                          className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50"
-                          data-testid={`process-refund-btn-${tid}`}
-                        >
-                          {state.processing ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <RefreshCw className="w-4 h-4" />
-                          )}
-                          {state.processing ? 'Processing Refund...' : 'Process Refund'}
-                        </button>
-                        {state.error && (
-                          <p className="text-xs text-red-500 mt-2" data-testid={`refund-error-${tid}`}>
-                            {state.error}
-                          </p>
+                {!s.completed && (
+                  <div>
+                    {!s.otpSent ? (
+                      /* STEP 1: Send OTP */
+                      <button
+                        onClick={() => handleSendOtp(tid)}
+                        disabled={s.sending}
+                        className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50"
+                        data-testid={`send-otp-btn-${tid}`}
+                      >
+                        {s.sending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
                         )}
-                      </div>
+                        {s.sending ? 'Sending OTP...' : 'Send Refund OTP to My Mobile'}
+                      </button>
                     ) : (
-                      /* MANUAL OTP fallback */
+                      /* STEP 2: Enter OTP */
                       <div className="space-y-2">
-                        <div className="flex items-center gap-1 text-sm text-blue-600 mb-2">
+                        <div className="flex items-center gap-1 text-xs text-blue-700 mb-1">
                           <Shield className="w-4 h-4" />
-                          OTP sent to customer's mobile. Enter below:
+                          OTP sent via SMS {s.mobile_hint ? `to ${s.mobile_hint}` : 'to your registered mobile'}. Enter below:
                         </div>
                         <div className="flex gap-2">
                           <input
@@ -209,24 +273,21 @@ const RefundBlockerModal = ({ userId, onAllRefundsComplete }) => {
                             inputMode="numeric"
                             maxLength={10}
                             placeholder="Enter OTP"
-                            value={state.otp || ''}
+                            value={s.otp || ''}
                             onChange={(e) => {
                               const val = e.target.value.replace(/\D/g, '');
-                              setProcessingStates(prev => ({
-                                ...prev,
-                                [tid]: { ...prev[tid], otp: val, error: '' }
-                              }));
+                              setTxn(tid, { otp: val, error: '' });
                             }}
                             className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-center text-lg font-mono tracking-widest focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                             data-testid={`otp-input-${tid}`}
                           />
                           <button
-                            onClick={() => handleManualVerify(tid)}
-                            disabled={state.verifying || !state.otp}
-                            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-5 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                            onClick={() => handleVerifyOtp(tid)}
+                            disabled={s.verifying || !s.otp}
+                            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-5 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
                             data-testid={`verify-otp-btn-${tid}`}
                           >
-                            {state.verifying ? (
+                            {s.verifying ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <Send className="w-4 h-4" />
@@ -234,10 +295,21 @@ const RefundBlockerModal = ({ userId, onAllRefundsComplete }) => {
                             Verify
                           </button>
                         </div>
-                        {state.error && (
-                          <p className="text-xs text-red-500 mt-1">{state.error}</p>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleSendOtp(tid)}
+                          disabled={s.sending}
+                          className="text-xs text-amber-600 hover:text-amber-700 underline disabled:opacity-50"
+                          data-testid={`resend-otp-btn-${tid}`}
+                        >
+                          {s.sending ? 'Resending...' : 'Resend OTP'}
+                        </button>
                       </div>
+                    )}
+                    {s.error && (
+                      <p className="text-xs text-red-600 mt-2 bg-red-50 border border-red-200 rounded px-2 py-1" data-testid={`refund-error-${tid}`}>
+                        {s.error}
+                      </p>
                     )}
                   </div>
                 )}
@@ -247,10 +319,10 @@ const RefundBlockerModal = ({ userId, onAllRefundsComplete }) => {
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4 bg-gray-50">
+        <div className="flex-shrink-0 border-t border-gray-200 px-6 py-3 bg-gray-50">
           <p className="text-xs text-gray-500 text-center">
-            Refunds are processed automatically via Eko.
-            Your wallet balance will be restored upon successful refund.
+            OTP is sent via SMS by Eko to your registered mobile. Your wallet balance
+            will be restored automatically after each successful refund.
           </p>
         </div>
       </div>

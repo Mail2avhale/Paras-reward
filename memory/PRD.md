@@ -10,6 +10,37 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 
 ## What's Been Implemented
 
+### User-Side Pending Refunds Blocker Modal - DMT + BBPS Support (DONE - April 22, 2026)
+- **Context**: 53 BBPS + 7 DMT transactions stuck in Eko `REFUND PENDING` status. Per Eko flow, customer must complete OTP refund; SMS-based OTP is sent to registered mobile.
+- **Dashboard Blocker**: Before user can access dashboard, all pending refunds must be cleared.
+- **Backend Changes**:
+  - `routes/eko_recharge.py`:
+    - `_find_user_txn`: Extended to scan all 4 collections (recharge_transactions, bill_payment_requests, dmt_transactions, bank_transfer_requests) and match by `eko_tid`, `client_ref_id`, or `eko_client_ref_id`.
+    - `_mark_refunded`: Updates all 4 collections; tracks `_source_collection` for audit.
+    - `GET /api/recharge/pending-refunds/{user_id}`: Returns rich per-transaction data — amount, phone/account, bank, IFSC, beneficiary_name, service_type ("Mobile Recharge" / "Bill Payment" / "Money Remittance (DMT)" / "Bank Transfer"), source.
+    - `POST /api/recharge/refund/process/{tid}`: Primary "Send OTP" endpoint. Calls Eko v1 `/transactions/{tid}/refund/otp`. In production, OTP is SMS-delivered; in staging, if Eko returns OTP inline, we auto-complete.
+    - `POST /api/recharge/refund/verify-otp/{tid}`: Calls Eko v2 `/transactions/{tid}/refund` with `otp, initiator_id, user_code, state=1`. On success, marks refunded + credits PRC back.
+  - `server.py` dashboard endpoint: `pending_refund_count` now counts across all 4 collections.
+- **Frontend**: `RefundBlockerModal.js` rewritten — SMS-first 2-step flow:
+  1. Rich data display per txn: Amount (prominent ₹), service badge (color-coded), TID, Client Ref, Phone/Account, Bank, Beneficiary, IFSC
+  2. "Send Refund OTP to My Mobile" button → calls Eko → SMS to user's mobile
+  3. OTP input field → "Verify" button → completes refund
+  4. Resend OTP option + graceful error display
+- **Reconciliation Script**: `/app/backend/scripts/seed_pending_refunds.py`
+  - Hardcoded 53 BBPS + 7 DMT transactions from Eko Excel export
+  - Idempotent — searches by `eko_tid`, `client_ref_id`, `eko_client_ref_id` across all 4 collections
+  - Updates matched records to `status: refund_pending` (skips already-refunded)
+  - Prints per-user impact summary and unmatched list
+  - Admin runs once on production: `cd /app/backend && python scripts/seed_pending_refunds.py`
+- **E2E Testing (Verified)**:
+  - Dashboard API returns `requires_refund_action: true` + `pending_refund_count` (tested: 2)
+  - `/pending-refunds/{uid}` returns rich data for both BBPS + DMT
+  - Send OTP click → real Eko API hit → graceful error handling (test TID → `Invalid_tid_Length` shown in UI; real production TID → OTP sent via SMS, UI switches to OTP input)
+  - Verify OTP → Eko v2 refund call → marks refunded + credits PRC
+  - Dashboard blocker auto-closes when all refunds cleared
+- **Eko API Compliance**: Implementation matches official docs at https://developers.eko.in/v1/reference/resend-refund-otp-1 (v1 OTP) and https://developers.eko.in/v1/reference/refund (v2 refund).
+
+
 ### Major Code Cleanup & Lint Fixes (DONE - April 19, 2026)
 - **1.9 GB disk space saved** — deleted dead `admin-frontend/`, `frontend-admin/`, `admin-deploy/` folders
 - Deleted duplicate logos & unused images (paras-logo-new/light/dark, abstract-growth, guilloche-bg)

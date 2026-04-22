@@ -7881,14 +7881,12 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     except Exception as e:
         logging.warning(f"[DASHBOARD] PRC rate fetch failed: {e}")
     
-    # Check for pending refunds (dashboard blocker)
+    # Check for pending refunds (dashboard blocker) — across all 4 collections
     pending_refund_count = 0
     try:
-        pending_refund_count = await db.recharge_transactions.count_documents(
-            {"user_id": uid, "status": "refund_pending"}
-        )
-        if pending_refund_count == 0:
-            pending_refund_count = await db.bill_payment_requests.count_documents(
+        for coll_name in ["recharge_transactions", "bill_payment_requests",
+                          "dmt_transactions", "bank_transfer_requests"]:
+            pending_refund_count += await db[coll_name].count_documents(
                 {"user_id": uid, "status": "refund_pending"}
             )
     except Exception as e:

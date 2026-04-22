@@ -1482,57 +1482,83 @@ def _eko_credentials_valid():
     return all([BASE_URL, DEVELOPER_KEY, AUTH_KEY, INITIATOR_ID, USER_CODE])
 
 
+REFUND_COLLECTIONS = [
+    ("recharge_transactions", "recharge"),
+    ("bill_payment_requests", "bill_payment"),
+    ("dmt_transactions", "dmt"),
+    ("bank_transfer_requests", "bank_transfer"),
+]
+
+
 async def _find_user_txn(tid: str, user_id: str, fields: dict = None):
-    """Find a transaction by eko_tid + user_id across both collections."""
+    """Find a transaction by eko_tid + user_id across all 4 collections.
+    Also tries matching by client_ref_id fallback (used for DMT/BBPS PAY-prefixed IDs).
+    """
     projection = fields or {"_id": 0, "status": 1, "user_id": 1}
-    txn = await db.recharge_transactions.find_one(
-        {"eko_tid": tid, "user_id": user_id}, projection
-    )
-    if not txn:
-        txn = await db.bill_payment_requests.find_one(
+
+    for coll_name, _source in REFUND_COLLECTIONS:
+        coll = db[coll_name]
+        # Try eko_tid first (primary key)
+        txn = await coll.find_one(
             {"eko_tid": tid, "user_id": user_id}, projection
         )
-    return txn
+        if txn:
+            txn["_source_collection"] = coll_name
+            return txn
+        # Try client_ref_id / eko_client_ref_id fallback
+        txn = await coll.find_one(
+            {"$or": [
+                {"client_ref_id": tid, "user_id": user_id},
+                {"eko_client_ref_id": tid, "user_id": user_id},
+            ]},
+            projection
+        )
+        if txn:
+            txn["_source_collection"] = coll_name
+            return txn
+    return None
 
 
 async def _mark_refunded(tid: str, user_id: str, refund_data: dict, txn: dict):
-    """Update DB status to refunded, auto-refund PRC, log, invalidate cache."""
+    """Update DB status to refunded across all collections, auto-refund PRC, log, invalidate cache."""
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    # Update recharge_transactions
-    await db.recharge_transactions.update_one(
+    refund_patch = {
+        "status": "refunded",
+        "eko_refund_tid": refund_data.get("refund_tid"),
+        "eko_refunded_amount": refund_data.get("refunded_amount"),
+        "eko_refunded_at": now_iso,
+        "refund_method": "user_otp",
+        "updated_at": now_iso,
+    }
+
+    # Update all 4 collections (match eko_tid OR client_ref_id)
+    match_q = {"$or": [
         {"eko_tid": tid},
-        {"$set": {
-            "status": "refunded",
-            "eko_refund_tid": refund_data.get("refund_tid"),
-            "eko_refunded_amount": refund_data.get("refunded_amount"),
-            "eko_refunded_at": now_iso,
-            "refund_method": "auto_otp",
-            "updated_at": now_iso,
-        }}
-    )
-    # Update bill_payment_requests
-    if txn.get("request_id"):
-        await db.bill_payment_requests.update_one(
-            {"request_id": txn["request_id"]},
-            {"$set": {"status": "refunded", "updated_at": now_iso}}
-        )
-    await db.bill_payment_requests.update_one(
-        {"eko_tid": tid},
-        {"$set": {"status": "refunded", "updated_at": now_iso}}
-    )
+        {"client_ref_id": tid},
+        {"eko_client_ref_id": tid},
+    ]}
+    for coll_name, _src in REFUND_COLLECTIONS:
+        await db[coll_name].update_many(match_q, {"$set": refund_patch})
 
     # Auto-refund PRC
-    prc_amt = txn.get("total_prc_deducted", 0)
+    prc_amt = (
+        txn.get("total_prc_deducted")
+        or txn.get("prc_deducted")
+        or txn.get("prc_amount")
+        or txn.get("total_prc")
+        or 0
+    )
     if not txn.get("prc_refunded") and prc_amt > 0:
         await db.users.update_one(
             {"uid": user_id},
             {"$inc": {"prc_balance": prc_amt}}
         )
-        await db.recharge_transactions.update_one(
-            {"eko_tid": tid},
-            {"$set": {"prc_refunded": True, "refund_at": now_iso}}
-        )
+        for coll_name, _src in REFUND_COLLECTIONS:
+            await db[coll_name].update_many(
+                match_q,
+                {"$set": {"prc_refunded": True, "refund_at": now_iso}}
+            )
         logging.info(f"[USER REFUND] PRC refund: {prc_amt} → user {user_id}, tid={tid}")
 
     # Audit log
@@ -1543,60 +1569,119 @@ async def _mark_refunded(tid: str, user_id: str, refund_data: dict, txn: dict):
         "refunded_amount": refund_data.get("refunded_amount") or refund_data.get("amount"),
         "initiated_by": "user",
         "user_id": user_id,
+        "source_collection": txn.get("_source_collection"),
         "timestamp": now_iso,
     })
 
     # Invalidate cache
     if cache:
-        await cache.delete(f"user:dashboard:{user_id}")
-        await cache.delete(f"user_data:{user_id}")
+        try:
+            await cache.delete(f"user:dashboard:{user_id}")
+            await cache.delete(f"user_data:{user_id}")
+        except Exception:
+            pass
 
 
 @router.get("/pending-refunds/{user_id}")
 async def get_user_pending_refunds(user_id: str):
-    """Get all refund_pending transactions for a user (dashboard blocker)."""
+    """Get all refund_pending transactions for a user (dashboard blocker).
+    Scans all 4 collections: recharge, bill_payment, DMT, bank_transfer.
+    Returns rich data: amount, account, bank, beneficiary, service type.
+    """
     if db is None:
         return {"success": False, "pending_refunds": []}
 
+    all_pending = []
+    seen_keys = set()
+
+    # 1. Recharge transactions (BBPS Mobile/DTH)
     recharge_pending = await db.recharge_transactions.find(
         {"user_id": user_id, "status": "refund_pending"},
         {"_id": 0, "eko_response": 0, "eko_error": 0}
     ).sort("created_at", -1).to_list(100)
-
-    bill_pending = await db.bill_payment_requests.find(
-        {"user_id": user_id, "status": "refund_pending"},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
-
-    all_pending = []
-    seen_tids = set()
-
     for txn in recharge_pending:
-        tid = txn.get("eko_tid")
-        if tid and tid not in seen_tids:
-            seen_tids.add(tid)
+        key = txn.get("eko_tid") or txn.get("client_ref_id")
+        if key and key not in seen_keys:
+            seen_keys.add(key)
             all_pending.append({
-                "eko_tid": tid,
+                "eko_tid": txn.get("eko_tid") or txn.get("client_ref_id") or "",
+                "client_ref_id": txn.get("client_ref_id", ""),
                 "request_id": txn.get("request_id", ""),
                 "amount_inr": txn.get("amount_inr", txn.get("amount", 0)),
                 "phone": txn.get("phone", txn.get("consumer_number", "")),
                 "operator": txn.get("operator_name", txn.get("operator", "")),
                 "created_at": txn.get("created_at", ""),
+                "service_type": "Mobile Recharge",
                 "source": "recharge",
             })
 
+    # 2. Bill Payment (BBPS Electricity/Gas/Water etc.)
+    bill_pending = await db.bill_payment_requests.find(
+        {"user_id": user_id, "status": "refund_pending"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
     for txn in bill_pending:
-        tid = txn.get("eko_tid")
-        if tid and tid not in seen_tids:
-            seen_tids.add(tid)
+        key = txn.get("eko_tid") or txn.get("client_ref_id")
+        if key and key not in seen_keys:
+            seen_keys.add(key)
             all_pending.append({
-                "eko_tid": tid,
+                "eko_tid": txn.get("eko_tid") or txn.get("client_ref_id") or "",
+                "client_ref_id": txn.get("client_ref_id", ""),
                 "request_id": txn.get("request_id", ""),
                 "amount_inr": txn.get("amount_inr", txn.get("amount", 0)),
                 "phone": txn.get("consumer_number", txn.get("phone", "")),
                 "operator": txn.get("operator_name", txn.get("service_type", "")),
                 "created_at": txn.get("created_at", ""),
+                "service_type": "Bill Payment",
                 "source": "bill_payment",
+            })
+
+    # 3. DMT transactions (Eko Money Remittance)
+    dmt_pending = await db.dmt_transactions.find(
+        {"user_id": user_id, "status": "refund_pending"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    for txn in dmt_pending:
+        key = txn.get("eko_tid") or txn.get("eko_client_ref_id") or txn.get("client_ref_id")
+        if key and key not in seen_keys:
+            seen_keys.add(key)
+            all_pending.append({
+                "eko_tid": txn.get("eko_tid") or txn.get("eko_client_ref_id") or txn.get("client_ref_id") or "",
+                "client_ref_id": txn.get("eko_client_ref_id", txn.get("client_ref_id", "")),
+                "request_id": txn.get("request_id", ""),
+                "amount_inr": txn.get("amount_inr", txn.get("amount", 0)),
+                "phone": txn.get("beneficiary_mobile", txn.get("recipient_mobile", "")),
+                "account_number": txn.get("account_number", txn.get("beneficiary_account", "")),
+                "ifsc": txn.get("ifsc", txn.get("beneficiary_ifsc", "")),
+                "bank_name": txn.get("bank_name", txn.get("beneficiary_bank", "")),
+                "beneficiary_name": txn.get("beneficiary_name", txn.get("recipient_name", "")),
+                "created_at": txn.get("created_at", ""),
+                "service_type": "Money Remittance (DMT)",
+                "source": "dmt",
+            })
+
+    # 4. Bank transfer requests (Manual bank transfer, may also have Eko linked)
+    bt_pending = await db.bank_transfer_requests.find(
+        {"user_id": user_id, "status": "refund_pending"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    for txn in bt_pending:
+        key = txn.get("eko_tid") or txn.get("eko_client_ref_id") or txn.get("client_ref_id") or txn.get("request_id")
+        if key and key not in seen_keys:
+            seen_keys.add(key)
+            bd = txn.get("bank_details", {}) or {}
+            all_pending.append({
+                "eko_tid": txn.get("eko_tid") or txn.get("eko_client_ref_id") or txn.get("client_ref_id") or "",
+                "client_ref_id": txn.get("eko_client_ref_id", txn.get("client_ref_id", "")),
+                "request_id": txn.get("request_id", ""),
+                "amount_inr": txn.get("amount_inr", txn.get("amount", 0)),
+                "account_number": txn.get("account_number") or bd.get("account_number", ""),
+                "ifsc": txn.get("ifsc") or bd.get("ifsc", ""),
+                "bank_name": txn.get("bank_name") or bd.get("bank_name", ""),
+                "beneficiary_name": txn.get("beneficiary_name") or bd.get("account_holder_name", ""),
+                "created_at": txn.get("created_at", ""),
+                "service_type": "Bank Transfer",
+                "source": "bank_transfer",
             })
 
     return {
@@ -1614,24 +1699,25 @@ class UserRefundRequest(BaseModel):
 @router.post("/refund/process/{tid}")
 async def user_process_refund(tid: str, data: UserRefundRequest):
     """
-    ONE-CLICK REFUND: Resend OTP + Initiate Refund in a single call.
+    SEND OTP: Call Eko Resend-Refund-OTP → Eko sends SMS with OTP to customer's registered mobile.
+    User then enters OTP manually and calls /refund/verify-otp/{tid} to complete refund.
 
-    Step 1: POST /v1/transactions/{tid}/refund/otp → get data.otp
-    Step 2: POST /v2/transactions/{tid}/refund → pass otp from step 1
-    
-    User does NOT need to enter OTP manually — it's fetched from Eko API response.
+    In staging/sandbox, Eko sometimes returns OTP inline in data.otp — we still auto-complete
+    refund in that case. In production, OTP is SMS-only, so user enters it manually.
+
     Ref: https://developers.eko.in/v1/reference/resend-refund-otp-1
-    Ref: https://developers.eko.in/v1/reference/refund
     """
     if db is None:
         return {"success": False, "error": "Service unavailable"}
     if not _eko_credentials_valid():
         return {"success": False, "error": "Refund service is not configured"}
 
-    # Ownership check
+    # Ownership check — accepts eko_tid OR client_ref_id
     fields = {
         "_id": 0, "status": 1, "user_id": 1, "total_prc_deducted": 1,
-        "prc_refunded": 1, "request_id": 1,
+        "prc_deducted": 1, "prc_amount": 1, "total_prc": 1,
+        "prc_refunded": 1, "request_id": 1, "eko_tid": 1, "client_ref_id": 1,
+        "eko_client_ref_id": 1,
     }
     txn = await _find_user_txn(tid, data.user_id, fields)
     if not txn:
@@ -1639,18 +1725,20 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
     if txn.get("status") != "refund_pending":
         return {"success": False, "error": "This transaction is not in refund pending status"}
 
+    # Resolve the actual Eko TID to use (numeric TID required by Eko API)
+    eko_api_tid = txn.get("eko_tid") or tid
+
     try:
-        # ===== STEP 1: Resend Refund OTP → get OTP from response =====
         headers_otp = _build_eko_headers()
-        otp_url = f"{BASE_URL}/v1/transactions/{tid}/refund/otp"
+        otp_url = f"{BASE_URL}/v1/transactions/{eko_api_tid}/refund/otp"
         otp_body = {"initiator_id": INITIATOR_ID}
 
-        logging.info(f"[USER REFUND] Step 1 → Resend OTP for TID: {tid}, user: {data.user_id}")
+        logging.info(f"[USER REFUND] SendOTP → TID: {eko_api_tid}, user: {data.user_id}")
 
         async with httpx.AsyncClient(timeout=30) as client:
             otp_response = await client.post(otp_url, headers=headers_otp, data=otp_body)
 
-        logging.info(f"[USER REFUND] OTP HTTP {otp_response.status_code} | {otp_response.text[:500]}")
+        logging.info(f"[USER REFUND] OTP HTTP {otp_response.status_code} | {otp_response.text[:300]}")
 
         try:
             otp_result = otp_response.json()
@@ -1660,65 +1748,49 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
         if otp_result.get("status") != 0:
             return {
                 "success": False,
-                "error": otp_result.get("message") or "Failed to get refund OTP from Eko",
+                "error": otp_result.get("message") or "Failed to send refund OTP",
                 "tid": tid,
             }
 
-        # Extract OTP from response (v1 returns data.otp, v3 returns data.otp_ref_id)
-        eko_data = otp_result.get("data", {})
-        otp_value = eko_data.get("otp") or eko_data.get("otp_ref_id") or ""
-        otp_value = str(otp_value).strip()
+        # In staging, Eko sometimes returns OTP inline. In production, it's SMS-only.
+        eko_data = otp_result.get("data", {}) or {}
+        inline_otp = str(eko_data.get("otp") or "").strip()
 
-        if not otp_value:
-            return {
-                "success": False,
-                "error": "Eko did not return OTP in response. OTP may have been sent via SMS to the customer.",
-                "tid": tid,
-                "requires_manual_otp": True,
+        if inline_otp and len(inline_otp) >= 4:
+            # Staging: auto-complete refund since we have OTP
+            headers_refund = _build_eko_headers()
+            refund_url = f"{BASE_URL}/v2/transactions/{eko_api_tid}/refund"
+            refund_body = {
+                "initiator_id": INITIATOR_ID,
+                "user_code": USER_CODE,
+                "otp": inline_otp,
+                "state": "1",
             }
+            async with httpx.AsyncClient(timeout=30) as client:
+                refund_response = await client.post(refund_url, headers=headers_refund, data=refund_body)
+            try:
+                refund_result = refund_response.json()
+            except Exception:
+                refund_result = {}
+            if refund_result.get("status") == 0:
+                refund_data = refund_result.get("data", {})
+                await _mark_refunded(eko_api_tid, data.user_id, refund_data, txn)
+                return {
+                    "success": True,
+                    "tid": tid,
+                    "message": "Refund completed successfully!",
+                    "refund_tid": refund_data.get("refund_tid"),
+                    "refunded_amount": refund_data.get("refunded_amount") or refund_data.get("amount"),
+                    "auto_completed": True,
+                }
 
-        logging.info(f"[USER REFUND] Got OTP from Eko response for TID: {tid}")
-
-        # ===== STEP 2: Initiate Refund with the OTP =====
-        headers_refund = _build_eko_headers()
-        refund_url = f"{BASE_URL}/v2/transactions/{tid}/refund"
-        refund_body = {
-            "initiator_id": INITIATOR_ID,
-            "user_code": USER_CODE,
-            "otp": otp_value,
-            "state": "1",
-        }
-
-        logging.info(f"[USER REFUND] Step 2 → Initiate Refund for TID: {tid}")
-
-        async with httpx.AsyncClient(timeout=30) as client:
-            refund_response = await client.post(refund_url, headers=headers_refund, data=refund_body)
-
-        logging.info(f"[USER REFUND] Refund HTTP {refund_response.status_code} | {refund_response.text[:500]}")
-
-        try:
-            refund_result = refund_response.json()
-        except Exception:
-            return {"success": False, "error": f"Eko Refund API returned invalid response (HTTP {refund_response.status_code})"}
-
-        success = refund_result.get("status") == 0
-        refund_data = refund_result.get("data", {})
-
-        if success:
-            await _mark_refunded(tid, data.user_id, refund_data, txn)
-
+        # Production flow: OTP sent via SMS, user must enter it
         return {
-            "success": success,
+            "success": True,
             "tid": tid,
-            "message": (
-                "Refund completed successfully!"
-                if success
-                else (refund_result.get("message") or "Refund failed. Please try again.")
-            ),
-            "refund_tid": refund_data.get("refund_tid") if success else None,
-            "refunded_amount": (
-                refund_data.get("refunded_amount") or refund_data.get("amount")
-            ) if success else None,
+            "otp_sent": True,
+            "message": otp_result.get("message") or "OTP sent to your registered mobile. Please enter it below.",
+            "mobile_hint": eko_data.get("mobile") or eko_data.get("customer_mobile") or "",
         }
 
     except httpx.TimeoutException:
@@ -1726,7 +1798,7 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
         return {"success": False, "error": "Request timed out. Please try again."}
     except Exception as e:
         logging.error(f"[USER REFUND] Error for TID {tid}: {e}")
-        return {"success": False, "error": "Refund processing failed. Please try again later."}
+        return {"success": False, "error": "OTP send failed. Please try again later."}
 
 
 class UserManualRefundOTPRequest(BaseModel):
@@ -1749,7 +1821,9 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
 
     fields = {
         "_id": 0, "status": 1, "user_id": 1, "total_prc_deducted": 1,
-        "prc_refunded": 1, "request_id": 1,
+        "prc_deducted": 1, "prc_amount": 1, "total_prc": 1,
+        "prc_refunded": 1, "request_id": 1, "eko_tid": 1, "client_ref_id": 1,
+        "eko_client_ref_id": 1,
     }
     txn = await _find_user_txn(tid, data.user_id, fields)
     if not txn:
@@ -1757,9 +1831,12 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
     if txn.get("status") != "refund_pending":
         return {"success": False, "error": "This transaction is not in refund pending status"}
 
+    # Resolve real Eko TID for API call
+    eko_api_tid = txn.get("eko_tid") or tid
+
     try:
         headers = _build_eko_headers()
-        url = f"{BASE_URL}/v2/transactions/{tid}/refund"
+        url = f"{BASE_URL}/v2/transactions/{eko_api_tid}/refund"
         body = {
             "initiator_id": INITIATOR_ID,
             "user_code": USER_CODE,
@@ -1767,7 +1844,7 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
             "state": "1",
         }
 
-        logging.info(f"[USER REFUND] Manual OTP Refund → TID: {tid}, user: {data.user_id}")
+        logging.info(f"[USER REFUND] Manual OTP Refund → TID: {eko_api_tid}, user: {data.user_id}")
 
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(url, headers=headers, data=body)
@@ -1783,7 +1860,7 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
         refund_data = result.get("data", {})
 
         if success:
-            await _mark_refunded(tid, data.user_id, refund_data, txn)
+            await _mark_refunded(eko_api_tid, data.user_id, refund_data, txn)
 
         return {
             "success": success,
