@@ -86,6 +86,71 @@ const AdminFailedTransactions = ({ user }) => {
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState([]);
 
+  // Reconciliation state
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcileReport, setReconcileReport] = useState(null);
+
+  // One-click reconcile Eko pending refunds (BBPS + DMT)
+  const handleReconcilePendingRefunds = async () => {
+    if (!user?.uid || !user?.token) {
+      toast.error('Admin authentication missing');
+      return;
+    }
+    // Step 1: confirmation
+    const confirmed = window.confirm(
+      'This will mark 53 BBPS + 7 DMT Eko refund-pending transactions as ' +
+      '"refund_pending" in our DB. Matched users will see a refund blocker modal on ' +
+      'their next login. This is IDEMPOTENT and safe to re-run.\n\nProceed?'
+    );
+    if (!confirmed) return;
+
+    setReconciling(true);
+    setReconcileReport(null);
+    try {
+      // Step 2: DRY RUN first
+      const dryRes = await axios.post(
+        `${API}/admin/failed-transactions/reconcile-pending-refunds`,
+        { admin_id: user.uid, dry_run: true },
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+
+      const dryMatched = dryRes.data?.matched_count || 0;
+      const dryTotal = dryRes.data?.total_candidates || 60;
+      const dryUsers = dryRes.data?.impacted_users_count || 0;
+
+      // Step 3: ask for final confirmation with dry run numbers
+      const finalConfirmed = window.confirm(
+        `DRY RUN COMPLETE:\n` +
+        `  • Matched in DB: ${dryMatched} / ${dryTotal}\n` +
+        `  • Unmatched: ${dryTotal - dryMatched}\n` +
+        `  • Impacted users: ${dryUsers}\n\n` +
+        `Proceed with ACTUAL reconciliation (updates DB)?`
+      );
+      if (!finalConfirmed) {
+        setReconcileReport(dryRes.data);
+        toast.info('Dry run complete — see report below.');
+        return;
+      }
+
+      // Step 4: actual run
+      const actualRes = await axios.post(
+        `${API}/admin/failed-transactions/reconcile-pending-refunds`,
+        { admin_id: user.uid, dry_run: false },
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      setReconcileReport(actualRes.data);
+      toast.success(
+        `Reconciled ${actualRes.data?.matched_count || 0} transactions ` +
+        `across ${actualRes.data?.impacted_users_count || 0} users`
+      );
+      fetchTransactions();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err?.response?.data?.error || 'Reconciliation failed');
+    } finally {
+      setReconciling(false);
+    }
+  };
+
   // Fetch transactions
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -298,10 +363,86 @@ const AdminFailedTransactions = ({ user }) => {
             <p className="text-sm text-slate-500">Manual refund and resolution management</p>
           </div>
         </div>
-        <Button onClick={fetchTransactions} disabled={loading} variant="outline" className="border-slate-200">
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            onClick={handleReconcilePendingRefunds}
+            disabled={reconciling}
+            className="bg-amber-500 hover:bg-amber-600 text-white"
+            data-testid="reconcile-pending-refunds-btn"
+          >
+            {reconciling ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 mr-2" />
+            )}
+            Reconcile Eko Pending Refunds
+          </Button>
+          <Button onClick={fetchTransactions} disabled={loading} variant="outline" className="border-slate-200">
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </Button>
+        </div>
       </div>
+
+      {/* Reconciliation Report */}
+      {reconcileReport && (
+        <Card className="bg-amber-50 border-amber-300 p-4 mb-6" data-testid="reconcile-report">
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div>
+              <h3 className="text-lg font-bold text-amber-800 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Reconciliation Report {reconcileReport.dry_run && <span className="text-xs font-normal bg-amber-200 px-2 py-0.5 rounded">DRY RUN</span>}
+              </h3>
+              <p className="text-xs text-amber-700 mt-1">
+                Candidates: <b>{reconcileReport.total_candidates}</b> •
+                Matched: <b>{reconcileReport.matched_count}</b> •
+                Unmatched: <b>{reconcileReport.unmatched_count}</b> •
+                Impacted Users: <b>{reconcileReport.impacted_users_count}</b>
+              </p>
+            </div>
+            <button onClick={() => setReconcileReport(null)} className="text-amber-700 hover:text-amber-900">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {reconcileReport.impacted_users?.length > 0 && (
+            <div className="mt-2">
+              <p className="text-sm font-semibold text-amber-900 mb-1">Impacted Users ({reconcileReport.impacted_users.length}):</p>
+              <div className="max-h-48 overflow-y-auto bg-white rounded border border-amber-200 divide-y divide-amber-100">
+                {reconcileReport.impacted_users.map((u) => (
+                  <div key={u.user_id} className="px-3 py-2 text-xs flex items-center justify-between gap-2">
+                    <div>
+                      <span className="font-semibold text-slate-800">{u.user_name || 'Unknown'}</span>
+                      <span className="text-slate-500 ml-2">{u.user_mobile}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      {u.bbps_count > 0 && <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{u.bbps_count} BBPS</span>}
+                      {u.dmt_count > 0 && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded">{u.dmt_count} DMT</span>}
+                      <span className="font-semibold text-amber-700">₹{(u.total_amount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {reconcileReport.unmatched?.length > 0 && (
+            <details className="mt-2">
+              <summary className="text-xs text-amber-800 cursor-pointer hover:text-amber-900">
+                {reconcileReport.unmatched.length} unmatched transactions (click to expand)
+              </summary>
+              <div className="max-h-40 overflow-y-auto mt-1 bg-white rounded border border-amber-200 p-2 text-[11px] font-mono text-slate-600">
+                {reconcileReport.unmatched.slice(0, 50).map((u, i) => (
+                  <div key={i}>
+                    [{u.type}] {u.eko_tid || u.client_ref_id} — ₹{u.amount}
+                    {u.beneficiary_name ? ` · ${u.beneficiary_name}` : ''}
+                    {u.cell_number ? ` · ${u.cell_number}` : ''}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
