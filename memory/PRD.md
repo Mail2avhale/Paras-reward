@@ -321,6 +321,26 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Frontend**: Green "Download Pending (Excel)" button on `/admin/bank-transfers` page header (next to Refresh). Uses axios `responseType: 'blob'` + blob URL + anchor click to trigger download. Toast notifications for Preparing/Success/Failure.
 - **Tested**: curl returns 200, 5.5 KB .xlsx file, 4 rows (title, header, 1 data, total). Screenshot shows button in place.
 
+### Pending Bank Redeems Excel — Data Robustness Fix (DONE - April 22, 2026)
+- **User report (screenshot)**: Downloaded Excel showed 100+ pending with Name but Account Number, IFSC, Amount all blank / ₹0.
+- **Root causes**:
+  1. Legacy pending records in production were spread across 4 collections (my code only queried 2): `bank_withdrawal_requests`, `bank_transfer_requests`, `bank_redeem_requests`, `chatbot_withdrawal_requests`. Chatbot ones use `uid` (not `user_id`), `inr_amount` (not `amount_inr`), `account_number` at top-level (not nested), and no `ifsc_code`.
+  2. Many pending requests don't have `bank_details` embedded — they only reference the user. Admin expects to see the user's saved bank details from their profile.
+  3. Field name inconsistency: `amount_inr` vs `amount` vs `amount_requested` vs `inr_amount`. Values often stored as strings, breaking `float()` calls.
+- **Fixes in `routes/bank_redeem.py#export_pending_bank_redeem_excel`**:
+  - Query ALL 4 pending collections and merge with robust dedupe (request_id → fallback composite key).
+  - Normalize `uid` → `user_id` for legacy chatbot rows.
+  - Name resolution chain: `request.user_name` → `users.name` → `request.bank_details.account_holder_name` → `users.bank_details.account_holder_name` → `request.account_holder_name` → "—".
+  - **Account Number fallback** across 11 field variants + `users.bank_details` fallback when request lacks bank fields.
+  - **IFSC fallback** across 10 variants, uppercased.
+  - **Amount fallback** across 6 field names with safe string→float conversion.
+  - Preserved color-coded Active/Inactive, IST dates, Total row, frozen header.
+- **Verified on preview** (after setting bank_details on a test user):
+  ```
+  Row 3: 1 | Test User DMT   | 1234567890     | —           | ₹100  | Active | 09-03-2026 16:36 IST
+  Row 4: 2 | SANTOSH AVHALE  | 98765432101234 | SBIN0002345 | ₹2000 | Active | 21-03-2026 20:30 IST
+  ```
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

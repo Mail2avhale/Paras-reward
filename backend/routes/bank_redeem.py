@@ -1611,34 +1611,49 @@ async def export_pending_bank_redeem_excel():
     from openpyxl.utils import get_column_letter
     from io import BytesIO
 
-    # Pull pending from both collections (new + legacy)
+    # Pull pending from ALL withdrawal/bank-redeem collections (new, legacy, chatbot)
     pending_new = await db.bank_withdrawal_requests.find(
         {"status": "pending"}, {"_id": 0}
     ).sort("created_at", 1).to_list(5000)
-    pending_legacy = await db.bank_transfer_requests.find(
+    pending_transfer = await db.bank_transfer_requests.find(
+        {"status": "pending"}, {"_id": 0}
+    ).sort("created_at", 1).to_list(5000)
+    pending_legacy_redeem = await db.bank_redeem_requests.find(
+        {"status": "pending"}, {"_id": 0}
+    ).sort("created_at", 1).to_list(5000)
+    pending_chatbot = await db.chatbot_withdrawal_requests.find(
         {"status": "pending"}, {"_id": 0}
     ).sort("created_at", 1).to_list(5000)
 
-    # Merge + dedupe by request_id
+    # Merge + dedupe by request_id (or request_id + user_id + amount for legacy records without request_id)
     merged = []
     seen = set()
-    for r in pending_new + pending_legacy:
+    for r in pending_new + pending_transfer + pending_legacy_redeem + pending_chatbot:
         rid = r.get("request_id") or ""
-        if rid and rid in seen:
+        # Fallback dedupe key for records missing request_id
+        key = rid if rid else f"{r.get('user_id','')}:{r.get('created_at','')}:{r.get('amount') or r.get('amount_inr') or 0}"
+        if key in seen:
             continue
-        if rid:
-            seen.add(rid)
+        seen.add(key)
         merged.append(r)
     # Oldest-first (so admin pays earliest requests first)
     merged.sort(key=lambda x: x.get("created_at", ""))
 
-    # Batch-resolve user details (name, status)
+    # Normalize user_id (some legacy collections use `uid` instead of `user_id`)
+    for r in merged:
+        if not r.get("user_id") and r.get("uid"):
+            r["user_id"] = r["uid"]
+
+    # Batch-resolve user details (name, status, bank_details fallback)
     user_ids = list({r.get("user_id") for r in merged if r.get("user_id")})
     uid_to_user = {}
     if user_ids:
         async for u in db.users.find(
             {"uid": {"$in": user_ids}},
-            {"_id": 0, "uid": 1, "name": 1, "is_banned": 1, "is_blocked": 1, "is_active": 1},
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1,
+             "is_banned": 1, "is_blocked": 1, "is_active": 1,
+             "bank_details": 1, "bank_account": 1, "bank_account_number": 1,
+             "account_number": 1, "ifsc_code": 1, "account_holder_name": 1},
         ):
             uid_to_user[u["uid"]] = u
 
@@ -1682,13 +1697,66 @@ async def export_pending_bank_redeem_excel():
 
     for idx, r in enumerate(merged, start=1):
         user = uid_to_user.get(r.get("user_id") or "", {})
-        bank = r.get("bank_details") or {}
+        req_bank = r.get("bank_details") or {}
+        user_bank = user.get("bank_details") or {}
 
-        # Name priority: request snapshot > user profile > "—"
-        name = (r.get("user_name") or user.get("name") or bank.get("account_holder_name") or "—")
-        account_number = bank.get("account_number") or "—"
-        ifsc = (bank.get("ifsc_code") or "").upper() or "—"
-        amount = float(r.get("amount_inr") or r.get("amount") or 0)
+        # Name priority: request snapshot > user profile > account_holder_name > "—"
+        name = (
+            r.get("user_name")
+            or user.get("name")
+            or req_bank.get("account_holder_name")
+            or user_bank.get("account_holder_name")
+            or r.get("account_holder_name")
+            or "—"
+        )
+
+        # Account Number — try all common locations (request nested, request top-level, user nested, user top-level)
+        account_number = (
+            req_bank.get("account_number")
+            or req_bank.get("accountNumber")
+            or req_bank.get("acc_no")
+            or r.get("account_number")
+            or r.get("bank_account")
+            or r.get("bank_account_number")
+            or r.get("accountNumber")
+            or user_bank.get("account_number")
+            or user_bank.get("accountNumber")
+            or user.get("bank_account")
+            or user.get("bank_account_number")
+            or user.get("account_number")
+            or "—"
+        )
+
+        # IFSC — similarly robust
+        ifsc = (
+            req_bank.get("ifsc_code")
+            or req_bank.get("ifsc")
+            or req_bank.get("ifscCode")
+            or r.get("ifsc_code")
+            or r.get("ifsc")
+            or r.get("ifscCode")
+            or user_bank.get("ifsc_code")
+            or user_bank.get("ifsc")
+            or user.get("ifsc_code")
+            or user.get("ifsc")
+            or "—"
+        )
+        ifsc = str(ifsc).upper() if ifsc and ifsc != "—" else "—"
+
+        # Amount — handle strings, ints, floats, across many legacy field names
+        raw_amount = (
+            r.get("amount_inr")
+            or r.get("amount")
+            or r.get("amount_requested")
+            or r.get("inr_amount")
+            or r.get("withdrawal_amount")
+            or r.get("requested_amount")
+            or 0
+        )
+        try:
+            amount = float(raw_amount)
+        except (TypeError, ValueError):
+            amount = 0.0
         total_amount += amount
 
         # Active/Inactive from user flags (is_banned / is_blocked / is_active)
