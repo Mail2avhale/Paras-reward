@@ -10,6 +10,38 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 
 ## What's Been Implemented
 
+### Eko Refund APIs Final Verification + Customer Mobile Hint (DONE - April 22, 2026)
+**Context**: User reported OTP not delivering after deploying refund flow. Deep investigation revealed Eko sends OTP to transaction's stored `customer_mobile`, not user's login mobile.
+
+**Eko API Compliance (verified against docs)**:
+- **Resend Refund OTP**: `POST {BASE_URL}/v1/transactions/{tid}/refund/otp` — body: `initiator_id`, `developer_key`; headers: `developer_key`, `secret-key`, `secret-key-timestamp` ✅
+- **Refund**: `POST {BASE_URL}/v2/transactions/{tid}/refund` — body: `initiator_id`, `otp`, `state=1`, `user_code`; same headers ✅
+- Both match https://developers.eko.in/v1/reference/resend-refund-otp-1 and refund docs exactly.
+
+**Root Cause of OTP Non-Delivery (Confirmed)**:
+Examined all 5 matched DMT transactions in production:
+- 2 of SANTOSH's DMTs: `customer_mobile=9421331342` (his walk-in customer) — OTP goes there, not to SANTOSH
+- 3 others: `customer_mobile` matches user's mobile but `otp_ref_id` empty in Eko response (transactions 39+ days old)
+- Eko returns `status=0` (accepted) but actual SMS queue skipped for stale transactions.
+
+**Changes Made**:
+- `eko_recharge.py`: `/pending-refunds/{user_id}` now returns `customer_mobile` field (DMT + bank_transfer). Helper scans all 4 collections unchanged.
+- `RefundBlockerModal.js`: Shows prominent amber box "OTP will be sent to: +91 XXXXXXXXXX" with note "(Mobile registered with Eko for this transaction)" so user knows which mobile to check.
+- **Reverted admin UI features** per user request — pure user self-service OTP flow:
+  - Removed `/refund/debug-send-otp` admin diagnostic endpoint
+  - Removed `/refund/admin-force-refund` admin endpoint
+  - Removed "Force Refund All" button from AdminFailedTransactions page
+- Kept: `/api/admin/failed-transactions/reconcile-pending-refunds` (admin one-click tagging) — this is initial setup, not runtime action.
+
+**Production Reconciliation Run (Completed April 22, 2026)**:
+- Admin ran reconcile-pending-refunds on production
+- Matched 5 of 60 transactions (3 users: SANTOSH/Siddhali/Sujan, ₹2,300 total)
+- 55 unmatched BBPS (not in production DB — likely Eko Connect retailer portal direct transactions)
+- Impacted users will see RefundBlockerModal on next login with proper customer_mobile display.
+
+**Test Status**: 45/45 backend pytest pass. Frontend lint clean. Production verified via screenshot.
+
+
 ### User-Side Pending Refunds Blocker Modal - DMT + BBPS Support (DONE - April 22, 2026)
 - **Context**: 53 BBPS + 7 DMT transactions stuck in Eko `REFUND PENDING` status. Per Eko flow, customer must complete OTP refund; SMS-based OTP is sent to registered mobile.
 - **Dashboard Blocker**: Before user can access dashboard, all pending refunds must be cleared.
