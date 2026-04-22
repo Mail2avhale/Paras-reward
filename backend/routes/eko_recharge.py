@@ -1731,7 +1731,7 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
     try:
         headers_otp = _build_eko_headers()
         otp_url = f"{BASE_URL}/v1/transactions/{eko_api_tid}/refund/otp"
-        otp_body = {"initiator_id": INITIATOR_ID}
+        otp_body = {"initiator_id": INITIATOR_ID, "developer_key": DEVELOPER_KEY}
 
         logging.info(f"[USER REFUND] SendOTP → TID: {eko_api_tid}, user: {data.user_id}")
 
