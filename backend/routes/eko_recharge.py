@@ -1895,3 +1895,55 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
         logging.error(f"[USER REFUND] Manual verify error for TID {tid}: {e}")
         return {"success": False, "error": "Refund verification failed. Please try again later."}
 
+
+
+# ========================================================================
+# Transaction Inquiry — Admin diagnostic for stuck refunds
+# Ref: https://developers.eko.in/reference/transaction-inquiry
+# ========================================================================
+
+class AdminTransactionInquiryRequest(BaseModel):
+    admin_id: str
+    tid: str  # can be numeric eko_tid OR client_ref_id (will be prefixed)
+
+
+@router.post("/admin/transaction-inquiry")
+async def admin_transaction_inquiry(data: AdminTransactionInquiryRequest):
+    """Admin-only: Query Eko's authoritative tx_status for a transaction.
+    tx_status codes: 0=Success, 1=Fail, 2=Awaited, 3=Refund Pending, 4=Refunded, 5=Hold.
+    If money already refunded (tx_status=4), no refund OTP needed — just sync our DB."""
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+    admin = await db.users.find_one({"uid": data.admin_id}, {"_id": 0, "role": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        return {"success": False, "error": "Admin only"}
+    if not _eko_credentials_valid():
+        return {"success": False, "error": "Eko not configured"}
+
+    tid = str(data.tid).strip()
+    # If non-numeric, use client_ref_id prefix form
+    if not tid.isdigit():
+        query_param = f"client_ref_id:{tid}"
+    else:
+        query_param = tid
+
+    try:
+        headers = _build_eko_headers()
+        url = f"{BASE_URL}/v2/transactions/{query_param}?initiator_id={INITIATOR_ID}"
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(url, headers=headers)
+        try:
+            raw = resp.json()
+        except Exception:
+            raw = {"raw_text": resp.text[:800]}
+        return {
+            "success": True,
+            "requested": tid,
+            "query_param": query_param,
+            "http_status": resp.status_code,
+            "eko_response": raw,
+        }
+    except httpx.TimeoutException:
+        return {"success": False, "error": "Eko inquiry timeout"}
+    except Exception as e:
+        return {"success": False, "error": f"Eko error: {e}"}
