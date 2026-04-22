@@ -994,6 +994,7 @@ ALL_ADMIN_PERMISSIONS = [
     # Finance
     {"id": "accounting", "label": "Accounting Dashboard", "category": "Finance"},
     {"id": "profit-loss", "label": "Profit & Loss", "category": "Finance"},
+    {"id": "gst-report", "label": "GST Report (State-wise)", "category": "Finance"},
     {"id": "cash-bank-book", "label": "Cash & Bank Book", "category": "Finance"},
     {"id": "prc-ledger", "label": "PRC Ledger", "category": "Finance"},
     {"id": "ledger", "label": "Ledger View", "category": "Finance"},

@@ -55,6 +55,7 @@ const MENU_TO_PERMISSION = {
   // Finance
   'accounting': 'accounting',
   'profit-loss': 'profit-loss',
+  'gst-report': 'gst-report',
   'cash-bank-book': 'cash-bank-book',
   'prc-ledger': 'prc-ledger',
   'ledger': 'ledger',
@@ -210,6 +211,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       subItems: [
         { id: 'accounting', label: 'Accounting Dashboard', icon: BarChart2, path: '/admin/accounting' },
         { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss', highlight: true },
+        { id: 'gst-report', label: 'GST Report (State-wise)', icon: Receipt, path: '/admin/gst-report', highlight: true },
         { id: 'cash-bank-book', label: 'Cash & Bank Book', icon: Wallet, path: '/admin/cash-bank-book' },
         { id: 'prc-ledger', label: 'PRC Ledger', icon: Activity, path: '/admin/prc-ledger' },
         { id: 'ledger', label: 'Ledger View', icon: FileText, path: '/admin/ledger' },
@@ -280,6 +282,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     // Finance
     '/admin/accounting': 'accounting',
     '/admin/profit-loss': 'profit-loss',
+    '/admin/gst-report': 'gst-report',
     '/admin/cash-bank-book': 'cash-bank-book',
     '/admin/prc-ledger': 'prc-ledger',
     '/admin/ledger': 'ledger',

@@ -287,6 +287,26 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
   - Top-level `analytics` menu item removed.
 - **Verified via curl (preview)**: `/api/admin/permissions/list` returns 200 with 40 permissions + 13 defaults. `/api/admin/managers/sync-permissions` returns 200 with `stale_removed` field. Sidebar screenshot shows all new links working, no dead links.
 
+### State-wise Monthly GST Report (DONE - April 22, 2026)
+- **User request**: "आपण अगोदरच GST implement केलेले आहे. मला monthly एक report पाहिजे — कोणत्या state मधून किती GST जमा झाला आहे."
+- **Audit of existing GST implementation** (`routes/gst_invoice.py`):
+  - Already had `POST /invoice/generate`, `GET /invoice/admin/all`, PDF generation, 29 real invoices in DB.
+  - Gap: Customer state was never captured on invoices → no way to group by state. Every invoice's gst_breakdown always split to CGST+SGST even for inter-state customers (GST compliance gap, but not asked to fix).
+- **Two new backend endpoints**:
+  - `GET /api/invoice/admin/state-wise-report?month=&year=` — For the given month, aggregates invoices by customer state. Enrichment priority: `invoice.customer_state` (new snapshot field) → `users.state` → `kyc_submissions.state` → "Unknown". Returns per-state: invoice_count, base, cgst, sgst, igst, total_gst, total_amount. Classifies as CGST+SGST when state==Maharashtra (company HQ), IGST otherwise. Summary includes intra/inter/unknown counts.
+  - `GET /api/invoice/admin/yearly-gst-summary?year=` — 12-month trend for chart (invoice_count + total_gst + total_amount per month).
+- **Invoice generation updated**: `POST /invoice/generate` now resolves `customer_state` at generation time (users.state → kyc_submissions fallback) and persists it in the invoice document. Future invoices will have correct state snapshot; existing ones fall back to current users.state.
+- **New admin page** `/admin/gst-report` (`pages/AdminGSTReport.js` - 280 lines):
+  - 4 summary cards: Total GST, CGST+SGST (intra-state), IGST (inter-state), Total Revenue.
+  - Month/Year dropdowns with auto-refresh on change.
+  - State-wise breakdown table with GST-Type badge (Home State / CGST+SGST / IGST / UNKNOWN), per-state and total row.
+  - Amber advisory when Unknown-state invoices exist.
+  - Stacked bar chart showing CGST/SGST/IGST per state.
+  - Yearly trend line chart for monthly GST collected.
+  - **Export CSV** button for accountant/CA use.
+- **Wiring**: Added `gst-report` permission to `ALL_ADMIN_PERMISSIONS` (Finance category). Sidebar link under Finance & Accounting (highlighted). Route `/admin/gst-report` + permission mapping in `App.js` and `AdminLayout.js` MENU_TO_PERMISSION / ROUTE_TO_PERMISSION.
+- **Verified**: Backend curl returns 29 invoices ₹3,549.77 GST for March 2026. Frontend screenshot shows summary cards, table, Export CSV button, and amber note about unknown-state invoices — all rendering correctly.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

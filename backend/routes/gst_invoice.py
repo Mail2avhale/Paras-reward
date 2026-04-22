@@ -322,6 +322,22 @@ async def generate_invoice(request: InvoiceRequest):
     # Calculate GST
     gst_breakdown = calculate_gst(request.amount)
     
+    # Resolve customer state (from user profile) for GST compliance + reporting
+    customer_state = (user.get("state") or "").strip()
+    # Fallback to KYC submission if user.state is empty
+    if not customer_state:
+        try:
+            kyc = await db.kyc_submissions.find_one(
+                {"user_id": request.user_id},
+                {"_id": 0, "state": 1, "address_state": 1},
+            )
+            if kyc:
+                customer_state = (kyc.get("state") or kyc.get("address_state") or "").strip()
+        except Exception:
+            pass
+    if not customer_state:
+        customer_state = "Unknown"
+
     # Prepare invoice data
     invoice_data = {
         "invoice_id": invoice_id,
@@ -330,6 +346,7 @@ async def generate_invoice(request: InvoiceRequest):
         "customer_name": user.get("name", "Customer"),
         "customer_email": user.get("email", ""),
         "customer_phone": user.get("phone", ""),
+        "customer_state": customer_state,
         "payment_id": request.payment_id,
         "plan_name": request.plan_name,
         "plan_type": request.plan_type,
@@ -501,4 +518,198 @@ async def get_all_invoices(
             "total_sgst": round(total_gst / 2, 2),
             "total_amount": round(total_amount, 2)
         }
+    }
+
+
+
+# Company registered state (Maharashtra - GSTIN starts with 27)
+COMPANY_STATE = "Maharashtra"
+
+
+@router.get("/admin/state-wise-report")
+async def get_state_wise_gst_report(
+    month: Optional[int] = None,
+    year: Optional[int] = None,
+):
+    """
+    Admin: Monthly state-wise GST collection report.
+    For each customer state in the given month, returns:
+      - invoice_count, total_base, total_gst
+      - gst_type (CGST_SGST for Maharashtra / IGST for others)
+      - cgst + sgst (intra-state) OR igst (inter-state)
+    Defaults to the current month if month/year not given.
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    now = datetime.now(timezone.utc)
+    if not year:
+        year = now.year
+    if not month:
+        month = now.month
+    if month < 1 or month > 12 or year < 2020 or year > 2100:
+        raise HTTPException(status_code=400, detail="Invalid month/year")
+
+    start_date = f"{year}-{month:02d}-01"
+    if month == 12:
+        end_date = f"{year + 1}-01-01"
+    else:
+        end_date = f"{year}-{month + 1:02d}-01"
+
+    # 1. Pull invoices in the month
+    invoices = await db.invoices.find(
+        {"created_at": {"$gte": start_date, "$lt": end_date}},
+        {"_id": 0, "pdf_base64": 0},
+    ).to_list(50000)
+
+    if not invoices:
+        return {
+            "success": True,
+            "month": month,
+            "year": year,
+            "period_label": datetime(year, month, 1).strftime("%B %Y"),
+            "company_state": COMPANY_STATE,
+            "total_states": 0,
+            "summary": {
+                "total_invoices": 0, "total_base": 0, "total_gst": 0,
+                "total_cgst": 0, "total_sgst": 0, "total_igst": 0, "total_amount": 0,
+                "intra_state_count": 0, "inter_state_count": 0, "unknown_state_count": 0,
+            },
+            "states": [],
+        }
+
+    # 2. Enrich with state — PREFER invoice.customer_state (historical snapshot),
+    # FALLBACK to current users.state, then KYC
+    user_ids = list({inv.get("user_id") for inv in invoices if inv.get("user_id")})
+    users_cursor = db.users.find(
+        {"uid": {"$in": user_ids}},
+        {"_id": 0, "uid": 1, "state": 1},
+    )
+    uid_to_state = {}
+    async for u in users_cursor:
+        uid_to_state[u["uid"]] = (u.get("state") or "").strip()
+
+    # Secondary fallback: KYC submissions
+    kyc_cursor = db.kyc_submissions.find(
+        {"user_id": {"$in": user_ids}},
+        {"_id": 0, "user_id": 1, "state": 1, "address_state": 1},
+    )
+    async for k in kyc_cursor:
+        uid = k.get("user_id")
+        if uid and not uid_to_state.get(uid):
+            uid_to_state[uid] = (k.get("state") or k.get("address_state") or "").strip()
+
+    def _resolve_state(inv):
+        # priority: invoice.customer_state (snapshot) > users.state > KYC > "Unknown"
+        s = (inv.get("customer_state") or "").strip()
+        if not s:
+            s = uid_to_state.get(inv.get("user_id", ""), "")
+        return s if s else "Unknown"
+
+    # 3. Group by state and compute GST breakdown
+    by_state = {}
+    totals = {
+        "total_invoices": 0, "total_base": 0.0, "total_gst": 0.0,
+        "total_cgst": 0.0, "total_sgst": 0.0, "total_igst": 0.0, "total_amount": 0.0,
+        "intra_state_count": 0, "inter_state_count": 0, "unknown_state_count": 0,
+    }
+
+    for inv in invoices:
+        state = _resolve_state(inv)
+        breakdown = inv.get("gst_breakdown", {}) or {}
+        base = float(breakdown.get("base_amount", 0) or 0)
+        gst = float(breakdown.get("gst_amount", 0) or 0)
+        amt = float(inv.get("amount", 0) or 0)
+
+        bucket = by_state.setdefault(state, {
+            "state": state,
+            "is_intra_state": state == COMPANY_STATE,
+            "gst_type": "CGST+SGST" if state == COMPANY_STATE else ("IGST" if state != "Unknown" else "UNKNOWN"),
+            "invoice_count": 0,
+            "total_base": 0.0,
+            "total_gst": 0.0,
+            "cgst": 0.0, "sgst": 0.0, "igst": 0.0,
+            "total_amount": 0.0,
+        })
+        bucket["invoice_count"] += 1
+        bucket["total_base"] += base
+        bucket["total_gst"] += gst
+        bucket["total_amount"] += amt
+        if state == COMPANY_STATE:
+            bucket["cgst"] += gst / 2.0
+            bucket["sgst"] += gst / 2.0
+            totals["intra_state_count"] += 1
+        elif state == "Unknown":
+            totals["unknown_state_count"] += 1
+        else:
+            bucket["igst"] += gst
+            totals["inter_state_count"] += 1
+
+        totals["total_invoices"] += 1
+        totals["total_base"] += base
+        totals["total_gst"] += gst
+        totals["total_amount"] += amt
+        if state == COMPANY_STATE:
+            totals["total_cgst"] += gst / 2.0
+            totals["total_sgst"] += gst / 2.0
+        elif state != "Unknown":
+            totals["total_igst"] += gst
+
+    # Round + sort by gst desc
+    states_list = []
+    for s in by_state.values():
+        for k in ("total_base", "total_gst", "cgst", "sgst", "igst", "total_amount"):
+            s[k] = round(s[k], 2)
+        states_list.append(s)
+    states_list.sort(key=lambda x: x["total_gst"], reverse=True)
+
+    for k in totals:
+        if isinstance(totals[k], float):
+            totals[k] = round(totals[k], 2)
+
+    return {
+        "success": True,
+        "month": month,
+        "year": year,
+        "period_label": datetime(year, month, 1).strftime("%B %Y"),
+        "company_state": COMPANY_STATE,
+        "total_states": len(states_list),
+        "summary": totals,
+        "states": states_list,
+    }
+
+
+@router.get("/admin/yearly-gst-summary")
+async def get_yearly_gst_summary(year: Optional[int] = None):
+    """Monthly GST collection for the whole year (for trend charts)."""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    if not year:
+        year = datetime.now(timezone.utc).year
+
+    months_data = []
+    for m in range(1, 13):
+        start_date = f"{year}-{m:02d}-01"
+        end_date = f"{year}-{m + 1:02d}-01" if m < 12 else f"{year + 1}-01-01"
+        invoices = await db.invoices.find(
+            {"created_at": {"$gte": start_date, "$lt": end_date}},
+            {"_id": 0, "amount": 1, "gst_breakdown": 1},
+        ).to_list(50000)
+        total_gst = sum(float((inv.get("gst_breakdown") or {}).get("gst_amount", 0) or 0) for inv in invoices)
+        total_amount = sum(float(inv.get("amount", 0) or 0) for inv in invoices)
+        months_data.append({
+            "month": m,
+            "month_label": datetime(year, m, 1).strftime("%b"),
+            "invoice_count": len(invoices),
+            "total_gst": round(total_gst, 2),
+            "total_amount": round(total_amount, 2),
+        })
+
+    return {
+        "success": True,
+        "year": year,
+        "total_gst": round(sum(m["total_gst"] for m in months_data), 2),
+        "total_amount": round(sum(m["total_amount"] for m in months_data), 2),
+        "total_invoices": sum(m["invoice_count"] for m in months_data),
+        "months": months_data,
     }
