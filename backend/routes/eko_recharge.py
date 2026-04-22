@@ -1947,3 +1947,84 @@ async def admin_transaction_inquiry(data: AdminTransactionInquiryRequest):
         return {"success": False, "error": "Eko inquiry timeout"}
     except Exception as e:
         return {"success": False, "error": f"Eko error: {e}"}
+
+
+
+# ========================================================================
+# Multi-path Refund OTP Experiment — Admin diagnostic to compare v1/v2/v3
+# ========================================================================
+
+class AdminTryAllRefundOTPRequest(BaseModel):
+    admin_id: str
+    tid: str  # numeric Eko TID
+
+
+@router.post("/admin/try-all-refund-otp-paths")
+async def admin_try_all_refund_otp_paths(data: AdminTryAllRefundOTPRequest):
+    """Admin-only: Try ALL possible Eko refund-OTP endpoint variants and return
+    raw responses for comparison. Helps identify which path Eko accepts for
+    actual SMS delivery on this specific account."""
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+    admin = await db.users.find_one({"uid": data.admin_id}, {"_id": 0, "role": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        return {"success": False, "error": "Admin only"}
+    if not _eko_credentials_valid():
+        return {"success": False, "error": "Eko not configured"}
+
+    tid = str(data.tid).strip()
+    results = {}
+    headers = _build_eko_headers()
+
+    # Variant 1: v1 POST transactions path (current implementation)
+    v1_url = f"{BASE_URL}/v1/transactions/{tid}/refund/otp"
+    v1_body = {"initiator_id": INITIATOR_ID, "developer_key": DEVELOPER_KEY}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.post(v1_url, headers=headers, data=v1_body)
+        results["v1_POST_transactions"] = {
+            "url": v1_url, "body": v1_body, "http": r.status_code,
+            "response": r.json() if r.text else None,
+        }
+    except Exception as e:
+        results["v1_POST_transactions"] = {"url": v1_url, "error": str(e)}
+
+    # Variant 2: v3 GET customer/payment/refund path
+    v3_url = f"{BASE_URL}/v3/customer/payment/refund/{tid}?initiator_id={INITIATOR_ID}&user_code={USER_CODE}"
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(v3_url, headers=headers)
+        results["v3_GET_customer_payment"] = {
+            "url": v3_url, "http": r.status_code,
+            "response": r.json() if r.text else None,
+        }
+    except Exception as e:
+        results["v3_GET_customer_payment"] = {"url": v3_url, "error": str(e)}
+
+    # Variant 3: v2 POST transactions refund/otp
+    v2_url = f"{BASE_URL}/v2/transactions/{tid}/refund/otp"
+    v2_body = {"initiator_id": INITIATOR_ID, "user_code": USER_CODE}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.post(v2_url, headers=headers, data=v2_body)
+        results["v2_POST_transactions"] = {
+            "url": v2_url, "body": v2_body, "http": r.status_code,
+            "response": r.json() if r.text else None,
+        }
+    except Exception as e:
+        results["v2_POST_transactions"] = {"url": v2_url, "error": str(e)}
+
+    # Variant 4: v1 with full body (initiator_id + user_code + developer_key)
+    v1f_url = f"{BASE_URL}/v1/transactions/{tid}/refund/otp"
+    v1f_body = {"initiator_id": INITIATOR_ID, "user_code": USER_CODE, "developer_key": DEVELOPER_KEY}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.post(v1f_url, headers=headers, data=v1f_body)
+        results["v1_POST_with_user_code"] = {
+            "url": v1f_url, "body": v1f_body, "http": r.status_code,
+            "response": r.json() if r.text else None,
+        }
+    except Exception as e:
+        results["v1_POST_with_user_code"] = {"url": v1f_url, "error": str(e)}
+
+    return {"success": True, "tid": tid, "results": results}
