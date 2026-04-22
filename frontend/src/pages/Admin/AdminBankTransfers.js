@@ -337,14 +337,47 @@ const AdminBankTransfers = () => {
             <p className="text-slate-600 mt-1">Manage PRC to Bank transfer requests</p>
           </div>
           
-          <Button
-            onClick={loadRequests}
-            variant="outline"
-            className="border-slate-300 text-slate-700 hover:bg-slate-100"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={async () => {
+                try {
+                  toast.info('Preparing Excel...');
+                  const res = await axios.get(
+                    `${API}/admin/bank-redeem/export-pending-excel`,
+                    { responseType: 'blob' }
+                  );
+                  const blob = new Blob([res.data], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
+                  a.download = `pending-bank-redeems-${ts}.xlsx`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  window.URL.revokeObjectURL(url);
+                  toast.success('Excel downloaded');
+                } catch (e) {
+                  toast.error(e.response?.data?.detail || 'Download failed');
+                }
+              }}
+              data-testid="download-pending-excel-btn"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download Pending (Excel)
+            </Button>
+            <Button
+              onClick={loadRequests}
+              variant="outline"
+              className="border-slate-300 text-slate-700 hover:bg-slate-100"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Bulk Actions */}

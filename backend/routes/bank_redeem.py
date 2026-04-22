@@ -1596,3 +1596,171 @@ async def admin_direct_dmt_transfer(request: Request):
     except Exception as e:
         logging.error(f"Admin DMT transfer failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.get("/admin/bank-redeem/export-pending-excel")
+async def export_pending_bank_redeem_excel():
+    """
+    Download pending bank redeem requests as an Excel file.
+    Columns: Sr No, Name, Account Number, IFSC, Amount, Active/Inactive, Date of Request.
+    """
+    from fastapi.responses import StreamingResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from io import BytesIO
+
+    # Pull pending from both collections (new + legacy)
+    pending_new = await db.bank_withdrawal_requests.find(
+        {"status": "pending"}, {"_id": 0}
+    ).sort("created_at", 1).to_list(5000)
+    pending_legacy = await db.bank_transfer_requests.find(
+        {"status": "pending"}, {"_id": 0}
+    ).sort("created_at", 1).to_list(5000)
+
+    # Merge + dedupe by request_id
+    merged = []
+    seen = set()
+    for r in pending_new + pending_legacy:
+        rid = r.get("request_id") or ""
+        if rid and rid in seen:
+            continue
+        if rid:
+            seen.add(rid)
+        merged.append(r)
+    # Oldest-first (so admin pays earliest requests first)
+    merged.sort(key=lambda x: x.get("created_at", ""))
+
+    # Batch-resolve user details (name, status)
+    user_ids = list({r.get("user_id") for r in merged if r.get("user_id")})
+    uid_to_user = {}
+    if user_ids:
+        async for u in db.users.find(
+            {"uid": {"$in": user_ids}},
+            {"_id": 0, "uid": 1, "name": 1, "is_banned": 1, "is_blocked": 1, "is_active": 1},
+        ):
+            uid_to_user[u["uid"]] = u
+
+    # Build workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Pending Bank Redeems"
+
+    # Title row
+    title = f"Pending Bank Redeem Requests — {datetime.now(timezone.utc).strftime('%d %b %Y, %H:%M UTC')}"
+    ws.merge_cells("A1:G1")
+    ws["A1"] = title
+    ws["A1"].font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor="4F46E5")
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 26
+
+    # Header row
+    headers = ["Sr. No", "Name", "Account Number", "IFSC Code", "Amount (₹)", "Active / Inactive", "Date of Request"]
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="6366F1")
+    border = Border(
+        left=Side(style="thin", color="CBD5E1"),
+        right=Side(style="thin", color="CBD5E1"),
+        top=Side(style="thin", color="CBD5E1"),
+        bottom=Side(style="thin", color="CBD5E1"),
+    )
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=2, column=col_idx, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = border
+    ws.row_dimensions[2].height = 22
+
+    # Data rows
+    inactive_fill = PatternFill("solid", fgColor="FEE2E2")
+    active_fill = PatternFill("solid", fgColor="DCFCE7")
+    row = 3
+    total_amount = 0.0
+
+    for idx, r in enumerate(merged, start=1):
+        user = uid_to_user.get(r.get("user_id") or "", {})
+        bank = r.get("bank_details") or {}
+
+        # Name priority: request snapshot > user profile > "—"
+        name = (r.get("user_name") or user.get("name") or bank.get("account_holder_name") or "—")
+        account_number = bank.get("account_number") or "—"
+        ifsc = (bank.get("ifsc_code") or "").upper() or "—"
+        amount = float(r.get("amount_inr") or r.get("amount") or 0)
+        total_amount += amount
+
+        # Active/Inactive from user flags (is_banned / is_blocked / is_active)
+        if user:
+            is_banned = bool(user.get("is_banned") or user.get("is_blocked"))
+            is_active_flag = user.get("is_active", True)
+            active_status = "Inactive" if (is_banned or not is_active_flag) else "Active"
+        else:
+            active_status = "Unknown"
+
+        # Date of Request (ISO → dd-mm-yyyy hh:mm)
+        created = r.get("created_at", "")
+        try:
+            dt = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+            # Convert to IST (UTC+5:30)
+            ist = dt.astimezone(timezone(timedelta(hours=5, minutes=30)))
+            date_str = ist.strftime("%d-%m-%Y %H:%M IST")
+        except Exception:
+            date_str = str(created)[:19]
+
+        row_data = [idx, name, str(account_number), ifsc, amount, active_status, date_str]
+        for col_idx, val in enumerate(row_data, start=1):
+            cell = ws.cell(row=row, column=col_idx, value=val)
+            cell.border = border
+            cell.alignment = Alignment(horizontal=("right" if col_idx in (1, 5) else "left"), vertical="center")
+            if col_idx == 5:
+                cell.number_format = '₹ #,##0.00'
+            if col_idx == 6:
+                if active_status == "Inactive":
+                    cell.fill = inactive_fill
+                    cell.font = Font(color="991B1B", bold=True)
+                elif active_status == "Active":
+                    cell.fill = active_fill
+                    cell.font = Font(color="166534", bold=True)
+        row += 1
+
+    # Totals row
+    if merged:
+        totals_fill = PatternFill("solid", fgColor="FEF3C7")
+        ws.cell(row=row, column=1, value="Total").font = Font(bold=True)
+        ws.cell(row=row, column=4, value="Sum").alignment = Alignment(horizontal="right")
+        total_cell = ws.cell(row=row, column=5, value=total_amount)
+        total_cell.number_format = '₹ #,##0.00'
+        total_cell.font = Font(bold=True)
+        for c in range(1, 8):
+            cell = ws.cell(row=row, column=c)
+            cell.border = border
+            cell.fill = totals_fill
+    else:
+        ws.cell(row=row, column=1, value="No pending requests").font = Font(italic=True, color="64748B")
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=7)
+
+    # Column widths
+    widths = [8, 26, 22, 15, 14, 18, 22]
+    for i, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    # Freeze header
+    ws.freeze_panes = "A3"
+
+    # Save to buffer
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f"pending-bank-redeems-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M')}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Total-Pending": str(len(merged)),
+            "X-Total-Amount": f"{total_amount:.2f}",
+        },
+    )

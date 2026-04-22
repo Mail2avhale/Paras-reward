@@ -307,6 +307,20 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Wiring**: Added `gst-report` permission to `ALL_ADMIN_PERMISSIONS` (Finance category). Sidebar link under Finance & Accounting (highlighted). Route `/admin/gst-report` + permission mapping in `App.js` and `AdminLayout.js` MENU_TO_PERMISSION / ROUTE_TO_PERMISSION.
 - **Verified**: Backend curl returns 29 invoices ₹3,549.77 GST for March 2026. Frontend screenshot shows summary cards, table, Export CSV button, and amber note about unknown-state invoices — all rendering correctly.
 
+### Pending Bank Redeems — Excel Export (DONE - April 22, 2026)
+- **User request**: "Redeem to Bank मधील फक्त pending requests ची Excel sheet download करून पाहिजे (Sr.No, Name, A/c, IFSC, Amount, Active/Inactive, Date)."
+- **Backend**: New endpoint `GET /api/admin/bank-redeem/export-pending-excel` (`routes/bank_redeem.py`). Pulls pending from BOTH `bank_withdrawal_requests` (modern) and `bank_transfer_requests` (legacy admin-manual) collections, dedupes by request_id, sorts oldest-first, batch-enriches user names + active/banned/blocked status from `users` collection, and builds an `.xlsx` via openpyxl with:
+  - Title row (purple fill, timestamp)
+  - Header row (indigo fill, 7 columns)
+  - Data rows with color-coded Active/Inactive cells (green for Active, red for Inactive)
+  - Total row (yellow fill, ₹ formatted)
+  - Frozen header, column widths tuned, ₹ number format
+  - IST timestamps (UTC+5:30) for date column
+  - Filename `pending-bank-redeems-YYYYMMDD-HHMM.xlsx`
+  - Response headers `X-Total-Pending` and `X-Total-Amount` for quick checks
+- **Frontend**: Green "Download Pending (Excel)" button on `/admin/bank-transfers` page header (next to Refresh). Uses axios `responseType: 'blob'` + blob URL + anchor click to trigger download. Toast notifications for Preparing/Success/Failure.
+- **Tested**: curl returns 200, 5.5 KB .xlsx file, 4 rows (title, header, 1 data, total). Screenshot shows button in place.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
