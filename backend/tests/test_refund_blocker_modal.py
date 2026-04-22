@@ -5,7 +5,7 @@ Tests for dashboard-blocking OTP refund modal for users with refund_pending tran
 
 Features tested:
 1. GET /api/recharge/pending-refunds/{user_id} - returns pending refund list
-2. POST /api/recharge/refund/send-otp/{tid} - validates user ownership, sends OTP
+2. POST /api/recharge/refund/process/{tid} - validates user ownership, sends OTP
 3. POST /api/recharge/refund/verify-otp/{tid} - validates user ownership, processes refund
 4. GET /api/user/{uid}/dashboard - returns requires_refund_action flag
 """
@@ -62,12 +62,12 @@ class TestPendingRefundsAPI:
 
 
 class TestSendOTPAPI:
-    """Tests for POST /api/recharge/refund/send-otp/{tid}"""
+    """Tests for POST /api/recharge/refund/process/{tid}"""
     
     def test_send_otp_requires_user_id(self):
         """Test that send-otp requires user_id in body"""
         response = requests.post(
-            f"{BASE_URL}/api/recharge/refund/send-otp/{TEST_TID_1}",
+            f"{BASE_URL}/api/recharge/refund/process/{TEST_TID_1}",
             json={}
         )
         # Should fail validation without user_id
@@ -78,7 +78,7 @@ class TestSendOTPAPI:
         """Test that send-otp validates user owns the transaction"""
         # Try with wrong user_id
         response = requests.post(
-            f"{BASE_URL}/api/recharge/refund/send-otp/{TEST_TID_1}",
+            f"{BASE_URL}/api/recharge/refund/process/{TEST_TID_1}",
             json={"user_id": "wrong-user-id-12345"}
         )
         assert response.status_code == 200  # API returns 200 with error in body
@@ -91,7 +91,7 @@ class TestSendOTPAPI:
     def test_send_otp_with_valid_user(self):
         """Test send-otp with valid user (may succeed or fail based on transaction status)"""
         response = requests.post(
-            f"{BASE_URL}/api/recharge/refund/send-otp/{TEST_TID_1}",
+            f"{BASE_URL}/api/recharge/refund/process/{TEST_TID_1}",
             json={"user_id": TEST_USER_UID}
         )
         assert response.status_code == 200

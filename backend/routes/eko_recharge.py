@@ -1721,9 +1721,9 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
     }
     txn = await _find_user_txn(tid, data.user_id, fields)
     if not txn:
-        return {"success": False, "error": "Transaction not found or does not belong to you"}
+        return {"success": False, "tid": tid, "error": "Transaction not found or does not belong to you", "message": "Transaction not found or does not belong to you"}
     if txn.get("status") != "refund_pending":
-        return {"success": False, "error": "This transaction is not in refund pending status"}
+        return {"success": False, "tid": tid, "error": "This transaction is not in refund pending status", "message": "This transaction is not in refund pending status"}
 
     # Resolve the actual Eko TID to use (numeric TID required by Eko API)
     eko_api_tid = txn.get("eko_tid") or tid
@@ -1785,11 +1785,19 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
                 }
 
         # Production flow: OTP sent via SMS, user must enter it
+        # Eko's raw message sometimes contains unfilled template tokens like '{2} {3}';
+        # normalize to a clean user-facing message.
+        raw_msg = otp_result.get("message") or ""
+        if "{" in raw_msg and "}" in raw_msg:
+            friendly_msg = "OTP sent to your registered mobile. Please enter it below."
+        else:
+            friendly_msg = raw_msg or "OTP sent to your registered mobile. Please enter it below."
+
         return {
             "success": True,
             "tid": tid,
             "otp_sent": True,
-            "message": otp_result.get("message") or "OTP sent to your registered mobile. Please enter it below.",
+            "message": friendly_msg,
             "mobile_hint": eko_data.get("mobile") or eko_data.get("customer_mobile") or "",
         }
 
@@ -1827,9 +1835,9 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
     }
     txn = await _find_user_txn(tid, data.user_id, fields)
     if not txn:
-        return {"success": False, "error": "Transaction not found or does not belong to you"}
+        return {"success": False, "tid": tid, "error": "Transaction not found or does not belong to you", "message": "Transaction not found or does not belong to you"}
     if txn.get("status") != "refund_pending":
-        return {"success": False, "error": "This transaction is not in refund pending status"}
+        return {"success": False, "tid": tid, "error": "This transaction is not in refund pending status", "message": "This transaction is not in refund pending status"}
 
     # Resolve real Eko TID for API call
     eko_api_tid = txn.get("eko_tid") or tid

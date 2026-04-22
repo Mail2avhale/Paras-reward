@@ -3,7 +3,7 @@ Refund API E2E Tests - Code Quality & Functionality Retest
 ==========================================================
 Tests for:
 1. GET /api/recharge/pending-refunds/{user_id} - correct data structure
-2. POST /api/recharge/refund/send-otp/{tid} - async httpx, ownership validation, otp_ref_id storage
+2. POST /api/recharge/refund/process/{tid} - async httpx, ownership validation, otp_ref_id storage
 3. POST /api/recharge/refund/verify-otp/{tid} - async httpx, otp_ref_id from DB, Eko error handling
 4. GET /api/user/{uid}/dashboard - requires_refund_action + pending_refund_count
 5. Admin POST /api/bbps/refund/resend-otp/{tid} - returns otp_ref_id (not otp_ref)
@@ -63,12 +63,12 @@ class TestPendingRefundsAPI:
 
 
 class TestSendOTPAPI:
-    """Test POST /api/recharge/refund/send-otp/{tid}"""
+    """Test POST /api/recharge/refund/process/{tid}"""
     
     def test_send_otp_requires_user_id(self):
         """Verify send-otp requires user_id in request body"""
         response = requests.post(
-            f"{BASE_URL}/api/recharge/refund/send-otp/{TEST_TID_1}",
+            f"{BASE_URL}/api/recharge/refund/process/{TEST_TID_1}",
             json={}  # Missing user_id
         )
         # Should fail validation
@@ -79,7 +79,7 @@ class TestSendOTPAPI:
         """Verify send-otp validates transaction ownership"""
         # Use a different user_id that doesn't own the transaction
         response = requests.post(
-            f"{BASE_URL}/api/recharge/refund/send-otp/{TEST_TID_1}",
+            f"{BASE_URL}/api/recharge/refund/process/{TEST_TID_1}",
             json={"user_id": "wrong-user-id-12345"}
         )
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
@@ -93,7 +93,7 @@ class TestSendOTPAPI:
     def test_send_otp_with_valid_user(self):
         """Test send-otp with valid user (may succeed or fail based on Eko)"""
         response = requests.post(
-            f"{BASE_URL}/api/recharge/refund/send-otp/{TEST_TID_1}",
+            f"{BASE_URL}/api/recharge/refund/process/{TEST_TID_1}",
             json={"user_id": TEST_USER_UID}
         )
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
@@ -262,7 +262,7 @@ class TestCodeQualityChecks:
         """Verify DRY helper functions are working correctly"""
         # Test that ownership validation works (uses _find_user_txn helper)
         response = requests.post(
-            f"{BASE_URL}/api/recharge/refund/send-otp/{TEST_TID_1}",
+            f"{BASE_URL}/api/recharge/refund/process/{TEST_TID_1}",
             json={"user_id": "invalid-user"}
         )
         assert response.status_code == 200
