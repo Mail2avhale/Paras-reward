@@ -1,0 +1,45 @@
+TO: developers@eko.in, support@eko.in
+SUBJECT: URGENT — 60 Transactions Stuck in Refund Pending (₹87,977) — Force Refund Required
+
+Dear Eko Support Team,
+
+Our retailer account is facing a critical cash flow blockage. 60 transactions are stuck in "Refund Pending" status (tx_status=3) since 14 March 2026 — more than 39 days. NPCI auto-refund has not completed, and the refund OTP API is not delivering SMS for these stale transactions.
+
+ACCOUNT DETAILS:
+  Partner Name       : PARAS
+  User Code          : 19560001
+  Initiator ID       : 9936606966
+  Issue Dated        : 14 March 2026 (transactions originated)
+
+TRANSACTION BREAKDOWN:
+  Total transactions : 60
+  Total stuck amount : ₹87,977.00
+  BBPS (Recharge)    : 53 transactions
+  DMT (Remittance)   : 7 transactions
+
+AUTHORITATIVE VERIFICATION:
+We called your Transaction Inquiry API (GET /v2/transactions/{tid}) for ALL 60 TIDs on
+22 April 2026 15:02 UTC. Response consistently: tx_status=3, txstatus_desc=Refund Pending.
+
+SAMPLE TIDS (attached full CSV with all 60):
+  BBPS: 3554878505 (₹1849), 3554878178 (₹799), 3554878012 (₹799), 3554860600 (₹3599)...
+  DMT : DMT1E6F098CA229 (₹1000), DMT94C4A3C3CE21 (₹100), DMT8C89EF7B6725 (₹100)...
+
+REFUND OTP API STATUS:
+- POST /v1/transactions/{tid}/refund/otp → response.status=0 (ok)
+- response.data.otp_ref_id = "" (empty) for most transactions
+- No SMS delivered to customer_id mobile on any attempt
+- Implying SMS queue is silently skipping these stale transactions
+
+REQUEST:
+1. Please FORCE REFUND these 60 transactions back to our eValue wallet
+2. Confirm whether OTP window has expired (our transactions are 39+ days old)
+3. Provide guidance on handling such stale "Refund Pending" entries
+
+Full CSV with all TIDs, client_ref_ids, amounts, customer mobiles attached.
+
+Looking forward to a quick resolution. Our cash flow is blocked.
+
+Regards,
+PARAS Team
+User Code: 19560001
