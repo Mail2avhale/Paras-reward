@@ -1981,6 +1981,9 @@ async def admin_try_all_refund_otp_paths(data: AdminTryAllRefundOTPRequest):
     results = {}
     headers = _build_eko_headers()
 
+    # Compute alternate base URLs (Eko has /ekoicici and /ekoapi namespaces)
+    alt_base = BASE_URL.replace("/ekoicici", "/ekoapi") if "/ekoicici" in BASE_URL else BASE_URL
+
     # Variant 1: v1 POST transactions path (current implementation)
     v1_url = f"{BASE_URL}/v1/transactions/{tid}/refund/otp"
     v1_body = {"initiator_id": INITIATOR_ID, "developer_key": DEVELOPER_KEY}
@@ -1994,32 +1997,38 @@ async def admin_try_all_refund_otp_paths(data: AdminTryAllRefundOTPRequest):
     except Exception as e:
         results["v1_POST_transactions"] = {"url": v1_url, "error": str(e)}
 
-    # Variant 2: v3 GET customer/payment/refund path
-    v3_url = f"{BASE_URL}/v3/customer/payment/refund/{tid}?initiator_id={INITIATOR_ID}&user_code={USER_CODE}"
+    # Variant 2: v3 GET ekoapi/customer/payment/refund path (per latest docs)
+    v3_url = f"{alt_base}/v3/customer/payment/refund/{tid}?initiator_id={INITIATOR_ID}&user_code={USER_CODE}"
     try:
         async with httpx.AsyncClient(timeout=20) as client:
             r = await client.get(v3_url, headers=headers)
-        results["v3_GET_customer_payment"] = {
-            "url": v3_url, "http": r.status_code,
-            "response": r.json() if r.text else None,
+        try:
+            resp_body = r.json()
+        except Exception:
+            resp_body = {"raw_text": r.text[:500]}
+        results["v3_GET_ekoapi_customer_payment"] = {
+            "url": v3_url, "http": r.status_code, "response": resp_body,
         }
     except Exception as e:
-        results["v3_GET_customer_payment"] = {"url": v3_url, "error": str(e)}
+        results["v3_GET_ekoapi_customer_payment"] = {"url": v3_url, "error": str(e)}
 
-    # Variant 3: v2 POST transactions refund/otp
-    v2_url = f"{BASE_URL}/v2/transactions/{tid}/refund/otp"
-    v2_body = {"initiator_id": INITIATOR_ID, "user_code": USER_CODE}
+    # Variant 3: v3 POST ekoapi refund
+    v3p_url = f"{alt_base}/v3/customer/payment/refund/{tid}"
+    v3p_body = {"initiator_id": INITIATOR_ID, "user_code": USER_CODE, "developer_key": DEVELOPER_KEY}
     try:
         async with httpx.AsyncClient(timeout=20) as client:
-            r = await client.post(v2_url, headers=headers, data=v2_body)
-        results["v2_POST_transactions"] = {
-            "url": v2_url, "body": v2_body, "http": r.status_code,
-            "response": r.json() if r.text else None,
+            r = await client.post(v3p_url, headers=headers, data=v3p_body)
+        try:
+            resp_body = r.json()
+        except Exception:
+            resp_body = {"raw_text": r.text[:500]}
+        results["v3_POST_ekoapi_customer_payment"] = {
+            "url": v3p_url, "body": v3p_body, "http": r.status_code, "response": resp_body,
         }
     except Exception as e:
-        results["v2_POST_transactions"] = {"url": v2_url, "error": str(e)}
+        results["v3_POST_ekoapi_customer_payment"] = {"url": v3p_url, "error": str(e)}
 
-    # Variant 4: v1 with full body (initiator_id + user_code + developer_key)
+    # Variant 4: v1 POST with full body (initiator_id + user_code + developer_key)
     v1f_url = f"{BASE_URL}/v1/transactions/{tid}/refund/otp"
     v1f_body = {"initiator_id": INITIATOR_ID, "user_code": USER_CODE, "developer_key": DEVELOPER_KEY}
     try:
@@ -2032,4 +2041,4 @@ async def admin_try_all_refund_otp_paths(data: AdminTryAllRefundOTPRequest):
     except Exception as e:
         results["v1_POST_with_user_code"] = {"url": v1f_url, "error": str(e)}
 
-    return {"success": True, "tid": tid, "results": results}
+    return {"success": True, "tid": tid, "base_url_used": BASE_URL, "alt_base": alt_base, "results": results}

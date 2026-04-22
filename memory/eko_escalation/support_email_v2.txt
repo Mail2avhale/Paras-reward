@@ -1,0 +1,64 @@
+TO: developers@eko.in, support@eko.in, sales.engineer@eko.co.in
+SUBJECT: URGENT — Refund OTP SMS Not Delivering (60 txns ₹87,977 stuck) — PARAS user_code 19560001
+
+Dear Eko Support Team,
+
+We are facing critical refund OTP SMS non-delivery issue on our PARAS retailer account. Despite correct API implementation per your documentation, SMS is NOT reaching the customer mobile.
+
+ACCOUNT DETAILS:
+  Partner Name     : PARAS REWARD TECHNOLOGIES PRIVATE LIMITED
+  User Code        : 19560001
+  Initiator ID     : 9936606966
+  Registered Email : mail2avhale@gmail.com
+
+IMPLEMENTATION (Verified against https://developers.eko.in/v1/reference/resend-refund-otp-1):
+  Endpoint: POST https://api.eko.in:25002/ekoicici/v1/transactions/{tid}/refund/otp
+  Body:     initiator_id=9936606966, user_code=19560001, developer_key=<our_prod_key>
+  Headers:  developer_key, secret-key, secret-key-timestamp (all generated correctly)
+
+YOUR API RESPONSE FOR EVERY TID WE TRY:
+  HTTP 200 OK
+  {
+    "status": 0,                                          ← per docs = SUCCESS
+    "response_status_id": -1,
+    "data": { "tid": "...", "otp_ref_id": "" },
+    "message": "OTP for failed transaction has been sent
+                to customers mobile. Either you can retry
+                the transaction or Use this otp for
+                refunding the transaction {2} {3}"
+  }
+
+PROBLEM:
+  1. Message claims "OTP has been sent to customers mobile" — but customer 9970100782
+     confirms no SMS received even after 10+ retry attempts across multiple TIDs
+  2. DND is disabled on customer mobile (verified)
+  3. SMS never arrives despite Eko's API returning status=0
+  4. {2} {3} unfilled placeholders in message suggest template rendering issue
+
+TRANSACTION DETAILS (Transaction Inquiry confirms):
+  DMT TID 3548838278: customer_id=9970100782, tx_status=3 (Refund Pending),
+                      tx_desc="IMPS Remittance"
+  BBPS TID 3554878505: customer_id="" (EMPTY!), tx_status=3 (Refund Pending),
+                       service=Mobile Recharge
+
+  Full CSV attached with all 60 TIDs/client_ref_ids/amounts.
+
+BBPS SPECIFIC ANOMALY:
+  For BBPS refund-pending transactions, customer_id is empty at your end.
+  How is refund OTP supposed to work when there's no customer mobile stored?
+
+QUESTIONS:
+  1. Can you check your SMS provider logs for customer 9970100782? When was the
+     last successful SMS delivery attempt from Eko to this number?
+  2. Is our DLT template registration active? Are SMS being silently dropped?
+  3. For BBPS transactions with empty customer_id, what is the refund flow?
+  4. Can you force-refund these 60 transactions directly to our eValue wallet
+     given that refund OTP SMS is not reaching the customer?
+  5. Is there an alternate way to receive/complete refund OTP (email, portal,
+     push notification, customer support IVR)?
+
+URGENT — OUR ₹87,977 CASH IS BLOCKED. PLEASE PRIORITIZE.
+
+Regards,
+PARAS Team
+User Code: 19560001
