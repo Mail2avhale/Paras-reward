@@ -77,10 +77,14 @@ async def create_success_story_post(
     amount_inr: float,
     extra_title: str = "",
     ref_id: str = "",
+    created_at_override: Optional[str] = None,
 ):
     """Create a system-authored (admin) Success Story post in the community forum.
     Privacy-safe: only first name + city/state + amount revealed. No phone/account shown.
-    Idempotent via ref_id. Safe to call fire-and-forget (errors logged, never raised)."""
+    Idempotent via ref_id. Safe to call fire-and-forget (errors logged, never raised).
+    If `created_at_override` is provided (ISO string), it is used as the post's timestamp
+    instead of the current time — used during backfill so posts reflect the actual
+    transaction date and latest wins bubble to the top."""
     try:
         if db is None:
             return
@@ -152,6 +156,8 @@ async def create_success_story_post(
 
         post_id = str(uuid.uuid4())
         now_iso = datetime.now(timezone.utc).isoformat()
+        # Post timestamp: use original transaction date during backfill, else now
+        post_ts = created_at_override or now_iso
 
         post_doc = {
             "post_id": post_id,
@@ -196,8 +202,8 @@ async def create_success_story_post(
             "is_pinned": False,
             "is_deleted": False,
             "is_reported": False,
-            "created_at": now_iso,
-            "updated_at": now_iso,
+            "created_at": post_ts,
+            "updated_at": post_ts,
         }
         await db.community_posts.insert_one(post_doc)
         logging.info(f"[SUCCESS STORY] Posted: {service_type} ₹{amount_inr} by {first_name} ({location})")
@@ -236,7 +242,7 @@ async def auto_backfill_success_stories(limit: int = 1000):
             {"status": {"$in": success_statuses}},
             {"_id": 0, "user_id": 1, "amount_inr": 1, "amount": 1,
              "recharge_type": 1, "eko_tid": 1, "request_id": 1, "client_ref_id": 1,
-             "operator_name": 1, "operator": 1}
+             "operator_name": 1, "operator": 1, "created_at": 1, "updated_at": 1}
         ).sort("created_at", -1).limit(limit)
         async for txn in cursor:
             ref_id = f"recharge:{txn.get('eko_tid') or txn.get('request_id') or txn.get('client_ref_id')}"
@@ -254,11 +260,16 @@ async def auto_backfill_success_stories(limit: int = 1000):
                 op = (txn.get("operator_name") or txn.get("operator") or "").lower()
                 rtype = "dth" if any(k in op for k in ["dth", "tata sky", "airtel dth", "dish tv", "videocon", "d2h", "sun direct"]) else "mobile"
             service_key = "dth_recharge" if rtype == "dth" else "mobile_recharge"
+            # Preserve original transaction timestamp
+            txn_ts = txn.get("updated_at") or txn.get("created_at")
+            if hasattr(txn_ts, "isoformat"):
+                txn_ts = txn_ts.isoformat()
             await create_success_story_post(
                 user_id=txn["user_id"],
                 service_type=service_key,
                 amount_inr=amount,
                 ref_id=ref_id,
+                created_at_override=txn_ts,
             )
             created += 1
 
@@ -266,7 +277,7 @@ async def auto_backfill_success_stories(limit: int = 1000):
         cursor2 = db.bank_transfer_requests.find(
             {"status": {"$in": bank_paid_statuses}},
             {"_id": 0, "user_id": 1, "amount_inr": 1, "amount": 1,
-             "inr_amount": 1, "request_id": 1}
+             "inr_amount": 1, "request_id": 1, "processed_at": 1, "created_at": 1}
         ).sort("processed_at", -1).limit(limit)
         async for req in cursor2:
             ref_id = f"bank_redeem:{req.get('request_id')}"
@@ -279,11 +290,15 @@ async def auto_backfill_success_stories(limit: int = 1000):
             amount = float(req.get("amount_inr") or req.get("amount") or req.get("inr_amount") or 0)
             if amount <= 0:
                 continue
+            req_ts = req.get("processed_at") or req.get("created_at")
+            if hasattr(req_ts, "isoformat"):
+                req_ts = req_ts.isoformat()
             await create_success_story_post(
                 user_id=req["user_id"],
                 service_type="bank_redeem",
                 amount_inr=amount,
                 ref_id=ref_id,
+                created_at_override=req_ts,
             )
             created += 1
 
@@ -522,11 +537,28 @@ async def get_posts(
         ).sort("created_at", -1).to_list(10)
 
         non_pinned_query = {**query, "is_pinned": {"$ne": True}}
+
+        # Success Story feed: show logged-in user's OWN wins at top (page 1 only),
+        # followed by everyone else's latest wins.
+        own_posts = []
+        is_success_feed = category == "Success Story" and user_id and page == 1
+        if is_success_feed:
+            own_posts = await db.community_posts.find(
+                {**non_pinned_query, "metadata.beneficiary_user_id": user_id},
+                {"_id": 0}
+            ).sort(sort_field, sort_order).limit(20).to_list(20)
+            own_ids = [p["post_id"] for p in own_posts]
+            if own_ids:
+                non_pinned_query["post_id"] = {"$nin": own_ids}
+
         posts = await db.community_posts.find(
             non_pinned_query, {"_id": 0}
         ).sort(sort_field, sort_order).skip(skip).limit(limit).to_list(limit)
 
-        all_posts = pinned + posts if page == 1 else posts
+        if page == 1:
+            all_posts = pinned + own_posts + posts
+        else:
+            all_posts = posts
 
         # Enrich with user's like/bookmark status
         if user_id:
