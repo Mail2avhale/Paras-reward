@@ -5,8 +5,9 @@ import {
   MessageCircle, Heart, Bookmark, Send, Search, Filter, Image,
   MoreVertical, Pin, Flag, Trash2, Shield, ChevronDown, Loader2,
   HelpCircle, Lightbulb, BookOpen, MessageSquare, Megaphone, Headphones,
-  X, CheckCircle, Clock, AlertTriangle, ChevronLeft
+  X, CheckCircle, Clock, AlertTriangle, ChevronLeft, Trophy, TrendingUp, Sparkles
 } from 'lucide-react';
+import SuccessStoryCard from '../components/SuccessStoryCard';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -16,7 +17,8 @@ const CATEGORY_ICONS = {
   'Tips & Tricks': Lightbulb,
   'General Discussion': MessageSquare,
   'Announcement': Megaphone,
-  'Support': Headphones
+  'Support': Headphones,
+  'Success Story': Trophy
 };
 
 const CATEGORY_COLORS = {
@@ -25,7 +27,8 @@ const CATEGORY_COLORS = {
   'Tips & Tricks': 'bg-emerald-100 text-emerald-700 border-emerald-200',
   'General Discussion': 'bg-slate-100 text-slate-700 border-slate-200',
   'Announcement': 'bg-purple-100 text-purple-700 border-purple-200',
-  'Support': 'bg-rose-100 text-rose-700 border-rose-200'
+  'Support': 'bg-rose-100 text-rose-700 border-rose-200',
+  'Success Story': 'bg-amber-100 text-amber-700 border-amber-200'
 };
 
 const CommunityPage = ({ user }) => {
@@ -64,6 +67,7 @@ const CommunityPage = ({ user }) => {
   const [editContent, setEditContent] = useState('');
 
   const [userStats, setUserStats] = useState(null);
+  const [successStats, setSuccessStats] = useState(null);
 
   // Profile view
   const [profileData, setProfileData] = useState(null);
@@ -75,13 +79,16 @@ const CommunityPage = ({ user }) => {
   const currentUserId = user?.uid || paras_user?.uid;
   const currentUserName = user?.name || paras_user?.name || 'User';
 
-  const categories = ['All', 'Help Request', 'Knowledge Share', 'Tips & Tricks', 'General Discussion', 'Announcement', 'Support'];
+  const categories = ['All', '🎉 Wins', 'Help Request', 'Knowledge Share', 'Tips & Tricks', 'General Discussion', 'Announcement', 'Support'];
 
   const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ page, limit: 15, sort: sortBy });
-      if (activeCategory !== 'All') params.append('category', activeCategory);
+      if (activeCategory !== 'All') {
+        const mapped = activeCategory === '🎉 Wins' ? 'Success Story' : activeCategory;
+        params.append('category', mapped);
+      }
       if (searchQuery) params.append('search', searchQuery);
       if (currentUserId) params.append('user_id', currentUserId);
       if (timeFilter) params.append('time_filter', timeFilter);
@@ -96,14 +103,16 @@ const CommunityPage = ({ user }) => {
 
   const fetchStats = useCallback(async () => {
     try {
-      const [statsRes, userRes, trendRes] = await Promise.all([
+      const [statsRes, userRes, trendRes, successRes] = await Promise.all([
         axios.get(`${API}/community/stats`, { headers }),
         currentUserId ? axios.get(`${API}/community/user/${currentUserId}/stats`, { headers }) : Promise.resolve({ data: null }),
-        axios.get(`${API}/community/trending?limit=5`, { headers })
+        axios.get(`${API}/community/trending?limit=5`, { headers }),
+        axios.get(`${API}/community/success-stats`).catch(() => ({ data: null }))
       ]);
       setStats(statsRes.data || {});
       setUserStats(userRes.data);
       setTrending(trendRes.data?.trending || []);
+      setSuccessStats(successRes.data);
     } catch {}
   }, [currentUserId]);
 
@@ -509,6 +518,40 @@ const CommunityPage = ({ user }) => {
         </button>
       </div>
 
+      {/* Live Wins Banner — Maximum Requests counter */}
+      {successStats && successStats.total_lifetime > 0 && (
+        <div
+          className="relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 p-4"
+          data-testid="live-wins-banner"
+        >
+          <div className="absolute -top-6 -right-6 w-32 h-32 bg-amber-200/40 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-8 -left-4 w-24 h-24 bg-rose-200/40 rounded-full blur-2xl pointer-events-none" />
+          <div className="relative flex items-center gap-3 flex-wrap">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center text-white shadow-md shrink-0">
+              <Trophy className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-[180px]">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-700 flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3" /> Live Wins · Paras Community
+              </p>
+              <p className="text-slate-900 font-bold text-lg leading-snug" data-testid="live-wins-total">
+                {successStats.total_lifetime.toLocaleString('en-IN')} successful {successStats.total_lifetime === 1 ? 'request' : 'requests'} completed
+              </p>
+              <p className="text-xs text-slate-600">
+                ₹{Math.round(successStats.total_amount_inr || 0).toLocaleString('en-IN')} disbursed
+                {successStats.total_7d > 0 && ` · Join ${successStats.total_7d} ${successStats.total_7d === 1 ? 'win' : 'wins'} this week`}
+              </p>
+            </div>
+            {successStats.total_24h > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 border border-amber-200 text-amber-700 text-xs font-semibold">
+                <TrendingUp className="w-3.5 h-3.5" />
+                +{successStats.total_24h} today
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Stats Bar */}
       <div className="flex gap-4 text-xs text-slate-500 bg-white border border-slate-200 rounded-lg px-4 py-2">
         <span>{stats.total_posts || 0} Posts</span>
@@ -592,7 +635,7 @@ const CommunityPage = ({ user }) => {
               <button onClick={() => setShowCreate(false)}><X className="w-5 h-5 text-slate-400" /></button>
             </div>
             <select value={newPost.category} onChange={e => setNewPost(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" data-testid="post-category">
-              {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+              {categories.filter(c => c !== 'All' && c !== '🎉 Wins').map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <input type="text" value={newPost.title} onChange={e => setNewPost(p => ({ ...p, title: e.target.value }))} placeholder="Title" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" data-testid="post-title" />
             <textarea value={newPost.content} onChange={e => setNewPost(p => ({ ...p, content: e.target.value }))} placeholder="Share your thoughts..." rows={5} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white resize-none" data-testid="post-content" />
@@ -675,7 +718,18 @@ const CommunityPage = ({ user }) => {
         ) : (
           <div className="space-y-3">
             <p className="text-sm font-medium text-slate-500">Trending this week</p>
-            {trending.map(post => <PostCard key={post.post_id} post={post} />)}
+            {trending.map(post => (
+              post.category === 'Success Story' ? (
+                <SuccessStoryCard
+                  key={post.post_id}
+                  post={post}
+                  currentUserId={currentUserId}
+                  onClick={openPostDetail}
+                />
+              ) : (
+                <PostCard key={post.post_id} post={post} />
+              )
+            ))}
           </div>
         )
       ) : posts.length === 0 ? (
@@ -686,7 +740,18 @@ const CommunityPage = ({ user }) => {
         </div>
       ) : (
         <div className="space-y-3">
-          {posts.map(post => <PostCard key={post.post_id} post={post} />)}
+          {posts.map(post => (
+            post.category === 'Success Story' ? (
+              <SuccessStoryCard
+                key={post.post_id}
+                post={post}
+                currentUserId={currentUserId}
+                onClick={openPostDetail}
+              />
+            ) : (
+              <PostCard key={post.post_id} post={post} />
+            )
+          ))}
         </div>
       )}
 

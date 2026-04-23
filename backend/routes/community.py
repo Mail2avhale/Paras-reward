@@ -99,6 +99,14 @@ async def create_success_story_post(
 
         post_doc = {
             "post_id": post_id,
+            # Fields aligned with regular posts so they appear in the unified feed
+            "user_id": "system",
+            "user_name": "Paras Reward",
+            "user_plan": "admin",
+            "status": "active",
+            "is_helpful": False,
+            "report_count": 0,
+            # Success-story specific flags
             "author_uid": "system",
             "author_name": "Paras Reward",
             "author_role": "admin",
@@ -137,12 +145,6 @@ async def create_success_story_post(
         logging.info(f"[SUCCESS STORY] Posted: {service_type} ₹{amount_inr} by {first_name} ({location})")
     except Exception as e:
         logging.warning(f"[SUCCESS STORY] create failed (non-fatal): {e}")
-    "Knowledge Share",
-    "Tips & Tricks",
-    "General Discussion",
-    "Announcement",
-    "Support"
-]
 
 
 def set_db(database):
@@ -219,6 +221,10 @@ async def create_post(data: CreatePostRequest):
 
         if data.category not in CATEGORIES:
             raise HTTPException(status_code=400, detail=f"Invalid category. Use: {CATEGORIES}")
+
+        # Users cannot create Success Story posts (system-generated only)
+        if data.category == "Success Story":
+            raise HTTPException(status_code=403, detail="Success Story posts are system-generated only")
 
         # Only admins/mods can post Announcements
         if data.category == "Announcement":
@@ -1125,6 +1131,84 @@ async def get_community_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== SUCCESS STORIES PUBLIC STATS ====================
+
+@router.get("/success-stats")
+async def get_success_stats():
+    """Public stats for the "Live Wins" banner in Community Forum.
+    Returns total lifetime successful transactions (Recharge + DTH + Bank Redeem)
+    and recent activity (last 24h / 7d). Cached lightly via count_documents."""
+    try:
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
+        day_ago = (now - timedelta(days=1)).isoformat()
+        week_ago = (now - timedelta(days=7)).isoformat()
+
+        success_statuses = ["success", "SUCCESS", "Success", "completed", "COMPLETED"]
+        bank_paid_statuses = ["paid", "Paid", "PAID"]
+
+        # Lifetime counts
+        recharge_total = await db.recharge_transactions.count_documents(
+            {"status": {"$in": success_statuses}}
+        )
+        bank_total = await db.bank_transfer_requests.count_documents({"status": {"$in": bank_paid_statuses}})
+
+        # Last 7 days
+        recharge_7d = await db.recharge_transactions.count_documents(
+            {"status": {"$in": success_statuses}, "created_at": {"$gte": week_ago}}
+        )
+        bank_7d = await db.bank_transfer_requests.count_documents(
+            {"status": {"$in": bank_paid_statuses}, "processed_at": {"$gte": week_ago}}
+        )
+
+        # Last 24h
+        recharge_24h = await db.recharge_transactions.count_documents(
+            {"status": {"$in": success_statuses}, "created_at": {"$gte": day_ago}}
+        )
+        bank_24h = await db.bank_transfer_requests.count_documents(
+            {"status": {"$in": bank_paid_statuses}, "processed_at": {"$gte": day_ago}}
+        )
+
+        # Sum of total disbursed/recharged amount (lifetime) — best effort
+        recharge_amount_agg = await db.recharge_transactions.aggregate([
+            {"$match": {"status": {"$in": success_statuses}}},
+            {"$group": {"_id": None, "total": {
+                "$sum": {"$ifNull": ["$amount_inr", {"$ifNull": ["$amount", 0]}]}
+            }}}
+        ]).to_list(1)
+        bank_amount_agg = await db.bank_transfer_requests.aggregate([
+            {"$match": {"status": {"$in": bank_paid_statuses}}},
+            {"$group": {"_id": None, "total": {
+                "$sum": {"$ifNull": ["$amount_inr", {"$ifNull": ["$inr_amount", {"$ifNull": ["$amount", 0]}]}]}
+            }}}
+        ]).to_list(1)
+        recharge_amount = float(recharge_amount_agg[0]["total"]) if recharge_amount_agg else 0
+        bank_amount = float(bank_amount_agg[0]["total"]) if bank_amount_agg else 0
+
+        total_lifetime = recharge_total + bank_total
+        total_7d = recharge_7d + bank_7d
+        total_24h = recharge_24h + bank_24h
+        total_amount = recharge_amount + bank_amount
+
+        return {
+            "total_lifetime": total_lifetime,
+            "total_7d": total_7d,
+            "total_24h": total_24h,
+            "total_amount_inr": total_amount,
+            "breakdown": {
+                "recharge": recharge_total,
+                "bank_redeem": bank_total,
+            },
+        }
+    except Exception as e:
+        logging.error(f"success-stats failed: {e}")
+        # Never fail the feed — return zeros
+        return {
+            "total_lifetime": 0, "total_7d": 0, "total_24h": 0,
+            "total_amount_inr": 0, "breakdown": {"recharge": 0, "bank_redeem": 0},
+        }
+
+
 # ==================== SUCCESS STORY BACKFILL (Admin) ====================
 
 @router.post("/admin/backfill-success-stories")
@@ -1187,7 +1271,7 @@ async def backfill_success_stories(request: Request):
 
         # 2. Bank transfer paid requests
         cursor2 = db.bank_transfer_requests.find(
-            {"status": "paid"},
+            {"status": {"$in": ["paid", "Paid", "PAID"]}},
             {"_id": 0, "user_id": 1, "amount_inr": 1, "amount": 1,
              "inr_amount": 1, "request_id": 1}
         ).sort("processed_at", -1).limit(limit)
