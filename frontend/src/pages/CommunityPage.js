@@ -80,10 +80,10 @@ const CommunityPage = ({ user }) => {
 
   const categories = ['All', '🎉 Wins', 'Help Request', 'Knowledge Share', 'Tips & Tricks', 'General Discussion', 'Announcement', 'Support'];
 
-  const fetchPosts = useCallback(async () => {
+  const fetchPosts = useCallback(async (append = false) => {
     try {
-      setLoading(true);
-      const params = new URLSearchParams({ page, limit: 15, sort: sortBy });
+      if (!append) setLoading(true);
+      const params = new URLSearchParams({ page, limit: 20, sort: sortBy });
       if (activeCategory !== 'All') {
         const mapped = activeCategory === '🎉 Wins' ? 'Success Story' : activeCategory;
         params.append('category', mapped);
@@ -94,7 +94,15 @@ const CommunityPage = ({ user }) => {
       if (viewMode === 'my_posts') params.append('author_id', currentUserId);
 
       const res = await axios.get(`${API}/community/posts?${params}`, { headers });
-      setPosts(res.data?.posts || []);
+      const newPosts = res.data?.posts || [];
+      if (append) {
+        setPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.post_id));
+          return [...prev, ...newPosts.filter(p => !existingIds.has(p.post_id))];
+        });
+      } else {
+        setPosts(newPosts);
+      }
       setTotalPages(res.data?.pages || 1);
     } catch { toast.error('Failed to load posts'); }
     finally { setLoading(false); }
@@ -113,7 +121,7 @@ const CommunityPage = ({ user }) => {
     } catch {}
   }, [currentUserId]);
 
-  useEffect(() => { fetchPosts(); }, [fetchPosts]);
+  useEffect(() => { fetchPosts(page > 1); }, [fetchPosts, page]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
   const handleCreatePost = async () => {
@@ -710,18 +718,16 @@ const CommunityPage = ({ user }) => {
         </div>
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2 pt-4">
-          {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
-            <button
-              key={i + 1}
-              onClick={() => setPage(i + 1)}
-              className={`px-3 py-1.5 rounded-lg text-sm ${page === i + 1 ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}
-            >
-              {i + 1}
-            </button>
-          ))}
+      {/* Load More / Infinite Scroll */}
+      {!loading && page < totalPages && (
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={() => setPage(p => p + 1)}
+            className="px-5 py-2 rounded-full text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+            data-testid="load-more-btn"
+          >
+            Load more
+          </button>
         </div>
       )}
     </div>
