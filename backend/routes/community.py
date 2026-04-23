@@ -39,6 +39,37 @@ CATEGORIES = [
 # Emoji reactions allowed on posts
 ALLOWED_REACTIONS = {"celebrate", "love", "fire"}  # 🎉 ❤️ 🔥
 
+# Rolling window for Success Story posts — keep only latest N; older ones auto-pruned
+MAX_SUCCESS_STORIES = 1000
+
+
+async def _prune_old_success_stories():
+    """Keep only the latest MAX_SUCCESS_STORIES Success Story posts.
+    Hard-deletes oldest ones beyond the cap + cascades reactions/likes/bookmarks.
+    Fire-and-forget: errors logged, never raised."""
+    try:
+        if db is None:
+            return
+        total = await db.community_posts.count_documents({"is_success_story": True})
+        excess = total - MAX_SUCCESS_STORIES
+        if excess <= 0:
+            return
+        oldest = await db.community_posts.find(
+            {"is_success_story": True},
+            {"_id": 0, "post_id": 1}
+        ).sort("created_at", 1).limit(excess).to_list(excess)
+        if not oldest:
+            return
+        ids = [p["post_id"] for p in oldest]
+        await db.community_posts.delete_many({"post_id": {"$in": ids}})
+        # Cascade related data
+        await db.community_reactions.delete_many({"post_id": {"$in": ids}})
+        await db.community_likes.delete_many({"post_id": {"$in": ids}})
+        await db.community_bookmarks.delete_many({"post_id": {"$in": ids}})
+        logging.info(f"[SUCCESS STORY PRUNE] removed {len(ids)} old posts (cap={MAX_SUCCESS_STORIES})")
+    except Exception as e:
+        logging.warning(f"[SUCCESS STORY PRUNE] failed: {e}")
+
 
 async def create_success_story_post(
     user_id: str,
@@ -170,11 +201,13 @@ async def create_success_story_post(
         }
         await db.community_posts.insert_one(post_doc)
         logging.info(f"[SUCCESS STORY] Posted: {service_type} ₹{amount_inr} by {first_name} ({location})")
+        # Enforce rolling window — prune oldest if over cap
+        await _prune_old_success_stories()
     except Exception as e:
         logging.warning(f"[SUCCESS STORY] create failed (non-fatal): {e}")
 
 
-async def auto_backfill_success_stories(limit: int = 2000):
+async def auto_backfill_success_stories(limit: int = 1000):
     """Run once at server startup to create Success Story posts for historical
     successful transactions that were completed BEFORE this feature shipped.
     Idempotent via ref_id dedup — safe to run multiple times.
@@ -255,6 +288,8 @@ async def auto_backfill_success_stories(limit: int = 2000):
             created += 1
 
         logging.info(f"[SUCCESS STORY AUTO-BACKFILL] created {created} posts (existing before: {existing})")
+        # Final prune to enforce rolling 1000 cap
+        await _prune_old_success_stories()
     except Exception as e:
         logging.error(f"[SUCCESS STORY AUTO-BACKFILL] failed: {e}")
 

@@ -33626,10 +33626,10 @@ async def _background_db_init():
     except Exception as e:
         print(f"Holiday seed (non-critical): {e}")
     
-    # Community Success Story auto-backfill (fire-and-forget, idempotent)
+    # Community Success Story auto-backfill (fire-and-forget, idempotent, rolling 1000 cap)
     try:
         import asyncio
-        asyncio.create_task(auto_backfill_success_stories(limit=2000))
+        asyncio.create_task(auto_backfill_success_stories(limit=1000))
         print("Community Success Story auto-backfill scheduled")
     except Exception as e:
         print(f"Success story backfill (non-critical): {e}")
