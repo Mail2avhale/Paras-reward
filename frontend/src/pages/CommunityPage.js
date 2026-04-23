@@ -5,7 +5,7 @@ import {
   MessageCircle, Heart, Bookmark, Send, Search, Filter, Image,
   MoreVertical, Pin, Flag, Trash2, Shield, ChevronDown, Loader2,
   HelpCircle, Lightbulb, BookOpen, MessageSquare, Megaphone, Headphones,
-  X, CheckCircle, Clock, AlertTriangle, ChevronLeft, Trophy, TrendingUp, Sparkles
+  X, CheckCircle, Clock, AlertTriangle, ChevronLeft, Trophy
 } from 'lucide-react';
 import SuccessStoryCard from '../components/SuccessStoryCard';
 
@@ -67,7 +67,6 @@ const CommunityPage = ({ user }) => {
   const [editContent, setEditContent] = useState('');
 
   const [userStats, setUserStats] = useState(null);
-  const [successStats, setSuccessStats] = useState(null);
 
   // Profile view
   const [profileData, setProfileData] = useState(null);
@@ -103,16 +102,14 @@ const CommunityPage = ({ user }) => {
 
   const fetchStats = useCallback(async () => {
     try {
-      const [statsRes, userRes, trendRes, successRes] = await Promise.all([
+      const [statsRes, userRes, trendRes] = await Promise.all([
         axios.get(`${API}/community/stats`, { headers }),
         currentUserId ? axios.get(`${API}/community/user/${currentUserId}/stats`, { headers }) : Promise.resolve({ data: null }),
-        axios.get(`${API}/community/trending?limit=5`, { headers }),
-        axios.get(`${API}/community/success-stats`).catch(() => ({ data: null }))
+        axios.get(`${API}/community/trending?limit=5`, { headers })
       ]);
       setStats(statsRes.data || {});
       setUserStats(userRes.data);
       setTrending(trendRes.data?.trending || []);
-      setSuccessStats(successRes.data);
     } catch {}
   }, [currentUserId]);
 
@@ -517,40 +514,6 @@ const CommunityPage = ({ user }) => {
           + New Post
         </button>
       </div>
-
-      {/* Live Wins Banner — Maximum Requests counter */}
-      {successStats && successStats.total_lifetime > 0 && (
-        <div
-          className="relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 p-4"
-          data-testid="live-wins-banner"
-        >
-          <div className="absolute -top-6 -right-6 w-32 h-32 bg-amber-200/40 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-8 -left-4 w-24 h-24 bg-rose-200/40 rounded-full blur-2xl pointer-events-none" />
-          <div className="relative flex items-center gap-3 flex-wrap">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center text-white shadow-md shrink-0">
-              <Trophy className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-[180px]">
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-amber-700 flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3" /> Live Wins · Paras Community
-              </p>
-              <p className="text-slate-900 font-bold text-lg leading-snug" data-testid="live-wins-total">
-                {successStats.total_lifetime.toLocaleString('en-IN')} successful {successStats.total_lifetime === 1 ? 'request' : 'requests'} completed
-              </p>
-              <p className="text-xs text-slate-600">
-                ₹{Math.round(successStats.total_amount_inr || 0).toLocaleString('en-IN')} disbursed
-                {successStats.total_7d > 0 && ` · Join ${successStats.total_7d} ${successStats.total_7d === 1 ? 'win' : 'wins'} this week`}
-              </p>
-            </div>
-            {successStats.total_24h > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 border border-amber-200 text-amber-700 text-xs font-semibold">
-                <TrendingUp className="w-3.5 h-3.5" />
-                +{successStats.total_24h} today
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Categories */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
