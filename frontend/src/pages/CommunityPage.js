@@ -34,6 +34,7 @@ const CATEGORY_COLORS = {
 const CommunityPage = ({ user }) => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('latest');
@@ -82,7 +83,8 @@ const CommunityPage = ({ user }) => {
 
   const fetchPosts = useCallback(async (append = false) => {
     try {
-      if (!append) setLoading(true);
+      if (append) setLoadingMore(true);
+      else setLoading(true);
       const params = new URLSearchParams({ page, limit: 20, sort: sortBy });
       if (activeCategory !== 'All') {
         const mapped = activeCategory === '🎉 Wins' ? 'Success Story' : activeCategory;
@@ -105,7 +107,10 @@ const CommunityPage = ({ user }) => {
       }
       setTotalPages(res.data?.pages || 1);
     } catch { toast.error('Failed to load posts'); }
-    finally { setLoading(false); }
+    finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
   }, [page, activeCategory, searchQuery, sortBy, timeFilter, viewMode]);
 
   const fetchStats = useCallback(async () => {
@@ -123,6 +128,25 @@ const CommunityPage = ({ user }) => {
 
   useEffect(() => { fetchPosts(page > 1); }, [fetchPosts, page]);
   useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  // Infinite scroll: auto-trigger Load More when sentinel enters viewport
+  const loadMoreRef = useRef(null);
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    if (loading || loadingMore) return;
+    if (page >= totalPages) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setPage(p => p + 1);
+        }
+      },
+      { rootMargin: '400px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading, loadingMore, page, totalPages, posts.length]);
 
   const handleCreatePost = async () => {
     if (!newPost.title.trim() || !newPost.content.trim()) { toast.error('Title and content required'); return; }
@@ -719,15 +743,21 @@ const CommunityPage = ({ user }) => {
       )}
 
       {/* Load More / Infinite Scroll */}
-      {!loading && page < totalPages && (
-        <div className="flex justify-center pt-4">
-          <button
-            onClick={() => setPage(p => p + 1)}
-            className="px-5 py-2 rounded-full text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors"
-            data-testid="load-more-btn"
-          >
-            Load more
-          </button>
+      {page < totalPages && (
+        <div ref={loadMoreRef} className="flex justify-center pt-4" data-testid="load-more-sentinel">
+          {loadingMore ? (
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading more wins...
+            </div>
+          ) : (
+            <button
+              onClick={() => setPage(p => p + 1)}
+              className="px-5 py-2 rounded-full text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+              data-testid="load-more-btn"
+            >
+              Load more
+            </button>
+          )}
         </div>
       )}
     </div>

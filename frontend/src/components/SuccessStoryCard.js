@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { CheckCircle2, MapPin, Sparkles } from 'lucide-react';
+import { CheckCircle2, MapPin, Sparkles, Star } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -40,6 +40,7 @@ const REACTIONS = [
 const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
   const meta = post.metadata || {};
   const theme = SERVICE_THEME[meta.service_type] || SERVICE_THEME.mobile_recharge;
+  const isOwn = !!currentUserId && meta.beneficiary_user_id === currentUserId;
 
   const [reactions, setReactions] = useState(post.reactions_count || { celebrate: 0, love: 0, fire: 0 });
   const [myReaction, setMyReaction] = useState(null);
@@ -110,7 +111,9 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
   return (
     <div
       onClick={() => onClick && onClick(post.post_id)}
-      className="relative overflow-hidden rounded-2xl cursor-pointer group transition-all hover:shadow-xl"
+      className={`relative overflow-hidden rounded-2xl cursor-pointer group transition-all hover:shadow-xl ${
+        isOwn ? 'ring-2 ring-amber-300 ring-offset-1 shadow-md' : ''
+      }`}
       data-testid={`success-story-${post.post_id}`}
     >
       {/* Gradient top strip */}
@@ -120,10 +123,21 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
       <div className="bg-white border border-slate-200 border-t-0 rounded-b-2xl p-5">
         {/* Top row: service chip + success badge */}
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${theme.chip}`}>
-            <span className="text-sm leading-none">{theme.icon}</span>
-            {theme.label}
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${theme.chip}`}>
+              <span className="text-sm leading-none">{theme.icon}</span>
+              {theme.label}
+            </span>
+            {isOwn && (
+              <span
+                className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-sm"
+                data-testid={`own-win-badge-${post.post_id}`}
+              >
+                <Star className="w-3 h-3 fill-current" />
+                Your Win
+              </span>
+            )}
+          </div>
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
             <CheckCircle2 className="w-3 h-3" />
             Successfully Completed
