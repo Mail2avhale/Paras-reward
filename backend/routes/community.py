@@ -135,7 +135,16 @@ async def create_success_story_post(
             bank_agg = await db.bank_transfer_requests.aggregate([
                 {"$match": {"user_id": user_id, "status": {"$in": bank_paid_statuses}}},
                 {"$group": {"_id": None, "total": {
-                    "$sum": {"$ifNull": ["$amount_inr", {"$ifNull": ["$inr_amount", {"$ifNull": ["$amount", 0]}]}]}
+                    "$sum": {"$ifNull": [
+                        "$withdrawal_amount",
+                        {"$ifNull": [
+                            "$amount_inr",
+                            {"$ifNull": [
+                                "$total_inr",
+                                {"$ifNull": ["$inr_amount", {"$ifNull": ["$amount", 0]}]}
+                            ]}
+                        ]}
+                    ]}
                 }}}
             ]).to_list(1)
             db_total = float((rech_agg[0]["total"] if rech_agg else 0) or 0) + float((bank_agg[0]["total"] if bank_agg else 0) or 0)
@@ -213,6 +222,106 @@ async def create_success_story_post(
         logging.warning(f"[SUCCESS STORY] create failed (non-fatal): {e}")
 
 
+async def _repair_zero_amount_success_stories():
+    """One-time repair: Success Story posts that got created with metadata.amount_inr=0
+    because of a field-name mismatch (e.g., bank_transfer_requests uses `withdrawal_amount`).
+    Looks up the original transaction via ref_id and patches the metadata in-place.
+    Fire-and-forget; errors logged, never raised."""
+    try:
+        if db is None:
+            return
+        bad = db.community_posts.find(
+            {"is_success_story": True, "metadata.amount_inr": {"$lte": 0}},
+            {"_id": 0, "post_id": 1, "metadata": 1}
+        )
+        repaired = 0
+        async for post in bad:
+            meta = post.get("metadata") or {}
+            ref_id = meta.get("ref_id") or ""
+            if not ref_id:
+                continue
+            amount = 0.0
+            if ref_id.startswith("bank_redeem:"):
+                req_id = ref_id.split(":", 1)[1]
+                req = await db.bank_transfer_requests.find_one(
+                    {"request_id": req_id},
+                    {"_id": 0, "amount_inr": 1, "amount": 1, "inr_amount": 1,
+                     "withdrawal_amount": 1, "total_inr": 1, "user_id": 1}
+                )
+                if req:
+                    amount = float(
+                        req.get("withdrawal_amount")
+                        or req.get("amount_inr")
+                        or req.get("total_inr")
+                        or req.get("amount")
+                        or req.get("inr_amount")
+                        or 0
+                    )
+            elif ref_id.startswith("recharge:"):
+                tid = ref_id.split(":", 1)[1]
+                txn = await db.recharge_transactions.find_one(
+                    {"$or": [{"eko_tid": tid}, {"request_id": tid}, {"client_ref_id": tid}]},
+                    {"_id": 0, "amount_inr": 1, "amount": 1, "user_id": 1}
+                )
+                if txn:
+                    amount = float(txn.get("amount_inr") or txn.get("amount") or 0)
+            if amount <= 0:
+                continue
+
+            # Recompute lifetime redeemed for this user
+            uid = meta.get("beneficiary_user_id")
+            lifetime = amount
+            if uid:
+                try:
+                    s_statuses = ["success", "SUCCESS", "Success", "completed", "COMPLETED"]
+                    p_statuses = ["paid", "Paid", "PAID"]
+                    r_agg = await db.recharge_transactions.aggregate([
+                        {"$match": {"user_id": uid, "status": {"$in": s_statuses}}},
+                        {"$group": {"_id": None, "t": {"$sum": {"$ifNull": ["$amount_inr", {"$ifNull": ["$amount", 0]}]}}}}
+                    ]).to_list(1)
+                    b_agg = await db.bank_transfer_requests.aggregate([
+                        {"$match": {"user_id": uid, "status": {"$in": p_statuses}}},
+                        {"$group": {"_id": None, "t": {"$sum": {"$ifNull": [
+                            "$withdrawal_amount",
+                            {"$ifNull": ["$amount_inr", {"$ifNull": ["$total_inr", {"$ifNull": ["$inr_amount", {"$ifNull": ["$amount", 0]}]}]}]}
+                        ]}}}}
+                    ]).to_list(1)
+                    lifetime = max(
+                        amount,
+                        float((r_agg[0]["t"] if r_agg else 0) or 0) + float((b_agg[0]["t"] if b_agg else 0) or 0)
+                    )
+                except Exception:
+                    pass
+
+            # Update title/content/metadata in place
+            label = meta.get("service_label") or "Transaction"
+            icon = meta.get("service_icon") or "✅"
+            first_name = meta.get("first_name") or "A user"
+            location = meta.get("location") or "India"
+            new_title = f"{icon} {first_name} from {location} completed {label}!"
+            new_content = "\n".join([
+                f"🎉 Congratulations **{first_name}** from **{location}**!",
+                "",
+                f"Successfully completed **{label}** of **₹{int(amount):,}**",
+                "",
+                "✅ Transaction completed successfully via Paras Reward",
+            ])
+            await db.community_posts.update_one(
+                {"post_id": post["post_id"]},
+                {"$set": {
+                    "title": new_title,
+                    "content": new_content,
+                    "metadata.amount_inr": float(amount),
+                    "metadata.user_total_redeemed_inr": float(lifetime),
+                }}
+            )
+            repaired += 1
+        if repaired:
+            logging.info(f"[SUCCESS STORY REPAIR] patched {repaired} zero-amount posts")
+    except Exception as e:
+        logging.error(f"[SUCCESS STORY REPAIR] failed: {e}")
+
+
 async def auto_backfill_success_stories(limit: int = 1000):
     """Run once at server startup to create Success Story posts for historical
     successful transactions that were completed BEFORE this feature shipped.
@@ -233,7 +342,8 @@ async def auto_backfill_success_stories(limit: int = 1000):
             + await db.bank_transfer_requests.count_documents({"status": {"$in": bank_paid_statuses}})
         )
         if existing >= total_txns:
-            logging.info(f"[SUCCESS STORY AUTO-BACKFILL] up-to-date ({existing}/{total_txns}) — skip")
+            logging.info(f"[SUCCESS STORY AUTO-BACKFILL] up-to-date ({existing}/{total_txns}) — skip create, run repair only")
+            await _repair_zero_amount_success_stories()
             return
 
         created = 0
@@ -277,7 +387,8 @@ async def auto_backfill_success_stories(limit: int = 1000):
         cursor2 = db.bank_transfer_requests.find(
             {"status": {"$in": bank_paid_statuses}},
             {"_id": 0, "user_id": 1, "amount_inr": 1, "amount": 1,
-             "inr_amount": 1, "request_id": 1, "processed_at": 1, "created_at": 1}
+             "inr_amount": 1, "withdrawal_amount": 1, "total_inr": 1,
+             "request_id": 1, "processed_at": 1, "created_at": 1}
         ).sort("processed_at", -1).limit(limit)
         async for req in cursor2:
             ref_id = f"bank_redeem:{req.get('request_id')}"
@@ -287,7 +398,14 @@ async def auto_backfill_success_stories(limit: int = 1000):
                 continue
             if not req.get("user_id"):
                 continue
-            amount = float(req.get("amount_inr") or req.get("amount") or req.get("inr_amount") or 0)
+            amount = float(
+                req.get("withdrawal_amount")
+                or req.get("amount_inr")
+                or req.get("total_inr")
+                or req.get("amount")
+                or req.get("inr_amount")
+                or 0
+            )
             if amount <= 0:
                 continue
             req_ts = req.get("processed_at") or req.get("created_at")
@@ -303,6 +421,8 @@ async def auto_backfill_success_stories(limit: int = 1000):
             created += 1
 
         logging.info(f"[SUCCESS STORY AUTO-BACKFILL] created {created} posts (existing before: {existing})")
+        # Patch any zero-amount posts from earlier broken runs
+        await _repair_zero_amount_success_stories()
         # Final prune to enforce rolling 1000 cap
         await _prune_old_success_stories()
     except Exception as e:

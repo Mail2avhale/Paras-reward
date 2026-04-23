@@ -845,7 +845,14 @@ async def mark_request_paid(action: AdminActionRequest):
         # Create community Success Story post (fire-and-forget)
         try:
             from routes.community import create_success_story_post
-            amount_paid = request.get("amount_inr") or request.get("amount") or request.get("inr_amount") or 0
+            amount_paid = (
+                request.get("withdrawal_amount")
+                or request.get("amount_inr")
+                or request.get("total_inr")
+                or request.get("amount")
+                or request.get("inr_amount")
+                or 0
+            )
             await create_success_story_post(
                 user_id=request.get("user_id"),
                 service_type="bank_redeem",
