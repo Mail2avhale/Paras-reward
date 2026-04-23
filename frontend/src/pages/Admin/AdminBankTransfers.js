@@ -1157,13 +1157,14 @@ const AdminBankTransfers = () => {
 
       {/* Action Modal */}
       {showActionModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="bg-white border-slate-200 max-w-md w-full shadow-xl">
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-slate-900 mb-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <Card className="bg-white border-slate-200 max-w-md w-full shadow-xl max-h-[95vh] flex flex-col overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0">
+              <h2 className="text-xl font-bold text-slate-900">
                 {actionType === 'paid' ? 'Mark as Paid' : 'Mark as Failed'}
               </h2>
-              
+            </div>
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1">
               {/* Request Details with Copy Buttons */}
               <div className="bg-slate-50 rounded-lg p-4 mb-4 space-y-3">
                 {/* User Info */}
@@ -1359,13 +1360,17 @@ const AdminBankTransfers = () => {
                   </div>
                 </>
               )}
-              
+            </div>
+
+            {/* Sticky footer with action buttons — always visible on mobile */}
+            <div className="p-4 sm:p-6 border-t border-slate-200 bg-white flex-shrink-0">
               <div className="flex gap-3">
                 <Button
                   onClick={() => setShowActionModal(false)}
                   variant="outline"
                   className="flex-1 border-slate-300 text-slate-700"
                   disabled={processing}
+                  data-testid="action-modal-cancel-btn"
                 >
                   Cancel
                 </Button>
@@ -1377,6 +1382,7 @@ const AdminBankTransfers = () => {
                       ? 'bg-green-600 hover:bg-green-700'
                       : 'bg-red-600 hover:bg-red-700'
                   }`}
+                  data-testid="action-modal-confirm-btn"
                 >
                   {processing ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
