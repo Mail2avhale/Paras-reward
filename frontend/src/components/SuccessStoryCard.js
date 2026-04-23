@@ -152,6 +152,17 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
             >
               ₹{(meta.amount_inr || 0).toLocaleString('en-IN')}
             </p>
+            {typeof meta.user_total_redeemed_inr === 'number' && meta.user_total_redeemed_inr > 0 && (
+              <p
+                className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] font-semibold text-slate-700"
+                data-testid={`success-story-lifetime-${post.post_id}`}
+              >
+                <span className="text-slate-400">Redeemed till</span>
+                <span className="text-slate-900">
+                  ₹{Math.round(meta.user_total_redeemed_inr).toLocaleString('en-IN')}
+                </span>
+              </p>
+            )}
           </div>
         </div>
 

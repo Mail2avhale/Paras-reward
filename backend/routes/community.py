@@ -83,6 +83,31 @@ async def create_success_story_post(
         }
         label, icon = service_labels.get(service_type, ("Transaction", "✅"))
 
+        # Snapshot of user's lifetime redeemed INR (mobile+DTH+bank).
+        # Note: the current txn is normally ALREADY in the DB when this runs
+        # (recharge_transactions updated to 'success' / bank_transfer_requests to 'paid'
+        # BEFORE this function is called). So the aggregation already includes it.
+        # max() guards the edge case where the write hasn't landed yet.
+        try:
+            success_statuses = ["success", "SUCCESS", "Success", "completed", "COMPLETED"]
+            bank_paid_statuses = ["paid", "Paid", "PAID"]
+            rech_agg = await db.recharge_transactions.aggregate([
+                {"$match": {"user_id": user_id, "status": {"$in": success_statuses}}},
+                {"$group": {"_id": None, "total": {
+                    "$sum": {"$ifNull": ["$amount_inr", {"$ifNull": ["$amount", 0]}]}
+                }}}
+            ]).to_list(1)
+            bank_agg = await db.bank_transfer_requests.aggregate([
+                {"$match": {"user_id": user_id, "status": {"$in": bank_paid_statuses}}},
+                {"$group": {"_id": None, "total": {
+                    "$sum": {"$ifNull": ["$amount_inr", {"$ifNull": ["$inr_amount", {"$ifNull": ["$amount", 0]}]}]}
+                }}}
+            ]).to_list(1)
+            db_total = float((rech_agg[0]["total"] if rech_agg else 0) or 0) + float((bank_agg[0]["total"] if bank_agg else 0) or 0)
+        except Exception:
+            db_total = 0.0
+        lifetime_redeemed = max(db_total, float(amount_inr))
+
         # Title + content
         title = f"{icon} {first_name} from {location} completed {label}!"
         body_lines = [
@@ -128,6 +153,8 @@ async def create_success_story_post(
                 "city": city,
                 "state": state,
                 "ref_id": ref_id,
+                "beneficiary_user_id": user_id,
+                "user_total_redeemed_inr": float(lifetime_redeemed),
             },
             "like_count": 0,
             "reactions_count": {"celebrate": 0, "love": 0, "fire": 0},
