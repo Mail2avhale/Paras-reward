@@ -82,7 +82,8 @@ def _mask_account(v: str) -> str:
 
 
 def _pick_created_at(doc: dict) -> str:
-    for k in ("created_at", "approved_at", "timestamp", "updated_at", "eko_callback_at"):
+    for k in ("paid_at", "processed_at", "completed_at", "approved_at",
+              "created_at", "timestamp", "updated_at", "eko_callback_at"):
         v = doc.get(k)
         if v:
             return v if isinstance(v, str) else v.isoformat()
@@ -103,7 +104,7 @@ def _resolve_service(stype: str) -> tuple:
 @router.get("/public/live-transactions")
 async def get_live_transactions():
     """Public endpoint: latest 100 SUCCESSFUL transactions (time-desc) across ALL services."""
-    cache_key = "live_ticker:latest_100:v7_dedup"
+    cache_key = "live_ticker:latest_100:v8_withdrawal_amount"
     if cache:
         try:
             cached = await cache.get(cache_key)
@@ -206,15 +207,30 @@ async def get_live_transactions():
     except Exception as e:
         logging.warning(f"[LIVE-TICKER] bank_withdrawal error: {e}")
 
-    # 3b. bank_transfer_requests — admin-completed manual bank redeems (AdminBankTransfers page source)
+    # 3b. bank_transfer_requests — admin-completed manual bank redeems (AdminBankTransfers page source).
+    # Uses `withdrawal_amount` as primary field. Filter: requests either created OR paid within last 90 days
+    # (so an older pending request that was paid today still surfaces).
     try:
         bt_docs = await db.bank_transfer_requests.find(
-            {"status": {"$in": SUCCESS_STATUSES}, "created_at": {"$gte": since}},
-            {"_id": 0, "user_id": 1, "user_mobile": 1, "amount": 1, "amount_inr": 1,
-             "created_at": 1, "approved_at": 1, "completed_at": 1, "paid_at": 1},
-        ).sort("created_at", -1).limit(80).to_list(80)
+            {
+                "status": {"$in": SUCCESS_STATUSES},
+                "$or": [
+                    {"created_at": {"$gte": since}},
+                    {"processed_at": {"$gte": since}},
+                    {"paid_at": {"$gte": since}},
+                ],
+            },
+            {"_id": 0, "user_id": 1, "user_mobile": 1,
+             "withdrawal_amount": 1, "amount": 1, "amount_inr": 1, "total_inr": 1, "inr_amount": 1,
+             "created_at": 1, "approved_at": 1, "completed_at": 1, "paid_at": 1, "processed_at": 1},
+        ).sort("processed_at", -1).limit(80).to_list(80)
         for d in bt_docs:
-            amt = d.get("amount_inr") or d.get("amount") or 0
+            amt = (d.get("withdrawal_amount")
+                   or d.get("amount_inr")
+                   or d.get("total_inr")
+                   or d.get("amount")
+                   or d.get("inr_amount")
+                   or 0)
             items.append({
                 "uid": d.get("user_id"),
                 "mobile": _mask_account(d.get("user_mobile", "")),
