@@ -10,6 +10,34 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 
 ## What's Been Implemented
 
+### Live Wins / Success Stories Feed in Community Forum (DONE - April 23, 2026)
+
+**Business Goal**: Social proof loop — every successful Mobile Recharge, DTH Recharge, and Bank Redeem is auto-posted as a visually distinct "Success Story" card in the Community Forum, driving engagement and trust.
+
+**Key Changes**:
+1. **Backend — `community.py`**:
+   - `create_success_story_post()` helper — idempotent via `ref_id` dedup. Posts are unified with regular feed schema (`user_id='system'`, `status='active'`, `category='Success Story'`) so they appear in `/posts` queries.
+   - Triggers wired into `eko_recharge.py` (mobile + DTH) and `manual_bank_transfer.py` (paid bank transfers).
+   - `GET /api/community/success-stats` — returns `{total_lifetime, total_7d, total_24h, total_amount_inr, breakdown}` for Live Wins banner. Handles legacy case variations (`paid`/`Paid`/`PAID`).
+   - `POST /api/community/posts/{id}/react` with emoji (`celebrate`|`love`|`fire`) — add / swap / remove in single endpoint.
+   - `GET /api/community/posts/{id}/my-reaction?user_id=X` — returns current user's reaction.
+   - `POST /api/community/admin/backfill-success-stories` — one-shot script to backfill historical success stories from `recharge_transactions` + `bank_transfer_requests`.
+   - `POST /api/community/posts/create` blocks `category='Success Story'` with 403 (system-generated only).
+
+2. **Frontend — `SuccessStoryCard.js` (new component)**:
+   - Gradient strip (blue=mobile, purple=DTH, emerald=bank).
+   - Shows only: service chip, "Successfully Completed" badge, first name, city/state, ₹amount, 3 reaction buttons.
+   - **No timestamp rendered** (per user request).
+   - Optimistic reaction UI with rollback on API error, light celebration Sparkles for brand-new posts.
+
+3. **Frontend — `CommunityPage.js`**:
+   - Live Wins amber banner at top with Trophy icon — "X successful requests completed · ₹Y disbursed · Join Z wins this week".
+   - Category chip "🎉 Wins" filters to Success Story posts only.
+   - Conditional render: `post.category === 'Success Story'` → `<SuccessStoryCard />`, else `<PostCard />`.
+   - Create Post modal correctly excludes Success Story from user dropdown.
+
+**Test Coverage**: 12/12 pytest backend cases + full frontend verification on live preview (iteration_222.json). No issues.
+
 ### Eko Pending Refunds — Smart Mobile Attribution + Production Reconciliation (DONE - April 22, 2026)
 
 **Business Goal**: ₹87,977 of real money stuck at Eko in "Refund Pending" state (60 transactions). Until Eko's Refund API is called with OTP, Eko won't release eValue back to retailer wallet. Priority: unblock this money flow.
