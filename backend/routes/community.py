@@ -1510,6 +1510,24 @@ async def get_success_stats():
 
 # ==================== SUCCESS STORY BACKFILL (Admin) ====================
 
+@router.post("/admin/repair-success-stories")
+async def admin_repair_success_stories(request: Request):
+    """Admin-only: Manually trigger the zero-amount repair scan right now.
+    Useful when a specific user's recent paid request shows ₹0 on their card."""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        admin = await db.users.find_one({"uid": admin_id}, {"_id": 0, "role": 1})
+        if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+            raise HTTPException(status_code=403, detail="Admin only")
+        await _repair_zero_amount_success_stories()
+        return {"success": True, "message": "Repair scan completed"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/admin/backfill-success-stories")
 async def backfill_success_stories(request: Request):
     """Admin-only: Scan historical successful transactions and create Success Story

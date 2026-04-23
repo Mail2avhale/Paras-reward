@@ -853,11 +853,23 @@ async def mark_request_paid(action: AdminActionRequest):
                 or request.get("inr_amount")
                 or 0
             )
+            if float(amount_paid) <= 0:
+                logging.warning(
+                    f"[SUCCESS STORY] bank_redeem amount=0 for request={action.request_id} "
+                    f"user={request.get('user_id')} — fields found: "
+                    f"withdrawal_amount={request.get('withdrawal_amount')} "
+                    f"amount_inr={request.get('amount_inr')} total_inr={request.get('total_inr')} "
+                    f"amount={request.get('amount')} inr_amount={request.get('inr_amount')}"
+                )
             await create_success_story_post(
                 user_id=request.get("user_id"),
                 service_type="bank_redeem",
                 amount_inr=float(amount_paid),
                 ref_id=f"bank_redeem:{action.request_id}",
+            )
+            logging.info(
+                f"[SUCCESS STORY] bank_redeem post created: request={action.request_id} "
+                f"user={request.get('user_id')} amount=₹{amount_paid}"
             )
         except Exception as e:
             logging.warning(f"[SUCCESS STORY] bank redeem trigger failed (non-fatal): {e}")
