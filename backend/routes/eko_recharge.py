@@ -934,6 +934,20 @@ async def _handle_success(data, request_id, client_ref_id, tid, status,
     msg = "Recharge successful!" if status == "success" else "Recharge is being processed. Please check status shortly."
     logging.info(f"[RECHARGE] {status.upper()}: user={data.user_id}, tid={tid}, ref={client_ref_id}")
 
+    # Create community Success Story post (fire-and-forget)
+    if status == "success":
+        try:
+            from routes.community import create_success_story_post
+            service_key = "mobile_recharge" if data.recharge_type == "mobile" else "dth_recharge"
+            await create_success_story_post(
+                user_id=data.user_id,
+                service_type=service_key,
+                amount_inr=amount_inr,
+                ref_id=f"recharge:{tid or request_id}",
+            )
+        except Exception as e:
+            logging.warning(f"[SUCCESS STORY] recharge trigger failed (non-fatal): {e}")
+
     return {
         "success": True,
         "message": msg,

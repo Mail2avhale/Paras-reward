@@ -32,6 +32,115 @@ CATEGORIES = [
     "Tips & Tricks",
     "General Discussion",
     "Announcement",
+    "Support",
+    "Success Story",  # Auto-generated system posts for completed transactions
+]
+
+# Emoji reactions allowed on posts
+ALLOWED_REACTIONS = {"celebrate", "love", "fire"}  # 🎉 ❤️ 🔥
+
+
+async def create_success_story_post(
+    user_id: str,
+    service_type: str,  # "mobile_recharge" | "dth_recharge" | "bank_redeem"
+    amount_inr: float,
+    extra_title: str = "",
+    ref_id: str = "",
+):
+    """Create a system-authored (admin) Success Story post in the community forum.
+    Privacy-safe: only first name + city/state + amount revealed. No phone/account shown.
+    Idempotent via ref_id. Safe to call fire-and-forget (errors logged, never raised)."""
+    try:
+        if db is None:
+            return
+        # Idempotency: if ref_id already posted, skip
+        if ref_id:
+            existing = await db.community_posts.find_one(
+                {"metadata.ref_id": ref_id, "is_success_story": True},
+                {"_id": 1}
+            )
+            if existing:
+                return
+
+        user = await db.users.find_one(
+            {"uid": user_id},
+            {"_id": 0, "name": 1, "first_name": 1, "address": 1, "city": 1, "state": 1}
+        )
+        if not user:
+            return
+
+        full_name = (user.get("first_name") or user.get("name") or "").strip()
+        first_name = full_name.split()[0] if full_name else "A user"
+        # Prefer direct city/state; fall back to nested address
+        city = (user.get("city") or (user.get("address") or {}).get("city") or "").strip() if isinstance(user.get("address"), dict) else (user.get("city") or "").strip()
+        state = (user.get("state") or (user.get("address") or {}).get("state") or "").strip() if isinstance(user.get("address"), dict) else (user.get("state") or "").strip()
+        location = ", ".join([p for p in [city, state] if p]) or "India"
+
+        service_labels = {
+            "mobile_recharge": ("Mobile Recharge", "📱"),
+            "dth_recharge": ("DTH Recharge", "📺"),
+            "bank_redeem": ("Bank Redeem", "💰"),
+        }
+        label, icon = service_labels.get(service_type, ("Transaction", "✅"))
+
+        # Title + content
+        title = f"{icon} {first_name} from {location} completed {label}!"
+        body_lines = [
+            f"🎉 Congratulations **{first_name}** from **{location}**!",
+            "",
+            f"Successfully completed **{label}** of **₹{int(amount_inr):,}**",
+            "",
+            "✅ Transaction completed successfully via Paras Reward",
+        ]
+        content = "\n".join(body_lines)
+
+        post_id = str(uuid.uuid4())
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        post_doc = {
+            "post_id": post_id,
+            "author_uid": "system",
+            "author_name": "Paras Reward",
+            "author_role": "admin",
+            "is_admin_post": True,
+            "is_success_story": True,
+            "category": "Success Story",
+            "title": title,
+            "content": content,
+            "image_url": None,
+            "images": [],
+            "tags": [service_type, "success"],
+            "metadata": {
+                "service_type": service_type,
+                "service_label": label,
+                "service_icon": icon,
+                "amount_inr": float(amount_inr),
+                "first_name": first_name,
+                "location": location,
+                "city": city,
+                "state": state,
+                "ref_id": ref_id,
+            },
+            "like_count": 0,
+            "reactions_count": {"celebrate": 0, "love": 0, "fire": 0},
+            "comment_count": 0,
+            "view_count": 0,
+            "bookmark_count": 0,
+            "helpful_count": 0,
+            "is_pinned": False,
+            "is_deleted": False,
+            "is_reported": False,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+        }
+        await db.community_posts.insert_one(post_doc)
+        logging.info(f"[SUCCESS STORY] Posted: {service_type} ₹{amount_inr} by {first_name} ({location})")
+    except Exception as e:
+        logging.warning(f"[SUCCESS STORY] create failed (non-fatal): {e}")
+    "Knowledge Share",
+    "Tips & Tricks",
+    "General Discussion",
+    "Announcement",
     "Support"
 ]
 
@@ -403,6 +512,77 @@ async def toggle_like(post_id: str, request: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/posts/{post_id}/react")
+async def toggle_reaction(post_id: str, request: Request):
+    """Toggle an emoji reaction (celebrate 🎉 | love ❤️ | fire 🔥) on a post.
+    One reaction per user per post — switching to a new emoji replaces the old one."""
+    try:
+        data = await request.json()
+        user_id = data.get("user_id")
+        emoji = (data.get("emoji") or "").strip().lower()
+
+        if emoji not in ALLOWED_REACTIONS:
+            raise HTTPException(status_code=400, detail="Invalid reaction emoji")
+        if await is_user_blocked(user_id):
+            raise HTTPException(status_code=403, detail="Blocked")
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        existing = await db.community_reactions.find_one(
+            {"post_id": post_id, "user_id": user_id}, {"_id": 0, "emoji": 1}
+        )
+
+        # Same emoji pressed → remove reaction
+        if existing and existing.get("emoji") == emoji:
+            await db.community_reactions.delete_one({"post_id": post_id, "user_id": user_id})
+            await db.community_posts.update_one(
+                {"post_id": post_id},
+                {"$inc": {f"reactions_count.{emoji}": -1}}
+            )
+            return {"success": True, "removed": True, "emoji": emoji}
+
+        # Different emoji pressed → swap
+        if existing:
+            old_emoji = existing.get("emoji")
+            await db.community_reactions.update_one(
+                {"post_id": post_id, "user_id": user_id},
+                {"$set": {"emoji": emoji, "updated_at": now_iso}}
+            )
+            inc_patch = {
+                f"reactions_count.{emoji}": 1,
+                f"reactions_count.{old_emoji}": -1,
+            }
+            await db.community_posts.update_one({"post_id": post_id}, {"$inc": inc_patch})
+            return {"success": True, "swapped": True, "emoji": emoji}
+
+        # Fresh reaction
+        await db.community_reactions.insert_one({
+            "post_id": post_id, "user_id": user_id,
+            "emoji": emoji, "created_at": now_iso,
+        })
+        await db.community_posts.update_one(
+            {"post_id": post_id},
+            {"$inc": {f"reactions_count.{emoji}": 1}}
+        )
+        return {"success": True, "added": True, "emoji": emoji}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/posts/{post_id}/my-reaction")
+async def get_my_reaction(post_id: str, user_id: str):
+    """Return the current user's reaction emoji (if any) for a post."""
+    if not user_id:
+        return {"emoji": None}
+    r = await db.community_reactions.find_one(
+        {"post_id": post_id, "user_id": user_id},
+        {"_id": 0, "emoji": 1}
+    )
+    return {"emoji": (r or {}).get("emoji")}
+
 
 
 # ==================== BOOKMARKS ====================
@@ -943,3 +1123,106 @@ async def get_community_stats():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== SUCCESS STORY BACKFILL (Admin) ====================
+
+@router.post("/admin/backfill-success-stories")
+async def backfill_success_stories(request: Request):
+    """Admin-only: Scan historical successful transactions and create Success Story
+    posts for each one that doesn't already have a post.
+    Sources:
+      - recharge_transactions (mobile + DTH) where status IN ['success', 'SUCCESS', 'completed']
+      - bank_transfer_requests where status='paid'
+    Idempotent: uses ref_id dedup via create_success_story_post()."""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        limit = int(data.get("limit", 500))
+        dry_run = bool(data.get("dry_run", False))
+
+        admin = await db.users.find_one({"uid": admin_id}, {"_id": 0, "role": 1, "name": 1})
+        if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+            raise HTTPException(status_code=403, detail="Admin only")
+
+        created = {"mobile_recharge": 0, "dth_recharge": 0, "bank_redeem": 0}
+        skipped_existing = 0
+        skipped_no_user = 0
+
+        success_statuses = ["success", "SUCCESS", "Success", "completed", "COMPLETED"]
+
+        # 1. Recharge transactions (mobile + DTH)
+        cursor = db.recharge_transactions.find(
+            {"status": {"$in": success_statuses}},
+            {"_id": 0, "user_id": 1, "amount_inr": 1, "amount": 1,
+             "recharge_type": 1, "eko_tid": 1, "request_id": 1, "client_ref_id": 1,
+             "operator_name": 1, "operator": 1}
+        ).sort("created_at", -1).limit(limit)
+        async for txn in cursor:
+            ref_id = f"recharge:{txn.get('eko_tid') or txn.get('request_id') or txn.get('client_ref_id')}"
+            # Dedupe check
+            if await db.community_posts.find_one({"metadata.ref_id": ref_id, "is_success_story": True}, {"_id": 1}):
+                skipped_existing += 1
+                continue
+            if not txn.get("user_id"):
+                skipped_no_user += 1
+                continue
+            amount = float(txn.get("amount_inr") or txn.get("amount") or 0)
+            if amount <= 0:
+                continue
+            rtype = (txn.get("recharge_type") or "").lower()
+            # Heuristic: infer DTH from operator name if missing
+            if not rtype:
+                op = (txn.get("operator_name") or txn.get("operator") or "").lower()
+                rtype = "dth" if any(k in op for k in ["dth", "tata sky", "airtel dth", "dish tv", "videocon", "d2h", "sun direct"]) else "mobile"
+            service_key = "dth_recharge" if rtype == "dth" else "mobile_recharge"
+            if not dry_run:
+                await create_success_story_post(
+                    user_id=txn["user_id"],
+                    service_type=service_key,
+                    amount_inr=amount,
+                    ref_id=ref_id,
+                )
+            created[service_key] += 1
+
+        # 2. Bank transfer paid requests
+        cursor2 = db.bank_transfer_requests.find(
+            {"status": "paid"},
+            {"_id": 0, "user_id": 1, "amount_inr": 1, "amount": 1,
+             "inr_amount": 1, "request_id": 1}
+        ).sort("processed_at", -1).limit(limit)
+        async for req in cursor2:
+            ref_id = f"bank_redeem:{req.get('request_id')}"
+            if await db.community_posts.find_one({"metadata.ref_id": ref_id, "is_success_story": True}, {"_id": 1}):
+                skipped_existing += 1
+                continue
+            if not req.get("user_id"):
+                skipped_no_user += 1
+                continue
+            amount = float(req.get("amount_inr") or req.get("amount") or req.get("inr_amount") or 0)
+            if amount <= 0:
+                continue
+            if not dry_run:
+                await create_success_story_post(
+                    user_id=req["user_id"],
+                    service_type="bank_redeem",
+                    amount_inr=amount,
+                    ref_id=ref_id,
+                )
+            created["bank_redeem"] += 1
+
+        total_created = sum(created.values())
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "total_created": total_created,
+            "by_type": created,
+            "skipped_existing": skipped_existing,
+            "skipped_no_user": skipped_no_user,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Backfill success stories failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
