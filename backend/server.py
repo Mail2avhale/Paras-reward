@@ -100,7 +100,7 @@ from routes.admin_subscription import router as admin_subscription_router
 from routes.pool_wallet import router as pool_wallet_router, set_db as set_pool_wallet_db, set_cache as set_pool_wallet_cache, distribute_pool_to_core_team
 from routes.employee_management import router as employee_router, set_db as set_employee_db, set_cache as set_employee_cache, distribute_employee_pool
 from routes.employee_reports import router as employee_reports_router, set_db as set_employee_reports_db
-from routes.community import router as community_router, set_db as set_community_db, set_cache as set_community_cache
+from routes.community import router as community_router, set_db as set_community_db, set_cache as set_community_cache, auto_backfill_success_stories
 from routes.careers_investors import router as public_pages_router, set_db as set_public_pages_db
 from routes.social_profile import router as social_profile_router, set_db as set_social_profile_db
 from routes.live_ticker import router as live_ticker_router, set_db as set_live_ticker_db, set_cache as set_live_ticker_cache
@@ -33626,6 +33626,14 @@ async def _background_db_init():
     except Exception as e:
         print(f"Holiday seed (non-critical): {e}")
     
+    # Community Success Story auto-backfill (fire-and-forget, idempotent)
+    try:
+        import asyncio
+        asyncio.create_task(auto_backfill_success_stories(limit=2000))
+        print("Community Success Story auto-backfill scheduled")
+    except Exception as e:
+        print(f"Success story backfill (non-critical): {e}")
+
     print("Background DB init complete!")
 
 @app.on_event("startup")

@@ -174,6 +174,91 @@ async def create_success_story_post(
         logging.warning(f"[SUCCESS STORY] create failed (non-fatal): {e}")
 
 
+async def auto_backfill_success_stories(limit: int = 2000):
+    """Run once at server startup to create Success Story posts for historical
+    successful transactions that were completed BEFORE this feature shipped.
+    Idempotent via ref_id dedup — safe to run multiple times.
+    Fire-and-forget: errors are logged but never raised."""
+    if db is None:
+        return
+    try:
+        # Quick skip if we already have a healthy volume of success stories
+        existing = await db.community_posts.count_documents(
+            {"category": "Success Story", "is_success_story": True}
+        )
+        # Count how many historical success transactions exist
+        success_statuses = ["success", "SUCCESS", "Success", "completed", "COMPLETED"]
+        bank_paid_statuses = ["paid", "Paid", "PAID"]
+        total_txns = (
+            await db.recharge_transactions.count_documents({"status": {"$in": success_statuses}})
+            + await db.bank_transfer_requests.count_documents({"status": {"$in": bank_paid_statuses}})
+        )
+        if existing >= total_txns:
+            logging.info(f"[SUCCESS STORY AUTO-BACKFILL] up-to-date ({existing}/{total_txns}) — skip")
+            return
+
+        created = 0
+        # 1. Recharges (mobile + DTH)
+        cursor = db.recharge_transactions.find(
+            {"status": {"$in": success_statuses}},
+            {"_id": 0, "user_id": 1, "amount_inr": 1, "amount": 1,
+             "recharge_type": 1, "eko_tid": 1, "request_id": 1, "client_ref_id": 1,
+             "operator_name": 1, "operator": 1}
+        ).sort("created_at", -1).limit(limit)
+        async for txn in cursor:
+            ref_id = f"recharge:{txn.get('eko_tid') or txn.get('request_id') or txn.get('client_ref_id')}"
+            if await db.community_posts.find_one(
+                {"metadata.ref_id": ref_id, "is_success_story": True}, {"_id": 1}
+            ):
+                continue
+            if not txn.get("user_id"):
+                continue
+            amount = float(txn.get("amount_inr") or txn.get("amount") or 0)
+            if amount <= 0:
+                continue
+            rtype = (txn.get("recharge_type") or "").lower()
+            if not rtype:
+                op = (txn.get("operator_name") or txn.get("operator") or "").lower()
+                rtype = "dth" if any(k in op for k in ["dth", "tata sky", "airtel dth", "dish tv", "videocon", "d2h", "sun direct"]) else "mobile"
+            service_key = "dth_recharge" if rtype == "dth" else "mobile_recharge"
+            await create_success_story_post(
+                user_id=txn["user_id"],
+                service_type=service_key,
+                amount_inr=amount,
+                ref_id=ref_id,
+            )
+            created += 1
+
+        # 2. Bank transfer paid requests
+        cursor2 = db.bank_transfer_requests.find(
+            {"status": {"$in": bank_paid_statuses}},
+            {"_id": 0, "user_id": 1, "amount_inr": 1, "amount": 1,
+             "inr_amount": 1, "request_id": 1}
+        ).sort("processed_at", -1).limit(limit)
+        async for req in cursor2:
+            ref_id = f"bank_redeem:{req.get('request_id')}"
+            if await db.community_posts.find_one(
+                {"metadata.ref_id": ref_id, "is_success_story": True}, {"_id": 1}
+            ):
+                continue
+            if not req.get("user_id"):
+                continue
+            amount = float(req.get("amount_inr") or req.get("amount") or req.get("inr_amount") or 0)
+            if amount <= 0:
+                continue
+            await create_success_story_post(
+                user_id=req["user_id"],
+                service_type="bank_redeem",
+                amount_inr=amount,
+                ref_id=ref_id,
+            )
+            created += 1
+
+        logging.info(f"[SUCCESS STORY AUTO-BACKFILL] created {created} posts (existing before: {existing})")
+    except Exception as e:
+        logging.error(f"[SUCCESS STORY AUTO-BACKFILL] failed: {e}")
+
+
 def set_db(database):
     global db
     db = database

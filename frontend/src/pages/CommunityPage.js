@@ -552,14 +552,6 @@ const CommunityPage = ({ user }) => {
         </div>
       )}
 
-      {/* Stats Bar */}
-      <div className="flex gap-4 text-xs text-slate-500 bg-white border border-slate-200 rounded-lg px-4 py-2">
-        <span>{stats.total_posts || 0} Posts</span>
-        <span>{stats.active_users || 0} Members</span>
-        <span>{stats.total_comments || 0} Comments</span>
-        <span>{stats.helpful_posts || 0} Helpful</span>
-      </div>
-
       {/* Categories */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {categories.map(cat => (
