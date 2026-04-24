@@ -503,6 +503,60 @@ const AdminBankTransfers = () => {
               <option value="paid">Paid</option>
               <option value="failed">Failed</option>
             </select>
+
+            {/* Priority Quick-Toggle: Low Redeemers First */}
+            <Button
+              onClick={() => {
+                if (sortBy === 'total_redeemed' && sortOrder === 'asc') {
+                  // Already active → turn off (revert to latest-first)
+                  setSortBy('created_at');
+                  setSortOrder('desc');
+                  setNeverRedeemed(false);
+                } else {
+                  setSortBy('total_redeemed');
+                  setSortOrder('asc');
+                }
+              }}
+              variant={sortBy === 'total_redeemed' && sortOrder === 'asc' ? 'default' : 'outline'}
+              className={
+                sortBy === 'total_redeemed' && sortOrder === 'asc'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
+                  : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
+              }
+              data-testid="priority-low-redeemers-btn"
+              title="Show users with lowest lifetime redeems (incl. zero) at top"
+            >
+              <ArrowUpDown className="w-4 h-4 mr-1.5" />
+              {sortBy === 'total_redeemed' && sortOrder === 'asc' ? 'Low Redeemers (ON)' : 'Low Redeemers First'}
+            </Button>
+
+            {/* Quick-Toggle: Only Zero Redeemers */}
+            <Button
+              onClick={() => {
+                if (neverRedeemed && Number(redeemMax) === 0) {
+                  // Already active → clear
+                  setNeverRedeemed(false);
+                  setRedeemMax('');
+                } else {
+                  setNeverRedeemed(true);
+                  setRedeemMin('');
+                  setRedeemMax('0');
+                  setSortBy('total_redeemed');
+                  setSortOrder('asc');
+                  setShowAdvancedFilters(true);
+                }
+              }}
+              variant={neverRedeemed && Number(redeemMax) === 0 ? 'default' : 'outline'}
+              className={
+                neverRedeemed && Number(redeemMax) === 0
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
+                  : 'border-blue-300 text-blue-700 hover:bg-blue-50'
+              }
+              data-testid="priority-zero-redeemers-btn"
+              title="Show only users who never redeemed to bank before"
+            >
+              🆕 {neverRedeemed && Number(redeemMax) === 0 ? 'Only ₹0 (ON)' : 'Only ₹0 Redeemers'}
+            </Button>
             
             {/* Date From */}
             <div className="flex items-center gap-2">
