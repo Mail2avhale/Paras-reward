@@ -3544,6 +3544,9 @@ async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
     # Total (no burn)
     total_prc = base_prc + processing_fee_prc + admin_charges_prc
     
+    # Admin charges in INR (20% of base + processing fee)
+    admin_charges_inr = (base_inr + PROCESSING_FEE_INR) * ADMIN_CHARGE_RATE
+
     return {
         "base_inr": base_inr,
         "gst_inr": round(gst_inr, 2),
@@ -3551,8 +3554,9 @@ async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
         "base_with_gst_inr": round(base_with_gst_inr, 2),
         "processing_fee_inr": PROCESSING_FEE_INR,
         "admin_charge_rate": ADMIN_CHARGE_RATE * 100,
+        "admin_charges_inr": round(admin_charges_inr, 2),
         "prc_rate": prc_rate,
-        # PRC Breakdown
+        # PRC Breakdown (what user pays)
         "base_prc": round(base_prc, 2),
         "gst_prc": round(gst_inr * prc_rate, 2),
         "processing_fee_prc": round(processing_fee_prc, 2),
@@ -3561,13 +3565,14 @@ async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
         "burn_rate_percent": 0,
         "subtotal_before_burn_prc": round(total_prc, 2),
         "total_prc": round(total_prc, 2),
-        # For Company Wallet
+        # For Company Wallet — always stored in INR so totals match UI labels (₹).
+        # Unit alignment with manual/Razorpay subscription credits which are already INR.
         "company_wallet_breakdown": {
-            "gst_collection": round(gst_inr * prc_rate, 2),
-            "processing_fees": round(processing_fee_prc, 2),
-            "admin_charges": round(admin_charges_prc, 2),
+            "gst_collection": round(gst_inr, 2),
+            "processing_fees": round(PROCESSING_FEE_INR, 2),
+            "admin_charges": round(admin_charges_inr, 2),
             "burn_amount": 0,
-            "subscription_revenue": round(base_inr * prc_rate, 2)
+            "subscription_revenue": round(base_inr, 2)
         }
     }
 
@@ -3579,6 +3584,7 @@ async def credit_company_wallets_for_subscription(user_id: str, pricing: dict, u
     """
     now = datetime.now(timezone.utc)
     breakdown = pricing.get("company_wallet_breakdown", {})
+    prc_rate_used = pricing.get("prc_rate")
     
     wallet_credits = [
         ("gst_collection", breakdown.get("gst_collection", 0), "GST (18%)"),
@@ -3589,7 +3595,7 @@ async def credit_company_wallets_for_subscription(user_id: str, pricing: dict, u
     
     for wallet_type, amount, description in wallet_credits:
         if amount > 0:
-            # Update wallet balance
+            # Update wallet balance (INR)
             await db.company_wallets.update_one(
                 {"wallet_type": wallet_type},
                 {
@@ -3599,12 +3605,14 @@ async def credit_company_wallets_for_subscription(user_id: str, pricing: dict, u
                 upsert=True
             )
             
-            # Record transaction
+            # Record transaction — amount is in INR (aligned with manual subs)
             await db.company_wallet_transactions.insert_one({
                 "txn_id": str(uuid.uuid4()),
                 "wallet_type": wallet_type,
                 "type": "credit",
                 "amount": amount,
+                "currency": "INR",
+                "prc_rate_at_txn": prc_rate_used,
                 "description": f"{description} from {user_name} Elite subscription",
                 "source": "prc_subscription",
                 "user_id": user_id,
@@ -26683,6 +26691,140 @@ async def get_gst_collection_summary():
     except Exception as e:
         logging.error(f"GST Summary Error: {e}")
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+
+
+@api_router.post("/admin/company-wallets/repair-prc-units")
+async def repair_prc_unit_company_wallets(request: Request):
+    """Admin-only: One-shot repair.
+    Historical PRC subscription entries in company_wallet_transactions were stored
+    in PRC units (multiplied by prc_rate) instead of INR. This endpoint:
+      1. Scans all transactions where source='prc_subscription' AND currency != 'INR'
+      2. Divides amount by prc_rate_at_txn (or looks up via subscription_payments / prc_rate_history fallback)
+      3. Updates each txn's amount + marks currency='INR' + tags repaired_at
+      4. Decrements wallet balance + total_credit by the diff per wallet_type
+    Idempotent: already-INR entries are skipped.
+    """
+    try:
+        data = await request.json() if request.headers.get("content-type","").startswith("application/json") else {}
+        admin_id = data.get("admin_id")
+        dry_run = bool(data.get("dry_run", False))
+
+        admin = await db.users.find_one({"uid": admin_id}, {"_id": 0, "role": 1})
+        if not admin or admin.get("role") not in ("admin", "super_admin", "manager"):
+            raise HTTPException(status_code=403, detail="Admin only")
+
+        now = datetime.now(timezone.utc)
+        # Fetch current PRC rate as last-resort fallback
+        try:
+            current_rate = float(await get_dynamic_prc_rate() or 13.0)
+        except Exception:
+            current_rate = 13.0
+
+        # Scan inflated transactions
+        query = {
+            "source": "prc_subscription",
+            "type": "credit",
+            "$or": [
+                {"currency": {"$exists": False}},
+                {"currency": {"$ne": "INR"}},
+            ],
+            "repaired_at": {"$exists": False},
+        }
+        cursor = db.company_wallet_transactions.find(query, {"_id": 0})
+        scanned = 0
+        repaired = 0
+        balance_deltas = {}  # wallet_type -> total reduction (in PRC-units that need to be removed)
+        patches = []
+        async for txn in cursor:
+            scanned += 1
+            wallet = txn.get("wallet_type")
+            amt_prc = float(txn.get("amount") or 0)
+            if amt_prc <= 0:
+                continue
+
+            # Determine prc_rate for this txn
+            rate = txn.get("prc_rate_at_txn")
+            if not rate:
+                # Try to look up via user's subscription_payments on the same day
+                user_id = txn.get("user_id")
+                ts = txn.get("timestamp")
+                if user_id and ts:
+                    try:
+                        sp = await db.subscription_payments.find_one(
+                            {
+                                "user_id": user_id,
+                                "payment_method": "prc",
+                                "created_at": {"$regex": f"^{ts[:10]}"},
+                            },
+                            {"_id": 0, "prc_rate": 1, "pricing": 1}
+                        )
+                        if sp:
+                            rate = sp.get("prc_rate") or (sp.get("pricing") or {}).get("prc_rate")
+                    except Exception:
+                        pass
+            rate = float(rate or current_rate)
+            if rate <= 0:
+                rate = current_rate
+
+            amt_inr = round(amt_prc / rate, 2)
+            delta_reduction = round(amt_prc - amt_inr, 2)  # to subtract from wallet balance
+
+            patches.append((txn.get("txn_id"), amt_prc, amt_inr, rate, wallet, delta_reduction))
+            balance_deltas[wallet] = balance_deltas.get(wallet, 0) + delta_reduction
+
+        if dry_run:
+            return {
+                "success": True, "dry_run": True,
+                "scanned": scanned, "to_repair": len(patches),
+                "balance_deltas_to_subtract": {k: round(v, 2) for k, v in balance_deltas.items()},
+                "sample": [
+                    {"wallet": p[4], "old_prc": p[1], "new_inr": p[2], "rate": p[3]}
+                    for p in patches[:5]
+                ],
+            }
+
+        # Apply patches
+        for txn_id, amt_prc, amt_inr, rate, wallet, _delta in patches:
+            await db.company_wallet_transactions.update_one(
+                {"txn_id": txn_id},
+                {"$set": {
+                    "amount": amt_inr,
+                    "currency": "INR",
+                    "prc_rate_at_txn": rate,
+                    "amount_prc_before_repair": amt_prc,
+                    "repaired_at": now.isoformat(),
+                }},
+            )
+            repaired += 1
+
+        # Reduce wallet balances + total_credit by the delta
+        for wallet, delta in balance_deltas.items():
+            if delta > 0:
+                await db.company_wallets.update_one(
+                    {"wallet_type": wallet},
+                    {"$inc": {"balance": -delta, "total_credit": -delta},
+                     "$set": {"last_updated": now.isoformat()}},
+                    upsert=True,
+                )
+
+        # Audit log
+        await db.admin_audit_log.insert_one({
+            "admin_id": admin_id, "action": "repair_prc_unit_company_wallets",
+            "repaired_count": repaired, "scanned": scanned,
+            "balance_deltas": {k: round(v, 2) for k, v in balance_deltas.items()},
+            "timestamp": now.isoformat(),
+        })
+
+        return {
+            "success": True, "scanned": scanned, "repaired": repaired,
+            "balance_deltas_subtracted": {k: round(v, 2) for k, v in balance_deltas.items()},
+            "message": f"Repaired {repaired}/{scanned} PRC-unit entries to INR",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"repair_prc_unit_company_wallets failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ==================== ADS INCOME MODULE ====================
