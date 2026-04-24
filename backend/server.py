@@ -4605,6 +4605,11 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float
     # Catches legacy orphan redemptions where wallet debit entry was never written
     # (e.g., Mahaveer's Airtel postpaid recharge of 18,786 PRC in redeem_requests
     # but no matching wallet transaction).
+    #
+    # NOTE: subscription_payments is INTENTIONALLY excluded — subscription PRC
+    # debits ALWAYS go through the wallet log (enforced by code path). Scanning
+    # them here would double-count subscription debits whose reference_id doesn't
+    # align with wallet log's reference_id.
     service_collections = [
         ("bank_transfer_requests", ["request_id", "redeem_id", "txn_id"]),
         ("redeem_requests",        ["request_id", "redeem_id", "txn_id"]),
@@ -4616,9 +4621,23 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float
         ("gift_voucher_requests",  ["request_id", "voucher_id", "order_id"]),
         ("orders",                 ["order_id", "request_id", "txn_id"]),
         ("unified_redemptions",    ["request_id", "redeem_id", "txn_id"]),
-        ("subscription_payments",  ["request_id", "payment_id", "txn_id"]),
     ]
-    extra_match = {"subscription_payments": {"payment_method": "prc"}}
+    extra_match = {}
+
+    # Build a fallback dedup lookup: {(amount, YYYYMMDD): count} from wallet log
+    # If service collection doc has an amount that matches wallet log on same day, skip.
+    wallet_day_amounts: dict = {}
+    if debug or True:  # always build for correctness
+        async for t in db.transactions.find(
+            {"user_id": user_id, "type": {"$in": DEBIT_TYPES}},
+            {"_id": 0, "amount": 1, "created_at": 1, "timestamp": 1},
+        ):
+            amt_w = round(abs(float(t.get("amount") or 0)), 2)
+            ts = t.get("created_at") or t.get("timestamp") or ""
+            ts_str = str(ts)[:10] if ts else ""
+            if amt_w > 0 and ts_str:
+                key = (amt_w, ts_str)
+                wallet_day_amounts[key] = wallet_day_amounts.get(key, 0) + 1
 
     for coll_name, ref_fields in service_collections:
         try:
@@ -4632,7 +4651,7 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float
                     if v:
                         ref_id = str(v)
                         break
-                # Skip if already counted in wallet log
+                # Skip if already counted in wallet log by ref
                 if ref_id and ref_id in seen_refs:
                     continue
                 # Extract PRC amount (strict PRC fields only — no INR leak)
@@ -4645,6 +4664,14 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float
                         used_field = af
                         break
                 if amt <= 0:
+                    continue
+                # FALLBACK DEDUP — if wallet log has a debit of the same amount
+                # on the same day, treat as already counted (ref IDs just don't align)
+                doc_ts = doc.get("created_at") or doc.get("timestamp") or ""
+                doc_day = str(doc_ts)[:10] if doc_ts else ""
+                key = (amt, doc_day)
+                if wallet_day_amounts.get(key, 0) > 0:
+                    wallet_day_amounts[key] -= 1  # consume one match
                     continue
                 # Count as supplementary debit
                 total_debits += amt
