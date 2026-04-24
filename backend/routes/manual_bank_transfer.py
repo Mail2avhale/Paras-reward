@@ -575,6 +575,7 @@ async def get_all_requests(
     redeem_min: Optional[float] = Query(default=None, description="Min lifetime redeemed filter"),
     redeem_max: Optional[float] = Query(default=None, description="Max lifetime redeemed filter"),
     never_redeemed: Optional[bool] = Query(default=None, description="Show only first-time redeemers"),
+    subscription_status: Optional[str] = Query(default=None, description="Filter by subscription: active | inactive"),
 ):
     """Get all bank transfer requests for admin with advanced filtering and sorting."""
     try:
@@ -715,6 +716,11 @@ async def get_all_requests(
             requests = [r for r in requests if r.get("user_total_redeemed_prc", 0) <= redeem_max]
         if never_redeemed:
             requests = [r for r in requests if r.get("is_first_redeem", False)]
+
+        # Post-filter by subscription_status
+        if subscription_status:
+            want_active = subscription_status.lower() == "active"
+            requests = [r for r in requests if bool(r.get("subscription_active", False)) == want_active]
         
         # Sort by total_redeemed if requested
         if sort_by == "total_redeemed":

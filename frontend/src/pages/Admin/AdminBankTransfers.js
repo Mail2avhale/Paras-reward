@@ -88,6 +88,7 @@ const AdminBankTransfers = () => {
   const [redeemMin, setRedeemMin] = useState('');
   const [redeemMax, setRedeemMax] = useState('');
   const [neverRedeemed, setNeverRedeemed] = useState(false);
+  const [subscriptionFilter, setSubscriptionFilter] = useState(''); // '', 'active', 'inactive'
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   // Pagination
@@ -245,6 +246,7 @@ const AdminBankTransfers = () => {
       if (redeemMin) params.append('redeem_min', redeemMin);
       if (redeemMax) params.append('redeem_max', redeemMax);
       if (neverRedeemed) params.append('never_redeemed', 'true');
+      if (subscriptionFilter) params.append('subscription_status', subscriptionFilter);
       
       const res = await axios.get(`${API}/bank-transfer/admin/requests?${params}`);
       
@@ -260,7 +262,7 @@ const AdminBankTransfers = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, searchQuery, dateFrom, dateTo, sortBy, sortOrder, redeemMin, redeemMax, neverRedeemed]);
+  }, [page, statusFilter, searchQuery, dateFrom, dateTo, sortBy, sortOrder, redeemMin, redeemMax, neverRedeemed, subscriptionFilter]);
 
   useEffect(() => {
     loadRequests();
@@ -557,6 +559,45 @@ const AdminBankTransfers = () => {
             >
               🆕 {neverRedeemed && Number(redeemMax) === 0 ? 'Only ₹0 (ON)' : 'Only ₹0 Redeemers'}
             </Button>
+
+            {/* Subscription filter: All / Active / Inactive */}
+            <div className="flex items-center rounded-lg border border-slate-300 overflow-hidden" data-testid="subscription-filter-group">
+              <button
+                onClick={() => setSubscriptionFilter('')}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  subscriptionFilter === ''
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+                data-testid="sub-filter-all"
+              >
+                All Subs
+              </button>
+              <button
+                onClick={() => setSubscriptionFilter(subscriptionFilter === 'active' ? '' : 'active')}
+                className={`px-3 py-2 text-sm font-medium border-l border-slate-300 transition-colors ${
+                  subscriptionFilter === 'active'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-white text-emerald-700 hover:bg-emerald-50'
+                }`}
+                data-testid="sub-filter-active"
+                title="Show only users with active subscription"
+              >
+                ⭐ Active
+              </button>
+              <button
+                onClick={() => setSubscriptionFilter(subscriptionFilter === 'inactive' ? '' : 'inactive')}
+                className={`px-3 py-2 text-sm font-medium border-l border-slate-300 transition-colors ${
+                  subscriptionFilter === 'inactive'
+                    ? 'bg-slate-600 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+                data-testid="sub-filter-inactive"
+                title="Show only users without active subscription"
+              >
+                Inactive
+              </button>
+            </div>
             
             {/* Date From */}
             <div className="flex items-center gap-2">
@@ -615,6 +656,7 @@ const AdminBankTransfers = () => {
                 setRedeemMin('');
                 setRedeemMax('');
                 setNeverRedeemed(false);
+                setSubscriptionFilter('');
                 setShowAdvancedFilters(false);
               }}
               className="border-slate-300 text-slate-700"
