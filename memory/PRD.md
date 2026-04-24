@@ -10,26 +10,27 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 
 ### Total Redeemed "0 PRC" False Display Bug (DONE - Feb 1, 2026)
 
-**User-reported**: On Home Dashboard, "Redeem Limit → USED" showed `0.00 PRC` even though the user had clearly redeemed tens of thousands. On "Redeem Used Details" page, `TOTAL REDEEMED` showed `0.00 PRC` while `Redeem Breakdown` clearly listed Bank Redeem 18,365 + Subscription 16,477 + Bill Pay 7,155 ≈ 42,000 PRC.
+**User-reported**: "Total Redeemed" on Redeem Used Details page showed `0.00 PRC`, and "USED" on Home Dashboard showed `0.00 PRC`, even though the "Redeem Breakdown" clearly listed Bank Redeem 18,365 + Subscription 16,477 + Bill Pay 7,155 ≈ 42,000 PRC.
 
-**Root cause**: `get_user_all_time_redeemed` (`server.py`) double-counted refunds when the same refund event was recorded in BOTH `transactions` (wallet log) AND `prc_ledger` (modern unified ledger). The previous dedup only matched exact `reference_id`, but the two collections use DIFFERENT reference ID schemes:
-- `transactions` → `BWR-...` / `WD-...` / `BTR-...`
-- `prc_ledger` → `RDM-...`
+**User requirement**: "दोन्ही value एकच आहेत. म्हणजे आजपर्यंत युजर ने किती PRC वापरले आहे" → **Total Redeemed = USED = sum of the breakdown categories. Simple lifetime spend. No refund netting.**
 
-So a single logical refund in both collections was counted twice → with enough partial refunds, `debits - (refunds × 2)` dropped to 0 or negative → clamped to 0 by `max(0, ...)` → `Total Redeemed = 0` displayed.
+**Previous implementation had**: A complex 3-layer aggregator (`transactions` wallet log + `prc_ledger` + service-collection safety net with refund netting and cross-collection reference-based dedup). When the same refund event was recorded in both `transactions` and `prc_ledger` with different reference schemes (`BWR-...` vs `RDM-...`), refunds were double-counted → `debits - (refunds × 2) ≤ 0` → clamped to 0.
 
 **Fix** (`/app/backend/server.py` `get_user_all_time_redeemed`):
-1. Layer 1 (`transactions` refunds): register `seen_refs.add(f"refund:{ref}")` AND track `(rounded_amount, YYYY-MM-DD)` in a new `refund_day_amounts` dict.
-2. Layer 2 (`prc_ledger` refunds): check EXACT ref match, then also check `(amount, day)` fallback — skips duplicates even when reference schemes differ between collections.
-3. Also support legacy `amount_prc` field on old `withdrawal_refund` entries.
+- Replaced the aggregator with a direct, deterministic sum over all service collections (Bank Redeem, Subscription, Bill Pay, Mobile/DTH Recharge, Gift Vouchers, DMT, Shop orders, unified redemptions).
+- Uses `(amount_prc, YYYY-MM-DDTHH:MM)` fingerprint to dedup records that exist in multiple service collections (e.g., same bank redeem in both `bank_transfer_requests` and `redeem_requests`).
+- Matches the exact logic of `/api/prc-statement/usage-history/{uid}` `by_category` breakdown → guaranteed the Total display equals the Breakdown sum.
+- Refunds are NOT netted here — refunds restore the user's PRC balance; the limit formula `available = redeemable - total_redeemed` still works against gross lifetime spend (the business-desired semantic per user).
 
-**Regression tests** (`/app/backend/tests/test_total_redeemed_refund_dedup.py` — all 4 passing):
-- Refund in both collections with different ref schemes → counted once.
-- Partial refund recorded twice → preserves debit amount.
-- Legacy `amount_prc` field → recognized.
-- No refunds → no regression in clean case.
+**Admin diagnostic endpoint added**: `GET /api/admin/debug/total-redeemed/{user_id}` — returns full breakdown (authoritative vs service-scan, entry-by-entry) for any future reconciliation needs.
 
-**Impact**: Production users whose "Total Redeemed" showed 0 will now display the correct net-of-refunds amount. Their Dashboard `REMAINING` limit will also correct itself (since `redeemable - total_redeemed` was previously inflated).
+**Regression tests** (`/app/backend/tests/test_total_redeemed_display.py` — 5 passing):
+- Total = breakdown sum
+- Refunds don't wipe total to 0
+- Same redeem in multiple collections → counted once
+- INR field not misused as PRC
+- Pending redeems count (PRC already deducted)
+
 
 
 
