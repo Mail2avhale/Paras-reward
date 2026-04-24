@@ -3472,6 +3472,37 @@ async def get_elite_pricing():
         raise HTTPException(status_code=500, detail="Could not calculate pricing")
 
 
+@api_router.get("/subscription/prc-eligibility/{uid}")
+async def get_prc_subscription_eligibility(uid: str):
+    """Check whether a user is eligible to avail the one-time PRC subscription benefit.
+    Returns: {eligible: bool, last_used_at?: str, last_plan?: str}.
+    Used by frontend to preemptively disable the 'Pay with PRC' option + show banner."""
+    try:
+        COUNTING_STATUSES = ["paid", "upcoming", "active", "completed", "expired"]
+        prior = await db.subscription_payments.find_one(
+            {
+                "user_id": uid,
+                "payment_method": "prc",
+                "status": {"$in": COUNTING_STATUSES},
+            },
+            sort=[("created_at", -1)],
+            projection={"_id": 0, "created_at": 1, "plan_name": 1, "plan_type": 1, "status": 1},
+        )
+        if not prior:
+            return {"eligible": True}
+        return {
+            "eligible": False,
+            "last_used_at": prior.get("created_at"),
+            "last_plan": prior.get("plan_name") or "elite",
+            "last_plan_type": prior.get("plan_type"),
+            "last_status": prior.get("status"),
+        }
+    except Exception as e:
+        logging.error(f"prc-eligibility error for {uid}: {e}")
+        # Fail open — don't block user if DB hiccup
+        return {"eligible": True, "error": str(e)}
+
+
 # ==================== NEW ELITE PRICING (Active - 29 March 2026) ====================
 # Formula: (₹999 + 18% GST) × PRC Rate + ₹10 Processing + 20% Admin Charges
 
@@ -11898,7 +11929,32 @@ async def subscription_pay_with_prc(request: Request):
         current_balance = float(user.get("prc_balance", 0) or 0)
         
         logging.info(f"[PRC-SUB] Request: User={user_id}, Plan={plan_name}, Amount={prc_amount}, Balance={current_balance}")
-        
+
+        # ==================== ONE-TIME PRC BENEFIT GUARD ====================
+        # PRC-based subscription is a one-time-per-user benefit (any plan/duration).
+        # Counts only successful prior PRC payments (pending/failed/cancelled do NOT consume the benefit).
+        # No admin override — applies uniformly.
+        COUNTING_STATUSES = ["paid", "upcoming", "active", "completed", "expired"]
+        prior_prc = await db.subscription_payments.find_one(
+            {
+                "user_id": user_id,
+                "payment_method": "prc",
+                "status": {"$in": COUNTING_STATUSES},
+            },
+            {"_id": 0, "created_at": 1, "plan_name": 1, "plan_type": 1, "status": 1},
+        )
+        if prior_prc:
+            prior_date = (prior_prc.get("created_at") or "")[:10]
+            prior_plan = (prior_prc.get("plan_name") or "elite").title()
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"PRC Subscription is a one-time benefit per account. "
+                    f"You already availed it on {prior_date or 'a previous date'} "
+                    f"({prior_plan}). Please use UPI or Manual Payment for renewal."
+                ),
+            )
+
         # CHECK COOLDOWN: 15 days between subscriptions
         try:
             cooldown = await check_service_cooldown(user_id, "subscription")

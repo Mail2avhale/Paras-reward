@@ -57,6 +57,9 @@ const SubscriptionPlans = ({ user }) => {
   const [prcEnabled, setPrcEnabled] = useState(false);
   const [prcPricing, setPrcPricing] = useState(null);
   const [prcLoading, setPrcLoading] = useState(false);
+  const [prcEligible, setPrcEligible] = useState(true);
+  const [prcLastUsedAt, setPrcLastUsedAt] = useState(null);
+  const [prcLastPlan, setPrcLastPlan] = useState(null);
   
   // Steps: 1=Select Plan, 2=Select Duration, 3=Payment Info, 4=Upload Proof
   const [currentStep, setCurrentStep] = useState(1);
@@ -128,18 +131,29 @@ const SubscriptionPlans = ({ user }) => {
       setRazorpayEnabled(isRazorpayEnabled);
       setPrcEnabled(isPrcEnabled);
       
-      // Fetch PRC pricing if enabled
+      // Fetch PRC pricing + one-time-benefit eligibility if enabled
+      let isPrcEligible = true;
       if (isPrcEnabled) {
         try {
           const prcRes = await axios.get(`${API}/subscription/elite-pricing`);
           if (prcRes.data.success) setPrcPricing(prcRes.data);
         } catch { /* silent */ }
+        try {
+          const eligRes = await axios.get(`${API}/subscription/prc-eligibility/${user.uid}`);
+          isPrcEligible = eligRes.data?.eligible !== false;
+          setPrcEligible(isPrcEligible);
+          setPrcLastUsedAt(eligRes.data?.last_used_at || null);
+          setPrcLastPlan(eligRes.data?.last_plan || null);
+        } catch { /* silent — fail open */ }
       }
       
-      // Set default payment method (priority: Razorpay > PRC > Manual)
+      // Check eligibility (may have been updated above via state setter — re-read via local var)
+      let canUsePrc = isPrcEnabled && isPrcEligible;
+
+      // Set default payment method (priority: Razorpay > eligible-PRC > Manual)
       if (isRazorpayEnabled) {
         setPaymentMethod('razorpay');
-      } else if (isPrcEnabled) {
+      } else if (canUsePrc) {
         setPaymentMethod('prc');
       } else if (isManualEnabled) {
         setPaymentMethod('manual');
@@ -1102,9 +1116,12 @@ const SubscriptionPlans = ({ user }) => {
             {/* Pay with PRC */}
             {prcEnabled && (
             <button
-              onClick={() => setPaymentMethod('prc')}
-              className={`w-full p-4 rounded-2xl border-2 transition-all ${
-                paymentMethod === 'prc'
+              onClick={() => prcEligible && setPaymentMethod('prc')}
+              disabled={!prcEligible}
+              className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${
+                !prcEligible
+                  ? 'border-gray-800 bg-gray-900/30 opacity-60 cursor-not-allowed'
+                  : paymentMethod === 'prc'
                   ? 'border-cyan-500 bg-cyan-500/10'
                   : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'
               }`}
@@ -1112,27 +1129,35 @@ const SubscriptionPlans = ({ user }) => {
             >
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  paymentMethod === 'prc' ? 'bg-cyan-500/20' : 'bg-gray-800'
+                  paymentMethod === 'prc' && prcEligible ? 'bg-cyan-500/20' : 'bg-gray-800'
                 }`}>
-                  <Wallet className={`w-6 h-6 ${paymentMethod === 'prc' ? 'text-cyan-400' : 'text-gray-400'}`} />
+                  <Wallet className={`w-6 h-6 ${paymentMethod === 'prc' && prcEligible ? 'text-cyan-400' : 'text-gray-400'}`} />
                 </div>
                 <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2">
-                    <p className={`font-semibold ${paymentMethod === 'prc' ? 'text-cyan-400' : 'text-white'}`}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className={`font-semibold ${paymentMethod === 'prc' && prcEligible ? 'text-cyan-400' : 'text-white'}`}>
                       Pay with PRC
                     </p>
-                    <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full font-medium">
-                      Instant
-                    </span>
+                    {prcEligible ? (
+                      <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full font-medium">
+                        Instant
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full font-medium" data-testid="prc-one-time-used-badge">
+                        One-time benefit used
+                      </span>
+                    )}
                   </div>
                   <p className="text-gray-400 text-sm">
-                    {prcPricing ? `${Number(prcPricing.total_prc_required).toLocaleString('en-IN')} PRC required` : 'Use your PRC balance'}
+                    {!prcEligible
+                      ? `Already availed${prcLastUsedAt ? ` on ${String(prcLastUsedAt).slice(0, 10)}` : ''}${prcLastPlan ? ` (${String(prcLastPlan).charAt(0).toUpperCase() + String(prcLastPlan).slice(1)})` : ''} — use UPI or Manual Payment`
+                      : (prcPricing ? `${Number(prcPricing.total_prc_required).toLocaleString('en-IN')} PRC required` : 'Use your PRC balance')}
                   </p>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  paymentMethod === 'prc' ? 'border-cyan-500 bg-cyan-500' : 'border-gray-600'
+                  paymentMethod === 'prc' && prcEligible ? 'border-cyan-500 bg-cyan-500' : 'border-gray-600'
                 }`}>
-                  {paymentMethod === 'prc' && <Check className="w-3 h-3 text-white" />}
+                  {paymentMethod === 'prc' && prcEligible && <Check className="w-3 h-3 text-white" />}
                 </div>
               </div>
             </button>
