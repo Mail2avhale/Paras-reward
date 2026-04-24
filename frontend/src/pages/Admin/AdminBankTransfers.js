@@ -309,12 +309,32 @@ const AdminBankTransfers = () => {
   };
 
   // Open action modal
-  const openActionModal = (request, type) => {
+  const openActionModal = async (request, type) => {
     setSelectedRequest(request);
     setActionType(type);
     setShowActionModal(true);
     setActionRemark('');
     setUtrNumber('');
+    // Lazy-fetch user's redeem limit stats (skipped from list for perf)
+    if (request?.user_id && request.redeem_limit_available == null) {
+      try {
+        const res = await axios.get(`${API}/api/user/${request.user_id}/redeem-limit`);
+        const d = res.data || {};
+        const rawUsed = d.total_redeemed ?? 0;
+        const rawTotal = d.total_limit ?? 0;
+        setSelectedRequest(prev => prev ? {
+          ...prev,
+          redeem_limit_available: d.available ?? 0,
+          redeem_limit_effective: d.effective_available ?? 0,
+          redeem_limit_total: rawTotal,
+          redeem_limit_used: rawUsed,
+          redeem_limit_percent: d.unlock_percent ?? 0,
+          redeem_limit_raw: Math.round((rawTotal - rawUsed) * 100) / 100,
+        } : prev);
+      } catch (e) {
+        // Silent — modal still shows other fields
+      }
+    }
   };
 
   // Reset filters

@@ -689,9 +689,16 @@ async def get_all_requests(
             req["user_redeem_count"] = totals["redeem_count"]
             req["is_first_redeem"] = totals["redeem_count"] <= 1
         
-        # Enrich: user's current redeem limit (available, effective_available)
-        # PERF: deduplicate by unique uid — many requests can share the same user
-        if calculate_redeem_limit_func and user_ids:
+        # Enrich: user's current redeem limit
+        # NOTE: calculate_redeem_limit_func is expensive (12+ DB queries per user).
+        # For the list view we SKIP this enrichment to keep response times fast.
+        # Individual request details (modal / detail endpoint) can fetch it via
+        # /api/user/{uid}/redeem-limit on demand.
+        # Exception: if the admin is actively filtering/sorting by redeem_limit_*
+        # fields, we'd need it — but currently the list only filters by
+        # user_total_redeemed_prc (already populated from the fast aggregation).
+        SKIP_REDEEM_LIMIT_ENRICHMENT = True
+        if calculate_redeem_limit_func and user_ids and not SKIP_REDEEM_LIMIT_ENRICHMENT:
             limit_cache = {}
             unique_uids = set(r.get("user_id") for r in requests if r.get("user_id"))
             for uid in unique_uids:
