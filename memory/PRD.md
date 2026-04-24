@@ -8,27 +8,29 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Backend**: FastAPI (Python) + MongoDB (Motor)
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
-### Admin Redeem Limit Override — Unblocks Legit Users (DONE - Feb 1, 2026)
+### Admin Redeem Limit Override + Bank Redeem False "0 Available" Fix (DONE - Feb 1, 2026)
 
-**Bug**: Production user `9970100782` had ~1.3M PRC but got `Insufficient Redeem Limit. Available: 0 PRC` on Bank Redeem page. Root cause: when a user's **active Growth Network** size drops to 0 (e.g., downline mining sessions expire), `calculate_user_redeem_limit` returns `redeemable = 0` regardless of balance. Admin-only endpoint `/admin/override-redeem-limit` existed but **wrote to a field that was never read back** — override was silently ignored.
+**User-reported bug**: Production user `9970100782` (Elite Subscription, 1196 active network users, 65.22% unlocked, Remaining Redeem Limit = 12,99,837 PRC ≈ ₹99,987 as shown on Home) got "Insufficient Redeem Limit. Available: 0 PRC" when submitting Bank Redeem.
 
-**Fix**:
-1. **Backend — `server.py`**:
-   - `calculate_user_redeem_limit` now reads `redeem_limit_override` field and treats it as **additional redeem headroom** on top of `total_redeemed`. When active, `redeemable = max(formula_redeemable, total_redeemed + override_value)` and `unlock_percent` reflects the expanded cap.
-   - `check_redeem_limit` no longer blocks users with `unlock_percent==0` when an admin override is present.
-   - Response payload adds `override_active`, `override_value`, `override_reason` so UI can show status.
-   - `get_user_redeem_limit_internal` (used by Admin User360) passes through override fields.
-2. **Frontend — `AdminUser360New.js`**:
-   - New "Redeem Override" admin action button (amber, `Zap` icon) next to Adjust Balance.
-   - Modal (`redeem-override-modal`) with PRC amount input, reason, permanent-toggle, and shows current `total_redeemed` + existing override.
-   - Override badge on the Redeem Limit card when active: `Override +N PRC`.
-   - Uses existing `POST /api/admin/override-redeem-limit` endpoint.
-3. **Regression**: `/app/backend/tests/test_redeem_limit_override.py` (3 tests, all passing).
+**REAL root cause (frontend)**:
+`BankRedeemPage.js` line 101 used `.catch(() => ({ data: null }))` to silently swallow ANY error from `GET /api/user/{uid}/redeem-limit` — timeout, 403, 500, mobile network blip, ALL collapsed to `null`. Then the submit guard evaluated `redeemLimit?.effective_available || ... || 0 = 0` and falsely showed "Available: 0 PRC" even though the user legitimately had 12+ lakh PRC of limit.
 
-**Verified E2E via curl**:
-- Before override: `effective_available=0, override_active=False`
-- Apply 50,000 PRC override → `effective_available=28,574, override_active=True, total_limit=131,599`
-- Clear (0) → reverts to 0
+Home screen loaded the API successfully on first Dashboard render → showed correct 12,99,837 PRC. The Bank Redeem page's *second* call (on mobile, often a slower network path) occasionally failed transiently → silent null → false block.
+
+**Fix** (`/app/frontend/src/pages/BankRedeemPage.js`):
+1. `/redeem-limit` fetch now retries up to 3 times with back-off (400/800 ms).
+2. After retries, if it still fails, a toast surfaces the error AND the user can still submit. The client-side "available" guard is *only* applied when `redeemLimit` is non-null — otherwise the backend's authoritative `check_redeem_limit` at POST `/bank-transfer/request` validates (line 413 `manual_bank_transfer.py`).
+3. `availableLimit` now uses `Math.max(effective_available, effective_remaining, remaining_limit, available)` instead of `||` chain, which correctly coalesces zero values without falling back to 0 prematurely.
+
+**Bonus (separate fix — admin safety net)**:
+- `calculate_user_redeem_limit` now honors `redeem_limit_override` (previously set by admin but ignored) as *additional* headroom above `total_redeemed`. `check_redeem_limit` bypasses the "zero unlock" block when override is active.
+- New Admin UI in `AdminUser360New.js` → "Redeem Override" button + modal with amount, reason, permanent toggle.
+- Badge on Redeem Limit card when override is active.
+
+**Regression tests** (all passing):
+- `/app/backend/tests/test_redeem_limit_override.py` — 3 tests
+- `/app/backend/tests/test_bank_redeem_transient_failure.py` — authoritative server-side check
+
 
 
 

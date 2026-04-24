@@ -95,10 +95,27 @@ const BankRedeemPage = ({ user: initialUser }) => {
         }
         
         // Fetch fresh user data, config, and redeem limit
+        // IMPORTANT: redeem-limit is fetched WITHOUT a silent catch so a transient
+        // error doesn't produce a false "Available: 0 PRC" block at submit time.
+        // If it fails, we retry; after retries it remains null and the frontend
+        // guard falls back to user.prc_balance + server-side authoritative check.
+        const fetchRedeemLimit = async (attempt = 1) => {
+          try {
+            return await axios.get(`${API}/user/${userData.uid}/redeem-limit`);
+          } catch (err) {
+            if (attempt < 3) {
+              await new Promise(r => setTimeout(r, 400 * attempt));
+              return fetchRedeemLimit(attempt + 1);
+            }
+            console.error('[BankRedeem] redeem-limit fetch failed after retries:', err?.response?.status, err?.message);
+            return { data: null, _error: true };
+          }
+        };
+        
         const [userRes, configRes, limitRes, burnRes] = await Promise.all([
           axios.get(`${API}/users/${userData.uid}`),
           axios.get(`${API}/bank-transfer/config`),
-          axios.get(`${API}/user/${userData.uid}/redeem-limit`).catch(() => ({ data: null })),
+          fetchRedeemLimit(),
           axios.get(`${API}/redemption/calculate-charges?amount_inr=100&user_id=${userData.uid}`).catch(() => ({ data: null }))
         ]);
         
@@ -114,6 +131,9 @@ const BankRedeemPage = ({ user: initialUser }) => {
         // Set redeem limit info
         if (limitRes.data?.success) {
           setRedeemLimit(limitRes.data.limit);
+        } else if (limitRes._error) {
+          // Surface the error but don't block UX — backend will enforce at submit
+          toast.error('Could not load redeem limit. You can still submit — limit will be verified by server.');
         }
         
         // Pre-fill account holder name
@@ -260,10 +280,20 @@ const BankRedeemPage = ({ user: initialUser }) => {
     }
     
     // Check Available Redeem Limit (NOT prc_balance)
-    const availableLimit = redeemLimit?.effective_available || redeemLimit?.effective_remaining || redeemLimit?.remaining_limit || redeemLimit?.remaining || 0;
-    if (availableLimit < fees.total_prc) {
-      toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${fees.total_prc.toLocaleString()} PRC`);
-      return;
+    // If redeemLimit failed to load, skip the client-side guard and let the
+    // server-side check_redeem_limit validate on submit — prevents a false
+    // "Available: 0 PRC" block caused by a transient /redeem-limit fetch error.
+    if (redeemLimit) {
+      const availableLimit = Math.max(
+        Number(redeemLimit.effective_available) || 0,
+        Number(redeemLimit.effective_remaining) || 0,
+        Number(redeemLimit.remaining_limit) || 0,
+        Number(redeemLimit.available) || 0
+      );
+      if (availableLimit > 0 && availableLimit < fees.total_prc) {
+        toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${fees.total_prc.toLocaleString()} PRC`);
+        return;
+      }
     }
     
     // Check KYC
