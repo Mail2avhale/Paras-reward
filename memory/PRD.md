@@ -8,6 +8,31 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Backend**: FastAPI (Python) + MongoDB (Motor)
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
+### Total Redeemed "0 PRC" False Display Bug (DONE - Feb 1, 2026)
+
+**User-reported**: On Home Dashboard, "Redeem Limit → USED" showed `0.00 PRC` even though the user had clearly redeemed tens of thousands. On "Redeem Used Details" page, `TOTAL REDEEMED` showed `0.00 PRC` while `Redeem Breakdown` clearly listed Bank Redeem 18,365 + Subscription 16,477 + Bill Pay 7,155 ≈ 42,000 PRC.
+
+**Root cause**: `get_user_all_time_redeemed` (`server.py`) double-counted refunds when the same refund event was recorded in BOTH `transactions` (wallet log) AND `prc_ledger` (modern unified ledger). The previous dedup only matched exact `reference_id`, but the two collections use DIFFERENT reference ID schemes:
+- `transactions` → `BWR-...` / `WD-...` / `BTR-...`
+- `prc_ledger` → `RDM-...`
+
+So a single logical refund in both collections was counted twice → with enough partial refunds, `debits - (refunds × 2)` dropped to 0 or negative → clamped to 0 by `max(0, ...)` → `Total Redeemed = 0` displayed.
+
+**Fix** (`/app/backend/server.py` `get_user_all_time_redeemed`):
+1. Layer 1 (`transactions` refunds): register `seen_refs.add(f"refund:{ref}")` AND track `(rounded_amount, YYYY-MM-DD)` in a new `refund_day_amounts` dict.
+2. Layer 2 (`prc_ledger` refunds): check EXACT ref match, then also check `(amount, day)` fallback — skips duplicates even when reference schemes differ between collections.
+3. Also support legacy `amount_prc` field on old `withdrawal_refund` entries.
+
+**Regression tests** (`/app/backend/tests/test_total_redeemed_refund_dedup.py` — all 4 passing):
+- Refund in both collections with different ref schemes → counted once.
+- Partial refund recorded twice → preserves debit amount.
+- Legacy `amount_prc` field → recognized.
+- No refunds → no regression in clean case.
+
+**Impact**: Production users whose "Total Redeemed" showed 0 will now display the correct net-of-refunds amount. Their Dashboard `REMAINING` limit will also correct itself (since `redeemable - total_redeemed` was previously inflated).
+
+
+
 ### Admin Redeem Limit Override + Bank Redeem False "0 Available" Fix (DONE - Feb 1, 2026)
 
 **User-reported bug**: Production user `9970100782` (Elite Subscription, 1196 active network users, 65.22% unlocked, Remaining Redeem Limit = 12,99,837 PRC ≈ ₹99,987 as shown on Home) got "Insufficient Redeem Limit. Available: 0 PRC" when submitting Bank Redeem.

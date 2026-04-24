@@ -4511,6 +4511,10 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float
     total_debits = 0.0
     total_refunds = 0.0
     seen_refs: set = set()   # All reference_ids seen (wallet + service) — prevents double count
+    # Fallback dedup for refunds recorded in both `transactions` and `prc_ledger`
+    # with DIFFERENT reference_id/reference schemes (e.g., BWR- vs RDM-) but same
+    # logical event. Key = (rounded_amount_prc, YYYY-MM-DD).
+    refund_day_amounts: dict = {}
     breakdown = []
 
     # --- LAYER 1: `transactions` wallet log ---
@@ -4536,17 +4540,32 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float
 
         async for t in db.transactions.find(
             {"user_id": user_id, "type": {"$in": REFUND_TYPES}},
-            {"_id": 0, "type": 1, "amount": 1, "reference_id": 1, "created_at": 1, "description": 1},
+            {"_id": 0, "type": 1, "amount": 1, "amount_prc": 1, "reference_id": 1, "created_at": 1, "description": 1},
         ):
-            amt = abs(float(t.get("amount") or 0))
+            # Some historical entries store PRC under `amount_prc` instead of `amount`
+            raw_amt = t.get("amount") or t.get("amount_prc") or 0
+            amt = abs(float(raw_amt or 0))
             if amt <= 0:
                 continue
+            ref = str(t.get("reference_id") or "")
+            # CRITICAL: register refund in BOTH ref-based and (amount, day)-based
+            # dedup so Layer 2 prc_ledger refund scan doesn't double-count the
+            # same refund when it's recorded in both collections. Previously this
+            # was missing → refunds counted twice → net dragged to 0 and
+            # "Total Redeemed" wiped on Dashboard and Usage History page.
+            if ref:
+                seen_refs.add(f"refund:{ref}")
+            ts_raw = t.get("created_at") or ""
+            day = str(ts_raw)[:10] if ts_raw else ""
+            if day:
+                rk = (round(amt, 2), day)
+                refund_day_amounts[rk] = refund_day_amounts.get(rk, 0) + 1
             total_refunds += amt
             if debug:
                 breakdown.append({
                     "source": "transactions:refund", "type": t.get("type"),
-                    "amount_prc": round(amt, 2), "ref": str(t.get("reference_id") or "") or None,
-                    "ts": str(t.get("created_at") or "")[:19],
+                    "amount_prc": round(amt, 2), "ref": ref or None,
+                    "ts": str(ts_raw)[:19],
                     "desc": (t.get("description") or "")[:60],
                 })
     except Exception as e:
@@ -4580,21 +4599,36 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float
             {"_id": 0, "amount": 1, "reference": 1, "created_at": 1, "service": 1},
         ):
             ref = str(le.get("reference") or "")
-            # Refunds in prc_ledger — if ref already seen as debit in wallet, it's likely
-            # already netted in that collection's refund entry. Skip duplicates.
+            # Dedup by ref (exact match — same ref scheme within prc_ledger)
             if ref and f"refund:{ref}" in seen_refs:
                 continue
-            if ref:
-                seen_refs.add(f"refund:{ref}")
             amt = abs(float(le.get("amount") or 0))
             if amt <= 0:
                 continue
+            # Fallback dedup by (amount, day) — catches refunds that exist in both
+            # `transactions` and `prc_ledger` but with different reference_id schemes
+            # (e.g., BWR-... in transactions vs RDM-... in prc_ledger).
+            ts_raw = le.get("created_at") or ""
+            day = str(ts_raw)[:10] if ts_raw else ""
+            rk = (round(amt, 2), day) if day else None
+            if rk and refund_day_amounts.get(rk, 0) > 0:
+                refund_day_amounts[rk] -= 1
+                if debug:
+                    breakdown.append({
+                        "source": "prc_ledger:refund", "type": "refund:dedup-skipped",
+                        "amount_prc": round(amt, 2), "ref": ref or None,
+                        "ts": str(ts_raw)[:19],
+                        "desc": f"DEDUP: already in transactions on {day}",
+                    })
+                continue
+            if ref:
+                seen_refs.add(f"refund:{ref}")
             total_refunds += amt
             if debug:
                 breakdown.append({
                     "source": "prc_ledger:refund", "type": "refund",
                     "amount_prc": round(amt, 2), "ref": ref or None,
-                    "ts": str(le.get("created_at") or "")[:19],
+                    "ts": str(ts_raw)[:19],
                     "desc": le.get("service"),
                 })
     except Exception as e:
