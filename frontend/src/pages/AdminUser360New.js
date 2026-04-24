@@ -339,6 +339,10 @@ const AdminUser360New = ({ user: adminUser }) => {
   const [balanceAmount, setBalanceAmount] = useState('');
   const [balanceReason, setBalanceReason] = useState('');
   const [balanceOperation, setBalanceOperation] = useState('add');
+  const [showRedeemOverride, setShowRedeemOverride] = useState(false);
+  const [overrideAmount, setOverrideAmount] = useState('');
+  const [overrideReason, setOverrideReason] = useState('');
+  const [overridePermanent, setOverridePermanent] = useState(false);
   const [newReferrer, setNewReferrer] = useState('');
   const [newPin, setNewPin] = useState(null);
   const [adminNotes, setAdminNotes] = useState('');
@@ -616,6 +620,37 @@ const AdminUser360New = ({ user: adminUser }) => {
   
   const handleSaveNotes = async () => {
     await handleAction('save_notes', { notes: adminNotes });
+  };
+  
+  const handleRedeemOverride = async () => {
+    const amt = parseFloat(overrideAmount);
+    if (isNaN(amt) || amt < 0) {
+      toast.error('Please enter a valid PRC amount (0 to clear override)');
+      return;
+    }
+    if (!userData?.user?.uid) return;
+    try {
+      setActionLoading(true);
+      await axios.post(`${API}/admin/override-redeem-limit`, {
+        user_id: userData.user.uid,
+        new_limit: amt,
+        reason: overrideReason || 'Admin manual redeem unlock',
+        admin_id: adminUser?.uid,
+        is_permanent: overridePermanent
+      }, {
+        headers: { Authorization: `Bearer ${adminUser?.token}` }
+      });
+      toast.success(amt === 0 ? 'Override cleared' : `Redeem limit override set: ${amt.toLocaleString()} PRC`);
+      setShowRedeemOverride(false);
+      setOverrideAmount('');
+      setOverrideReason('');
+      setOverridePermanent(false);
+      await refreshUserData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to set override');
+    } finally {
+      setActionLoading(false);
+    }
   };
   
   // Edit Profile
@@ -1034,6 +1069,11 @@ const AdminUser360New = ({ user: adminUser }) => {
                     {formatNumber((userData.redeem_limit?.total_limit || 0).toFixed(0))} <span className="text-sm font-medium">PRC</span>
                   </p>
                   <p className="text-xs text-amber-500 mt-1">Unlock: {userData.redeem_limit?.unlock_percent || 0}%</p>
+                  {userData.redeem_limit?.override_active && (
+                    <p className="text-[10px] mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-amber-200 text-amber-800 rounded-full font-semibold" data-testid="override-badge">
+                      <Zap className="h-3 w-3" /> Override +{formatNumber((userData.redeem_limit.override_value || 0).toFixed(0))} PRC
+                    </p>
+                  )}
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                   <p className="text-xs text-red-600 font-semibold mb-1">USED LIMIT</p>
@@ -1081,6 +1121,20 @@ const AdminUser360New = ({ user: adminUser }) => {
                   {/* Balance Adjust */}
                   <Button onClick={() => setShowBalanceAdjust(true)} disabled={actionLoading} className="bg-blue-600 hover:bg-blue-700">
                     <Wallet className="h-4 w-4 mr-1" />Adjust Balance
+                  </Button>
+                  
+                  {/* Redeem Limit Override */}
+                  <Button
+                    data-testid="redeem-override-btn"
+                    onClick={() => {
+                      setOverrideAmount(String(userData.redeem_limit?.override_value || ''));
+                      setOverrideReason(userData.redeem_limit?.override_reason || '');
+                      setShowRedeemOverride(true);
+                    }}
+                    disabled={actionLoading}
+                    className="bg-amber-600 hover:bg-amber-700"
+                  >
+                    <Zap className="h-4 w-4 mr-1" />Redeem Override
                   </Button>
                   
                   {/* Referral Change */}
@@ -1950,6 +2004,78 @@ const AdminUser360New = ({ user: adminUser }) => {
             <Button onClick={() => setShowRoleChange(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
             <Button onClick={handleRoleChange} disabled={actionLoading} className="flex-1 bg-purple-600 hover:bg-purple-700">
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Role'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      
+      {/* Redeem Limit Override Modal */}
+      <Modal show={showRedeemOverride} onClose={() => setShowRedeemOverride(false)} title="Redeem Limit Override">
+        <div className="space-y-4" data-testid="redeem-override-modal">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-xs text-amber-700 font-semibold">
+              Grants ADDITIONAL redeem headroom on top of what the user has already redeemed.
+              Useful when a user's Growth Network unlock is blocking a legitimate bank redeem.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-white rounded-lg border border-slate-200">
+              <p className="text-xs text-slate-500">Already Redeemed</p>
+              <p className="text-lg font-bold text-red-600">
+                {formatNumber((userData?.redeem_limit?.total_redeemed || 0).toFixed(0))} PRC
+              </p>
+            </div>
+            <div className="p-3 bg-white rounded-lg border border-slate-200">
+              <p className="text-xs text-slate-500">Current Override</p>
+              <p className="text-lg font-bold text-amber-600">
+                {formatNumber((userData?.redeem_limit?.override_value || 0).toFixed(0))} PRC
+              </p>
+            </div>
+          </div>
+          <div>
+            <Label className="text-slate-500">New Override (PRC)</Label>
+            <Input
+              type="number"
+              data-testid="override-amount-input"
+              value={overrideAmount}
+              onChange={(e) => setOverrideAmount(e.target.value)}
+              placeholder="Extra PRC to unlock (0 to clear)"
+              className="bg-white border-slate-200 mt-1"
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              Enter 0 to clear the override and revert to formula-based limit.
+            </p>
+          </div>
+          <div>
+            <Label className="text-slate-500">Reason</Label>
+            <Input
+              data-testid="override-reason-input"
+              value={overrideReason}
+              onChange={(e) => setOverrideReason(e.target.value)}
+              placeholder="e.g., Network dropped; legitimate PRC approved"
+              className="bg-white border-slate-200 mt-1"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+            <input
+              type="checkbox"
+              data-testid="override-permanent-toggle"
+              checked={overridePermanent}
+              onChange={(e) => setOverridePermanent(e.target.checked)}
+            />
+            Make permanent (also updates monthly_redeem_limit)
+          </label>
+          <div className="flex gap-3">
+            <Button onClick={() => setShowRedeemOverride(false)} variant="outline" className="flex-1 border-slate-300">
+              Cancel
+            </Button>
+            <Button
+              data-testid="override-submit-btn"
+              onClick={handleRedeemOverride}
+              disabled={actionLoading}
+              className="flex-1 bg-amber-600 hover:bg-amber-700"
+            >
+              {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply Override'}
             </Button>
           </div>
         </div>

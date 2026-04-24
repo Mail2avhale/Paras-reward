@@ -15391,8 +15391,15 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
     try:
         from routes.growth_economy import calculate_growth_level, get_active_network_size
         
-        # Get user data
-        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "total_mined_prc": 1, "total_mined": 1})
+        # Get user data (include admin override fields)
+        user = await db.users.find_one(
+            {"uid": user_id},
+            {
+                "_id": 0, "prc_balance": 1, "total_mined_prc": 1, "total_mined": 1,
+                "redeem_limit_override": 1, "monthly_redeem_limit": 1,
+                "redeem_limit_override_reason": 1, "redeem_limit_override_at": 1
+            }
+        )
         if not user:
             return {
                 "total_earned": 0,
@@ -15432,6 +15439,22 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         # TOTAL LIMIT = total_mined × Unlock% (based on total_mined, not total_earned)
         redeemable = reconciled_total_mined * (redeem_limit_percent / 100)
         
+        # ADMIN OVERRIDE: If admin has explicitly set redeem_limit_override,
+        # it represents ADDITIONAL redeem headroom on top of what user has already redeemed.
+        # This unblocks users whose active network dropped to 0 but have legitimate PRC.
+        # Semantics: redeem_limit_override = extra PRC the admin grants as a top-up.
+        override_raw = user.get("redeem_limit_override")
+        override_value = float(override_raw) if override_raw not in (None, "", False) else 0.0
+        override_active = override_value > 0
+        if override_active:
+            # Cumulative cap becomes max(formula, already_redeemed + granted_top_up)
+            override_redeemable = total_redeemed + override_value
+            redeemable = max(redeemable, override_redeemable)
+            # Reflect override as effective unlock_percent so UI shows non-zero
+            if reconciled_total_mined > 0:
+                effective_percent = round(min(100.0, (redeemable / reconciled_total_mined) * 100), 2)
+                redeem_limit_percent = max(redeem_limit_percent, effective_percent)
+        
         # Available = TOTAL LIMIT - Already Used (NEVER negative — cap at 0)
         available = max(0, redeemable - total_redeemed)
         
@@ -15450,7 +15473,10 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
             "current_balance": round(current_balance, 2),
             "network_size": network_size,
             "total_limit": round(redeemable, 2),
-            "unlimited": False
+            "unlimited": False,
+            "override_active": override_active,
+            "override_value": round(override_value, 2) if override_active else 0,
+            "override_reason": user.get("redeem_limit_override_reason") if override_active else None
         }
     except Exception as e:
         logging.error(f"Error calculating redeem limit for {user_id}: {e}")
@@ -15576,7 +15602,10 @@ async def get_user_redeem_limit_internal(user_id: str, user: dict = None) -> dic
             "total_limit": limit_info.get("total_limit", 0),
             "total_redeemed": limit_info.get("total_redeemed", 0),
             "remaining_limit": limit_info.get("available", 0),
-            "effective_available": limit_info.get("effective_available", 0)
+            "effective_available": limit_info.get("effective_available", 0),
+            "override_active": limit_info.get("override_active", False),
+            "override_value": limit_info.get("override_value", 0),
+            "override_reason": limit_info.get("override_reason")
         }
     except Exception as e:
         logging.error(f"Error getting redeem limit for {user_id}: {e}")
@@ -15602,8 +15631,10 @@ async def check_redeem_limit(user_id: str, amount: float) -> dict:
         limit_info = await calculate_user_redeem_limit(user_id)
         effective_available = limit_info.get("effective_available", 0)
         unlock_percent = limit_info.get("unlock_percent", 0)
+        override_active = limit_info.get("override_active", False)
         
-        if unlock_percent == 0:
+        # Block zero-unlock only when no admin override is present
+        if unlock_percent == 0 and not override_active:
             return {
                 "allowed": False,
                 "reason": "Your Growth Network is too small. Get referrals to unlock redeem.",
@@ -15681,6 +15712,9 @@ async def get_user_redeem_limit(user_id: str, request: Request):
                     if limit_info.get("redeemable", 0) > 0 else 0, 2
                 ),
                 "unlimited": False,
+                "override_active": limit_info.get("override_active", False),
+                "override_value": limit_info.get("override_value", 0),
+                "override_reason": limit_info.get("override_reason"),
                 "note": "Dynamic limit based on Growth Network. Grow your network to unlock more."
             }
         }

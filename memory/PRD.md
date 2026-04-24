@@ -8,6 +8,30 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Backend**: FastAPI (Python) + MongoDB (Motor)
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
+### Admin Redeem Limit Override — Unblocks Legit Users (DONE - Feb 1, 2026)
+
+**Bug**: Production user `9970100782` had ~1.3M PRC but got `Insufficient Redeem Limit. Available: 0 PRC` on Bank Redeem page. Root cause: when a user's **active Growth Network** size drops to 0 (e.g., downline mining sessions expire), `calculate_user_redeem_limit` returns `redeemable = 0` regardless of balance. Admin-only endpoint `/admin/override-redeem-limit` existed but **wrote to a field that was never read back** — override was silently ignored.
+
+**Fix**:
+1. **Backend — `server.py`**:
+   - `calculate_user_redeem_limit` now reads `redeem_limit_override` field and treats it as **additional redeem headroom** on top of `total_redeemed`. When active, `redeemable = max(formula_redeemable, total_redeemed + override_value)` and `unlock_percent` reflects the expanded cap.
+   - `check_redeem_limit` no longer blocks users with `unlock_percent==0` when an admin override is present.
+   - Response payload adds `override_active`, `override_value`, `override_reason` so UI can show status.
+   - `get_user_redeem_limit_internal` (used by Admin User360) passes through override fields.
+2. **Frontend — `AdminUser360New.js`**:
+   - New "Redeem Override" admin action button (amber, `Zap` icon) next to Adjust Balance.
+   - Modal (`redeem-override-modal`) with PRC amount input, reason, permanent-toggle, and shows current `total_redeemed` + existing override.
+   - Override badge on the Redeem Limit card when active: `Override +N PRC`.
+   - Uses existing `POST /api/admin/override-redeem-limit` endpoint.
+3. **Regression**: `/app/backend/tests/test_redeem_limit_override.py` (3 tests, all passing).
+
+**Verified E2E via curl**:
+- Before override: `effective_available=0, override_active=False`
+- Apply 50,000 PRC override → `effective_available=28,574, override_active=True, total_limit=131,599`
+- Clear (0) → reverts to 0
+
+
+
 ## What's Been Implemented
 
 ### Live Wins / Success Stories Feed in Community Forum (DONE - April 23, 2026)
