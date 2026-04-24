@@ -168,12 +168,87 @@ async def test_pending_redeem_counted():
         await _cleanup(db, uid)
 
 
+async def test_legacy_admin_debit_counted():
+    """Admin-debited PRC (in `transactions`) with no service-collection entry must count."""
+    from server import get_user_all_time_redeemed, db
+    uid = "__test_admin_debit__"
+    await _cleanup(db, uid)
+    try:
+        await db.transactions.insert_one({
+            "user_id": uid, "type": "admin_debit", "amount": 350.0,
+            "reference_id": "ADMIN-PENALTY-01",
+            "created_at": "2026-01-05T10:00:00+00:00",
+            "description": "Manual penalty deduction",
+        })
+        total = await get_user_all_time_redeemed(uid)
+        assert total == 350.0, f"Admin debit must count; got {total}"
+    finally:
+        await _cleanup(db, uid)
+
+
+async def test_prc_burn_NOT_counted():
+    """Voluntary PRC burns must NOT be counted (per user decision Feb 2026)."""
+    from server import get_user_all_time_redeemed, db
+    uid = "__test_burn_excluded__"
+    await _cleanup(db, uid)
+    try:
+        await db.transactions.insert_one({
+            "user_id": uid, "type": "prc_burn", "amount": 5000.0,
+            "reference_id": "BURN-001",
+            "created_at": "2026-01-05T10:00:00+00:00",
+        })
+        await db.bank_transfer_requests.insert_one({
+            "user_id": uid, "request_id": "BTR-1", "status": "paid",
+            "total_prc_deducted": 2000.0,
+            "created_at": "2026-01-10T10:00:00+00:00",
+        })
+        total = await get_user_all_time_redeemed(uid)
+        assert total == 2000.0, (
+            f"Burns must NOT count (only the 2000 bank redeem); got {total}"
+        )
+    finally:
+        await _cleanup(db, uid)
+
+
+async def test_retry_debit_deduped_with_redeem():
+    """prc_ledger redeem + retry_debit sharing same reference → counted once."""
+    from server import get_user_all_time_redeemed, db
+    uid = "__test_retry_debit_dedup__"
+    await _cleanup(db, uid)
+    try:
+        # Same event RDM-XYZ recorded as redeem, refund, AND retry_debit
+        await db.prc_ledger.insert_many([
+            {"user_id": uid, "type": "redeem", "amount": -1500.0,
+             "reference": "RDM-XYZ", "created_at": "2026-02-10T05:00:00+00:00"},
+            {"user_id": uid, "type": "refund", "amount": 1500.0,
+             "reference": "RDM-XYZ", "created_at": "2026-02-10T05:00:05+00:00"},
+            {"user_id": uid, "type": "retry_debit", "amount": -1500.0,
+             "reference": "RDM-XYZ", "created_at": "2026-02-10T05:02:00+00:00"},
+        ])
+        # Also write to service collection (so we know ref is tracked there)
+        await db.redeem_requests.insert_one({
+            "user_id": uid, "request_id": "RDM-XYZ", "status": "pending",
+            "total_prc_deducted": 1500.0,
+            "created_at": "2026-02-10T05:00:00+00:00",
+        })
+        total = await get_user_all_time_redeemed(uid)
+        # Only counted ONCE from redeem_requests (1500), not 1500 × 3
+        assert total == 1500.0, (
+            f"Same-ref retry_debit must dedup vs service entry; got {total}"
+        )
+    finally:
+        await _cleanup(db, uid)
+
+
 async def _run_all():
     await test_total_equals_breakdown_sum()
     await test_refunds_no_longer_wipe_total_to_zero()
     await test_dedup_across_collections()
     await test_inr_field_not_used_as_amount()
     await test_pending_redeem_counted()
+    await test_legacy_admin_debit_counted()
+    await test_prc_burn_NOT_counted()
+    await test_retry_debit_deduped_with_redeem()
 
 
 if __name__ == "__main__":

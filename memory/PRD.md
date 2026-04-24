@@ -12,24 +12,37 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 
 **User-reported**: "Total Redeemed" on Redeem Used Details page showed `0.00 PRC`, and "USED" on Home Dashboard showed `0.00 PRC`, even though the "Redeem Breakdown" clearly listed Bank Redeem 18,365 + Subscription 16,477 + Bill Pay 7,155 ≈ 42,000 PRC.
 
-**User requirement**: "दोन्ही value एकच आहेत. म्हणजे आजपर्यंत युजर ने किती PRC वापरले आहे" → **Total Redeemed = USED = sum of the breakdown categories. Simple lifetime spend. No refund netting.**
-
-**Previous implementation had**: A complex 3-layer aggregator (`transactions` wallet log + `prc_ledger` + service-collection safety net with refund netting and cross-collection reference-based dedup). When the same refund event was recorded in both `transactions` and `prc_ledger` with different reference schemes (`BWR-...` vs `RDM-...`), refunds were double-counted → `debits - (refunds × 2) ≤ 0` → clamped to 0.
+**User requirement**:
+1. "Total Redeemed" = "USED" = sum of "Redeem Breakdown" categories.
+2. Include ALL legacy PRC debits from old/deprecated services that aren't in current service collections (e.g., old `subscription_prc`, orphan `bank_withdrawal`, `admin_debit` in `transactions` wallet log; `redeem`/`retry_debit` in `prc_ledger`).
+3. EXCLUDE `prc_burn` (voluntary PRC destruction, not a service spend).
+4. NO refund netting — gross lifetime spend.
 
 **Fix** (`/app/backend/server.py` `get_user_all_time_redeemed`):
-- Replaced the aggregator with a direct, deterministic sum over all service collections (Bank Redeem, Subscription, Bill Pay, Mobile/DTH Recharge, Gift Vouchers, DMT, Shop orders, unified redemptions).
-- Uses `(amount_prc, YYYY-MM-DDTHH:MM)` fingerprint to dedup records that exist in multiple service collections (e.g., same bank redeem in both `bank_transfer_requests` and `redeem_requests`).
-- Matches the exact logic of `/api/prc-statement/usage-history/{uid}` `by_category` breakdown → guaranteed the Total display equals the Breakdown sum.
-- Refunds are NOT netted here — refunds restore the user's PRC balance; the limit formula `available = redeemable - total_redeemed` still works against gross lifetime spend (the business-desired semantic per user).
+- **Layer 1**: Scan all 16 service collections, collect every `reference_id` / `request_id` / `redeem_id` / `txn_id` / `order_id` / `payment_id` (even from non-success records) into `seen_refs` set — so later layers can dedup strongly.
+- **Layer 2**: Sum service collections with success status (defines the category breakdown).
+- **Layer 3**: Scan `transactions` wallet log for legacy debit types (`subscription_prc`, `bank_withdrawal_request`, `admin_debit`, etc.) — count ONLY if `reference_id` is NOT already in `seen_refs` (true orphans). `prc_burn` is explicitly NOT in this list.
+- **Layer 4**: Scan `prc_ledger` for `redeem` / `retry_debit` types — same strong ref-based dedup. This handles the case where `redeem` + `retry_debit` share the same `reference` (same event billed twice in ledger) — both get deduped against the single service-collection ref.
+- Fallback: `(amount_rounded, YYYY-MM-DDTHH:MM)` fingerprint for records missing reference IDs.
 
-**Admin diagnostic endpoint added**: `GET /api/admin/debug/total-redeemed/{user_id}` — returns full breakdown (authoritative vs service-scan, entry-by-entry) for any future reconciliation needs.
+**Admin diagnostic**: `GET /api/admin/debug/total-redeemed/{user_id}` returns entry-by-entry breakdown (source, type, ref, amount, timestamp) plus `discrepancy_prc` vs by-category sum.
 
-**Regression tests** (`/app/backend/tests/test_total_redeemed_display.py` — 5 passing):
+**Verified on preview user 9970100782**:
+- `total_redeemed` (limit API) = **109,609 PRC**
+- `total_used` (usage-history) = **109,609 PRC**
+- Breakdown sum (Bank 108,609 + Redeem 500 + Bill Pay 500) = **109,609 PRC**
+- All three match exactly ✅
+
+**Regression tests** (`/app/backend/tests/test_total_redeemed_display.py` — 8 passing):
 - Total = breakdown sum
 - Refunds don't wipe total to 0
-- Same redeem in multiple collections → counted once
+- Same redeem in multiple service collections → counted once
 - INR field not misused as PRC
-- Pending redeems count (PRC already deducted)
+- Pending redeems counted (PRC already deducted)
+- Legacy `admin_debit` in `transactions` → counted
+- `prc_burn` → NOT counted
+- `prc_ledger` `retry_debit` sharing ref with service redeem → counted once
+
 
 
 
