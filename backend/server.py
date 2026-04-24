@@ -4466,34 +4466,28 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
 async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float:
     """
     Get user's ALL TIME total PRC redeemed (net of refunds).
-    
-    AUTHORITATIVE SOURCE: `transactions` + `prc_ledger` (PRC wallet logs).
-    Every PRC movement OUT of the user's wallet is logged there. Summing
-    debits and subtracting refunds gives the EXACT redeemed amount.
-    
-    Why not scan service collections (bank_transfer_requests, redeem_requests, etc)?
-    ✗ Same transaction may be logged in multiple service collections → over-count
-    ✗ INR fields (amount_inr, amount) could leak into PRC sum → inflation
-    ✓ Wallet ledger is the single source of truth — no dedup ambiguity
+
+    PRIMARY source: `transactions` + `prc_ledger` (wallet log — source of truth).
+    SAFETY NET: supplementary scan of service collections for "orphan" redemptions
+    whose request_id is NOT found in the wallet log (legacy code paths may have
+    processed redemptions without creating a ledger entry). Without this safety
+    net, company loses money for historical orphan records.
+
+    All dedup happens via `reference_id` / `request_id` — strong primary key match.
+    Never uses fuzzy time/amount matching (would merge genuinely-different txns).
+    Never uses INR fields as amount fallback (would cause ×PRC_rate inflation).
     """
 
     # ========== DEBIT TYPES (user's PRC used for redemption) ==========
     DEBIT_TYPES = [
-        # Subscription
         "subscription_prc", "subscription",
-        # Bank / DMT / Withdrawal
         "bank_withdrawal_request", "bank_withdrawal", "withdrawal",
         "dmt_payment", "dmt",
-        # BBPS / Bills
         "bill_payment", "bbps_payment",
-        # Recharge
         "mobile_recharge", "dth_recharge", "recharge",
-        # Shopping / Vouchers / Orders
         "gift_voucher", "voucher", "order", "shopping",
-        # Manual admin debit
         "admin_debit",
     ]
-    # ========== REFUND TYPES (PRC returned to user after rejection/cancellation) ==========
     REFUND_TYPES = [
         "withdrawal_refund", "bank_withdrawal_refund",
         "withdrawal_cancelled_refund", "withdrawal_bulk_cancel_refund",
@@ -4501,30 +4495,41 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float
         "admin_refund", "refund",
         "recharge_refund", "bill_payment_refund",
     ]
+    # PRC-only fields — INR fields NEVER used (prevents ×rate inflation)
+    PRC_FIELDS = ["total_prc_deducted", "prc_deducted", "prc_used", "total_prc", "prc_amount"]
+    SUCCESS_STATUSES = [
+        "completed", "COMPLETED", "Completed",
+        "success", "SUCCESS", "Success",
+        "approved", "APPROVED", "Approved",
+        "paid", "PAID", "Paid",
+        "delivered", "DELIVERED", "Delivered",
+        "processing", "PROCESSING", "Processing",
+        # NOTE: do NOT include "pending" for supplementary scan to avoid counting
+        # requests that are still being processed (wallet debit might be pending too).
+    ]
 
     total_debits = 0.0
     total_refunds = 0.0
+    seen_refs: set = set()   # All reference_ids seen (wallet + service) — prevents double count
     breakdown = []
 
-    # --- PRIMARY: transactions collection (all-time wallet log) ---
+    # --- LAYER 1: `transactions` wallet log ---
     try:
         async for t in db.transactions.find(
             {"user_id": user_id, "type": {"$in": DEBIT_TYPES}},
             {"_id": 0, "type": 1, "amount": 1, "reference_id": 1, "created_at": 1, "description": 1},
         ):
-            amt = float(t.get("amount") or 0)
-            # Debits stored as negative — take absolute
-            if amt < 0:
-                total_debits += abs(amt)
-            elif amt > 0:
-                # Some legacy entries stored as positive — still count
-                total_debits += amt
+            amt = abs(float(t.get("amount") or 0))
+            if amt <= 0:
+                continue
+            ref = str(t.get("reference_id") or "")
+            if ref:
+                seen_refs.add(ref)
+            total_debits += amt
             if debug:
                 breakdown.append({
-                    "source": "transactions",
-                    "type": t.get("type"),
-                    "amount_prc": round(abs(amt), 2),
-                    "ref": t.get("reference_id"),
+                    "source": "transactions", "type": t.get("type"),
+                    "amount_prc": round(amt, 2), "ref": ref or None,
                     "ts": str(t.get("created_at") or "")[:19],
                     "desc": (t.get("description") or "")[:60],
                 })
@@ -4533,62 +4538,39 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float
             {"user_id": user_id, "type": {"$in": REFUND_TYPES}},
             {"_id": 0, "type": 1, "amount": 1, "reference_id": 1, "created_at": 1, "description": 1},
         ):
-            amt = float(t.get("amount") or 0)
-            # Refunds stored as positive
-            if amt > 0:
-                total_refunds += amt
-            elif amt < 0:
-                total_refunds += abs(amt)
+            amt = abs(float(t.get("amount") or 0))
+            if amt <= 0:
+                continue
+            total_refunds += amt
             if debug:
                 breakdown.append({
-                    "source": "transactions:refund",
-                    "type": t.get("type"),
-                    "amount_prc": round(abs(amt), 2),
-                    "ref": t.get("reference_id"),
+                    "source": "transactions:refund", "type": t.get("type"),
+                    "amount_prc": round(amt, 2), "ref": str(t.get("reference_id") or "") or None,
                     "ts": str(t.get("created_at") or "")[:19],
                     "desc": (t.get("description") or "")[:60],
                 })
     except Exception as e:
         logging.warning(f"[REDEEMED] transactions error for {user_id}: {e}")
 
-    # --- SECONDARY: prc_ledger (modern unified ledger) ---
-    # Only use if this ledger has entries NOT already in `transactions` (matched via reference).
+    # --- LAYER 2: `prc_ledger` (modern unified ledger) ---
     try:
-        transactions_refs = set()
-        async for t in db.transactions.find(
-            {"user_id": user_id, "reference_id": {"$exists": True, "$ne": None}},
-            {"_id": 0, "reference_id": 1},
-        ):
-            ref = t.get("reference_id")
-            if ref:
-                transactions_refs.add(str(ref))
-
         async for le in db.prc_ledger.find(
             {"user_id": user_id, "type": {"$in": ["redeem", "retry_debit"]}},
             {"_id": 0, "type": 1, "amount": 1, "reference": 1, "created_at": 1, "service": 1},
         ).sort("created_at", 1):
             ref = str(le.get("reference") or "")
-            if ref and ref in transactions_refs:
-                continue  # already counted via transactions
-            # Within prc_ledger: skip retry_debit if original `redeem` for same ref already counted.
-            # retry_debit is a replay of a failed debit attempt — not a separate deduction.
-            if ref and le.get("type") == "retry_debit" and f"ledger:{ref}" in transactions_refs:
+            if ref and ref in seen_refs:
                 continue
             if ref:
-                if f"ledger:{ref}" in transactions_refs:
-                    continue
-                transactions_refs.add(f"ledger:{ref}")
-            amt = float(le.get("amount") or 0)
-            if amt < 0:
-                total_debits += abs(amt)
-            elif amt > 0:
-                total_debits += amt
+                seen_refs.add(ref)
+            amt = abs(float(le.get("amount") or 0))
+            if amt <= 0:
+                continue
+            total_debits += amt
             if debug:
                 breakdown.append({
-                    "source": "prc_ledger",
-                    "type": le.get("type"),
-                    "amount_prc": round(abs(amt), 2),
-                    "ref": ref or None,
+                    "source": "prc_ledger", "type": le.get("type"),
+                    "amount_prc": round(amt, 2), "ref": ref or None,
                     "ts": str(le.get("created_at") or "")[:19],
                     "desc": le.get("service"),
                 })
@@ -4598,28 +4580,90 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float
             {"_id": 0, "amount": 1, "reference": 1, "created_at": 1, "service": 1},
         ):
             ref = str(le.get("reference") or "")
-            if ref and ref in transactions_refs:
+            # Refunds in prc_ledger — if ref already seen as debit in wallet, it's likely
+            # already netted in that collection's refund entry. Skip duplicates.
+            if ref and f"refund:{ref}" in seen_refs:
                 continue
-            amt = float(le.get("amount") or 0)
-            if amt > 0:
-                total_refunds += amt
-            elif amt < 0:
-                total_refunds += abs(amt)
+            if ref:
+                seen_refs.add(f"refund:{ref}")
+            amt = abs(float(le.get("amount") or 0))
+            if amt <= 0:
+                continue
+            total_refunds += amt
             if debug:
                 breakdown.append({
-                    "source": "prc_ledger:refund",
-                    "type": "refund",
-                    "amount_prc": round(abs(amt), 2),
-                    "ref": ref or None,
+                    "source": "prc_ledger:refund", "type": "refund",
+                    "amount_prc": round(amt, 2), "ref": ref or None,
                     "ts": str(le.get("created_at") or "")[:19],
                     "desc": le.get("service"),
                 })
     except Exception as e:
         logging.warning(f"[REDEEMED] prc_ledger error for {user_id}: {e}")
 
+    # --- LAYER 3: SAFETY NET — supplementary scan of service collections ---
+    # Only counts records with a reference_id NOT already seen in wallet log.
+    # Catches legacy orphan redemptions where wallet debit entry was never written
+    # (e.g., Mahaveer's Airtel postpaid recharge of 18,786 PRC in redeem_requests
+    # but no matching wallet transaction).
+    service_collections = [
+        ("bank_transfer_requests", ["request_id", "redeem_id", "txn_id"]),
+        ("redeem_requests",        ["request_id", "redeem_id", "txn_id"]),
+        ("bank_withdrawal_requests",["request_id", "withdrawal_id", "txn_id"]),
+        ("bank_redeem_requests",   ["request_id", "redeem_id", "txn_id"]),
+        ("bill_payment_requests",  ["request_id", "txn_id", "order_id"]),
+        ("bill_payments",          ["request_id", "txn_id", "payment_id"]),
+        ("recharge_requests",      ["request_id", "txn_id", "eko_tid", "client_ref_id"]),
+        ("gift_voucher_requests",  ["request_id", "voucher_id", "order_id"]),
+        ("orders",                 ["order_id", "request_id", "txn_id"]),
+        ("unified_redemptions",    ["request_id", "redeem_id", "txn_id"]),
+        ("subscription_payments",  ["request_id", "payment_id", "txn_id"]),
+    ]
+    extra_match = {"subscription_payments": {"payment_method": "prc"}}
+
+    for coll_name, ref_fields in service_collections:
+        try:
+            query = {"user_id": user_id, "status": {"$in": SUCCESS_STATUSES}}
+            query.update(extra_match.get(coll_name, {}))
+            async for doc in db[coll_name].find(query, {"_id": 0}):
+                # Find the reference id
+                ref_id = None
+                for rf in ref_fields:
+                    v = doc.get(rf)
+                    if v:
+                        ref_id = str(v)
+                        break
+                # Skip if already counted in wallet log
+                if ref_id and ref_id in seen_refs:
+                    continue
+                # Extract PRC amount (strict PRC fields only — no INR leak)
+                amt = 0.0
+                used_field = None
+                for af in PRC_FIELDS:
+                    v = doc.get(af)
+                    if v and float(v) > 0:
+                        amt = round(float(v), 2)
+                        used_field = af
+                        break
+                if amt <= 0:
+                    continue
+                # Count as supplementary debit
+                total_debits += amt
+                if ref_id:
+                    seen_refs.add(ref_id)
+                if debug:
+                    breakdown.append({
+                        "source": f"svc:{coll_name}", "type": "orphan_redemption",
+                        "amount_prc": amt, "ref": ref_id,
+                        "ts": str(doc.get("created_at") or "")[:19],
+                        "desc": f"[{used_field}] {doc.get('service_type') or doc.get('bill_type') or ''}",
+                    })
+        except Exception as e:
+            logging.warning(f"[REDEEMED] {coll_name} scan error for {user_id}: {e}")
+
     total = round(max(0.0, total_debits - total_refunds), 2)
+
     logging.debug(
-        f"[REDEEMED] {user_id}: debits={round(total_debits, 2)} refunds={round(total_refunds, 2)} net={total}"
+        f"[REDEEMED] {user_id}: debits={round(total_debits,2)} refunds={round(total_refunds,2)} net={total}"
     )
 
     if debug:
