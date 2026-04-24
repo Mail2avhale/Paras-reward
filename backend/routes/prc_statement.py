@@ -304,128 +304,66 @@ async def get_prc_statement(
 async def get_prc_usage_history(uid: str):
     """
     Date-wise PRC REDEEM usage history (services only, NO burns).
-    Returns ONLY actual service usage: Mobile Recharge, Bank Redeem, Gift Cards,
-    Subscription, Bill Pay, etc. — matching the dashboard 'USED' total exactly.
+
+    Sources ALL entries directly from `get_user_all_time_redeemed(debug=True)`
+    so the displayed TOTAL REDEEMED, by-category breakdown, daily entries,
+    and the Home Dashboard "USED" card are ALWAYS in sync.
+
+    Includes legacy orphan entries from `transactions` wallet log and
+    `prc_ledger` (references not in service collections), shown under their
+    detected category (or 'Admin Adjust' for admin_debit, 'Other' fallback).
     """
     try:
-        user = await db.users.find_one({"uid": uid}, {"_id": 0, "created_at": 1, "registered_at": 1, "createdAt": 1, "prc_balance": 1})
+        user = await db.users.find_one(
+            {"uid": uid},
+            {"_id": 0, "created_at": 1, "registered_at": 1, "createdAt": 1, "prc_balance": 1},
+        )
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        
+
         join_date = user.get("created_at") or user.get("registered_at") or user.get("createdAt")
         if isinstance(join_date, str):
             try:
                 join_date = datetime.fromisoformat(join_date.replace("Z", "+00:00"))
             except Exception:
                 join_date = datetime.now(timezone.utc)
-        
-        # Same statuses as calculate_total_redeemed() in server.py
-        success_statuses = [
-            "completed", "COMPLETED", "Completed",
-            "success", "SUCCESS", "Success",
-            "approved", "APPROVED", "Approved",
-            "paid", "PAID", "Paid",
-            "pending", "PENDING", "Pending",
-            "processing", "PROCESSING", "Processing",
-            "delivered", "DELIVERED", "Delivered"
-        ]
-        
-        # Service collection definitions matching calculate_total_redeemed()
-        # Format: (collection, category, match_extra, amount_fields, date_fields, desc_fields)
-        service_sources = [
-            ("recharge_requests", "Mobile Recharge", {}, ["prc_used", "prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], ["operator_name", "description"]),
-            ("bill_payment_requests", "Bill Pay", {}, ["prc_used", "total_prc_deducted", "prc_amount", "amount"], ["created_at", "timestamp"], ["operator_name", "description", "service_type"]),
-            ("bill_payments", "Bill Pay", {}, ["prc_used", "total_prc_deducted", "prc_amount"], ["created_at", "timestamp"], ["operator_name", "description"]),
-            ("payment_requests", "Bill Pay", {}, ["total_prc_deducted", "prc_amount", "prc_used"], ["created_at", "timestamp"], ["description"]),
-            ("gift_voucher_requests", "Gift Cards", {}, ["total_prc_deducted", "prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], ["denomination", "description"]),
-            ("redeem_requests", "Bank Redeem", {}, ["total_prc_deducted", "prc_amount", "total_prc", "amount_inr", "amount"], ["created_at", "timestamp"], ["description", "bank_name"]),
-            ("bank_withdrawal_requests", "Bank Redeem", {}, ["total_prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], ["description", "bank_name"]),
-            ("bank_redeem_requests", "Bank Redeem", {}, ["prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], ["description", "bank_name"]),
-            ("bank_transfers", "Bank Redeem", {}, ["prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], ["description", "bank_name"]),
-            ("bank_transfer_requests", "Bank Redeem", {}, ["total_prc_deducted", "prc_deducted", "total_prc", "prc_amount"], ["created_at", "timestamp"], ["description", "bank_name"]),
-            ("subscription_payments", "Subscription", {"payment_method": "prc"}, ["prc_amount", "inr_equivalent", "amount"], ["created_at", "timestamp", "approved_at"], ["plan_name", "subscription_plan", "description"]),
-            ("vip_payments", "Subscription", {"payment_method": "prc"}, ["prc_amount", "prc_used", "amount"], ["created_at", "timestamp", "approved_at"], ["plan_name", "description"]),
-            ("dmt_transactions", "Bank Redeem", {}, ["prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], ["description", "beneficiary_name"]),
-            ("dmt_logs", "Bank Redeem", {}, ["prc_deducted", "prc_amount", "amount"], ["created_at", "timestamp"], ["description"]),
-            ("orders", "Shopping", {}, ["total_prc", "prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], ["description", "product_name"]),
-            ("unified_redemptions", "Redeem", {}, ["prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], ["description", "service_type"]),
-            ("loan_payments", "Loan EMI", {}, ["prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], ["description"]),
-        ]
-        
+
+        # Pull every counted debit from the SAME canonical aggregator that
+        # produces the Home Dashboard "USED" number. Guaranteed consistency.
+        from server import get_user_all_time_redeemed
+        total, info = await get_user_all_time_redeemed(uid, debug=True)
+
+        # Keep only non-dedup entries (actual counted)
+        counted_entries = [e for e in info.get("entries", []) if "dedup" not in str(e.get("type", ""))]
+
         all_entries = []
-        seen_fingerprints = set()  # Dedup: same amount + same minute = single entry
-        
-        for coll_name, category, extra_match, amt_fields, dt_fields, desc_fields in service_sources:
-            try:
-                query = {"user_id": uid, "status": {"$in": success_statuses}}
-                query.update(extra_match)
-                docs = await db[coll_name].find(query, {"_id": 0}).to_list(5000)
-                
-                for doc in docs:
-                    # Extract amount
-                    amount = 0
-                    for af in amt_fields:
-                        val = doc.get(af)
-                        if val and float(val) > 0:
-                            amount = round(float(val), 2)
-                            break
-                    if amount <= 0:
-                        continue
-                    
-                    # Extract date
-                    dt = None
-                    for df in dt_fields:
-                        raw = doc.get(df)
-                        if raw:
-                            dt = parse_date(raw)
-                            if dt:
-                                break
-                    if not dt:
-                        continue
-                    
-                    # Deduplication: fingerprint = amount + timestamp (minute precision)
-                    fp = f"{amount}_{dt.strftime('%Y%m%d%H%M')}"
-                    if fp in seen_fingerprints:
-                        logging.debug(f"[USAGE-HISTORY] DEDUP: Skipping {coll_name} → {fp}")
-                        continue
-                    seen_fingerprints.add(fp)
-                    
-                    # Build narration
-                    narration = ""
-                    for dfield in desc_fields:
-                        val = doc.get(dfield)
-                        if val and isinstance(val, str) and len(val) > 1:
-                            narration = val
-                            break
-                    if not narration:
-                        narration = f"{category}"
-                    
-                    all_entries.append({
-                        "date": dt.isoformat(),
-                        "date_ts": dt.timestamp(),
-                        "month_key": dt.strftime("%Y-%m"),
-                        "day_key": dt.strftime("%Y-%m-%d"),
-                        "category": category,
-                        "amount": amount,
-                        "narration": narration,
-                        "status": doc.get("status", ""),
-                        "source": coll_name
-                    })
-            except Exception as e:
-                logging.debug(f"[USAGE-HISTORY] Error querying {coll_name}: {e}")
-                continue
-        
+        for e in counted_entries:
+            ts_raw = e.get("ts") or ""
+            dt = parse_date(ts_raw) if ts_raw else None
+            if not dt:
+                dt = datetime.now(timezone.utc)
+            all_entries.append({
+                "date": dt.isoformat(),
+                "date_ts": dt.timestamp(),
+                "month_key": dt.strftime("%Y-%m"),
+                "day_key": dt.strftime("%Y-%m-%d"),
+                "category": e.get("category") or "Other",
+                "amount": round(float(e.get("amount_prc") or 0), 2),
+                "narration": (e.get("narration") or e.get("category") or "Redeem")[:120],
+                "status": e.get("status") or "completed",
+                "source": e.get("source") or "service",
+                "ref": e.get("ref"),
+            })
+
         # Sort newest first
         all_entries.sort(key=lambda x: x["date_ts"], reverse=True)
-        
-        # Aggregate by category
+
+        # Aggregate by category (guaranteed to sum to `total`)
         category_totals = {}
-        total_used = 0
         for entry in all_entries:
             cat = entry["category"]
             category_totals[cat] = category_totals.get(cat, 0) + entry["amount"]
-            total_used += entry["amount"]
-        
+
         # Monthly aggregation for graph
         monthly_data = {}
         for entry in all_entries:
@@ -434,13 +372,13 @@ async def get_prc_usage_history(uid: str):
                 monthly_data[mk] = {"month": mk, "total": 0, "count": 0}
             monthly_data[mk]["total"] += entry["amount"]
             monthly_data[mk]["count"] += 1
-        
+
         graph_data = sorted(
             [{"month": k, "total": round(v["total"], 2), "count": v["count"]}
              for k, v in monthly_data.items()],
-            key=lambda x: x["month"]
+            key=lambda x: x["month"],
         )
-        
+
         # Daily grouping
         daily_groups = {}
         for entry in all_entries:
@@ -453,43 +391,34 @@ async def get_prc_usage_history(uid: str):
                 "amount": entry["amount"],
                 "category": entry["category"],
                 "narration": entry["narration"],
-                "status": entry["status"]
+                "status": entry["status"],
+                "source": entry["source"],
+                "ref": entry.get("ref"),
             })
-        
+
         daily_list = sorted(
             [{"date": k, "total": round(v["total"], 2), "entries": v["entries"]}
              for k, v in daily_groups.items()],
-            key=lambda x: x["date"], reverse=True
+            key=lambda x: x["date"], reverse=True,
         )
-
-        # ========== AUTHORITATIVE TOTAL (unified with Dashboard) ==========
-        # Import the canonical redeemed calculator from server.py so both the
-        # Dashboard `USED` card and this page's TOTAL REDEEMED show the SAME
-        # value. Prevents drift between different pages reading from different
-        # sources.
-        authoritative_total = None
-        try:
-            from server import get_user_all_time_redeemed
-            authoritative_total = await get_user_all_time_redeemed(uid)
-        except Exception as e:
-            logging.warning(f"[PRC USAGE HISTORY] authoritative total fetch failed: {e}")
-            authoritative_total = round(total_used, 2)
 
         return {
             "success": True,
             "user_id": uid,
             "join_date": join_date.isoformat() if join_date else None,
             "summary": {
-                # Use authoritative total for the main "TOTAL REDEEMED" display
-                "total_used": authoritative_total,
-                # Keep legacy sum for reference / debugging
-                "total_used_service_sum": round(total_used, 2),
+                "total_used": round(total, 2),
+                # Kept for backward compatibility; now identical to total_used
+                "total_used_service_sum": round(total, 2),
                 "total_transactions": len(all_entries),
-                "by_category": {k: round(v, 2) for k, v in sorted(category_totals.items(), key=lambda x: -x[1])},
-                "months_active": len(graph_data)
+                "by_category": {
+                    k: round(v, 2)
+                    for k, v in sorted(category_totals.items(), key=lambda x: -x[1])
+                },
+                "months_active": len(graph_data),
             },
             "graph_data": graph_data,
-            "daily_breakdown": daily_list
+            "daily_breakdown": daily_list,
         }
     except HTTPException:
         raise

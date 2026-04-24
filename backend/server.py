@@ -4598,6 +4598,14 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
                         "source": f"svc:{coll}", "type": "service_debit",
                         "amount_prc": amt, "category": category,
                         "ts": str(ts_raw)[:19], "via": used_field,
+                        "ref": _doc_ref(doc),
+                        "narration": (
+                            doc.get("operator_name") or doc.get("bank_name")
+                            or doc.get("plan_name") or doc.get("service_type")
+                            or doc.get("beneficiary_name") or doc.get("product_name")
+                            or doc.get("description") or category
+                        ),
+                        "status": doc.get("status"),
                     })
         except Exception as e:
             logging.warning(f"[REDEEMED] {coll} scan error for {user_id}: {e}")
@@ -4639,11 +4647,26 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
                 seen_fp.add(fp)
             total += amt
             if debug:
+                ttype_str = str(t.get("type") or "")
+                _cat_map = {
+                    "subscription_prc": "Subscription", "subscription": "Subscription",
+                    "bank_withdrawal_request": "Bank Redeem",
+                    "bank_withdrawal": "Bank Redeem", "withdrawal": "Bank Redeem",
+                    "dmt_payment": "Bank Redeem", "dmt": "Bank Redeem",
+                    "bill_payment": "Bill Pay", "bbps_payment": "Bill Pay",
+                    "mobile_recharge": "Mobile Recharge",
+                    "dth_recharge": "Mobile Recharge", "recharge": "Mobile Recharge",
+                    "gift_voucher": "Gift Cards", "voucher": "Gift Cards",
+                    "order": "Shopping", "shopping": "Shopping",
+                    "admin_debit": "Admin Adjust",
+                }
                 breakdown.append({
-                    "source": "transactions", "type": str(t.get("type")),
+                    "source": "transactions", "type": ttype_str,
                     "amount_prc": amt, "ref": ref or None,
                     "ts": str(ts_raw)[:19],
-                    "desc": (t.get("description") or "")[:60],
+                    "category": _cat_map.get(ttype_str, "Other"),
+                    "narration": (t.get("description") or ttype_str)[:80],
+                    "status": "completed",
                 })
     except Exception as e:
         logging.warning(f"[REDEEMED] transactions wallet scan error for {user_id}: {e}")
@@ -4687,11 +4710,25 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
                 seen_fp.add(fp)
             total += amt
             if debug:
+                service = le.get("service") or "Redeem"
+                s_lower = str(service).lower()
+                if "bank" in s_lower or "redeem" in s_lower:
+                    _cat = "Bank Redeem"
+                elif "sub" in s_lower:
+                    _cat = "Subscription"
+                elif "bill" in s_lower:
+                    _cat = "Bill Pay"
+                elif "recharge" in s_lower:
+                    _cat = "Mobile Recharge"
+                else:
+                    _cat = "Redeem"
                 breakdown.append({
                     "source": "prc_ledger", "type": str(le.get("type")),
                     "amount_prc": amt, "ref": ref or None,
                     "ts": str(ts_raw)[:19],
-                    "desc": le.get("service"),
+                    "category": _cat,
+                    "narration": str(service)[:80],
+                    "status": "completed",
                 })
     except Exception as e:
         logging.warning(f"[REDEEMED] prc_ledger scan error for {user_id}: {e}")
