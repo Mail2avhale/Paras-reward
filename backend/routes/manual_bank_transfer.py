@@ -690,12 +690,21 @@ async def get_all_requests(
             req["is_first_redeem"] = totals["redeem_count"] <= 1
         
         # Enrich: user's current redeem limit (available, effective_available)
+        # PERF: deduplicate by unique uid — many requests can share the same user
         if calculate_redeem_limit_func and user_ids:
+            limit_cache = {}
+            unique_uids = set(r.get("user_id") for r in requests if r.get("user_id"))
+            for uid in unique_uids:
+                try:
+                    limit_cache[uid] = await calculate_redeem_limit_func(uid)
+                except Exception as e:
+                    logging.warning(f"[BANK REQUESTS] redeem limit calc failed for {uid}: {e}")
+                    limit_cache[uid] = None
             for req in requests:
                 uid = req.get("user_id")
-                if uid:
+                limit_info = limit_cache.get(uid)
+                if limit_info:
                     try:
-                        limit_info = await calculate_redeem_limit_func(uid)
                         raw_total = limit_info.get("total_limit", 0)
                         raw_used = limit_info.get("total_redeemed", 0)
                         req["redeem_limit_available"] = limit_info.get("available", 0)
@@ -708,6 +717,8 @@ async def get_all_requests(
                     except Exception as e:
                         logging.warning(f"Failed to get redeem limit for {uid}: {e}")
                         req["redeem_limit_available"] = None
+                else:
+                    req["redeem_limit_available"] = None
         
         # Post-filter by redeem range
         if redeem_min is not None:
