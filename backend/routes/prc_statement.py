@@ -461,13 +461,29 @@ async def get_prc_usage_history(uid: str):
              for k, v in daily_groups.items()],
             key=lambda x: x["date"], reverse=True
         )
-        
+
+        # ========== AUTHORITATIVE TOTAL (unified with Dashboard) ==========
+        # Import the canonical redeemed calculator from server.py so both the
+        # Dashboard `USED` card and this page's TOTAL REDEEMED show the SAME
+        # value. Prevents drift between different pages reading from different
+        # sources.
+        authoritative_total = None
+        try:
+            from server import get_user_all_time_redeemed
+            authoritative_total = await get_user_all_time_redeemed(uid)
+        except Exception as e:
+            logging.warning(f"[PRC USAGE HISTORY] authoritative total fetch failed: {e}")
+            authoritative_total = round(total_used, 2)
+
         return {
             "success": True,
             "user_id": uid,
             "join_date": join_date.isoformat() if join_date else None,
             "summary": {
-                "total_used": round(total_used, 2),
+                # Use authoritative total for the main "TOTAL REDEEMED" display
+                "total_used": authoritative_total,
+                # Keep legacy sum for reference / debugging
+                "total_used_service_sum": round(total_used, 2),
                 "total_transactions": len(all_entries),
                 "by_category": {k: round(v, 2) for k, v in sorted(category_totals.items(), key=lambda x: -x[1])},
                 "months_active": len(graph_data)
