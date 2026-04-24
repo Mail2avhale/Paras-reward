@@ -3,16 +3,20 @@ import axios from 'axios';
 import { 
   Receipt, TrendingUp, Calendar, IndianRupee, 
   ArrowUpRight, ArrowDownRight, RefreshCw,
-  Wallet, CreditCard, Coins
+  Wallet, CreditCard, Coins, Wrench, AlertTriangle, X, CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const GSTSummaryWidget = ({ token }) => {
+const GSTSummaryWidget = ({ token, adminId }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showRepair, setShowRepair] = useState(false);
+  const [repairPreview, setRepairPreview] = useState(null);
+  const [repairLoading, setRepairLoading] = useState(false);
+  const [repairDone, setRepairDone] = useState(null);
 
   useEffect(() => {
     fetchGSTSummary();
@@ -31,6 +35,44 @@ const GSTSummaryWidget = ({ token }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const openRepair = async () => {
+    setShowRepair(true);
+    setRepairDone(null);
+    setRepairPreview(null);
+    setRepairLoading(true);
+    try {
+      const res = await axios.post(
+        `${API}/admin/company-wallets/repair-prc-units`,
+        { admin_id: adminId, dry_run: true },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      setRepairPreview(res.data);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to preview repair');
+      setShowRepair(false);
+    } finally {
+      setRepairLoading(false);
+    }
+  };
+
+  const applyRepair = async () => {
+    setRepairLoading(true);
+    try {
+      const res = await axios.post(
+        `${API}/admin/company-wallets/repair-prc-units`,
+        { admin_id: adminId },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      setRepairDone(res.data);
+      toast.success(`Repaired ${res.data.repaired} entries to INR`);
+      await fetchGSTSummary();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Repair failed');
+    } finally {
+      setRepairLoading(false);
     }
   };
 
@@ -71,15 +113,127 @@ const GSTSummaryWidget = ({ token }) => {
               <p className="text-xs text-gray-500">18% GST on all subscriptions</p>
             </div>
           </div>
-          <button 
-            onClick={fetchGSTSummary}
-            disabled={refreshing}
-            className="p-2 hover:bg-emerald-100 rounded-lg transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 text-emerald-600 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            {adminId && (
+              <button
+                onClick={openRepair}
+                title="Run one-time repair for old PRC-unit entries"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-200 hover:bg-amber-50 text-amber-700 text-xs font-medium transition-colors"
+                data-testid="gst-repair-btn"
+              >
+                <Wrench className="w-3.5 h-3.5" />
+                Repair
+              </button>
+            )}
+            <button 
+              onClick={fetchGSTSummary}
+              disabled={refreshing}
+              className="p-2 hover:bg-emerald-100 rounded-lg transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 text-emerald-600 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Repair Modal */}
+      {showRepair && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !repairLoading && setShowRepair(false)}
+          data-testid="gst-repair-modal"
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-gray-100 bg-amber-50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <h3 className="font-semibold text-gray-900">Repair PRC-Unit GST Entries</h3>
+              </div>
+              <button
+                onClick={() => !repairLoading && setShowRepair(false)}
+                className="p-1 hover:bg-amber-100 rounded"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              {repairLoading && !repairPreview && !repairDone && (
+                <p className="text-sm text-gray-500">Scanning…</p>
+              )}
+
+              {repairPreview && !repairDone && (
+                <>
+                  <p className="text-sm text-gray-700">
+                    Found <b>{repairPreview.to_repair}</b> legacy PRC-unit entries
+                    (out of {repairPreview.scanned} scanned).
+                  </p>
+                  {repairPreview.balance_deltas_to_subtract && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs space-y-1">
+                      <p className="font-semibold text-amber-800 mb-1">Wallet balance will be reduced by:</p>
+                      {Object.entries(repairPreview.balance_deltas_to_subtract).map(([w, v]) => (
+                        <div key={w} className="flex justify-between">
+                          <span className="text-gray-700">{w.replace(/_/g, ' ')}</span>
+                          <span className="font-semibold text-red-600">-₹{Number(v).toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {repairPreview.sample?.length > 0 && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs space-y-1">
+                      <p className="font-semibold text-gray-700 mb-1">Sample conversions:</p>
+                      {repairPreview.sample.map((s, i) => (
+                        <div key={i} className="flex justify-between">
+                          <span className="text-gray-600">{s.wallet}</span>
+                          <span>
+                            <span className="line-through text-gray-400">₹{s.old_prc}</span>
+                            {' → '}
+                            <span className="font-semibold text-emerald-600">₹{s.new_inr}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {repairPreview.to_repair === 0 ? (
+                    <p className="text-emerald-700 text-sm flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" /> All entries already in INR. Nothing to repair.
+                    </p>
+                  ) : (
+                    <button
+                      onClick={applyRepair}
+                      disabled={repairLoading}
+                      className="w-full py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-medium text-sm disabled:opacity-60"
+                      data-testid="gst-repair-confirm-btn"
+                    >
+                      {repairLoading ? 'Repairing…' : `Apply Repair (${repairPreview.to_repair} entries)`}
+                    </button>
+                  )}
+                </>
+              )}
+
+              {repairDone && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <p className="font-semibold">Repair Complete</p>
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    {repairDone.repaired} entries converted to INR. Wallet balances reset.
+                  </p>
+                  <button
+                    onClick={() => setShowRepair(false)}
+                    className="w-full py-2 rounded-lg bg-slate-900 text-white text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="p-6">

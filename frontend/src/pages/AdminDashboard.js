@@ -795,7 +795,7 @@ const AdminDashboard = ({ user }) => {
 
       {/* GST Collection Summary Widget */}
       <div className="mt-6">
-        <GSTSummaryWidget token={localStorage.getItem('token')} />
+        <GSTSummaryWidget token={localStorage.getItem('token')} adminId={user?.uid} />
       </div>
 
       {/* Login As User Dialog */}

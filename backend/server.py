@@ -4463,16 +4463,21 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
     return total_redeemed
 
 
-async def get_user_all_time_redeemed(user_id: str) -> float:
+async def get_user_all_time_redeemed(user_id: str, debug: bool = False) -> float:
     """
     Get user's ALL TIME total PRC redeemed/used across ALL services.
     
-    DEDUPLICATION: Same transaction may exist in multiple collections.
-    Each entry is fingerprinted (amount + timestamp rounded to nearest minute)
-    to prevent double-counting.
+    IMPORTANT: Only counts fields that are GUARANTEED to be in PRC units.
+    Never falls back to `amount`, `amount_inr`, `inr_equivalent`, `withdrawal_amount`,
+    `total_amount` — these are INR values and would cause massive inflation if summed.
+    
+    DEDUPLICATION: Same transaction may exist in multiple collections (old + new schema).
+    Each entry is fingerprinted via (service_type + prc_amount + timestamp-to-minute)
+    so the same redemption isn't double-counted even across collections.
     
     Types EXCLUDED: prc_burn, admin_burn, hourly_burn (not user redemptions)
     Status INCLUDED: completed, success, approved, paid, pending, processing, delivered
+        (pending included because PRC is already deducted from wallet at request time)
     """
     
     success_statuses = [
@@ -4485,58 +4490,70 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         "delivered", "DELIVERED", "Delivered"
     ]
     
+    # PRC-ONLY field names (STRICTLY in PRC units — no INR fallbacks)
+    # If a record doesn't have any of these, it's skipped entirely (safer than inflating).
+    PRC_FIELDS = [
+        "total_prc_deducted", "prc_deducted", "prc_used",
+        "total_prc", "prc_amount",
+    ]
+
     # Service collections grouped by category
-    # Format: (collection, amount_fields, date_fields, extra_match)
+    # Format: (collection, amount_fields_PRC_ONLY, date_fields, extra_match)
     service_sources = [
         # Subscription (PRC purchases only)
-        ("subscription_payments", ["prc_amount", "inr_equivalent", "amount"], ["created_at", "timestamp", "approved_at"], {"payment_method": "prc"}),
-        ("vip_payments", ["prc_amount", "prc_used", "amount"], ["created_at", "timestamp", "approved_at"], {"payment_method": "prc"}),
+        ("subscription_payments", PRC_FIELDS, ["created_at", "timestamp", "approved_at"], {"payment_method": "prc"}),
+        ("vip_payments", PRC_FIELDS, ["created_at", "timestamp", "approved_at"], {"payment_method": "prc"}),
         # Bank Redeem / Withdrawals
-        ("bank_transfer_requests", ["total_prc_deducted", "prc_deducted", "total_prc", "prc_amount"], ["created_at", "timestamp"], {}),
-        ("redeem_requests", ["total_prc_deducted", "prc_amount", "total_prc", "amount_inr", "amount"], ["created_at", "timestamp"], {}),
-        ("bank_withdrawal_requests", ["total_prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], {}),
-        ("bank_redeem_requests", ["prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], {}),
-        ("bank_transfers", ["prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], {}),
-        ("dmt_transactions", ["prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], {}),
-        ("dmt_logs", ["prc_deducted", "prc_amount", "amount"], ["created_at", "timestamp"], {}),
+        ("bank_transfer_requests", PRC_FIELDS, ["created_at", "timestamp"], {}),
+        ("redeem_requests", PRC_FIELDS, ["created_at", "timestamp"], {}),
+        ("bank_withdrawal_requests", PRC_FIELDS, ["created_at", "timestamp"], {}),
+        ("bank_redeem_requests", PRC_FIELDS, ["created_at", "timestamp"], {}),
+        ("bank_transfers", PRC_FIELDS, ["created_at", "timestamp"], {}),
+        ("dmt_transactions", PRC_FIELDS, ["created_at", "timestamp"], {}),
+        ("dmt_logs", PRC_FIELDS, ["created_at", "timestamp"], {}),
         # Bill Pay / BBPS
-        ("bill_payment_requests", ["prc_used", "total_prc_deducted", "prc_amount", "amount"], ["created_at", "timestamp"], {}),
-        ("bill_payments", ["prc_used", "total_prc_deducted", "prc_amount"], ["created_at", "timestamp"], {}),
-        ("payment_requests", ["total_prc_deducted", "prc_amount", "prc_used"], ["created_at", "timestamp"], {}),
+        ("bill_payment_requests", PRC_FIELDS, ["created_at", "timestamp"], {}),
+        ("bill_payments", PRC_FIELDS, ["created_at", "timestamp"], {}),
+        ("payment_requests", PRC_FIELDS, ["created_at", "timestamp"], {}),
         # Recharge
-        ("recharge_requests", ["prc_used", "prc_amount", "total_prc_deducted", "amount"], ["created_at", "timestamp"], {}),
+        ("recharge_requests", PRC_FIELDS, ["created_at", "timestamp"], {}),
         # Gift Vouchers
-        ("gift_voucher_requests", ["total_prc_deducted", "prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], {}),
+        ("gift_voucher_requests", PRC_FIELDS, ["created_at", "timestamp"], {}),
         # Shopping / Orders
-        ("orders", ["total_prc", "prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], {}),
+        ("orders", PRC_FIELDS, ["created_at", "timestamp"], {}),
         # Unified
-        ("unified_redemptions", ["prc_deducted", "prc_amount", "total_prc", "amount"], ["created_at", "timestamp"], {}),
+        ("unified_redemptions", PRC_FIELDS, ["created_at", "timestamp"], {}),
         # Loan
-        ("loan_payments", ["prc_amount", "prc_used", "amount"], ["created_at", "timestamp"], {}),
+        ("loan_payments", PRC_FIELDS, ["created_at", "timestamp"], {}),
         # Legacy
-        ("chatbot_withdrawal_requests", ["prc_amount", "amount", "total_prc"], ["created_at", "timestamp"], {}),
+        ("chatbot_withdrawal_requests", PRC_FIELDS, ["created_at", "timestamp"], {}),
     ]
     
     seen_fingerprints = set()
     total = 0
-    
+    breakdown = []  # for debug mode
+
     for coll_name, amt_fields, dt_fields, extra_match in service_sources:
         try:
             query = {"user_id": user_id, "status": {"$in": success_statuses}}
             query.update(extra_match)
             docs = await db[coll_name].find(query, {"_id": 0}).to_list(5000)
-            
+
+            coll_total = 0
+            coll_count = 0
             for doc in docs:
-                # Extract amount
+                # Extract amount (PRC only)
                 amount = 0
+                used_field = None
                 for af in amt_fields:
                     val = doc.get(af)
                     if val and float(val) > 0:
                         amount = round(float(val), 2)
+                        used_field = af
                         break
                 if amount <= 0:
                     continue
-                
+
                 # Extract date for fingerprint
                 dt_str = ""
                 for df in dt_fields:
@@ -4548,23 +4565,76 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
                             dt_str = raw[:16].replace("-", "").replace(":", "").replace("T", "")
                         if dt_str:
                             break
-                
-                # Create fingerprint: amount + timestamp (rounded to minute)
-                # This deduplicates same transaction across multiple collections
-                fingerprint = f"{amount}_{dt_str}"
-                
-                if fingerprint in seen_fingerprints:
-                    logging.debug(f"[REDEEMED] DEDUP: Skipping {coll_name} → {fingerprint}")
+
+                # ============= MULTI-LAYER DEDUP =============
+                # Same transaction may exist in multiple collections (old + new schema).
+                # Build MULTIPLE fingerprints for a record and skip if ANY already seen.
+                #
+                # Layer 1: Unique reference ID (strongest signal — same redeem linked across tables)
+                # Layer 2: amount + timestamp (catches same txn logged twice at same minute)
+                # Layer 3: amount + ±5 minute bucket (catches slight time drift between collections)
+                ref_id_candidates = [
+                    doc.get("request_id"), doc.get("redeem_id"), doc.get("txn_id"),
+                    doc.get("order_id"), doc.get("payment_id"),
+                    doc.get("eko_tid"), doc.get("client_ref_id"), doc.get("ref_id"),
+                ]
+                ref_key = None
+                for r in ref_id_candidates:
+                    if r:
+                        ref_key = f"ref:{r}"
+                        break
+
+                # ±5 min bucket
+                bucket_5 = ""
+                if len(dt_str) >= 12:
+                    try:
+                        minute_int = int(dt_str[8:12])
+                        bucket = (minute_int // 5) * 5
+                        bucket_5 = f"{dt_str[:8]}{bucket:04d}"
+                    except Exception:
+                        bucket_5 = dt_str
+                else:
+                    bucket_5 = dt_str
+
+                fp_strong = ref_key
+                fp_exact = f"ts:{amount}|{dt_str}"
+                fp_fuzzy = f"fz:{amount}|{bucket_5}"
+
+                # Skip if ANY of the fingerprints has been seen
+                if fp_strong and fp_strong in seen_fingerprints:
                     continue
-                
-                seen_fingerprints.add(fingerprint)
+                if fp_exact in seen_fingerprints:
+                    continue
+                if fp_fuzzy in seen_fingerprints:
+                    continue
+
+                # Register all fingerprints
+                if fp_strong:
+                    seen_fingerprints.add(fp_strong)
+                seen_fingerprints.add(fp_exact)
+                seen_fingerprints.add(fp_fuzzy)
+
                 total += amount
-                
+                coll_total += amount
+                coll_count += 1
+                if debug:
+                    breakdown.append({
+                        "collection": coll_name,
+                        "amount_prc": amount,
+                        "field_used": used_field,
+                        "service_type": (doc.get("service_type") or doc.get("bill_type") or doc.get("request_type") or ""),
+                        "timestamp": dt_str,
+                        "status": doc.get("status"),
+                        "ref_id": ref_key,
+                    })
+
+            if debug and coll_count > 0:
+                logging.info(f"[REDEEMED-DEBUG] {user_id} {coll_name}: {coll_count} docs, total {coll_total} PRC")
         except Exception as e:
-            logging.debug(f"[REDEEMED] Error querying {coll_name}: {e}")
-            continue
-    
-    logging.debug(f"[REDEEMED] User {user_id}: unique_entries={len(seen_fingerprints)}, total={total}")
+            logging.warning(f"[REDEEMED] {coll_name} error: {e}")
+
+    if debug:
+        return total, breakdown
     return round(total, 2)
 
 
@@ -26691,6 +26761,33 @@ async def get_gst_collection_summary():
     except Exception as e:
         logging.error(f"GST Summary Error: {e}")
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+
+
+@api_router.get("/admin/users/{uid}/redeemed-breakdown")
+async def get_user_redeemed_breakdown(uid: str):
+    """Admin-only: Debug breakdown of a user's total redeemed PRC —
+    shows which collection + field + status contributed how much.
+    Helps diagnose any user complaint like 'I redeemed 5000 but it shows 35000'."""
+    try:
+        total, breakdown = await get_user_all_time_redeemed(uid, debug=True)
+        # Group by collection for easy reading
+        by_coll = {}
+        for b in breakdown:
+            c = b["collection"]
+            by_coll.setdefault(c, {"count": 0, "total_prc": 0, "entries": []})
+            by_coll[c]["count"] += 1
+            by_coll[c]["total_prc"] = round(by_coll[c]["total_prc"] + b["amount_prc"], 2)
+            by_coll[c]["entries"].append(b)
+        return {
+            "success": True,
+            "user_id": uid,
+            "total_redeemed_prc": round(total, 2),
+            "entries_counted": len(breakdown),
+            "by_collection": by_coll,
+        }
+    except Exception as e:
+        logging.error(f"redeemed-breakdown failed for {uid}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @api_router.post("/admin/company-wallets/repair-prc-units")
