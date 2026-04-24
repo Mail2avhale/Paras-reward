@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from pymongo import ReturnDocument
 
 router = APIRouter(prefix="/pool-wallet", tags=["Pool Wallet"])
 
@@ -34,6 +35,54 @@ def set_db(database):
 def set_cache(cache_instance):
     global cache
     cache = cache_instance
+
+
+async def auto_repair_balance_after():
+    """Fire-and-forget: runs once at startup to patch legacy Core Team Bonus entries
+    that were stored with balance_after=0. Idempotent — skips if nothing to repair."""
+    if db is None:
+        return
+    try:
+        pending = await db.transactions.count_documents(
+            {"type": "core_team_bonus", "balance_after": 0}
+        )
+        if pending == 0:
+            return
+        logging.info(f"[POOL AUTO-REPAIR] Found {pending} core_team_bonus entries with balance_after=0; patching...")
+        pipeline = [
+            {"$match": {"type": "core_team_bonus", "balance_after": 0}},
+            {"$group": {"_id": "$user_id"}},
+        ]
+        affected = [d["_id"] async for d in db.transactions.aggregate(pipeline)]
+        patched = 0
+        for uid in affected:
+            txns = await db.transactions.find(
+                {"user_id": uid},
+                {"_id": 0, "transaction_id": 1, "type": 1, "amount": 1, "balance_after": 1,
+                 "created_at": 1, "timestamp": 1}
+            ).sort([("created_at", 1), ("timestamp", 1)]).to_list(20000)
+            running = 0.0
+            for t in txns:
+                amt = float(t.get("amount") or 0)
+                ttype = t.get("type") or ""
+                is_debit = ttype in (
+                    "prc_burn", "subscription_prc", "subscription",
+                    "bank_withdrawal_request", "bank_withdrawal", "withdrawal",
+                    "dmt_payment", "dmt", "bill_payment", "bbps_payment",
+                    "mobile_recharge", "dth_recharge", "recharge",
+                    "gift_voucher", "voucher", "order", "shopping", "admin_debit",
+                ) or amt < 0
+                delta = -abs(amt) if is_debit else abs(amt)
+                running = round(running + delta, 6)
+                if ttype == "core_team_bonus" and (t.get("balance_after") or 0) == 0:
+                    await db.transactions.update_one(
+                        {"transaction_id": t["transaction_id"]},
+                        {"$set": {"balance_after": running}},
+                    )
+                    patched += 1
+        logging.info(f"[POOL AUTO-REPAIR] Patched {patched} entries for {len(affected)} users")
+    except Exception as e:
+        logging.error(f"[POOL AUTO-REPAIR] failed: {e}")
 
 
 # ==================== SETTINGS ====================
@@ -247,11 +296,14 @@ async def _distribute_pool_to_core_team_inner(triggered_by: str = "auto"):
         for member in eligible_uids:
             uid = member["uid"]
             try:
-                # Credit PRC to user
-                await db.users.update_one(
+                # Credit PRC to user (returns updated doc so we know the new balance)
+                updated = await db.users.find_one_and_update(
                     {"uid": uid},
-                    {"$inc": {"prc_balance": per_member}}
+                    {"$inc": {"prc_balance": per_member}},
+                    projection={"_id": 0, "prc_balance": 1},
+                    return_document=ReturnDocument.AFTER,
                 )
+                new_balance = round(float((updated or {}).get("prc_balance", 0) or 0), 6)
 
                 # Log in transactions (for PRC statement)
                 await db.transactions.insert_one({
@@ -260,7 +312,7 @@ async def _distribute_pool_to_core_team_inner(triggered_by: str = "auto"):
                     "type": "core_team_bonus",
                     "amount": per_member,
                     "description": "Core Team Bonus - Pool Distribution",
-                    "balance_after": 0,
+                    "balance_after": new_balance,
                     "timestamp": now_iso,
                     "created_at": now_iso,
                 })
@@ -307,6 +359,55 @@ async def _distribute_pool_to_core_team_inner(triggered_by: str = "auto"):
 # ==================== API ENDPOINTS ====================
 
 # --- Public (User-facing) ---
+
+@router.post("/admin/repair-balance-after")
+async def repair_core_team_bonus_balance_after():
+    """Admin: one-shot repair of historical Core Team Bonus entries that were stored
+    with balance_after=0. Reconstructs balance_after by sorting ALL user transactions
+    chronologically and computing running balance.
+    Idempotent — only patches entries that are actually missing balance_after>0."""
+    try:
+        # Find all users who received core_team_bonus with balance_after=0
+        pipeline = [
+            {"$match": {"type": "core_team_bonus", "balance_after": 0}},
+            {"$group": {"_id": "$user_id"}},
+        ]
+        affected_users = [d["_id"] async for d in db.transactions.aggregate(pipeline)]
+        patched = 0
+        for uid in affected_users:
+            # Fetch ALL credit/debit transactions chronologically
+            txns = await db.transactions.find(
+                {"user_id": uid},
+                {"_id": 0, "transaction_id": 1, "type": 1, "amount": 1, "balance_after": 1,
+                 "created_at": 1, "timestamp": 1}
+            ).sort([("created_at", 1), ("timestamp", 1)]).to_list(20000)
+
+            # Running balance — walk through, patch core_team_bonus entries
+            running = 0.0
+            for t in txns:
+                amt = float(t.get("amount") or 0)
+                ttype = t.get("type") or ""
+                is_debit = ttype in (
+                    "prc_burn", "subscription_prc", "subscription",
+                    "bank_withdrawal_request", "bank_withdrawal", "withdrawal",
+                    "dmt_payment", "dmt", "bill_payment", "bbps_payment",
+                    "mobile_recharge", "dth_recharge", "recharge",
+                    "gift_voucher", "voucher", "order", "shopping", "admin_debit",
+                ) or amt < 0
+                delta = -abs(amt) if is_debit else abs(amt)
+                running = round(running + delta, 6)
+
+                if ttype == "core_team_bonus" and (t.get("balance_after") or 0) == 0:
+                    await db.transactions.update_one(
+                        {"transaction_id": t["transaction_id"]},
+                        {"$set": {"balance_after": running}},
+                    )
+                    patched += 1
+        return {"success": True, "users_scanned": len(affected_users), "entries_patched": patched}
+    except Exception as e:
+        logging.error(f"[POOL REPAIR] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/info")
 async def get_pool_wallet_info():

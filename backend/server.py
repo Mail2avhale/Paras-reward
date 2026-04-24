@@ -97,7 +97,7 @@ from routes.eko_callback import router as eko_callback_router, set_db as set_eko
 from routes.eko_recharge import router as eko_recharge_router, set_db as set_eko_recharge_db, set_recharge_redeem_check, set_recharge_log_transaction, set_recharge_calculate_charges, set_cache as set_eko_recharge_cache
 from routes.growth_economy import router as growth_economy_router, set_db as set_growth_economy_db
 from routes.admin_subscription import router as admin_subscription_router
-from routes.pool_wallet import router as pool_wallet_router, set_db as set_pool_wallet_db, set_cache as set_pool_wallet_cache, distribute_pool_to_core_team
+from routes.pool_wallet import router as pool_wallet_router, set_db as set_pool_wallet_db, set_cache as set_pool_wallet_cache, distribute_pool_to_core_team, auto_repair_balance_after as pool_auto_repair_balance_after
 from routes.employee_management import router as employee_router, set_db as set_employee_db, set_cache as set_employee_cache, distribute_employee_pool
 from routes.employee_reports import router as employee_reports_router, set_db as set_employee_reports_db
 from routes.community import router as community_router, set_db as set_community_db, set_cache as set_community_cache, auto_backfill_success_stories
@@ -33960,6 +33960,14 @@ async def _background_db_init():
         print("Community Success Story auto-backfill scheduled")
     except Exception as e:
         print(f"Success story backfill (non-critical): {e}")
+
+    # Pool Wallet — auto-repair legacy Core Team Bonus balance_after=0 entries
+    try:
+        import asyncio
+        asyncio.create_task(pool_auto_repair_balance_after())
+        print("Pool Wallet balance_after auto-repair scheduled")
+    except Exception as e:
+        print(f"Pool balance_after repair (non-critical): {e}")
 
     print("Background DB init complete!")
 
