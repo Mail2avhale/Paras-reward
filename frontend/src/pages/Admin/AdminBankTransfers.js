@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/input';
 import {
   Banknote, CheckCircle, XCircle, Clock, Search, Filter, RefreshCw,
   ChevronLeft, ChevronRight, Eye, IndianRupee, Building2, User,
-  Calendar, AlertCircle, Download, ArrowUpDown, Loader2, Copy, Pencil
+  Calendar, AlertCircle, Download, ArrowUpDown, Loader2, Copy, Pencil, X
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -733,6 +733,78 @@ const AdminBankTransfers = () => {
             </div>
           )}
         </Card>
+
+        {/* Active Filters Chip Bar */}
+        {(() => {
+          const chips = [];
+          if (statusFilter) chips.push({ key: 'status', label: `Status: ${statusFilter}`, clear: () => setStatusFilter('') });
+          if (searchQuery) chips.push({ key: 'search', label: `Search: "${searchQuery}"`, clear: () => setSearchQuery('') });
+          if (dateFrom) chips.push({ key: 'date-from', label: `From: ${dateFrom}`, clear: () => setDateFrom('') });
+          if (dateTo) chips.push({ key: 'date-to', label: `To: ${dateTo}`, clear: () => setDateTo('') });
+          if (subscriptionFilter) chips.push({
+            key: 'sub',
+            label: subscriptionFilter === 'active' ? '⭐ Active Subs' : 'Inactive Subs',
+            clear: () => setSubscriptionFilter(''),
+          });
+          if (neverRedeemed && Number(redeemMax) === 0) {
+            chips.push({ key: 'zero', label: '🆕 Only ₹0 Redeemers', clear: () => { setNeverRedeemed(false); setRedeemMax(''); } });
+          } else {
+            if (neverRedeemed) chips.push({ key: 'nr', label: 'First-time Redeemers', clear: () => setNeverRedeemed(false) });
+            if (redeemMin) chips.push({ key: 'rmin', label: `Min ${redeemMin} PRC`, clear: () => setRedeemMin('') });
+            if (redeemMax) chips.push({ key: 'rmax', label: `Max ${redeemMax} PRC`, clear: () => setRedeemMax('') });
+          }
+          if (sortBy === 'total_redeemed' && sortOrder === 'asc') {
+            chips.push({ key: 'sort-low', label: 'Sorted: Low Redeemers First', clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
+          } else if (sortBy === 'total_redeemed' && sortOrder === 'desc') {
+            chips.push({ key: 'sort-high', label: 'Sorted: High Redeemers First', clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
+          } else if (sortBy !== 'created_at') {
+            chips.push({ key: 'sort', label: `Sort: ${sortBy} ${sortOrder}`, clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
+          }
+
+          if (chips.length === 0) return null;
+          return (
+            <div
+              className="flex flex-wrap items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg"
+              data-testid="active-filters-bar"
+            >
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 mr-1">
+                Active:
+              </span>
+              {chips.map(c => (
+                <span
+                  key={c.key}
+                  className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1 rounded-full bg-white border border-slate-300 text-slate-700 text-xs font-medium shadow-sm"
+                  data-testid={`filter-chip-${c.key}`}
+                >
+                  {c.label}
+                  <button
+                    onClick={c.clear}
+                    className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors"
+                    aria-label={`Remove ${c.label}`}
+                    data-testid={`filter-chip-${c.key}-clear`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              {chips.length > 1 && (
+                <button
+                  onClick={() => {
+                    resetFilters();
+                    setRedeemMin('');
+                    setRedeemMax('');
+                    setNeverRedeemed(false);
+                    setSubscriptionFilter('');
+                  }}
+                  className="ml-1 text-xs font-medium text-slate-500 hover:text-red-600 underline"
+                  data-testid="clear-all-filters-btn"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Requests Table */}
         <Card className="bg-white border-slate-200 overflow-hidden shadow-sm">
