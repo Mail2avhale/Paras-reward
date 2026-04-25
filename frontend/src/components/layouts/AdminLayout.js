@@ -43,6 +43,7 @@ const MENU_TO_PERMISSION = {
   'popup-messages': 'popup-messages',
   'service-toggles': 'service-toggles',
   'policies': 'policies',
+  'settings-hub': 'service-toggles',
 
   // Payments
   'subscriptions': 'subscriptions',
@@ -239,6 +240,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       label: 'Operations & Settings',
       icon: Settings,
       subItems: [
+        { id: 'settings-hub', label: 'All Settings (Hub)', icon: Settings, path: '/admin/settings-hub' },
         { id: 'service-toggles', label: 'Service Toggles', icon: ToggleLeft, path: '/admin/service-toggles' },
         { id: 'service-charges', label: 'Service Charges', icon: CreditCard, path: '/admin/service-charges' },
         { id: 'contact-settings', label: 'Contact Page', icon: Phone, path: '/admin/contact-settings' },
@@ -272,6 +274,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/popup-messages': 'popup-messages',
     '/admin/service-toggles': 'service-toggles',
     '/admin/policies': 'policies',
+    '/admin/settings-hub': 'service-toggles',
+    '/admin/settings': 'service-toggles',
 
     // Payments
     '/admin/subscriptions': 'subscriptions',
