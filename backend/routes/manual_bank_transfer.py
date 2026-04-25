@@ -690,18 +690,19 @@ async def get_all_requests(
             req["is_first_redeem"] = totals["redeem_count"] <= 1
         
         # Enrich: user's current redeem limit
-        # NOTE: calculate_redeem_limit_func is expensive (12+ DB queries per user).
-        # For the list view we SKIP this enrichment to keep response times fast.
-        # Individual request details (modal / detail endpoint) can fetch it via
-        # /api/user/{uid}/redeem-limit on demand.
-        # Exception: if the admin is actively filtering/sorting by redeem_limit_*
-        # fields, we'd need it — but currently the list only filters by
-        # user_total_redeemed_prc (already populated from the fast aggregation).
-        SKIP_REDEEM_LIMIT_ENRICHMENT = True
-        if calculate_redeem_limit_func and user_ids and not SKIP_REDEEM_LIMIT_ENRICHMENT:
+        # PERF: calculate_redeem_limit_func is heavy (12+ DB queries per user).
+        # Compromise: enrich ONLY pending requests so admin sees the OVER-LIMIT
+        # badge where it matters for action; non-pending rows skip enrichment.
+        # This keeps the page fast (typically 5-30 pending) while restoring the
+        # "Over Limit" indicator that admins relied on.
+        SKIP_REDEEM_LIMIT_ENRICHMENT = False
+        if calculate_redeem_limit_func and not SKIP_REDEEM_LIMIT_ENRICHMENT:
+            pending_uids = list({
+                r.get("user_id") for r in requests
+                if r.get("user_id") and (r.get("status") or "").lower() == "pending"
+            })
             limit_cache = {}
-            unique_uids = set(r.get("user_id") for r in requests if r.get("user_id"))
-            for uid in unique_uids:
+            for uid in pending_uids:
                 try:
                     limit_cache[uid] = await calculate_redeem_limit_func(uid)
                 except Exception as e:
@@ -709,6 +710,12 @@ async def get_all_requests(
                     limit_cache[uid] = None
             for req in requests:
                 uid = req.get("user_id")
+                # Only attach limit data to pending rows so historical (paid/failed)
+                # rows don't show a misleading red "OVER LIMIT" indicator based on
+                # the user's CURRENT cumulative status.
+                if (req.get("status") or "").lower() != "pending":
+                    req["redeem_limit_available"] = None
+                    continue
                 limit_info = limit_cache.get(uid)
                 if limit_info:
                     try:
@@ -725,6 +732,8 @@ async def get_all_requests(
                         logging.warning(f"Failed to get redeem limit for {uid}: {e}")
                         req["redeem_limit_available"] = None
                 else:
+                    # Pending row but enrichment failed — keep null so frontend
+                    # shows "N/A" gracefully instead of showing zeros.
                     req["redeem_limit_available"] = None
         
         # Post-filter by redeem range
