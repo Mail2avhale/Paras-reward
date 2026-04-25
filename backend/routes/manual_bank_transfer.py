@@ -18,6 +18,7 @@ import logging
 import re
 import uuid
 import httpx
+import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
@@ -694,21 +695,45 @@ async def get_all_requests(
         # PERF: calculate_redeem_limit_func is heavy (12+ DB queries per user).
         # Compromise: enrich ONLY pending requests so admin sees the OVER-LIMIT
         # badge where it matters for action; non-pending rows skip enrichment.
-        # This keeps the page fast (typically 5-30 pending) while restoring the
-        # "Over Limit" indicator that admins relied on.
+        # Run all per-user limit calcs in PARALLEL with asyncio.gather, capped
+        # by an overall deadline so a slow DB never breaks page load.
         SKIP_REDEEM_LIMIT_ENRICHMENT = False
         if calculate_redeem_limit_func and not SKIP_REDEEM_LIMIT_ENRICHMENT:
             pending_uids = list({
                 r.get("user_id") for r in requests
                 if r.get("user_id") and (r.get("status") or "").lower() == "pending"
             })
+
             limit_cache = {}
-            for uid in pending_uids:
+
+            async def _limit_for(uid: str):
                 try:
-                    limit_cache[uid] = await calculate_redeem_limit_func(uid)
+                    return uid, await calculate_redeem_limit_func(uid)
                 except Exception as e:
                     logging.warning(f"[BANK REQUESTS] redeem limit calc failed for {uid}: {e}")
-                    limit_cache[uid] = None
+                    return uid, None
+
+            # Parallel calc with hard 15-second deadline for entire enrichment
+            if pending_uids:
+                try:
+                    # Cap at 100 unique pending users per page (more than that
+                    # almost never happens in practice; admins paginate anyway).
+                    bounded = pending_uids[:100]
+                    results = await asyncio.wait_for(
+                        asyncio.gather(*[_limit_for(u) for u in bounded]),
+                        timeout=15.0,
+                    )
+                    for uid, info in results:
+                        limit_cache[uid] = info
+                except asyncio.TimeoutError:
+                    logging.warning(
+                        f"[BANK REQUESTS] redeem-limit enrichment timed out "
+                        f"(>{15}s) for {len(pending_uids)} pending users; "
+                        f"falling back to N/A"
+                    )
+                except Exception as e:
+                    logging.warning(f"[BANK REQUESTS] enrichment error: {e}")
+
             for req in requests:
                 uid = req.get("user_id")
                 # Only attach limit data to pending rows so historical (paid/failed)
@@ -733,8 +758,8 @@ async def get_all_requests(
                         logging.warning(f"Failed to get redeem limit for {uid}: {e}")
                         req["redeem_limit_available"] = None
                 else:
-                    # Pending row but enrichment failed — keep null so frontend
-                    # shows "N/A" gracefully instead of showing zeros.
+                    # Pending row but enrichment failed/timed out — keep null so
+                    # frontend shows "N/A" gracefully instead of crashing.
                     req["redeem_limit_available"] = None
         
         # Post-filter by redeem range
