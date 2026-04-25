@@ -89,6 +89,7 @@ const AdminBankTransfers = () => {
   const [redeemMax, setRedeemMax] = useState('');
   const [neverRedeemed, setNeverRedeemed] = useState(false);
   const [subscriptionFilter, setSubscriptionFilter] = useState(''); // '', 'active', 'inactive'
+  const [overLimitOnly, setOverLimitOnly] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   // Pagination
@@ -247,6 +248,11 @@ const AdminBankTransfers = () => {
       if (redeemMax) params.append('redeem_max', redeemMax);
       if (neverRedeemed) params.append('never_redeemed', 'true');
       if (subscriptionFilter) params.append('subscription_status', subscriptionFilter);
+      if (overLimitOnly) {
+        params.append('over_limit_only', 'true');
+        // Over-limit filter only makes sense for pending requests
+        if (!params.has('status')) params.append('status', 'pending');
+      }
       
       const res = await axios.get(`${API}/bank-transfer/admin/requests?${params}`);
       
@@ -262,7 +268,7 @@ const AdminBankTransfers = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, searchQuery, dateFrom, dateTo, sortBy, sortOrder, redeemMin, redeemMax, neverRedeemed, subscriptionFilter]);
+  }, [page, statusFilter, searchQuery, dateFrom, dateTo, sortBy, sortOrder, redeemMin, redeemMax, neverRedeemed, subscriptionFilter, overLimitOnly]);
 
   useEffect(() => {
     loadRequests();
@@ -618,6 +624,23 @@ const AdminBankTransfers = () => {
                 Inactive
               </button>
             </div>
+
+            {/* Over Limit Filter */}
+            <button
+              onClick={() => {
+                setOverLimitOnly(!overLimitOnly);
+                setPage(1);
+              }}
+              className={`px-3 py-2 text-sm font-bold rounded-lg border transition-colors ${
+                overLimitOnly
+                  ? 'bg-red-600 text-white border-red-700 shadow-sm'
+                  : 'bg-white text-red-700 border-red-300 hover:bg-red-50'
+              }`}
+              data-testid="over-limit-filter-btn"
+              title="Show only pending requests where the user is over their redeem limit"
+            >
+              ⚠️ Over Limit Only
+            </button>
             
             {/* Date From */}
             <div className="flex items-center gap-2">
@@ -766,6 +789,11 @@ const AdminBankTransfers = () => {
             label: subscriptionFilter === 'active' ? '⭐ Active Subs' : 'Inactive Subs',
             clear: () => setSubscriptionFilter(''),
           });
+          if (overLimitOnly) chips.push({
+            key: 'over-limit',
+            label: '⚠️ Over Limit Only',
+            clear: () => setOverLimitOnly(false),
+          });
           if (neverRedeemed && Number(redeemMax) === 0) {
             chips.push({ key: 'zero', label: '🆕 Only ₹0 Redeemers', clear: () => { setNeverRedeemed(false); setRedeemMax(''); } });
           } else {
@@ -815,6 +843,7 @@ const AdminBankTransfers = () => {
                     setRedeemMax('');
                     setNeverRedeemed(false);
                     setSubscriptionFilter('');
+                    setOverLimitOnly(false);
                   }}
                   className="ml-1 text-xs font-medium text-slate-500 hover:text-red-600 underline"
                   data-testid="clear-all-filters-btn"
