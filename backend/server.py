@@ -75,6 +75,7 @@ from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_r
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db
 from routes.bbps_services import router as bbps_router, set_db as set_bbps_db, set_redeem_limit_check as set_bbps_redeem_limit_check
 from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check, set_calculate_redeem_limit as set_bank_transfer_calc_limit
+from routes.sustainability_burn import set_db as set_sustainability_burn_db, apply_sustainability_burn, reverse_sustainability_burn
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
@@ -12368,6 +12369,19 @@ async def subscription_pay_with_prc(request: Request):
             logging.info(f"[PRC-SUB] UPCOMING: {user_name} ({user_id}) queued Elite for {prc_amount:.0f} PRC, starts {scheduled_start[:10]}")
         else:
             logging.info(f"[PRC-SUB] SUCCESS: {user_name} ({user_id}) bought Elite for {prc_amount:.0f} PRC, expires {new_expiry[:10]}")
+
+        # Sustainability auto-burn (1% of post-deduction balance, threshold 30k)
+        # Applied for both immediate AND upcoming subscriptions since PRC has
+        # already been deducted at this point.
+        try:
+            await apply_sustainability_burn(
+                user_id=user_id,
+                service_type="subscription_prc",
+                service_ref_id=payment_id,
+                amount_inr=pricing.get("base_with_gst_inr"),
+            )
+        except Exception as burn_err:
+            logging.warning(f"[SUSTAIN-BURN] subscription hook failed (non-fatal): {burn_err}")
         
         if is_upcoming:
             return {
@@ -33428,6 +33442,7 @@ api_router.include_router(redeem_v2_router)
 
 # Manual Bank Transfer Router
 set_bank_transfer_db(db)
+set_sustainability_burn_db(db)
 set_bank_transfer_limit_check(check_redeem_limit)
 set_bank_transfer_weekly_check(check_weekly_one_service_limit)
 set_bank_transfer_calc_limit(calculate_user_redeem_limit)

@@ -947,7 +947,19 @@ async def mark_request_paid(action: AdminActionRequest):
             )
         except Exception as e:
             logging.warning(f"[SUCCESS STORY] bank redeem trigger failed (non-fatal): {e}")
-        
+
+        # Sustainability auto-burn (1% of post-deduction balance, threshold 30k)
+        try:
+            from routes.sustainability_burn import apply_sustainability_burn
+            await apply_sustainability_burn(
+                user_id=request.get("user_id"),
+                service_type="bank_redeem",
+                service_ref_id=action.request_id,
+                amount_inr=float(amount_paid) if amount_paid else None,
+            )
+        except Exception as e:
+            logging.warning(f"[SUSTAIN-BURN] bank redeem hook failed (non-fatal): {e}")
+
         # TODO: Send notification to user
         
         return {
@@ -1215,7 +1227,22 @@ async def bulk_mark_paid(action: BulkActionRequest):
                     }
                 )
                 paid_count += 1
-                
+
+                # Sustainability auto-burn (1% of post-deduction balance, threshold 30k)
+                try:
+                    from routes.sustainability_burn import apply_sustainability_burn
+                    amount_paid_b = (
+                        request.get("withdrawal_amount") or request.get("amount_inr")
+                        or request.get("total_inr") or request.get("amount") or 0
+                    )
+                    await apply_sustainability_burn(
+                        user_id=request.get("user_id"),
+                        service_type="bank_redeem",
+                        service_ref_id=request_id,
+                        amount_inr=float(amount_paid_b) if amount_paid_b else None,
+                    )
+                except Exception as burn_err:
+                    logging.warning(f"[SUSTAIN-BURN] bulk bank redeem hook failed (non-fatal): {burn_err}")
             except Exception as req_err:
                 logging.error(f"Error processing request {request_id}: {req_err}")
                 error_count += 1

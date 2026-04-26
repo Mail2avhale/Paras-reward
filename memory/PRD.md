@@ -8,6 +8,38 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Backend**: FastAPI (Python) + MongoDB (Motor)
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
+### Sustainability Auto-Burn 1% (DONE - Feb 1, 2026)
+
+**Goal**: After every successful PRC service transaction, burn 1% of the user's POST-deduction balance to maintain platform sustainability.
+
+**Rules** (per user spec):
+- Trigger: Mobile Recharge, DTH Recharge, Bank Redeem (mark-paid), PRC Subscription activation.
+- Burn = 1% × (balance AFTER service deduction).
+- **Threshold**: only if post-deduction balance > 30,000 PRC. Below threshold → skip.
+- Permanently destroyed (PRC supply ↓; no company-wallet credit).
+- **Refund** of source service → reverses the burn (balance restored, original entry marked `reversed=true`).
+- Statement description: **"PRC BURN BY APP TO MAINTAIN SUSTAINABILITY"**.
+- Idempotent: same `(service_type, service_ref_id)` never double-burns.
+
+**Implementation**:
+- New module `/app/backend/routes/sustainability_burn.py` with `apply_sustainability_burn(...)` and `reverse_sustainability_burn(...)`.
+- Records in BOTH `prc_ledger` (modern; type=`auto_burn`) AND `transactions` (legacy; type=`prc_burn`) for full PRC Statement visibility and historical reports compatibility.
+- Hooks added at:
+  - `/app/backend/routes/eko_recharge.py` — recharge success + refund flows.
+  - `/app/backend/routes/manual_bank_transfer.py` — `mark-paid` and `bulk-mark-paid`.
+  - `/app/backend/server.py` `pay_subscription_with_prc` — both immediate and upcoming subscription activations.
+- `/app/backend/routes/prc_statement.py` — `auto_burn` mapped to "Burn" filter category; `auto_burn_reversal` → "Refund".
+- `get_user_all_time_redeemed` does NOT include burns (separate semantic; burns are a SYSTEM action, not user redeem).
+
+**Regression tests** (`/app/backend/tests/test_sustainability_burn.py` — 5 passing):
+- Burn 1% when balance > 30k.
+- Skip when balance ≤ 30k.
+- Idempotent (re-fire doesn't double-burn).
+- Refund of service reverses the burn.
+- Burns NOT counted in Total Redeemed.
+
+
+
 ### Total Redeemed "0 PRC" False Display Bug (DONE - Feb 1, 2026)
 
 **User-reported**: "Total Redeemed" on Redeem Used Details page showed `0.00 PRC`, and "USED" on Home Dashboard showed `0.00 PRC`, even though the "Redeem Breakdown" clearly listed Bank Redeem 18,365 + Subscription 16,477 + Bill Pay 7,155 ≈ 42,000 PRC.

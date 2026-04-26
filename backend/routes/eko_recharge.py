@@ -948,6 +948,19 @@ async def _handle_success(data, request_id, client_ref_id, tid, status,
         except Exception as e:
             logging.warning(f"[SUCCESS STORY] recharge trigger failed (non-fatal): {e}")
 
+        # Sustainability auto-burn (1% of post-deduction balance, threshold 30k)
+        try:
+            from routes.sustainability_burn import apply_sustainability_burn
+            burn_service = "mobile_recharge" if data.recharge_type == "mobile" else "dth_recharge"
+            await apply_sustainability_burn(
+                user_id=data.user_id,
+                service_type=burn_service,
+                service_ref_id=request_id,
+                amount_inr=amount_inr,
+            )
+        except Exception as e:
+            logging.warning(f"[SUSTAIN-BURN] recharge hook failed (non-fatal): {e}")
+
     return {
         "success": True,
         "message": msg,
@@ -973,6 +986,18 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
         {"$inc": {"prc_balance": total_prc}}
     )
     logging.info(f"[RECHARGE] PRC refunded: {total_prc:.2f} to user {data.user_id}")
+
+    # Reverse any sustainability auto-burn applied for this transaction
+    try:
+        from routes.sustainability_burn import reverse_sustainability_burn
+        burn_service = "mobile_recharge" if data.recharge_type == "mobile" else "dth_recharge"
+        await reverse_sustainability_burn(
+            user_id=data.user_id,
+            service_type=burn_service,
+            service_ref_id=request_id,
+        )
+    except Exception as e:
+        logging.warning(f"[SUSTAIN-BURN] recharge refund reversal failed (non-fatal): {e}")
 
     # UPDATE the pre-inserted pending record to failed
     try:
