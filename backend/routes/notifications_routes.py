@@ -669,157 +669,6 @@ async def get_suggested_users(uid: str, limit: int = 10):
 
 
 
-@router.get("/referrals/{user_id}/diagnose")
-async def diagnose_direct_referrals(user_id: str):
-    """
-    DIAGNOSTIC: Quickly explain why /direct-list might be empty for a user.
-    Tries every known referrer-link field variant to find orphaned referrals.
-    """
-    user = await db.users.find_one(
-        {"uid": user_id},
-        {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
-         "referral_code": 1, "referred_by": 1, "referral_count": 1,
-         "total_referral_earnings": 1}
-    )
-    if not user:
-        return {"success": False, "reason": "user_not_found", "user_id": user_id}
-
-    ref_code = user.get("referral_code") or ""
-    counter = int(user.get("referral_count") or 0)
-
-    # Probe every known field/value combination
-    probes = []
-    candidate_fields = [
-        "referred_by", "referrer_id", "referrer", "parent_id",
-        "sponsor_id", "sponsor", "upline", "upline_id",
-        "invited_by", "invite_code_used", "ref_by", "referrer_code",
-    ]
-    candidate_values = [v for v in [user_id, ref_code] if v]
-
-    for fld in candidate_fields:
-        for val in candidate_values:
-            try:
-                cnt = await db.users.count_documents({fld: val})
-            except Exception:
-                cnt = -1
-            if cnt > 0:
-                probes.append({"field": fld, "value": val, "matches": cnt})
-
-    # Also check any field with the user_id or ref_code as value
-    # by sampling 1 known referral (if counter > 0) to learn the schema
-    sample_orphan = None
-    if counter > 0 and not probes:
-        # Look at the user's own activity log for any record of a referral
-        try:
-            act = await db.activity_logs.find_one(
-                {"user_id": user_id, "action_type": {"$regex": "refer", "$options": "i"}},
-                {"_id": 0},
-            )
-            if act:
-                sample_orphan = {
-                    "from_activity_log": True,
-                    "metadata_keys": list((act.get("metadata") or {}).keys())[:10],
-                }
-        except Exception:
-            pass
-
-    diagnosis = "ok" if probes else (
-        "counter_says_referrals_exist_but_no_field_matches"
-        if counter > 0 else "no_referrals"
-    )
-
-    return {
-        "success": True,
-        "user_id": user_id,
-        "user_name": user.get("name"),
-        "user_referral_code": ref_code or None,
-        "referral_count_field": counter,
-        "total_referral_earnings": user.get("total_referral_earnings", 0),
-        "probes": probes,
-        "diagnosis": diagnosis,
-        "sample_orphan_hint": sample_orphan,
-        "hint": (
-            "If diagnosis = 'counter_says_referrals_exist_but_no_field_matches', "
-            "the user record's referral_count says they have N referrals but no "
-            "user document has referred_by (or any known variant) pointing to "
-            "their UID/referral_code. Likely caused by a past data migration or "
-            "an older signup flow that didn't persist the link. Run "
-            "/admin/repair-referral-links/{user_id} to attempt a backfill."
-        ),
-    }
-
-
-@router.post("/admin/repair-referral-links/{referrer_id}")
-async def repair_referral_links(referrer_id: str, request: Request):
-    """
-    Admin tool: scan recent users and try to backfill missing referred_by
-    links by matching on the referrer's referral_code stored in alternative
-    fields. SAFE — only sets referred_by; never overwrites an existing value.
-    """
-    # Lightweight admin check
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Admin token required")
-    referrer = await db.users.find_one(
-        {"uid": referrer_id},
-        {"_id": 0, "uid": 1, "referral_code": 1, "referral_count": 1},
-    )
-    if not referrer:
-        raise HTTPException(status_code=404, detail="Referrer not found")
-    ref_code = referrer.get("referral_code")
-    if not ref_code:
-        return {"success": False, "reason": "no_referral_code"}
-
-    # Probe alt fields where the code might still be sitting
-    alt_fields = [
-        "invite_code", "invited_by", "invite_code_used", "ref_by",
-        "referrer_code", "sponsor_code", "referred_by_code",
-    ]
-    candidates = []
-    for fld in alt_fields:
-        async for doc in db.users.find(
-            {fld: ref_code,
-             "$or": [{"referred_by": None}, {"referred_by": ""},
-                     {"referred_by": {"$exists": False}}]},
-            {"_id": 0, "uid": 1, "name": 1, "mobile": 1, fld: 1, "created_at": 1},
-        ):
-            candidates.append({**doc, "_match_field": fld})
-
-    if not candidates:
-        return {
-            "success": True,
-            "repaired": 0,
-            "candidates_found": 0,
-            "message": "No orphaned candidates found for this referrer's code.",
-        }
-
-    # Backfill
-    repaired = 0
-    for c in candidates:
-        try:
-            await db.users.update_one(
-                {"uid": c["uid"]},
-                {"$set": {"referred_by": referrer_id}},
-            )
-            repaired += 1
-        except Exception:
-            pass
-
-    # Re-sync the referrer's counter
-    new_count = await db.users.count_documents({"referred_by": referrer_id})
-    await db.users.update_one(
-        {"uid": referrer_id}, {"$set": {"referral_count": new_count}}
-    )
-
-    return {
-        "success": True,
-        "repaired": repaired,
-        "candidates_found": len(candidates),
-        "new_referral_count": new_count,
-        "samples": candidates[:5],
-    }
-
-
 def _mask(mobile):
     if not mobile:
         return None
@@ -832,22 +681,29 @@ def _mask(mobile):
 @router.get("/referrals/{user_id}/direct-list")
 async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20):
     """
-    Get list of direct referrals with messaging capability
-    Returns referrals that the user can message
+    Get list of direct referrals.
+    Searches across ALL known referrer-link fields/values to handle legacy data.
     """
     skip = (page - 1) * limit
-    
-    # Get user's referral_code to handle mixed referred_by values
+
+    # Get user's referral_code
     current_user_for_code = await db.users.find_one(
         {"uid": user_id},
         {"_id": 0, "referral_code": 1}
     )
     user_referral_code = current_user_for_code.get("referral_code", "") if current_user_for_code else ""
-    
-    ref_or_conds = [{"referred_by": user_id}]
-    if user_referral_code:
-        ref_or_conds.append({"referred_by": user_referral_code})
-    ref_filter = {"$or": ref_or_conds}
+
+    # Build a forgiving OR query: any of these fields equal to UID or referral_code
+    candidate_fields = [
+        "referred_by", "referrer_id", "referrer", "sponsor_id",
+        "invited_by", "ref_by", "invite_code_used", "referrer_code",
+    ]
+    candidate_values = [v for v in [user_id, user_referral_code] if v]
+    ref_or_conds = []
+    for fld in candidate_fields:
+        for val in candidate_values:
+            ref_or_conds.append({fld: val})
+    ref_filter = {"$or": ref_or_conds} if ref_or_conds else {"referred_by": user_id}
     
     # Get direct referrals (users who used this user's referral code)
     direct_referrals = await db.users.find(
@@ -911,6 +767,15 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
                 "can_message": referrer_data.get("allow_messages", True)
             }
     
+    # Get current PRC rate ONCE for INR conversion (PRC ÷ rate = INR)
+    try:
+        from utils.helpers import get_prc_rate
+        current_prc_rate = await get_prc_rate(db)
+    except Exception:
+        current_prc_rate = 28.57  # safe fallback
+    if not current_prc_rate or current_prc_rate <= 0:
+        current_prc_rate = 28.57
+
     # Format referrals
     result = []
     now = datetime.now(timezone.utc)
@@ -958,7 +823,9 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
             "last_seen": ref.get("last_login", ""),
             "can_message": ref.get("allow_messages", True),
             "prc_earned": round(prc_earned, 2),
-            "prc_used": round(prc_used, 2)
+            "prc_used": round(prc_used, 2),
+            # INR equivalent of total PRC redeemed (for display: "Total Redeemed in INR")
+            "redeemed_inr": round(prc_used / current_prc_rate, 2) if current_prc_rate > 0 else 0,
         })
     
     return {

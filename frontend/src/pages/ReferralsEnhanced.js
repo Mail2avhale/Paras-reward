@@ -253,15 +253,13 @@ const ReferralsEnhanced = ({ user }) => {
                     )}
                   </div>
                   
-                  {/* PRC Stats */}
-                  <div className="grid grid-cols-2 gap-2 ml-[52px]">
-                    <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-1.5">
-                      <p className="text-[10px] text-gray-500 uppercase">PRC Earned</p>
-                      <p className="text-emerald-400 text-sm font-bold">{Number(ref.prc_earned || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
-                    </div>
-                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-1.5">
-                      <p className="text-[10px] text-gray-500 uppercase">PRC Used</p>
-                      <p className="text-amber-400 text-sm font-bold">{Number(ref.prc_used || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                  {/* Total PRC Redeemed in INR */}
+                  <div className="ml-[52px]">
+                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-1.5 inline-block" data-testid={`ref-redeemed-inr-${index}`}>
+                      <p className="text-[10px] text-gray-500 uppercase">Total Redeemed</p>
+                      <p className="text-amber-400 text-sm font-bold">
+                        ₹{Number(ref.redeemed_inr || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                      </p>
                     </div>
                   </div>
                 </div>
