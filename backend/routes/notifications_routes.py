@@ -673,87 +673,150 @@ async def get_suggested_users(uid: str, limit: int = 10):
 async def diagnose_direct_referrals(user_id: str):
     """
     DIAGNOSTIC: Quickly explain why /direct-list might be empty for a user.
-    Public-safe: returns only counts and sanitized samples (no PII beyond
-    name initials and masked mobile). Useful when admin/user reports
-    'direct referrals suddenly missing'.
+    Tries every known referrer-link field variant to find orphaned referrals.
     """
     user = await db.users.find_one(
         {"uid": user_id},
         {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
-         "referral_code": 1, "referred_by": 1}
+         "referral_code": 1, "referred_by": 1, "referral_count": 1,
+         "total_referral_earnings": 1}
     )
     if not user:
         return {"success": False, "reason": "user_not_found", "user_id": user_id}
 
     ref_code = user.get("referral_code") or ""
-    # Counts under each query strategy
-    by_uid = await db.users.count_documents({"referred_by": user_id})
-    by_code = (
-        await db.users.count_documents({"referred_by": ref_code})
-        if ref_code else 0
+    counter = int(user.get("referral_count") or 0)
+
+    # Probe every known field/value combination
+    probes = []
+    candidate_fields = [
+        "referred_by", "referrer_id", "referrer", "parent_id",
+        "sponsor_id", "sponsor", "upline", "upline_id",
+        "invited_by", "invite_code_used", "ref_by", "referrer_code",
+    ]
+    candidate_values = [v for v in [user_id, ref_code] if v]
+
+    for fld in candidate_fields:
+        for val in candidate_values:
+            try:
+                cnt = await db.users.count_documents({fld: val})
+            except Exception:
+                cnt = -1
+            if cnt > 0:
+                probes.append({"field": fld, "value": val, "matches": cnt})
+
+    # Also check any field with the user_id or ref_code as value
+    # by sampling 1 known referral (if counter > 0) to learn the schema
+    sample_orphan = None
+    if counter > 0 and not probes:
+        # Look at the user's own activity log for any record of a referral
+        try:
+            act = await db.activity_logs.find_one(
+                {"user_id": user_id, "action_type": {"$regex": "refer", "$options": "i"}},
+                {"_id": 0},
+            )
+            if act:
+                sample_orphan = {
+                    "from_activity_log": True,
+                    "metadata_keys": list((act.get("metadata") or {}).keys())[:10],
+                }
+        except Exception:
+            pass
+
+    diagnosis = "ok" if probes else (
+        "counter_says_referrals_exist_but_no_field_matches"
+        if counter > 0 else "no_referrals"
     )
-    or_count = await db.users.count_documents({
-        "$or": (
-            [{"referred_by": user_id}]
-            + ([{"referred_by": ref_code}] if ref_code else [])
-        )
-    })
-
-    # Sample first 3 candidates from BOTH strategies for visibility
-    samples = []
-    async for u in db.users.find(
-        {"referred_by": user_id},
-        {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
-         "referred_by": 1, "created_at": 1},
-    ).limit(3):
-        samples.append({
-            "match_via": "uid",
-            "uid": u.get("uid"),
-            "name": (u.get("name") or "")[:20],
-            "mobile_masked": _mask(u.get("mobile")),
-            "referred_by": u.get("referred_by"),
-            "joined_at": str(u.get("created_at"))[:10],
-        })
-    if ref_code:
-        async for u in db.users.find(
-            {"referred_by": ref_code},
-            {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
-             "referred_by": 1, "created_at": 1},
-        ).limit(3):
-            samples.append({
-                "match_via": "referral_code",
-                "uid": u.get("uid"),
-                "name": (u.get("name") or "")[:20],
-                "mobile_masked": _mask(u.get("mobile")),
-                "referred_by": u.get("referred_by"),
-                "joined_at": str(u.get("created_at"))[:10],
-            })
-
-    diagnosis = "ok" if or_count > 0 else "no_referrals_in_db"
-    if or_count > 0 and by_uid == 0 and by_code > 0:
-        diagnosis = "code_based_only_uid_match_missing"
-    elif or_count > 0 and by_code == 0 and by_uid > 0:
-        diagnosis = "uid_based_only"
 
     return {
         "success": True,
         "user_id": user_id,
         "user_name": user.get("name"),
-        "user_mobile": _mask(user.get("mobile")),
         "user_referral_code": ref_code or None,
-        "counts": {
-            "by_uid_field": by_uid,
-            "by_referral_code_field": by_code,
-            "by_or_query_used_in_direct_list": or_count,
-        },
+        "referral_count_field": counter,
+        "total_referral_earnings": user.get("total_referral_earnings", 0),
+        "probes": probes,
         "diagnosis": diagnosis,
-        "samples": samples,
+        "sample_orphan_hint": sample_orphan,
         "hint": (
-            "If 'by_or_query_used_in_direct_list' = 0, no users have referred_by "
-            "matching this user's UID OR referral_code. Either: (a) user truly has "
-            "no direct referrals; (b) referred_by stored under a DIFFERENT identifier "
-            "(check samples in this user's existing referrals, if any, in admin panel)."
+            "If diagnosis = 'counter_says_referrals_exist_but_no_field_matches', "
+            "the user record's referral_count says they have N referrals but no "
+            "user document has referred_by (or any known variant) pointing to "
+            "their UID/referral_code. Likely caused by a past data migration or "
+            "an older signup flow that didn't persist the link. Run "
+            "/admin/repair-referral-links/{user_id} to attempt a backfill."
         ),
+    }
+
+
+@router.post("/admin/repair-referral-links/{referrer_id}")
+async def repair_referral_links(referrer_id: str, request: Request):
+    """
+    Admin tool: scan recent users and try to backfill missing referred_by
+    links by matching on the referrer's referral_code stored in alternative
+    fields. SAFE — only sets referred_by; never overwrites an existing value.
+    """
+    # Lightweight admin check
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Admin token required")
+    referrer = await db.users.find_one(
+        {"uid": referrer_id},
+        {"_id": 0, "uid": 1, "referral_code": 1, "referral_count": 1},
+    )
+    if not referrer:
+        raise HTTPException(status_code=404, detail="Referrer not found")
+    ref_code = referrer.get("referral_code")
+    if not ref_code:
+        return {"success": False, "reason": "no_referral_code"}
+
+    # Probe alt fields where the code might still be sitting
+    alt_fields = [
+        "invite_code", "invited_by", "invite_code_used", "ref_by",
+        "referrer_code", "sponsor_code", "referred_by_code",
+    ]
+    candidates = []
+    for fld in alt_fields:
+        async for doc in db.users.find(
+            {fld: ref_code,
+             "$or": [{"referred_by": None}, {"referred_by": ""},
+                     {"referred_by": {"$exists": False}}]},
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1, fld: 1, "created_at": 1},
+        ):
+            candidates.append({**doc, "_match_field": fld})
+
+    if not candidates:
+        return {
+            "success": True,
+            "repaired": 0,
+            "candidates_found": 0,
+            "message": "No orphaned candidates found for this referrer's code.",
+        }
+
+    # Backfill
+    repaired = 0
+    for c in candidates:
+        try:
+            await db.users.update_one(
+                {"uid": c["uid"]},
+                {"$set": {"referred_by": referrer_id}},
+            )
+            repaired += 1
+        except Exception:
+            pass
+
+    # Re-sync the referrer's counter
+    new_count = await db.users.count_documents({"referred_by": referrer_id})
+    await db.users.update_one(
+        {"uid": referrer_id}, {"$set": {"referral_count": new_count}}
+    )
+
+    return {
+        "success": True,
+        "repaired": repaired,
+        "candidates_found": len(candidates),
+        "new_referral_count": new_count,
+        "samples": candidates[:5],
     }
 
 
