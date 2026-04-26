@@ -1,0 +1,42 @@
+{
+  "summary": "Integration testing of Sustainability Auto-Burn (1% post-transaction). Created /app/backend/tests/test_sustainability_burn_integration.py with 10 tests covering: (1) burn applied via real POST /api/bank-transfer/admin/mark-paid when balance > 30k, (2) NO burn below 30k threshold, (3) idempotency (no double-burn for same service_ref_id+service_type), (4) reverse_sustainability_burn restores balance + marks original reversed=true + inserts auto_burn_reversal credit, (5) GET /api/user/{uid}/redeem-limit total_redeemed EXCLUDES burns, (6) GET /api/prc-statement/usage-history/{uid} total_used EXCLUDES burns AND total_used == sum(by_category), (7) GET /api/bank-transfer/admin/requests loads under 5s (measured ~1.5s), (8) over_limit_only=true filter returns only pending rows with redeem_limit_raw < 0, (9) GET /api/admin/debug/total-redeemed/{uid} requires admin Bearer (401 without, 403 for non-admin, 200 for admin), (10) idempotency query is correctly keyed on (user_id, type, service_ref_id, service_type) — different service_type with same ref_id burns independently. Result: 10/10 PASSED. Live preview spot-check on UID cbdf46d7-7d66-4d43-8495-e1432a2ab071 confirms /redeem-limit total_redeemed=109609.0 == /usage-history summary.total_used=109609.0 == sum(by_category) (108609+500+500=109609). No 'Burn' category leaks into used breakdown. Pre-existing /app/backend/tests/test_sustainability_burn.py 5/5 unit tests pass when run individually (cross-test event-loop binding limitation in motor — non-functional).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "tests/test_sustainability_burn.py", "issue": "Module-level `from server import db` binds motor client to the first test's event loop; subsequent async tests in same pytest run fail with 'Future attached to a different loop'. Tests pass individually. Suggested fix: parameterize each test with its own AsyncIOMotorClient (as the new integration test does) OR add session-scoped event_loop fixture in conftest. Non-blocking — feature itself works."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_sustainability_burn_integration.py",
+    "/app/test_reports/pytest/sustain_burn_integration.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/sustainability_burn.py: Idempotency check is correctly keyed on (user_id, type=auto_burn, service_ref_id, service_type) — verified test_idempotency_query_shape that two different service_types with the same ref_id each burn independently. Good design.",
+    "routes/sustainability_burn.py: apply_sustainability_burn uses an atomic conditional update {prc_balance: {$gte: burn_amt}} to prevent overdraft from race conditions. Returns 'balance_changed_concurrent' on miss — robust.",
+    "routes/sustainability_burn.py: Refund flow (reverse_sustainability_burn) marks original entry reversed=true AND inserts a separate auto_burn_reversal credit entry. This provides audit trail + ensures statement shows both lines. Verified in test 4.",
+    "manual_bank_transfer.py:951-961: Burn hook runs AFTER status flip to 'paid' inside try/except — non-fatal failure won't block the mark-paid response. Good.",
+    "manual_bank_transfer.py:716-731: 15s parallel asyncio.gather + asyncio.wait_for around redeem-limit enrichment with absolute fallback to redeem_limit_available=None ensures the admin requests page always loads. Measured 1.5s in live preview.",
+    "Burn rate (1%) and threshold (30k) are module-level constants — fine for this size. If they ever become tenant-specific, move to admin_settings collection.",
+    "Live spot-check: /api/user/{uid}/redeem-limit `limit.total_redeemed` (109609) exactly matches /api/prc-statement/usage-history/{uid} `summary.total_used` (109609) which equals sum(by_category) — Home Dashboard 'USED' and 'Redeem Used Details' will stay in sync.",
+    "Minor: /api/admin/debug/total-redeemed expects header user_id-less Bearer JWT (decoded directly). Could optionally use the existing dependency injection pattern from get_current_admin for consistency, but current inline check is correct."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_sustainability_burn_integration.py (new — 10 integration tests)"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 integration + 5/5 unit when run individually)",
+    "frontend": "skipped per request"
+  },
+  "test_credentials": "admin email=admin@test.com pin=153759 UID=admin-test-123 (Bearer token generated via JWT_SECRET_KEY); test user UID cbdf46d7-7d66-4d43-8495-e1432a2ab071 mobile 9970100782",
+  "seed_data_creation": "Each test seeds its own throw-away user (uid prefix '__TEST_burn_*__') + bank_transfer_request, then cleans up all related rows (users, prc_ledger, transactions, bank_transfer_requests, subscription_payments, recharge_requests, community_posts) in finally block. No production data touched.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Sustainability Auto-Burn fully verified end-to-end. Run: REACT_APP_BACKEND_URL=https://formula-audit-fix.preview.emergentagent.com MONGO_URL=mongodb://localhost:27017 DB_NAME=paras_reward_db pytest /app/backend/tests/test_sustainability_burn_integration.py -v --asyncio-mode=auto. Burn record fields: prc_ledger.type='auto_burn' (debit, amount negative, description='PRC BURN BY APP TO MAINTAIN SUSTAINABILITY'); transactions.type='prc_burn'. Reversal: prc_ledger.type='auto_burn_reversal' (credit) + original entry's reversed=true. Both /redeem-limit and /usage-history correctly exclude burns from total_used/total_redeemed. The 5 pre-existing unit tests in test_sustainability_burn.py pass individually but conflict on shared motor event loop when run in same session — main agent may want to refactor to session-scoped fixture. Live UID cbdf46d7-7d66-4d43-8495-e1432a2ab071 verified: total_redeemed=109609 exactly equals usage-history summary.total_used=109609 and sum(by_category)=109609.",
+  "rca of the issue": "N/A — no defects in feature implementation. Two initial test failures in my new integration test were due to test code reading wrong response paths (data['used'] vs data['limit']['total_redeemed']; data['total_used'] vs data['summary']['total_used']). Fixed in the test; feature behavior was correct from the start."
+}
