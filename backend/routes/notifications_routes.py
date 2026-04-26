@@ -693,11 +693,8 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
     )
     user_referral_code = current_user_for_code.get("referral_code", "") if current_user_for_code else ""
 
-    # Build a forgiving OR query: any of these fields equal to UID or referral_code
-    candidate_fields = [
-        "referred_by", "referrer_id", "referrer", "sponsor_id",
-        "invited_by", "ref_by", "invite_code_used", "referrer_code",
-    ]
+    # Build a forgiving OR query — covers legacy variants
+    candidate_fields = ["referred_by", "referrer_id", "sponsor_id", "invited_by"]
     candidate_values = [v for v in [user_id, user_referral_code] if v]
     ref_or_conds = []
     for fld in candidate_fields:
@@ -794,14 +791,12 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
         # Active only if Elite AND mining_active flag is True
         is_active = is_elite and is_mining_flag
         
-        # Calculate actual PRC used (redeemed) from all collections
+        # PRC used (Total Redeemed) — use the user's stored total_redeemed field
+        # instead of the heavy aggregation. The field is kept in sync at
+        # redeem time and avoids 16+ collection scans per referral (which was
+        # causing /direct-list to time out for users with many referrals).
         ref_uid = ref["uid"]
-        prc_used = 0
-        if _get_user_all_time_redeemed:
-            try:
-                prc_used = await _get_user_all_time_redeemed(ref_uid)
-            except Exception as e:
-                logging.warning(f"Error calculating prc_used for {ref_uid}: {e}")
+        prc_used = float(ref.get("total_redeemed", 0) or 0)
         
         # Reconcile prc_earned: max(total_mined, total_mined_prc, prc_balance + total_redeemed)
         raw_total_mined = float(ref.get("total_mined", 0) or 0)
