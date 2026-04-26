@@ -668,6 +668,102 @@ async def get_suggested_users(uid: str, limit: int = 10):
     return {"suggested_users": suggestions}
 
 
+
+@router.get("/referrals/{user_id}/diagnose")
+async def diagnose_direct_referrals(user_id: str):
+    """
+    DIAGNOSTIC: Quickly explain why /direct-list might be empty for a user.
+    Public-safe: returns only counts and sanitized samples (no PII beyond
+    name initials and masked mobile). Useful when admin/user reports
+    'direct referrals suddenly missing'.
+    """
+    user = await db.users.find_one(
+        {"uid": user_id},
+        {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
+         "referral_code": 1, "referred_by": 1}
+    )
+    if not user:
+        return {"success": False, "reason": "user_not_found", "user_id": user_id}
+
+    ref_code = user.get("referral_code") or ""
+    # Counts under each query strategy
+    by_uid = await db.users.count_documents({"referred_by": user_id})
+    by_code = (
+        await db.users.count_documents({"referred_by": ref_code})
+        if ref_code else 0
+    )
+    or_count = await db.users.count_documents({
+        "$or": (
+            [{"referred_by": user_id}]
+            + ([{"referred_by": ref_code}] if ref_code else [])
+        )
+    })
+
+    # Sample first 3 candidates from BOTH strategies for visibility
+    samples = []
+    async for u in db.users.find(
+        {"referred_by": user_id},
+        {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
+         "referred_by": 1, "created_at": 1},
+    ).limit(3):
+        samples.append({
+            "match_via": "uid",
+            "uid": u.get("uid"),
+            "name": (u.get("name") or "")[:20],
+            "mobile_masked": _mask(u.get("mobile")),
+            "referred_by": u.get("referred_by"),
+            "joined_at": str(u.get("created_at"))[:10],
+        })
+    if ref_code:
+        async for u in db.users.find(
+            {"referred_by": ref_code},
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
+             "referred_by": 1, "created_at": 1},
+        ).limit(3):
+            samples.append({
+                "match_via": "referral_code",
+                "uid": u.get("uid"),
+                "name": (u.get("name") or "")[:20],
+                "mobile_masked": _mask(u.get("mobile")),
+                "referred_by": u.get("referred_by"),
+                "joined_at": str(u.get("created_at"))[:10],
+            })
+
+    diagnosis = "ok" if or_count > 0 else "no_referrals_in_db"
+    if or_count > 0 and by_uid == 0 and by_code > 0:
+        diagnosis = "code_based_only_uid_match_missing"
+    elif or_count > 0 and by_code == 0 and by_uid > 0:
+        diagnosis = "uid_based_only"
+
+    return {
+        "success": True,
+        "user_id": user_id,
+        "user_name": user.get("name"),
+        "user_mobile": _mask(user.get("mobile")),
+        "user_referral_code": ref_code or None,
+        "counts": {
+            "by_uid_field": by_uid,
+            "by_referral_code_field": by_code,
+            "by_or_query_used_in_direct_list": or_count,
+        },
+        "diagnosis": diagnosis,
+        "samples": samples,
+        "hint": (
+            "If 'by_or_query_used_in_direct_list' = 0, no users have referred_by "
+            "matching this user's UID OR referral_code. Either: (a) user truly has "
+            "no direct referrals; (b) referred_by stored under a DIFFERENT identifier "
+            "(check samples in this user's existing referrals, if any, in admin panel)."
+        ),
+    }
+
+
+def _mask(mobile):
+    if not mobile:
+        return None
+    s = str(mobile)
+    return s[:2] + "*****" + s[-2:] if len(s) >= 4 else "*****"
+
+
 # ========== DIRECT REFERRAL MESSAGING ==========
 
 @router.get("/referrals/{user_id}/direct-list")
