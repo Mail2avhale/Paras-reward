@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime, timezone
 import asyncio
+import logging
 import uuid
 
 # Initialize router
@@ -295,7 +296,7 @@ async def list_kyc(
     limit: int = 50,
     skip: Optional[int] = None
 ):
-    """List all KYC submissions (Admin)"""
+    """List all KYC submissions (Admin) — optimized for production scale."""
     try:
         query = {}
         if status:
@@ -307,34 +308,72 @@ async def list_kyc(
                 {"aadhaar_number": {"$regex": search, "$options": "i"}},
                 {"pan_number": {"$regex": search, "$options": "i"}}
             ]
-        
-        # Calculate skip from page if skip not provided
+
         actual_skip = skip if skip is not None else (page - 1) * limit
-        
-        kyc_list = await db.kyc.find(
-            query,
-            {"_id": 0, "aadhaar_front_base64": 0, "aadhaar_back_base64": 0, "pan_front_base64": 0, "selfie_base64": 0}
-        ).sort("submitted_at", -1).skip(actual_skip).limit(limit).to_list(length=limit)
-        
-        total = await db.kyc.count_documents(query)
-        
-        # Enrich with user info
-        for kyc in kyc_list:
-            user = await db.users.find_one({"uid": kyc["uid"]}, {"name": 1, "email": 1, "mobile": 1})
-            if user:
-                kyc["user_name"] = user.get("name")
-                kyc["user_email"] = user.get("email")
-                kyc["user_mobile"] = user.get("mobile")
-        
+
+        # Run list + count in PARALLEL to halve total wall-time.
+        # `submitted_at` may not be indexed → fallback to `created_at` if sort fails.
+        async def _fetch_list():
+            try:
+                return await db.kyc.find(
+                    query,
+                    {"_id": 0, "aadhaar_front_base64": 0, "aadhaar_back_base64": 0,
+                     "pan_front_base64": 0, "selfie_base64": 0}
+                ).sort("submitted_at", -1).skip(actual_skip).limit(limit).to_list(length=limit)
+            except Exception as e:
+                logging.warning(f"[KYC list] sort by submitted_at failed: {e}; trying created_at")
+                return await db.kyc.find(
+                    query,
+                    {"_id": 0, "aadhaar_front_base64": 0, "aadhaar_back_base64": 0,
+                     "pan_front_base64": 0, "selfie_base64": 0}
+                ).sort("created_at", -1).skip(actual_skip).limit(limit).to_list(length=limit)
+
+        async def _count():
+            try:
+                # Bound count_documents with timeout — never block the page
+                return await asyncio.wait_for(db.kyc.count_documents(query), timeout=5.0)
+            except asyncio.TimeoutError:
+                logging.warning("[KYC list] count_documents timed out; falling back to estimated count")
+                # Fallback: estimated count is O(1) but doesn't honor query
+                try:
+                    return await db.kyc.estimated_document_count()
+                except Exception:
+                    return 0
+            except Exception as ce:
+                logging.warning(f"[KYC list] count error: {ce}")
+                return 0
+
+        kyc_list, total = await asyncio.gather(_fetch_list(), _count())
+
+        # BATCH user enrichment — 1 query instead of N (was N+1 problem).
+        if kyc_list:
+            uids = [k["uid"] for k in kyc_list if k.get("uid")]
+            users_by_uid = {}
+            try:
+                async for u in db.users.find(
+                    {"uid": {"$in": uids}},
+                    {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1},
+                ):
+                    users_by_uid[u["uid"]] = u
+            except Exception as ue:
+                logging.warning(f"[KYC list] batch user lookup failed: {ue}")
+            for kyc in kyc_list:
+                u = users_by_uid.get(kyc.get("uid"))
+                if u:
+                    kyc["user_name"] = u.get("name")
+                    kyc["user_email"] = u.get("email")
+                    kyc["user_mobile"] = u.get("mobile")
+
         return {
             "users": kyc_list,
             "total": total,
             "limit": limit,
             "skip": actual_skip,
             "page": page,
-            "total_pages": (total + limit - 1) // limit
+            "total_pages": (total + limit - 1) // limit if total else 1
         }
     except Exception as e:
+        logging.error(f"[KYC list] hard error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/details/{uid}")
@@ -556,27 +595,37 @@ async def reject_kyc(uid: str, request: Request):
 
 @router.get("/stats")
 async def get_kyc_stats():
-    """Get KYC statistics (Admin)"""
+    """Get KYC statistics (Admin) — counts run in parallel with timeout."""
+    async def _count(coll, q):
+        try:
+            return await asyncio.wait_for(coll.count_documents(q), timeout=5.0)
+        except Exception:
+            return 0
     try:
-        pending = await db.kyc.count_documents({"status": "pending"})
-        verified = await db.kyc.count_documents({"status": "verified"})
-        rejected = await db.kyc.count_documents({"status": "rejected"})
-        total = await db.kyc.count_documents({})
-        
-        # Also check users collection for comparison
-        users_pending = await db.users.count_documents({"kyc_status": "pending"})
-        users_verified = await db.users.count_documents({"kyc_status": {"$in": ["verified", "approved"]}})
-        
+        pending, verified, rejected, total, users_pending, users_verified = await asyncio.gather(
+            _count(db.kyc, {"status": "pending"}),
+            _count(db.kyc, {"status": "verified"}),
+            _count(db.kyc, {"status": "rejected"}),
+            _count(db.kyc, {}),
+            _count(db.users, {"kyc_status": "pending"}),
+            _count(db.users, {"kyc_status": {"$in": ["verified", "approved"]}}),
+        )
         return {
             "pending": pending,
             "verified": verified,
             "rejected": rejected,
             "total": total,
             "users_kyc_pending": users_pending,
-            "users_kyc_verified": users_verified
+            "users_kyc_verified": users_verified,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"[KYC stats] error: {e}")
+        # Never crash the page — return zeros so UI keeps rendering
+        return {
+            "pending": 0, "verified": 0, "rejected": 0, "total": 0,
+            "users_kyc_pending": 0, "users_kyc_verified": 0,
+            "error": str(e)[:120],
+        }
 
 
 @router.get("/debug")
