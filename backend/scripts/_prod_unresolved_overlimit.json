@@ -1,0 +1,122 @@
+[
+  {
+    "request_id": "BTR-20260320134258-2B00B900",
+    "user_id": "a8598d1a-23e3-4d43-9e79-73ef93d7cdb2",
+    "user_name": "ANIRUDHA BORGOHAIN",
+    "withdrawal_amount": 2000,
+    "prc_deducted": 28920,
+    "redeem_limit_raw": -8523.58
+  },
+  {
+    "request_id": "BTR-20260320134326-A68A1CAB",
+    "user_id": "2455d8cb-0c87-49bd-b8e0-28b62d5e63f0",
+    "user_name": "Aditya Desai",
+    "withdrawal_amount": 1000,
+    "prc_deducted": 14520,
+    "redeem_limit_raw": -10469.17
+  },
+  {
+    "request_id": "BTR-20260320134331-93D8F277",
+    "user_id": "58fc2e73-e1cb-400d-b37a-46b31316a061",
+    "user_name": "Anushka Khetale",
+    "withdrawal_amount": 1500,
+    "prc_deducted": 19910,
+    "redeem_limit_raw": -3199.97
+  },
+  {
+    "request_id": "BTR-20260320134338-34F5728C",
+    "user_id": "205c8ee2-ff9c-4c85-88d0-22528d4aa8b1",
+    "user_name": "Shivam bharti",
+    "withdrawal_amount": 1900,
+    "prc_deducted": 27480,
+    "redeem_limit_raw": -2483.33
+  },
+  {
+    "request_id": "BTR-20260320134427-4F972305",
+    "user_id": "b944b029-a1b3-43a8-b271-6002c4e38faf",
+    "user_name": "Mayur jitu dubla",
+    "withdrawal_amount": 2000,
+    "prc_deducted": 28920,
+    "redeem_limit_raw": -30137.34
+  },
+  {
+    "request_id": "BTR-20260320134526-41D223D1",
+    "user_id": "2be54777-a034-481c-997a-3dbaee8a9925",
+    "user_name": "Jitendra Yashwant Pawar",
+    "withdrawal_amount": 1900,
+    "prc_deducted": 27480,
+    "redeem_limit_raw": -37467.0
+  },
+  {
+    "request_id": "BTR-20260320134722-8BA6FD0E",
+    "user_id": "91c44f5b-9a85-4061-a036-97b26968b750",
+    "user_name": "Vikram Shivnath Bhagwat",
+    "withdrawal_amount": 1900,
+    "prc_deducted": 27480,
+    "redeem_limit_raw": -17047.46
+  },
+  {
+    "request_id": "BTR-20260320135020-C455EB6B",
+    "user_id": "35ba234f-cf3e-4b1d-8956-25a05d086233",
+    "user_name": "Ram Shiromani",
+    "withdrawal_amount": 700,
+    "prc_deducted": 10200,
+    "redeem_limit_raw": -7068.15
+  },
+  {
+    "request_id": "BTR-20260320135025-B54F0E56",
+    "user_id": "482c66f5-1877-48cc-bd33-450f167e216d",
+    "user_name": "Pratibha Devi",
+    "withdrawal_amount": 1900,
+    "prc_deducted": 27480,
+    "redeem_limit_raw": -24481.34
+  },
+  {
+    "request_id": "BTR-20260320135043-B1318AFC",
+    "user_id": "f168cdda-d871-453a-97ec-59376aba6f36",
+    "user_name": "PREETI GAUTAM",
+    "withdrawal_amount": 1900,
+    "prc_deducted": 27480,
+    "redeem_limit_raw": -28006.88
+  },
+  {
+    "request_id": "BTR-20260320140620-09987B74",
+    "user_id": "fdb70f9f-fb9f-432a-a0b0-7afc9ecb640b",
+    "user_name": "Ruchi Maurya",
+    "withdrawal_amount": 1300,
+    "prc_deducted": 17270,
+    "redeem_limit_raw": -9651.8
+  },
+  {
+    "request_id": "BTR-20260322041256-46977C52",
+    "user_id": "b7cb3c7b-26d8-48a4-8f28-926febea751c",
+    "user_name": "NITISH RANJAN DAS",
+    "withdrawal_amount": 800,
+    "prc_deducted": 10670,
+    "redeem_limit_raw": -2811.07
+  },
+  {
+    "request_id": "BTR-20260322041300-61C5ADFD",
+    "user_id": "f0859b1d-b896-4959-a0b1-9ff1ee668e3a",
+    "user_name": "Shweta Sandesh Nirmal",
+    "withdrawal_amount": 1500,
+    "prc_deducted": 19910,
+    "redeem_limit_raw": -20377.65
+  },
+  {
+    "request_id": "BTR-20260322041908-90BBFB80",
+    "user_id": "cd6bae8a-97f3-4fa2-914c-d86e53b2f182",
+    "user_name": "Babu Acharya",
+    "withdrawal_amount": 1900,
+    "prc_deducted": 27480,
+    "redeem_limit_raw": -12161.27
+  },
+  {
+    "request_id": "BTR-20260418044143-359398D4",
+    "user_id": "761bef28-2672-4faa-a5b5-cfeb9f3993a2",
+    "user_name": "Amarawati Devi",
+    "withdrawal_amount": 1000,
+    "prc_deducted": 15730,
+    "redeem_limit_raw": -1293.85
+  }
+]

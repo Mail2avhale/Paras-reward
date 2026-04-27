@@ -38,6 +38,23 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - Refund of service reverses the burn.
 - Burns NOT counted in Total Redeemed.
 
+### Bulk Fail Over-Limit Pending Bank Redeems (DONE - Apr 27, 2026)
+
+**Goal**: One-time admin action — programmatically fail all pending bank redeem requests where the user has already crossed their cumulative redeem cap (`total_redeemed > total_limit`), refunding the locked PRC back to wallets.
+
+**Production Result**:
+- Identified via paginated dry-run on `/api/bank-transfer/admin/requests?status=pending`
+- **606 over-limit requests** failed with `admin_remark="Over Limit"`
+- **13,519,367 PRC** refunded across users (1.35 कोटी PRC)
+- Pending count: 1806 → 1201 | Failed count: 2090 → 2696
+- 5 stubborn timeout-prone records turned out to be within-limit on retry (no action needed)
+
+**Scripts** (kept for future re-runs):
+- `/app/backend/scripts/prod_bulk_fail_overlimit.py` — `--dry-run` paginates with auto-retry on enrichment timeouts (limit=30 per page, falls back to limit=10 on big-page timeouts). `--execute` chunks calls to existing `/admin/bulk-mark-failed` (50 IDs per batch).
+- `/app/backend/scripts/prod_retry_unresolved.py` — re-checks any IDs that were timeout-skipped in dry-run.
+
+
+
 
 
 ### Total Redeemed "0 PRC" False Display Bug (DONE - Feb 1, 2026)
