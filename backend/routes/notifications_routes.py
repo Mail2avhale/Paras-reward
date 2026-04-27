@@ -703,6 +703,10 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
     ref_filter = {"$or": ref_or_conds} if ref_or_conds else {"referred_by": user_id}
     
     # Get direct referrals (users who used this user's referral code)
+    # NOTE: `avatar` and `profile_picture` intentionally NOT projected here.
+    # Some users have base64 images (150-250 KB each) stored inline, which
+    # inflated the /direct-list response to >300 KB and caused the Invite
+    # page to time out. Frontend renders an initial-letter placeholder.
     direct_referrals = await db.users.find(
         ref_filter,
         {
@@ -711,8 +715,6 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
             "name": 1, 
             "email": 1,
             "mobile": 1,
-            "avatar": 1, 
-            "profile_picture": 1,
             "city": 1, 
             "state": 1,
             "subscription_plan": 1,
@@ -835,7 +837,7 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
             "uid": ref_uid,
             "name": ref.get("name", "Unknown"),
             "mobile": ref.get("mobile", ""),
-            "avatar": ref.get("avatar") or ref.get("profile_picture"),
+            # avatar intentionally omitted — see projection comment above
             "city": ref.get("city", ""),
             "state": ref.get("state", ""),
             "subscription_plan": ref.get("subscription_plan") or ("explorer" if ref.get("membership_type") == "free" else "startup"),
@@ -845,7 +847,6 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
             "can_message": ref.get("allow_messages", True),
             "prc_earned": round(prc_earned, 2),
             "prc_used": round(prc_used, 2),
-            # INR equivalent of total PRC redeemed (for display: "Total Redeemed in INR")
             "redeemed_inr": round(prc_used / current_prc_rate, 2) if current_prc_rate > 0 else 0,
         })
     

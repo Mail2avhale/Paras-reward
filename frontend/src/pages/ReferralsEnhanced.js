@@ -29,11 +29,16 @@ const ReferralsEnhanced = ({ user }) => {
     try {
       setRefreshing(true);
       
-      // Fetch network stats, mining speed, and referrals in PARALLEL with timeout
+      // Fetch network stats, mining speed, and referrals in PARALLEL.
+      // direct-list does heavy aggregation per referral — needs longer timeout
+      // than the lighter stats endpoints.
       const [statsRes, miningRes, referralsRes] = await Promise.all([
-        axios.get(`${API}/api/growth/network-stats/${user.uid}`, { timeout: 4000 }).catch(() => null),
-        axios.get(`${API}/api/growth/mining-speed/${user.uid}`, { timeout: 4000 }).catch(() => null),
-        axios.get(`${API}/api/notifications/referrals/${user.uid}/direct-list`, { timeout: 4000 }).catch(() => null)
+        axios.get(`${API}/api/growth/network-stats/${user.uid}`, { timeout: 8000 }).catch(() => null),
+        axios.get(`${API}/api/growth/mining-speed/${user.uid}`, { timeout: 8000 }).catch(() => null),
+        axios.get(`${API}/api/notifications/referrals/${user.uid}/direct-list`, { timeout: 20000 }).catch((err) => {
+          console.error('[Invite] direct-list fetch failed:', err?.message);
+          return null;
+        })
       ]);
       
       if (statsRes?.data?.success) {
