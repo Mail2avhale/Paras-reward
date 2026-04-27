@@ -1027,7 +1027,36 @@ async def mark_request_failed(action: AdminActionRequest):
         
         logging.info(f"[BANK TRANSFER] Marked FAILED: {action.request_id} | Admin: {action.admin_id} | Refund: {prc_to_refund} PRC")
         
-        # TODO: Send notification to user
+        # Send in-app notification (non-fatal)
+        try:
+            from routes.notifications import create_notification
+            reason = action.remark or "Request rejected"
+            amount_inr = request.get("withdrawal_amount") or request.get("amount") or 0
+            account_tail = (request.get("account_number") or "")[-4:] if request.get("account_number") else None
+            msg_parts = [
+                f"Your bank redeem of \u20b9{int(amount_inr):,} has been rejected.",
+                f"Reason: {reason}.",
+            ]
+            if prc_to_refund:
+                msg_parts.append(f"{int(prc_to_refund):,} PRC has been refunded to your wallet.")
+            if account_tail:
+                msg_parts.append(f"Account: XXXX{account_tail}.")
+            await create_notification(
+                user_id=user_id,
+                notification_type="payment_rejected",
+                title="Bank Redeem Failed",
+                message=" ".join(msg_parts),
+                data={
+                    "request_id": action.request_id,
+                    "amount_inr": amount_inr,
+                    "prc_refunded": prc_to_refund,
+                    "reason": reason,
+                    "service": "bank_redeem",
+                    "status": "failed",
+                },
+            )
+        except Exception as ne:
+            logging.warning(f"[BANK TRANSFER] notify on fail err (non-fatal): {ne}")
         
         return {
             "success": True,
@@ -1167,6 +1196,37 @@ async def bulk_mark_failed(action: BulkActionRequest):
                 
                 failed_count += 1
                 
+                # Send in-app notification (non-fatal)
+                try:
+                    from routes.notifications import create_notification
+                    reason = action.remark or "Request rejected"
+                    amount_inr = request.get("withdrawal_amount") or request.get("amount") or 0
+                    account_tail = (request.get("account_number") or "")[-4:] if request.get("account_number") else None
+                    msg_parts = [
+                        f"Your bank redeem of \u20b9{int(amount_inr):,} has been rejected.",
+                        f"Reason: {reason}.",
+                    ]
+                    if prc_to_refund:
+                        msg_parts.append(f"{int(prc_to_refund):,} PRC has been refunded to your wallet.")
+                    if account_tail:
+                        msg_parts.append(f"Account: XXXX{account_tail}.")
+                    await create_notification(
+                        user_id=user_id,
+                        notification_type="payment_rejected",
+                        title="Bank Redeem Failed",
+                        message=" ".join(msg_parts),
+                        data={
+                            "request_id": request_id,
+                            "amount_inr": amount_inr,
+                            "prc_refunded": prc_to_refund,
+                            "reason": reason,
+                            "service": "bank_redeem",
+                            "status": "failed",
+                        },
+                    )
+                except Exception as ne:
+                    logging.warning(f"[BULK FAIL] notify err (non-fatal): {ne}")
+                
             except Exception as req_err:
                 logging.error(f"Error processing request {request.get('request_id')}: {req_err}")
                 error_count += 1
@@ -1261,6 +1321,112 @@ async def bulk_mark_paid(action: BulkActionRequest):
         raise
     except Exception as e:
         logging.error(f"Bulk paid error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Server error")
+
+
+class NotifyFailedRequest(BaseModel):
+    """Send in-app notification to users whose bank redeems were failed."""
+    request_ids: list = Field(default=[], description="List of failed request IDs")
+    only_status: str = Field(default="failed", description="Only consider rows with this status")
+    title: str = Field(default="Bank Redeem Failed", description="Notification title")
+    use_admin_remark_as_reason: bool = Field(default=True, description="If true, use stored admin_remark as the reason")
+    custom_reason: Optional[str] = Field(default=None, description="Override reason text if not using remark")
+
+
+@router.post("/admin/notify-failed-users")
+async def notify_failed_users(payload: NotifyFailedRequest):
+    """Create an in-app notification for each user whose bank redeem request
+    was failed (one notification per request_id). Idempotent — skips if a
+    notification with the same `data.request_id` already exists for the user.
+    """
+    try:
+        from routes.notifications import create_notification
+
+        if not payload.request_ids:
+            raise HTTPException(status_code=400, detail="request_ids is required")
+
+        rows = await db.bank_transfer_requests.find(
+            {"request_id": {"$in": payload.request_ids}}, {"_id": 0}
+        ).to_list(len(payload.request_ids))
+
+        sent = 0
+        skipped = 0
+        not_failed = 0
+        already_notified = 0
+
+        for r in rows:
+            rid = r.get("request_id")
+            uid = r.get("user_id")
+            if not uid or not rid:
+                skipped += 1
+                continue
+            if (r.get("status") or "").lower() != payload.only_status:
+                not_failed += 1
+                continue
+
+            # Idempotency: skip if a notification already exists for this rid
+            existing = await db.notifications.find_one({
+                "user_id": uid,
+                "data.request_id": rid,
+                "type": "payment_rejected",
+            })
+            if existing:
+                already_notified += 1
+                continue
+
+            reason = payload.custom_reason or (
+                r.get("admin_remark") if payload.use_admin_remark_as_reason else None
+            ) or "Request rejected"
+
+            amount_inr = r.get("withdrawal_amount") or r.get("amount") or 0
+            prc_refunded = r.get("prc_deducted") or r.get("total_prc_deducted") or 0
+            account_tail = (r.get("account_number") or "")[-4:] if r.get("account_number") else None
+
+            msg_parts = [
+                f"Your bank redeem of \u20b9{int(amount_inr):,} has been rejected.",
+                f"Reason: {reason}.",
+            ]
+            if prc_refunded:
+                msg_parts.append(f"{int(prc_refunded):,} PRC has been refunded to your wallet.")
+            if account_tail:
+                msg_parts.append(f"Account: XXXX{account_tail}.")
+            message = " ".join(msg_parts)
+
+            await create_notification(
+                user_id=uid,
+                notification_type="payment_rejected",
+                title=payload.title,
+                message=message,
+                data={
+                    "request_id": rid,
+                    "amount_inr": amount_inr,
+                    "prc_refunded": prc_refunded,
+                    "reason": reason,
+                    "service": "bank_redeem",
+                    "status": "failed",
+                },
+            )
+            sent += 1
+
+        logging.info(
+            f"[BANK TRANSFER NOTIFY] sent={sent} already={already_notified} "
+            f"not_failed={not_failed} skipped={skipped} of {len(payload.request_ids)}"
+        )
+        return {
+            "success": True,
+            "sent": sent,
+            "already_notified": already_notified,
+            "not_failed": not_failed,
+            "skipped": skipped,
+            "total_input": len(payload.request_ids),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"notify_failed_users error: {e}")
         import traceback
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Server error")
