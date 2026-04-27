@@ -1,0 +1,21 @@
+{
+  "over_limit": [
+    {
+      "request_id": "BTR-20260321150000",
+      "user_id": "cbdf46d7-7d66-4d43-8495-e1432a2ab071",
+      "user_name": "",
+      "user_phone": "",
+      "amount_inr": 0,
+      "prc_deducted": 0,
+      "total_limit": 0.0,
+      "total_redeemed": 109609.0,
+      "raw_diff": -109609.0,
+      "network_size": 0,
+      "unlock_percent": 0
+    }
+  ],
+  "within_limit_count": 0,
+  "errors": [],
+  "total_prc_to_refund": 0,
+  "total_inr": 0
+}
