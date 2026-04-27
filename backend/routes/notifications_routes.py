@@ -764,6 +764,33 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
                 "can_message": referrer_data.get("allow_messages", True)
             }
     
+    # Compute Total Redeemed for ALL referrals in parallel (canonical source).
+    # Same data User 360 page shows. Capped at 8s for whole batch so /direct-list
+    # never times out even with 50+ referrals.
+    redeemed_by_uid = {}
+    if _get_user_all_time_redeemed and direct_referrals:
+        async def _calc(uid):
+            try:
+                v = await _get_user_all_time_redeemed(uid)
+                return uid, float(v or 0)
+            except Exception:
+                return uid, 0.0
+        try:
+            import asyncio as _aio
+            results = await _aio.wait_for(
+                _aio.gather(*[_calc(r["uid"]) for r in direct_referrals]),
+                timeout=8.0,
+            )
+            for uid, val in results:
+                redeemed_by_uid[uid] = val
+        except _aio.TimeoutError:
+            logging.warning(
+                f"[DIRECT-LIST] redeemed-PRC batch timed out for "
+                f"{len(direct_referrals)} referrals; showing 0"
+            )
+        except Exception as e:
+            logging.warning(f"[DIRECT-LIST] redeemed batch error: {e}")
+
     # Get current PRC rate ONCE for INR conversion (PRC ÷ rate = INR)
     try:
         from utils.helpers import get_prc_rate
@@ -791,12 +818,11 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
         # Active only if Elite AND mining_active flag is True
         is_active = is_elite and is_mining_flag
         
-        # PRC used (Total Redeemed) — use the user's stored total_redeemed field
-        # instead of the heavy aggregation. The field is kept in sync at
-        # redeem time and avoids 16+ collection scans per referral (which was
-        # causing /direct-list to time out for users with many referrals).
+        # PRC used (Total Redeemed) — pulled from the parallel batch above
+        # (same calculation User 360 page uses). Falls back to stored field
+        # only if the batch timed out.
         ref_uid = ref["uid"]
-        prc_used = float(ref.get("total_redeemed", 0) or 0)
+        prc_used = float(redeemed_by_uid.get(ref_uid, ref.get("total_redeemed", 0) or 0))
         
         # Reconcile prc_earned: max(total_mined, total_mined_prc, prc_balance + total_redeemed)
         raw_total_mined = float(ref.get("total_mined", 0) or 0)
