@@ -184,7 +184,7 @@ async def get_weekly_leaderboard(limit: int = 50):
 # TOP REDEEMERS — Lifetime across ALL services (for Community + Live Strip)
 # ============================================================================
 _TOP_REDEEMERS_CACHE: dict = {"ts": 0, "data": None}
-_TOP_REDEEMERS_TTL = 30 * 60  # 30 minutes
+_TOP_REDEEMERS_TTL = 2 * 60 * 60  # 2 hours (was 30 min — reduce cold-start DB storm)
 
 
 def _mask_name(full_name: str, first_name: str = "") -> str:

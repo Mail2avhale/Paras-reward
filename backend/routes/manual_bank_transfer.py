@@ -726,7 +726,9 @@ async def get_all_requests(
                         logging.warning(f"[BANK REQUESTS] limit calc failed for {uid}: {e}")
                         return uid, None
 
-                bounded = user_ids[:100]
+                # Reduced from 100 → 20 to prevent heavy DB load storms when
+                # indexes haven't kicked in (safe: page shows max ~20 rows).
+                bounded = user_ids[:20]
                 try:
                     results = await asyncio.wait_for(
                         asyncio.gather(*[_limit_for(u) for u in bounded]),
