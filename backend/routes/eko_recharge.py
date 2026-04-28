@@ -2239,3 +2239,251 @@ async def admin_try_all_refund_otp_paths(data: AdminTryAllRefundOTPRequest):
         results["v1_POST_with_user_code"] = {"url": v1f_url, "error": str(e)}
 
     return {"success": True, "tid": tid, "base_url_used": BASE_URL, "alt_base": alt_base, "results": results}
+
+
+
+# ========================================================================
+# Admin: Sync Eko Excel "Refund pending" → DB rows for user OTP flow
+# Mirrors logic from scripts/sync_eko_refund_pending.py but runs via API
+# so admins can trigger it from the browser without SSH access.
+# ========================================================================
+
+REFUND_PENDING_STATUSES_UI = {"refund pending", "refund_pending", "refundpending"}
+
+
+def _normalize_status(raw: str) -> str:
+    return str(raw or "").strip().lower().replace("-", " ")
+
+
+def _parse_eko_excel(file_bytes: bytes):
+    """Parse Eko Excel (xlsx) bytes → list of dicts. Same column rules as the CLI script."""
+    import openpyxl
+    from io import BytesIO
+    try:
+        wb = openpyxl.load_workbook(BytesIO(file_bytes), data_only=True)
+    except Exception as e:
+        raise ValueError(f"Could not open Excel file: {e}")
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        return []
+
+    headers = [str(c or "").strip().lower() for c in rows[0]]
+    col_map = {}
+    for idx, h in enumerate(headers):
+        if "transaction date" in h or h == "date":
+            col_map["date"] = idx
+        elif "eko transaction id" in h or "eko tid" in h:
+            col_map["eko_tid"] = idx
+        elif "client reference" in h:
+            col_map["client_ref_id"] = idx
+        elif "cellnumber" in h or "cell number" in h:
+            col_map["mobile"] = idx
+        elif h.startswith("amount"):
+            col_map["amount"] = idx
+        elif h == "status":
+            col_map["status"] = idx
+
+    required = {"eko_tid", "client_ref_id", "mobile", "status"}
+    if not required.issubset(col_map.keys()):
+        raise ValueError(f"Excel missing required columns. Found: {headers}")
+
+    entries = []
+    for row in rows[1:]:
+        if not row or all(c is None for c in row):
+            continue
+        try:
+            entries.append({
+                "date": str(row[col_map["date"]] or "") if "date" in col_map else "",
+                "eko_tid": str(row[col_map["eko_tid"]] or "").strip(),
+                "client_ref_id": str(row[col_map["client_ref_id"]] or "").strip(),
+                "mobile": str(row[col_map["mobile"]] or "").strip(),
+                "amount": float(str(row[col_map["amount"]] or "0").replace(",", "") or 0) if "amount" in col_map else 0,
+                "status": str(row[col_map["status"]] or "").strip(),
+            })
+        except (ValueError, IndexError):
+            continue
+    return entries
+
+
+from fastapi import UploadFile, File, Form
+
+
+@router.post("/admin/sync-eko-refund-pending")
+async def admin_sync_eko_refund_pending(
+    admin_id: str = Form(...),
+    dry_run: bool = Form(True),
+    mobiles: Optional[str] = Form(None),  # comma-separated
+    file: UploadFile = File(...),
+):
+    """
+    Admin: Upload Eko Excel → sync 'Refund pending' rows to DB so users see the
+    refund modal on their dashboard and can complete via OTP flow.
+
+    Logic mirrors `scripts/sync_eko_refund_pending.py`:
+      • Match each Excel row to existing DB row by client_ref_id (across all 4 collections)
+      • Update status: failed → refund_pending, ensure eko_tid + client_ref_id populated
+      • Fallback to mobile lookup if no DB row exists (creates new row in recharge_transactions)
+      • Idempotent: rows already in refund_pending state are skipped
+
+    By default `dry_run=True` — no DB writes, just preview.
+    Pass `dry_run=False` to apply changes.
+    """
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+    admin = await db.users.find_one({"uid": admin_id}, {"_id": 0, "role": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        return {"success": False, "error": "Admin only"}
+
+    try:
+        file_bytes = await file.read()
+        entries = _parse_eko_excel(file_bytes)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logging.error(f"[ADMIN SYNC] Excel parse error: {e}")
+        return {"success": False, "error": f"Excel parse error: {e}"}
+
+    refund_pending_entries = [
+        e for e in entries if _normalize_status(e["status"]) in REFUND_PENDING_STATUSES_UI
+    ]
+
+    mobile_filter = None
+    if mobiles:
+        mobile_filter = {m.strip() for m in mobiles.split(",") if m.strip()}
+        refund_pending_entries = [e for e in refund_pending_entries if e["mobile"] in mobile_filter]
+
+    if not refund_pending_entries:
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "message": "No 'Refund pending' entries found in Excel after filters.",
+            "total_excel_rows": len(entries),
+            "summary": {},
+            "preview": [],
+        }
+
+    cref_ids = list({e["client_ref_id"] for e in refund_pending_entries if e["client_ref_id"]})
+    eko_tids = list({e["eko_tid"] for e in refund_pending_entries if e["eko_tid"]})
+
+    REFUND_COLLECTIONS = ["recharge_transactions", "bill_payment_requests", "dmt_transactions", "bank_transfer_requests"]
+    db_rows_by_cref = {}
+    db_rows_by_tid = {}
+
+    for coll_name in REFUND_COLLECTIONS:
+        async for doc in db[coll_name].find(
+            {"$or": [
+                {"client_ref_id": {"$in": cref_ids}},
+                {"eko_client_ref_id": {"$in": cref_ids}},
+            ]},
+            {"_id": 0, "request_id": 1, "user_id": 1, "status": 1, "client_ref_id": 1,
+             "eko_client_ref_id": 1, "eko_tid": 1}
+        ):
+            cref = doc.get("client_ref_id") or doc.get("eko_client_ref_id")
+            if cref:
+                db_rows_by_cref[cref] = (doc, coll_name)
+        async for doc in db[coll_name].find(
+            {"eko_tid": {"$in": eko_tids}},
+            {"_id": 0, "request_id": 1, "user_id": 1, "status": 1, "client_ref_id": 1,
+             "eko_tid": 1}
+        ):
+            tid = doc.get("eko_tid")
+            if tid:
+                db_rows_by_tid[str(tid)] = (doc, coll_name)
+
+    mobiles_in = list({e["mobile"] for e in refund_pending_entries if e["mobile"]})
+    user_by_mobile = {
+        u["mobile"]: u
+        async for u in db.users.find({"mobile": {"$in": mobiles_in}}, {"_id": 0, "uid": 1, "mobile": 1, "name": 1})
+    }
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    summary = {"matched_updated": 0, "created_new": 0, "skipped_no_user": 0, "already_synced": 0}
+    preview = []
+
+    for entry in refund_pending_entries:
+        eko_tid = entry["eko_tid"]
+        client_ref_id = entry["client_ref_id"]
+        mobile = entry["mobile"]
+
+        match = db_rows_by_cref.get(client_ref_id) or db_rows_by_tid.get(eko_tid)
+
+        if match:
+            doc, coll_name = match
+            uid = doc.get("user_id")
+            if not uid or uid == "UNKNOWN":
+                summary["skipped_no_user"] += 1
+                preview.append({"action": "skip_no_user", "tid": eko_tid, "client_ref_id": client_ref_id, "reason": "Match found but user_id missing"})
+                continue
+            if doc.get("status") == "refund_pending" and doc.get("eko_tid") == eko_tid:
+                summary["already_synced"] += 1
+                preview.append({"action": "already_synced", "tid": eko_tid, "user_id": uid, "collection": coll_name})
+                continue
+            preview.append({
+                "action": "update", "collection": coll_name,
+                "request_id": doc.get("request_id"), "tid": eko_tid,
+                "client_ref_id": client_ref_id, "user_id": uid,
+                "old_status": doc.get("status"), "new_status": "refund_pending",
+            })
+            if not dry_run:
+                await db[coll_name].update_one(
+                    {"$or": [
+                        {"request_id": doc.get("request_id")},
+                        {"client_ref_id": client_ref_id},
+                        {"eko_tid": eko_tid},
+                    ]},
+                    {"$set": {
+                        "status": "refund_pending",
+                        "eko_tid": eko_tid,
+                        "client_ref_id": client_ref_id,
+                        "updated_at": now_iso,
+                        "refund_pending_synced_at": now_iso,
+                        "refund_pending_source": "admin_excel_sync",
+                    }}
+                )
+            summary["matched_updated"] += 1
+            continue
+
+        user = user_by_mobile.get(mobile)
+        if not user:
+            summary["skipped_no_user"] += 1
+            preview.append({"action": "skip_no_user", "tid": eko_tid, "mobile": mobile, "reason": "No DB row + no user matched by mobile"})
+            continue
+
+        uid = user["uid"]
+        preview.append({
+            "action": "create", "tid": eko_tid, "client_ref_id": client_ref_id,
+            "user_id": uid, "mobile": mobile, "amount": entry["amount"],
+        })
+        if not dry_run:
+            await db.recharge_transactions.insert_one({
+                "request_id": f"RECON-{eko_tid}",
+                "user_id": uid,
+                "user_name": user.get("name", ""),
+                "service_type": "mobile_recharge",
+                "amount": entry["amount"],
+                "amount_inr": entry["amount"],
+                "phone": mobile,
+                "customer_mobile": mobile,
+                "eko_tid": eko_tid,
+                "client_ref_id": client_ref_id,
+                "status": "refund_pending",
+                "prc_refunded": False,
+                "total_prc_deducted": 0,
+                "created_at": entry.get("date") or now_iso,
+                "updated_at": now_iso,
+                "refund_pending_synced_at": now_iso,
+                "refund_pending_source": "admin_excel_sync_fallback_mobile",
+                "reconcile_note": "Created via admin Excel sync — no existing DB row, matched by mobile",
+            })
+        summary["created_new"] += 1
+
+    return {
+        "success": True,
+        "dry_run": dry_run,
+        "total_excel_rows": len(entries),
+        "refund_pending_in_excel": len(refund_pending_entries),
+        "filtered_by_mobiles": list(mobile_filter) if mobile_filter else None,
+        "summary": summary,
+        "preview": preview,  # full list — admin can see every action
+    }
