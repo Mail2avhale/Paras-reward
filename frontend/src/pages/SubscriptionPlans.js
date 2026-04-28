@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import RewardLoader from '@/components/RewardLoader';
@@ -99,11 +99,7 @@ const SubscriptionPlans = ({ user }) => {
     monthly: { label: t('monthly'), days: 28 }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -203,7 +199,11 @@ const SubscriptionPlans = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.uid]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSelectPlan = (plan) => {
     if (plan.is_free) {
