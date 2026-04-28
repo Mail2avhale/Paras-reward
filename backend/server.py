@@ -8057,21 +8057,8 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     # Use stored referral_count from user document (no expensive count query)
     referral_count = user.get("referral_count", 0)
     
-    # Get recent activity in background (non-blocking)
-    # If this fails, just return empty - dashboard still loads
+    # recent_activity will be fetched in parallel asyncio.gather below (see "Build response")
     recent_activity = []
-    try:
-        recent_activity = await asyncio.wait_for(
-            db.transactions.find(
-                {"user_id": uid},
-                {"_id": 0}
-            ).sort("created_at", -1).limit(5).to_list(5),
-            timeout=5.0  # Max 5 seconds for activity
-        )
-    except asyncio.TimeoutError:
-        print(f"[DASHBOARD] Activity query timed out for {uid}")
-    except Exception as e:
-        print(f"[DASHBOARD] Activity query failed: {e}")
     
     # Check mining session validity (no DB query - from user data)
     mining_active = False
@@ -8161,32 +8148,98 @@ async def get_user_dashboard_combined(uid: str, request: Request):
                 await cache.delete(f"user:dashboard:{uid}")
     
     # Build response
-    # Include PRC rate in dashboard response (single source of truth)
-    prc_rate = None
-    try:
-        from utils.helpers import get_prc_rate
-        prc_rate_val = await get_prc_rate(db)
-        prc_rate = prc_rate_val if prc_rate_val else None
-    except Exception as e:
-        logging.warning(f"[DASHBOARD] PRC rate fetch failed: {e}")
-    
-    # Check for pending refunds (dashboard blocker) — across all 4 collections
-    # Respects global kill switch system_config.refund_blocker_modal_enabled (default: disabled)
-    pending_refund_count = 0
-    try:
-        cfg = await db.system_config.find_one(
-            {"key": "refund_blocker_modal_enabled"},
-            {"_id": 0, "value": 1}
-        )
-        modal_enabled = bool(cfg and cfg.get("value"))
-        if modal_enabled:
-            for coll_name in ["recharge_transactions", "bill_payment_requests",
-                              "dmt_transactions", "bank_transfer_requests"]:
-                pending_refund_count += await db[coll_name].count_documents(
-                    {"user_id": uid, "status": "refund_pending"}
+    # PARALLEL FETCH — run all independent lookups concurrently to minimize latency
+    from utils.helpers import get_prc_rate as _get_prc_rate
+
+    async def _fetch_prc_rate():
+        try:
+            val = await _get_prc_rate(db)
+            return val if val else None
+        except Exception as e:
+            logging.warning(f"[DASHBOARD] PRC rate fetch failed: {e}")
+            return None
+
+    async def _fetch_pending_refund_count():
+        try:
+            cfg = await db.system_config.find_one(
+                {"key": "refund_blocker_modal_enabled"},
+                {"_id": 0, "value": 1}
+            )
+            if not (cfg and cfg.get("value")):
+                return 0
+            # Run all 4 count_documents in parallel (not sequentially)
+            counts = await asyncio.gather(*[
+                db[coll].count_documents({"user_id": uid, "status": "refund_pending"})
+                for coll in ["recharge_transactions", "bill_payment_requests",
+                             "dmt_transactions", "bank_transfer_requests"]
+            ], return_exceptions=True)
+            return sum(c for c in counts if isinstance(c, int))
+        except Exception as e:
+            logging.warning(f"[DASHBOARD] Pending refund check failed: {e}")
+            return 0
+
+    async def _fetch_lifetime_redeemed():
+        try:
+            return round(await get_user_all_time_redeemed(uid), 2)
+        except Exception as e:
+            logging.warning(f"[DASHBOARD] Lifetime redeemed calc failed: {e}")
+            return 0
+
+    async def _fetch_pool_wallet():
+        try:
+            pool_wallet = await db.pool_wallet.find_one({"wallet_id": "main"}, {"_id": 0, "balance": 1, "total_distributed": 1})
+            pool_balance = round(float(pool_wallet.get("balance", 0)), 4) if pool_wallet else 0
+            pool_total_dist = round(float(pool_wallet.get("total_distributed", 0)), 4) if pool_wallet else 0
+            core_team_count, is_core = await asyncio.gather(
+                db.core_team_members.count_documents({"status": "active"}),
+                db.core_team_members.find_one({"uid": uid, "status": "active"})
+            )
+            return {
+                "balance": pool_balance,
+                "total_distributed": pool_total_dist,
+                "core_team_count": core_team_count,
+                "is_core_member": is_core is not None,
+            }
+        except Exception:
+            return {"balance": 0, "total_distributed": 0, "core_team_count": 0, "is_core_member": False}
+
+    async def _fetch_upcoming_plan():
+        try:
+            upcoming_count = await db.subscription_payments.count_documents({"user_id": uid, "status": "upcoming"})
+            if upcoming_count > 0:
+                upcoming_plan = await db.subscription_payments.find_one(
+                    {"user_id": uid, "status": "upcoming"},
+                    {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1,
+                     "duration_days": 1, "payment_method": 1, "prc_amount": 1, "created_at": 1},
+                    sort=[("scheduled_start", 1)]
                 )
-    except Exception as e:
-        logging.warning(f"[DASHBOARD] Pending refund check failed: {e}")
+                return upcoming_plan, upcoming_count
+            return None, 0
+        except Exception:
+            return None, 0
+
+    async def _fetch_recent_activity():
+        try:
+            return await asyncio.wait_for(
+                db.transactions.find({"user_id": uid}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5),
+                timeout=5.0
+            )
+        except asyncio.TimeoutError:
+            print(f"[DASHBOARD] Activity query timed out for {uid}")
+            return []
+        except Exception as e:
+            print(f"[DASHBOARD] Activity query failed: {e}")
+            return []
+
+    prc_rate, pending_refund_count, lifetime_redeemed, pool_wallet_info, upcoming_result, recent_activity = await asyncio.gather(
+        _fetch_prc_rate(),
+        _fetch_pending_refund_count(),
+        _fetch_lifetime_redeemed(),
+        _fetch_pool_wallet(),
+        _fetch_upcoming_plan(),
+        _fetch_recent_activity(),
+    )
+    upcoming_plan, upcoming_count = upcoming_result
 
     result = {
         "user": {
@@ -8196,7 +8249,7 @@ async def get_user_dashboard_combined(uid: str, request: Request):
             "mobile": user.get("mobile", ""),
             "prc_balance": round(user.get("prc_balance", 0), 4),
             "total_mined": round(user.get("total_mined", 0), 4),
-            "total_redeemed": round(await get_user_all_time_redeemed(uid), 2),  # Calculate real-time
+            "total_redeemed": lifetime_redeemed,  # Pre-computed via asyncio.gather above
             "referral_count": referral_count,
             "referral_code": user.get("referral_code", ""),
             "subscription_plan": subscription_plan,
@@ -8222,43 +8275,11 @@ async def get_user_dashboard_combined(uid: str, request: Request):
         "recent_activity": recent_activity,
         "requires_refund_action": pending_refund_count > 0,
         "pending_refund_count": pending_refund_count,
-        "cached_at": now.isoformat()
+        "cached_at": now.isoformat(),
+        "pool_wallet": pool_wallet_info,  # Pre-computed via asyncio.gather
+        "upcoming_plan": upcoming_plan,
+        "upcoming_plans_count": upcoming_count,
     }
-    
-    # Add pool wallet info
-    try:
-        pool_wallet = await db.pool_wallet.find_one({"wallet_id": "main"}, {"_id": 0, "balance": 1, "total_distributed": 1})
-        pool_balance = round(float(pool_wallet.get("balance", 0)), 4) if pool_wallet else 0
-        pool_total_dist = round(float(pool_wallet.get("total_distributed", 0)), 4) if pool_wallet else 0
-        core_team_count = await db.core_team_members.count_documents({"status": "active"})
-        is_core_team = await db.core_team_members.find_one({"uid": uid, "status": "active"}) is not None
-        result["pool_wallet"] = {
-            "balance": pool_balance,
-            "total_distributed": pool_total_dist,
-            "core_team_count": core_team_count,
-            "is_core_member": is_core_team,
-        }
-    except Exception:
-        result["pool_wallet"] = {"balance": 0, "total_distributed": 0, "core_team_count": 0, "is_core_member": False}
-    
-    # Add upcoming subscription plan info (for Dashboard "Queued Plan" card)
-    try:
-        upcoming_count = await db.subscription_payments.count_documents({"user_id": uid, "status": "upcoming"})
-        if upcoming_count > 0:
-            upcoming_plan = await db.subscription_payments.find_one(
-                {"user_id": uid, "status": "upcoming"},
-                {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1,
-                 "duration_days": 1, "payment_method": 1, "prc_amount": 1, "created_at": 1},
-                sort=[("scheduled_start", 1)]
-            )
-            result["upcoming_plan"] = upcoming_plan
-            result["upcoming_plans_count"] = upcoming_count
-        else:
-            result["upcoming_plan"] = None
-            result["upcoming_plans_count"] = 0
-    except Exception:
-        result["upcoming_plan"] = None
-        result["upcoming_plans_count"] = 0
     
     # Cache for 60 seconds
     await cache.set(cache_key, result, ttl=60)
