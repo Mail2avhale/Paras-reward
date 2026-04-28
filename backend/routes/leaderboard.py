@@ -237,11 +237,15 @@ async def _sum_prc_by_user(pipeline_match: dict, pipeline_group_field: str,
 @router.get("/top-redeemers")
 async def get_top_redeemers(limit: int = 50):
     """Top N users by LIFETIME PRC redeemed/spent across all services.
-    Uses aggregation on multiple collections + 30-min in-memory cache.
-    Returns masked names + city only (privacy-safe, shareable).
+    Two-pass:
+      1. Fast aggregation → identify top candidates (2x buffer).
+      2. Accurate per-user reconciliation via get_user_all_time_redeemed()
+         (which includes dedup and all 16 collections).
+    30-min in-memory cache.
     """
     import time
     import logging
+    import asyncio
 
     now = time.time()
     if (_TOP_REDEEMERS_CACHE["data"] is not None
@@ -253,37 +257,73 @@ async def get_top_redeemers(limit: int = 50):
             "refreshed_at": _TOP_REDEEMERS_CACHE["ts"],
         }
 
-    # Paid / approved / completed / pending / success — count as "used"
     STATUS_OK = {"$in": ["paid", "approved", "completed", "success",
-                          "pending", "processing"]}
+                          "pending", "processing", "Paid", "Approved",
+                          "Completed", "Success", "Pending", "Processing"]}
 
-    totals: dict = {}
+    rough_totals: dict = {}
 
-    # Each tuple: (collection, status_filter, prc_field)
+    # Broader source list matching get_user_all_time_redeemed
     sources = [
-        ("bank_transfer_requests", {"status": STATUS_OK}, "prc_deducted"),
-        ("bank_withdrawal_requests", {"status": STATUS_OK}, "total_prc_deducted"),
-        ("bank_redeem_requests", {"status": STATUS_OK}, "total_prc_deducted"),
-        ("bill_payment_requests", {"status": STATUS_OK}, "total_prc_deducted"),
-        ("recharge_requests", {"status": STATUS_OK}, "total_prc_deducted"),
-        ("gift_voucher_requests", {"status": STATUS_OK}, "total_prc_deducted"),
-        ("subscription_payments", {"status": STATUS_OK}, "prc_amount"),
-        ("dmt_transactions", {"status": STATUS_OK}, "total_prc_deducted"),
+        ("recharge_requests", "total_prc_deducted"),
+        ("bill_payment_requests", "total_prc_deducted"),
+        ("bill_payments", "total_prc_deducted"),
+        ("payment_requests", "total_prc_deducted"),
+        ("gift_voucher_requests", "total_prc_deducted"),
+        ("redeem_requests", "total_prc_deducted"),
+        ("bank_withdrawal_requests", "total_prc_deducted"),
+        ("bank_redeem_requests", "total_prc_deducted"),
+        ("bank_transfers", "total_prc_deducted"),
+        ("bank_transfer_requests", "prc_deducted"),
+        ("subscription_payments", "prc_amount"),
+        ("vip_payments", "prc_amount"),
+        ("dmt_transactions", "total_prc_deducted"),
+        ("dmt_logs", "total_prc_deducted"),
+        ("orders", "prc_amount"),
+        ("unified_redemptions", "total_prc_deducted"),
     ]
-    for coll, match, field in sources:
-        partial = await _sum_prc_by_user(match, field, coll)
+    for coll, field in sources:
+        partial = await _sum_prc_by_user({"status": STATUS_OK}, field, coll)
         for uid, prc in partial.items():
-            totals[uid] = totals.get(uid, 0) + prc
+            rough_totals[uid] = rough_totals.get(uid, 0) + prc
 
-    if not totals:
+    if not rough_totals:
         logging.warning("[top-redeemers] no data across any service")
         return {"leaderboard": [], "cached": False, "refreshed_at": int(now)}
 
-    # Sort & take top N (extra buffer for filter-out-admins)
-    top_ids = sorted(totals.items(), key=lambda x: -x[1])[:limit * 2]
+    # Top 3x buffer for admin filtering + reconciliation
+    candidates = sorted(rough_totals.items(), key=lambda x: -x[1])[:limit * 3]
+    user_ids = [t[0] for t in candidates]
+
+    # Pass 2: reconcile each with canonical get_user_all_time_redeemed (dedup-aware)
+    try:
+        from server import get_user_all_time_redeemed
+    except Exception as e:
+        logging.error(f"[top-redeemers] cannot import canonical fn: {e}")
+        get_user_all_time_redeemed = None
+
+    accurate: dict = {}
+    if get_user_all_time_redeemed:
+        async def _resolve(uid: str):
+            try:
+                v = await get_user_all_time_redeemed(uid)
+                return uid, float(v or 0)
+            except Exception:
+                return uid, float(rough_totals.get(uid, 0))
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(*[_resolve(u) for u in user_ids]),
+                timeout=45.0,
+            )
+            for uid, prc in results:
+                accurate[uid] = prc
+        except asyncio.TimeoutError:
+            logging.warning("[top-redeemers] reconciliation timeout — using rough totals")
+            accurate = dict(candidates)
+    else:
+        accurate = dict(candidates)
 
     # Hydrate user info
-    user_ids = [t[0] for t in top_ids]
     user_docs = {u["uid"]: u for u in await db.users.find(
         {"uid": {"$in": user_ids}},
         {"_id": 0, "uid": 1, "name": 1, "first_name": 1, "last_name": 1,
@@ -298,15 +338,20 @@ async def get_top_redeemers(limit: int = 50):
     except Exception:
         prc_rate = 13.0
 
+    # Sort by accurate totals
+    sorted_accurate = sorted(accurate.items(), key=lambda x: -x[1])
+
     leaderboard = []
     rank = 0
-    for uid, prc in top_ids:
+    for uid, prc in sorted_accurate:
         if len(leaderboard) >= limit:
             break
         user = user_docs.get(uid)
         if not user:
             continue
         if user.get("role") == "admin":
+            continue
+        if prc <= 0:
             continue
         rank += 1
         leaderboard.append({
