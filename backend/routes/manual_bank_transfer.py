@@ -679,7 +679,6 @@ async def get_all_requests(
         # Enrich: user's lifetime PRC SPENT across ALL services (recharge, bill pay,
         # bank redeem, gift cards, subscription, etc.) — converted to INR via rate.
         user_ids = list(set(r.get("user_id") for r in requests if r.get("user_id")))
-        user_redeem_totals: dict = {}
 
         # Bank-transfer-specific count (how many redeems this user has done to bank)
         bank_counts: dict = {}
@@ -691,32 +690,6 @@ async def get_all_requests(
             async for row in db.bank_transfer_requests.aggregate(count_pipeline):
                 bank_counts[row["_id"]] = row.get("redeem_count", 0)
 
-        # All-time PRC spent per user (parallel, with 15s total deadline).
-        # Falls back to 0 if a single user times out.
-        if user_ids and get_all_time_redeemed_func:
-            async def _all_time(uid: str):
-                try:
-                    return uid, float(await get_all_time_redeemed_func(uid))
-                except Exception as e:
-                    logging.warning(f"[BANK REQUESTS] all-time redeemed calc failed for {uid}: {e}")
-                    return uid, 0.0
-            try:
-                results = await asyncio.wait_for(
-                    asyncio.gather(*[_all_time(u) for u in user_ids[:100]]),
-                    timeout=15.0,
-                )
-            except asyncio.TimeoutError:
-                logging.warning(
-                    f"[BANK REQUESTS] all-time redeemed enrichment timed out "
-                    f"(>15s) for {len(user_ids)} users; some rows may show 0."
-                )
-                results = []
-            except Exception as e:
-                logging.warning(f"[BANK REQUESTS] all-time gather error: {e}")
-                results = []
-            for uid, prc in results:
-                user_redeem_totals[uid] = prc
-
         # Current PRC rate for PRC→INR conversion (default 10 PRC = 1 INR)
         prc_rate = 10.0
         if get_prc_rate_func:
@@ -725,88 +698,71 @@ async def get_all_requests(
             except Exception:
                 prc_rate = 10.0
 
+        # Single combined enrichment: use `calculate_redeem_limit_func` which
+        # already computes `total_redeemed` (via get_user_all_time_redeemed internally)
+        # AND the redeem-limit fields. This halves the runtime vs two sequential
+        # passes and keeps us well under the 30s proxy timeout.
+        SKIP_REDEEM_LIMIT_ENRICHMENT = False
+        limit_cache = {}
+        try:
+            if calculate_redeem_limit_func and not SKIP_REDEEM_LIMIT_ENRICHMENT and user_ids:
+                async def _limit_for(uid: str):
+                    try:
+                        return uid, await calculate_redeem_limit_func(uid)
+                    except Exception as e:
+                        logging.warning(f"[BANK REQUESTS] limit calc failed for {uid}: {e}")
+                        return uid, None
+
+                bounded = user_ids[:100]
+                try:
+                    results = await asyncio.wait_for(
+                        asyncio.gather(*[_limit_for(u) for u in bounded]),
+                        timeout=15.0,
+                    )
+                    for uid, info in results:
+                        limit_cache[uid] = info
+                except asyncio.TimeoutError:
+                    logging.warning(
+                        f"[BANK REQUESTS] combined enrichment timed out "
+                        f"(>15s) for {len(bounded)} users; page still loads."
+                    )
+                except Exception as e:
+                    logging.warning(f"[BANK REQUESTS] enrichment gather error: {e}")
+        except Exception as enrich_err:
+            logging.error(
+                f"[BANK REQUESTS] enrichment hard-failed: {enrich_err}"
+            )
+
+        # Populate per-row lifetime totals from limit_cache
         for req in requests:
             uid = req.get("user_id")
-            prc = user_redeem_totals.get(uid, 0.0)
+            info = limit_cache.get(uid)
+            prc = float(info.get("total_redeemed", 0)) if info else 0.0
             inr = prc / prc_rate if prc_rate else 0.0
             req["user_total_redeemed_prc"] = round(prc, 2)
             req["user_total_redeemed_inr"] = round(inr, 2)
             req["user_redeem_count"] = bank_counts.get(uid, 0)
             req["is_first_redeem"] = req["user_redeem_count"] <= 1
-        
-        # Enrich: user's current redeem limit (Over Limit badge data)
-        # ULTIMATE SAFETY NET: Even if EVERYTHING fails (timeout, DB error,
-        # bug), this entire block is wrapped so the page ALWAYS returns the
-        # request list. Worst case: redeem_limit columns show "N/A" — admins
-        # can still see/action all requests.
-        SKIP_REDEEM_LIMIT_ENRICHMENT = False
-        try:
-            if calculate_redeem_limit_func and not SKIP_REDEEM_LIMIT_ENRICHMENT:
-                pending_uids = list({
-                    r.get("user_id") for r in requests
-                    if r.get("user_id") and (r.get("status") or "").lower() == "pending"
-                })
 
-                limit_cache = {}
-
-                async def _limit_for(uid: str):
-                    try:
-                        return uid, await calculate_redeem_limit_func(uid)
-                    except Exception as e:
-                        logging.warning(f"[BANK REQUESTS] redeem limit calc failed for {uid}: {e}")
-                        return uid, None
-
-                # Parallel calc with hard 15-second deadline for entire enrichment
-                if pending_uids:
-                    try:
-                        bounded = pending_uids[:100]  # cap at 100 unique users
-                        results = await asyncio.wait_for(
-                            asyncio.gather(*[_limit_for(u) for u in bounded]),
-                            timeout=15.0,
-                        )
-                        for uid, info in results:
-                            limit_cache[uid] = info
-                    except asyncio.TimeoutError:
-                        logging.warning(
-                            f"[BANK REQUESTS] redeem-limit enrichment timed out "
-                            f"(>15s) for {len(pending_uids)} pending users; "
-                            f"falling back to N/A. Page still loads."
-                        )
-                    except Exception as e:
-                        logging.warning(f"[BANK REQUESTS] enrichment gather error: {e}")
-
-                for req in requests:
-                    uid = req.get("user_id")
-                    # Only attach limit data to pending rows so historical
-                    # (paid/failed) rows don't show a misleading red "OVER LIMIT".
-                    if (req.get("status") or "").lower() != "pending":
-                        req["redeem_limit_available"] = None
-                        continue
-                    limit_info = limit_cache.get(uid)
-                    if limit_info:
-                        try:
-                            raw_total = limit_info.get("total_limit", 0)
-                            raw_used = limit_info.get("total_redeemed", 0)
-                            req["redeem_limit_available"] = limit_info.get("available", 0)
-                            req["redeem_limit_effective"] = limit_info.get("effective_available", 0)
-                            req["redeem_limit_total"] = raw_total
-                            req["redeem_limit_used"] = raw_used
-                            req["redeem_limit_percent"] = limit_info.get("unlock_percent", 0)
-                            # Raw difference (negative for over-limit users)
-                            req["redeem_limit_raw"] = round(raw_total - raw_used, 2)
-                        except Exception as e:
-                            logging.warning(f"Failed to set redeem limit for {uid}: {e}")
-                            req["redeem_limit_available"] = None
-                    else:
-                        # Enrichment failed/timed out — frontend shows "N/A"
-                        req["redeem_limit_available"] = None
-        except Exception as enrich_err:
-            # ABSOLUTE FALLBACK: log and continue with N/A on every row
-            logging.error(
-                f"[BANK REQUESTS] redeem-limit enrichment hard-failed: "
-                f"{enrich_err}. Page will load with N/A limits."
-            )
-            for req in requests:
+            # Only attach limit data to pending rows so historical
+            # (paid/failed) rows don't show a misleading red "OVER LIMIT".
+            if (req.get("status") or "").lower() != "pending":
+                req["redeem_limit_available"] = None
+                continue
+            if info:
+                try:
+                    raw_total = info.get("total_limit", 0)
+                    raw_used = info.get("total_redeemed", 0)
+                    req["redeem_limit_available"] = info.get("available", 0)
+                    req["redeem_limit_effective"] = info.get("effective_available", 0)
+                    req["redeem_limit_total"] = raw_total
+                    req["redeem_limit_used"] = raw_used
+                    req["redeem_limit_percent"] = info.get("unlock_percent", 0)
+                    req["redeem_limit_raw"] = round(raw_total - raw_used, 2)
+                except Exception as e:
+                    logging.warning(f"Failed to set redeem limit for {uid}: {e}")
+                    req["redeem_limit_available"] = None
+            else:
                 req["redeem_limit_available"] = None
         
         # Post-filter by redeem range
