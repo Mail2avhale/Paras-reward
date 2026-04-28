@@ -74,7 +74,7 @@ from routes.razorpay_payments import router as razorpay_router, set_db as set_ra
 from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check, set_weekly_one_service_check as set_redeem_v2_weekly_check
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db
 from routes.bbps_services import router as bbps_router, set_db as set_bbps_db, set_redeem_limit_check as set_bbps_redeem_limit_check
-from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check, set_calculate_redeem_limit as set_bank_transfer_calc_limit
+from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check, set_calculate_redeem_limit as set_bank_transfer_calc_limit, set_all_time_redeemed as set_bank_transfer_all_time, set_prc_rate_getter as set_bank_transfer_prc_rate
 from routes.sustainability_burn import set_db as set_sustainability_burn_db, apply_sustainability_burn, reverse_sustainability_burn
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
@@ -33446,6 +33446,9 @@ set_sustainability_burn_db(db)
 set_bank_transfer_limit_check(check_redeem_limit)
 set_bank_transfer_weekly_check(check_weekly_one_service_limit)
 set_bank_transfer_calc_limit(calculate_user_redeem_limit)
+set_bank_transfer_all_time(get_user_all_time_redeemed)
+from utils.helpers import get_prc_rate as _helpers_get_prc_rate
+set_bank_transfer_prc_rate(_helpers_get_prc_rate)
 api_router.include_router(bank_transfer_router)
 
 # Error Monitor Router

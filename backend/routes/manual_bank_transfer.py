@@ -39,6 +39,12 @@ check_weekly_one_service_func = None
 # Full redeem limit calculator (set by server.py)
 calculate_redeem_limit_func = None
 
+# All-time total redeemed PRC (across ALL services) func (set by server.py)
+get_all_time_redeemed_func = None
+
+# Dynamic PRC rate getter async (set by server.py) — returns current PRC per INR (e.g. 10)
+get_prc_rate_func = None
+
 def set_db(database):
     global db
     db = database
@@ -54,6 +60,14 @@ def set_weekly_one_service_check(func):
 def set_calculate_redeem_limit(func):
     global calculate_redeem_limit_func
     calculate_redeem_limit_func = func
+
+def set_all_time_redeemed(func):
+    global get_all_time_redeemed_func
+    get_all_time_redeemed_func = func
+
+def set_prc_rate_getter(func):
+    global get_prc_rate_func
+    get_prc_rate_func = func
 
 # ==================== CONSTANTS ====================
 
@@ -662,34 +676,63 @@ async def get_all_requests(
                     req["subscription_active"] = False
                     req["subscription_plan"] = "unknown"
         
-        # Enrich: user's lifetime total redeemed from bank transfers (paid only)
+        # Enrich: user's lifetime PRC SPENT across ALL services (recharge, bill pay,
+        # bank redeem, gift cards, subscription, etc.) — converted to INR via rate.
         user_ids = list(set(r.get("user_id") for r in requests if r.get("user_id")))
-        user_redeem_totals = {}
+        user_redeem_totals: dict = {}
+
+        # Bank-transfer-specific count (how many redeems this user has done to bank)
+        bank_counts: dict = {}
         if user_ids:
-            redeem_pipeline = [
+            count_pipeline = [
                 {"$match": {"user_id": {"$in": user_ids}, "status": "paid"}},
-                {"$group": {
-                    "_id": "$user_id",
-                    "total_redeemed_prc": {"$sum": {"$ifNull": ["$prc_deducted", 0]}},
-                    "total_redeemed_inr": {"$sum": {"$ifNull": ["$withdrawal_amount", 0]}},
-                    "redeem_count": {"$sum": 1}
-                }}
+                {"$group": {"_id": "$user_id", "redeem_count": {"$sum": 1}}}
             ]
-            redeem_results = await db.bank_transfer_requests.aggregate(redeem_pipeline).to_list(500)
-            for r in redeem_results:
-                user_redeem_totals[r["_id"]] = {
-                    "total_redeemed_prc": round(r.get("total_redeemed_prc", 0), 2),
-                    "total_redeemed_inr": round(r.get("total_redeemed_inr", 0), 2),
-                    "redeem_count": r.get("redeem_count", 0)
-                }
-        
+            async for row in db.bank_transfer_requests.aggregate(count_pipeline):
+                bank_counts[row["_id"]] = row.get("redeem_count", 0)
+
+        # All-time PRC spent per user (parallel, with 15s total deadline).
+        # Falls back to 0 if a single user times out.
+        if user_ids and get_all_time_redeemed_func:
+            async def _all_time(uid: str):
+                try:
+                    return uid, float(await get_all_time_redeemed_func(uid))
+                except Exception as e:
+                    logging.warning(f"[BANK REQUESTS] all-time redeemed calc failed for {uid}: {e}")
+                    return uid, 0.0
+            try:
+                results = await asyncio.wait_for(
+                    asyncio.gather(*[_all_time(u) for u in user_ids[:100]]),
+                    timeout=15.0,
+                )
+            except asyncio.TimeoutError:
+                logging.warning(
+                    f"[BANK REQUESTS] all-time redeemed enrichment timed out "
+                    f"(>15s) for {len(user_ids)} users; some rows may show 0."
+                )
+                results = []
+            except Exception as e:
+                logging.warning(f"[BANK REQUESTS] all-time gather error: {e}")
+                results = []
+            for uid, prc in results:
+                user_redeem_totals[uid] = prc
+
+        # Current PRC rate for PRC→INR conversion (default 10 PRC = 1 INR)
+        prc_rate = 10.0
+        if get_prc_rate_func:
+            try:
+                prc_rate = float(await get_prc_rate_func(db)) or 10.0
+            except Exception:
+                prc_rate = 10.0
+
         for req in requests:
             uid = req.get("user_id")
-            totals = user_redeem_totals.get(uid, {"total_redeemed_prc": 0, "total_redeemed_inr": 0, "redeem_count": 0})
-            req["user_total_redeemed_prc"] = totals["total_redeemed_prc"]
-            req["user_total_redeemed_inr"] = totals["total_redeemed_inr"]
-            req["user_redeem_count"] = totals["redeem_count"]
-            req["is_first_redeem"] = totals["redeem_count"] <= 1
+            prc = user_redeem_totals.get(uid, 0.0)
+            inr = prc / prc_rate if prc_rate else 0.0
+            req["user_total_redeemed_prc"] = round(prc, 2)
+            req["user_total_redeemed_inr"] = round(inr, 2)
+            req["user_redeem_count"] = bank_counts.get(uid, 0)
+            req["is_first_redeem"] = req["user_redeem_count"] <= 1
         
         # Enrich: user's current redeem limit (Over Limit badge data)
         # ULTIMATE SAFETY NET: Even if EVERYTHING fails (timeout, DB error,
