@@ -89,7 +89,6 @@ const AdminBankTransfers = () => {
   const [redeemMax, setRedeemMax] = useState('');
   const [neverRedeemed, setNeverRedeemed] = useState(false);
   const [subscriptionFilter, setSubscriptionFilter] = useState(''); // '', 'active', 'inactive'
-  const [overLimitOnly, setOverLimitOnly] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   // Pagination
@@ -248,11 +247,6 @@ const AdminBankTransfers = () => {
       if (redeemMax) params.append('redeem_max', redeemMax);
       if (neverRedeemed) params.append('never_redeemed', 'true');
       if (subscriptionFilter) params.append('subscription_status', subscriptionFilter);
-      if (overLimitOnly) {
-        params.append('over_limit_only', 'true');
-        // Over-limit filter only makes sense for pending requests
-        if (!params.has('status')) params.append('status', 'pending');
-      }
       
       const res = await axios.get(`${API}/bank-transfer/admin/requests?${params}`);
       
@@ -268,7 +262,7 @@ const AdminBankTransfers = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, searchQuery, dateFrom, dateTo, sortBy, sortOrder, redeemMin, redeemMax, neverRedeemed, subscriptionFilter, overLimitOnly]);
+  }, [page, statusFilter, searchQuery, dateFrom, dateTo, sortBy, sortOrder, redeemMin, redeemMax, neverRedeemed, subscriptionFilter]);
 
   useEffect(() => {
     loadRequests();
@@ -442,36 +436,6 @@ const AdminBankTransfers = () => {
                     </Button>
                   </>
                 )}
-                {/* Fail All Button */}
-                <Button
-                  onClick={async () => {
-                    if (!window.confirm(`⚠️ DANGER: Are you sure you want to FAIL ALL ${stats.pending?.count} pending requests?\n\nPRC will be refunded to all users.`)) return;
-                    try {
-                      setLoading(true);
-                      const admin = JSON.parse(localStorage.getItem('user') || '{}');
-                      const res = await axios.post(`${API}/bank-transfer/admin/bulk-mark-failed`, {
-                        mark_all_pending: true,
-                        admin_id: admin.uid || 'admin',
-                        remark: 'Bulk failed - Service discontinued'
-                      });
-                      if (res.data.success) {
-                        toast.success(`${res.data.failed_count} requests failed. ${res.data.total_refunded?.toLocaleString()} PRC refunded.`);
-                        setSelectedIds([]);
-                        setSelectAll(false);
-                        loadRequests();
-                      }
-                    } catch (err) {
-                      toast.error(err.response?.data?.detail || 'Bulk action failed');
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                  disabled={loading}
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Fail ALL Pending ({stats.pending?.count})
-                </Button>
               </div>
             </div>
           </div>
@@ -532,60 +496,6 @@ const AdminBankTransfers = () => {
               <option value="failed">Failed</option>
             </select>
 
-            {/* Priority Quick-Toggle: Low Redeemers First */}
-            <Button
-              onClick={() => {
-                if (sortBy === 'total_redeemed' && sortOrder === 'asc') {
-                  // Already active → turn off (revert to latest-first)
-                  setSortBy('created_at');
-                  setSortOrder('desc');
-                  setNeverRedeemed(false);
-                } else {
-                  setSortBy('total_redeemed');
-                  setSortOrder('asc');
-                }
-              }}
-              variant={sortBy === 'total_redeemed' && sortOrder === 'asc' ? 'default' : 'outline'}
-              className={
-                sortBy === 'total_redeemed' && sortOrder === 'asc'
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
-                  : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
-              }
-              data-testid="priority-low-redeemers-btn"
-              title="Show users with lowest lifetime redeems (incl. zero) at top"
-            >
-              <ArrowUpDown className="w-4 h-4 mr-1.5" />
-              {sortBy === 'total_redeemed' && sortOrder === 'asc' ? 'Low Redeemers (ON)' : 'Low Redeemers First'}
-            </Button>
-
-            {/* Quick-Toggle: Only Zero Redeemers */}
-            <Button
-              onClick={() => {
-                if (neverRedeemed && Number(redeemMax) === 0) {
-                  // Already active → clear
-                  setNeverRedeemed(false);
-                  setRedeemMax('');
-                } else {
-                  setNeverRedeemed(true);
-                  setRedeemMin('');
-                  setRedeemMax('0');
-                  setSortBy('total_redeemed');
-                  setSortOrder('asc');
-                  setShowAdvancedFilters(true);
-                }
-              }}
-              variant={neverRedeemed && Number(redeemMax) === 0 ? 'default' : 'outline'}
-              className={
-                neverRedeemed && Number(redeemMax) === 0
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
-                  : 'border-blue-300 text-blue-700 hover:bg-blue-50'
-              }
-              data-testid="priority-zero-redeemers-btn"
-              title="Show only users who never redeemed to bank before"
-            >
-              🆕 {neverRedeemed && Number(redeemMax) === 0 ? 'Only ₹0 (ON)' : 'Only ₹0 Redeemers'}
-            </Button>
-
             {/* Subscription filter: All / Active / Inactive */}
             <div className="flex items-center rounded-lg border border-slate-300 overflow-hidden" data-testid="subscription-filter-group">
               <button
@@ -624,23 +534,6 @@ const AdminBankTransfers = () => {
                 Inactive
               </button>
             </div>
-
-            {/* Over Limit Filter */}
-            <button
-              onClick={() => {
-                setOverLimitOnly(!overLimitOnly);
-                setPage(1);
-              }}
-              className={`px-3 py-2 text-sm font-bold rounded-lg border transition-colors ${
-                overLimitOnly
-                  ? 'bg-red-600 text-white border-red-700 shadow-sm'
-                  : 'bg-white text-red-700 border-red-300 hover:bg-red-50'
-              }`}
-              data-testid="over-limit-filter-btn"
-              title="Show only pending requests where the user is over their redeem limit"
-            >
-              ⚠️ Over Limit Only
-            </button>
             
             {/* Date From */}
             <div className="flex items-center gap-2">
@@ -756,22 +649,6 @@ const AdminBankTransfers = () => {
                   />
                   <label className="text-sm text-slate-700 font-medium">First-time Redeemers Only</label>
                 </div>
-                <Button
-                  onClick={() => { setSortBy('total_redeemed'); setSortOrder('asc'); }}
-                  variant="outline"
-                  className={`border-slate-300 ${sortBy === 'total_redeemed' && sortOrder === 'asc' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'text-slate-700'}`}
-                  data-testid="sort-low-to-high"
-                >
-                  Low Redeemers First
-                </Button>
-                <Button
-                  onClick={() => { setSortBy('total_redeemed'); setSortOrder('desc'); }}
-                  variant="outline"
-                  className={`border-slate-300 ${sortBy === 'total_redeemed' && sortOrder === 'desc' ? 'bg-red-50 border-red-300 text-red-700' : 'text-slate-700'}`}
-                  data-testid="sort-high-to-low"
-                >
-                  High Redeemers First
-                </Button>
               </div>
             </div>
           )}
@@ -789,22 +666,13 @@ const AdminBankTransfers = () => {
             label: subscriptionFilter === 'active' ? '⭐ Active Subs' : 'Inactive Subs',
             clear: () => setSubscriptionFilter(''),
           });
-          if (overLimitOnly) chips.push({
-            key: 'over-limit',
-            label: '⚠️ Over Limit Only',
-            clear: () => setOverLimitOnly(false),
-          });
-          if (neverRedeemed && Number(redeemMax) === 0) {
-            chips.push({ key: 'zero', label: '🆕 Only ₹0 Redeemers', clear: () => { setNeverRedeemed(false); setRedeemMax(''); } });
-          } else {
-            if (neverRedeemed) chips.push({ key: 'nr', label: 'First-time Redeemers', clear: () => setNeverRedeemed(false) });
-            if (redeemMin) chips.push({ key: 'rmin', label: `Min ${redeemMin} PRC`, clear: () => setRedeemMin('') });
-            if (redeemMax) chips.push({ key: 'rmax', label: `Max ${redeemMax} PRC`, clear: () => setRedeemMax('') });
-          }
+          if (neverRedeemed) chips.push({ key: 'nr', label: 'First-time Redeemers', clear: () => setNeverRedeemed(false) });
+          if (redeemMin) chips.push({ key: 'rmin', label: `Min ${redeemMin} PRC`, clear: () => setRedeemMin('') });
+          if (redeemMax) chips.push({ key: 'rmax', label: `Max ${redeemMax} PRC`, clear: () => setRedeemMax('') });
           if (sortBy === 'total_redeemed' && sortOrder === 'asc') {
-            chips.push({ key: 'sort-low', label: 'Sorted: Low Redeemers First', clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
+            chips.push({ key: 'sort-low', label: 'Sort: Low → High', clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
           } else if (sortBy === 'total_redeemed' && sortOrder === 'desc') {
-            chips.push({ key: 'sort-high', label: 'Sorted: High Redeemers First', clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
+            chips.push({ key: 'sort-high', label: 'Sort: High → Low', clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
           } else if (sortBy !== 'created_at') {
             chips.push({ key: 'sort', label: `Sort: ${sortBy} ${sortOrder}`, clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
           }
@@ -843,7 +711,6 @@ const AdminBankTransfers = () => {
                     setRedeemMax('');
                     setNeverRedeemed(false);
                     setSubscriptionFilter('');
-                    setOverLimitOnly(false);
                   }}
                   className="ml-1 text-xs font-medium text-slate-500 hover:text-red-600 underline"
                   data-testid="clear-all-filters-btn"
