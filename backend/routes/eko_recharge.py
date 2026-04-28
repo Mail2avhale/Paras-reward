@@ -1791,8 +1791,39 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
     if txn.get("status") != "refund_pending":
         return {"success": False, "tid": tid, "error": "This transaction is not in refund pending status", "message": "This transaction is not in refund pending status"}
 
-    # Resolve the actual Eko TID to use (numeric TID required by Eko API)
-    eko_api_tid = txn.get("eko_tid") or tid
+    # Rate limit: max 5 OTP send attempts per TID per hour (per user)
+    # Prevents accidental spam clicks; Eko also rate-limits but we should reject early.
+    one_hour_ago = datetime.now(timezone.utc).replace(microsecond=0).timestamp() - 3600
+    try:
+        recent_otp_count = await db.eko_refund_logs.count_documents({
+            "tid": str(tid),
+            "user_id": data.user_id,
+            "action": "otp_send",
+            "ts_epoch": {"$gte": one_hour_ago},
+        })
+        if recent_otp_count >= 5:
+            logging.warning(f"[USER REFUND] Rate limit hit: user={data.user_id} tid={tid} ({recent_otp_count} attempts in last hour)")
+            return {
+                "success": False,
+                "tid": tid,
+                "error": "Too many OTP requests. Please wait an hour before trying again.",
+                "message": "Too many OTP requests. Please wait an hour before trying again.",
+            }
+    except Exception as _e:
+        logging.warning(f"[USER REFUND] Rate-limit check failed (proceeding): {_e}")
+
+    # Resolve the actual Eko TID to use — Eko V1 API requires the numeric Eko TID.
+    # If only client_ref_id is stored (e.g. row created from Excel sync), reject early
+    # with a clear message rather than calling Eko with a non-numeric value.
+    eko_api_tid = txn.get("eko_tid") or (tid if str(tid).isdigit() else None)
+    if not eko_api_tid or not str(eko_api_tid).isdigit():
+        logging.warning(f"[USER REFUND] No numeric eko_tid for txn {tid} (user={data.user_id})")
+        return {
+            "success": False,
+            "tid": tid,
+            "error": "Eko Transaction ID missing — please contact support to reconcile this entry.",
+            "message": "Eko Transaction ID missing — please contact support to reconcile this entry.",
+        }
 
     try:
         headers_otp = _build_eko_headers()
@@ -1811,12 +1842,63 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
         except Exception:
             return {"success": False, "error": f"Eko OTP API returned invalid response (HTTP {otp_response.status_code})"}
 
-        if otp_result.get("status") != 0:
+        # Eko V1 quirk: response always has top-level "status: 0" even on validation failures.
+        # The REAL success indicators are:
+        #   - response_status_id == 0 (or response_type_id == 1607 per Eko V1 spec)
+        #   - data.tid is populated (non-empty)
+        # Validation failures show: response_status_id == -1, invalid_params present, data empty.
+        eko_data = otp_result.get("data") or {}
+        is_eko_success = (
+            otp_result.get("response_status_id") == 0
+            and (eko_data.get("tid") or eko_data.get("otp_ref_id"))
+            and not otp_result.get("invalid_params")
+        )
+
+        if not is_eko_success:
+            err_msg = (
+                otp_result.get("message")
+                or (f"Invalid TID — Eko rejected the request. {otp_result.get('invalid_params')}" if otp_result.get("invalid_params") else None)
+                or "Failed to send refund OTP"
+            )
+            # Strip unfilled template tokens like {2} {3} that Eko sometimes returns
+            if "{" in err_msg and "}" in err_msg:
+                err_msg = "Refund OTP could not be sent. The transaction may be too old, already refunded, or unavailable for refund."
+            # Audit failed attempt — counts toward rate limit
+            try:
+                await db.eko_refund_logs.insert_one({
+                    "tid": str(tid),
+                    "eko_api_tid": str(eko_api_tid),
+                    "user_id": data.user_id,
+                    "action": "otp_send",
+                    "result": "failed",
+                    "eko_response_status_id": otp_result.get("response_status_id"),
+                    "eko_invalid_params": otp_result.get("invalid_params"),
+                    "eko_message": otp_result.get("message"),
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                    "ts_epoch": datetime.now(timezone.utc).timestamp(),
+                })
+            except Exception:
+                pass
             return {
                 "success": False,
-                "error": otp_result.get("message") or "Failed to send refund OTP",
+                "error": err_msg,
+                "message": err_msg,
                 "tid": tid,
             }
+
+        # Audit successful OTP send
+        try:
+            await db.eko_refund_logs.insert_one({
+                "tid": str(tid),
+                "eko_api_tid": str(eko_api_tid),
+                "user_id": data.user_id,
+                "action": "otp_send",
+                "result": "success",
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "ts_epoch": datetime.now(timezone.utc).timestamp(),
+            })
+        except Exception:
+            pass
 
         # In staging, Eko sometimes returns OTP inline. In production, it's SMS-only.
         eko_data = otp_result.get("data", {}) or {}
@@ -1838,8 +1920,15 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
                 refund_result = refund_response.json()
             except Exception:
                 refund_result = {}
-            if refund_result.get("status") == 0:
-                refund_data = refund_result.get("data", {})
+            # Use same response_status_id-based success check (not misleading top-level status)
+            _rd = refund_result.get("data") or {}
+            _is_success = (
+                refund_result.get("response_status_id") == 0
+                and (_rd.get("refund_tid") or _rd.get("tid"))
+                and not refund_result.get("invalid_params")
+            )
+            if _is_success:
+                refund_data = _rd
                 await _mark_refunded(eko_api_tid, data.user_id, refund_data, txn)
                 return {
                     "success": True,
@@ -1905,8 +1994,16 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
     if txn.get("status") != "refund_pending":
         return {"success": False, "tid": tid, "error": "This transaction is not in refund pending status", "message": "This transaction is not in refund pending status"}
 
-    # Resolve real Eko TID for API call
-    eko_api_tid = txn.get("eko_tid") or tid
+    # Resolve real Eko TID for API call — must be numeric
+    eko_api_tid = txn.get("eko_tid") or (tid if str(tid).isdigit() else None)
+    if not eko_api_tid or not str(eko_api_tid).isdigit():
+        logging.warning(f"[USER REFUND] Verify: No numeric eko_tid for txn {tid} (user={data.user_id})")
+        return {
+            "success": False,
+            "tid": tid,
+            "error": "Eko Transaction ID missing — please contact support.",
+            "message": "Eko Transaction ID missing — please contact support.",
+        }
 
     try:
         headers = _build_eko_headers()
@@ -1930,11 +2027,54 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
         except Exception:
             return {"success": False, "error": f"Eko returned invalid response (HTTP {response.status_code})"}
 
-        success = result.get("status") == 0
-        refund_data = result.get("data", {})
+        # Eko V1 quirk (same as OTP send): top-level `status: 0` is misleading.
+        # Real success: response_status_id == 0 AND data.refund_tid present AND no invalid_params.
+        refund_data = result.get("data") or {}
+        success = (
+            result.get("response_status_id") == 0
+            and (refund_data.get("refund_tid") or refund_data.get("tid"))
+            and not result.get("invalid_params")
+        )
 
         if success:
+            # Audit successful refund
+            try:
+                await db.eko_refund_logs.insert_one({
+                    "tid": str(tid),
+                    "eko_api_tid": str(eko_api_tid),
+                    "user_id": data.user_id,
+                    "action": "refund_verify",
+                    "result": "success",
+                    "refund_tid": refund_data.get("refund_tid"),
+                    "refunded_amount": refund_data.get("refunded_amount") or refund_data.get("amount"),
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                    "ts_epoch": datetime.now(timezone.utc).timestamp(),
+                })
+            except Exception:
+                pass
             await _mark_refunded(eko_api_tid, data.user_id, refund_data, txn)
+        else:
+            # Audit failed verify (likely wrong OTP)
+            try:
+                await db.eko_refund_logs.insert_one({
+                    "tid": str(tid),
+                    "eko_api_tid": str(eko_api_tid),
+                    "user_id": data.user_id,
+                    "action": "refund_verify",
+                    "result": "failed",
+                    "eko_response_status_id": result.get("response_status_id"),
+                    "eko_invalid_params": result.get("invalid_params"),
+                    "eko_message": result.get("message"),
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                    "ts_epoch": datetime.now(timezone.utc).timestamp(),
+                })
+            except Exception:
+                pass
+
+        # Build user-facing message — strip unfilled template tokens
+        err_msg = result.get("message") or "OTP verification failed. Please try again."
+        if "{" in err_msg and "}" in err_msg:
+            err_msg = "Refund could not be completed. The OTP may be incorrect or expired. Please try again."
 
         return {
             "success": success,
@@ -1942,7 +2082,7 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
             "message": (
                 "Refund completed successfully!"
                 if success
-                else (result.get("message") or "OTP verification failed. Please try again.")
+                else err_msg
             ),
             "refund_tid": refund_data.get("refund_tid") if success else None,
             "refunded_amount": (
