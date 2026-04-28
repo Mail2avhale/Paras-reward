@@ -563,14 +563,23 @@ const AdminBankTransfers = () => {
             {/* Sort By Dropdown */}
             <select
               data-testid="sort-by-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              value={sortBy === 'total_redeemed' && sortOrder === 'asc' ? 'lifetime_low' : sortBy}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'lifetime_low') {
+                  setSortBy('total_redeemed');
+                  setSortOrder('asc');
+                } else {
+                  setSortBy(v);
+                }
+              }}
               className="bg-white border border-slate-300 text-slate-900 rounded-md px-3 py-2 text-sm"
             >
               <option value="created_at">Sort by: Date</option>
               <option value="amount">Sort by: Amount</option>
               <option value="user_name">Sort by: Name</option>
-              <option value="total_redeemed">Sort by: Total Redeemed</option>
+              <option value="total_redeemed">Sort by: Lifetime Uses</option>
+              <option value="lifetime_low">Sort by: Lifetime Uses (Low → High)</option>
             </select>
             
             {/* Sort Order */}
@@ -670,9 +679,9 @@ const AdminBankTransfers = () => {
           if (redeemMin) chips.push({ key: 'rmin', label: `Min ${redeemMin} PRC`, clear: () => setRedeemMin('') });
           if (redeemMax) chips.push({ key: 'rmax', label: `Max ${redeemMax} PRC`, clear: () => setRedeemMax('') });
           if (sortBy === 'total_redeemed' && sortOrder === 'asc') {
-            chips.push({ key: 'sort-low', label: 'Sort: Low → High', clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
+            chips.push({ key: 'sort-low', label: 'Sort: Lifetime Uses Low → High', clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
           } else if (sortBy === 'total_redeemed' && sortOrder === 'desc') {
-            chips.push({ key: 'sort-high', label: 'Sort: High → Low', clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
+            chips.push({ key: 'sort-high', label: 'Sort: Lifetime Uses High → Low', clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
           } else if (sortBy !== 'created_at') {
             chips.push({ key: 'sort', label: `Sort: ${sortBy} ${sortOrder}`, clear: () => { setSortBy('created_at'); setSortOrder('desc'); } });
           }
