@@ -1884,6 +1884,10 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
                 "error": err_msg,
                 "message": err_msg,
                 "tid": tid,
+                # Diagnostic context (helpful for admin/support; user UI shows just `message`)
+                "eko_response_status_id": otp_result.get("response_status_id"),
+                "eko_invalid_params": otp_result.get("invalid_params"),
+                "eko_raw_message": otp_result.get("message"),
             }
 
         # Audit successful OTP send
