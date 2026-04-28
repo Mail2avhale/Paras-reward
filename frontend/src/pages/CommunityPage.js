@@ -8,6 +8,7 @@ import {
   X, CheckCircle, Clock, AlertTriangle, ChevronLeft, Trophy
 } from 'lucide-react';
 import SuccessStoryCard from '../components/SuccessStoryCard';
+import TopRedeemersCard from '../components/TopRedeemersCard';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -562,6 +563,9 @@ const CommunityPage = ({ user }) => {
           </button>
         ))}
       </div>
+
+      {/* Top Redeemers Leaderboard (pinned - builds community trust) */}
+      <TopRedeemersCard compact limit={50} />
 
       {/* View Mode Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">
