@@ -223,6 +223,58 @@ async def create_performance_indexes(db):
         await db.bill_payments.create_index("created_at", background=True)
         await db.bill_payments.create_index([("status", 1), ("created_at", -1)], background=True)
         print("  ✅ Bill payments indexes created")
+
+        # ============ BANK TRANSFER REQUESTS (CRITICAL - admin timeouts) ============
+        await db.bank_transfer_requests.create_index("request_id", unique=True, sparse=True, background=True)
+        await db.bank_transfer_requests.create_index("user_id", background=True)
+        await db.bank_transfer_requests.create_index("status", background=True)
+        await db.bank_transfer_requests.create_index("created_at", background=True)
+        await db.bank_transfer_requests.create_index([("status", 1), ("created_at", -1)], background=True)
+        await db.bank_transfer_requests.create_index([("user_id", 1), ("status", 1)], background=True)
+        await db.bank_transfer_requests.create_index([("user_id", 1), ("created_at", -1)], background=True)
+        print("  ✅ Bank transfer requests indexes created")
+
+        # ============ BANK REDEEM REQUESTS ============
+        await db.bank_redeem_requests.create_index("user_id", background=True)
+        await db.bank_redeem_requests.create_index("status", background=True)
+        await db.bank_redeem_requests.create_index([("status", 1), ("created_at", -1)], background=True)
+        await db.bank_redeem_requests.create_index([("user_id", 1), ("status", 1)], background=True)
+        print("  ✅ Bank redeem requests indexes created")
+
+        # ============ RECHARGE REQUESTS ============
+        await db.recharge_requests.create_index("user_id", background=True)
+        await db.recharge_requests.create_index("status", background=True)
+        await db.recharge_requests.create_index([("status", 1), ("created_at", -1)], background=True)
+        await db.recharge_requests.create_index([("user_id", 1), ("status", 1)], background=True)
+        print("  ✅ Recharge requests indexes created")
+
+        # ============ DMT TRANSACTIONS ============
+        await db.dmt_transactions.create_index("user_id", background=True)
+        await db.dmt_transactions.create_index("status", background=True)
+        await db.dmt_transactions.create_index([("user_id", 1), ("status", 1)], background=True)
+        print("  ✅ DMT transactions indexes created")
+
+        # ============ SUBSCRIPTION PAYMENTS (Razorpay orders) ============
+        await db.subscription_payments.create_index("user_id", background=True)
+        await db.subscription_payments.create_index("status", background=True)
+        await db.subscription_payments.create_index([("status", 1), ("created_at", -1)], background=True)
+        await db.subscription_payments.create_index("order_id", sparse=True, background=True)
+        await db.subscription_payments.create_index("payment_id", sparse=True, background=True)
+        await db.subscription_payments.create_index("razorpay_order_id", sparse=True, background=True)
+        print("  ✅ Subscription payments indexes created")
+
+        # ============ UNIFIED REDEMPTIONS ============
+        await db.unified_redemptions.create_index("user_id", background=True)
+        await db.unified_redemptions.create_index("status", background=True)
+        await db.unified_redemptions.create_index([("user_id", 1), ("status", 1)], background=True)
+        await db.unified_redemptions.create_index([("status", 1), ("created_at", -1)], background=True)
+        print("  ✅ Unified redemptions indexes created")
+
+        # ============ BANK TRANSFERS (legacy) ============
+        await db.bank_transfers.create_index("user_id", background=True)
+        await db.bank_transfers.create_index("status", background=True)
+        await db.bank_transfers.create_index([("user_id", 1), ("status", 1)], background=True)
+        print("  ✅ Bank transfers indexes created")
         
         print("✅ All database indexes created successfully!")
         print("🚀 Database is now optimized for high performance!")

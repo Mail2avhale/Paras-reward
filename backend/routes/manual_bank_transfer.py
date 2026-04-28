@@ -1433,38 +1433,40 @@ async def notify_failed_users(payload: NotifyFailedRequest):
 
 @router.get("/admin/stats")
 async def get_admin_stats():
-    """Get dashboard statistics for admin."""
+    """Get dashboard statistics for admin. Parallelised for snappy response."""
     try:
-        # Counts by status
-        pending = await db.bank_transfer_requests.count_documents({"status": "pending"})
-        paid = await db.bank_transfer_requests.count_documents({"status": "paid"})
-        failed = await db.bank_transfer_requests.count_documents({"status": "failed"})
-        
-        # Sum of PRC
-        pipeline = [
-            {"$group": {
-                "_id": "$status",
-                "total_prc": {"$sum": "$prc_deducted"},
-                "total_inr": {"$sum": "$withdrawal_amount"}
-            }}
-        ]
-        sums = await db.bank_transfer_requests.aggregate(pipeline).to_list(10)
-        sums_dict = {s["_id"]: s for s in sums}
-        
-        # Total PRC burned (paid requests)
-        total_prc_burned = sums_dict.get("paid", {}).get("total_prc", 0)
-        
-        # Today's stats
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        today_pending = await db.bank_transfer_requests.count_documents({
-            "status": "pending",
-            "created_at": {"$regex": f"^{today}"}
-        })
-        today_paid = await db.bank_transfer_requests.count_documents({
-            "status": "paid",
-            "processed_at": {"$regex": f"^{today}"}
-        })
-        
+        coll = db.bank_transfer_requests
+
+        async def _sums():
+            pipeline = [
+                {"$group": {
+                    "_id": "$status",
+                    "total_prc": {"$sum": "$prc_deducted"},
+                    "total_inr": {"$sum": "$withdrawal_amount"},
+                }}
+            ]
+            return await coll.aggregate(pipeline).to_list(10)
+
+        # Run all 5 queries in parallel
+        pending, paid, failed, sums, today_pending, today_paid = await asyncio.gather(
+            coll.count_documents({"status": "pending"}),
+            coll.count_documents({"status": "paid"}),
+            coll.count_documents({"status": "failed"}),
+            _sums(),
+            coll.count_documents({
+                "status": "pending",
+                "created_at": {"$regex": f"^{today}"},
+            }),
+            coll.count_documents({
+                "status": "paid",
+                "processed_at": {"$regex": f"^{today}"},
+            }),
+        )
+
+        sums_dict = {s["_id"]: s for s in sums}
+        total_prc_burned = sums_dict.get("paid", {}).get("total_prc", 0)
+
         return {
             "success": True,
             "stats": {
@@ -1476,11 +1478,11 @@ async def get_admin_stats():
                 "paid_amount": sums_dict.get("paid", {}).get("total_inr", 0),
                 "today": {
                     "new_requests": today_pending,
-                    "processed": today_paid
-                }
-            }
+                    "processed": today_paid,
+                },
+            },
         }
-        
+
     except Exception as e:
         logging.error(f"Error getting stats: {e}")
         raise HTTPException(status_code=500, detail="Server error")
