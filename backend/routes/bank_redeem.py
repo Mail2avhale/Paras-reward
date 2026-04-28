@@ -1664,7 +1664,7 @@ async def export_pending_bank_redeem_excel():
 
     # Title row
     title = f"Pending Bank Redeem Requests — {datetime.now(timezone.utc).strftime('%d %b %Y, %H:%M UTC')}"
-    ws.merge_cells("A1:G1")
+    ws.merge_cells("A1:H1")
     ws["A1"] = title
     ws["A1"].font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
     ws["A1"].fill = PatternFill("solid", fgColor="4F46E5")
@@ -1672,7 +1672,7 @@ async def export_pending_bank_redeem_excel():
     ws.row_dimensions[1].height = 26
 
     # Header row
-    headers = ["Sr. No", "Name", "Account Number", "IFSC Code", "Amount (₹)", "Active / Inactive", "Date of Request"]
+    headers = ["Sr. No", "Name", "Mobile Number", "Account Number", "IFSC Code", "Amount (₹)", "Active / Inactive", "Date of Request"]
     header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
     header_fill = PatternFill("solid", fgColor="6366F1")
     border = Border(
@@ -1707,6 +1707,17 @@ async def export_pending_bank_redeem_excel():
             or req_bank.get("account_holder_name")
             or user_bank.get("account_holder_name")
             or r.get("account_holder_name")
+            or "—"
+        )
+
+        # Mobile Number priority: request snapshot > user profile > "—"
+        mobile = (
+            r.get("user_phone")
+            or r.get("user_mobile")
+            or r.get("mobile")
+            or r.get("phone")
+            or user.get("mobile")
+            or user.get("phone")
             or "—"
         )
 
@@ -1777,14 +1788,14 @@ async def export_pending_bank_redeem_excel():
         except Exception:
             date_str = str(created)[:19]
 
-        row_data = [idx, name, str(account_number), ifsc, amount, active_status, date_str]
+        row_data = [idx, name, str(mobile), str(account_number), ifsc, amount, active_status, date_str]
         for col_idx, val in enumerate(row_data, start=1):
             cell = ws.cell(row=row, column=col_idx, value=val)
             cell.border = border
-            cell.alignment = Alignment(horizontal=("right" if col_idx in (1, 5) else "left"), vertical="center")
-            if col_idx == 5:
-                cell.number_format = '₹ #,##0.00'
+            cell.alignment = Alignment(horizontal=("right" if col_idx in (1, 6) else "left"), vertical="center")
             if col_idx == 6:
+                cell.number_format = '₹ #,##0.00'
+            if col_idx == 7:
                 if active_status == "Inactive":
                     cell.fill = inactive_fill
                     cell.font = Font(color="991B1B", bold=True)
@@ -1797,20 +1808,20 @@ async def export_pending_bank_redeem_excel():
     if merged:
         totals_fill = PatternFill("solid", fgColor="FEF3C7")
         ws.cell(row=row, column=1, value="Total").font = Font(bold=True)
-        ws.cell(row=row, column=4, value="Sum").alignment = Alignment(horizontal="right")
-        total_cell = ws.cell(row=row, column=5, value=total_amount)
+        ws.cell(row=row, column=5, value="Sum").alignment = Alignment(horizontal="right")
+        total_cell = ws.cell(row=row, column=6, value=total_amount)
         total_cell.number_format = '₹ #,##0.00'
         total_cell.font = Font(bold=True)
-        for c in range(1, 8):
+        for c in range(1, 9):
             cell = ws.cell(row=row, column=c)
             cell.border = border
             cell.fill = totals_fill
     else:
         ws.cell(row=row, column=1, value="No pending requests").font = Font(italic=True, color="64748B")
-        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=7)
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=8)
 
     # Column widths
-    widths = [8, 26, 22, 15, 14, 18, 22]
+    widths = [8, 26, 15, 22, 15, 14, 18, 22]
     for i, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
 
