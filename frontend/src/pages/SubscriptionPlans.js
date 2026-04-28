@@ -106,103 +106,97 @@ const SubscriptionPlans = ({ user }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch user data
-      const userRes = await axios.get(`${API}/user/${user.uid}`);
+
+      // PRIMARY FETCH — 4 endpoints in parallel (blocks render until done)
+      // These are required to render plan cards + default payment method
+      const [userRes, subRes, plansRes, configRes] = await Promise.all([
+        axios.get(`${API}/user/${user.uid}`),
+        axios.get(`${API}/subscription/user/${user.uid}`),
+        axios.get(`${API}/subscription/plans`),
+        axios.get(`${API}/settings/public`),
+      ]);
+
       setUserData(userRes.data);
-      
-      // Fetch current subscription
-      const subRes = await axios.get(`${API}/subscription/user/${user.uid}`);
       setCurrentSubscription(subRes.data.subscription);
-      
-      // Fetch plans
-      const plansRes = await axios.get(`${API}/subscription/plans`);
       setPlans(plansRes.data.plans || []);
-      
-      // Fetch payment config
-      const configRes = await axios.get(`${API}/settings/public`);
       setPaymentConfig(configRes.data);
-      
-      // Get gateway statuses from public settings
+
+      // Gateway flags
       const isManualEnabled = configRes.data.manual_subscription_enabled === true;
       const isRazorpayEnabled = configRes.data.razorpay_enabled === true;
       const isPrcEnabled = configRes.data.prc_subscription_enabled === true;
       setManualEnabled(isManualEnabled);
       setRazorpayEnabled(isRazorpayEnabled);
       setPrcEnabled(isPrcEnabled);
-      
-      // Fetch PRC pricing + one-time-benefit eligibility if enabled
-      let isPrcEligible = true;
-      if (isPrcEnabled) {
-        try {
-          const prcRes = await axios.get(`${API}/subscription/elite-pricing`);
-          if (prcRes.data.success) setPrcPricing(prcRes.data);
-        } catch { /* silent */ }
-        try {
-          const eligRes = await axios.get(`${API}/subscription/prc-eligibility/${user.uid}`);
-          isPrcEligible = eligRes.data?.eligible !== false;
-          setPrcEligible(isPrcEligible);
-          setPrcLastUsedAt(eligRes.data?.last_used_at || null);
-          setPrcLastPlan(eligRes.data?.last_plan || null);
-        } catch { /* silent — fail open */ }
-      }
-      
-      // Check eligibility (may have been updated above via state setter — re-read via local var)
-      let canUsePrc = isPrcEnabled && isPrcEligible;
 
-      // Set default payment method (priority: Razorpay > eligible-PRC > Manual)
+      // Set default payment method early (will refine after PRC eligibility resolves)
       if (isRazorpayEnabled) {
         setPaymentMethod('razorpay');
-      } else if (canUsePrc) {
+      } else if (isPrcEnabled) {
         setPaymentMethod('prc');
       } else if (isManualEnabled) {
         setPaymentMethod('manual');
       }
-      
-      // Fetch subscription history
-      try {
-        const historyRes = await axios.get(`${API}/subscription/history/${user.uid}`);
+
+      // Release the UI — secondary data loads in background without blocking
+      setLoading(false);
+
+      // SECONDARY FETCH — fire all in parallel, don't block render
+      const secondaryPromises = [
+        isPrcEnabled ? axios.get(`${API}/subscription/elite-pricing`).catch(() => null) : Promise.resolve(null),
+        isPrcEnabled ? axios.get(`${API}/subscription/prc-eligibility/${user.uid}`).catch(() => null) : Promise.resolve(null),
+        axios.get(`${API}/subscription/history/${user.uid}`).catch(() => null),
+        axios.get(`${API}/admin/subscription/user/${user.uid}/info`).catch(() => null),
+        axios.get(`${API}/razorpay/payment-history/${user.uid}?include_all=true`).catch(() => null),
+      ];
+
+      const [prcRes, eligRes, historyRes, upcomingRes, paymentRes] = await Promise.all(secondaryPromises);
+
+      // PRC pricing
+      if (prcRes?.data?.success) setPrcPricing(prcRes.data);
+
+      // PRC eligibility — may downgrade default payment method
+      let isPrcEligible = true;
+      if (eligRes?.data) {
+        isPrcEligible = eligRes.data?.eligible !== false;
+        setPrcEligible(isPrcEligible);
+        setPrcLastUsedAt(eligRes.data?.last_used_at || null);
+        setPrcLastPlan(eligRes.data?.last_plan || null);
+
+        // Re-evaluate default payment method if PRC was pre-selected but user is ineligible
+        if (isPrcEnabled && !isPrcEligible && !isRazorpayEnabled && isManualEnabled) {
+          setPaymentMethod('manual');
+        }
+      }
+
+      // History + upcoming
+      if (historyRes?.data) {
         setSubscriptionHistory(historyRes.data.history || []);
         setPlanPeriods(historyRes.data.plan_periods || []);
-      } catch (err) {
-        // console.log('No subscription history');
       }
-      
-      // Fetch upcoming plans
-      try {
-        const upcomingRes = await axios.get(`${API}/admin/subscription/user/${user.uid}/info`);
+      if (upcomingRes?.data) {
         setUpcomingPlans(upcomingRes.data.upcoming_plans || []);
-      } catch (err) {
-        // silent
       }
-      
-      // Fetch ALL payment attempts (including failed/pending)
-      try {
-        const paymentRes = await axios.get(`${API}/razorpay/payment-history/${user.uid}?include_all=true`);
+
+      // Payment attempts — detect unactivated paid orders
+      if (paymentRes?.data) {
         const attempts = paymentRes.data.payments || [];
         setPaymentAttempts(attempts);
-        
-        // Check if any RECENT payment is paid but subscription not active
-        // Exclude old payments that already activated a subscription which later expired normally
+
         const userPlan = subRes.data.subscription?.plan;
         const isExplorerOrNone = !userPlan || userPlan === 'explorer' || userPlan === 'free';
         if (isExplorerOrNone) {
           const recentPaid = attempts.find(p => {
             if (p.status !== 'paid') return false;
-            // If payment has "Subscription activated" in message, it was already used — skip
             if (p.status_message?.includes('activated')) return false;
-            // If payment claimed_at exists, subscription was activated from it — skip
             if (p.claimed_at || p.claimed_by) return false;
             return true;
           });
-          if (recentPaid) {
-            setHasUnactivatedPayment(true);
-          }
+          if (recentPaid) setHasUnactivatedPayment(true);
         }
-      } catch (err) {
-        // silent
       }
-      
+
+      return; // loading already false
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load subscription plans');
