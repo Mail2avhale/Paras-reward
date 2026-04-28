@@ -642,39 +642,45 @@ async def get_all_requests(
             {"_id": 0}
         ).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(limit)
         
-        # Enrich each request with subscription_active status
-        for req in requests:
+        # Enrich each request with subscription_active status (parallel)
+        async def _enrich_subscription(req):
             req_user_id = req.get("user_id")
-            if req_user_id:
-                req_user = await db.users.find_one(
-                    {"uid": req_user_id},
-                    {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expires": 1, "vip_expiry": 1}
-                )
-                if req_user:
-                    plan = (req_user.get("subscription_plan") or "explorer").lower()
-                    is_active = plan not in ["explorer", "free", ""]
-                    
-                    # Check expiry
-                    if is_active:
-                        expiry = req_user.get("subscription_expiry") or req_user.get("subscription_expires") or req_user.get("vip_expiry")
-                        if expiry:
-                            try:
-                                if isinstance(expiry, str):
-                                    exp_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
-                                else:
-                                    exp_dt = expiry
-                                if exp_dt.tzinfo is None:
-                                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
-                                if exp_dt < datetime.now(timezone.utc):
-                                    is_active = False
-                            except Exception:
-                                pass
-                    
-                    req["subscription_active"] = is_active
-                    req["subscription_plan"] = plan
-                else:
-                    req["subscription_active"] = False
-                    req["subscription_plan"] = "unknown"
+            if not req_user_id:
+                return
+            req_user = await db.users.find_one(
+                {"uid": req_user_id},
+                {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expires": 1, "vip_expiry": 1}
+            )
+            if not req_user:
+                req["subscription_active"] = False
+                req["subscription_plan"] = "unknown"
+                return
+            plan = (req_user.get("subscription_plan") or "explorer").lower()
+            is_active = plan not in ["explorer", "free", ""]
+            if is_active:
+                expiry = req_user.get("subscription_expiry") or req_user.get("subscription_expires") or req_user.get("vip_expiry")
+                if expiry:
+                    try:
+                        if isinstance(expiry, str):
+                            exp_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                        else:
+                            exp_dt = expiry
+                        if exp_dt.tzinfo is None:
+                            exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                        if exp_dt < datetime.now(timezone.utc):
+                            is_active = False
+                    except Exception:
+                        pass
+            req["subscription_active"] = is_active
+            req["subscription_plan"] = plan
+
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*[_enrich_subscription(r) for r in requests]),
+                timeout=5.0,
+            )
+        except asyncio.TimeoutError:
+            logging.warning("[BANK REQUESTS] subscription enrichment timeout (>5s)")
         
         # Enrich: user's lifetime PRC SPENT across ALL services (recharge, bill pay,
         # bank redeem, gift cards, subscription, etc.) — converted to INR via rate.
@@ -708,7 +714,14 @@ async def get_all_requests(
             if calculate_redeem_limit_func and not SKIP_REDEEM_LIMIT_ENRICHMENT and user_ids:
                 async def _limit_for(uid: str):
                     try:
-                        return uid, await calculate_redeem_limit_func(uid)
+                        # Per-user 18s hard cap — single heavy user can't block whole page
+                        info = await asyncio.wait_for(
+                            calculate_redeem_limit_func(uid), timeout=18.0
+                        )
+                        return uid, info
+                    except asyncio.TimeoutError:
+                        logging.warning(f"[BANK REQUESTS] limit calc timed out (>18s) for {uid}")
+                        return uid, None
                     except Exception as e:
                         logging.warning(f"[BANK REQUESTS] limit calc failed for {uid}: {e}")
                         return uid, None
@@ -717,14 +730,14 @@ async def get_all_requests(
                 try:
                     results = await asyncio.wait_for(
                         asyncio.gather(*[_limit_for(u) for u in bounded]),
-                        timeout=15.0,
+                        timeout=22.0,
                     )
                     for uid, info in results:
                         limit_cache[uid] = info
                 except asyncio.TimeoutError:
                     logging.warning(
                         f"[BANK REQUESTS] combined enrichment timed out "
-                        f"(>15s) for {len(bounded)} users; page still loads."
+                        f"(>22s) for {len(bounded)} users; page still loads."
                     )
                 except Exception as e:
                     logging.warning(f"[BANK REQUESTS] enrichment gather error: {e}")

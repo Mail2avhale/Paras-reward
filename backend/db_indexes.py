@@ -198,6 +198,14 @@ async def create_performance_indexes(db):
         await db.kyc_documents.create_index([("status", 1), ("submitted_at", 1)], background=True)
         await db.kyc_documents.create_index("submitted_at", background=True)
         print("  ✅ KYC documents indexes created")
+
+        # ============ KYC (actual collection used by /kyc/list) ============
+        await db.kyc.create_index("uid", background=True)
+        await db.kyc.create_index("status", background=True)
+        await db.kyc.create_index([("status", 1), ("submitted_at", -1)], background=True)
+        await db.kyc.create_index("submitted_at", background=True)
+        await db.kyc.create_index("created_at", background=True)
+        print("  ✅ KYC (live) indexes created")
         
         # ============ VIP PAYMENTS COLLECTION ============
         await db.vip_payments.create_index("payment_id", unique=True, sparse=True, background=True)
