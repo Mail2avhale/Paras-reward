@@ -4590,23 +4590,26 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
         ts_str = str(ts_raw or "")
         return (round(amt, 2), ts_str[:16]) if len(ts_str) >= 16 else None
 
-    # === LAYER 1: Service collections (also scan ALL statuses to seed dedup refs) ===
-    # First, collect every reference_id from service collections (any status)
-    # so later Layer 2/3 can skip anything that's already tracked by a service doc.
-    for coll, _, _extra in service_sources:
+    # === LAYER 1: Service collections (PARALLEL scan) ===
+    # Each collection is independently scanned to collect refs + sum amounts.
+    # Running all 16 in parallel reduces a 30s sequential scan to ~2s.
+    import asyncio as _asyncio
+
+    async def _scan_collection(coll: str, category: str, extra_match: dict):
+        """Return (refs_set, amount_entries) for a single collection."""
+        local_refs = set()
+        entries = []  # list of (amt, fp, ts_raw, doc)
         try:
+            # Seed refs from all records (any status)
             async for doc in db[coll].find(
                 {"user_id": user_id},
                 {rf: 1 for rf in SVC_REF_FIELDS} | {"_id": 0},
             ):
                 ref = _doc_ref(doc)
                 if ref:
-                    seen_refs.add(ref)
+                    local_refs.add(ref)
         except Exception:
             pass
-
-    # Now sum service collections for success statuses only (breakdown total).
-    for coll, category, extra_match in service_sources:
         try:
             q = {"user_id": user_id, "status": {"$in": SUCCESS_STATUSES}}
             q.update(extra_match)
@@ -4616,34 +4619,51 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
                     continue
                 ts_raw = doc.get("created_at") or doc.get("timestamp") or ""
                 fp = _fp(amt, ts_raw)
-                # Within-service dedup by (amt, minute)
-                if fp and fp in seen_fp:
-                    if debug:
-                        breakdown.append({
-                            "source": f"svc:{coll}", "type": "dedup-skipped",
-                            "amount_prc": amt, "category": category,
-                            "ts": str(ts_raw)[:19],
-                        })
-                    continue
-                if fp:
-                    seen_fp.add(fp)
-                total += amt
-                if debug:
-                    breakdown.append({
-                        "source": f"svc:{coll}", "type": "service_debit",
-                        "amount_prc": amt, "category": category,
-                        "ts": str(ts_raw)[:19], "via": used_field,
-                        "ref": _doc_ref(doc),
-                        "narration": (
-                            doc.get("operator_name") or doc.get("bank_name")
-                            or doc.get("plan_name") or doc.get("service_type")
-                            or doc.get("beneficiary_name") or doc.get("product_name")
-                            or doc.get("description") or category
-                        ),
-                        "status": doc.get("status"),
-                    })
+                entries.append((amt, fp, ts_raw, used_field, doc, coll, category))
         except Exception as e:
             logging.warning(f"[REDEEMED] {coll} scan error for {user_id}: {e}")
+        return local_refs, entries
+
+    try:
+        coll_results = await _asyncio.gather(
+            *[_scan_collection(c, cat, em) for c, cat, em in service_sources]
+        )
+    except Exception as e:
+        logging.warning(f"[REDEEMED] layer-1 parallel scan failed for {user_id}: {e}")
+        coll_results = []
+
+    # Merge refs first (so within-service dedup has full ref set)
+    for refs, _ in coll_results:
+        seen_refs.update(refs)
+
+    # Then sum & dedup by fingerprint
+    for _, entries in coll_results:
+        for amt, fp, ts_raw, used_field, doc, coll, category in entries:
+            if fp and fp in seen_fp:
+                if debug:
+                    breakdown.append({
+                        "source": f"svc:{coll}", "type": "dedup-skipped",
+                        "amount_prc": amt, "category": category,
+                        "ts": str(ts_raw)[:19],
+                    })
+                continue
+            if fp:
+                seen_fp.add(fp)
+            total += amt
+            if debug:
+                breakdown.append({
+                    "source": f"svc:{coll}", "type": "service_debit",
+                    "amount_prc": amt, "category": category,
+                    "ts": str(ts_raw)[:19], "via": used_field,
+                    "ref": _doc_ref(doc),
+                    "narration": (
+                        doc.get("operator_name") or doc.get("bank_name")
+                        or doc.get("plan_name") or doc.get("service_type")
+                        or doc.get("beneficiary_name") or doc.get("product_name")
+                        or doc.get("description") or category
+                    ),
+                    "status": doc.get("status"),
+                })
 
     # === LAYER 2: `transactions` wallet log — only if ref NOT in service ===
     try:
