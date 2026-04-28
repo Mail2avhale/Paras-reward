@@ -2492,3 +2492,121 @@ async def admin_sync_eko_refund_pending(
         "summary": summary,
         "preview": preview,  # full list — admin can see every action
     }
+
+
+
+# ========================================================================
+# Admin diagnostic: list pending BBPS refunds + trigger OTP on user's behalf
+# ========================================================================
+
+
+@router.get("/admin/list-pending-bbps-refunds")
+async def admin_list_pending_bbps_refunds(admin_id: str, limit: int = 50, service_filter: Optional[str] = None):
+    """Admin: list refund_pending entries from recharge_transactions / bill_payment_requests
+    so admin can pick ones to trigger OTP for. Excludes DMT (separate flow).
+    """
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+    admin = await db.users.find_one({"uid": admin_id}, {"_id": 0, "role": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        return {"success": False, "error": "Admin only"}
+
+    rows = []
+    for coll in ["recharge_transactions", "bill_payment_requests"]:
+        query = {
+            "status": "refund_pending",
+            "eko_tid": {"$exists": True, "$nin": [None, ""]},
+        }
+        if service_filter:
+            query["service_type"] = {"$regex": service_filter, "$options": "i"}
+        cursor = db[coll].find(
+            query,
+            {"_id": 0, "request_id": 1, "user_id": 1, "eko_tid": 1, "client_ref_id": 1,
+             "amount": 1, "amount_inr": 1, "phone": 1, "customer_mobile": 1,
+             "service_type": 1, "operator": 1, "status": 1, "created_at": 1,
+             "total_prc_deducted": 1, "prc_refunded": 1}
+        ).sort("created_at", -1).limit(limit)
+        async for doc in cursor:
+            tid = str(doc.get("eko_tid", "") or "")
+            if tid.isdigit():
+                doc["collection"] = coll
+                rows.append(doc)
+
+    user_ids = list({r.get("user_id") for r in rows if r.get("user_id")})
+    user_map = {}
+    async for u in db.users.find({"uid": {"$in": user_ids}}, {"_id": 0, "uid": 1, "name": 1, "mobile": 1}):
+        user_map[u["uid"]] = u
+
+    for r in rows:
+        u = user_map.get(r.get("user_id"))
+        if u:
+            r["app_user_name"] = u.get("name")
+            r["app_user_mobile"] = u.get("mobile")
+
+    return {
+        "success": True,
+        "count": len(rows),
+        "rows": rows,
+    }
+
+
+class AdminTriggerOTPRequest(BaseModel):
+    admin_id: str
+    tid: str
+
+
+@router.post("/admin/trigger-refund-otp")
+async def admin_trigger_refund_otp(request: AdminTriggerOTPRequest):
+    """Admin override: trigger refund OTP for any user's pending recharge."""
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+    admin = await db.users.find_one({"uid": request.admin_id}, {"_id": 0, "role": 1, "name": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        return {"success": False, "error": "Admin only"}
+
+    txn = None
+    for coll in ["recharge_transactions", "bill_payment_requests", "dmt_transactions", "bank_transfer_requests"]:
+        txn = await db[coll].find_one(
+            {"$or": [
+                {"eko_tid": request.tid},
+                {"client_ref_id": request.tid},
+                {"request_id": request.tid},
+            ], "status": "refund_pending"},
+            {"_id": 0}
+        )
+        if txn:
+            break
+    if not txn:
+        return {"success": False, "error": f"No refund_pending txn found for TID {request.tid}"}
+
+    target_user_id = txn.get("user_id")
+    if not target_user_id:
+        return {"success": False, "error": "Txn missing user_id"}
+
+    class _Body:
+        def __init__(self, uid):
+            self.user_id = uid
+    result = await user_process_refund(request.tid, _Body(target_user_id))
+
+    try:
+        await db.admin_audit_logs.insert_one({
+            "admin_id": request.admin_id,
+            "admin_name": admin.get("name"),
+            "action": "trigger_refund_otp",
+            "tid": request.tid,
+            "target_user_id": target_user_id,
+            "result_success": bool(result.get("success") or result.get("otp_sent")),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception:
+        pass
+
+    target_user = await db.users.find_one({"uid": target_user_id}, {"_id": 0, "name": 1, "mobile": 1})
+    return {
+        **result,
+        "admin_triggered_for_user": {
+            "user_id": target_user_id,
+            "name": (target_user or {}).get("name"),
+            "mobile": (target_user or {}).get("mobile"),
+        },
+    }
