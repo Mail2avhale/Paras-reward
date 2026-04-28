@@ -118,7 +118,10 @@ async def get_user_children(uid: str):
 async def check_user_birthday(uid: str):
     """Check if today is user's birthday"""
     try:
-        user = await db.users.find_one({"uid": uid}, {"_id": 0, "birthday": 1, "date_of_birth": 1, "name": 1})
+        user = await db.users.find_one(
+            {"uid": uid},
+            {"_id": 0, "birthday": 1, "date_of_birth": 1, "name": 1, "first_name": 1, "last_name": 1, "middle_name": 1}
+        )
         if not user:
             return {"is_birthday": False, "message": None}
         
@@ -146,10 +149,17 @@ async def check_user_birthday(uid: str):
         is_birthday = (today.month == birth_date.month and today.day == birth_date.day)
         
         if is_birthday:
-            user_name = user.get("name", "").split()[0] if user.get("name") else "User"
+            # Prefer explicit first_name; else first word of stored full name; else "User"
+            first = (user.get("first_name") or "").strip()
+            if not first:
+                full = (user.get("name") or "").strip()
+                first = full.split()[0] if full else ""
+            if not first:
+                first = "User"
             return {
                 "is_birthday": True,
-                "message": f"🎂 Happy Birthday, {user_name}! 🎉 Wishing you a wonderful day filled with joy!"
+                "first_name": first,
+                "message": f"🎂 Happy Birthday, {first}! 🎉 Wishing you a wonderful day filled with joy!"
             }
         
         return {"is_birthday": False, "message": None}

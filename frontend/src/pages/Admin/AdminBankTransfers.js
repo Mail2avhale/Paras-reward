@@ -872,10 +872,10 @@ const AdminBankTransfers = () => {
                           )}
                         </td>
                         <td className="p-4" data-testid={`lifetime-redeemed-${req.request_id}`}>
-                          <p className={`font-bold text-sm ${req.user_total_redeemed_prc <= 0 ? 'text-blue-600' : req.user_total_redeemed_prc < 5000 ? 'text-emerald-600' : 'text-orange-500'}`}>
-                            {(req.user_total_redeemed_prc || 0).toLocaleString()} PRC
+                          <p className={`font-bold text-base ${(req.user_total_redeemed_inr || 0) === 0 ? 'text-blue-600' : (req.user_total_redeemed_inr || 0) < 500 ? 'text-emerald-600' : 'text-orange-600'}`}>
+                            ₹{(req.user_total_redeemed_inr || 0).toLocaleString()}
                           </p>
-                          <p className="text-slate-500 text-xs">₹{(req.user_total_redeemed_inr || 0).toLocaleString()}</p>
+                          <p className="text-slate-500 text-xs">{(req.user_total_redeemed_prc || 0).toLocaleString()} PRC</p>
                           <p className="text-slate-400 text-[10px]">{req.user_redeem_count || 0} times</p>
                           {req.is_first_redeem && (
                             <span className="inline-block mt-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-semibold rounded">NEW</span>
@@ -1151,12 +1151,15 @@ const AdminBankTransfers = () => {
                       })()}
                       {/* Lifetime Redeemed */}
                       <div className="flex items-center justify-between -mx-3 px-3 py-2 rounded-b-lg border-t border-slate-200">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap" data-testid={`lifetime-redeemed-inr-${req.request_id}`}>
                           <span className="text-slate-500 text-xs">Lifetime: </span>
-                          <span className={`font-semibold text-sm ${(req.user_total_redeemed_prc || 0) < 5000 ? 'text-emerald-600' : 'text-orange-500'}`}>
-                            {(req.user_total_redeemed_prc || 0).toLocaleString()} PRC
+                          <span className={`font-bold text-sm ${(req.user_total_redeemed_inr || 0) < 500 ? 'text-emerald-600' : 'text-orange-600'}`}>
+                            ₹{(req.user_total_redeemed_inr || 0).toLocaleString()}
                           </span>
-                          <span className="text-slate-400 text-xs">({req.user_redeem_count || 0}x)</span>
+                          <span className="text-slate-400 text-[10px]">
+                            ({(req.user_total_redeemed_prc || 0).toLocaleString()} PRC)
+                          </span>
+                          <span className="text-slate-400 text-xs">· {req.user_redeem_count || 0}x</span>
                           {req.is_first_redeem && (
                             <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-semibold rounded">NEW</span>
                           )}
