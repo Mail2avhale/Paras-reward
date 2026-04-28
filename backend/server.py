@@ -4464,9 +4464,29 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
     return total_redeemed
 
 
+# ----------------------------------------------------------------------
+# In-memory TTL cache for lifetime-redeemed totals (per user).
+# Populated by get_user_all_time_redeemed() only when called with debug=False.
+# Invalidated manually on service debits (see invalidate_lifetime_cache).
+# ----------------------------------------------------------------------
+_REDEEMED_TOTAL_CACHE: dict = {}  # uid -> (ts_seconds, float_prc)
+_REDEEMED_TOTAL_CACHE_TTL: float = 60.0  # seconds
+
+def invalidate_lifetime_cache(user_id: str | None = None):
+    """Call after any service-collection write that changes lifetime spend."""
+    if user_id:
+        _REDEEMED_TOTAL_CACHE.pop(user_id, None)
+    else:
+        _REDEEMED_TOTAL_CACHE.clear()
+
+
 async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
     """
     Get user's ALL TIME total PRC spent (lifetime usage).
+
+    In-memory TTL cache (60s, non-debug only): prevents repeat hot-path
+    callers (dashboard, admin table row enrichment, redeem limit calc)
+    from re-scanning 16 collections every time.
 
     Sources (ALL included, dedup'd by reference_id + (amount,minute) fallback):
     1. Service collections — primary source; defines Redeem Breakdown categories.
@@ -4485,6 +4505,20 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
     - If record has a reference_id / request_id, dedup by that (strong).
     - Otherwise, use (amount_rounded, YYYY-MM-DDTHH:MM) fingerprint.
     """
+    # --- In-memory TTL cache (non-debug only) ---------------------------
+    import time as _time_mod
+    if not debug:
+        now = _time_mod.time()
+        cached = _REDEEMED_TOTAL_CACHE.get(user_id)
+        if cached and (now - cached[0] < _REDEEMED_TOTAL_CACHE_TTL):
+            return cached[1]
+        # Periodic evict to keep memory bounded (cheap: O(n) every ~500 calls)
+        if len(_REDEEMED_TOTAL_CACHE) > 5000:
+            stale = [k for k, (ts, _) in _REDEEMED_TOTAL_CACHE.items()
+                     if now - ts >= _REDEEMED_TOTAL_CACHE_TTL]
+            for k in stale:
+                _REDEEMED_TOTAL_CACHE.pop(k, None)
+
     SUCCESS_STATUSES = [
         "completed", "COMPLETED", "Completed",
         "success", "SUCCESS", "Success",
@@ -4742,6 +4776,12 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
             "net_redeemed_prc": total,
             "entries": breakdown,
         }
+    # Populate TTL cache (non-debug callers will hit cache on next call)
+    try:
+        import time as _t
+        _REDEEMED_TOTAL_CACHE[user_id] = (_t.time(), total)
+    except Exception:
+        pass
     return total
 
 
