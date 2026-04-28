@@ -767,10 +767,16 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
             }
     
     # Compute Total Redeemed for ALL referrals in parallel (canonical source).
-    # Same data User 360 page shows. Capped at 8s for whole batch so /direct-list
+    # Same data User 360 page shows. Capped at 5s for whole batch so /direct-list
     # never times out even with 50+ referrals.
+    # Optimization: skip lifetime calc for users with zero mining activity —
+    # they've almost certainly never redeemed (saves 16 collection scans each).
     redeemed_by_uid = {}
-    if _get_user_all_time_redeemed and direct_referrals:
+    candidates_for_calc = [
+        r for r in direct_referrals
+        if (r.get("total_mined_prc") or r.get("total_mined") or r.get("prc_balance") or 0) > 0
+    ]
+    if _get_user_all_time_redeemed and candidates_for_calc:
         async def _calc(uid):
             try:
                 v = await _get_user_all_time_redeemed(uid)
@@ -780,15 +786,15 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
         try:
             import asyncio as _aio
             results = await _aio.wait_for(
-                _aio.gather(*[_calc(r["uid"]) for r in direct_referrals]),
-                timeout=8.0,
+                _aio.gather(*[_calc(r["uid"]) for r in candidates_for_calc]),
+                timeout=5.0,
             )
             for uid, val in results:
                 redeemed_by_uid[uid] = val
         except _aio.TimeoutError:
             logging.warning(
                 f"[DIRECT-LIST] redeemed-PRC batch timed out for "
-                f"{len(direct_referrals)} referrals; showing 0"
+                f"{len(candidates_for_calc)} referrals; showing 0"
             )
         except Exception as e:
             logging.warning(f"[DIRECT-LIST] redeemed batch error: {e}")
