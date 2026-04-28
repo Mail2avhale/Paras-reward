@@ -17115,27 +17115,26 @@ async def get_admin_stats():
     if cached_stats:
         return cached_stats
     
-    # OPTIMIZED: Run all count queries in parallel using asyncio.gather
-    # This reduces total time from sum of all queries to max of all queries
-    
+    # ULTRA-OPTIMIZED: Fire ALL ~38 queries in a single asyncio.gather
+    # Previously split into 5 sequential gather batches — now one parallel wait.
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    
-    # Batch 1: User statistics (parallel)
     now = datetime.now(timezone.utc)
     now_str = now.isoformat()
-    user_counts = await asyncio.gather(
-        db.users.count_documents({}),  # total_users
+    valid_redeemed = ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "Success", "approved", "APPROVED", "Approved", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "Processing", "delivered", "DELIVERED", "Delivered"]
+
+    all_results = await asyncio.gather(
+        # --- User counts (8) ---
+        db.users.count_documents({}),
         db.users.count_documents({"$or": [
             {"subscription_plan": "explorer"},
             {"subscription_plan": {"$exists": False}},
             {"membership_type": "free"}
-        ]}),  # explorer_users
+        ]}),
         db.users.count_documents({"subscription_plan": "startup"}),
         db.users.count_documents({"subscription_plan": "growth"}),
         db.users.count_documents({"subscription_plan": "elite"}),
-        db.users.count_documents({"created_at": {"$gte": today_start.isoformat()}}),  # new_users_today
-        db.users.count_documents({"role": "manager"}),  # managers
-        # Active miners: Elite + mining_active + valid session
+        db.users.count_documents({"created_at": {"$gte": today_start.isoformat()}}),
+        db.users.count_documents({"role": "manager"}),
         db.users.count_documents({
             "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP", "Startup", "Growth", "Pro"]},
             "mining_active": True,
@@ -17145,15 +17144,8 @@ async def get_admin_stats():
                 {"mining_session_end": {"$exists": False}},
                 {"mining_session_end": None}
             ]
-        }),  # active_mining_users
-    )
-    total_users, explorer_users, startup_users, growth_users, elite_users, new_users_today, managers, active_mining_users = user_counts
-    inactive_mining_users = total_users - active_mining_users
-    vip_users = startup_users + growth_users + elite_users
-    free_users = explorer_users
-    
-    # Batch 2: Orders, KYC, Payments (parallel)
-    other_counts = await asyncio.gather(
+        }),
+        # --- Orders/KYC/Payments (12) ---
         db.orders.count_documents({}),
         db.orders.count_documents({"status": "pending"}),
         db.orders.count_documents({"status": "delivered"}),
@@ -17166,61 +17158,18 @@ async def get_admin_stats():
         db.vip_payments.count_documents({"status": "approved"}),
         db.products.count_documents({}),
         db.products.count_documents({"is_active": True, "visible": True}),
-    )
-    (total_orders, pending_orders, delivered_orders, 
-     total_kyc, pending_kyc, verified_kyc, rejected_kyc,
-     total_vip_requests, pending_vip_approvals, approved_vip,
-     total_products, active_products) = other_counts
-    
-    # Batch 3: Aggregation pipelines (parallel)
-    agg_results = await asyncio.gather(
-        # Total PRC in circulation (current balance)
-        db.users.aggregate([
-            {"$group": {"_id": None, "total_prc": {"$sum": "$prc_balance"}}}
-        ]).to_list(1),
-        # VIP fees
-        db.vip_payments.aggregate([
-            {"$match": {"status": "approved"}},
-            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-        ]).to_list(1),
-        # Revenue from orders
-        db.orders.aggregate([
-            {"$match": {"status": "delivered"}},
-            {"$group": {"_id": None, "total_cash": {"$sum": "$total_cash_price"}, "total_prc": {"$sum": "$total_prc_price"}}}
-        ]).to_list(1),
-        # Subscription payments
+        # --- Aggregations (7) ---
+        db.users.aggregate([{"$group": {"_id": None, "total_prc": {"$sum": "$prc_balance"}}}]).to_list(1),
+        db.vip_payments.aggregate([{"$match": {"status": "approved"}}, {"$group": {"_id": None, "total": {"$sum": "$amount"}}}]).to_list(1),
+        db.orders.aggregate([{"$match": {"status": "delivered"}}, {"$group": {"_id": None, "total_cash": {"$sum": "$total_cash_price"}, "total_prc": {"$sum": "$total_prc_price"}}}]).to_list(1),
         db.subscription_payments.count_documents({"status": "pending"}),
         db.subscription_payments.count_documents({"status": "approved"}),
-        # TOTAL PRC MINED (all-time)
-        db.users.aggregate([
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_mined", 0]}}}}
-        ]).to_list(1),
-        # TOTAL PRC BURNED (all-time)
-        db.burn_logs.aggregate([
-            {"$group": {"_id": None, "total": {"$sum": {"$abs": {"$ifNull": ["$amount", 0]}}}}}
-        ]).to_list(1),
-    )
-    
-    prc_result, vip_fees_result, revenue_result, pending_sub_payments, approved_sub_payments, total_mined_result, total_burned_result = agg_results
-    
-    total_prc_in_circulation = prc_result[0]["total_prc"] if prc_result else 0
-    total_vip_fees = vip_fees_result[0]["total"] if vip_fees_result else 0
-    total_revenue_inr = revenue_result[0]["total_cash"] if revenue_result else 0
-    total_revenue_prc = revenue_result[0]["total_prc"] if revenue_result else 0
-    total_prc_mined = total_mined_result[0]["total"] if total_mined_result else 0
-    total_prc_burned = total_burned_result[0]["total"] if total_burned_result else 0
-    
-    # Simplified withdrawal stats (parallel)
-    withdrawal_counts = await asyncio.gather(
+        db.users.aggregate([{"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_mined", 0]}}}}]).to_list(1),
+        db.burn_logs.aggregate([{"$group": {"_id": None, "total": {"$sum": {"$abs": {"$ifNull": ["$amount", 0]}}}}}]).to_list(1),
+        # --- Withdrawal counts (2) ---
         db.cashback_withdrawals.count_documents({"status": "pending"}),
         db.profit_withdrawals.count_documents({"status": "pending"}),
-    )
-    pending_cashback_withdrawals, pending_profit_withdrawals = withdrawal_counts
-    total_pending_withdrawals = pending_cashback_withdrawals + pending_profit_withdrawals
-    
-    # Calculate PRC redeemed (COMPLETE — all collections with consistent status filter)
-    valid_redeemed = ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "Success", "approved", "APPROVED", "Approved", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "Processing", "delivered", "DELIVERED", "Delivered"]
-    prc_redeemed_results = await asyncio.gather(
+        # --- PRC redeemed aggregations (8) ---
         db.orders.aggregate([
             {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", 0]}}}}
@@ -17233,43 +17182,63 @@ async def get_admin_stats():
             {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
         ]).to_list(1),
-        # Bank withdrawals
         db.bank_withdrawal_requests.aggregate([
             {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", {"$ifNull": ["$total_prc_deducted", 0]}]}}}}
         ]).to_list(1),
-        # Bank transfers
         db.bank_transfer_requests.aggregate([
             {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1),
-        # PRC subscriptions
         db.subscription_payments.aggregate([
             {"$match": {"payment_method": "prc", "status": {"$in": ["paid", "PAID", "Paid", "completed", "COMPLETED", "Completed"]}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
         ]).to_list(1),
-        # DMT transactions
         db.dmt_transactions.aggregate([
             {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1),
-        # Unified redemptions
         db.unified_redemptions.aggregate([
             {"$match": {"status": {"$in": valid_redeemed}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1),
+        # --- Recent VIP payments (1) ---
+        db.vip_payments.find(
+            {"status": "approved"},
+            {"_id": 0, "user_uid": 1, "user_id": 1, "amount": 1, "created_at": 1, "user_name": 1}
+        ).sort("created_at", -1).limit(5).to_list(5),
     )
-    
+
+    # Unpack all results positionally
+    (
+        total_users, explorer_users, startup_users, growth_users, elite_users, new_users_today, managers, active_mining_users,
+        total_orders, pending_orders, delivered_orders,
+        total_kyc, pending_kyc, verified_kyc, rejected_kyc,
+        total_vip_requests, pending_vip_approvals, approved_vip,
+        total_products, active_products,
+        prc_result, vip_fees_result, revenue_result, pending_sub_payments, approved_sub_payments, total_mined_result, total_burned_result,
+        pending_cashback_withdrawals, pending_profit_withdrawals,
+        r_orders, r_bills, r_gifts, r_bank_wd, r_bank_tr, r_sub_prc, r_dmt, r_unified,
+        recent_vip_payments,
+    ) = all_results
+
+    inactive_mining_users = total_users - active_mining_users
+    vip_users = startup_users + growth_users + elite_users
+    free_users = explorer_users
+
+    total_prc_in_circulation = prc_result[0]["total_prc"] if prc_result else 0
+    total_vip_fees = vip_fees_result[0]["total"] if vip_fees_result else 0
+    total_revenue_inr = revenue_result[0]["total_cash"] if revenue_result else 0
+    total_revenue_prc = revenue_result[0]["total_prc"] if revenue_result else 0
+    total_prc_mined = total_mined_result[0]["total"] if total_mined_result else 0
+    total_prc_burned = total_burned_result[0]["total"] if total_burned_result else 0
+
+    total_pending_withdrawals = pending_cashback_withdrawals + pending_profit_withdrawals
+
     total_prc_redeemed = sum([
-        r[0]["total"] if r else 0 for r in prc_redeemed_results
+        (r[0]["total"] if r else 0) for r in [r_orders, r_bills, r_gifts, r_bank_wd, r_bank_tr, r_sub_prc, r_dmt, r_unified]
     ])
-    
-    # Skip recent VIP payments enrichment for speed - use cached names
-    recent_vip_payments = await db.vip_payments.find(
-        {"status": "approved"},
-        {"_id": 0, "user_uid": 1, "user_id": 1, "amount": 1, "created_at": 1, "user_name": 1}
-    ).sort("created_at", -1).limit(5).to_list(5)
-    
+
     # Calculate PRC value in INR
     total_prc_value_in_inr = total_revenue_prc / 10 if total_revenue_prc else 0
     
@@ -19939,7 +19908,14 @@ async def admin_redeem_limits_overview():
     """
     Admin endpoint: Get redeem limit overview for all users.
     Returns aggregate totals + per-user breakdown.
+    Cached 60 seconds — avoids expensive N-user calc on every admin refresh.
     """
+    cache_key = "admin:redeem_limits_overview"
+    if cache:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+
     try:
         
         # Get all users with balance > 0
@@ -19947,21 +19923,29 @@ async def admin_redeem_limits_overview():
             {"prc_balance": {"$gt": 0}},
             {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile_number": 1, "prc_balance": 1, "subscription_plan": 1}
         ).to_list(None)
-        
+
+        # OPTIMIZED: Parallelize N independent calculate_user_redeem_limit calls with concurrency cap
+        # Throttled to 15 concurrent to avoid saturating DB connection pool on cold cache
+        _sem = asyncio.Semaphore(15)
+
+        async def _safe_limit(uid):
+            async with _sem:
+                try:
+                    return await calculate_user_redeem_limit(uid)
+                except Exception:
+                    return {"total_earned": 0, "unlock_percent": 0, "redeemable": 0, "total_redeemed": 0, "effective_available": 0, "network_size": 0}
+
+        limit_infos = await asyncio.gather(*[_safe_limit(u["uid"]) for u in users])
+
         user_data = []
         agg_total_earned = 0
         agg_total_redeemable = 0
         agg_total_redeemed = 0
         agg_total_available = 0
         agg_total_balance = 0
-        
-        for u in users:
+
+        for u, limit_info in zip(users, limit_infos):
             uid = u["uid"]
-            try:
-                limit_info = await calculate_user_redeem_limit(uid)
-            except Exception:
-                limit_info = {"total_earned": 0, "unlock_percent": 0, "redeemable": 0, "total_redeemed": 0, "effective_available": 0, "network_size": 0}
-            
             balance = float(u.get("prc_balance", 0) or 0)
             total_earned = limit_info.get("total_earned", 0)
             unlock_pct = limit_info.get("unlock_percent", 0)
@@ -19969,7 +19953,7 @@ async def admin_redeem_limits_overview():
             total_redeemed = limit_info.get("total_redeemed", 0)
             available = limit_info.get("effective_available", 0)
             network_size = limit_info.get("network_size", 0)
-            
+
             user_data.append({
                 "uid": uid,
                 "name": u.get("name", ""),
@@ -19983,7 +19967,7 @@ async def admin_redeem_limits_overview():
                 "available": round(available, 2),
                 "network_size": network_size,
             })
-            
+
             agg_total_earned += total_earned
             agg_total_redeemable += redeemable
             agg_total_redeemed += total_redeemed
@@ -19993,7 +19977,7 @@ async def admin_redeem_limits_overview():
         # Sort by balance desc
         user_data.sort(key=lambda x: x["balance"], reverse=True)
         
-        return {
+        result = {
             "aggregate": {
                 "total_users": len(user_data),
                 "total_balance": round(agg_total_balance, 2),
@@ -20004,6 +19988,13 @@ async def admin_redeem_limits_overview():
             },
             "users": user_data,
         }
+        # Cache for 60 seconds to avoid repeated expensive recalculation
+        if cache:
+            try:
+                await cache.set(cache_key, result, ttl=60)
+            except Exception:
+                pass
+        return result
     except Exception as e:
         logging.error(f"Admin redeem limits overview error: {e}")
         import traceback
