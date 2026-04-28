@@ -291,8 +291,8 @@ async def get_top_redeemers(limit: int = 50):
         logging.warning("[top-redeemers] no data across any service")
         return {"leaderboard": [], "cached": False, "refreshed_at": int(now)}
 
-    # Top 3x buffer for admin filtering + reconciliation
-    candidates = sorted(rough_totals.items(), key=lambda x: -x[1])[:limit * 3]
+    # Top 1.5x buffer (smaller = faster reconciliation)
+    candidates = sorted(rough_totals.items(), key=lambda x: -x[1])[:int(limit * 1.5) + 10]
     user_ids = [t[0] for t in candidates]
 
     # Pass 2: reconcile each with canonical get_user_all_time_redeemed (dedup-aware)
@@ -304,23 +304,34 @@ async def get_top_redeemers(limit: int = 50):
 
     accurate: dict = {}
     if get_user_all_time_redeemed:
-        async def _resolve(uid: str):
+        # Process in batches of 15 to avoid DB overload; 30s timeout per batch
+        BATCH = 15
+        for i in range(0, len(user_ids), BATCH):
+            batch = user_ids[i:i + BATCH]
+
+            async def _resolve(uid: str):
+                try:
+                    v = await asyncio.wait_for(
+                        get_user_all_time_redeemed(uid), timeout=25.0
+                    )
+                    return uid, float(v or 0), True
+                except Exception as e:
+                    logging.warning(f"[top-redeemers] reconcile {uid} failed: {e}")
+                    return uid, 0.0, False  # skip on failure — do NOT use rough
+
             try:
-                v = await get_user_all_time_redeemed(uid)
-                return uid, float(v or 0)
-            except Exception:
-                return uid, float(rough_totals.get(uid, 0))
-        try:
-            results = await asyncio.wait_for(
-                asyncio.gather(*[_resolve(u) for u in user_ids]),
-                timeout=45.0,
-            )
-            for uid, prc in results:
-                accurate[uid] = prc
-        except asyncio.TimeoutError:
-            logging.warning("[top-redeemers] reconciliation timeout — using rough totals")
-            accurate = dict(candidates)
+                results = await asyncio.wait_for(
+                    asyncio.gather(*[_resolve(u) for u in batch]),
+                    timeout=40.0,
+                )
+                for uid, prc, ok in results:
+                    if ok and prc > 0:
+                        accurate[uid] = prc
+            except asyncio.TimeoutError:
+                logging.warning(f"[top-redeemers] batch {i} timeout — skipping")
+                continue
     else:
+        # Canonical unavailable — use rough as last resort
         accurate = dict(candidates)
 
     # Hydrate user info
