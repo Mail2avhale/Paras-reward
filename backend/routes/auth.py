@@ -647,12 +647,19 @@ async def login(request: Request):
     
     normalized_identifier = identifier.lower().strip() if '@' in identifier else identifier.strip()
     
-    # OPTIMIZED: Use sequential equality checks
-    # Email lookup must be case-insensitive (user may type different case than stored)
+    # OPTIMIZED: Use exact index-backed lookup first (99%+ of emails are
+    # stored lowercase by signup). Regex fallback only if exact miss.
+    # This avoids a full collection scan that was timing out periodically.
     user = await db.users.find_one(
-        {"email": {"$regex": f"^{re.escape(normalized_identifier)}$", "$options": "i"}},
+        {"email": normalized_identifier},
         {"_id": 0, "profile_picture": 0}
     )
+    # Case-insensitive fallback (uses COLLSCAN but rarely needed)
+    if not user and '@' in identifier:
+        user = await db.users.find_one(
+            {"email": {"$regex": f"^{re.escape(normalized_identifier)}$", "$options": "i"}},
+            {"_id": 0, "profile_picture": 0}
+        )
     
     if not user:
         user = await db.users.find_one(

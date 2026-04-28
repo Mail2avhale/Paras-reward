@@ -265,15 +265,28 @@ def check_rate_limit(key: str, max_requests: int, window_seconds: int = RATE_LIM
 
 
 async def check_login_rate_limit_db(db, identifier: str) -> Tuple[bool, int, str]:
-    """Check if user is locked out in DATABASE (persistent across server restarts)"""
-    # Find user and check their lockout status
-    user = await db.users.find_one({
-        "$or": [
-            {"email": identifier.lower() if '@' in identifier else identifier},
+    """Check if user is locked out in DATABASE (persistent across server restarts).
+
+    Uses sequential index-backed lookups instead of a $or query because $or
+    queries don't use index intersections reliably on Atlas → occasional
+    full collection scans causing 30s proxy timeouts during login.
+    """
+    ident_lc = identifier.lower() if '@' in identifier else identifier
+    # Email first (most common), mobile, then uid — each uses its own index
+    user = await db.users.find_one(
+        {"email": ident_lc},
+        {"_id": 0, "failed_login_attempts": 1, "locked_until": 1, "email": 1}
+    )
+    if not user:
+        user = await db.users.find_one(
             {"mobile": identifier},
-            {"uid": identifier}
-        ]
-    }, {"_id": 0, "failed_login_attempts": 1, "locked_until": 1, "email": 1})
+            {"_id": 0, "failed_login_attempts": 1, "locked_until": 1, "email": 1}
+        )
+    if not user:
+        user = await db.users.find_one(
+            {"uid": identifier},
+            {"_id": 0, "failed_login_attempts": 1, "locked_until": 1, "email": 1}
+        )
     
     if not user:
         return True, 0, ""  # User not found, let login flow handle it
