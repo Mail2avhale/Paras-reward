@@ -1842,22 +1842,28 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
         except Exception:
             return {"success": False, "error": f"Eko OTP API returned invalid response (HTTP {otp_response.status_code})"}
 
-        # Eko V1 quirk: response always has top-level "status: 0" even on validation failures.
-        # The REAL success indicators are:
-        #   - response_status_id == 0 (or response_type_id == 1607 per Eko V1 spec)
-        #   - data.tid is populated (non-empty)
-        # Validation failures show: response_status_id == -1, invalid_params present, data empty.
-        eko_data = otp_result.get("data") or {}
+        # Eko OTP-send quirk (verified in production):
+        # When OTP is successfully sent, Eko returns:
+        #   status: 0, response_status_id: -1, invalid_params: null,
+        #   message: "OTP for failed transaction has been sent to customers mobile..."
+        #   data: {tid: "", otp_ref_id: ""}  (empty — refund_tid is generated only on verify)
+        #
+        # When OTP rejected (e.g. invalid TID), Eko returns:
+        #   status: 0, response_status_id: -1, invalid_params: {"tid": "invalid tid"},
+        #   data: {tid: "", otp_ref_id: ""}
+        #
+        # So real success = status:0 AND invalid_params is null/empty.
+        # Don't rely on response_status_id (always -1 for OTP send) or data.tid (always empty).
+        invalid = otp_result.get("invalid_params")
         is_eko_success = (
-            otp_result.get("response_status_id") == 0
-            and (eko_data.get("tid") or eko_data.get("otp_ref_id"))
-            and not otp_result.get("invalid_params")
+            otp_result.get("status") == 0
+            and not invalid  # null, {}, or [] — all falsy
         )
 
         if not is_eko_success:
             err_msg = (
                 otp_result.get("message")
-                or (f"Invalid TID — Eko rejected the request. {otp_result.get('invalid_params')}" if otp_result.get("invalid_params") else None)
+                or (f"Invalid TID — Eko rejected the request. {invalid}" if invalid else None)
                 or "Failed to send refund OTP"
             )
             # Strip unfilled template tokens like {2} {3} that Eko sometimes returns
@@ -1924,10 +1930,10 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
                 refund_result = refund_response.json()
             except Exception:
                 refund_result = {}
-            # Use same response_status_id-based success check (not misleading top-level status)
+            # Real success requires: status==0, data.refund_tid populated, no invalid_params.
             _rd = refund_result.get("data") or {}
             _is_success = (
-                refund_result.get("response_status_id") == 0
+                refund_result.get("status") == 0
                 and (_rd.get("refund_tid") or _rd.get("tid"))
                 and not refund_result.get("invalid_params")
             )
@@ -2031,11 +2037,13 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
         except Exception:
             return {"success": False, "error": f"Eko returned invalid response (HTTP {response.status_code})"}
 
-        # Eko V1 quirk (same as OTP send): top-level `status: 0` is misleading.
-        # Real success: response_status_id == 0 AND data.refund_tid present AND no invalid_params.
+        # Eko refund-verify success criteria:
+        # On successful refund Eko returns: status=0, data.refund_tid populated, no invalid_params.
+        # On wrong OTP / failure: invalid_params set OR data.refund_tid empty.
+        # Don't rely on response_status_id (Eko sometimes returns -1 even on success here too).
         refund_data = result.get("data") or {}
         success = (
-            result.get("response_status_id") == 0
+            result.get("status") == 0
             and (refund_data.get("refund_tid") or refund_data.get("tid"))
             and not result.get("invalid_params")
         )
