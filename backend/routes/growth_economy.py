@@ -32,6 +32,19 @@ router = APIRouter(prefix="/growth", tags=["Growth Economy"])
 # Database reference (set from main server)
 db = None
 
+# 60-second TTL cache for active network size — called on every redeem-limit
+# check, every admin page row, every dashboard load.
+_ACTIVE_NETWORK_CACHE: dict = {}  # uid -> (ts_sec, int_count)
+_ACTIVE_NETWORK_CACHE_TTL: float = 60.0
+
+
+def invalidate_active_network_cache(user_id=None):
+    if user_id:
+        _ACTIVE_NETWORK_CACHE.pop(user_id, None)
+    else:
+        _ACTIVE_NETWORK_CACHE.clear()
+
+
 def set_db(database):
     global db
     db = database
@@ -428,16 +441,25 @@ async def get_active_network_size(user_id: str) -> int:
     Get ACTIVE network size for mining reward calculation.
     Active = paid subscription + active mining session.
     Uses tree_position for single leg tree lookup.
+
+    60-second in-memory cache — called from redeem-limit + dashboard + admin
+    pages on every request, don't need minute-level freshness.
     """
+    import time as _t
+    now_sec = _t.time()
+    cached = _ACTIVE_NETWORK_CACHE.get(user_id)
+    if cached and (now_sec - cached[0] < _ACTIVE_NETWORK_CACHE_TTL):
+        return cached[1]
     try:
         now = datetime.now(timezone.utc)
         now_str = now.isoformat()
-        
+
         user = await db.users.find_one(
             {"uid": user_id},
             {"_id": 0, "tree_position": 1}
         )
         if not user or not user.get("tree_position"):
+            _ACTIVE_NETWORK_CACHE[user_id] = (now_sec, 0)
             return 0
         
         my_position = user["tree_position"]
@@ -455,6 +477,13 @@ async def get_active_network_size(user_id: str) -> int:
         }
         
         total_count = await db.users.count_documents(active_filter)
+        _ACTIVE_NETWORK_CACHE[user_id] = (now_sec, total_count)
+        # Cheap cleanup
+        if len(_ACTIVE_NETWORK_CACHE) > 5000:
+            stale = [k for k, (ts, _) in _ACTIVE_NETWORK_CACHE.items()
+                     if now_sec - ts >= _ACTIVE_NETWORK_CACHE_TTL]
+            for k in stale:
+                _ACTIVE_NETWORK_CACHE.pop(k, None)
         return total_count
     except Exception as e:
         logging.error(f"Error getting active network size: {e}")

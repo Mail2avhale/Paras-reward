@@ -93,6 +93,9 @@ async def create_performance_indexes(db):
     await ix(db.users, "pan_number", sparse=True, background=True)
     await ix(db.users, "device_fingerprint", sparse=True, background=True)
     await ix(db.users, "registration_ip", background=True)
+    # Active-network-size query (hot path: calculate_user_redeem_limit → get_active_network_size)
+    await ix(db.users, [("tree_position", 1), ("subscription_plan", 1), ("mining_active", 1)], background=True)
+    await ix(db.users, [("subscription_plan", 1), ("mining_active", 1)], background=True)
     print("  ✅ Users indexes attempted")
 
     # ============ TRANSACTIONS COLLECTION ============
