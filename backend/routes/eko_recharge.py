@@ -2447,7 +2447,7 @@ async def admin_sync_eko_refund_pending(
         user = user_by_mobile.get(mobile)
         if not user:
             summary["skipped_no_user"] += 1
-            preview.append({"action": "skip_no_user", "tid": eko_tid, "mobile": mobile, "reason": "No DB row + no user matched by mobile"})
+            preview.append({"action": "skip_no_user", "tid": eko_tid, "client_ref_id": client_ref_id, "mobile": mobile, "reason": "No DB row + no user matched by mobile"})
             continue
 
         uid = user["uid"]
@@ -2484,6 +2484,7 @@ async def admin_sync_eko_refund_pending(
         "total_excel_rows": len(entries),
         "refund_pending_in_excel": len(refund_pending_entries),
         "filtered_by_mobiles": list(mobile_filter) if mobile_filter else None,
+        "total_amount_inr": sum(e.get("amount", 0) for e in refund_pending_entries),
         "summary": summary,
         "preview": preview,  # full list — admin can see every action
     }
