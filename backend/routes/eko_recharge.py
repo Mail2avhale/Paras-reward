@@ -2502,6 +2502,135 @@ async def admin_sync_eko_refund_pending(
     }
 
 
+@router.post("/admin/reconcile-eko-refund-pending")
+async def admin_reconcile_eko_refund_pending(
+    admin_id: str = Form(...),
+    dry_run: bool = Form(True),
+    file: UploadFile = File(...),
+):
+    """
+    Admin: Upload the **latest** Eko Excel → reconcile DB so that
+    self-service refund modal stays open ONLY for transactions that are
+    STILL "Refund pending" in Eko.
+
+    Logic:
+      • Parse the Excel and collect the set of eko_tid + client_ref_id whose
+        Status is "Refund pending" right now.
+      • Walk every DB row currently in `status: "refund_pending"` across
+        all 4 refund-eligible collections.
+      • If that row's eko_tid OR client_ref_id is in the Excel's pending
+        set → keep it as `refund_pending` (modal stays).
+      • If NOT → mark it `refund_completed` with `reconcile_note` so the
+        self-service modal stops showing for that user.
+
+    By default `dry_run=True` — preview only. Pass `dry_run=False` to apply.
+    """
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+    admin = await db.users.find_one({"uid": admin_id}, {"_id": 0, "role": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        return {"success": False, "error": "Admin only"}
+
+    try:
+        file_bytes = await file.read()
+        entries = _parse_eko_excel(file_bytes)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logging.error(f"[ADMIN RECONCILE] Excel parse error: {e}")
+        return {"success": False, "error": f"Excel parse error: {e}"}
+
+    # Build the "still pending" set from Excel
+    still_pending_tids = set()
+    still_pending_crefs = set()
+    for e in entries:
+        if _normalize_status(e["status"]) in REFUND_PENDING_STATUSES_UI:
+            if e["eko_tid"]:
+                still_pending_tids.add(str(e["eko_tid"]))
+            if e["client_ref_id"]:
+                still_pending_crefs.add(str(e["client_ref_id"]))
+
+    REFUND_COLLECTIONS = ["recharge_transactions", "bill_payment_requests", "dmt_transactions", "bank_transfer_requests"]
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    summary = {
+        "kept_pending": 0,
+        "marked_completed": 0,
+        "skipped_no_eko_tid": 0,
+        "by_collection": {},
+    }
+    preview = []
+
+    for coll_name in REFUND_COLLECTIONS:
+        async for doc in db[coll_name].find(
+            {"status": "refund_pending"},
+            {"_id": 0, "request_id": 1, "user_id": 1, "eko_tid": 1,
+             "client_ref_id": 1, "eko_client_ref_id": 1, "phone": 1,
+             "customer_mobile": 1, "amount": 1, "amount_inr": 1, "service_type": 1}
+        ):
+            tid = str(doc.get("eko_tid") or "")
+            cref = str(doc.get("client_ref_id") or doc.get("eko_client_ref_id") or "")
+
+            if not tid and not cref:
+                summary["skipped_no_eko_tid"] += 1
+                preview.append({
+                    "action": "skip_no_identifier",
+                    "collection": coll_name,
+                    "request_id": doc.get("request_id"),
+                    "reason": "No eko_tid or client_ref_id to match against Excel",
+                })
+                continue
+
+            is_still_pending = (tid and tid in still_pending_tids) or (cref and cref in still_pending_crefs)
+
+            summary["by_collection"].setdefault(coll_name, {"kept": 0, "completed": 0})
+
+            if is_still_pending:
+                summary["kept_pending"] += 1
+                summary["by_collection"][coll_name]["kept"] += 1
+                preview.append({
+                    "action": "keep_pending",
+                    "collection": coll_name,
+                    "request_id": doc.get("request_id"),
+                    "user_id": doc.get("user_id"),
+                    "eko_tid": tid,
+                    "amount": doc.get("amount") or doc.get("amount_inr"),
+                })
+            else:
+                summary["marked_completed"] += 1
+                summary["by_collection"][coll_name]["completed"] += 1
+                preview.append({
+                    "action": "mark_completed",
+                    "collection": coll_name,
+                    "request_id": doc.get("request_id"),
+                    "user_id": doc.get("user_id"),
+                    "eko_tid": tid,
+                    "amount": doc.get("amount") or doc.get("amount_inr"),
+                })
+                if not dry_run:
+                    await db[coll_name].update_one(
+                        {"request_id": doc.get("request_id")},
+                        {"$set": {
+                            "status": "refund_completed",
+                            "refund_completed_at": now_iso,
+                            "updated_at": now_iso,
+                            "reconcile_note": "Eko Excel reconcile: this TID is no longer in 'Refund pending' state on Eko side — refund completed externally",
+                            "reconcile_source": "admin_excel_reconcile",
+                        }}
+                    )
+
+    return {
+        "success": True,
+        "dry_run": dry_run,
+        "total_excel_rows": len(entries),
+        "still_pending_in_excel": len({*still_pending_tids, *still_pending_crefs}),  # unique identifiers
+        "still_pending_tids": len(still_pending_tids),
+        "summary": summary,
+        "preview": preview[:500],  # cap preview to avoid huge payload
+        "preview_truncated": len(preview) > 500,
+    }
+
+
 
 # ========================================================================
 # Admin diagnostic: list pending BBPS refunds + trigger OTP on user's behalf

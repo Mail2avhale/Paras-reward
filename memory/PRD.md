@@ -651,6 +651,22 @@ Examined all 5 matched DMT transactions in production:
 - **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
 - **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
 
+### Eko Refund Excel Reconcile Endpoint (DONE - Feb 28, 2026)
+- **User context**: Periodically the Eko portal updates: many transactions that were "Refund pending" earlier are now actually "Refunded" (Eko has sent the money back to customer's bank). The DB still says `refund_pending` for those, so the self-service refund modal keeps showing for users who already got their money — wrong UX.
+- **Goal**: Upload the latest Eko Excel → DB auto-marks rows that are no longer "Refund pending" in Eko as `refund_completed`. Self-service modal stops showing for those users. Modal stays only for users whose TIDs are still in Excel's "Refund pending" state.
+- **Backend** (`routes/eko_recharge.py`):
+  - New endpoint: `POST /api/recharge/admin/reconcile-eko-refund-pending` (multipart form: `admin_id`, `dry_run`, `file`).
+  - Parses the Excel, extracts the set of currently-pending eko_tids + client_ref_ids.
+  - Walks every DB row in `status: "refund_pending"` across `recharge_transactions`, `bill_payment_requests`, `dmt_transactions`, `bank_transfer_requests`.
+  - If row's eko_tid OR client_ref_id matches Excel's pending set → keep `refund_pending`.
+  - If NOT → mark `refund_completed` with `reconcile_note` and `refund_completed_at` timestamp.
+  - Returns summary `{kept_pending, marked_completed, skipped_no_eko_tid, by_collection}` + per-row preview (cap 500).
+- **Frontend** (`AdminFailedTransactions.js`):
+  - New green "Upload Eko Excel → Reconcile" button next to existing "Reconcile Eko Pending Refunds".
+  - Two-step UX: dry-run preview first → confirm dialog showing kept/completed counts → actual write.
+  - Results panel shows per-collection breakdown + first 50 actions in a collapsible details list.
+- **E2E verified**: Uploaded the user-supplied Excel (647 rows, 43 still-pending). Seeded 2 test rows (one with TID matching Excel's pending list, one matching Excel's "Refunded"). Reconcile correctly kept the first as `refund_pending` and marked the second as `refund_completed` with proper reconcile_note. DB state verified post-write.
+
 ### Production Bug — `subscription-stats` 404 → "Server is busy" toast (DONE - Feb 28, 2026)
 - **User report (production screenshots)**: On `parasreward.com/admin/subscriptions`, all stat cards showed `0` (Explorer/Startup/Growth/Elite) and a "Server is busy. Please try again in a few seconds." red banner appeared at the top of the page AND inside the Reject modal.
 - **Root cause**: `get_subscription_stats()` in `server.py:11051` was an **orphaned async function** with NO `@api_router` decorator (third occurrence of this exact bug class — same as `approve_vip_payment`, `reject_vip_payment` earlier today). Frontend called `/api/admin/subscription-stats` → received 404 → axios interceptor converted to "Server is busy" toast.

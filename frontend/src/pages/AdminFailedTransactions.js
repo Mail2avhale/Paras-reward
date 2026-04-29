@@ -9,7 +9,7 @@ import {
   AlertTriangle, RefreshCw, Search, Filter, Loader2, ArrowLeft,
   CheckCircle, CheckCircle2, XCircle, Clock, RotateCcw, Wallet, User, Phone,
   Mail, Calendar, CreditCard, Zap, Download, ChevronLeft, ChevronRight,
-  Eye, Ban, Check, X, FileText, IndianRupee
+  Eye, Ban, Check, X, FileText, IndianRupee, FileSpreadsheet
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -193,6 +193,88 @@ const AdminFailedTransactions = ({ user }) => {
       toast.error(err?.response?.data?.detail || err?.response?.data?.error || 'Reconciliation failed');
     } finally {
       setReconciling(false);
+    }
+  };
+
+  // ────────────────────────────────────────────────────────────
+  // Upload latest Eko Excel → reconcile refund_pending state
+  // (Eko refunded externally → mark our DB rows refund_completed
+  //  so the user's self-service modal stops showing)
+  // ────────────────────────────────────────────────────────────
+  const [excelReconciling, setExcelReconciling] = useState(false);
+  const [excelReconcileReport, setExcelReconcileReport] = useState(null);
+
+  const handleExcelReconcileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // allow re-upload of same file
+    if (!file) return;
+    if (!user?.uid || !user?.token) {
+      toast.error('Admin authentication missing');
+      return;
+    }
+
+    setExcelReconciling(true);
+    setExcelReconcileReport(null);
+    try {
+      // Step 1: DRY RUN
+      const buildForm = (dryRun) => {
+        const fd = new FormData();
+        fd.append('admin_id', user.uid);
+        fd.append('dry_run', dryRun ? 'true' : 'false');
+        fd.append('file', file);
+        return fd;
+      };
+
+      const dryRes = await axios.post(
+        `${API}/recharge/admin/reconcile-eko-refund-pending`,
+        buildForm(true),
+        { headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'multipart/form-data' } }
+      );
+
+      if (!dryRes.data?.success) {
+        toast.error(dryRes.data?.error || 'Excel parse failed');
+        setExcelReconciling(false);
+        return;
+      }
+
+      const { still_pending_in_excel, summary } = dryRes.data;
+      const kept = summary?.kept_pending || 0;
+      const completed = summary?.marked_completed || 0;
+
+      const finalConfirm = window.confirm(
+        `Excel reconcile DRY RUN:\n\n` +
+        `  • Still "Refund pending" in Excel: ${still_pending_in_excel}\n` +
+        `  • DB rows that will REMAIN pending: ${kept}\n` +
+        `  • DB rows that will be marked COMPLETED: ${completed}\n\n` +
+        `Proceed with ACTUAL reconciliation?\n` +
+        `(${completed} users will lose the self-service refund modal — use only if Eko has actually refunded them.)`
+      );
+      if (!finalConfirm) {
+        setExcelReconcileReport(dryRes.data);
+        toast.info('Dry-run complete. Review the report below.');
+        return;
+      }
+
+      // Step 2: WRITE
+      const wetRes = await axios.post(
+        `${API}/recharge/admin/reconcile-eko-refund-pending`,
+        buildForm(false),
+        { headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'multipart/form-data' } }
+      );
+
+      setExcelReconcileReport(wetRes.data);
+      const w = wetRes.data?.summary || {};
+      toast.success(
+        `Reconcile applied: ${w.marked_completed || 0} marked completed, ${w.kept_pending || 0} still pending`,
+        { duration: 6000 }
+      );
+      // Refresh the failed-tx list
+      fetchTransactions();
+    } catch (err) {
+      const msg = err?.response?.data?.detail || err?.response?.data?.error || err.message;
+      toast.error(`Excel reconcile failed: ${msg}`);
+    } finally {
+      setExcelReconciling(false);
     }
   };
 
@@ -439,6 +521,31 @@ const AdminFailedTransactions = ({ user }) => {
             )}
             Reconcile Eko Pending Refunds
           </Button>
+          <label className="inline-flex">
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleExcelReconcileUpload}
+              className="hidden"
+              disabled={excelReconciling}
+              data-testid="upload-excel-reconcile-input"
+            />
+            <span
+              className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-colors ${
+                excelReconciling
+                  ? 'bg-emerald-300 text-white cursor-not-allowed'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
+              data-testid="upload-excel-reconcile-btn"
+            >
+              {excelReconciling ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+              )}
+              Upload Eko Excel → Reconcile
+            </span>
+          </label>
           <Button onClick={fetchTransactions} disabled={loading} variant="outline" className="border-slate-200">
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </Button>
@@ -498,6 +605,56 @@ const AdminFailedTransactions = ({ user }) => {
                     [{u.type}] {u.eko_tid || u.client_ref_id} — ₹{u.amount}
                     {u.beneficiary_name ? ` · ${u.beneficiary_name}` : ''}
                     {u.cell_number ? ` · ${u.cell_number}` : ''}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </Card>
+      )}
+
+      {/* Excel Reconcile Report */}
+      {excelReconcileReport && (
+        <Card className="bg-emerald-50 border-emerald-300 p-4 mb-6" data-testid="excel-reconcile-report">
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div>
+              <h3 className="text-lg font-bold text-emerald-800 flex items-center gap-2">
+                <FileSpreadsheet className="h-5 w-5" />
+                Excel Reconcile Report
+                {excelReconcileReport.dry_run && (
+                  <span className="text-xs font-normal bg-emerald-200 px-2 py-0.5 rounded">DRY RUN</span>
+                )}
+              </h3>
+              <p className="text-xs text-emerald-700 mt-1">
+                Excel rows: <b>{excelReconcileReport.total_excel_rows}</b> ·
+                Still pending in Excel: <b>{excelReconcileReport.still_pending_in_excel}</b> ·
+                Kept pending: <b>{excelReconcileReport.summary?.kept_pending || 0}</b> ·
+                Marked completed: <b>{excelReconcileReport.summary?.marked_completed || 0}</b>
+              </p>
+            </div>
+            <button onClick={() => setExcelReconcileReport(null)} className="text-emerald-700 hover:text-emerald-900">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          {excelReconcileReport.summary?.by_collection && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              {Object.entries(excelReconcileReport.summary.by_collection).map(([coll, c]) => (
+                <div key={coll} className="bg-white rounded p-2 border border-emerald-200">
+                  <p className="font-mono text-emerald-700 truncate">{coll}</p>
+                  <p className="text-slate-700">kept: <b>{c.kept}</b> · completed: <b>{c.completed}</b></p>
+                </div>
+              ))}
+            </div>
+          )}
+          {excelReconcileReport.preview?.length > 0 && (
+            <details className="mt-3">
+              <summary className="text-xs text-emerald-700 font-semibold cursor-pointer">
+                Show first 50 actions ({excelReconcileReport.preview.length} total{excelReconcileReport.preview_truncated ? ' — truncated to 500' : ''})
+              </summary>
+              <div className="mt-2 max-h-60 overflow-auto text-[11px] font-mono bg-white rounded p-2 border border-emerald-200">
+                {excelReconcileReport.preview.slice(0, 50).map((p, i) => (
+                  <div key={i} className={p.action === 'mark_completed' ? 'text-emerald-700' : 'text-slate-600'}>
+                    [{p.action}] {p.collection?.replace('_', ' ')} · TID={p.eko_tid || p.client_ref_id || '-'} · ₹{p.amount || 0} · user={p.user_id?.slice(0, 8) || '-'}
                   </div>
                 ))}
               </div>
