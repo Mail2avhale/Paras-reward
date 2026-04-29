@@ -2564,7 +2564,7 @@ async def admin_reconcile_eko_refund_pending(
     for coll_name in REFUND_COLLECTIONS:
         async for doc in db[coll_name].find(
             {"status": "refund_pending"},
-            {"_id": 0, "request_id": 1, "user_id": 1, "eko_tid": 1,
+            {"_id": 1, "request_id": 1, "user_id": 1, "eko_tid": 1,
              "client_ref_id": 1, "eko_client_ref_id": 1, "phone": 1,
              "customer_mobile": 1, "amount": 1, "amount_inr": 1, "service_type": 1}
         ):
@@ -2608,8 +2608,28 @@ async def admin_reconcile_eko_refund_pending(
                     "amount": doc.get("amount") or doc.get("amount_inr"),
                 })
                 if not dry_run:
+                    # Use _id when available (most precise), else fall back to a
+                    # composite eko_tid + user_id match. NEVER match on
+                    # request_id alone — many old prod rows have request_id=None
+                    # which would lead to mass-updating the wrong documents.
+                    doc_id = doc.get("_id")
+                    if doc_id:
+                        match_q = {"_id": doc_id}
+                    elif tid and doc.get("user_id"):
+                        match_q = {"eko_tid": tid, "user_id": doc.get("user_id"), "status": "refund_pending"}
+                    elif cref and doc.get("user_id"):
+                        match_q = {"$or": [{"client_ref_id": cref}, {"eko_client_ref_id": cref}], "user_id": doc.get("user_id"), "status": "refund_pending"}
+                    elif doc.get("request_id"):
+                        match_q = {"request_id": doc.get("request_id")}
+                    else:
+                        # No safe unique identifier — skip rather than risk wrong update
+                        preview[-1]["action"] = "skip_no_safe_match"
+                        summary["skipped_no_eko_tid"] += 1
+                        summary["marked_completed"] -= 1
+                        summary["by_collection"][coll_name]["completed"] -= 1
+                        continue
                     await db[coll_name].update_one(
-                        {"request_id": doc.get("request_id")},
+                        match_q,
                         {"$set": {
                             "status": "refund_completed",
                             "refund_completed_at": now_iso,
@@ -2628,6 +2648,73 @@ async def admin_reconcile_eko_refund_pending(
         "summary": summary,
         "preview": preview[:500],  # cap preview to avoid huge payload
         "preview_truncated": len(preview) > 500,
+    }
+
+
+@router.post("/admin/revert-eko-reconcile")
+async def admin_revert_eko_reconcile(
+    admin_id: str = Form(...),
+    dry_run: bool = Form(True),
+):
+    """
+    EMERGENCY ROLLBACK: Revert ALL rows that were marked `refund_completed` by
+    a previous Excel reconcile run (identified by `reconcile_source:
+    "admin_excel_reconcile"`) back to `refund_pending` status.
+
+    Use this when the previous reconcile incorrectly closed transactions
+    that Eko hasn't actually refunded. After reverting, the admin can
+    re-upload the correct Excel and re-run reconcile.
+    """
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+    admin = await db.users.find_one({"uid": admin_id}, {"_id": 0, "role": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        return {"success": False, "error": "Admin only"}
+
+    REFUND_COLLECTIONS = ["recharge_transactions", "bill_payment_requests", "dmt_transactions", "bank_transfer_requests"]
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    summary = {"reverted_total": 0, "by_collection": {}}
+    preview = []
+
+    for coll_name in REFUND_COLLECTIONS:
+        match = {
+            "reconcile_source": "admin_excel_reconcile",
+            "status": "refund_completed",
+        }
+        cnt = await db[coll_name].count_documents(match)
+        summary["by_collection"][coll_name] = cnt
+        summary["reverted_total"] += cnt
+
+        async for doc in db[coll_name].find(match, {"_id": 1, "user_id": 1, "eko_tid": 1, "amount": 1, "amount_inr": 1, "request_id": 1}).limit(50):
+            preview.append({
+                "collection": coll_name,
+                "request_id": doc.get("request_id"),
+                "user_id": doc.get("user_id"),
+                "eko_tid": doc.get("eko_tid"),
+                "amount": doc.get("amount") or doc.get("amount_inr"),
+            })
+
+        if not dry_run and cnt > 0:
+            await db[coll_name].update_many(
+                match,
+                {"$set": {
+                    "status": "refund_pending",
+                    "updated_at": now_iso,
+                    "revert_note": "Reverted from buggy admin_excel_reconcile run — re-reconcile required",
+                },
+                "$unset": {
+                    "refund_completed_at": "",
+                    "reconcile_note": "",
+                    "reconcile_source": "",
+                }}
+            )
+
+    return {
+        "success": True,
+        "dry_run": dry_run,
+        "summary": summary,
+        "preview": preview,
     }
 
 
