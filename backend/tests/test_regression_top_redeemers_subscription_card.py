@@ -147,3 +147,60 @@ async def test_top_redeemers_endpoint_returns_data_when_data_exists():
         "REGRESSION: Top Redeemers endpoint returned empty list while "
         "underlying data exists. Check pass-1 source list and pass-2 fallback."
     )
+
+
+# -----------------------------------------------------------------------------
+# REGRESSION 3: Pre-deploy health-check endpoint must report ok_to_deploy=True
+# -----------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_admin_health_regression_endpoint_overall_pass():
+    """Hit the LIVE preview /api/admin/health/regression endpoint and assert
+    overall_status == 'pass'. Uses a fresh client per test loop so it works
+    regardless of pytest-asyncio loop isolation. If this fails, do NOT deploy.
+    """
+    import os
+    import httpx
+    from dotenv import load_dotenv
+    load_dotenv("/app/backend/.env")
+    load_dotenv("/app/frontend/.env")
+    base = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
+    if not base:
+        pytest.skip("REACT_APP_BACKEND_URL unavailable")
+
+    # Login as test admin to get a token
+    async with httpx.AsyncClient(timeout=30) as client:
+        login = await client.post(
+            f"{base}/api/auth/login",
+            json={"identifier": "admin@test.com", "password": "153759"},
+        )
+        if login.status_code != 200:
+            pytest.skip(f"admin login unavailable: {login.status_code}")
+        token = login.json().get("token")
+        if not token:
+            pytest.skip("no token returned from admin login")
+        r = await client.get(
+            f"{base}/api/admin/health/regression",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert r.status_code == 200
+    data = r.json()
+    assert "overall_status" in data
+    assert "results" in data
+    assert isinstance(data["results"], list) and len(data["results"]) >= 10
+    failed = [x for x in data["results"] if x["status"] == "fail"]
+    assert not failed, f"REGRESSION: health-check failures: {failed}"
+    assert data["overall_status"] == "pass"
+    assert data["ok_to_deploy"] is True
+
+
+def test_admin_health_check_in_permission_list():
+    """Permission `health-check` MUST be in the master ALL_ADMIN_PERMISSIONS list,
+    otherwise managers won't be able to view this critical pre-deploy gate."""
+    src_path = "/app/backend/routes/admin_accounting.py"
+    with open(src_path, "r") as fp:
+        contents = fp.read()
+    assert '"id": "health-check"' in contents, (
+        "REGRESSION: 'health-check' permission removed from ALL_ADMIN_PERMISSIONS. "
+        "Manager admins won't see Pre-Deploy Health Check in sidebar."
+    )

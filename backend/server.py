@@ -13913,6 +13913,173 @@ async def admin_pending_vip_payments_count():
         return {"count": 0}
 
 
+# ============================================================================
+# PRE-DEPLOY REGRESSION SMOKE TEST ENDPOINT
+# ----------------------------------------------------------------------------
+# One-click health check to catch regressions BEFORE deploying to production.
+# Runs ~10 critical endpoint smoke tests in parallel via asyncio.gather.
+# Each check returns: name, status (pass|fail|warn), latency_ms, message
+# ============================================================================
+@api_router.get("/admin/health/regression")
+async def admin_regression_smoke_test(deep: bool = False):
+    """Run a battery of regression smoke tests covering production-critical paths.
+    
+    Catches the kinds of bugs that bit us before:
+    - Top Redeemers leaderboard returning empty (collection name mismatch)
+    - User-360 timing out (sequential queries hitting K8s 60s ingress timeout)
+    - Subscription history endpoint sort crash (datetime/str mix)
+    - Admin VIP payments list returning 404 (missing decorator)
+    - Mongo connection / query latency outlier
+    
+    Each check has its own 8s timeout. Total wall-clock < 10s.
+    `?deep=true` adds heavier checks (e.g. user-360 on a real heavy user).
+    """
+    import time as _time
+
+    overall_start = _time.monotonic()
+    results = []
+
+    async def _check(name: str, fn, *, expect_min_ms: int = 0, max_ms: int = 8000):
+        t0 = _time.monotonic()
+        try:
+            res = await asyncio.wait_for(fn(), timeout=max_ms / 1000.0)
+            dt = int((_time.monotonic() - t0) * 1000)
+            status, message = res if isinstance(res, tuple) else ("pass", str(res or "ok"))
+            return {"name": name, "status": status, "latency_ms": dt, "message": message}
+        except asyncio.TimeoutError:
+            return {"name": name, "status": "fail", "latency_ms": max_ms,
+                    "message": f"timed out after {max_ms}ms"}
+        except Exception as e:
+            dt = int((_time.monotonic() - t0) * 1000)
+            return {"name": name, "status": "fail", "latency_ms": dt,
+                    "message": f"{type(e).__name__}: {str(e)[:200]}"}
+
+    # ---------------- check definitions ----------------
+    async def check_mongo_ping():
+        await db.command("ping")
+        return ("pass", "Mongo ping ok")
+
+    async def check_top_redeemers():
+        # Import locally to avoid circular issues
+        from routes import leaderboard as _lb
+        out = await _lb.get_top_redeemers(limit=10)
+        n = len(out.get("leaderboard") or [])
+        # Determine if we expect data — quick existence probe
+        has_data = await db.redeem_requests.count_documents(
+            {"status": {"$in": ["completed", "success", "approved", "paid"]}}, limit=1
+        )
+        if has_data and n == 0:
+            return ("fail", "leaderboard empty but data exists in redeem_requests")
+        return ("pass", f"{n} ranked entries returned (cached={out.get('cached')})")
+
+    async def check_subscription_history_endpoint():
+        # Pick the first user that has a vip_payment record so we test a real path
+        sample = await db.vip_payments.find_one({}, {"_id": 0, "user_id": 1})
+        if not sample:
+            return ("warn", "no vip_payments rows yet — skipped")
+        uid = sample["user_id"]
+        # Call the second-defined impl (Python keeps the last def). Signature: (uid, page=1, limit=20)
+        out = await get_user_subscription_history(uid=uid, page=1, limit=20)
+        return ("pass", f"plan_periods={len(out.get('plan_periods', []))} for user {uid[:8]}")
+
+    async def check_vip_payments_list_pending():
+        out = await admin_list_vip_payments(status="pending", page=1, limit=10)
+        return ("pass", f"{out.get('total', 0)} pending payments")
+
+    async def check_vip_payments_list_approved():
+        out = await admin_list_vip_payments(status="approved", page=1, limit=10)
+        return ("pass", f"{out.get('total', 0)} approved payments")
+
+    async def check_vip_payments_list_rejected():
+        out = await admin_list_vip_payments(status="rejected", page=1, limit=10)
+        return ("pass", f"{out.get('total', 0)} rejected payments")
+
+    async def check_pending_count_badge():
+        out = await admin_pending_vip_payments_count()
+        return ("pass", f"pending count badge = {out.get('count')}")
+
+    async def check_redeem_limits_overview_quick():
+        # Just ensure indexes work — count active users
+        n = await db.users.count_documents({"role": {"$ne": "admin"}})
+        return ("pass", f"{n} non-admin users in DB")
+
+    async def check_recharge_transactions_collection_exists():
+        # The exact regression we hit yesterday: collection name mismatch
+        n = await db.recharge_transactions.count_documents({}, limit=1)
+        if n == 0:
+            return ("warn", "recharge_transactions exists but is empty")
+        return ("pass", "recharge_transactions reachable")
+
+    async def check_community_feed():
+        # Simple count to ensure the collection isn't broken
+        n = await db.community_posts.count_documents({}, limit=1)
+        return ("pass", f"community_posts reachable (≥{n} doc)")
+
+    async def check_user_360_heavy():
+        # Find heaviest referrer — the user that previously caused 503
+        heavy = await db.users.aggregate([
+            {"$match": {"role": {"$ne": "admin"}}},
+            {"$lookup": {
+                "from": "users", "localField": "uid",
+                "foreignField": "referred_by", "as": "refs",
+            }},
+            {"$project": {"_id": 0, "uid": 1, "n": {"$size": "$refs"}}},
+            {"$sort": {"n": -1}},
+            {"$limit": 1},
+        ]).to_list(1)
+        if not heavy:
+            return ("warn", "no users to test")
+        target_uid = heavy[0]["uid"]
+        # Fabricate a minimal Request (the real handler only reads .headers for auth bypass token)
+        from fastapi import Request as _R
+        async def _empty_recv():
+            return {"type": "http.request"}
+        scope = {"type": "http", "method": "GET", "headers": [],
+                 "query_string": f"query={target_uid}".encode(), "path": "/api/admin/user-360"}
+        fake_req = _R(scope, _empty_recv)
+        out = await get_user_360_view(query=target_uid, request=fake_req)
+        if not out or not out.get("user"):
+            return ("fail", f"user-360 returned no user for heavy uid {target_uid[:8]}")
+        return ("pass", f"user-360 heavy uid {target_uid[:8]} loaded ok")
+
+    # ---------------- run all checks in parallel ----------------
+    tasks = [
+        _check("mongo_ping", check_mongo_ping, max_ms=4000),
+        _check("top_redeemers_leaderboard", check_top_redeemers, max_ms=8000),
+        _check("subscription_history_endpoint", check_subscription_history_endpoint, max_ms=8000),
+        _check("vip_payments_list_pending", check_vip_payments_list_pending, max_ms=6000),
+        _check("vip_payments_list_approved", check_vip_payments_list_approved, max_ms=6000),
+        _check("vip_payments_list_rejected", check_vip_payments_list_rejected, max_ms=6000),
+        _check("vip_payments_pending_count", check_pending_count_badge, max_ms=4000),
+        _check("redeem_limits_quick", check_redeem_limits_overview_quick, max_ms=4000),
+        _check("recharge_transactions_collection", check_recharge_transactions_collection_exists, max_ms=4000),
+        _check("community_feed", check_community_feed, max_ms=4000),
+    ]
+    if deep:
+        tasks.append(_check("user_360_heavy_user", check_user_360_heavy, max_ms=10000))
+
+    results = await asyncio.gather(*tasks)
+
+    failed = [r for r in results if r["status"] == "fail"]
+    warned = [r for r in results if r["status"] == "warn"]
+    passed = [r for r in results if r["status"] == "pass"]
+
+    overall_status = "pass" if not failed else "fail"
+    return {
+        "overall_status": overall_status,
+        "ok_to_deploy": overall_status == "pass",
+        "summary": {
+            "total": len(results),
+            "passed": len(passed),
+            "warned": len(warned),
+            "failed": len(failed),
+        },
+        "total_latency_ms": int((_time.monotonic() - overall_start) * 1000),
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "results": results,
+    }
+
+
 async def delete_vip_payment(payment_id: str, request: Request):
     """Delete VIP payment - DEPRECATED orphan signature; canonical endpoint is admin_delete_vip_payment_endpoint below."""
     try:

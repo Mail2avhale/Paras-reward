@@ -1010,6 +1010,7 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "prc-economy", "label": "PRC Token Economy", "category": "Security & Economy"},
     {"id": "economy-settings", "label": "Economy Settings", "category": "Security & Economy"},
     {"id": "data-backup", "label": "Data Backup & Archive", "category": "Security & Economy"},
+    {"id": "health-check", "label": "Pre-Deploy Health Check", "category": "Security & Economy"},
 ]
 
 @permissions_router.get("/admin/permissions/list")

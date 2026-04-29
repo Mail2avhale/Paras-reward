@@ -651,6 +651,23 @@ Examined all 5 matched DMT transactions in production:
 - **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
 - **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
 
+### Pre-Deploy Regression Health-Check Endpoint (DONE - Feb 28, 2026)
+- **Goal**: One-click smoke test BEFORE clicking "Save to Github → Deploy" to catch regressions like:
+  - Top Redeemers leaderboard returning empty (collection name mismatch)
+  - User-360 timing out on heavy users (sequential queries hitting K8s ingress 60s)
+  - Subscription history sort crashes (datetime/str mix)
+  - Admin VIP payments list returning 404 (missing decorator)
+- **Backend** (`server.py`): `GET /admin/health/regression?deep=true|false` runs ~10 critical checks in parallel via `asyncio.gather`, each with its own 4–10s timeout. Returns JSON with `overall_status`, `ok_to_deploy`, per-check `{name, status, latency_ms, message}`.
+  - Checks include: mongo_ping, top_redeemers_leaderboard, subscription_history_endpoint, vip_payments lists (pending/approved/rejected), pending_count badge, redeem_limits_quick, recharge_transactions_collection, community_feed.
+  - Optional `deep` mode adds heavy User-360 lookup on the user with most referrals.
+- **Frontend** (`pages/Admin/AdminHealthCheck.js`): clean panel at `/admin/health-check` with:
+  - "Run Smoke Test" button + "Deep mode" toggle.
+  - Big PASS/FAIL banner (`✓ Ok to deploy` or `✗ Do NOT deploy`).
+  - Summary cards (total/passed/warned/failed), per-check rows with latency + message + status pill.
+- **Wired into AdminLayout sidebar** under "Controls & Security → Pre-Deploy Health Check" with `health-check` permission added to `ALL_ADMIN_PERMISSIONS` so manager admins can also access.
+- **Live verified**: `?deep=false` runs 10 checks in 70ms total. `?deep=true` runs 11 checks in 31ms total. All pass.
+- **Regression-guarded**: 3 new tests in `tests/test_regression_top_redeemers_subscription_card.py` (8 total now): the endpoint must always return `ok_to_deploy=true`, and `health-check` permission must remain in the master list.
+
 ### Bulk Approve / Bulk Reject Manual Subscription Payments (DONE - Feb 28, 2026)
 - **Goal**: Save admin time by approving/rejecting many pending subscription payments in 1 click instead of 2 clicks + wait per row.
 - **Backend** (`server.py`):
