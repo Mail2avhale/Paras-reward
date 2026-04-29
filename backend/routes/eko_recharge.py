@@ -2684,6 +2684,98 @@ async def admin_reconcile_eko_refund_pending(
     }
 
 
+@router.post("/admin/manual-mark-refund-completed")
+async def admin_manual_mark_refund_completed(
+    admin_id: str = Form(...),
+    user_id: str = Form(...),
+    eko_tids: str = Form(...),
+    note: Optional[str] = Form("Admin manual cleanup — refund settled externally"),
+    dry_run: bool = Form(True),
+):
+    """
+    Manually mark specific (user_id, eko_tid) pairs as `refund_completed`.
+    Use for legacy/ghost DB rows that Eko has settled long ago but our DB
+    still says `refund_pending`. Strictly scoped — only matches rows belonging
+    to the given user_id, never cross-user updates.
+
+    Args (multipart form):
+      admin_id: caller admin uid
+      user_id: target user uid (only this user's rows will be touched)
+      eko_tids: comma-separated TIDs to mark completed
+      note: reason text saved as `reconcile_note`
+      dry_run: True → preview only; False → write
+    """
+    if db is None:
+        return {"success": False, "error": "Service unavailable"}
+    admin = await db.users.find_one({"uid": admin_id}, {"_id": 0, "role": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        return {"success": False, "error": "Admin only"}
+
+    tids = [t.strip() for t in (eko_tids or "").split(",") if t.strip()]
+    if not tids:
+        return {"success": False, "error": "Provide at least one TID via eko_tids"}
+    if len(tids) > 50:
+        return {"success": False, "error": "Cannot mark more than 50 TIDs at once"}
+
+    REFUND_COLLECTIONS = ["recharge_transactions", "bill_payment_requests", "dmt_transactions", "bank_transfer_requests"]
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    summary = {"matched": 0, "marked_completed": 0, "by_collection": {}, "not_found": []}
+    preview = []
+
+    for tid in tids:
+        # Match by (user_id, eko_tid_or_cref, status=refund_pending) across all 4 collections.
+        found_any = False
+        for coll in REFUND_COLLECTIONS:
+            async for doc in db[coll].find(
+                {
+                    "user_id": user_id,
+                    "status": "refund_pending",
+                    "$or": [
+                        {"eko_tid": tid},
+                        {"client_ref_id": tid},
+                        {"eko_client_ref_id": tid},
+                    ],
+                },
+                {"_id": 1, "request_id": 1, "eko_tid": 1, "amount": 1, "amount_inr": 1}
+            ):
+                summary["matched"] += 1
+                found_any = True
+                summary["by_collection"].setdefault(coll, 0)
+                summary["by_collection"][coll] += 1
+                preview.append({
+                    "collection": coll,
+                    "request_id": doc.get("request_id"),
+                    "eko_tid": doc.get("eko_tid"),
+                    "amount": doc.get("amount") or doc.get("amount_inr"),
+                    "user_id": user_id,
+                    "tid_used": tid,
+                })
+                if not dry_run:
+                    await db[coll].update_one(
+                        {"_id": doc["_id"]},
+                        {"$set": {
+                            "status": "refund_completed",
+                            "refund_completed_at": now_iso,
+                            "updated_at": now_iso,
+                            "reconcile_note": note,
+                            "reconcile_source": "admin_manual_mark",
+                        }}
+                    )
+                    summary["marked_completed"] += 1
+        if not found_any:
+            summary["not_found"].append(tid)
+
+    return {
+        "success": True,
+        "dry_run": dry_run,
+        "user_id": user_id,
+        "tids_requested": tids,
+        "summary": summary,
+        "preview": preview,
+    }
+
+
 @router.post("/admin/revert-eko-reconcile")
 async def admin_revert_eko_reconcile(
     admin_id: str = Form(...),
