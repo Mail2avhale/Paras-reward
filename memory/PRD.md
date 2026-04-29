@@ -651,6 +651,26 @@ Examined all 5 matched DMT transactions in production:
 - **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
 - **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
 
+### Bulk Approve / Bulk Reject Manual Subscription Payments (DONE - Feb 28, 2026)
+- **Goal**: Save admin time by approving/rejecting many pending subscription payments in 1 click instead of 2 clicks + wait per row.
+- **Backend** (`server.py`):
+  - `POST /admin/vip-payments/bulk-approve` — body `{"payment_ids":[...], "admin_id":"...", "notes":"..."}`. Internally calls the canonical `approve_vip_payment` per ID **sequentially** (avoids race conditions when the same user has 2 pending payments). Returns `{results, approved, failed, total}`.
+  - `POST /admin/vip-payments/bulk-reject` — body `{"payment_ids":[...], "reason":"...", "admin_id":"..."}`. Calls `reject_vip_payment` per ID **in parallel** via `asyncio.gather` (independent updates). Returns `{results, rejected, failed, total}`.
+  - Hard cap: 50 IDs per request (prevent accidental bulk-approve of 1000s).
+  - All fraud prevention, GST routing, community success-story hooks, notifications fire identically to single-approve since we reuse the canonical functions.
+- **Frontend** (`AdminSubscriptionManagement.js`):
+  - Per-row checkbox (pending tab only) at the start of each `PaymentCard`.
+  - Bulk action bar above the list with "Select all on page" indeterminate checkbox + "Approve Selected (N)" + "Reject Selected (N)" buttons. Auto-clears selection on tab/page/filter change.
+  - Bulk reject opens a modal with a single textarea — same reason applied to all selected.
+  - Confirm dialog before bulk-approve. Optimistic removal of successful rows from list. Mixed success/failure surfaces a warning toast + first-failure detail.
+- **E2E verified**:
+  1. `bulk-approve [P1, P2]` → both approved (2 of 3 in 1.2s), each correctly extends user's expiry by 28 days.
+  2. `bulk-reject [P3]` with reason → rejected, reason persisted.
+  3. Re-approving an already-approved ID → idempotent (success=True, "Payment already approved").
+  4. Empty payment_ids → 400 "payment_ids array is required".
+  5. Bulk-reject without reason → 400 "Reject reason is required".
+  6. 51 payment_ids → 400 "Cannot bulk-approve more than 50 payments at once".
+
 ### Subscription Approve/Reject Stuck-Spinner Fix (DONE - Feb 28, 2026)
 - **User issue (video)**: While activating subscription, admin saw "Server is busy" / "Database timeout" banners; reject preset reason failed; ALL rows in pending tab showed spinning loaders simultaneously.
 - **Root causes**:

@@ -13729,6 +13729,104 @@ async def reject_vip_payment(payment_id: str, request: Request):
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
+@api_router.post("/admin/vip-payments/bulk-approve")
+async def admin_bulk_approve_vip_payments(request: Request):
+    """Bulk-approve multiple pending VIP/manual subscription payments.
+    Internally calls the canonical `approve_vip_payment` per payment_id so
+    every fraud-prevention check, community hook, fund-routing, and
+    notification fires identically to single-approve.
+    Body: {"payment_ids": [...], "admin_id": "...", "notes": "..."}
+    Returns: {"results": [{payment_id, success, message|error}], "approved": N, "failed": M}
+    """
+    try:
+        data = await request.json()
+        payment_ids = data.get("payment_ids") or []
+        admin_id = data.get("admin_id")
+        notes = data.get("notes", "")
+        if not isinstance(payment_ids, list) or not payment_ids:
+            raise HTTPException(status_code=400, detail="payment_ids array is required")
+        # Cap to prevent admin from accidentally bulk-approving 1000s
+        if len(payment_ids) > 50:
+            raise HTTPException(status_code=400, detail="Cannot bulk-approve more than 50 payments at once")
+
+        # Build a synthetic Request per payment so we can reuse the canonical fn.
+        class _SyntheticReq:
+            def __init__(self, body):
+                self._body = body
+            async def json(self):
+                return self._body
+
+        async def _approve_one(pid):
+            try:
+                fake_req = _SyntheticReq({"admin_id": admin_id, "notes": notes})
+                res = await approve_vip_payment(pid, fake_req)  # type: ignore
+                return {"payment_id": pid, "success": True, "message": res.get("message", "Approved")}
+            except HTTPException as he:
+                return {"payment_id": pid, "success": False, "error": str(he.detail), "status_code": he.status_code}
+            except Exception as e:
+                logging.warning(f"[BULK-APPROVE] {pid} failed: {e}")
+                return {"payment_id": pid, "success": False, "error": get_user_friendly_error(e)}
+
+        # Sequential execution — approval mutates user.subscription_expiry and we
+        # don't want race conditions if two payments belong to the same user.
+        results = []
+        for pid in payment_ids:
+            results.append(await _approve_one(pid))
+
+        approved = sum(1 for r in results if r.get("success"))
+        failed = len(results) - approved
+        return {"results": results, "approved": approved, "failed": failed, "total": len(results)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+
+
+@api_router.post("/admin/vip-payments/bulk-reject")
+async def admin_bulk_reject_vip_payments(request: Request):
+    """Bulk-reject multiple pending VIP/manual subscription payments with the
+    same reason. Body: {"payment_ids": [...], "reason": "...", "admin_id": "..."}
+    """
+    try:
+        data = await request.json()
+        payment_ids = data.get("payment_ids") or []
+        reason = (data.get("reason") or "").strip()
+        admin_id = data.get("admin_id")
+        if not isinstance(payment_ids, list) or not payment_ids:
+            raise HTTPException(status_code=400, detail="payment_ids array is required")
+        if not reason:
+            raise HTTPException(status_code=400, detail="Reject reason is required")
+        if len(payment_ids) > 50:
+            raise HTTPException(status_code=400, detail="Cannot bulk-reject more than 50 payments at once")
+
+        class _SyntheticReq:
+            def __init__(self, body):
+                self._body = body
+            async def json(self):
+                return self._body
+
+        async def _reject_one(pid):
+            try:
+                fake_req = _SyntheticReq({"admin_id": admin_id, "reason": reason})
+                res = await reject_vip_payment(pid, fake_req)  # type: ignore
+                return {"payment_id": pid, "success": True, "message": res.get("message", "Rejected")}
+            except HTTPException as he:
+                return {"payment_id": pid, "success": False, "error": str(he.detail), "status_code": he.status_code}
+            except Exception as e:
+                logging.warning(f"[BULK-REJECT] {pid} failed: {e}")
+                return {"payment_id": pid, "success": False, "error": get_user_friendly_error(e)}
+
+        # Reject is independent → run in parallel for speed.
+        results = await asyncio.gather(*[_reject_one(pid) for pid in payment_ids])
+        rejected = sum(1 for r in results if r.get("success"))
+        failed = len(results) - rejected
+        return {"results": list(results), "rejected": rejected, "failed": failed, "total": len(results)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+
+
 @api_router.get("/admin/vip-payments")
 async def admin_list_vip_payments(
     status: Optional[str] = None,

@@ -41,6 +41,12 @@ const AdminSubscriptionManagement = () => {
   const [rejectModal, setRejectModal] = useState({ show: false, payment: null });
   const [imageModal, setImageModal] = useState({ show: false, url: null });
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  // Bulk selection (pending tab only)
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [bulkRejectReason, setBulkRejectReason] = useState('');
+  const [showBulkRejectModal, setShowBulkRejectModal] = useState(false);
 
   const ITEMS_PER_PAGE = 15;
 
@@ -55,6 +61,8 @@ const AdminSubscriptionManagement = () => {
 
   useEffect(() => {
     fetchData();
+    // Clear selection whenever tab/page/filter changes
+    setSelectedIds([]);
   }, [activeTab, page, debouncedSearch, dateFrom, dateTo]);
 
   const fetchData = async () => {
@@ -179,6 +187,96 @@ const AdminSubscriptionManagement = () => {
       toast.error(error.response?.data?.detail || 'Update failed');
     } finally {
       setProcessing(null);
+    }
+  };
+
+  // ============================================================
+  // BULK ACTIONS (pending tab only)
+  // ============================================================
+  const toggleSelect = (paymentId) => {
+    setSelectedIds(prev =>
+      prev.includes(paymentId) ? prev.filter(id => id !== paymentId) : [...prev, paymentId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    const visibleIds = filteredPayments.map(p => p.payment_id);
+    if (selectedIds.length === visibleIds.length && visibleIds.every(id => selectedIds.includes(id))) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(visibleIds);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedIds.length === 0) {
+      toast.error('Please select at least one payment');
+      return;
+    }
+    if (!window.confirm(`Approve ${selectedIds.length} subscription payment(s)? This will activate plans for all selected users.`)) {
+      return;
+    }
+    setBulkProcessing(true);
+    try {
+      const res = await axios.post(`${API}/admin/vip-payments/bulk-approve`, {
+        payment_ids: selectedIds,
+        notes: 'Bulk approve via admin panel',
+      });
+      const { approved, failed, results } = res.data || {};
+      if (failed > 0) {
+        toast.warning(`${approved} approved, ${failed} failed. Check details below.`, { duration: 6000 });
+        const firstFail = (results || []).find(r => !r.success);
+        if (firstFail) toast.error(`First failure: ${firstFail.error}`, { duration: 8000 });
+      } else {
+        toast.success(`✓ ${approved} payment(s) approved successfully!`);
+      }
+      // Optimistic remove successful ones from list
+      const successIds = (results || []).filter(r => r.success).map(r => r.payment_id);
+      if (successIds.length) {
+        setPayments(prev => prev.filter(p => !successIds.includes(p.payment_id)));
+      }
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Bulk approve failed');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    if (selectedIds.length === 0) {
+      toast.error('Please select at least one payment');
+      return;
+    }
+    if (!bulkRejectReason.trim()) {
+      toast.error('Please enter a reject reason');
+      return;
+    }
+    setBulkProcessing(true);
+    try {
+      const res = await axios.post(`${API}/admin/vip-payments/bulk-reject`, {
+        payment_ids: selectedIds,
+        reason: bulkRejectReason.trim(),
+      });
+      const { rejected, failed, results } = res.data || {};
+      if (failed > 0) {
+        toast.warning(`${rejected} rejected, ${failed} failed.`, { duration: 6000 });
+      } else {
+        toast.success(`✓ ${rejected} payment(s) rejected successfully!`);
+      }
+      const successIds = (results || []).filter(r => r.success).map(r => r.payment_id);
+      if (successIds.length) {
+        setPayments(prev => prev.filter(p => !successIds.includes(p.payment_id)));
+      }
+      setSelectedIds([]);
+      setShowBulkRejectModal(false);
+      setBulkRejectReason('');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Bulk reject failed');
+    } finally {
+      setBulkProcessing(false);
     }
   };
 
@@ -546,6 +644,50 @@ const AdminSubscriptionManagement = () => {
         )}
       </div>
 
+      {/* Bulk Action Bar (pending tab only) */}
+      {activeTab === 'pending' && filteredPayments.length > 0 && (
+        <div className="mb-3 bg-slate-900 border border-slate-700 rounded-xl p-3 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300" data-testid="bulk-select-all-label">
+              <input
+                type="checkbox"
+                checked={selectedIds.length > 0 && filteredPayments.every(p => selectedIds.includes(p.payment_id))}
+                ref={el => { if (el) el.indeterminate = selectedIds.length > 0 && !filteredPayments.every(p => selectedIds.includes(p.payment_id)); }}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 cursor-pointer accent-amber-500"
+                data-testid="bulk-select-all"
+              />
+              <span>
+                {selectedIds.length > 0
+                  ? `${selectedIds.length} of ${filteredPayments.length} selected`
+                  : `Select all ${filteredPayments.length} on this page`}
+              </span>
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleBulkApprove}
+              disabled={selectedIds.length === 0 || bulkProcessing}
+              className="bg-green-600 hover:bg-green-700 disabled:opacity-40 h-9"
+              data-testid="bulk-approve-btn"
+            >
+              {bulkProcessing ? <RefreshCw className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+              Approve Selected ({selectedIds.length})
+            </Button>
+            <Button
+              onClick={() => setShowBulkRejectModal(true)}
+              disabled={selectedIds.length === 0 || bulkProcessing}
+              variant="outline"
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10 disabled:opacity-40 h-9"
+              data-testid="bulk-reject-btn"
+            >
+              <XCircle className="w-4 h-4 mr-1" />
+              Reject Selected ({selectedIds.length})
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Payments List */}
       <div className="bg-white rounded-xl border border-slate-200">
         {filteredPayments.length === 0 ? (
@@ -561,6 +703,9 @@ const AdminSubscriptionManagement = () => {
                 payment={payment}
                 tab={activeTab}
                 processing={processing === payment.payment_id}
+                selectable={activeTab === 'pending'}
+                selected={selectedIds.includes(payment.payment_id)}
+                onToggleSelect={() => toggleSelect(payment.payment_id)}
                 onApprove={() => handleApprove(payment.payment_id, payment.user_id || payment.user_uid)}
                 onReject={() => setRejectModal({ show: true, payment })}
                 onEdit={() => setEditModal({ show: true, payment })}
@@ -647,6 +792,49 @@ const AdminSubscriptionManagement = () => {
           />
         </div>
       )}
+
+      {/* Bulk Reject Modal */}
+      {showBulkRejectModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => !bulkProcessing && setShowBulkRejectModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()} data-testid="bulk-reject-modal">
+            <div className="flex items-center gap-2 mb-3">
+              <XCircle className="w-6 h-6 text-red-500" />
+              <h3 className="text-lg font-bold text-slate-900">Reject {selectedIds.length} payment(s)?</h3>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              All selected payments will be rejected with the same reason.
+              The users will be notified.
+            </p>
+            <textarea
+              value={bulkRejectReason}
+              onChange={e => setBulkRejectReason(e.target.value)}
+              placeholder="Reason for rejection (e.g. Invalid UTR, Screenshot not clear, Amount mismatch)…"
+              rows={4}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm text-slate-900 focus:outline-none focus:border-red-500 mb-4"
+              data-testid="bulk-reject-reason-input"
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                onClick={() => { setShowBulkRejectModal(false); setBulkRejectReason(''); }}
+                disabled={bulkProcessing}
+                variant="outline"
+                className="border-slate-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkReject}
+                disabled={bulkProcessing || !bulkRejectReason.trim()}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-40"
+                data-testid="confirm-bulk-reject-btn"
+              >
+                {bulkProcessing ? <RefreshCw className="w-4 h-4 animate-spin mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
+                Reject {selectedIds.length}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -676,7 +864,7 @@ const StatCard = ({ icon, label, value, color }) => {
 };
 
 // Payment Card
-const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, onView, onDelete, onImageClick }) => {
+const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, onView, onDelete, onImageClick, selectable, selected, onToggleSelect }) => {
   const planColors = {
     startup: 'bg-blue-500/20 text-blue-400',
     growth: 'bg-emerald-500/20 text-emerald-400',
@@ -686,8 +874,23 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
   const plan = payment.subscription_plan || payment.plan || '';
 
   return (
-    <div className="p-4 hover:bg-slate-50 transition-colors">
+    <div className={`p-4 hover:bg-slate-50 transition-colors ${selected ? 'bg-amber-50' : ''}`}>
       <div className="flex flex-col md:flex-row gap-4">
+        {/* Bulk-select checkbox (pending tab) */}
+        {selectable && (
+          <div className="flex items-start pt-1">
+            <input
+              type="checkbox"
+              checked={!!selected}
+              onChange={onToggleSelect}
+              onClick={(e) => e.stopPropagation()}
+              className="w-5 h-5 cursor-pointer accent-amber-500"
+              data-testid={`bulk-select-${payment.payment_id}`}
+              aria-label="Select payment for bulk action"
+            />
+          </div>
+        )}
+
         {/* Screenshot */}
         <div className="w-full md:w-32 flex-shrink-0">
           {payment.screenshot_url ? (
