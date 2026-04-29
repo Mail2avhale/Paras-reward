@@ -2540,10 +2540,22 @@ async def admin_reconcile_eko_refund_pending(
         logging.error(f"[ADMIN RECONCILE] Excel parse error: {e}")
         return {"success": False, "error": f"Excel parse error: {e}"}
 
-    # Build the "still pending" set from Excel
+    # Build TWO sets from Excel:
+    # 1. still_pending: TIDs whose status IS "Refund pending" right now in Eko
+    # 2. all_in_excel: ALL TIDs that appear in Excel regardless of status
+    #
+    # This distinction is CRITICAL: if the admin uploads a filtered Excel
+    # (e.g. only Mobile/DTH recharge transactions, no DMT), we must NOT touch
+    # DB rows whose TIDs aren't in the Excel at all — those are out of scope.
     still_pending_tids = set()
     still_pending_crefs = set()
+    all_tids_in_excel = set()
+    all_crefs_in_excel = set()
     for e in entries:
+        if e["eko_tid"]:
+            all_tids_in_excel.add(str(e["eko_tid"]))
+        if e["client_ref_id"]:
+            all_crefs_in_excel.add(str(e["client_ref_id"]))
         if _normalize_status(e["status"]) in REFUND_PENDING_STATUSES_UI:
             if e["eko_tid"]:
                 still_pending_tids.add(str(e["eko_tid"]))
@@ -2556,6 +2568,7 @@ async def admin_reconcile_eko_refund_pending(
     summary = {
         "kept_pending": 0,
         "marked_completed": 0,
+        "skipped_out_of_excel_scope": 0,
         "skipped_no_eko_tid": 0,
         "by_collection": {},
     }
@@ -2581,9 +2594,28 @@ async def admin_reconcile_eko_refund_pending(
                 })
                 continue
 
+            # CRITICAL safety: only act on rows whose TID/cref appears in the
+            # Excel at all. If the row is not in the Excel, it's out of scope
+            # (e.g. admin uploaded filtered Excel that only has Mobile/DTH).
+            in_excel = (tid and tid in all_tids_in_excel) or (cref and cref in all_crefs_in_excel)
             is_still_pending = (tid and tid in still_pending_tids) or (cref and cref in still_pending_crefs)
 
-            summary["by_collection"].setdefault(coll_name, {"kept": 0, "completed": 0})
+            summary["by_collection"].setdefault(coll_name, {"kept": 0, "completed": 0, "out_of_scope": 0})
+
+            if not in_excel:
+                # Out of Excel scope — DO NOT touch this row
+                summary["skipped_out_of_excel_scope"] += 1
+                summary["by_collection"][coll_name]["out_of_scope"] += 1
+                preview.append({
+                    "action": "skip_out_of_excel_scope",
+                    "collection": coll_name,
+                    "request_id": doc.get("request_id"),
+                    "user_id": doc.get("user_id"),
+                    "eko_tid": tid,
+                    "amount": doc.get("amount") or doc.get("amount_inr"),
+                    "reason": "TID not present in uploaded Excel — leaving untouched",
+                })
+                continue
 
             if is_still_pending:
                 summary["kept_pending"] += 1
@@ -2643,6 +2675,7 @@ async def admin_reconcile_eko_refund_pending(
         "success": True,
         "dry_run": dry_run,
         "total_excel_rows": len(entries),
+        "total_unique_tids_in_excel": len(all_tids_in_excel),
         "still_pending_in_excel": len({*still_pending_tids, *still_pending_crefs}),  # unique identifiers
         "still_pending_tids": len(still_pending_tids),
         "summary": summary,

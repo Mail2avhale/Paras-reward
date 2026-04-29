@@ -651,6 +651,28 @@ Examined all 5 matched DMT transactions in production:
 - **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
 - **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
 
+### Eko Refund Excel Reconcile — Bug Fix v2 (DONE - Feb 28, 2026)
+**Two production bugs found AFTER first reconcile run, both fixed and locked:**
+
+#### Bug 1 — `update_one({"request_id": None})` race
+- After production write, only **1 of 4 intended DMT rows** got actually updated. Why? `request_id` was `None` for all 4 rows. `update_one({"request_id": None})` matches the first doc with that match — same query reused for all 4 calls just kept hitting the same doc. The other 3 stayed in `refund_pending`, so the modal kept showing for user 9970100782.
+- **Fix**: Reconcile now uses `_id` (Mongo's truly unique key) for the update match, with fallback chain `(_id → eko_tid+user_id → cref+user_id → request_id)`. Includes `_id` in the find projection.
+- Added emergency rollback endpoint: `POST /api/recharge/admin/revert-eko-reconcile` — finds all rows with `reconcile_source: "admin_excel_reconcile"` and reverts them to `refund_pending`. Safe `dry_run=true` by default.
+
+#### Bug 2 — Reconcile touched out-of-scope rows
+- Admin's Excel was **filtered to only contain Mobile/DTH recharge transactions**. DMT (Money Remittance) rows were NOT in the Excel at all. But reconcile logic naively marked any `refund_pending` DB row as completed if its TID wasn't in Excel's pending list — including DMT rows that Excel never even mentioned. Result: 5 DMT rows would have been wrongly closed.
+- **Fix** (3-way logic):
+  1. TID **in Excel's "Refund pending" list** → keep `refund_pending` (modal stays).
+  2. TID **in Excel but not pending status** → mark `refund_completed` (Eko has refunded externally).
+  3. TID **not in Excel at all** → **skip with `skip_out_of_excel_scope`** (out of scope, do not touch).
+- New summary field: `skipped_out_of_excel_scope` + per-collection `out_of_scope` count.
+- New response field: `total_unique_tids_in_excel` (helps admin verify Excel coverage).
+- **Verified on preview** with seeded test rows: `kept_pending=1`, `marked_completed=1`, `out_of_scope=0` (when TIDs are in Excel scope) — exact behavior expected.
+
+#### Production rollback applied
+- Reverted the 1 wrongly-updated DMT row from morning's run.
+- Awaiting deploy of bug-fix v2 → will re-run reconcile correctly (43 Mobile/DTH kept pending, all DMT rows skipped as out-of-scope).
+
 ### Eko Refund Excel Reconcile Endpoint (DONE - Feb 28, 2026)
 - **User context**: Periodically the Eko portal updates: many transactions that were "Refund pending" earlier are now actually "Refunded" (Eko has sent the money back to customer's bank). The DB still says `refund_pending` for those, so the self-service refund modal keeps showing for users who already got their money — wrong UX.
 - **Goal**: Upload the latest Eko Excel → DB auto-marks rows that are no longer "Refund pending" in Eko as `refund_completed`. Self-service modal stops showing for those users. Modal stays only for users whose TIDs are still in Excel's "Refund pending" state.
