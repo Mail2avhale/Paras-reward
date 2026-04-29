@@ -124,6 +124,8 @@ const AdminSubscriptionManagement = () => {
       }
       
       toast.success(res.data?.message || 'Payment approved!');
+      // Optimistic: remove from current pending list immediately so admin sees instant feedback
+      setPayments(prev => prev.filter(p => p.payment_id !== paymentId));
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Approval failed');
@@ -142,6 +144,8 @@ const AdminSubscriptionManagement = () => {
       await axios.post(`${API}/admin/vip-payment/${paymentId}/reject`, { reason });
       toast.success('Payment rejected');
       setRejectModal({ show: false, payment: null });
+      // Optimistic: remove from pending list immediately so admin doesn't see a stuck row
+      setPayments(prev => prev.filter(p => p.payment_id !== paymentId));
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Rejection failed');
@@ -817,15 +821,15 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
               <>
                 <Button
                   onClick={onApprove}
-                  disabled={processing}
+                  disabled={processing === payment.payment_id}
                   className="bg-green-600 hover:bg-green-700 h-9"
                   data-testid="approve-btn"
                 >
-                  {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-1" /> Approve</>}
+                  {processing === payment.payment_id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-1" /> Approve</>}
                 </Button>
                 <Button
                   onClick={onReject}
-                  disabled={processing}
+                  disabled={processing === payment.payment_id}
                   variant="outline"
                   className="border-red-500/50 text-red-400 hover:bg-red-500/10 h-9"
                   data-testid="reject-btn"
@@ -842,15 +846,15 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
                 <Button onClick={onEdit} size="sm" variant="outline" className="border-blue-500/50 text-blue-400 h-9">
                   <Edit className="w-4 h-4 mr-1" /> Edit
                 </Button>
-                <Button onClick={onDelete} disabled={processing} size="sm" variant="outline" className="border-red-500/50 text-red-400 h-9">
-                  {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1" /> Delete</>}
+                <Button onClick={onDelete} disabled={processing === payment.payment_id} size="sm" variant="outline" className="border-red-500/50 text-red-400 h-9">
+                  {processing === payment.payment_id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1" /> Delete</>}
                 </Button>
               </>
             )}
             {tab === 'rejected' && (
               <>
-                <Button onClick={onApprove} disabled={processing} className="bg-green-600 hover:bg-green-700 h-9">
-                  {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-1" /> Re-approve</>}
+                <Button onClick={onApprove} disabled={processing === payment.payment_id} className="bg-green-600 hover:bg-green-700 h-9">
+                  {processing === payment.payment_id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-1" /> Re-approve</>}
                 </Button>
                 <Button onClick={onView} size="sm" variant="outline" className="border-slate-300 h-9">
                   <Eye className="w-4 h-4 mr-1" /> View

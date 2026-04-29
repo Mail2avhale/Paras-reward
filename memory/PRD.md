@@ -651,6 +651,21 @@ Examined all 5 matched DMT transactions in production:
 - **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
 - **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
 
+### Subscription Approve/Reject Stuck-Spinner Fix (DONE - Feb 28, 2026)
+- **User issue (video)**: While activating subscription, admin saw "Server is busy" / "Database timeout" banners; reject preset reason failed; ALL rows in pending tab showed spinning loaders simultaneously.
+- **Root causes**:
+  1. **Visual bug** — `disabled={processing}` & icon switch was a global truthy check on `processing` (which holds payment_id | null). When admin clicked Approve on row-1, ALL rows in the table showed spinning RefreshCw icon. Looked like the entire page was hung.
+  2. **No optimistic update** — After a successful approve/reject, the row stayed visible until the slow `fetchData()` refetch completed → admin thought the action failed.
+  3. **Tight DB timeouts** — Approve and reject endpoints used 10s `asyncio.wait_for` on Mongo queries. Atlas occasionally slows past 10s during peak load → 504 → "Server is busy" toast even though the real op would have completed at 11–15s.
+  4. **Reject endpoint had no timeout protection at all** — bare `find_one` and `update_one` calls; could hang indefinitely.
+  5. **Activity log insert failure could fail the whole reject** — wrapped in try/except, best-effort.
+- **Fixes**:
+  - Frontend `AdminSubscriptionManagement.js`: changed `disabled={processing}` → `disabled={processing === payment.payment_id}` for ALL approve/reject/delete buttons (approved + rejected + pending tabs).
+  - Frontend: optimistic remove on approve/reject success — `setPayments(prev => prev.filter(p => p.payment_id !== paymentId))` so the row disappears instantly.
+  - Backend `approve_vip_payment`: bumped DB timeouts 10s → 25s on payment fetch, user fetch, user update.
+  - Backend `reject_vip_payment`: added 25s `asyncio.wait_for` on `find_one` and `update_one`. activity_log insert wrapped in try/except.
+- **Verified**: Reject completes in 140ms with HTTP 200, status persisted correctly.
+
 ### Production Regression Fixes — Top Redeemers + Subscription Card (DONE - Feb 28, 2026)
 **Two issues reported on production after deploy + protection put in place:**
 

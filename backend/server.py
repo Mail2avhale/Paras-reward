@@ -13185,11 +13185,11 @@ async def approve_vip_payment(payment_id: str, request: Request):
         correct_plan = data.get("correct_plan")  # NEW: Admin can specify correct plan
         correct_duration = data.get("correct_duration")  # NEW: Admin can specify correct duration
         
-        # Get payment with timeout
+        # Get payment with timeout (25s — Atlas can be slow during peak load)
         try:
             payment = await asyncio.wait_for(
                 db.vip_payments.find_one({"payment_id": payment_id}),
-                timeout=10.0
+                timeout=25.0
             )
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
@@ -13228,11 +13228,11 @@ async def approve_vip_payment(payment_id: str, request: Request):
             "yearly": 336
         }.get(plan_type, 28)
         
-        # Get current user to check existing subscription with timeout
+        # Get current user to check existing subscription with timeout (25s)
         try:
             user = await asyncio.wait_for(
                 db.users.find_one({"uid": user_id}),
-                timeout=10.0
+                timeout=25.0
             )
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
@@ -13346,7 +13346,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
                         }
                     }
                 ),
-                timeout=15.0
+                timeout=25.0
             )
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail="Database timeout while updating user. Please try again.")
@@ -13660,8 +13660,14 @@ async def reject_vip_payment(payment_id: str, request: Request):
         if not reason:
             raise HTTPException(status_code=400, detail="Reject reason is required")
         
-        # Get payment
-        payment = await db.vip_payments.find_one({"payment_id": payment_id})
+        # Get payment (25s timeout — Atlas can be slow during peak load)
+        try:
+            payment = await asyncio.wait_for(
+                db.vip_payments.find_one({"payment_id": payment_id}),
+                timeout=25.0
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
         if not payment:
             raise HTTPException(status_code=404, detail="Payment not found")
         
@@ -13670,19 +13676,25 @@ async def reject_vip_payment(payment_id: str, request: Request):
         
         now = datetime.now(timezone.utc)
         
-        # Update payment status
-        await db.vip_payments.update_one(
-            {"payment_id": payment_id},
-            {
-                "$set": {
-                    "status": "rejected",
-                    "rejected_at": now.isoformat(),
-                    "rejected_by": admin_id,
-                    "rejection_reason": reason,
-                    "reject_reason": reason  # Consistent field name
-                }
-            }
-        )
+        # Update payment status (25s timeout)
+        try:
+            await asyncio.wait_for(
+                db.vip_payments.update_one(
+                    {"payment_id": payment_id},
+                    {
+                        "$set": {
+                            "status": "rejected",
+                            "rejected_at": now.isoformat(),
+                            "rejected_by": admin_id,
+                            "rejection_reason": reason,
+                            "reject_reason": reason  # Consistent field name
+                        }
+                    }
+                ),
+                timeout=25.0
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Database timeout while rejecting. Please try again.")
         
         # Notify user
         try:
@@ -13696,16 +13708,19 @@ async def reject_vip_payment(payment_id: str, request: Request):
         except Exception as _ne:
             logging.warning(f"[REJECT-VIP] notification create failed: {_ne}")
         
-        # Log activity
-        await db.activity_logs.insert_one({
-            "log_id": str(uuid.uuid4()),
-            "action": "vip_payment_rejected",
-            "user_id": payment.get("user_id"),
-            "admin_id": admin_id,
-            "payment_id": payment_id,
-            "reason": reason,
-            "timestamp": now.isoformat()
-        })
+        # Log activity (best-effort, never block reject)
+        try:
+            await db.activity_logs.insert_one({
+                "log_id": str(uuid.uuid4()),
+                "action": "vip_payment_rejected",
+                "user_id": payment.get("user_id"),
+                "admin_id": admin_id,
+                "payment_id": payment_id,
+                "reason": reason,
+                "timestamp": now.isoformat()
+            })
+        except Exception as _le:
+            logging.warning(f"[REJECT-VIP] activity_log insert failed (non-fatal): {_le}")
         
         return {"success": True, "message": "Payment rejected", "reject_reason": reason}
     except HTTPException:
