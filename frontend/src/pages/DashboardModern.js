@@ -1171,44 +1171,9 @@ const DashboardModern = ({ user, onLogout }) => {
 
       {/* Quick Actions removed - rewards integrated into dashboard */}
 
-      {/* Horizontal Scrollable Cards - Stats Card (only for Explorer/Free users) */}
-      {!['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && (
-        <div className="mb-4 overflow-hidden">
-          <div className="px-5 flex gap-3 overflow-x-auto scrollbar-hide pb-2" style={{ scrollSnapType: 'x mandatory' }}>
-            {/* Stats Card */}
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="flex-shrink-0 w-[85%]"
-              style={{ scrollSnapAlign: 'start' }}
-            >
-              <div className="bg-gray-900/80 rounded-xl p-4 border border-gray-800">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-white font-bold text-sm">{t('yourProgress')}</p>
-                      <p className="text-gray-400 text-xs">{t('total')}: {stats.totalMined.toFixed(0)} PRC</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-emerald-400 font-bold text-lg">{stats.referralCount}</p>
-                    <p className="text-gray-500 text-xs">{t('referrals')}</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-          {/* Scroll indicator dots */}
-          <div className="flex justify-center gap-1.5 mt-1">
-            <div className="w-4 h-1 bg-amber-500 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
-          </div>
-        </div>
-      )}
+      {/* "Your Progress" stats card removed per admin request (29 Apr 2026):
+          The data was redundant with the top stats strip. Keeping the file
+          slim — if you want it back, restore from git history. */}
 
       {/* Birthday Greeting */}
       {birthdayGreeting && (
