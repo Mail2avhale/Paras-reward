@@ -3488,11 +3488,23 @@ async def get_elite_pricing():
 
 @api_router.get("/subscription/prc-eligibility/{uid}")
 async def get_prc_subscription_eligibility(uid: str):
-    """Check whether a user is eligible to avail the one-time PRC subscription benefit.
-    Returns: {eligible: bool, last_used_at?: str, last_plan?: str}.
-    Used by frontend to preemptively disable the 'Pay with PRC' option + show banner."""
+    """Check whether a user is eligible to avail PRC subscription.
+    Users get up to 3 PRC subscriptions lifetime (counting only successful prior ones).
+    Returns: {eligible: bool, used_count: int, max_allowed: int, remaining: int, last_used_at?, last_plan?}
+    """
     try:
         COUNTING_STATUSES = ["paid", "upcoming", "active", "completed", "expired"]
+        MAX_PRC_SUBSCRIPTIONS = 3
+
+        used_count = await db.subscription_payments.count_documents({
+            "user_id": uid,
+            "payment_method": "prc",
+            "status": {"$in": COUNTING_STATUSES},
+        })
+        remaining = max(0, MAX_PRC_SUBSCRIPTIONS - used_count)
+        eligible = remaining > 0
+
+        # Fetch latest prior payment for context (if any)
         prior = await db.subscription_payments.find_one(
             {
                 "user_id": uid,
@@ -3502,19 +3514,20 @@ async def get_prc_subscription_eligibility(uid: str):
             sort=[("created_at", -1)],
             projection={"_id": 0, "created_at": 1, "plan_name": 1, "plan_type": 1, "status": 1},
         )
-        if not prior:
-            return {"eligible": True}
         return {
-            "eligible": False,
-            "last_used_at": prior.get("created_at"),
-            "last_plan": prior.get("plan_name") or "elite",
-            "last_plan_type": prior.get("plan_type"),
-            "last_status": prior.get("status"),
+            "eligible": eligible,
+            "used_count": used_count,
+            "max_allowed": MAX_PRC_SUBSCRIPTIONS,
+            "remaining": remaining,
+            "last_used_at": prior.get("created_at") if prior else None,
+            "last_plan": (prior.get("plan_name") if prior else None) or ("elite" if prior else None),
+            "last_plan_type": prior.get("plan_type") if prior else None,
+            "last_status": prior.get("status") if prior else None,
         }
     except Exception as e:
         logging.error(f"prc-eligibility error for {uid}: {e}")
         # Fail open — don't block user if DB hiccup
-        return {"eligible": True, "error": str(e)}
+        return {"eligible": True, "used_count": 0, "max_allowed": 3, "remaining": 3, "error": str(e)}
 
 
 # ==================== NEW ELITE PRICING (Active - 29 March 2026) ====================
@@ -12209,32 +12222,27 @@ async def subscription_pay_with_prc(request: Request):
         
         logging.info(f"[PRC-SUB] Request: User={user_id}, Plan={plan_name}, Amount={prc_amount}, Balance={current_balance}")
 
-        # ==================== ONE-TIME PRC BENEFIT GUARD ====================
-        # PRC-based subscription is a one-time-per-user benefit (any plan/duration).
+        # ==================== 3-TIME PRC BENEFIT GUARD ====================
+        # PRC-based subscription is allowed up to 3 times per user (any plan/duration).
         # Counts only successful prior PRC payments (pending/failed/cancelled do NOT consume the benefit).
         # No admin override — applies uniformly.
         COUNTING_STATUSES = ["paid", "upcoming", "active", "completed", "expired"]
-        prior_prc = await db.subscription_payments.find_one(
-            {
-                "user_id": user_id,
-                "payment_method": "prc",
-                "status": {"$in": COUNTING_STATUSES},
-            },
-            {"_id": 0, "created_at": 1, "plan_name": 1, "plan_type": 1, "status": 1},
-        )
-        if prior_prc:
-            prior_date = (prior_prc.get("created_at") or "")[:10]
-            prior_plan = (prior_prc.get("plan_name") or "elite").title()
+        MAX_PRC_SUBSCRIPTIONS = 3
+        prior_count = await db.subscription_payments.count_documents({
+            "user_id": user_id,
+            "payment_method": "prc",
+            "status": {"$in": COUNTING_STATUSES},
+        })
+        if prior_count >= MAX_PRC_SUBSCRIPTIONS:
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    f"PRC Subscription is a one-time benefit per account. "
-                    f"You already availed it on {prior_date or 'a previous date'} "
-                    f"({prior_plan}). Please use UPI or Manual Payment for renewal."
+                    f"PRC Subscription limit reached ({prior_count}/{MAX_PRC_SUBSCRIPTIONS}). "
+                    f"Please use UPI or Manual Payment for further subscriptions."
                 ),
             )
 
-        # CHECK COOLDOWN: 15 days between subscriptions
+        # CHECK COOLDOWN: 7 days between any subscription (PRC/UPI/Manual)
         try:
             cooldown = await check_service_cooldown(user_id, "subscription")
             if not cooldown["allowed"]:
@@ -12270,13 +12278,39 @@ async def subscription_pay_with_prc(request: Request):
         # Use expected amount for accuracy
         prc_amount = expected_prc
         
-        # SUBSCRIPTION: Skip redeem limit check - only check PRC balance
-        # Subscription is allowed even if redeem balance is insufficient
-        # This will make redeem balance go negative, which recovers naturally via mining/earning
-        # Bank redeem / bill pay still respect redeem limits
-        logging.info(f"[PRC-SUB] Subscription bypasses redeem limit check. PRC Balance: {current_balance}, Required: {prc_amount}")
-        
-        # Check PRC balance
+        # ==================== REDEEM LIMIT ENFORCEMENT (April 2026 update) ====================
+        # PRC subscription must respect the user's redeem limit (effective_available),
+        # same way as Bank Redeem / Bill Pay. This prevents users with locked-PRC from
+        # exceeding their unlocked redeem limit via subscriptions.
+        try:
+            limit_info = await calculate_user_redeem_limit(user_id)
+        except Exception as _le:
+            logging.error(f"[PRC-SUB] Redeem limit calc error for {user_id}: {_le}")
+            raise HTTPException(status_code=500, detail="Could not verify your redeem limit. Please try again.")
+
+        effective_available = float(limit_info.get("effective_available") or 0)
+        unlock_percent = limit_info.get("unlock_percent", 0)
+
+        if prc_amount > effective_available:
+            logging.info(
+                f"[PRC-SUB] Redeem limit blocked: user={user_id}, "
+                f"required={prc_amount:.2f}, available={effective_available:.2f}, unlock={unlock_percent}%"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Insufficient redeem limit. Available: {effective_available:,.0f} PRC "
+                    f"(Unlock: {unlock_percent}%). Required: {prc_amount:,.0f} PRC. "
+                    f"Earn more by mining or growing your network."
+                ),
+            )
+
+        logging.info(
+            f"[PRC-SUB] Redeem limit OK: user={user_id}, "
+            f"required={prc_amount:.2f}, available={effective_available:.2f}, balance={current_balance:.2f}"
+        )
+
+        # Check PRC balance (must also have raw balance — defense in depth)
         if current_balance < prc_amount:
             raise HTTPException(
                 status_code=400, 
