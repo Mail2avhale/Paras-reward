@@ -204,3 +204,34 @@ def test_admin_health_check_in_permission_list():
         "REGRESSION: 'health-check' permission removed from ALL_ADMIN_PERMISSIONS. "
         "Manager admins won't see Pre-Deploy Health Check in sidebar."
     )
+
+
+# -----------------------------------------------------------------------------
+# REGRESSION 4: Admin subscription-stats endpoint MUST have a router decorator
+# -----------------------------------------------------------------------------
+# Production hit Feb 28: get_subscription_stats() was an orphan — frontend got
+# 404 → "Server is busy" toast → stats cards all showed 0. This is the same
+# class of bug as approve_vip_payment / reject_vip_payment earlier the same day.
+# This test guards against the pattern returning.
+
+def test_subscription_stats_endpoint_has_decorator():
+    """Lock the orphaned-endpoint regression: get_subscription_stats() must
+    have a @api_router.get decorator above it, exposed at
+    /admin/subscription-stats."""
+    src_path = "/app/backend/server.py"
+    with open(src_path, "r") as fp:
+        lines = fp.readlines()
+    found = False
+    for i, line in enumerate(lines):
+        if line.startswith("async def get_subscription_stats("):
+            # Look up to 4 lines above for a decorator referencing subscription-stats
+            window = "".join(lines[max(0, i - 4):i])
+            if "@api_router.get" in window and "subscription-stats" in window:
+                found = True
+                break
+    assert found, (
+        "REGRESSION: get_subscription_stats() in server.py has no "
+        "@api_router.get('/admin/subscription-stats') decorator. The frontend "
+        "Admin Subscription page will get 404 and show 'Server is busy' toast "
+        "with all stat cards stuck at 0."
+    )

@@ -11048,6 +11048,7 @@ async def update_subscription_pricing(request: Request):
     
     return {"success": True, "pricing": pricing}
 
+@api_router.get("/admin/subscription-stats")
 async def get_subscription_stats():
     """Get subscription statistics using fast aggregation queries"""
     try:
@@ -11083,8 +11084,8 @@ async def get_subscription_stats():
         # Pending payments count
         pending_payments = await db.vip_payments.count_documents({"status": "pending"})
         
-        # Calculate approximate revenue
-        monthly_revenue = (plan_counts["startup"] * 299) + (plan_counts["growth"] * 549) + (plan_counts["elite"] * 799)
+        # Calculate approximate revenue (current pricing: startup 299, growth 549, elite 999 base — GST excluded)
+        monthly_revenue = (plan_counts["startup"] * 299) + (plan_counts["growth"] * 549) + (plan_counts["elite"] * 999)
         
         return {
             "total_users": total_users,
@@ -14010,6 +14011,17 @@ async def admin_regression_smoke_test(deep: bool = False):
             return ("warn", "recharge_transactions exists but is empty")
         return ("pass", "recharge_transactions reachable")
 
+    async def check_subscription_stats():
+        # The exact regression we hit on prod 28-Feb: get_subscription_stats was orphaned (no decorator).
+        # Frontend calls /api/admin/subscription-stats and got 404 → "Server is busy" toast.
+        out = await get_subscription_stats()
+        if not isinstance(out, dict):
+            return ("fail", "subscription-stats returned non-dict")
+        if "error" in out:
+            return ("fail", f"subscription-stats inner error: {out['error']}")
+        pc = out.get("plan_counts") or {}
+        return ("pass", f"counts={pc} pending={out.get('pending_payments')}")
+
     async def check_community_feed():
         # Simple count to ensure the collection isn't broken
         n = await db.community_posts.count_documents({}, limit=1)
@@ -14053,6 +14065,7 @@ async def admin_regression_smoke_test(deep: bool = False):
         _check("vip_payments_pending_count", check_pending_count_badge, max_ms=4000),
         _check("redeem_limits_quick", check_redeem_limits_overview_quick, max_ms=4000),
         _check("recharge_transactions_collection", check_recharge_transactions_collection_exists, max_ms=4000),
+        _check("subscription_stats_endpoint", check_subscription_stats, max_ms=6000),
         _check("community_feed", check_community_feed, max_ms=4000),
     ]
     if deep:

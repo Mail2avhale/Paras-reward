@@ -651,6 +651,18 @@ Examined all 5 matched DMT transactions in production:
 - **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
 - **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
 
+### Production Bug — `subscription-stats` 404 → "Server is busy" toast (DONE - Feb 28, 2026)
+- **User report (production screenshots)**: On `parasreward.com/admin/subscriptions`, all stat cards showed `0` (Explorer/Startup/Growth/Elite) and a "Server is busy. Please try again in a few seconds." red banner appeared at the top of the page AND inside the Reject modal.
+- **Root cause**: `get_subscription_stats()` in `server.py:11051` was an **orphaned async function** with NO `@api_router` decorator (third occurrence of this exact bug class — same as `approve_vip_payment`, `reject_vip_payment` earlier today). Frontend called `/api/admin/subscription-stats` → received 404 → axios interceptor converted to "Server is busy" toast.
+- **Curl verified on production**: `GET https://www.parasreward.com/api/admin/subscription-stats` → `HTTP 404 {"detail":"Not Found"}` while VIP-payments list returned 200 in 218ms.
+- **Fix** (`server.py`):
+  - Added `@api_router.get("/admin/subscription-stats")` decorator above `get_subscription_stats()`.
+  - Updated revenue formula `799 → 999` to match current Elite pricing.
+- **Regression-guarded** with new test #9 in `tests/test_regression_top_redeemers_subscription_card.py`:
+  - `test_subscription_stats_endpoint_has_decorator` parses server.py and asserts the decorator exists. Will fail loud if any future agent strips it.
+- **Health-check endpoint extended**: `subscription_stats_endpoint` is now check #11 in `/api/admin/health/regression` so this exact regression class is caught BEFORE deploy via the Pre-Deploy Health Check page.
+- **Verified on preview**: `/admin/subscription-stats` returns `{total_users: 72, plan_counts: {...}, monthly_revenue: 3096}` in 94ms. Health check now reports 11/11 passed.
+
 ### Pre-Deploy Regression Health-Check Endpoint (DONE - Feb 28, 2026)
 - **Goal**: One-click smoke test BEFORE clicking "Save to Github → Deploy" to catch regressions like:
   - Top Redeemers leaderboard returning empty (collection name mismatch)
