@@ -474,6 +474,20 @@ async def check_and_activate_upcoming(uid: str):
     except Exception as notify_err:
         logging.warning(f"[UPCOMING-SUB] Activation notification error for {uid}: {notify_err}")
 
+    # Community success-story hook (when an upcoming PRC plan auto-activates)
+    try:
+        import asyncio as _asyncio
+        from routes.community import create_success_story_post
+        _asyncio.create_task(create_success_story_post(
+            user_id=uid,
+            service_type="subscription",
+            amount_inr=float(upcoming.get("inr_equivalent") or upcoming.get("amount_inr") or 0),
+            plan_name=upcoming.get("plan_name", "elite"),
+            ref_id=f"sub_{upcoming.get('payment_id')}",
+        ))
+    except Exception as _e:
+        logging.warning(f"[COMMUNITY] upcoming-activate post hook failed: {_e}")
+
     return {
         "activated": True,
         "plan_name": upcoming.get("plan_name", "elite"),

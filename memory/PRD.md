@@ -651,9 +651,33 @@ Examined all 5 matched DMT transactions in production:
 - **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
 - **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
 
+### Subscription → Community Success Story Auto-Posts (DONE - Feb 28, 2026)
+- **Goal**: Whenever a user gets a subscription activated (any path), automatically post a celebratory "Success Story" in the Community Forum.
+- **Hooks added**: 
+  - `pay_subscription_with_prc` (PRC purchase, immediate only — not upcoming/queued) — already in place.
+  - `/admin/razorpay/manual-activate` (admin manual Razorpay activation) — already in place.
+  - `/admin/razorpay/sync-pending` (bulk sync) — already in place.
+  - **NEW**: `approve_vip_payment` (admin manual UTR/screenshot approval at server.py:13441).
+  - **NEW**: `sync_single_razorpay_order` (server.py:10473).
+  - **NEW**: `admin_update_user_subscription` (admin manual override at server.py:18398).
+  - **NEW**: `check_and_activate_upcoming` in `routes/admin_subscription.py:483` (when an upcoming PRC plan auto-activates after current expires).
+- **Hook signature**: `create_success_story_post(user_id, service_type="subscription", amount_inr, plan_name, ref_id="sub_<payment_id>")` — idempotent via ref_id, fire-and-forget via `asyncio.create_task`, errors logged but never raised.
+- **Verified**: Direct call produces post `"👑 User from City, State upgraded to Elite!"` with metadata.plan_name and tags `['subscription', 'success', 'subscription', 'elite']`. Existing 36 success stories on preview unaffected.
+
+### Admin User 360° — 503 Timeout Fix (DONE - Feb 28, 2026)
+- **User report**: "Request failed with status code 503" on User 360 page (heavy-network users like SANTOSH with 1196+ active referrals).
+- **Root cause**: `/api/admin/user-360` ran 12+ sequential MongoDB queries plus an N+1 loop (one `transactions.find_one` per direct referral up to 50). Total wall-clock easily exceeded the Kubernetes ingress 60s timeout for heavy users → ingress returned 503.
+- **Fix** (`server.py /admin/user-360`):
+  1. **`active_referrals` N+1 → `asyncio.gather`**: All up-to-50 referral activity probes now fire in parallel.
+  2. **Transactions history → `asyncio.gather`**: 7 independent collection queries (orders, bill_payments, gift_vouchers, subscriptions, vip_subscriptions, vip_payments, razorpay_orders) fired in one batch.
+  3. **Redeem breakdown → `asyncio.gather`**: 5 independent aggregations (bbps, gift_voucher, bank_transfer, dmt, shop) fired in parallel.
+  4. **Failed transactions → `asyncio.gather`**: 3 independent collection queries (bbps, vouchers, bank) fired in parallel.
+- **Result**: Wall-clock for primary user-360 endpoint reduced from sum-of-all to max-of-each. Verified on preview: 0.14–0.17s for SANTOSH (10 refs, 137 txns) and Test User DMT (49 txns). No data shape changes — frontend untouched.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
+- P1: Run Notification Script for 606 "Over Limit" failed bank-redeem users
 - P2: WhatsApp Share Receipt
 
 ## Future/Backlog

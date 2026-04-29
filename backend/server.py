@@ -10471,6 +10471,19 @@ async def sync_single_razorpay_order(request: Request):
         })
         
         logging.info(f"[SINGLE-SYNC] ✅ Activated {user_name} ({user_email}), Plan: {plan_name}, Days: {total_days}")
+
+        # Community success-story hook
+        try:
+            from routes.community import create_success_story_post
+            asyncio.create_task(create_success_story_post(
+                user_id=user_id,
+                service_type="subscription",
+                amount_inr=float(amount or 0),
+                plan_name=plan_name,
+                ref_id=f"sub_{payment_id}",
+            ))
+        except Exception as _e:
+            logging.warning(f"[COMMUNITY] single-sync post hook failed: {_e}")
         
         return {
             "success": True,
@@ -13437,6 +13450,19 @@ async def approve_vip_payment(payment_id: str, request: Request):
             await cache.delete("admin_vip_payments:all:p1:l50")
         except:
             pass
+
+        # Community success-story hook (admin manual UTR/screenshot approval)
+        try:
+            from routes.community import create_success_story_post
+            asyncio.create_task(create_success_story_post(
+                user_id=user_id,
+                service_type="subscription",
+                amount_inr=float(payment.get("amount") or 0),
+                plan_name=subscription_plan,
+                ref_id=f"sub_{payment_id}",
+            ))
+        except Exception as _e:
+            logging.warning(f"[COMMUNITY] approve_vip_payment post hook failed (non-fatal): {_e}")
         
         return {"success": True, "message": message, "new_expiry": new_expiry, "fraud_warning": fraud_warning}
     except HTTPException:
@@ -18394,6 +18420,20 @@ async def admin_update_user_subscription(uid: str, request: Request):
         icon="👑",
         action_url="/subscription"
     )
+
+    # Community success-story hook (admin manual subscription override)
+    if plan in ["startup", "growth", "elite"]:
+        try:
+            from routes.community import create_success_story_post
+            asyncio.create_task(create_success_story_post(
+                user_id=uid,
+                service_type="subscription",
+                amount_inr=float(amount_paid or 0),
+                plan_name=plan,
+                ref_id=f"sub_{payment_record['payment_id']}",
+            ))
+        except Exception as _e:
+            logging.warning(f"[COMMUNITY] admin manual subscription post hook failed: {_e}")
     
     return {
         "success": True,
@@ -19333,21 +19373,28 @@ async def get_user_360_view(query: str, request: Request):
         ).sort("created_at", -1).limit(50).to_list(50)
         
         # Count active referrals (users who have mining_active or have mined recently)
+        # PERF: parallelize the recent_activity probe across all referrals (was N+1 sequential — 503 on heavy users)
         active_referrals = 0
+        cutoff_iso = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        probe_uids = []
         for ref in referrals:
             if ref.get("mining_active"):
                 active_referrals += 1
             else:
-                # Check if they have any recent activity (last 7 days)
+                ru = ref.get("uid")
+                if ru:
+                    probe_uids.append(ru)
+        if probe_uids:
+            async def _probe(ru):
                 try:
-                    recent_activity = await db.transactions.find_one({
-                        "user_id": ref.get("uid", ""),
-                        "created_at": {"$gte": (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()}
-                    })
-                    if recent_activity:
-                        active_referrals += 1
-                except:
-                    pass
+                    return await db.transactions.find_one(
+                        {"user_id": ru, "created_at": {"$gte": cutoff_iso}},
+                        {"_id": 1}
+                    )
+                except Exception:
+                    return None
+            probe_results = await asyncio.gather(*[_probe(ru) for ru in probe_uids], return_exceptions=True)
+            active_referrals += sum(1 for r in probe_results if r and not isinstance(r, Exception))
         
         # Calculate referral earnings - check all referral-related transaction types
         referral_types = ["referral", "referral_bonus", "referral_reward"]
@@ -19380,96 +19427,73 @@ async def get_user_360_view(query: str, request: Request):
             "referrals": []
         }
     
-    # ========== TRANSACTIONS HISTORY ==========
-    try:
-        # Orders (Marketplace)
-        orders = await db.orders.find(
+    # ========== TRANSACTIONS HISTORY (PARALLELIZED) ==========
+    # Batch all 7 independent collection queries to reduce wall-clock from sequential to ~max(t).
+    async def _fetch_orders():
+        return await db.orders.find(
             {"user_id": uid},
             {"_id": 0, "order_id": 1, "total_prc": 1, "prc_amount": 1, "status": 1, "created_at": 1}
         ).sort("created_at", -1).limit(20).to_list(20)
-    except Exception as e:
-        logging.error(f"User360 orders error for {uid}: {e}")
-        orders = []
-    
-    try:
-        # Bill Payments
-        bill_payments = await db.bill_payment_requests.find(
+    async def _fetch_bills():
+        return await db.bill_payment_requests.find(
             {"user_id": uid},
             {"_id": 0, "request_id": 1, "request_type": 1, "amount_inr": 1, "total_prc_deducted": 1, "status": 1, "created_at": 1}
         ).sort("created_at", -1).limit(20).to_list(20)
-    except Exception as e:
-        logging.error(f"User360 bill_payments error for {uid}: {e}")
-        bill_payments = []
-    
-    try:
-        # Gift Vouchers
-        gift_vouchers = await db.gift_voucher_requests.find(
+    async def _fetch_vouchers():
+        return await db.gift_voucher_requests.find(
             {"user_id": uid},
             {"_id": 0, "request_id": 1, "denomination": 1, "total_prc_deducted": 1, "status": 1, "created_at": 1}
         ).sort("created_at", -1).limit(20).to_list(20)
-    except Exception as e:
-        logging.error(f"User360 gift_vouchers error for {uid}: {e}")
-        gift_vouchers = []
-    
-    try:
-        # Subscriptions - Include _id for deletion capability
-        subscriptions_raw = await db.subscriptions.find(
+    async def _fetch_subs():
+        return await db.subscriptions.find(
             {"user_id": uid},
             {"payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
         ).sort("submitted_at", -1).limit(20).to_list(20)
-        
-        # Convert _id to string for JSON serialization
-        subscriptions = []
-        for sub in subscriptions_raw:
-            sub["_id"] = str(sub["_id"]) if "_id" in sub else None
-            subscriptions.append(sub)
-    except Exception as e:
-        logging.error(f"User360 subscriptions error for {uid}: {e}")
-        subscriptions = []
-    
-    try:
-        # Also check vip_subscriptions collection
-        vip_subscriptions_raw = await db.vip_subscriptions.find(
+    async def _fetch_vip_subs():
+        return await db.vip_subscriptions.find(
             {"user_id": uid},
             {"payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
         ).sort("submitted_at", -1).limit(20).to_list(20)
-        
-        vip_subscriptions = []
-        for sub in vip_subscriptions_raw:
-            sub["_id"] = str(sub["_id"]) if "_id" in sub else None
-            vip_subscriptions.append(sub)
-    except Exception as e:
-        logging.error(f"User360 vip_subscriptions error for {uid}: {e}")
-        vip_subscriptions = []
+    async def _fetch_vip_payments():
+        return await db.vip_payments.find(
+            {"uid": uid},
+            {"payment_id": 1, "plan": 1, "plan_type": 1, "amount": 1, "status": 1, "created_at": 1, "approved_at": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+    async def _fetch_rp_orders():
+        return await db.razorpay_orders.find(
+            {"user_id": uid},
+            {"_id": 0, "order_id": 1, "plan_name": 1, "plan_type": 1, "amount": 1, "status": 1, "payment_id": 1, "created_at": 1, "paid_at": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+
+    _txn_results = await asyncio.gather(
+        _fetch_orders(), _fetch_bills(), _fetch_vouchers(),
+        _fetch_subs(), _fetch_vip_subs(), _fetch_vip_payments(), _fetch_rp_orders(),
+        return_exceptions=True,
+    )
+    orders = _txn_results[0] if not isinstance(_txn_results[0], Exception) else []
+    bill_payments = _txn_results[1] if not isinstance(_txn_results[1], Exception) else []
+    gift_vouchers = _txn_results[2] if not isinstance(_txn_results[2], Exception) else []
+    subscriptions_raw = _txn_results[3] if not isinstance(_txn_results[3], Exception) else []
+    vip_subscriptions_raw = _txn_results[4] if not isinstance(_txn_results[4], Exception) else []
+    vip_payments_raw = _txn_results[5] if not isinstance(_txn_results[5], Exception) else []
+    razorpay_orders = _txn_results[6] if not isinstance(_txn_results[6], Exception) else []
+    # Stringify _id for subs/vip_subs/vip_payments (deletion capability)
+    subscriptions = []
+    for sub in subscriptions_raw:
+        sub["_id"] = str(sub["_id"]) if "_id" in sub else None
+        subscriptions.append(sub)
+    vip_subscriptions = []
+    for sub in vip_subscriptions_raw:
+        sub["_id"] = str(sub["_id"]) if "_id" in sub else None
+        vip_subscriptions.append(sub)
+    vip_payments = []
+    for payment in vip_payments_raw:
+        payment["_id"] = str(payment["_id"]) if "_id" in payment else None
+        vip_payments.append(payment)
     
     # Merge subscription lists
     all_subscriptions = subscriptions + vip_subscriptions
     all_subscriptions.sort(key=lambda x: x.get("submitted_at", "") or "", reverse=True)
-    
-    try:
-        # Get VIP payments history - Include _id for deletion capability
-        vip_payments_raw = await db.vip_payments.find(
-            {"uid": uid},
-            {"payment_id": 1, "plan": 1, "plan_type": 1, "amount": 1, "status": 1, "created_at": 1, "approved_at": 1}
-        ).sort("created_at", -1).limit(20).to_list(20)
-        
-        vip_payments = []
-        for payment in vip_payments_raw:
-            payment["_id"] = str(payment["_id"]) if "_id" in payment else None
-            vip_payments.append(payment)
-    except Exception as e:
-        logging.error(f"User360 vip_payments error for {uid}: {e}")
-        vip_payments = []
-    
-    try:
-        # Get Razorpay orders
-        razorpay_orders = await db.razorpay_orders.find(
-            {"user_id": uid},
-            {"_id": 0, "order_id": 1, "plan_name": 1, "plan_type": 1, "amount": 1, "status": 1, "payment_id": 1, "created_at": 1, "paid_at": 1}
-        ).sort("created_at", -1).limit(20).to_list(20)
-    except Exception as e:
-        logging.error(f"User360 razorpay_orders error for {uid}: {e}")
-        razorpay_orders = []
     
     transactions = {
         "orders": orders,
@@ -19606,113 +19630,91 @@ async def get_user_360_view(query: str, request: Request):
         logging.error(f"User360 redeem_limit error for {uid}: {e}")
         redeem_limit_data = {"total_limit": 0, "total_redeemed": 0, "remaining_limit": 0}
     
-    # ========== REDEEM BREAKDOWN BY SERVICE ==========
+    # ========== REDEEM BREAKDOWN BY SERVICE (PARALLELIZED) ==========
     redeem_breakdown = {}
     
     valid_redeem_status = ["completed", "COMPLETED", "Completed", "success", "SUCCESS", "Success", "approved", "APPROVED", "Approved", "paid", "PAID", "Paid", "pending", "PENDING", "Pending", "processing", "PROCESSING", "Processing", "delivered", "DELIVERED", "Delivered"]
-    
-    try:
-        # BBPS/Bill Payments
-        bbps_total = await db.redeem_requests.aggregate([
+
+    async def _agg_bbps():
+        return await db.redeem_requests.aggregate([
             {"$match": {"user_id": uid, "status": {"$in": valid_redeem_status}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1)
-        if bbps_total and bbps_total[0].get("total", 0) > 0:
-            redeem_breakdown["bbps"] = round(bbps_total[0]["total"], 2)
-    except:
-        pass
-    
-    try:
-        # Gift Vouchers
-        voucher_total = await db.gift_voucher_requests.aggregate([
+    async def _agg_voucher():
+        return await db.gift_voucher_requests.aggregate([
             {"$match": {"user_id": uid, "status": {"$in": valid_redeem_status}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_used", 0]}]}}}}
         ]).to_list(1)
-        if voucher_total and voucher_total[0].get("total", 0) > 0:
-            redeem_breakdown["gift_voucher"] = round(voucher_total[0]["total"], 2)
-    except:
-        pass
-    
-    try:
-        # Bank Transfers/Withdrawals
-        bank_total = await db.bank_transfer_requests.aggregate([
+    async def _agg_bank():
+        return await db.bank_transfer_requests.aggregate([
             {"$match": {"user_id": uid, "status": {"$in": valid_redeem_status}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1)
-        if bank_total and bank_total[0].get("total", 0) > 0:
-            redeem_breakdown["bank_transfer"] = round(bank_total[0]["total"], 2)
-    except:
-        pass
-    
-    try:
-        # DMT (Money Transfer)
-        dmt_total = await db.dmt_requests.aggregate([
+    async def _agg_dmt():
+        return await db.dmt_requests.aggregate([
             {"$match": {"user_id": uid, "status": {"$in": valid_redeem_status}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1)
-        if dmt_total and dmt_total[0].get("total", 0) > 0:
-            redeem_breakdown["dmt"] = round(dmt_total[0]["total"], 2)
-    except:
-        pass
-    
-    try:
-        # Shop/Orders
-        shop_total = await db.orders.aggregate([
+    async def _agg_shop():
+        return await db.orders.aggregate([
             {"$match": {"user_id": uid, "status": {"$in": valid_redeem_status}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
         ]).to_list(1)
-        if shop_total and shop_total[0].get("total", 0) > 0:
-            redeem_breakdown["shop"] = round(shop_total[0]["total"], 2)
-    except:
-        pass
+
+    _agg_results = await asyncio.gather(
+        _agg_bbps(), _agg_voucher(), _agg_bank(), _agg_dmt(), _agg_shop(),
+        return_exceptions=True,
+    )
+    _keys = ["bbps", "gift_voucher", "bank_transfer", "dmt", "shop"]
+    for _k, _r in zip(_keys, _agg_results):
+        try:
+            if not isinstance(_r, Exception) and _r and _r[0].get("total", 0) > 0:
+                redeem_breakdown[_k] = round(_r[0]["total"], 2)
+        except Exception:
+            pass
     
-    # ========== FAILED/PENDING TRANSACTIONS (For Issue Resolution) ==========
+    # ========== FAILED/PENDING TRANSACTIONS (For Issue Resolution) — PARALLELIZED ==========
     failed_transactions = []
-    
-    try:
-        # Failed BBPS/Bill Payments
-        failed_bbps = await db.redeem_requests.find(
+
+    async def _fetch_failed_bbps():
+        return await db.redeem_requests.find(
             {"user_id": uid, "status": {"$in": ["failed", "rejected", "RETRY_FAILED", "eko_failed", "pending"]}},
-            {"_id": 0, "request_id": 1, "service_type": 1, "amount": 1, "total_prc_deducted": 1, "prc_amount": 1, 
+            {"_id": 0, "request_id": 1, "service_type": 1, "amount": 1, "total_prc_deducted": 1, "prc_amount": 1,
              "status": 1, "created_at": 1, "error_message": 1, "prc_refunded": 1, "consumer_number": 1}
         ).sort("created_at", -1).limit(50).to_list(50)
-        
-        for req in failed_bbps:
-            req["type"] = "bbps"
-            req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_amount") or 0
-            failed_transactions.append(req)
-    except Exception as e:
-        logging.error(f"User360 failed_bbps error for {uid}: {e}")
-    
-    try:
-        # Failed Gift Vouchers
-        failed_vouchers = await db.gift_voucher_requests.find(
+    async def _fetch_failed_vouchers():
+        return await db.gift_voucher_requests.find(
             {"user_id": uid, "status": {"$in": ["failed", "rejected", "pending", "processing"]}},
             {"_id": 0, "request_id": 1, "brand_name": 1, "denomination": 1, "total_prc_deducted": 1, "prc_used": 1,
              "status": 1, "created_at": 1, "rejection_reason": 1, "prc_refunded": 1}
         ).sort("created_at", -1).limit(50).to_list(50)
-        
-        for req in failed_vouchers:
-            req["type"] = "gift_voucher"
-            req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_used") or 0
-            failed_transactions.append(req)
-    except Exception as e:
-        logging.error(f"User360 failed_vouchers error for {uid}: {e}")
-    
-    try:
-        # Failed/Pending Bank Transfers
-        failed_bank = await db.bank_transfer_requests.find(
+    async def _fetch_failed_bank():
+        return await db.bank_transfer_requests.find(
             {"user_id": uid, "status": {"$in": ["failed", "rejected", "pending", "processing"]}},
             {"_id": 0, "request_id": 1, "amount_inr": 1, "total_prc_deducted": 1, "prc_amount": 1,
              "status": 1, "created_at": 1, "rejection_reason": 1, "prc_refunded": 1, "bank_name": 1, "account_number": 1}
         ).sort("created_at", -1).limit(50).to_list(50)
-        
-        for req in failed_bank:
-            req["type"] = "bank_transfer"
-            req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_amount") or 0
-            failed_transactions.append(req)
-    except Exception as e:
-        logging.error(f"User360 failed_bank error for {uid}: {e}")
+
+    _failed = await asyncio.gather(
+        _fetch_failed_bbps(), _fetch_failed_vouchers(), _fetch_failed_bank(),
+        return_exceptions=True,
+    )
+    failed_bbps = _failed[0] if not isinstance(_failed[0], Exception) else []
+    failed_vouchers = _failed[1] if not isinstance(_failed[1], Exception) else []
+    failed_bank = _failed[2] if not isinstance(_failed[2], Exception) else []
+
+    for req in failed_bbps:
+        req["type"] = "bbps"
+        req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_amount") or 0
+        failed_transactions.append(req)
+    for req in failed_vouchers:
+        req["type"] = "gift_voucher"
+        req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_used") or 0
+        failed_transactions.append(req)
+    for req in failed_bank:
+        req["type"] = "bank_transfer"
+        req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_amount") or 0
+        failed_transactions.append(req)
     
     # Sort all failed transactions by date
     failed_transactions.sort(key=lambda x: x.get("created_at") or "", reverse=True)
