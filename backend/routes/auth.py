@@ -333,11 +333,39 @@ async def register_user(request: Request):
             name_parts.append(data['last_name'])
         data['name'] = ' '.join(name_parts)
     
-    # Check for duplicate email
+    # Normalize email to lowercase BEFORE any duplicate checks or storage.
+    # Without this, "User@gmail.com" and "user@gmail.com" become two separate
+    # accounts (case-sensitive match) — exactly the production bug we hit on
+    # 29 Apr 2026 with PRAFULLA MUKUND KOYANDE who lost access to his
+    # 1.82 lakh PRC + Elite plan because a different mobile + same-email
+    # (different case) created a fresh Explorer record.
     if data.get("email"):
-        existing = await db.users.find_one({"email": data["email"]})
+        data["email"] = data["email"].strip().lower()
+        # Case-insensitive duplicate check via regex anchor (covers any
+        # legacy rows that may have been stored with mixed case).
+        import re as _re
+        existing = await db.users.find_one({
+            "email": {"$regex": f"^{_re.escape(data['email'])}$", "$options": "i"}
+        }, {"_id": 0, "uid": 1, "mobile": 1})
         if existing:
-            raise HTTPException(status_code=400, detail="Email already registered")
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "An account with this email already exists. "
+                    f"If this is yours, please log in using mobile number ending in "
+                    f"...{(existing.get('mobile') or '')[-4:]} or use the password reset option."
+                ),
+            )
+
+    # Check for duplicate mobile (already covered elsewhere but be defensive)
+    if data.get("mobile"):
+        mobile = str(data["mobile"]).strip()
+        existing_mobile = await db.users.find_one({"mobile": mobile}, {"_id": 0, "uid": 1})
+        if existing_mobile:
+            raise HTTPException(
+                status_code=400,
+                detail="An account with this mobile number already exists. Please log in instead."
+            )
     
     if data.get('password'):
         data['password_hash'] = hash_password(data['password'])

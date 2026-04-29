@@ -651,6 +651,24 @@ Examined all 5 matched DMT transactions in production:
 - **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
 - **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
 
+### Email Case-Insensitive Duplicate Signup Block (DONE - 29 Apr 2026)
+- **User report (production)**: PRAFULLA MUKUND KOYANDE thought he "lost" his Elite plan + 1.82 lakh PRC. RCA showed it wasn't lost at all — he had registered TWICE:
+  1. Original account: email `Prafullakoyande8@gmail.com` (capital P) + mobile `9769723462` → 1.82L PRC + Elite ✓
+  2. Duplicate account (29 Apr): same email lowercased `prafullakoyande8@gmail.com` + mobile `9324183388` → 0 PRC + Explorer (this is what user was logging into and panicking about).
+- **Root cause**: `routes/auth.py register_user()` did a literal `find_one({"email": data["email"]})` — case-SENSITIVE. So `Foo@bar.com` and `foo@bar.com` slipped through as separate accounts.
+- **Fix** (`routes/auth.py register_user`):
+  1. Email is **lowercased BEFORE** storage AND BEFORE duplicate check.
+  2. Duplicate check now uses case-insensitive regex anchor (`^email$` with `$options: "i"`) — covers any legacy mixed-case rows.
+  3. Helpful error message: `"An account with this email already exists. If this is yours, please log in using mobile number ending in ...XXXX or use the password reset option."` — surfaces the right account's masked mobile.
+  4. Added duplicate-mobile block as a defensive double-check.
+- **Regression-guarded** with 5 tests in `tests/test_regression_email_case_signup.py`:
+  - case-insensitive duplicate-check exists in source
+  - email is lowercased before store
+  - duplicate mobile is blocked
+  - helpful error message includes masked mobile
+  - **LIVE integration**: actually signs up two case-variant emails on preview → second is rejected with proper status & message → cleanup wipes test users.
+- **Did NOT merge accounts**: per user choice (Option C). Existing duplicate (PRAFULLA's 27 Mar Explorer record) stays. He just needs to log in with mobile `9769723462` to access his Elite + PRC.
+
 ### Eko Refund Excel Reconcile — Bug Fix v2 (DONE - Feb 28, 2026)
 **Two production bugs found AFTER first reconcile run, both fixed and locked:**
 
