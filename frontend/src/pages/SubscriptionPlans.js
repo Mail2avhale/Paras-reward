@@ -60,6 +60,10 @@ const SubscriptionPlans = ({ user }) => {
   const [prcEligible, setPrcEligible] = useState(true);
   const [prcLastUsedAt, setPrcLastUsedAt] = useState(null);
   const [prcLastPlan, setPrcLastPlan] = useState(null);
+  const [prcUsedCount, setPrcUsedCount] = useState(0);
+  const [prcMaxAllowed, setPrcMaxAllowed] = useState(3);
+  const [prcRemaining, setPrcRemaining] = useState(3);
+  const [redeemLimitInfo, setRedeemLimitInfo] = useState(null);
   
   // Steps: 1=Select Plan, 2=Select Duration, 3=Payment Info, 4=Upload Proof
   const [currentStep, setCurrentStep] = useState(1);
@@ -144,9 +148,10 @@ const SubscriptionPlans = ({ user }) => {
         axios.get(`${API}/subscription/history/${user.uid}`).catch(() => null),
         axios.get(`${API}/admin/subscription/user/${user.uid}/info`).catch(() => null),
         axios.get(`${API}/razorpay/payment-history/${user.uid}?include_all=true`).catch(() => null),
+        axios.get(`${API}/user/${user.uid}/redeem-limit`).catch(() => null),
       ];
 
-      const [prcRes, eligRes, historyRes, upcomingRes, paymentRes] = await Promise.all(secondaryPromises);
+      const [prcRes, eligRes, historyRes, upcomingRes, paymentRes, redeemLimitRes] = await Promise.all(secondaryPromises);
 
       // PRC pricing
       if (prcRes?.data?.success) setPrcPricing(prcRes.data);
@@ -158,11 +163,19 @@ const SubscriptionPlans = ({ user }) => {
         setPrcEligible(isPrcEligible);
         setPrcLastUsedAt(eligRes.data?.last_used_at || null);
         setPrcLastPlan(eligRes.data?.last_plan || null);
+        setPrcUsedCount(eligRes.data?.used_count ?? 0);
+        setPrcMaxAllowed(eligRes.data?.max_allowed ?? 3);
+        setPrcRemaining(eligRes.data?.remaining ?? 3);
 
         // Re-evaluate default payment method if PRC was pre-selected but user is ineligible
         if (isPrcEnabled && !isPrcEligible && !isRazorpayEnabled && isManualEnabled) {
           setPaymentMethod('manual');
         }
+      }
+
+      // Redeem limit info
+      if (redeemLimitRes?.data?.success) {
+        setRedeemLimitInfo(redeemLimitRes.data.limit);
       }
 
       // History + upcoming
@@ -1133,18 +1146,21 @@ const SubscriptionPlans = ({ user }) => {
                       Pay with PRC
                     </p>
                     {prcEligible ? (
-                      <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full font-medium">
-                        Instant
+                      <span
+                        className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full font-medium"
+                        data-testid="prc-usage-badge"
+                      >
+                        {`${prcUsedCount}/${prcMaxAllowed} used`}
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full font-medium" data-testid="prc-one-time-used-badge">
-                        One-time benefit used
+                      <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full font-medium" data-testid="prc-limit-reached-badge">
+                        Limit reached ({prcUsedCount}/{prcMaxAllowed})
                       </span>
                     )}
                   </div>
                   <p className="text-gray-400 text-sm">
                     {!prcEligible
-                      ? `Already availed${prcLastUsedAt ? ` on ${String(prcLastUsedAt).slice(0, 10)}` : ''}${prcLastPlan ? ` (${String(prcLastPlan).charAt(0).toUpperCase() + String(prcLastPlan).slice(1)})` : ''} — use UPI or Manual Payment`
+                      ? `${prcMaxAllowed} PRC subscriptions used${prcLastUsedAt ? `, last on ${String(prcLastUsedAt).slice(0, 10)}` : ''} — use UPI or Manual Payment for renewals`
                       : (prcPricing ? `${Number(prcPricing.total_prc_required).toLocaleString('en-IN')} PRC required` : 'Use your PRC balance')}
                   </p>
                 </div>
@@ -1157,6 +1173,81 @@ const SubscriptionPlans = ({ user }) => {
             </button>
             )}
           </div>
+
+          {/* PRC Subscription Status Card — shown when PRC method selected */}
+          {prcEnabled && paymentMethod === 'prc' && (
+            <div
+              className="p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/5 space-y-3"
+              data-testid="prc-subscription-status-card"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-cyan-400" />
+                  <p className="text-cyan-400 text-sm font-semibold">PRC Subscription Status</p>
+                </div>
+              </div>
+
+              {/* Usage progress */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-400">PRC subscriptions used</span>
+                  <span
+                    className={`font-mono font-bold ${prcRemaining > 0 ? 'text-cyan-400' : 'text-amber-400'}`}
+                    data-testid="prc-usage-text"
+                  >
+                    {prcUsedCount} / {prcMaxAllowed}
+                  </span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-gray-800 overflow-hidden">
+                  <div
+                    className={`h-full transition-all ${prcRemaining > 0 ? 'bg-cyan-500' : 'bg-amber-500'}`}
+                    style={{ width: `${Math.min(100, (prcUsedCount / prcMaxAllowed) * 100)}%` }}
+                    data-testid="prc-usage-progress"
+                  />
+                </div>
+                <p className="text-xs text-gray-500">
+                  {prcRemaining > 0
+                    ? `${prcRemaining} PRC subscription${prcRemaining === 1 ? '' : 's'} remaining`
+                    : 'No PRC subscriptions remaining — use UPI or Manual Payment'}
+                </p>
+              </div>
+
+              {/* Redeem limit info — only show if backend returned data */}
+              {redeemLimitInfo && (
+                <div className="pt-2 border-t border-cyan-500/20 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-400">Available redeem limit</span>
+                    <span
+                      className="font-mono font-bold text-emerald-400"
+                      data-testid="redeem-limit-available-text"
+                    >
+                      {Number(redeemLimitInfo.effective_available || 0).toLocaleString('en-IN')} PRC
+                    </span>
+                  </div>
+                  {prcPricing && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-400">Required for this plan</span>
+                      <span className="font-mono text-white">
+                        {Number(prcPricing.total_prc_required || 0).toLocaleString('en-IN')} PRC
+                      </span>
+                    </div>
+                  )}
+                  {prcPricing &&
+                    Number(prcPricing.total_prc_required || 0) > Number(redeemLimitInfo.effective_available || 0) && (
+                      <p
+                        className="text-xs text-amber-400 mt-1"
+                        data-testid="redeem-limit-insufficient-warning"
+                      >
+                        Insufficient redeem limit. Earn more by mining or growing your network.
+                      </p>
+                    )}
+                  <p className="text-xs text-gray-500">
+                    Unlock: {redeemLimitInfo.unlock_percent || 0}% of total earned
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Razorpay Pay Now Button */}
           {paymentMethod === 'razorpay' && (
