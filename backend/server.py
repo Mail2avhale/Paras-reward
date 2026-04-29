@@ -10049,7 +10049,20 @@ async def manual_activate_subscription(request: Request):
         })
         
         logging.info(f"[MANUAL-ACTIVATE] ✅ Activated {user_name} ({user_email}), Plan: {plan_name}, Payment: {payment_id}")
-        
+
+        # Community success-story hook
+        try:
+            from routes.community import create_success_story_post
+            asyncio.create_task(create_success_story_post(
+                user_id=user_id,
+                service_type="subscription",
+                amount_inr=float(amount or 0),
+                plan_name=plan_name,
+                ref_id=f"sub_{payment_id}",
+            ))
+        except Exception as _e:
+            logging.warning(f"[COMMUNITY] manual-activate post hook failed (non-fatal): {_e}")
+
         return {
             "success": True,
             "message": f"✅ Subscription activated for {user_name}!",
@@ -10250,6 +10263,20 @@ async def bulk_sync_captured_payments(request: Request):
                 })
                 
                 activated_count += 1
+
+                # Community success-story hook
+                try:
+                    from routes.community import create_success_story_post
+                    asyncio.create_task(create_success_story_post(
+                        user_id=user_id,
+                        service_type="subscription",
+                        amount_inr=float(amount or 0),
+                        plan_name=plan_name,
+                        ref_id=f"sub_{payment_id}",
+                    ))
+                except Exception as _e:
+                    logging.warning(f"[COMMUNITY] bulk-sync post hook failed: {_e}")
+
                 results.append({
                     "order_id": order_id,
                     "payment_id": payment_id,
@@ -12510,7 +12537,21 @@ async def subscription_pay_with_prc(request: Request):
             )
         except Exception as burn_err:
             logging.warning(f"[SUSTAIN-BURN] subscription hook failed (non-fatal): {burn_err}")
-        
+
+        # Community success-story post (immediate activations only, not upcoming/queued)
+        if not is_upcoming:
+            try:
+                from routes.community import create_success_story_post
+                asyncio.create_task(create_success_story_post(
+                    user_id=user_id,
+                    service_type="subscription",
+                    amount_inr=pricing.get("base_with_gst_inr") or 0,
+                    plan_name="Elite",
+                    ref_id=f"sub_{payment_id}",
+                ))
+            except Exception as _e:
+                logging.warning(f"[COMMUNITY] subscription PRC post hook failed (non-fatal): {_e}")
+
         if is_upcoming:
             return {
                 "success": True,

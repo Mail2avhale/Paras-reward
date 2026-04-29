@@ -73,11 +73,12 @@ async def _prune_old_success_stories():
 
 async def create_success_story_post(
     user_id: str,
-    service_type: str,  # "mobile_recharge" | "dth_recharge" | "bank_redeem"
+    service_type: str,  # "mobile_recharge" | "dth_recharge" | "bank_redeem" | "subscription"
     amount_inr: float,
     extra_title: str = "",
     ref_id: str = "",
     created_at_override: Optional[str] = None,
+    plan_name: Optional[str] = None,  # for service_type="subscription" — e.g. "Elite", "Growth", "Startup"
 ):
     """Create a system-authored (admin) Success Story post in the community forum.
     Privacy-safe: only first name + city/state + amount revealed. No phone/account shown.
@@ -115,52 +116,65 @@ async def create_success_story_post(
             "mobile_recharge": ("Mobile Recharge", "📱"),
             "dth_recharge": ("DTH Recharge", "📺"),
             "bank_redeem": ("Bank Redeem", "💰"),
+            "subscription": ("Subscription", "👑"),
         }
         label, icon = service_labels.get(service_type, ("Transaction", "✅"))
 
         # Snapshot of user's lifetime redeemed INR (mobile+DTH+bank).
-        # Note: the current txn is normally ALREADY in the DB when this runs
-        # (recharge_transactions updated to 'success' / bank_transfer_requests to 'paid'
-        # BEFORE this function is called). So the aggregation already includes it.
-        # max() guards the edge case where the write hasn't landed yet.
+        # For subscription posts, this metric isn't relevant — skip the aggregation.
         try:
-            success_statuses = ["success", "SUCCESS", "Success", "completed", "COMPLETED"]
-            bank_paid_statuses = ["paid", "Paid", "PAID"]
-            rech_agg = await db.recharge_transactions.aggregate([
-                {"$match": {"user_id": user_id, "status": {"$in": success_statuses}}},
-                {"$group": {"_id": None, "total": {
-                    "$sum": {"$ifNull": ["$amount_inr", {"$ifNull": ["$amount", 0]}]}
-                }}}
-            ]).to_list(1)
-            bank_agg = await db.bank_transfer_requests.aggregate([
-                {"$match": {"user_id": user_id, "status": {"$in": bank_paid_statuses}}},
-                {"$group": {"_id": None, "total": {
-                    "$sum": {"$ifNull": [
-                        "$withdrawal_amount",
-                        {"$ifNull": [
-                            "$amount_inr",
+            if service_type == "subscription":
+                db_total = 0.0
+            else:
+                success_statuses = ["success", "SUCCESS", "Success", "completed", "COMPLETED"]
+                bank_paid_statuses = ["paid", "Paid", "PAID"]
+                rech_agg = await db.recharge_transactions.aggregate([
+                    {"$match": {"user_id": user_id, "status": {"$in": success_statuses}}},
+                    {"$group": {"_id": None, "total": {
+                        "$sum": {"$ifNull": ["$amount_inr", {"$ifNull": ["$amount", 0]}]}
+                    }}}
+                ]).to_list(1)
+                bank_agg = await db.bank_transfer_requests.aggregate([
+                    {"$match": {"user_id": user_id, "status": {"$in": bank_paid_statuses}}},
+                    {"$group": {"_id": None, "total": {
+                        "$sum": {"$ifNull": [
+                            "$withdrawal_amount",
                             {"$ifNull": [
-                                "$total_inr",
-                                {"$ifNull": ["$inr_amount", {"$ifNull": ["$amount", 0]}]}
+                                "$amount_inr",
+                                {"$ifNull": [
+                                    "$total_inr",
+                                    {"$ifNull": ["$inr_amount", {"$ifNull": ["$amount", 0]}]}
+                                ]}
                             ]}
                         ]}
-                    ]}
-                }}}
-            ]).to_list(1)
-            db_total = float((rech_agg[0]["total"] if rech_agg else 0) or 0) + float((bank_agg[0]["total"] if bank_agg else 0) or 0)
+                    }}}
+                ]).to_list(1)
+                db_total = float((rech_agg[0]["total"] if rech_agg else 0) or 0) + float((bank_agg[0]["total"] if bank_agg else 0) or 0)
         except Exception:
             db_total = 0.0
-        lifetime_redeemed = max(db_total, float(amount_inr))
+        lifetime_redeemed = max(db_total, float(amount_inr) if service_type != "subscription" else 0.0)
 
-        # Title + content
-        title = f"{icon} {first_name} from {location} completed {label}!"
-        body_lines = [
-            f"🎉 Congratulations **{first_name}** from **{location}**!",
-            "",
-            f"Successfully completed **{label}** of **₹{int(amount_inr):,}**",
-            "",
-            "✅ Transaction completed successfully via Paras Reward",
-        ]
+        # Build title + content (celebratory for subscriptions)
+        if service_type == "subscription":
+            plan_label = (plan_name or "Premium").strip().title()
+            title = f"{icon} {first_name} from {location} upgraded to {plan_label}!"
+            body_lines = [
+                f"🎊 Congratulations **{first_name}** from **{location}**!",
+                "",
+                f"Successfully activated **{plan_label} Subscription** plan",
+                "",
+                f"🚀 Welcome to the {plan_label} club!",
+                "✅ Now earning premium rewards via Paras Reward",
+            ]
+        else:
+            title = f"{icon} {first_name} from {location} completed {label}!"
+            body_lines = [
+                f"🎉 Congratulations **{first_name}** from **{location}**!",
+                "",
+                f"Successfully completed **{label}** of **₹{int(amount_inr):,}**",
+                "",
+                "✅ Transaction completed successfully via Paras Reward",
+            ]
         content = "\n".join(body_lines)
 
         post_id = str(uuid.uuid4())
@@ -188,7 +202,7 @@ async def create_success_story_post(
             "content": content,
             "image_url": None,
             "images": [],
-            "tags": [service_type, "success"],
+            "tags": [service_type, "success"] + (["subscription", (plan_name or "premium").lower()] if service_type == "subscription" else []),
             "metadata": {
                 "service_type": service_type,
                 "service_label": label,
@@ -201,6 +215,7 @@ async def create_success_story_post(
                 "ref_id": ref_id,
                 "beneficiary_user_id": user_id,
                 "user_total_redeemed_inr": float(lifetime_redeemed),
+                "plan_name": (plan_name or "").strip().title() if service_type == "subscription" else None,
             },
             "like_count": 0,
             "reactions_count": {"celebrate": 0, "love": 0, "fire": 0},
