@@ -651,6 +651,37 @@ Examined all 5 matched DMT transactions in production:
 - **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
 - **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
 
+### Production Regression Fixes — Top Redeemers + Subscription Card (DONE - Feb 28, 2026)
+**Two issues reported on production after deploy + protection put in place:**
+
+#### Issue 1 — Top Redeemers leaderboard returned empty `[]`
+- **Root cause**: `routes/leaderboard.py` source list referenced collection `recharge_requests` but the actual production collection is `recharge_transactions`. Users who only did mobile/DTH recharges were never picked as candidates → empty leaderboard. Compounded by:
+  - No empty-result fallback (if pass-2 reconcile timed out, served `[]` to users).
+  - 2-hour cache locked the empty result in for 2 hours.
+- **Fix** (`routes/leaderboard.py`):
+  - Added `recharge_transactions` to sources (with `amount_inr` field).
+  - All sources now use a fallback chain `[primary, fallback1, fallback2]` of field names (handles schema drift across collections).
+  - Safety net: if pass-2 reconciliation yields empty, fall back to pass-1 `rough_totals` candidates so leaderboard is never empty when data exists.
+  - Empty results no longer cached for full 2-hour TTL — only 60 seconds.
+- **Verified**: Endpoint returns 4 ranked users on preview, all PRC totals > 0.
+
+#### Issue 2 — Subscription post in Community feed showed "Mobile Recharge" icon/label
+- **Root cause**: `frontend/src/components/SuccessStoryCard.js` `SERVICE_THEME` map had no `subscription` key. Default fallback was `mobile_recharge` → wrong blue gradient, 📱 icon, "Mobile Recharge" label for Elite/Growth subscription wins.
+- **Fix** (`SuccessStoryCard.js`):
+  - Added `subscription` theme: amber→orange→rose gradient + 👑 icon + "Subscription" label.
+  - Chip dynamically appends plan name → "Subscription • Elite".
+  - Completion badge text adapts: "Upgraded" for subscriptions, "Successfully Completed" for redeems.
+  - "Redeemed till" badge hidden for subscription posts (irrelevant context).
+
+#### Regression protection
+- `tests/test_regression_top_redeemers_subscription_card.py` — 6 guards:
+  1. `recharge_transactions` must remain in sources list.
+  2. Empty-fallback safety-net must exist.
+  3. Empty results must not be cached for full TTL.
+  4. SERVICE_THEME must have `subscription` entry with label/icon/gradient.
+  5. `subscription` icon must be celebratory (👑/🏆/⭐) not phone.
+  6. Live integration test asserts endpoint returns non-empty when data exists.
+
 ### Manual Subscription Payment Flow — Wired Up & E2E Verified (DONE - Feb 28, 2026)
 - **Critical bug found**: `AdminSubscriptionManagement.js` called `/admin/vip-payments` (list), `/admin/vip-payment/{id}/approve`, `/admin/vip-payment/{id}/reject` — all 3 endpoints existed as orphaned functions in `server.py` (no `@api_router` decorator). Entire admin manual subscription approval flow was returning 404.
 - **Fixes (`server.py`)**:

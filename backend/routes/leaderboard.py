@@ -214,12 +214,23 @@ def _city_for(user: dict) -> str:
 
 async def _sum_prc_by_user(pipeline_match: dict, pipeline_group_field: str,
                            coll_name: str) -> dict:
-    """Return {user_id: sum_prc} for given collection + numeric field."""
+    """Return {user_id: sum_prc} for given collection + numeric field.
+    `pipeline_group_field` may be a single field name OR a list of fallback
+    field names (first non-null wins via $ifNull chain). This handles schema
+    drift across collections (e.g., recharge_transactions has only amount_inr,
+    bill_payment_requests uses prc_used, etc.)."""
+    if isinstance(pipeline_group_field, str):
+        sum_expr = {"$ifNull": [f"${pipeline_group_field}", 0]}
+    else:
+        # Build nested $ifNull chain across multiple field candidates
+        sum_expr = 0
+        for fname in reversed(pipeline_group_field):
+            sum_expr = {"$ifNull": [f"${fname}", sum_expr]}
     pipeline = [
         {"$match": pipeline_match},
         {"$group": {
             "_id": "$user_id",
-            "total": {"$sum": {"$ifNull": [f"${pipeline_group_field}", 0]}},
+            "total": {"$sum": sum_expr},
         }},
     ]
     result = {}
@@ -263,27 +274,34 @@ async def get_top_redeemers(limit: int = 50):
 
     rough_totals: dict = {}
 
-    # Broader source list matching get_user_all_time_redeemed
+    # Broader source list matching get_user_all_time_redeemed.
+    # NOTE: pass-1 here just picks candidate user IDs; pass-2 below reconciles
+    # the accurate PRC value via the canonical get_user_all_time_redeemed().
+    # So per-collection field accuracy doesn't have to be perfect — it just
+    # needs to not miss any user who has *some* PRC spend.
+    # Field tuples support fallback chains for schema drift.
     sources = [
-        ("recharge_requests", "total_prc_deducted"),
-        ("bill_payment_requests", "total_prc_deducted"),
-        ("bill_payments", "total_prc_deducted"),
-        ("payment_requests", "total_prc_deducted"),
-        ("gift_voucher_requests", "total_prc_deducted"),
-        ("redeem_requests", "total_prc_deducted"),
-        ("bank_withdrawal_requests", "total_prc_deducted"),
-        ("bank_redeem_requests", "total_prc_deducted"),
-        ("bank_transfers", "total_prc_deducted"),
-        ("bank_transfer_requests", "prc_deducted"),
-        ("subscription_payments", "prc_amount"),
-        ("vip_payments", "prc_amount"),
-        ("dmt_transactions", "total_prc_deducted"),
-        ("dmt_logs", "total_prc_deducted"),
-        ("orders", "prc_amount"),
-        ("unified_redemptions", "total_prc_deducted"),
+        # Mobile/DTH recharges (Eko) — schema: amount_inr (proxy for PRC via rate)
+        ("recharge_transactions", ["amount_inr", "amount", "prc_amount", "total_prc_deducted"]),
+        ("recharge_requests", ["total_prc_deducted", "amount_inr"]),
+        ("bill_payment_requests", ["total_prc_deducted", "prc_used", "amount_inr"]),
+        ("bill_payments", ["total_prc_deducted", "prc_used", "amount_inr"]),
+        ("payment_requests", ["total_prc_deducted", "prc_used", "amount_inr"]),
+        ("gift_voucher_requests", ["total_prc_deducted", "prc_used", "amount_inr"]),
+        ("redeem_requests", ["total_prc_deducted", "prc_amount", "amount_inr"]),
+        ("bank_withdrawal_requests", ["total_prc_deducted", "prc_amount", "amount_inr"]),
+        ("bank_redeem_requests", ["total_prc_deducted", "prc_amount", "amount_inr"]),
+        ("bank_transfers", ["total_prc_deducted", "prc_amount", "amount_inr"]),
+        ("bank_transfer_requests", ["total_prc_deducted", "prc_deducted", "prc_amount", "amount_inr"]),
+        ("subscription_payments", ["prc_amount", "inr_equivalent", "amount"]),
+        ("vip_payments", ["prc_amount", "amount"]),
+        ("dmt_transactions", ["total_prc_deducted", "prc_amount", "amount"]),
+        ("dmt_logs", ["total_prc_deducted", "prc_amount", "amount"]),
+        ("orders", ["prc_amount", "total_prc"]),
+        ("unified_redemptions", ["total_prc_deducted", "prc_amount", "amount_inr"]),
     ]
-    for coll, field in sources:
-        partial = await _sum_prc_by_user({"status": STATUS_OK}, field, coll)
+    for coll, fields in sources:
+        partial = await _sum_prc_by_user({"status": STATUS_OK}, fields, coll)
         for uid, prc in partial.items():
             rough_totals[uid] = rough_totals.get(uid, 0) + prc
 
@@ -334,6 +352,14 @@ async def get_top_redeemers(limit: int = 50):
         # Canonical unavailable — use rough as last resort
         accurate = dict(candidates)
 
+    # SAFETY NET: if pass-2 reconciliation yielded empty (e.g. all batches timed out
+    # on heavy production data), do NOT serve an empty leaderboard. Fall back to
+    # rough pass-1 candidates so users still see real data.
+    if not accurate and rough_totals:
+        import logging
+        logging.warning("[top-redeemers] pass-2 yielded empty — falling back to rough_totals")
+        accurate = dict(candidates)
+
     # Hydrate user info
     user_docs = {u["uid"]: u for u in await db.users.find(
         {"uid": {"$in": user_ids}},
@@ -376,7 +402,7 @@ async def get_top_redeemers(limit: int = 50):
             "has_avatar": bool(user.get("profile_picture")),
         })
 
-    _TOP_REDEEMERS_CACHE["ts"] = int(now)
+    _TOP_REDEEMERS_CACHE["ts"] = int(now) if leaderboard else int(now) - _TOP_REDEEMERS_TTL + 60  # don't cache empty for >60s
     _TOP_REDEEMERS_CACHE["data"] = leaderboard
     return {
         "leaderboard": leaderboard,

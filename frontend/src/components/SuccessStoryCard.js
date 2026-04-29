@@ -24,6 +24,12 @@ const SERVICE_THEME = {
     icon: '💰',
     label: 'Bank Redeem',
   },
+  subscription: {
+    gradient: 'from-amber-400 via-orange-500 to-rose-500',
+    chip: 'bg-amber-100 text-amber-800 border-amber-200',
+    icon: '👑',
+    label: 'Subscription',
+  },
 };
 
 const REACTIONS = [
@@ -40,6 +46,10 @@ const REACTIONS = [
 const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
   const meta = post.metadata || {};
   const theme = SERVICE_THEME[meta.service_type] || SERVICE_THEME.mobile_recharge;
+  const isSubscription = meta.service_type === 'subscription';
+  const planName = (meta.plan_name || '').trim();
+  const chipLabel = isSubscription && planName ? `${theme.label} • ${planName}` : theme.label;
+  const completionLabel = isSubscription ? 'Upgraded' : 'Successfully Completed';
   const isOwn = !!currentUserId && meta.beneficiary_user_id === currentUserId;
 
   const [reactions, setReactions] = useState(post.reactions_count || { celebrate: 0, love: 0, fire: 0 });
@@ -126,7 +136,7 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${theme.chip}`}>
               <span className="text-sm leading-none">{theme.icon}</span>
-              {theme.label}
+              {chipLabel}
             </span>
             {isOwn && (
               <span
@@ -140,7 +150,7 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
           </div>
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
             <CheckCircle2 className="w-3 h-3" />
-            Successfully Completed
+            {completionLabel}
           </span>
         </div>
 
@@ -166,7 +176,7 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
             >
               ₹{(meta.amount_inr || 0).toLocaleString('en-IN')}
             </p>
-            {typeof meta.user_total_redeemed_inr === 'number' && meta.user_total_redeemed_inr > 0 && (
+            {!isSubscription && typeof meta.user_total_redeemed_inr === 'number' && meta.user_total_redeemed_inr > 0 && (
               <p
                 className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] font-semibold text-slate-700"
                 data-testid={`success-story-lifetime-${post.post_id}`}
