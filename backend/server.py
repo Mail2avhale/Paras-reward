@@ -13173,6 +13173,7 @@ async def check_subscription_fraud(user_id: str, days: int = 10):
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
+@api_router.post("/admin/vip-payment/{payment_id}/approve")
 async def approve_vip_payment(payment_id: str, request: Request):
     """Approve VIP payment and activate membership with fraud prevention and timeout handling"""
     try:
@@ -13647,6 +13648,7 @@ async def get_referral_uids(referrer_uid: str) -> list:
     ).to_list(1000)
     return [r["uid"] for r in referrals]
 
+@api_router.post("/admin/vip-payment/{payment_id}/reject")
 async def reject_vip_payment(payment_id: str, request: Request):
     """Reject VIP payment"""
     try:
@@ -13683,14 +13685,16 @@ async def reject_vip_payment(payment_id: str, request: Request):
         )
         
         # Notify user
-        await create_notification(
-            user_id=payment.get("user_id"),
-            title="❌ Subscription Payment Rejected",
-            message=f"Your subscription payment was rejected. Reason: {reason}",
-            notification_type="subscription",
-            related_id=payment_id,
-            icon="❌"
-        )
+        try:
+            await create_notification(
+                user_id=payment.get("user_id"),
+                notification_type="subscription",
+                title="Subscription Payment Rejected",
+                message=f"Your subscription payment was rejected. Reason: {reason}",
+                data={"payment_id": payment_id, "reason": reason},
+            )
+        except Exception as _ne:
+            logging.warning(f"[REJECT-VIP] notification create failed: {_ne}")
         
         # Log activity
         await db.activity_logs.insert_one({
@@ -13709,8 +13713,95 @@ async def reject_vip_payment(payment_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
+
+@api_router.get("/admin/vip-payments")
+async def admin_list_vip_payments(
+    status: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20,
+    search: Optional[str] = None,
+):
+    """List VIP/manual subscription payments grouped by status (pending/approved/rejected).
+    Used by Admin → Manual Subscription Management tabs."""
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+
+        # Optional substring search across UTR / payment_id / user_email / user_name
+        if search:
+            search = search.strip()
+            search_users = await db.users.find(
+                {"$or": [
+                    {"name": {"$regex": search, "$options": "i"}},
+                    {"email": {"$regex": search, "$options": "i"}},
+                    {"mobile": {"$regex": search, "$options": "i"}},
+                    {"phone": {"$regex": search, "$options": "i"}},
+                ]},
+                {"_id": 0, "uid": 1}
+            ).to_list(200)
+            uids = [u["uid"] for u in search_users]
+            or_clause = [
+                {"utr_number": {"$regex": search, "$options": "i"}},
+                {"payment_id": {"$regex": search, "$options": "i"}},
+                {"user_email": {"$regex": search, "$options": "i"}},
+                {"user_name": {"$regex": search, "$options": "i"}},
+            ]
+            if uids:
+                or_clause.append({"user_id": {"$in": uids}})
+            query["$or"] = or_clause
+
+        skip = max(0, (page - 1) * limit)
+        sort_field = "submitted_at"
+        if status == "approved":
+            sort_field = "approved_at"
+        elif status == "rejected":
+            sort_field = "rejected_at"
+
+        total = await db.vip_payments.count_documents(query)
+        payments = await db.vip_payments.find(query, {"_id": 0}).sort(sort_field, -1).skip(skip).limit(limit).to_list(limit)
+
+        # Enrich with current user info (name/email/mobile)
+        uids = list({p.get("user_id") for p in payments if p.get("user_id")})
+        users_map = {}
+        if uids:
+            ulist = await db.users.find(
+                {"uid": {"$in": uids}},
+                {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1, "phone": 1, "subscription_plan": 1, "subscription_expiry": 1}
+            ).to_list(len(uids))
+            users_map = {u["uid"]: u for u in ulist}
+        for p in payments:
+            u = users_map.get(p.get("user_id") or "", {})
+            p["user_name"] = p.get("user_name") or u.get("name") or "Unknown"
+            p["user_email"] = p.get("user_email") or u.get("email") or ""
+            p["user_phone"] = p.get("user_phone") or u.get("mobile") or u.get("phone") or ""
+            p["plan"] = p.get("subscription_plan", "")
+            p["duration"] = p.get("plan_type", "monthly")
+            if status == "approved" and not p.get("new_expiry"):
+                p["new_expiry"] = u.get("subscription_expiry")
+
+        return {
+            "payments": payments,
+            "total": total,
+            "page": page,
+            "pages": max(1, (total + limit - 1) // limit),
+        }
+    except Exception as e:
+        logging.error(f"[ADMIN-VIP-LIST] error: {e}")
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+
+
+@api_router.get("/admin/vip-payments/pending-count")
+async def admin_pending_vip_payments_count():
+    """Quick badge count for the pending tab."""
+    try:
+        return {"count": await db.vip_payments.count_documents({"status": "pending"})}
+    except Exception:
+        return {"count": 0}
+
+
 async def delete_vip_payment(payment_id: str, request: Request):
-    """Delete VIP payment (for mistakenly approved payments)"""
+    """Delete VIP payment - DEPRECATED orphan signature; canonical endpoint is admin_delete_vip_payment_endpoint below."""
     try:
         data = await request.json()
         admin_id = data.get("admin_id")
@@ -19754,8 +19845,17 @@ async def get_user_360_view(query: str, request: Request):
     except Exception as e:
         logging.error(f"User360 vip_payments_hist error for {uid}: {e}")
     
-    # Sort combined history
-    subscription_history.sort(key=lambda x: x.get("created_at") or x.get("paid_at") or "", reverse=True)
+    # Sort combined history (normalize datetime → iso string for stable sort)
+    def _to_iso(v):
+        if v is None:
+            return ""
+        if isinstance(v, datetime):
+            try:
+                return v.isoformat()
+            except Exception:
+                return ""
+        return str(v)
+    subscription_history.sort(key=lambda x: _to_iso(x.get("created_at") or x.get("paid_at")), reverse=True)
     
     # ========== FRAUD DETECTION ==========
     # 1. Multiple failed payments in short time

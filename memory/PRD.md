@@ -651,6 +651,27 @@ Examined all 5 matched DMT transactions in production:
 - **Wiring**: New `bulk-refund-otp` permission in `ALL_ADMIN_PERMISSIONS`, sidebar link under General, route + permission mapping in `App.js` and `AdminLayout.js`. Sidebar screenshot confirms link active.
 - **Verified**: Backend bulk endpoint tested with 3 fake TIDs — all 3 correctly returned HTTP 404 from Eko ("Eko rejected"). Real production TIDs from Eko portal will trigger actual OTP SMS to customer mobile.
 
+### Manual Subscription Payment Flow — Wired Up & E2E Verified (DONE - Feb 28, 2026)
+- **Critical bug found**: `AdminSubscriptionManagement.js` called `/admin/vip-payments` (list), `/admin/vip-payment/{id}/approve`, `/admin/vip-payment/{id}/reject` — all 3 endpoints existed as orphaned functions in `server.py` (no `@api_router` decorator). Entire admin manual subscription approval flow was returning 404.
+- **Fixes (`server.py`)**:
+  - Added `@api_router.post("/admin/vip-payment/{payment_id}/approve")` decorator on `approve_vip_payment` (line 13176).
+  - Added `@api_router.post("/admin/vip-payment/{payment_id}/reject")` decorator on `reject_vip_payment` (line 13651).
+  - Fixed `create_notification` kwarg mismatch in reject (was passing `related_id` & `icon` which are not in signature) → switched to canonical `(user_id, notification_type, title, message, data=...)` signature inside try/except.
+  - **NEW**: `GET /admin/vip-payments?status=pending|approved|rejected&page=&limit=&search=` — list with FIFO/desc sort, user enrichment, pagination.
+  - **NEW**: `GET /admin/vip-payments/pending-count` — pending badge.
+  - Side fix: User-360 endpoint sort crash on combined subscription history (`TypeError: '<' not supported between datetime and str`) → normalize to ISO string before sort.
+- **E2E test (preview)**:
+  1. User `9970100782` submits Payment-1 (Elite ₹799) → `submitted` ✓
+  2. User submits Payment-2 (Startup ₹299) → `submitted` ✓
+  3. PENDING tab → both visible, total=2 ✓
+  4. Admin approves P1 → `success: true`, +28 days added to existing expiry, plan=elite ✓
+  5. Admin rejects P2 with reason → `success: true`, reason stored ✓
+  6. APPROVED tab → contains P1 with new_expiry, fraud_warning surfaces (recent sub) ✓
+  7. REJECTED tab → contains P2 with rejection_reason, rejected_by, rejected_at ✓
+  8. PENDING tab → empty ✓
+  9. Community success-story post auto-created with plan_name=Elite, tags include `['subscription','success','subscription','elite']` ✓
+  10. Activity logs recorded for both approve and reject actions ✓
+
 ### Subscription → Community Success Story Auto-Posts (DONE - Feb 28, 2026)
 - **Goal**: Whenever a user gets a subscription activated (any path), automatically post a celebratory "Success Story" in the Community Forum.
 - **Hooks added**: 
@@ -662,7 +683,7 @@ Examined all 5 matched DMT transactions in production:
   - **NEW**: `admin_update_user_subscription` (admin manual override at server.py:18398).
   - **NEW**: `check_and_activate_upcoming` in `routes/admin_subscription.py:483` (when an upcoming PRC plan auto-activates after current expires).
 - **Hook signature**: `create_success_story_post(user_id, service_type="subscription", amount_inr, plan_name, ref_id="sub_<payment_id>")` — idempotent via ref_id, fire-and-forget via `asyncio.create_task`, errors logged but never raised.
-- **Verified**: Direct call produces post `"👑 User from City, State upgraded to Elite!"` with metadata.plan_name and tags `['subscription', 'success', 'subscription', 'elite']`. Existing 36 success stories on preview unaffected.
+- **Verified**: Direct call produces post `"👑 User from City, State upgraded to Elite!"` with metadata.plan_name and tags `['subscription', 'success', 'subscription', 'elite']`.
 
 ### Admin User 360° — 503 Timeout Fix (DONE - Feb 28, 2026)
 - **User report**: "Request failed with status code 503" on User 360 page (heavy-network users like SANTOSH with 1196+ active referrals).
