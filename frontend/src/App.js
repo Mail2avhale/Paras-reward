@@ -13,6 +13,7 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import LiveTickerStrip from "@/components/LiveTickerStrip";
+import WebVitalsReporter from "@/components/WebVitalsReporter";
 // Lazy load heavy components
 const SupportChatbot = null; // REMOVED - chatbot feature removed
 // HoliCelebration removed as per user request
@@ -334,6 +335,7 @@ const AdminRazorpaySubscriptions = IS_USER_BUILD ? null : lazy(() => import(/* w
 const AdminErrorMonitor = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/ErrorMonitor"));
 const AdminHealthCheck = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminHealthCheck"));
 const AdminForceActivateSubscription = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminForceActivateSubscription"));
+const AdminWebVitals = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminWebVitals"));
 // AdminBankWithdrawals removed - merged into AdminUnifiedPayments
 const AdminGiftVouchers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminGiftVouchers"));
 const AdminServiceCharges = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceCharges"));
@@ -446,6 +448,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
       )}
       <BrowserRouter>
         <PageTitleUpdater />
+        <WebVitalsReporter user={user} />
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
             <Route path="/" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RewardsHome />} />
@@ -562,6 +565,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/error-monitor" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminErrorMonitor user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/health-check" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminHealthCheck user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/force-activate-subscription" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminForceActivateSubscription user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/web-vitals" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminWebVitals user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/holidays" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminHolidays /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/settings/system" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=system" replace /> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/settings/web" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=web" replace /> : <Navigate to="/dashboard" />} />

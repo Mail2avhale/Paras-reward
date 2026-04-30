@@ -237,6 +237,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'economy-settings', label: 'Economy Settings', icon: Cpu, path: '/admin/economy-settings' },
         { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/admin/data-backup' },
         { id: 'health-check', label: 'Pre-Deploy Health Check', icon: Activity, path: '/admin/health-check', highlight: true },
+        { id: 'web-vitals', label: 'Web Vitals (RUM)', icon: Activity, path: '/admin/web-vitals', highlight: true },
       ]
     },
     settings: {
@@ -310,6 +311,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/economy-settings': 'economy-settings',
     '/admin/data-backup': 'data-backup',
     '/admin/health-check': 'health-check',
+    '/admin/web-vitals': 'health-check',
   };
 
   useEffect(() => {

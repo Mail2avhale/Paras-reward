@@ -1369,6 +1369,139 @@ async def get_cache_stats():
         "status": "connected" if stats.get("connected") else "disconnected"
     }
 
+# ==================== WEB VITALS METRICS (Apr 30 2026) ====================
+# Real-User-Monitoring endpoint. Receives Core Web Vitals (LCP, INP, CLS) +
+# FCP/TTFB from the frontend WebVitalsReporter. Stored in `web_vitals`
+# collection with a 14-day TTL index for self-cleanup.
+
+@api_router.post("/metrics/web-vitals")
+async def ingest_web_vitals(request: Request):
+    """Ingest a single Web-Vitals data point. Public endpoint (uses sendBeacon)."""
+    try:
+        data = await request.json()
+    except Exception:
+        return {"ok": False}
+    name = (data.get("name") or "").upper()
+    if name not in {"LCP", "INP", "CLS", "FCP", "TTFB"}:
+        return {"ok": False}
+    try:
+        value = float(data.get("value") or 0)
+    except Exception:
+        return {"ok": False}
+
+    # Light validation — drop absurd outliers (browser bugs / synthetic spikes)
+    SANE_BOUNDS = {"LCP": 60000, "INP": 60000, "CLS": 5, "FCP": 60000, "TTFB": 60000}
+    if value < 0 or value > SANE_BOUNDS.get(name, 60000):
+        return {"ok": False}
+
+    client_ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+    if not client_ip:
+        client_ip = request.headers.get("X-Real-IP", "")
+
+    doc = {
+        "name": name,
+        "value": value,
+        "rating": data.get("rating") or "unknown",
+        "delta": float(data.get("delta") or 0),
+        "page_load_id": data.get("page_load_id"),
+        "path": (data.get("path") or "")[:200],
+        "user_agent": (data.get("user_agent") or "")[:300],
+        "connection": data.get("connection_effective_type"),
+        "uid": data.get("uid"),
+        "role": data.get("role") or "anonymous",
+        "ip": client_ip,
+        "created_at": datetime.now(timezone.utc),
+    }
+    try:
+        await db.web_vitals.insert_one(doc)
+    except Exception as e:
+        logging.warning(f"[WEB-VITALS] insert failed: {e}")
+        return {"ok": False}
+    return {"ok": True}
+
+
+@api_router.get("/admin/web-vitals/summary")
+async def admin_web_vitals_summary(hours: int = 24):
+    """Aggregated summary: p50/p75/p95 + good/poor distribution per metric.
+    Phase-2 perf: 60s cache.
+    """
+    hours = max(1, min(720, int(hours or 24)))  # 1h..30d
+    CACHE_KEY = f"admin:web_vitals_summary:h={hours}:v1"
+    if cache:
+        try:
+            cached = await cache.get(CACHE_KEY)
+            if cached:
+                return cached
+        except Exception:
+            pass
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    metrics = ["LCP", "INP", "CLS", "FCP", "TTFB"]
+    summary = {}
+    total_samples = 0
+
+    for m in metrics:
+        cur = db.web_vitals.find(
+            {"name": m, "created_at": {"$gte": cutoff}},
+            {"_id": 0, "value": 1, "rating": 1},
+        ).sort("value", 1)
+        values = [d["value"] for d in await cur.to_list(length=10000)]
+        n = len(values)
+        total_samples += n
+        if n == 0:
+            summary[m] = {
+                "samples": 0, "p50": None, "p75": None, "p95": None,
+                "good": 0, "needs_improvement": 0, "poor": 0,
+            }
+            continue
+        p50 = values[int(n * 0.50)]
+        p75 = values[int(min(n - 1, n * 0.75))]
+        p95 = values[int(min(n - 1, n * 0.95))]
+        # Distribution
+        good = await db.web_vitals.count_documents({"name": m, "created_at": {"$gte": cutoff}, "rating": "good"})
+        needs = await db.web_vitals.count_documents({"name": m, "created_at": {"$gte": cutoff}, "rating": "needs-improvement"})
+        poor = await db.web_vitals.count_documents({"name": m, "created_at": {"$gte": cutoff}, "rating": "poor"})
+        summary[m] = {
+            "samples": n,
+            "p50": round(p50, 3),
+            "p75": round(p75, 3),
+            "p95": round(p95, 3),
+            "good": good,
+            "needs_improvement": needs,
+            "poor": poor,
+        }
+
+    # Top 5 worst-performing pages by LCP p75
+    pipeline = [
+        {"$match": {"name": "LCP", "created_at": {"$gte": cutoff}}},
+        {"$group": {"_id": "$path", "avg": {"$avg": "$value"}, "count": {"$sum": 1}}},
+        {"$match": {"count": {"$gte": 3}}},
+        {"$sort": {"avg": -1}},
+        {"$limit": 5},
+    ]
+    worst_pages_raw = await db.web_vitals.aggregate(pipeline).to_list(length=5)
+    worst_pages = [{"path": d["_id"], "avg_lcp_ms": round(d["avg"], 0), "samples": d["count"]} for d in worst_pages_raw]
+
+    payload = {
+        "window_hours": hours,
+        "total_samples": total_samples,
+        "metrics": summary,
+        "worst_pages_by_lcp": worst_pages,
+        "thresholds": {
+            "LCP": {"good": "<=2500ms", "poor": ">4000ms"},
+            "INP": {"good": "<=200ms", "poor": ">500ms"},
+            "CLS": {"good": "<=0.1", "poor": ">0.25"},
+        },
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if cache:
+        try:
+            await cache.set(CACHE_KEY, payload, ttl=60)
+        except Exception:
+            pass
+    return payload
+
+
 # ==================== SESSION VALIDATION API ====================
 @api_router.post("/auth/validate-session")
 async def validate_session(request: Request):
@@ -23932,18 +24065,38 @@ async def submit_vip_payment(request: Request):
     }
 
 @api_router.get("/membership/payments")
-async def get_vip_payments(status: Optional[str] = None):
-    """Get all VIP payment requests (Admin)"""
+async def get_vip_payments(
+    status: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50,
+):
+    """Get VIP payment requests (Admin) — paginated.
+
+    Query: status?, page (1-based), limit (max 100).
+    Returns: {payments, total, page, limit, total_pages}
+    """
+    # Clamp inputs
+    page = max(1, page)
+    limit = max(1, min(100, limit))
+    skip = (page - 1) * limit
+
     query = {}
     if status:
         query["status"] = status
-    
-    payments = await db.vip_payments.find(query).sort("submitted_at", -1).to_list(length=1000)
-    
-    for payment in payments:
-        payment["_id"] = str(payment["_id"])
-    
-    return payments
+
+    total = await db.vip_payments.count_documents(query)
+    payments = await db.vip_payments.find(
+        query,
+        {"_id": 0},  # SECURITY: exclude raw Mongo _id
+    ).sort("submitted_at", -1).skip(skip).limit(limit).to_list(length=limit)
+
+    return {
+        "payments": payments,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit if limit else 0,
+    }
 
 @api_router.get("/membership/payment/{user_id}")
 async def get_user_payment_status(user_id: str):
@@ -35364,6 +35517,22 @@ async def initialize_database_indexes():
         print("✅ Community posts indexes ready")
     except Exception as e:
         print(f"⚠️  Community posts indexes: {e}")
+
+    # ==================== WEB VITALS INDEXES (Apr 30 2026 — RUM monitoring) ====================
+    try:
+        existing_indexes = await db.web_vitals.index_information()
+        # 14-day TTL for self-cleanup
+        if "created_at_ttl" not in existing_indexes:
+            await db.web_vitals.create_index(
+                [("created_at", 1)], expireAfterSeconds=14 * 24 * 3600, name="created_at_ttl"
+            )
+        if "name_1_created_at_-1" not in existing_indexes:
+            await db.web_vitals.create_index([("name", 1), ("created_at", -1)])
+        if "path_1_created_at_-1" not in existing_indexes:
+            await db.web_vitals.create_index([("path", 1), ("created_at", -1)])
+        print("✅ Web vitals indexes ready")
+    except Exception as e:
+        print(f"⚠️  Web vitals indexes: {e}")
 
 
     # ==================== KYC DOCUMENTS INDEXES ====================

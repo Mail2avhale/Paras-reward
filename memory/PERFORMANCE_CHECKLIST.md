@@ -85,6 +85,18 @@ Each cached with payload-identical guard test
 - Production verified Apr 30: KPIs 1.49s cold → 0.42s warm; Members 1.19s → 0.45s.
 - Stale window deliberately small (60-180s); admin staleness is acceptable given the tradeoff.
 
+### 13. Web Vitals — Real User Monitoring (Apr 30 2026)
+- Frontend `WebVitalsReporter` (mounted in `App.js`) sends LCP, INP, CLS, FCP, TTFB to `POST /api/metrics/web-vitals` via `navigator.sendBeacon` (zero perf cost on unload).
+- Backend ingest validates name + bounds, drops outliers, stores in `web_vitals` collection with **14-day TTL index** (auto-cleanup).
+- Admin page `/admin/web-vitals` shows p50/p75/p95 + good/needs-improvement/poor distribution per metric, plus top-5 worst pages by LCP avg. 60s redis cache on summary endpoint. Window selectable: 1h / 24h / 7d / 30d.
+- Indexes: `(name, created_at desc)`, `(path, created_at desc)`.
+
+### 14. Pagination on `/membership/payments` (Apr 30 2026)
+- Was: returned up to 1000 records + raw Mongo `_id` exposed.
+- Now: `page`/`limit` (max 100) with proper `total / total_pages` envelope. `_id` excluded.
+
+---
+
 ### 12. Phase B Security Hardening (Apr 30 2026)
 
 **A. IDOR Protection on User Routes**
