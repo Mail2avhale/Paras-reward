@@ -37,6 +37,7 @@ TYPE_MAP = {
     "test_credit": "Admin Credit", "test_debit": "Admin Debit",
     "subscription": "Subscription", "subscription_payment": "Subscription", "elite_activation": "Subscription",
     "subscription_prc": "Subscription", "subscription_refund": "Subscription",
+    "subscription_prc_admin_override": "Subscription",
     "gift_subscription": "Subscription",
     "redeem": "Redeem", "retry_debit": "Redeem",
     "dmt_transfer": "Redeem",
@@ -60,6 +61,7 @@ DEBIT_TYPES = {
     "bank_withdrawal_request", "bank_redeem_request",
     "dmt_transfer", "redeem", "retry_debit", "burn", "hourly_burn",
     "auto_burn", "subscription", "subscription_payment", "subscription_prc",
+    "subscription_prc_admin_override",
     "elite_activation", "test_debit",
 }
 
@@ -125,7 +127,9 @@ async def get_prc_statement(
             dt = parse_date(doc.get("timestamp") or doc.get("created_at"))
             if not dt:
                 continue
-            txn_id = doc.get("txn_id", "")
+            # Capture txn_id with reference fallback (e.g. sustainability burns
+            # store their unique id in `reference`, not `txn_id`).
+            txn_id = doc.get("txn_id") or doc.get("reference") or ""
             display_type = classify_type(doc.get("type", ""))
             amount = abs(doc.get("amount", 0))
             is_credit = determine_credit(doc)
