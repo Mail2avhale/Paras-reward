@@ -8,6 +8,38 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **Backend**: FastAPI (Python) + MongoDB (Motor)
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
+
+### Admin Force-Activate Elite (PRC Override) — DONE (30 Apr 2026)
+
+**Goal**: Let an admin manually activate an Elite subscription for a user using PRC, even when the user has insufficient PRC balance — with proper guardrails, audit trail, and auto debt-recovery.
+
+**Rules (confirmed with user)**:
+- Admin PIN required (`153759`).
+- Only Elite plan; price = `calculate_elite_prc_price()` dynamic (`₹999 + 18% GST + processing + admin charges → PRC`).
+- Consumes 1 of 3 lifetime PRC-subscription chances (`MAX_PRC_SUBSCRIPTIONS=3`).
+- 7-day subscription cooldown ENFORCED (NOT bypassed).
+- PRC balance IS allowed to go NEGATIVE (overdraft / debt).
+- Full audit trail: `admin_audit_logs` (`action="force_activate_elite_prc"`) + `transactions` statement row (`SUB-PRC-ADMIN-*`, `type="subscription_prc_admin_override"`, negative amount) + `subscription_payments` row with `admin_force_activated=true`.
+- Auto-posts a Success Story to Community Forum on immediate activations (via `create_success_story_post`).
+
+**Debt Recovery**:
+- Since all credit paths (`mining`, `referral`, `cashback`, `admin_credit`, …) use `$inc: {prc_balance: +x}`, the negative balance naturally offsets until it returns to ≥ 0.
+- On force-activation with overdraft, we stamp `prc_debt_active=True`, `prc_debt_original=abs(balance_after)`, `prc_debt_at`, `prc_debt_reason="admin_force_activate_elite"` on the user.
+- `GET /api/user/prc-debt-status/{uid}` computes `in_debt/remaining/recovered` from current balance and auto-clears `prc_debt_active` (stamps `prc_debt_cleared_at`) once balance ≥ 0.
+- Withdrawals while negative are blocked implicitly by `effective_available = min(available, current_balance)` already.
+
+**New endpoints (backend/server.py)**:
+- `POST /api/admin/subscription/force-activate-elite-prc` — validates admin PIN → looks up user by mobile/email/uid → enforces cap + cooldown → `calculate_elite_prc_price()` → `$inc prc_balance -= total_prc` (no `$gte` guard → overdraft allowed) → activates / queues Elite → credits company wallets → audit/activity/notification/community-post/sustainability-burn.
+- `GET /api/admin/subscription/force-activate-preview?identifier=...` — returns `{user, pricing, projection(overdraft/is_upcoming), eligibility(chances, cooldown, can_proceed, blockers)}` for the 3-step confirm UI.
+- `GET /api/user/prc-debt-status/{uid}` — PRC debt status with auto-clear.
+
+**New frontend page**:
+- `/admin/force-activate-subscription` → `AdminForceActivateSubscription.js` (3-step search → preview → PIN modal → success result).
+- Sidebar link under *Request Approvals* group (AdminLayout, `KeyRound` icon, `highlight=true`).
+
+**Tests**: `/app/backend/tests/test_admin_force_activate_elite_prc.py` — 9 cases, all passing. Frontend Playwright verified all testids end-to-end.
+
+
 ### Sustainability Auto-Burn 1% (DONE - Feb 1, 2026)
 
 **Goal**: After every successful PRC service transaction, burn 1% of the user's POST-deduction balance to maintain platform sustainability.
