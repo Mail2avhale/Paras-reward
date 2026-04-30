@@ -10,7 +10,7 @@ import {
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
   AlertTriangle, Smartphone, Building, Crown, AlertOctagon, Database, Eye,
   ShieldAlert, CheckCircle, Building2, Zap, Receipt, Send, MessageSquare, Banknote,
-  Coins, Flame, Briefcase
+  Coins, Flame, Briefcase, KeyRound
 } from 'lucide-react';
 
 const LOGO_URL = "/paras-logo.png";
@@ -203,6 +203,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'kyc', label: 'KYC', icon: Shield, path: '/admin/kyc', pendingCount: pendingCounts.kyc },
         { id: 'bank-transfers', label: 'Redeem to Bank', icon: Banknote, path: '/admin/bank-transfers', highlight: true },
         { id: 'subscriptions', label: 'Subscription', icon: Crown, path: '/admin/subscriptions', pendingCount: pendingCounts.subscriptions },
+        { id: 'force-activate-subscription', label: 'Force Activate Elite (PRC)', icon: KeyRound, path: '/admin/force-activate-subscription', highlight: true },
         { id: 'razorpay-subs', label: 'Razorpay Payments', icon: CreditCard, path: '/admin/razorpay-subscriptions', highlight: true },
         { id: 'bbps-dashboard', label: 'BBPS Instant', icon: Activity, path: '/admin/bbps', highlight: true },
         { id: 'eko-services', label: 'Eko Direct Services', icon: Zap, path: '/admin/eko-services', highlight: true },
@@ -281,6 +282,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
     // Payments
     '/admin/subscriptions': 'subscriptions',
+    '/admin/force-activate-subscription': 'subscriptions',
     '/admin/bank-transfers': 'bank-transfers',
     '/admin/razorpay-subscriptions': 'razorpay-subs',
     '/admin/bbps': 'bbps-dashboard',

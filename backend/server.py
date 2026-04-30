@@ -18,6 +18,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import re
 import logging
 import hashlib
 from pydantic import BaseModel, Field, ConfigDict
@@ -12601,6 +12602,538 @@ async def subscription_pay_with_prc(request: Request):
         import traceback
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Subscription failed. Technical error: {str(e)}")
+
+
+# ============================================================================
+# ADMIN OVERRIDE: Force Activate Elite Subscription via PRC
+# ----------------------------------------------------------------------------
+# Allows admin to manually activate an Elite plan for a user using PRC,
+# bypassing the standard redeem-limit and balance checks. PRC balance IS
+# allowed to go negative (overdraft) — subsequent user earnings will
+# naturally pay off the debt via `$inc`.
+#
+# RULES (confirmed with user):
+#  1. Admin PIN required (153759)
+#  2. Only Elite plan, dynamic price (₹999 + 18% GST + Fees → PRC via rate)
+#  3. Consumes 1 of 3 lifetime PRC subscription chances
+#  4. Enforces the existing 7-day subscription cooldown
+#  5. Redeem-limit + balance checks are SKIPPED (overdraft allowed)
+#  6. Full audit trail: admin_audit_logs + user transactions statement
+#  7. Auto-posts Success Story to Community Forum (immediate activations)
+# ============================================================================
+ADMIN_OVERRIDE_PIN = "153759"  # Matches existing hardcoded admin PIN pattern
+
+@api_router.post("/admin/subscription/force-activate-elite-prc")
+async def admin_force_activate_elite_prc(request: Request):
+    """Admin PIN-protected force activation of Elite subscription via PRC.
+    Allows PRC balance to go negative (debt). Consumes 1 PRC-subscription
+    chance and enforces the 7-day cooldown.
+    """
+    try:
+        data = await request.json()
+        admin_uid = (data.get("admin_uid") or "").strip()
+        admin_pin = str(data.get("admin_pin") or "").strip()
+        target_identifier = (data.get("target_identifier") or "").strip()
+        admin_note = (data.get("admin_note") or "").strip() or "Admin force-activated Elite via PRC"
+
+        # 1) Admin PIN validation
+        if admin_pin != ADMIN_OVERRIDE_PIN:
+            raise HTTPException(status_code=403, detail="Invalid Admin PIN.")
+
+        if not target_identifier:
+            raise HTTPException(status_code=400, detail="Target user identifier (mobile or email) is required.")
+
+        # 2) Lookup target user: try mobile → email (case-insensitive)
+        target_user = None
+        digits = "".join(ch for ch in target_identifier if ch.isdigit())
+        if len(digits) >= 10:
+            mobile10 = digits[-10:]
+            target_user = await db.users.find_one({"mobile": {"$regex": f"{mobile10}$"}})
+        if not target_user and "@" in target_identifier:
+            target_user = await db.users.find_one({"email": {"$regex": f"^{re.escape(target_identifier)}$", "$options": "i"}})
+        if not target_user:
+            target_user = await db.users.find_one({"uid": target_identifier})
+        if not target_user:
+            raise HTTPException(status_code=404, detail=f"No user found for identifier '{target_identifier}'.")
+
+        user_id = target_user["uid"]
+        user_name = target_user.get("name", "User")
+        current_balance = float(target_user.get("prc_balance", 0) or 0)
+
+        logging.info(f"[ADMIN-FORCE-SUB] admin={admin_uid} target={user_id} ({user_name}) balance={current_balance}")
+
+        # 3) 3-time PRC subscription lifetime cap
+        COUNTING_STATUSES = ["paid", "upcoming", "active", "completed", "expired"]
+        MAX_PRC_SUBSCRIPTIONS = 3
+        prior_count = await db.subscription_payments.count_documents({
+            "user_id": user_id,
+            "payment_method": "prc",
+            "status": {"$in": COUNTING_STATUSES},
+        })
+        if prior_count >= MAX_PRC_SUBSCRIPTIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"User has already used {prior_count}/{MAX_PRC_SUBSCRIPTIONS} PRC subscription chances. Admin override cannot bypass lifetime cap.",
+            )
+
+        # 4) 7-day cooldown (NOT bypassed per user rule)
+        try:
+            cooldown = await check_service_cooldown(user_id, "subscription")
+            if not cooldown["allowed"]:
+                wait_days = cooldown.get("wait_days") or round(cooldown.get("wait_hours", 0) / 24, 1)
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Cooldown active. User must wait {wait_days:.0f} more days before next subscription.",
+                )
+        except HTTPException:
+            raise
+        except Exception as cd_err:
+            logging.warning(f"[ADMIN-FORCE-SUB] Cooldown check error for {user_id}: {cd_err}")
+
+        # 5) Dynamic Elite pricing
+        try:
+            pricing = await calculate_elite_prc_price()
+            prc_amount = pricing["total_prc"]
+            prc_rate = pricing["prc_rate"]
+        except Exception as rate_err:
+            logging.error(f"[ADMIN-FORCE-SUB] Pricing calc error: {rate_err}")
+            raise HTTPException(status_code=500, detail="Could not calculate Elite pricing.")
+
+        # 6) Cooldown / duration / active-plan handling (mirrors normal flow)
+        duration_days = 28
+        now = datetime.now(timezone.utc)
+        current_expiry = target_user.get("subscription_expiry") or target_user.get("subscription_expires")
+        has_active_plan = False
+        expiry_dt = None
+        is_expired_flag = target_user.get("subscription_expired", False)
+        if current_expiry and not is_expired_flag:
+            try:
+                if isinstance(current_expiry, str):
+                    expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+                else:
+                    expiry_dt = current_expiry
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                if expiry_dt > now:
+                    has_active_plan = True
+            except Exception:
+                pass
+
+        is_upcoming = has_active_plan
+        import uuid as _uuid
+        payment_id = str(_uuid.uuid4())
+        if is_upcoming:
+            scheduled_start = expiry_dt.isoformat()
+            scheduled_end = (expiry_dt + timedelta(days=duration_days)).isoformat()
+        else:
+            new_expiry = (now + timedelta(days=duration_days)).isoformat()
+
+        # 7) DEDUCT PRC — allow overdraft (no $gte filter, no balance check)
+        try:
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$inc": {"prc_balance": -prc_amount}},
+            )
+        except Exception as deduct_err:
+            logging.error(f"[ADMIN-FORCE-SUB] PRC deduction failed: {deduct_err}")
+            raise HTTPException(status_code=500, detail="Could not deduct PRC. Try again.")
+
+        # 8) If balance went negative, annotate debt fields for UI transparency
+        updated_user_doc = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
+        balance_after = round(float((updated_user_doc or {}).get("prc_balance", 0) or 0), 2)
+        overdraft_applied = balance_after < 0
+        if overdraft_applied:
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {
+                    "prc_debt_active": True,
+                    "prc_debt_original": abs(balance_after),
+                    "prc_debt_at": now.isoformat(),
+                    "prc_debt_reason": "admin_force_activate_elite",
+                }}
+            )
+
+        # 9) Activate or schedule subscription
+        if not is_upcoming:
+            try:
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {"$set": {
+                        "subscription_plan": "elite",
+                        "subscription_expiry": new_expiry,
+                        "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
+                        "subscription_start": now.isoformat(),
+                        "membership_type": "vip",
+                        "subscription_status": "active",
+                        "subscription_payment_type": "prc",
+                        "subscription_expired": False,
+                        "last_prc_subscription": now.isoformat(),
+                    }},
+                )
+            except Exception as upd_err:
+                # Best-effort refund if activation fails
+                logging.error(f"[ADMIN-FORCE-SUB] Activation failed, refunding PRC: {upd_err}")
+                await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": prc_amount}})
+                raise HTTPException(status_code=500, detail="Subscription activation failed. PRC refunded.")
+            if cache:
+                await cache.delete(f"user_data:{user_id}")
+                await cache.delete(f"user:dashboard:{user_id}")
+            try:
+                await assign_subscription_position(user_id)
+            except Exception as pos_err:
+                logging.warning(f"[ADMIN-FORCE-SUB] Sub position error: {pos_err}")
+
+        # 10) Credit company wallets (revenue recognised regardless of overdraft)
+        try:
+            await credit_company_wallets_for_subscription(user_id, pricing, user_name)
+        except Exception as w_err:
+            logging.error(f"[ADMIN-FORCE-SUB] Company wallet credit failed: {w_err}")
+
+        # 11) subscription_payments record (counts toward 3-time cap)
+        payment_record = {
+            "payment_id": payment_id,
+            "user_id": user_id,
+            "user_name": user_name,
+            "plan_name": "elite",
+            "plan_type": "monthly",
+            "payment_method": "prc",
+            "prc_amount": round(prc_amount, 2),
+            "prc_rate_used": prc_rate,
+            "pricing_breakdown": {
+                "base_inr": pricing["base_inr"],
+                "gst_inr": pricing["gst_inr"],
+                "gst_rate": pricing["gst_rate"],
+                "processing_fee_inr": pricing["processing_fee_inr"],
+                "admin_charge_rate": pricing["admin_charge_rate"],
+                "base_prc": pricing["base_prc"],
+                "gst_prc": pricing["gst_prc"],
+                "processing_fee_prc": pricing["processing_fee_prc"],
+                "admin_charges_prc": pricing["admin_charges_prc"],
+                "total_prc": pricing["total_prc"],
+            },
+            "inr_equivalent": pricing["base_with_gst_inr"],
+            "status": "upcoming" if is_upcoming else "paid",
+            "created_at": now.isoformat(),
+            "duration_days": duration_days,
+            "admin_force_activated": True,
+            "admin_uid": admin_uid,
+            "admin_note": admin_note,
+            "overdraft_applied": overdraft_applied,
+            "balance_before": round(current_balance, 2),
+            "balance_after": balance_after,
+        }
+        if is_upcoming:
+            payment_record["scheduled_start"] = scheduled_start
+            payment_record["scheduled_end"] = scheduled_end
+        else:
+            payment_record["subscription_start"] = now.isoformat()
+            payment_record["subscription_expiry"] = new_expiry
+        await db.subscription_payments.insert_one(payment_record)
+
+        # 12) Transaction statement (negative if overdraft) — visible in user's PRC statement
+        if is_upcoming:
+            try:
+                sched_dt = datetime.fromisoformat(scheduled_start.replace('Z', '+00:00'))
+                sched_display = sched_dt.strftime("%d %b %Y")
+            except Exception:
+                sched_display = scheduled_start[:10]
+            desc = f"Elite Subscription ({duration_days} days) — Admin Override (Starts {sched_display})"
+        else:
+            desc = f"Elite Subscription ({duration_days} days) — Admin Override"
+        if overdraft_applied:
+            desc += f" [Overdraft: {abs(balance_after):,.0f} PRC debt]"
+
+        await db.transactions.insert_one({
+            "user_id": user_id,
+            "transaction_id": f"SUB-PRC-ADMIN-{payment_id}",
+            "type": "subscription_prc_admin_override",
+            "amount": -prc_amount,
+            "prc_amount": prc_amount,
+            "inr_value": pricing["base_with_gst_inr"],
+            "description": desc,
+            "balance_after": balance_after,
+            "timestamp": now,
+            "created_at": now.isoformat(),
+            "status": "completed",
+            "admin_uid": admin_uid,
+            "admin_force_activated": True,
+            "overdraft_applied": overdraft_applied,
+        })
+
+        # 13) Admin audit log
+        try:
+            await log_admin_action(
+                admin_uid=admin_uid or "unknown",
+                action="force_activate_elite_prc",
+                entity_type="user",
+                entity_id=user_id,
+                details={
+                    "target_user_name": user_name,
+                    "target_user_mobile": target_user.get("mobile"),
+                    "target_user_email": target_user.get("email"),
+                    "prc_amount": round(prc_amount, 2),
+                    "inr_value": pricing["base_with_gst_inr"],
+                    "prc_rate_used": prc_rate,
+                    "balance_before": round(current_balance, 2),
+                    "balance_after": balance_after,
+                    "overdraft_applied": overdraft_applied,
+                    "is_upcoming": is_upcoming,
+                    "note": admin_note,
+                    "payment_id": payment_id,
+                },
+                before_data={"prc_balance": current_balance, "subscription_plan": target_user.get("subscription_plan")},
+                after_data={"prc_balance": balance_after, "subscription_plan": "elite"},
+            )
+        except Exception as audit_err:
+            logging.warning(f"[ADMIN-FORCE-SUB] Audit log failed (non-fatal): {audit_err}")
+
+        # 14) Notify user
+        try:
+            if is_upcoming:
+                notify_msg = f"Admin has queued an Elite plan for you (activates {scheduled_start[:10]}). {prc_amount:,.0f} PRC deducted."
+                await log_activity(user_id=user_id, action_type="subscription_prc_admin_upcoming",
+                    description=f"Admin queued Elite (PRC): {prc_amount:.0f}", metadata=payment_record)
+            else:
+                notify_msg = f"Admin has activated your Elite plan (expires {new_expiry[:10]}). {prc_amount:,.0f} PRC deducted."
+                await log_activity(user_id=user_id, action_type="subscription_prc_admin_activated",
+                    description=f"Admin activated Elite (PRC): {prc_amount:.0f}", metadata=payment_record)
+            if overdraft_applied:
+                notify_msg += f" Your PRC balance is now {balance_after:,.0f}. Future earnings will clear this debt."
+            await create_notification(
+                user_id=user_id,
+                title="Elite Subscription — Admin Activated",
+                message=notify_msg,
+                notification_type="subscription",
+            )
+        except Exception:
+            pass
+
+        # 15) Sustainability burn hook (non-fatal)
+        try:
+            await apply_sustainability_burn(
+                user_id=user_id,
+                service_type="subscription_prc_admin",
+                service_ref_id=payment_id,
+                amount_inr=pricing.get("base_with_gst_inr"),
+            )
+        except Exception as burn_err:
+            logging.warning(f"[ADMIN-FORCE-SUB] Sustain burn failed (non-fatal): {burn_err}")
+
+        # 16) Community success story (immediate only)
+        if not is_upcoming:
+            try:
+                from routes.community import create_success_story_post
+                asyncio.create_task(create_success_story_post(
+                    user_id=user_id,
+                    service_type="subscription",
+                    amount_inr=pricing.get("base_with_gst_inr") or 0,
+                    plan_name="Elite",
+                    ref_id=f"sub_{payment_id}",
+                ))
+            except Exception as _e:
+                logging.warning(f"[ADMIN-FORCE-SUB] community post hook failed (non-fatal): {_e}")
+
+        logging.info(
+            f"[ADMIN-FORCE-SUB] OK admin={admin_uid} user={user_name} ({user_id}) "
+            f"-{prc_amount:.0f} PRC balance_after={balance_after} overdraft={overdraft_applied} upcoming={is_upcoming}"
+        )
+
+        return {
+            "success": True,
+            "message": (
+                f"Elite subscription {'queued' if is_upcoming else 'activated'} for {user_name}. "
+                f"{prc_amount:,.0f} PRC deducted."
+                + (f" Overdraft of {abs(balance_after):,.0f} PRC applied." if overdraft_applied else "")
+            ),
+            "is_upcoming": is_upcoming,
+            "user": {
+                "uid": user_id,
+                "name": user_name,
+                "mobile": target_user.get("mobile"),
+                "email": target_user.get("email"),
+            },
+            "subscription": {
+                "plan": "elite",
+                "expiry": (scheduled_end if is_upcoming else new_expiry)[:10],
+                "prc_deducted": round(prc_amount, 2),
+                "inr_equivalent": pricing["base_with_gst_inr"],
+                "prc_rate_used": prc_rate,
+                "duration_days": duration_days,
+                "pricing_breakdown": pricing,
+            },
+            "balance": {
+                "before": round(current_balance, 2),
+                "after": balance_after,
+                "overdraft_applied": overdraft_applied,
+                "debt_amount": abs(balance_after) if overdraft_applied else 0,
+            },
+            "chances": {
+                "used_before": prior_count,
+                "used_after": prior_count + 1,
+                "remaining": max(0, MAX_PRC_SUBSCRIPTIONS - (prior_count + 1)),
+            },
+            "payment_id": payment_id,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN-FORCE-SUB] Unexpected error: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Admin force-activation failed: {str(e)}")
+
+
+@api_router.get("/admin/subscription/force-activate-preview")
+async def admin_force_activate_preview(identifier: str):
+    """Preview endpoint: returns target user summary + Elite pricing + eligibility
+    (cooldown, chances used) so the Admin UI can show a confirmation summary
+    BEFORE the PIN is entered."""
+    try:
+        if not identifier or not identifier.strip():
+            raise HTTPException(status_code=400, detail="Identifier required.")
+        ident = identifier.strip()
+
+        # Lookup
+        target_user = None
+        digits = "".join(ch for ch in ident if ch.isdigit())
+        if len(digits) >= 10:
+            mobile10 = digits[-10:]
+            target_user = await db.users.find_one({"mobile": {"$regex": f"{mobile10}$"}})
+        if not target_user and "@" in ident:
+            target_user = await db.users.find_one({"email": {"$regex": f"^{re.escape(ident)}$", "$options": "i"}})
+        if not target_user:
+            target_user = await db.users.find_one({"uid": ident})
+        if not target_user:
+            raise HTTPException(status_code=404, detail=f"No user found for '{ident}'.")
+
+        user_id = target_user["uid"]
+        current_balance = float(target_user.get("prc_balance", 0) or 0)
+
+        # Pricing
+        pricing = await calculate_elite_prc_price()
+        prc_required = pricing["total_prc"]
+
+        # Chances used
+        COUNTING_STATUSES = ["paid", "upcoming", "active", "completed", "expired"]
+        used_count = await db.subscription_payments.count_documents({
+            "user_id": user_id,
+            "payment_method": "prc",
+            "status": {"$in": COUNTING_STATUSES},
+        })
+
+        # Cooldown
+        cooldown = await check_service_cooldown(user_id, "subscription")
+        cooldown_blocked = not cooldown.get("allowed", True)
+        cooldown_reason = None
+        if cooldown_blocked:
+            wait_days = cooldown.get("wait_days") or round(cooldown.get("wait_hours", 0) / 24, 1)
+            cooldown_reason = f"Cooldown: must wait {wait_days:.0f} more days"
+
+        # Active plan?
+        current_expiry = target_user.get("subscription_expiry") or target_user.get("subscription_expires")
+        is_expired_flag = target_user.get("subscription_expired", False)
+        has_active_plan = False
+        if current_expiry and not is_expired_flag:
+            try:
+                if isinstance(current_expiry, str):
+                    expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+                else:
+                    expiry_dt = current_expiry
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                if expiry_dt > datetime.now(timezone.utc):
+                    has_active_plan = True
+            except Exception:
+                pass
+
+        projected_balance = round(current_balance - prc_required, 2)
+        overdraft_will_apply = projected_balance < 0
+
+        MAX_PRC_SUBSCRIPTIONS = 3
+        chances_exhausted = used_count >= MAX_PRC_SUBSCRIPTIONS
+
+        return {
+            "user": {
+                "uid": user_id,
+                "name": target_user.get("name", "User"),
+                "mobile": target_user.get("mobile"),
+                "email": target_user.get("email"),
+                "current_plan": target_user.get("subscription_plan", "explorer"),
+                "current_expiry": (current_expiry.isoformat() if hasattr(current_expiry, "isoformat") else current_expiry) if current_expiry else None,
+                "prc_balance": round(current_balance, 2),
+            },
+            "pricing": {
+                "prc_required": round(prc_required, 2),
+                "prc_rate_used": pricing["prc_rate"],
+                "inr_equivalent": pricing["base_with_gst_inr"],
+                "breakdown": pricing,
+            },
+            "projection": {
+                "balance_after": projected_balance,
+                "overdraft_will_apply": overdraft_will_apply,
+                "debt_amount": abs(projected_balance) if overdraft_will_apply else 0,
+                "is_upcoming": has_active_plan,
+            },
+            "eligibility": {
+                "chances_used": used_count,
+                "chances_max": MAX_PRC_SUBSCRIPTIONS,
+                "chances_remaining": max(0, MAX_PRC_SUBSCRIPTIONS - used_count),
+                "chances_exhausted": chances_exhausted,
+                "cooldown_blocked": cooldown_blocked,
+                "cooldown_reason": cooldown_reason,
+                "can_proceed": (not chances_exhausted) and (not cooldown_blocked),
+                "blockers": (
+                    ([f"Lifetime PRC cap reached ({used_count}/{MAX_PRC_SUBSCRIPTIONS})"] if chances_exhausted else [])
+                    + ([cooldown_reason] if cooldown_blocked else [])
+                ),
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN-FORCE-SUB-PREVIEW] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Preview failed: {str(e)}")
+
+
+@api_router.get("/user/prc-debt-status/{uid}")
+async def user_prc_debt_status(uid: str):
+    """Return whether a user currently has PRC overdraft debt (balance < 0).
+    Also auto-clears the `prc_debt_active` flag when balance has recovered to >= 0.
+    """
+    user = await db.users.find_one(
+        {"uid": uid},
+        {"_id": 0, "prc_balance": 1, "prc_debt_active": 1, "prc_debt_original": 1, "prc_debt_at": 1, "prc_debt_reason": 1, "prc_debt_cleared_at": 1},
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    balance = float(user.get("prc_balance", 0) or 0)
+    debt_active_flag = bool(user.get("prc_debt_active"))
+    in_debt = balance < 0
+    # Auto-clear stale flag once user has climbed back to zero
+    if debt_active_flag and not in_debt:
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"prc_debt_active": False, "prc_debt_cleared_at": datetime.now(timezone.utc).isoformat()}},
+        )
+        debt_active_flag = False
+    original = float(user.get("prc_debt_original", 0) or 0)
+    remaining = abs(balance) if in_debt else 0
+    recovered = max(0, original - remaining) if original > 0 else 0
+    return {
+        "uid": uid,
+        "in_debt": in_debt,
+        "debt_active_flag": debt_active_flag,
+        "current_balance": round(balance, 2),
+        "debt_original": round(original, 2),
+        "debt_remaining": round(remaining, 2),
+        "debt_recovered": round(recovered, 2),
+        "debt_at": user.get("prc_debt_at"),
+        "debt_reason": user.get("prc_debt_reason"),
+        "debt_cleared_at": user.get("prc_debt_cleared_at"),
+    }
+
+
 @api_router.post("/subscription/downgrade/{uid}")
 async def downgrade_subscription(uid: str, request: Request):
     """Admin: Downgrade user to Explorer (free) plan"""
