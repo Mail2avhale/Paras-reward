@@ -8,12 +8,20 @@ Includes:
 - Dashboard data
 - User stats
 - Account deletion
+
+SECURITY (Apr 30 2026 — Phase B):
+All endpoints that read/write a specific user's data require JWT auth.
+The IDOR rule is enforced via `verify_user_access`: a non-admin user can
+only operate on their own UID; admins (role==admin) can operate on any UID.
 """
 
-from fastapi import APIRouter, HTTPException, Request, File, UploadFile
+from fastapi import APIRouter, HTTPException, Request, File, UploadFile, Depends
 from datetime import datetime, timezone, timedelta
 import logging
 import base64
+
+# Auth dependencies (JWT + IDOR enforcement)
+from middleware.auth import get_current_user, verify_user_access
 
 # Create router
 router = APIRouter(tags=["Users"])
@@ -59,8 +67,9 @@ def set_helpers(helpers: dict):
 # ========== USER DATA ENDPOINTS ==========
 
 @router.get("/users/{uid}")
-async def get_user(uid: str):
-    """Get user data by UID"""
+async def get_user(uid: str, current_user: dict = Depends(get_current_user)):
+    """Get user data by UID (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -80,8 +89,9 @@ async def get_user(uid: str):
 
 
 @router.get("/users/{uid}/profile-picture")
-async def get_user_profile_picture(uid: str):
-    """Get user's profile picture separately - to avoid loading large base64 in main requests"""
+async def get_user_profile_picture(uid: str, current_user: dict = Depends(get_current_user)):
+    """Get user's profile picture separately - to avoid loading large base64 in main requests (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "profile_picture": 1, "name": 1})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -93,8 +103,9 @@ async def get_user_profile_picture(uid: str):
 
 
 @router.get("/users/children/{uid}")
-async def get_user_children(uid: str):
-    """Get children (subordinates) of a user"""
+async def get_user_children(uid: str, current_user: dict = Depends(get_current_user)):
+    """Get children (subordinates) of a user (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     try:
         children = await db.users.find({
             "parent_id": uid
@@ -115,8 +126,9 @@ async def get_user_children(uid: str):
 
 
 @router.get("/user/{uid}/birthday-check")
-async def check_user_birthday(uid: str):
-    """Check if today is user's birthday"""
+async def check_user_birthday(uid: str, current_user: dict = Depends(get_current_user)):
+    """Check if today is user's birthday (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     try:
         user = await db.users.find_one(
             {"uid": uid},
@@ -171,8 +183,9 @@ async def check_user_birthday(uid: str):
 # ========== PROFILE MANAGEMENT ==========
 
 @router.put("/user/{uid}/profile")
-async def update_profile(uid: str, request: Request):
-    """Update user profile"""
+async def update_profile(uid: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Update user profile (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -231,8 +244,9 @@ async def update_profile(uid: str, request: Request):
 
 
 @router.post("/user/{uid}/upload-profile-picture")
-async def upload_profile_picture(uid: str, file: UploadFile = File(...)):
-    """Upload profile picture (stores as base64)"""
+async def upload_profile_picture(uid: str, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    """Upload profile picture (stores as base64) (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -263,8 +277,9 @@ async def upload_profile_picture(uid: str, file: UploadFile = File(...)):
 
 
 @router.delete("/user/{uid}/profile-picture")
-async def delete_profile_picture(uid: str):
-    """Delete profile picture"""
+async def delete_profile_picture(uid: str, current_user: dict = Depends(get_current_user)):
+    """Delete profile picture (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -281,8 +296,9 @@ async def delete_profile_picture(uid: str):
 
 
 @router.put("/user/{uid}/complete-profile")
-async def complete_profile(uid: str, request: Request):
-    """Complete user profile with all additional fields"""
+async def complete_profile(uid: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Complete user profile with all additional fields (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -357,8 +373,9 @@ async def complete_profile(uid: str, request: Request):
 
 
 @router.post("/user/{uid}/change-password")
-async def change_user_password(uid: str, request: Request):
-    """Change user password"""
+async def change_user_password(uid: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Change user password (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -392,8 +409,9 @@ async def change_user_password(uid: str, request: Request):
 
 
 @router.post("/user/{uid}/change-pin")
-async def change_user_pin(uid: str, request: Request):
-    """Change user PIN"""
+async def change_user_pin(uid: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Change user PIN (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -437,8 +455,9 @@ async def change_user_pin(uid: str, request: Request):
 # ========== ACCOUNT DELETION ==========
 
 @router.post("/user/{uid}/request-account-deletion")
-async def request_account_deletion(uid: str, request: Request):
-    """Request account deletion with soft delete (30 day grace period)"""
+async def request_account_deletion(uid: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Request account deletion with soft delete (30 day grace period) (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -489,8 +508,9 @@ async def request_account_deletion(uid: str, request: Request):
 
 
 @router.post("/user/{uid}/cancel-account-deletion")
-async def cancel_account_deletion(uid: str, request: Request):
-    """Cancel scheduled account deletion"""
+async def cancel_account_deletion(uid: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """Cancel scheduled account deletion (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -536,8 +556,9 @@ async def cancel_account_deletion(uid: str, request: Request):
 
 
 @router.get("/user/{uid}/deletion-status")
-async def get_deletion_status(uid: str):
-    """Get account deletion status"""
+async def get_deletion_status(uid: str, current_user: dict = Depends(get_current_user)):
+    """Get account deletion status (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "deletion_scheduled_at": 1, "deletion_scheduled_for": 1, "is_deleted": 1})
     
     if not user:
@@ -585,8 +606,9 @@ async def get_deletion_status(uid: str):
 # ========== USER STATS ==========
 
 @router.get("/user/stats/today/{uid}")
-async def get_user_today_stats(uid: str):
-    """Get today's PRC earned and spent for a user - CACHED 60 sec"""
+async def get_user_today_stats(uid: str, current_user: dict = Depends(get_current_user)):
+    """Get today's PRC earned and spent for a user - CACHED 60 sec (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     # Cache key for today's stats
     cache_key = f"user:stats:today:{uid}"
     
@@ -647,8 +669,9 @@ async def get_user_today_stats(uid: str):
 
 
 @router.get("/user/stats/redeemed/{uid}")
-async def get_user_redeemed_stats(uid: str):
-    """Get user's total redeemed PRC statistics - uses centralized deduped function"""
+async def get_user_redeemed_stats(uid: str, current_user: dict = Depends(get_current_user)):
+    """Get user's total redeemed PRC statistics - uses centralized deduped function (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     cache_key = f"user:stats:redeemed:{uid}"
     
     if cache:
@@ -675,8 +698,9 @@ async def get_user_redeemed_stats(uid: str):
 
 
 @router.get("/user/{uid}/dashboard")
-async def get_user_dashboard_combined(uid: str):
-    """Combined API for User Dashboard - returns ALL data in ONE call"""
+async def get_user_dashboard_combined(uid: str, current_user: dict = Depends(get_current_user)):
+    """Combined API for User Dashboard - returns ALL data in ONE call (auth required: self or admin)"""
+    await verify_user_access(uid, current_user)
     cache_key = f"user:dashboard:{uid}"
     
     if cache:
@@ -777,11 +801,13 @@ async def get_user_dashboard_combined(uid: str):
 # ========== PRC EXPIRY - DEPRECATED MARCH 2026 ==========
 
 @router.get("/user/{uid}/prc-expiry")
-async def get_prc_expiry_info(uid: str):
+async def get_prc_expiry_info(uid: str, current_user: dict = Depends(get_current_user)):
     """
     DEPRECATED - Burn module removed March 2026
     PRC now has lifetime validity with no burning
+    (auth required: self or admin)
     """
+    await verify_user_access(uid, current_user)
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

@@ -8027,26 +8027,29 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     Combined API for User Dashboard - returns ALL data in ONE call.
     CRITICAL OPTIMIZATION: Skip slow count_documents, use cached referral_count from user doc.
     Cached for 60 seconds.
-    SECURITY: IDOR Protection - Users can only access their own dashboard
+    SECURITY (Phase B, Apr 30 2026): IDOR Protection — auth REQUIRED.
+    Anonymous or invalid-token requests now get 401 (was silently passing).
     """
     
-    # SECURITY: Verify user authorization
+    # SECURITY: Verify user authorization (strict — no silent fallback).
     auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header.replace("Bearer ", "")
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-            requesting_uid = payload.get("uid")
-            requesting_role = payload.get("role", "user")
-            
-            # IDOR Protection: Non-admins can only access their own dashboard
-            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
-                raise HTTPException(
-                    status_code=403, 
-                    detail="Access denied. You can only view your own dashboard."
-                )
-        except jwt.InvalidTokenError:
-            pass  # Allow for backwards compatibility
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    token = auth_header.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        requesting_uid = payload.get("uid")
+        requesting_role = payload.get("role", "user")
+        # IDOR Protection: Non-admins can only access their own dashboard
+        if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied. You can only view your own dashboard."
+            )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
     
     cache_key = f"user:dashboard:{uid}"
     
@@ -8305,26 +8308,29 @@ async def get_user_dashboard_combined(uid: str, request: Request):
 @api_router.get("/user/{uid}")
 async def get_user_data(uid: str, request: Request):
     """Get user details - Comprehensive user data endpoint with caching
-    SECURITY: IDOR Protection - Users can only access their own data, admins can access any
+    SECURITY (Phase B, Apr 30 2026): IDOR Protection — auth REQUIRED.
+    Anonymous or invalid-token requests now get 401 (was silently passing).
     """
     
-    # SECURITY: Verify user authorization
+    # SECURITY: Verify user authorization (strict — no silent fallback).
     auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header.replace("Bearer ", "")
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-            requesting_uid = payload.get("uid")
-            requesting_role = payload.get("role", "user")
-            
-            # IDOR Protection: Non-admins can only access their own data
-            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
-                raise HTTPException(
-                    status_code=403, 
-                    detail="Access denied. You can only view your own profile."
-                )
-        except jwt.InvalidTokenError:
-            pass  # Allow public access for backwards compatibility but log
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    token = auth_header.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        requesting_uid = payload.get("uid")
+        requesting_role = payload.get("role", "user")
+        # IDOR Protection: Non-admins can only access their own data
+        if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied. You can only view your own profile."
+            )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
     
     # Try to get from cache first (cache for 2 minutes)
     cache_key = f"user_data:{uid}"
@@ -32612,26 +32618,52 @@ async def update_settings(
 
 # Note: app.include_router moved to after all route definitions
 
-# CORS Configuration - Allow all origins for flexibility
-# Note: When allow_credentials=True, we need specific origins OR use allow_origin_regex
-cors_origins = os.environ.get('CORS_ORIGINS', '*')
-if cors_origins == '*':
-    # Use regex to allow all origins when credentials are needed
+# CORS Configuration — SECURE (Apr 30 2026, Phase B)
+# Explicit allowlist via CORS_ORIGINS env var (comma-separated). The previous
+# `allow_origin_regex=".*"` combined with `allow_credentials=True` permitted
+# any third-party site to invoke our APIs with the user's cookies/session,
+# which is a CSRF / token-theft surface. We now allow only known frontends.
+#
+# Production should set in System Keys (no defaults — fail fast):
+#   CORS_ORIGINS="https://www.parasreward.com,https://parasreward.com"
+# Preview / dev should append their preview URLs as needed.
+_cors_env = os.environ.get('CORS_ORIGINS', '')
+_cors_list = [o.strip() for o in _cors_env.split(',') if o.strip() and o.strip() != '*']
+
+if not _cors_list:
+    # Backwards-compat fallback: still allow a permissive regex (with
+    # credentials) but log a loud warning so this gets fixed in env config.
+    logging.warning(
+        "[CORS] CORS_ORIGINS env var is empty or '*'. Falling back to "
+        "permissive regex. Set CORS_ORIGINS to an explicit comma-separated "
+        "allowlist in production for security."
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_credentials=True,
-        allow_origin_regex=".*",  # Match any origin
+        allow_origin_regex=".*",
         allow_methods=["*"],
         allow_headers=["*"],
     )
 else:
+    # Build a regex that matches the explicit list AND any preview subdomain
+    # of the same parent (so the same env var works for prod + preview pods).
+    # Example: "https://www.parasreward.com" → also matches preview URLs.
+    import re as _re
+    explicit_origins = list(_cors_list)
+    # Allow Emergent preview subdomains automatically
+    preview_regex = (
+        r"^https://([a-z0-9-]+\.)?(emergentagent\.com|emergent\.host)$"
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_credentials=True,
-        allow_origins=cors_origins.split(','),
-        allow_methods=["*"],
+        allow_origins=explicit_origins,
+        allow_origin_regex=preview_regex,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
+    logging.info(f"[CORS] Locked down. Allowed origins: {explicit_origins} + preview regex.")
 
 logging.basicConfig(
     level=logging.INFO,

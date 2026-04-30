@@ -752,10 +752,21 @@ function App() {
     // Add timeout to prevent infinite loading
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
+
     try {
+      // SECURITY (Phase B Apr 30 2026): /api/user/{uid} now requires JWT auth.
+      // Pull token from storage and send Authorization header explicitly,
+      // since this raw fetch() bypasses the axios interceptor.
+      const stored = JSON.parse(getStoredUserRaw() || "{}");
+      const authToken =
+        stored.token ||
+        localStorage.getItem("token") ||
+        localStorage.getItem("paras_session_token");
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+
       const response = await fetch(`${BACKEND_URL}/api/user/${uid}`, {
-        signal: controller.signal
+        signal: controller.signal,
+        headers,
       });
       clearTimeout(timeoutId);
       

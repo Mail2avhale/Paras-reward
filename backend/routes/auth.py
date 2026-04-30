@@ -1727,7 +1727,10 @@ async def delete_biometric_credential(credential_id: str, user_id: str):
 
 @router.post("/reset-password-request")
 async def reset_password_request(email: str):
-    """Request password reset"""
+    """Request password reset — SECURE (token NEVER returned in response).
+    Token is stored in DB and must be delivered to user via email/SMS only.
+    Same response whether email exists or not (prevents email enumeration).
+    """
     user = await db.users.find_one({"email": email})
     if not user:
         return {"message": "If the email exists, a reset link has been sent"}
@@ -1740,11 +1743,11 @@ async def reset_password_request(email: str):
         {"$set": {"reset_token": reset_token, "reset_token_expiry": reset_expiry.isoformat()}}
     )
     
-    return {
-        "message": "Password reset token generated",
-        "reset_token": reset_token,
-        "note": "In production, this would be sent via email"
-    }
+    # SECURITY: Do NOT return reset_token in response.
+    # TODO: Send via email — integrate SendGrid/Resend.
+    logging.info(f"[SECURITY] Password reset requested for: {email}")
+    
+    return {"message": "If the email exists, a reset link has been sent"}
 
 
 @router.post("/reset-password")

@@ -85,6 +85,25 @@ Each cached with payload-identical guard test
 - Production verified Apr 30: KPIs 1.49s cold → 0.42s warm; Members 1.19s → 0.45s.
 - Stale window deliberately small (60-180s); admin staleness is acceptable given the tradeoff.
 
+### 12. Phase B Security Hardening (Apr 30 2026)
+
+**A. IDOR Protection on User Routes**
+- `routes/users.py`: 16 endpoints (`/users/{uid}`, `/user/{uid}/profile`, `/user/{uid}/dashboard`, `/user/stats/today/{uid}`, profile-picture upload/delete, change-pin, account-deletion, etc.) now require `Depends(get_current_user)` + `verify_user_access(uid, current_user)` (self-or-admin rule).
+- `server.py`: 2 duplicate routes `/user/{uid}` and `/user/{uid}/dashboard` had `except jwt.InvalidTokenError: pass` (silently allowed unauthenticated requests). Tightened to raise 401.
+- Verified: 8/8 Phase B tests pass — anonymous requests get 401, cross-user requests get 403, self/admin requests get 200.
+
+**B. Reset-Password Token Leak Fixed**
+- `routes/auth.py:1728` — `/reset-password-request` was returning `{"reset_token": "..."}` in the response body. NOW returns only generic message. Token persisted in DB; must be delivered via email/SMS. (`/forgot-password` was already secure.)
+
+**C. CORS Lockdown**
+- `server.py:32605` — replaced `allow_origin_regex=".*"` blanket with explicit allowlist via `CORS_ORIGINS` env var (comma-separated). Preview/dev still works automatically via Emergent-host regex. If env var is empty/`*`, falls back to permissive regex with a loud `WARNING` in logs to make production misconfig obvious.
+- **PRODUCTION ACTION**: set `CORS_ORIGINS="https://www.parasreward.com,https://parasreward.com"` in Emergent System Keys.
+
+**D. Frontend `refreshUserData` token fix**
+- `App.js:767` — raw `fetch()` to `/api/user/{uid}` was bypassing axios interceptor → no Bearer token → 401 after Phase B hardening. Now reads token from localStorage and sends `Authorization: Bearer …` header explicitly.
+
+---
+
 ### 11. Phase A Frontend Network Optimizations (Apr 30 2026)
 
 **Section 10. User-360 Endpoint — Cache NOT applied (intentional)**
