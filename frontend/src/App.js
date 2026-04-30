@@ -87,12 +87,45 @@ if (typeof window !== 'undefined') {
 // Axios defaults for mobile - longer timeout
 axios.defaults.timeout = 30000; // 30 seconds for slow mobile networks
 
+// ============================================================================
+// AUTO-RETRY for transient failures (504 Gateway Timeout, 502 Bad Gateway,
+// 503 Service Unavailable, ECONNABORTED). Eliminates the "refresh 3-4 times
+// to load admin pages" pattern. Single retry with 800ms back-off; safe only
+// for idempotent methods (GET, HEAD).
+// ----------------------------------------------------------------------------
+const RETRY_STATUS_CODES = [502, 503, 504];
+const RETRY_METHODS = ['get', 'head'];
+const MAX_RETRIES = 1;
+const RETRY_DELAY_MS = 800;
+// ============================================================================
+
 // Axios response interceptor - suppress 404 toast errors for optional APIs
 axios.interceptors.response.use(
   response => response,
-  error => {
+  async error => {
+    const config = error.config || {};
+    const url = config.url || '';
+    const method = (config.method || 'get').toLowerCase();
+    const status = error.response?.status;
+    const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
+    const isRetriable = RETRY_METHODS.includes(method) && (RETRY_STATUS_CODES.includes(status) || isTimeout);
+
+    // Auto-retry once for transient gateway failures / timeouts on GET requests
+    if (isRetriable) {
+      config.__retryCount = (config.__retryCount || 0);
+      if (config.__retryCount < MAX_RETRIES) {
+        config.__retryCount += 1;
+        await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+        try {
+          return await axios(config);
+        } catch (retryErr) {
+          // fall through to normal error handling
+          error = retryErr;
+        }
+      }
+    }
+
     // Don't show toast for 404 errors on optional/stats endpoints
-    const url = error.config?.url || '';
     const is404 = error.response?.status === 404;
     const isOptionalEndpoint = url.includes('subscription-stats') || 
                                url.includes('pricing-reference') ||
@@ -146,9 +179,11 @@ axios.interceptors.request.use(
       config.headers['Cache-Control'] = 'no-cache';
       config.headers['Pragma'] = 'no-cache';
     }
-    // Increase timeout for mobile users on slow connections
+    // Increase timeout for mobile users on slow connections.
+    // Admin endpoints often touch heavy aggregations → bump to 60s to
+    // ride out cold-cache requests rather than throwing the user a 504.
     if (!config.timeout) {
-      config.timeout = 30000;
+      config.timeout = url.includes('/admin/') ? 60000 : 30000;
     }
     return config;
   },

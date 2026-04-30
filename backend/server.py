@@ -35175,7 +35175,53 @@ async def initialize_database_indexes():
         print("✅ Activity logs indexes ready")
     except Exception as e:
         print(f"⚠️  Activity logs indexes: {e}")
-    
+
+    # ==================== ADMIN AUDIT LOGS INDEXES (Apr 30, 2026 — Phase-1 perf) ====================
+    try:
+        existing_indexes = await db.admin_audit_logs.index_information()
+        if "admin_uid_1" not in existing_indexes:
+            await db.admin_audit_logs.create_index("admin_uid")
+        if "action_1" not in existing_indexes:
+            await db.admin_audit_logs.create_index("action")
+        if "entity_type_1" not in existing_indexes:
+            await db.admin_audit_logs.create_index("entity_type")
+        if "entity_id_1" not in existing_indexes:
+            await db.admin_audit_logs.create_index("entity_id")
+        if "timestamp_-1" not in existing_indexes:
+            await db.admin_audit_logs.create_index([("timestamp", -1)])
+        if "created_at_-1" not in existing_indexes:
+            await db.admin_audit_logs.create_index([("created_at", -1)])
+        # Compound for admin-history-by-action queries
+        if "action_1_timestamp_-1" not in existing_indexes:
+            await db.admin_audit_logs.create_index([("action", 1), ("timestamp", -1)])
+        # Compound for entity-trace queries (e.g. user 360 audit history)
+        if "entity_id_1_timestamp_-1" not in existing_indexes:
+            await db.admin_audit_logs.create_index([("entity_id", 1), ("timestamp", -1)])
+        print("✅ Admin audit logs indexes ready")
+    except Exception as e:
+        print(f"⚠️  Admin audit logs indexes: {e}")
+
+    # ==================== COMMUNITY POSTS INDEXES (Apr 30, 2026 — Phase-1 perf) ====================
+    try:
+        existing_indexes = await db.community_posts.index_information()
+        if "post_id_1" not in existing_indexes:
+            await db.community_posts.create_index("post_id", sparse=True)
+        if "user_id_1" not in existing_indexes:
+            await db.community_posts.create_index("user_id")
+        if "service_type_1" not in existing_indexes:
+            await db.community_posts.create_index("service_type")
+        if "created_at_-1" not in existing_indexes:
+            await db.community_posts.create_index([("created_at", -1)])
+        if "deleted_1_created_at_-1" not in existing_indexes:
+            await db.community_posts.create_index([("deleted", 1), ("created_at", -1)])
+        # Compound for filtered feed by service_type sorted by recent
+        if "service_type_1_created_at_-1" not in existing_indexes:
+            await db.community_posts.create_index([("service_type", 1), ("created_at", -1)])
+        print("✅ Community posts indexes ready")
+    except Exception as e:
+        print(f"⚠️  Community posts indexes: {e}")
+
+
     # ==================== KYC DOCUMENTS INDEXES ====================
     try:
         existing_indexes = await db.kyc_documents.index_information()

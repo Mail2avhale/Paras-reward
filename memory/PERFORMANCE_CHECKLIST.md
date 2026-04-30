@@ -61,6 +61,28 @@ CACHE_ENV_PREFIX = "prod"  # MUST ADD THIS
 - ✅ Prevents race condition logout
 - ✅ 30-second interval for ongoing validation
 
+### 7. Auto-Retry on Transient Failures (App.js, Apr 30 2026)
+- ✅ Axios global response interceptor retries GET/HEAD once on 502/503/504/timeout (800ms back-off)
+- ✅ Eliminates "refresh 3-4 times for admin pages to load" pattern
+- ✅ Admin endpoint timeout bumped from 30s → 60s for cold-cache aggregations
+
+### 8. Index Coverage on Heavy Admin Collections (Apr 30 2026)
+- ✅ `admin_audit_logs` — admin_uid, action, entity_type, entity_id, timestamp, created_at + compound (action+timestamp), (entity_id+timestamp). Was 772 docs with only `_id_` index → full scan.
+- ✅ `community_posts` — post_id, user_id, service_type, created_at, deleted+created_at compound, service_type+created_at compound.
+
+---
+
+## ⚠️ Production Deploy Settings (Verify Before Each Deploy)
+
+The PREVIEW supervisor here uses `--reload` (causes 10-15× slowdown) which is
+fine for dev but **MUST NOT** be used in production. Verify in your deploy
+config (Emergent platform):
+```
+uvicorn server:app --host 0.0.0.0 --port 8001 --workers 1
+# (No --reload. Workers can be increased to 2 or 3 only after Mongo
+#  connection pool can absorb it — review under load.)
+```
+
 ---
 
 ## 🚨 Common Issues & Solutions
