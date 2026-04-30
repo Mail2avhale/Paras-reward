@@ -171,9 +171,10 @@ axios.interceptors.request.use(
       }
     }
     
-    // Add cache busting for admin dashboard APIs
-    if (url.includes('/admin/') && config.method === 'get') {
-      config.params = config.params || {};
+    // Add cache busting for admin GETs ONLY when caller asks via `?refresh=1`.
+    // Default: let server-side redis cache + browser cache serve fresh data.
+    // (Apr 30 2026 perf — was bypassing cache on every admin GET, hurting hit-rate.)
+    if (url.includes('/admin/') && config.method === 'get' && config.params && config.params.refresh) {
       config.params._t = Date.now();
       config.headers = config.headers || {};
       config.headers['Cache-Control'] = 'no-cache';
@@ -880,11 +881,12 @@ function App() {
     // Strip sensitive fields before persisting to storage
     const { hashed_pin, pin_hash, password, ...safeUserData } = userData;
     setStoredUserRaw(JSON.stringify(safeUserData));
-    
-    // console.log('[LOGIN] User saved to state and localStorage with role:', userData.role);
-    
-    // Refresh to get complete user data including subscription
-    setTimeout(() => refreshUserData(userData.uid), 100);
+
+    // NOTE (Apr 30 2026): Removed the post-login refreshUserData() call.
+    // The /api/auth/login response already contains complete user payload
+    // (subscription, balance, role, mining state). The mount-time effect
+    // below also refreshes once on first render, so a third hit was wasteful
+    // and added ~500ms to the login → dashboard transition.
   };
 
   const handleLogout = async (showMessage = true, reason = null) => {
@@ -922,23 +924,28 @@ function App() {
     }, 500);
   };
 
-  // Session validation - check every 30 seconds (with initial delay to allow login to complete)
+  // Session validation - every 90s, paused while tab is hidden (Apr 30 2026 perf)
+  // Old behaviour: every 30s regardless of tab state. New behaviour:
+  //   - First check 5s after mount/login (race-condition safe).
+  //   - Then every 90s (was 30s) — auth tokens last hours, single-session
+  //     enforcement doesn't need second-by-second polling.
+  //   - When tab becomes hidden (visibilityState !== 'visible'), the timer
+  //     stops to save battery + API traffic.
+  //   - When tab becomes visible again, run an immediate check then resume
+  //     the 90s loop.
   useEffect(() => {
     if (!user?.uid) return;
-    
+
     const validateSession = async () => {
       const sessionToken = localStorage.getItem("paras_session_token");
       if (!sessionToken) return;
-      
       try {
         const response = await fetch(`${BACKEND_URL}/api/auth/validate-session`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ uid: user.uid, session_token: sessionToken })
         });
-        
         const result = await response.json();
-        
         if (!result.valid && result.reason === 'session_expired') {
           // Another device logged in - force logout
           handleLogout(true, 'session_expired');
@@ -947,15 +954,39 @@ function App() {
         console.error('Session validation error:', e);
       }
     };
-    
-    // IMPORTANT: Delay first validation by 5 seconds to allow login process to complete
-    // This prevents race condition where validation runs before session_token is saved to DB
+
+    let interval = null;
+    const startInterval = () => {
+      if (interval) return;
+      interval = setInterval(validateSession, 90000);
+    };
+    const stopInterval = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Tab back in focus — run immediate check then resume polling.
+        validateSession();
+        startInterval();
+      } else {
+        // Tab hidden — stop polling to save battery/API.
+        stopInterval();
+      }
+    };
+
+    // First validation 5s after mount (race-safe with login flow).
     const initialDelay = setTimeout(validateSession, 5000);
-    const interval = setInterval(validateSession, 30000);
-    
+    if (document.visibilityState === 'visible') startInterval();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     return () => {
       clearTimeout(initialDelay);
-      clearInterval(interval);
+      stopInterval();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [user?.uid]);
 

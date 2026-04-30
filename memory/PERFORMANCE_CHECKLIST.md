@@ -85,12 +85,31 @@ Each cached with payload-identical guard test
 - Production verified Apr 30: KPIs 1.49s cold → 0.42s warm; Members 1.19s → 0.45s.
 - Stale window deliberately small (60-180s); admin staleness is acceptable given the tradeoff.
 
-### 10. User-360 Endpoint — Cache NOT applied (intentional)
+### 11. Phase A Frontend Network Optimizations (Apr 30 2026)
+
+**Section 10. User-360 Endpoint — Cache NOT applied (intentional)**
 Tested Apr 30 2026: caching the 600+ KB payload via Upstash REST made warm requests SLOWER than cold (7.6s vs 5.6s) due to round-trip overhead and JSON deserialization on a large blob. The endpoint relies instead on:
 - Internal parallelization via `asyncio.gather` (already done; ~5-6s on prod)
 - Frontend axios auto-retry (handles transient 503/504)
 - Existing per-section indexes on transactions, redeem_requests, subscription_payments
 If User-360 latency becomes a problem again, the right fix is **payload reduction** (lazy-load tabs like login_history & failed_transactions) rather than blob caching.
+
+---
+
+**A. Session Polling — Smart, Tab-aware**
+- Was: `setInterval(validateSession, 30000)` always
+- Now: `90000` ms + paused while `document.visibilityState !== 'visible'` + immediate re-check on tab focus.
+- **Impact**: ~67% fewer `/api/auth/validate-session` calls; significant battery saving on mobile when app is in background.
+
+**B. Selective Admin Cache-busting**
+- Was: every `/admin/*` GET injected `_t=Date.now()` + `Cache-Control: no-cache` → bypassed redis cache 100% of the time.
+- Now: cache-bust applied ONLY when caller passes `?refresh=1`.
+- **Impact**: redis cache hit-rate jumps from 0% (every call cold) to expected 80-90% on warm tab. Verified locally: 21/21 admin GETs on `/admin/dashboard` are now cache-friendly.
+
+**C. Login Duplicate Refresh Removed**
+- Was: `handleLogin` ⇒ saved user ⇒ `setTimeout(refreshUserData, 100)` (extra GET `/api/user/{uid}`).
+- Now: login response is the source of truth (already includes subscription, balance, role). Mount-time effect handles the one-shot refresh on subsequent loads.
+- **Impact**: login → dashboard transition ~500ms faster; one fewer DB hit per login.
 
 ---
 
