@@ -48,11 +48,17 @@ SUCCESS CRITERIA:
 
 import requests
 import json
+import os
 import sys
 from datetime import datetime
+import pytest
 
-# Get backend URL from frontend .env file
+# Get backend URL from environment or frontend .env file
 def get_backend_url():
+    env_url = os.environ.get("REACT_APP_BACKEND_URL", "").strip()
+    if env_url:
+        return env_url
+
     try:
         with open('/app/frontend/.env', 'r') as f:
             for line in f:
@@ -64,8 +70,7 @@ def get_backend_url():
 
 BACKEND_URL = get_backend_url()
 if not BACKEND_URL:
-    print("ERROR: Could not get REACT_APP_BACKEND_URL from /app/frontend/.env")
-    sys.exit(1)
+    pytest.skip("REACT_APP_BACKEND_URL not set", allow_module_level=True)
 
 API_BASE = f"{BACKEND_URL}/api"
 

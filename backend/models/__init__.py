@@ -12,7 +12,6 @@ from .schemas import (
     # Mining models
     MiningStatus,
     MiningCollectRequest,
-    TapGamePlay,
     
     # Referral models
     ReferralInfo,
@@ -84,7 +83,7 @@ from .schemas import (
 
 __all__ = [
     'User', 'UserLogin', 'UserUpdateRequest', 'BalanceAdjustRequest',
-    'MiningStatus', 'MiningCollectRequest', 'TapGamePlay',
+    'MiningStatus', 'MiningCollectRequest',
     'ReferralInfo',
     'VIPPayment', 'VIPPaymentCreate', 'VIPPaymentAction',
     'KYCDocument', 'KYCSubmit',
