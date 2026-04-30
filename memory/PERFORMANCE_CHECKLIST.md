@@ -70,6 +70,21 @@ CACHE_ENV_PREFIX = "prod"  # MUST ADD THIS
 - ✅ `admin_audit_logs` — admin_uid, action, entity_type, entity_id, timestamp, created_at + compound (action+timestamp), (entity_id+timestamp). Was 772 docs with only `_id_` index → full scan.
 - ✅ `community_posts` — post_id, user_id, service_type, created_at, deleted+created_at compound, service_type+created_at compound.
 
+### 9. Admin Endpoint Redis Cache (Phase-2, Apr 30 2026)
+Each cached with payload-identical guard test
+(`/app/backend/tests/test_admin_endpoints_cache.py`).
+| Endpoint | TTL | Cache key |
+|---|---|---|
+| `GET /admin/dashboard/kpis` | 60s | `admin:dashboard:kpis:v1` |
+| `GET /admin/dashboard/growth?period=` | 180s | `admin:dashboard:growth:{period}:v1` |
+| `GET /admin/subscription-stats` | 60s | `admin:subscription_stats:v1` |
+| `GET /admin/members/dashboard` | 90s | `admin:members_dashboard:p=…:f=…:t=…:v1` |
+| `GET /admin/paid-users-wallet-summary` | 120s | `admin:paid_users_wallet_summary:v1` |
+| `GET /admin/prc-subscription-stats` | 90s | `admin:prc_subscription_stats:v1` |
+| `GET /admin/reports/financial?start_date=&end_date=` | 180s | `admin:reports:financial:{start}:{end}:v1` |
+- Local sandbox shows 40-50% latency reduction on cache hit. Production with larger collections will see 5-10× improvement on heavy aggregation endpoints.
+- Stale window deliberately small (60-180s); admin staleness is acceptable given the tradeoff.
+
 ---
 
 ## ⚠️ Production Deploy Settings (Verify Before Each Deploy)

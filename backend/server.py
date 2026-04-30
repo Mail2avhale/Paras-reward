@@ -11051,7 +11051,15 @@ async def update_subscription_pricing(request: Request):
 
 @api_router.get("/admin/subscription-stats")
 async def get_subscription_stats():
-    """Get subscription statistics using fast aggregation queries"""
+    """Get subscription statistics using fast aggregation queries — Phase-2 perf: 60s cache."""
+    CACHE_KEY = "admin:subscription_stats:v1"
+    if cache:
+        try:
+            cached = await cache.get(CACHE_KEY)
+            if cached:
+                return cached
+        except Exception:
+            pass
     try:
         # Use aggregation for fast counting
         plan_counts_pipeline = [
@@ -11088,13 +11096,19 @@ async def get_subscription_stats():
         # Calculate approximate revenue (current pricing: startup 299, growth 549, elite 999 base — GST excluded)
         monthly_revenue = (plan_counts["startup"] * 299) + (plan_counts["growth"] * 549) + (plan_counts["elite"] * 999)
         
-        return {
+        payload = {
             "total_users": total_users,
             "plan_counts": plan_counts,
             "pending_payments": pending_payments,
             "expiring_this_week": expiring_count,
             "monthly_revenue": monthly_revenue
         }
+        if cache:
+            try:
+                await cache.set(CACHE_KEY, payload, ttl=60)
+            except Exception:
+                pass
+        return payload
     except Exception as e:
         return {"error": str(e)}
 
@@ -11107,9 +11121,18 @@ async def get_paid_users_wallet_summary():
     - Total PRC balance for all paid users with INR value
     - Total PRC redeemed with INR value
     - Breakdown by plan type
-    
+
     Conversion: 10 PRC = ₹1 INR
+    Phase-2 perf: 120s cache (4 cross-collection $lookup aggregations).
     """
+    CACHE_KEY = "admin:paid_users_wallet_summary:v1"
+    if cache:
+        try:
+            cached = await cache.get(CACHE_KEY)
+            if cached:
+                return cached
+        except Exception:
+            pass
     try:
         # Define paid plans
         paid_plans = ["startup", "growth", "elite", "vip", "pro"]
@@ -11207,7 +11230,7 @@ async def get_paid_users_wallet_summary():
         # Calculate total redeemed
         total_redeemed_prc = bank_redeemed_prc + bill_redeemed_prc + voucher_redeemed_prc + orders_redeemed_prc
         
-        return {
+        payload = {
             "summary": {
                 "total_paid_users": total_paid_users,
                 "total_prc_balance": round(total_prc_balance, 2),
@@ -11236,6 +11259,12 @@ async def get_paid_users_wallet_summary():
             },
             "conversion_rate": "10 PRC = ₹1 INR"
         }
+        if cache:
+            try:
+                await cache.set(CACHE_KEY, payload, ttl=120)
+            except Exception:
+                pass
+        return payload
         
     except Exception as e:
         logging.error(f"Error getting paid users wallet summary: {e}")
@@ -11645,7 +11674,16 @@ async def get_prc_subscription_stats():
     """
     Get statistics of subscriptions activated via PRC vs Razorpay
     Shows how many users paid with PRC balance
+    Phase-2 perf: 90s cache.
     """
+    CACHE_KEY = "admin:prc_subscription_stats:v1"
+    if cache:
+        try:
+            cached = await cache.get(CACHE_KEY)
+            if cached:
+                return cached
+        except Exception:
+            pass
     try:
         now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -11722,7 +11760,7 @@ async def get_prc_subscription_stats():
             "last_prc_subscription": {"$exists": True}
         })
         
-        return {
+        payload = {
             "success": True,
             "prc_subscriptions": {
                 "total": prc_total,
@@ -11747,6 +11785,12 @@ async def get_prc_subscription_stats():
             "prc_by_plan": {item["_id"]: {"count": item["count"], "total_prc": item["total_prc"]} for item in prc_by_plan},
             "recent_prc_subscriptions": recent_prc
         }
+        if cache:
+            try:
+                await cache.set(CACHE_KEY, payload, ttl=90)
+            except Exception:
+                pass
+        return payload
         
     except Exception as e:
         logging.error(f"Error getting PRC subscription stats: {e}")
@@ -19581,9 +19625,19 @@ async def get_members_dashboard(
     """
     Comprehensive Members Dashboard API
     Returns: Active/Inactive stats, New joinings, Subscription breakdown, Advanced analytics
+    Phase-2 perf: 90s cache (period-keyed) — heavy aggregation pipeline.
     """
     import asyncio
-    
+
+    CACHE_KEY = f"admin:members_dashboard:p={period}:f={date_from or '-'}:t={date_to or '-'}:v1"
+    if cache:
+        try:
+            cached = await cache.get(CACHE_KEY)
+            if cached:
+                return cached
+        except Exception:
+            pass
+
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     
@@ -19795,7 +19849,7 @@ async def get_members_dashboard(
     paid_members = sum(subscription_breakdown[p]["count"] for p in ["startup", "growth", "elite"])
     paid_percentage = round((paid_members / total_members * 100), 2) if total_members > 0 else 0
     
-    return {
+    payload = {
         "summary": {
             "total_members": total_members,
             "active_members": active_count,
@@ -19825,6 +19879,12 @@ async def get_members_dashboard(
             "to": period_end.isoformat()
         }
     }
+    if cache:
+        try:
+            await cache.set(CACHE_KEY, payload, ttl=90)
+        except Exception:
+            pass
+    return payload
 
 
 @api_router.get("/admin/members/list")
@@ -24108,12 +24168,22 @@ async def update_contact_details(request: Request):
 
 @api_router.get("/admin/dashboard/kpis")
 async def get_admin_kpis(request: Request):
-    """Get comprehensive KPIs for admin dashboard - OPTIMIZED with parallel queries"""
+    """Get comprehensive KPIs for admin dashboard - OPTIMIZED with parallel queries + 60s cache"""
     # Verify admin access
     admin_uid = request.headers.get("X-User-ID")
     if admin_uid:
         await verify_admin(admin_uid)
-    
+
+    # Phase-2 perf: 60s redis cache (admin staleness window is acceptable)
+    CACHE_KEY = "admin:dashboard:kpis:v1"
+    if cache:
+        try:
+            cached = await cache.get(CACHE_KEY)
+            if cached:
+                return cached
+        except Exception:
+            pass
+
     # OPTIMIZED: Run ALL count queries in parallel using asyncio.gather
     count_queries = await asyncio.gather(
         db.users.count_documents({}),                                    # total_users
@@ -24168,8 +24238,8 @@ async def get_admin_kpis(request: Request):
     total_cashback = cashback_agg[0].get("total_cashback", 0) if cashback_agg and not isinstance(cashback_agg, Exception) else 0
     
     total_membership_fees = total_vip_payments * 1000  # ₹1000 per VIP
-    
-    return {
+
+    payload = {
         "users": {
             "total": total_users,
             "active": active_users,
@@ -24192,10 +24262,25 @@ async def get_admin_kpis(request: Request):
             "total": total_orders
         }
     }
+    if cache:
+        try:
+            await cache.set(CACHE_KEY, payload, ttl=60)
+        except Exception:
+            pass
+    return payload
 
 @api_router.get("/admin/dashboard/growth")
 async def get_growth_metrics(period: str = "daily"):
-    """Get growth metrics (daily/monthly)"""
+    """Get growth metrics (daily/monthly) — Phase-2 perf: 180s cache."""
+    CACHE_KEY = f"admin:dashboard:growth:{period}:v1"
+    if cache:
+        try:
+            cached = await cache.get(CACHE_KEY)
+            if cached:
+                return cached
+        except Exception:
+            pass
+
     now = datetime.now(timezone.utc)
     
     if period == "daily":
@@ -24240,12 +24325,18 @@ async def get_growth_metrics(period: str = "daily"):
         order_data[date_key] = order_data.get(date_key, 0) + 1
         revenue_data[date_key] = revenue_data.get(date_key, 0) + order.get("total_cash", 0)
     
-    return {
+    payload = {
         "period": period,
         "registrations": registration_data,
         "orders": order_data,
         "revenue": revenue_data
     }
+    if cache:
+        try:
+            await cache.set(CACHE_KEY, payload, ttl=180)
+        except Exception:
+            pass
+    return payload
 
 @api_router.post("/admin/users/{uid}/freeze")
 async def freeze_user_account(uid: str, request: Request):
@@ -24413,14 +24504,24 @@ async def create_audit_log(request: Request):
 
 @api_router.get("/admin/reports/financial")
 async def get_financial_report(start_date: str = None, end_date: str = None):
-    """Get financial report with profit & loss summary"""
+    """Get financial report with profit & loss summary — Phase-2 perf: 180s cache."""
     
     # If dates not provided, use last 30 days
     if not end_date:
         end_date = datetime.now(timezone.utc).isoformat()
     if not start_date:
         start_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-    
+
+    # Cache by date range (start/end) so different period selections cache independently
+    CACHE_KEY = f"admin:reports:financial:{start_date[:10]}:{end_date[:10]}:v1"
+    if cache:
+        try:
+            cached = await cache.get(CACHE_KEY)
+            if cached:
+                return cached
+        except Exception:
+            pass
+
     # INFLOWS
     # 1. VIP Membership fees
     vip_payments = await db.vip_payments.find({
@@ -24477,7 +24578,7 @@ async def get_financial_report(start_date: str = None, end_date: str = None):
     total_outflow = cashback_given + delivery_distribution + deposit_returns_paid + withdrawal_payouts
     net_profit = total_inflow - total_outflow
     
-    return {
+    payload = {
         "period": {"start": start_date, "end": end_date},
         "inflows": {
             "vip_memberships": vip_income,
@@ -24496,6 +24597,12 @@ async def get_financial_report(start_date: str = None, end_date: str = None):
         "net_profit": net_profit,
         "profit_margin": (net_profit / total_inflow * 100) if total_inflow > 0 else 0
     }
+    if cache:
+        try:
+            await cache.set(CACHE_KEY, payload, ttl=180)
+        except Exception:
+            pass
+    return payload
 
 @api_router.get("/admin/reports/gst")
 async def get_gst_report(start_date: str = None, end_date: str = None):
