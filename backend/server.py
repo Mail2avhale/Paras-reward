@@ -20264,20 +20264,10 @@ async def get_user_360_view(query: str, request: Request):
         
         logging.info(f"[USER360] Processing user: {uid}")
 
-        # ============================================================
-        # Phase-2 perf: 60s redis cache by uid. Heavy aggregation runs
-        # ~10-15s on production; admin can refresh after 60s. This is
-        # the #1 cause of 503/timeouts on the User-360 page.
-        # ============================================================
-        USER360_CACHE_KEY = f"admin:user_360:uid:{uid}:v1"
-        if cache:
-            try:
-                cached_payload = await cache.get(USER360_CACHE_KEY)
-                if cached_payload:
-                    logging.info(f"[USER360] Cache HIT for uid {uid}")
-                    return cached_payload
-            except Exception:
-                pass
+        # NOTE: Redis caching for the full User-360 payload was tried (Apr 30 2026)
+        # but the 600+ KB payload made Upstash REST round-trips slower than
+        # recomputing. The endpoint is fast enough (~5s on prod) and the frontend
+        # axios auto-retry handles transient 503s. Keep this endpoint cache-free.
 
         # Remove sensitive data from user
         user.pop("password_hash", None)
@@ -20891,12 +20881,6 @@ async def get_user_360_view(query: str, request: Request):
             }
         }
         logging.info(f"[USER360] Successfully returning data for user: {uid}")
-        # Phase-2 perf: cache the heavy payload by uid for 60s
-        if cache:
-            try:
-                await cache.set(USER360_CACHE_KEY, response_data, ttl=60)
-            except Exception as cache_err:
-                logging.warning(f"[USER360] Cache set failed (non-fatal): {cache_err}")
         return response_data
     except Exception as e:
         logging.error(f"[USER360] Serialization error for {uid}: {str(e)}", exc_info=True)
@@ -23166,12 +23150,6 @@ async def user_360_quick_action(request: Request):
     if not user_id or not action:
         raise HTTPException(status_code=400, detail="user_id and action are required")
     
-    # Phase-2 perf: invalidate User-360 cache on any mutation so admin sees fresh data immediately.
-    if cache:
-        try:
-            await cache.delete(f"admin:user_360:uid:{user_id}:v1")
-        except Exception:
-            pass
     # Get user
     user = await db.users.find_one({"uid": user_id})
     if not user:

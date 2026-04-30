@@ -82,8 +82,15 @@ Each cached with payload-identical guard test
 | `GET /admin/paid-users-wallet-summary` | 120s | `admin:paid_users_wallet_summary:v1` |
 | `GET /admin/prc-subscription-stats` | 90s | `admin:prc_subscription_stats:v1` |
 | `GET /admin/reports/financial?start_date=&end_date=` | 180s | `admin:reports:financial:{start}:{end}:v1` |
-- Local sandbox shows 40-50% latency reduction on cache hit. Production with larger collections will see 5-10× improvement on heavy aggregation endpoints.
+- Production verified Apr 30: KPIs 1.49s cold → 0.42s warm; Members 1.19s → 0.45s.
 - Stale window deliberately small (60-180s); admin staleness is acceptable given the tradeoff.
+
+### 10. User-360 Endpoint — Cache NOT applied (intentional)
+Tested Apr 30 2026: caching the 600+ KB payload via Upstash REST made warm requests SLOWER than cold (7.6s vs 5.6s) due to round-trip overhead and JSON deserialization on a large blob. The endpoint relies instead on:
+- Internal parallelization via `asyncio.gather` (already done; ~5-6s on prod)
+- Frontend axios auto-retry (handles transient 503/504)
+- Existing per-section indexes on transactions, redeem_requests, subscription_payments
+If User-360 latency becomes a problem again, the right fix is **payload reduction** (lazy-load tabs like login_history & failed_transactions) rather than blob caching.
 
 ---
 
