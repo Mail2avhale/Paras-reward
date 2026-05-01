@@ -93,37 +93,70 @@ async def main(apply: bool = False, target_uid: str | None = None):
         client.close()
         return
 
-    # Apply refunds
+    # Apply refunds — IDEMPOTENT ORDER (mark FIRST, then refund balance).
+    # Why this order matters: if the script crashes mid-way, re-running must
+    # NOT re-refund. Marking the subscription as `status=refunded` first
+    # makes the next dry-run skip it (because we filter on
+    # status in [paid, upcoming, active, completed] — refunded is excluded).
+    # Only after the mark succeeds do we credit the balance.
     refunded = 0
     for f in findings:
         uid = f["user_id"]
         amount = float(f["prc_amount"] or 0)
-        extra_pid = f["extra_payment_id"]
+        extra_pid = f["extra_payment_id"] or f"legacy-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
         if amount <= 0:
             continue
-        # Refund PRC to user (atomic)
-        upd = await db.users.update_one(
-            {"uid": uid}, {"$inc": {"prc_balance": amount}}
-        )
-        if upd.modified_count != 1:
-            print(f"  WARN: refund failed for {uid}")
-            continue
-        # Mark extra sub as refunded
-        await db.subscription_payments.update_one(
-            {"payment_id": extra_pid},
+
+        # 1. ATOMIC mark-as-refunded (CAS): only succeeds if status was NOT
+        # already 'refunded'. This is the idempotency gate — duplicate runs
+        # of this script will see modified_count == 0 and skip the user.
+        if f["extra_payment_id"]:
+            mark_filter = {
+                "payment_id": f["extra_payment_id"],
+                "status": {"$ne": "refunded"},
+            }
+        else:
+            # Legacy doc with no payment_id → match on user_id + created_at
+            mark_filter = {
+                "user_id": uid,
+                "created_at": f["extra_created"],
+                "status": {"$ne": "refunded"},
+            }
+        mark_res = await db.subscription_payments.update_one(
+            mark_filter,
             {
                 "$set": {
                     "status": "refunded",
                     "refunded_at": datetime.now(timezone.utc).isoformat(),
                     "refund_reason": "cooldown_race_auto_remediation",
+                    "refund_amount_prc": amount,
                 }
             },
         )
-        # Log to transactions for PRC statement visibility
+        if mark_res.modified_count == 0:
+            # Already refunded in a prior run — skip silently.
+            print(f"  SKIP: uid={uid} already refunded (idempotent)")
+            continue
+
+        # 2. Now safe to refund balance — exactly once per finding.
+        upd = await db.users.update_one(
+            {"uid": uid}, {"$inc": {"prc_balance": amount}}
+        )
+        if upd.modified_count != 1:
+            # Ultra-rare: user was deleted between step 1 and step 2.
+            # Roll back the mark so a future run can retry.
+            await db.subscription_payments.update_one(
+                mark_filter | {"status": "refunded"},
+                {"$set": {"status": "paid"}, "$unset": {"refunded_at": "", "refund_reason": "", "refund_amount_prc": ""}},
+            )
+            print(f"  WARN: refund failed for {uid} (user missing) — mark rolled back")
+            continue
+
+        # 3. Log refund txn for user-facing PRC statement visibility.
         await db.transactions.insert_one(
             {
                 "user_id": uid,
-                "transaction_id": f"REFUND-PRC-SUB-{extra_pid}",
+                "transaction_id": f"REFUND-PRC-SUB-{extra_pid[:24]}",
                 "type": "subscription_refund",
                 "amount": amount,
                 "description": (
