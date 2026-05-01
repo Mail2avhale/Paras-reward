@@ -89,6 +89,10 @@ async def create_success_story_post(
     try:
         if db is None:
             return
+        # Guard #1: skip test / internal admin users — they should never appear in the
+        # public Live Wins feed even if their tests successfully activate a plan.
+        if not user_id or user_id.startswith("admin-test") or user_id.startswith("test-") or user_id.startswith("__TEST") or user_id.startswith("__test") or user_id.startswith("burn-test") or user_id == "system":
+            return
         # Idempotency: if ref_id already posted, skip
         if ref_id:
             existing = await db.community_posts.find_one(
@@ -97,6 +101,30 @@ async def create_success_story_post(
             )
             if existing:
                 return
+        # Guard #2: per-user per-service 24h dedup. Prevents 10 force-activate calls
+        # from the same admin creating 10 posts for the same user in seconds.
+        # Subscriptions have a 7-day cooldown anyway, so 1 Success Story per user per
+        # service per day is a safe UX cap.
+        try:
+            from datetime import timedelta as _td
+            twenty_four_h_ago = (datetime.now(timezone.utc) - _td(hours=24)).isoformat()
+            recent_for_user = await db.community_posts.find_one(
+                {
+                    "metadata.beneficiary_user_id": user_id,
+                    "metadata.service_type": service_type,
+                    "is_success_story": True,
+                    "created_at": {"$gte": twenty_four_h_ago},
+                },
+                {"_id": 1},
+            )
+            if recent_for_user:
+                logging.info(
+                    f"[SUCCESS STORY] 24h per-user dedup skip: {user_id} / {service_type}"
+                )
+                return
+        except Exception as _e:
+            # Non-fatal — fail open (better to over-post than lose a legit post)
+            logging.debug(f"[SUCCESS STORY] 24h dedup check failed (non-fatal): {_e}")
 
         user = await db.users.find_one(
             {"uid": user_id},
