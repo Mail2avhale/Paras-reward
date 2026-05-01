@@ -741,6 +741,34 @@ async def login(request: Request):
         )
         logging.info(f"[LOGIN DEBUG] Password verification result: {is_valid}")
         print(f"[LOGIN DEBUG] Password verification result: {is_valid}", flush=True)
+
+        # LAZY REHASH (Apr 30 2026 perf): If the stored hash uses bcrypt cost
+        # >10, rehash with new lower cost and persist. This progressively
+        # migrates legacy users (cost=12 → cost=10) over their next login.
+        # The rehash itself runs in a background task so it never blocks the
+        # current login response.
+        if is_valid and isinstance(stored_password, str) and stored_password.startswith("$2"):
+            try:
+                # bcrypt format: $2b$<cost>$...
+                parts = stored_password.split("$")
+                if len(parts) >= 4 and parts[2].isdigit() and int(parts[2]) > 10:
+                    legacy_uid = user["uid"]
+                    legacy_password = password
+                    async def _bg_rehash():
+                        try:
+                            new_hash = await loop.run_in_executor(
+                                _password_executor, hash_password, legacy_password
+                            )
+                            await db.users.update_one(
+                                {"uid": legacy_uid},
+                                {"$set": {"password": new_hash, "pin_migrated": True}},
+                            )
+                            logging.info(f"[LOGIN LAZY-REHASH] {legacy_uid} migrated bcrypt cost {parts[2]}→10")
+                        except Exception as e:
+                            logging.warning(f"[LOGIN LAZY-REHASH] failed (non-fatal): {e}")
+                    asyncio.create_task(_bg_rehash())
+            except Exception:
+                pass
         
         # If PIN doesn't match, try alternate user (phone/mobile collision)
         if not is_valid:
@@ -840,34 +868,36 @@ async def login(request: Request):
     # Generate unique session token for this login
     session_token = str(uuid.uuid4())
     now_iso = datetime.now(timezone.utc).isoformat()
-    
-    # PARALLEL: Run multiple independent database updates together
-    login_history_entry = {
-        "user_id": user["uid"],
-        "login_time": now_iso,
-        "ip_address": real_ip,
-        "device_id": device_id or "unknown",
-        "user_agent": user_agent[:200] if user_agent else "unknown",
-        "device_info": parse_user_agent(user_agent) if user_agent else {},
-        "login_type": "pin",
-        "success": True
-    }
-    
-    # Run independent DB operations in parallel using asyncio.gather
-    await asyncio.gather(
-        db.users.update_one(
-            {"uid": user["uid"]},
-            {"$set": {
-                "session_token": session_token,
-                "session_created_at": now_iso,
-                "last_login": now_iso,
-                "last_login_ip": real_ip,
-                "last_login_device": device_id or "unknown"
-            }}
-        ),
-        db.login_history.insert_one(login_history_entry),
-        return_exceptions=True
+
+    # CRITICAL: persist session-token on the user doc (this is what the
+    # client sees + what /validate-session checks). Must await.
+    await db.users.update_one(
+        {"uid": user["uid"]},
+        {"$set": {
+            "session_token": session_token,
+            "session_created_at": now_iso,
+            "last_login": now_iso,
+            "last_login_ip": real_ip,
+            "last_login_device": device_id or "unknown",
+        }}
     )
+
+    # FIRE-AND-FORGET: login_history insert (non-critical for response)
+    async def _bg_insert_login_history():
+        try:
+            await db.login_history.insert_one({
+                "user_id": user["uid"],
+                "login_time": now_iso,
+                "ip_address": real_ip,
+                "device_id": device_id or "unknown",
+                "user_agent": user_agent[:200] if user_agent else "unknown",
+                "device_info": parse_user_agent(user_agent) if user_agent else {},
+                "login_type": "pin",
+                "success": True,
+            })
+        except Exception as e:
+            logging.warning(f"[LOGIN] login_history insert failed (non-fatal): {e}")
+    asyncio.create_task(_bg_insert_login_history())
     
     # Subscription expiry check (unified for all paid plans)
     subscription_expiry_message = None
@@ -885,16 +915,22 @@ async def login(request: Request):
                 if expiry_date < now:
                     days_expired = (now - expiry_date).days
                     subscription_expiry_message = f"Your {current_plan.capitalize()} subscription expired {days_expired} days ago. Please renew."
-                    # Actually downgrade to explorer in DB
-                    await db.users.update_one(
-                        {"uid": user["uid"]},
-                        {"$set": {
-                            "subscription_plan": "explorer",
-                            "subscription_expired": True,
-                            "subscription_expired_at": now.isoformat(),
-                            "subscription_status": "expired"
-                        }}
-                    )
+                    # FIRE-AND-FORGET: downgrade plan in DB. Wrapped in async
+                    # helper because Motor returns a Future, not a coroutine.
+                    async def _bg_downgrade(uid_local=user["uid"], now_iso_local=now.isoformat()):
+                        try:
+                            await db.users.update_one(
+                                {"uid": uid_local},
+                                {"$set": {
+                                    "subscription_plan": "explorer",
+                                    "subscription_expired": True,
+                                    "subscription_expired_at": now_iso_local,
+                                    "subscription_status": "expired"
+                                }}
+                            )
+                        except Exception as e:
+                            logging.warning(f"[LOGIN] expiry downgrade failed (non-fatal): {e}")
+                    asyncio.create_task(_bg_downgrade())
                     user["subscription_plan"] = "explorer"
                     user["subscription_expired"] = True
                     user["subscription_days_expired"] = days_expired
@@ -914,63 +950,67 @@ async def login(request: Request):
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
     
-    # OPTIMIZED: Collect ALL post-login DB operations and run in parallel
+    # OPTIMIZED (Apr 30 2026): Split post-login work into critical (await)
+    # vs background (fire-and-forget). Only the user-doc update on session
+    # state is blocking; everything else runs detached so the response can
+    # ship immediately. This was the #1 cause of 7-10s login latency on prod.
+
     now_iso = datetime.now(timezone.utc).isoformat()
-    post_login_tasks = []
-    
-    # PRC expiry on login REMOVED - PRC now has lifetime validity for all users
-    # Old code that reset PRC for free users has been removed as per user request
-    
-    # Task 1: Update last_login + login_count
+
+    # CRITICAL: Update last_login + login_count (must complete before response
+    # so the client sees the freshest user doc).
     update_data = {"last_login": now_iso}
     if device_id:
         update_data["device_id"] = device_id
     if ip_address:
         update_data["ip_address"] = ip_address
-    post_login_tasks.append(
-        db.users.update_one({"uid": user["uid"]}, {"$set": update_data, "$inc": {"login_count": 1}})
+    await db.users.update_one(
+        {"uid": user["uid"]},
+        {"$set": update_data, "$inc": {"login_count": 1}},
     )
-    
-    # Task 3: Log activity (fire-and-forget style via task list)
-    post_login_tasks.append(
-        log_activity(
-            user_id=user["uid"],
-            action_type="login",
-            description=f"User logged in from {real_ip}",
-            metadata={"device_id": device_id, "identifier": identifier},
-            ip_address=real_ip
-        )
-    )
-    
-    # Task 4: Admin session and logging (if admin)
-    if user.get("role") in ["admin", "sub_admin"]:
-        session_data = {
-            "session_id": str(uuid.uuid4()),
-            "uid": user["uid"],
-            "token_id": token_id,
-            "is_active": True,
-            "ip_address": real_ip,
-            "user_agent": user_agent,
-            "device_id": device_id,
-            "created_at": now_iso,
-            "last_activity": now_iso,
-            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)).isoformat()
-        }
-        post_login_tasks.append(db.admin_sessions.insert_one(session_data))
-        post_login_tasks.append(
-            log_admin_action(
-                admin_uid=user["uid"],
-                action="login",
-                entity_type="auth",
-                details={"device_id": device_id, "identifier": identifier},
+
+    # FIRE-AND-FORGET: activity log (non-critical for response)
+    async def _bg_log_activity():
+        try:
+            await log_activity(
+                user_id=user["uid"],
+                action_type="login",
+                description=f"User logged in from {real_ip}",
+                metadata={"device_id": device_id, "identifier": identifier},
                 ip_address=real_ip,
-                user_agent=user_agent
             )
-        )
-    
-    # Run ALL post-login DB operations in parallel
-    if post_login_tasks:
-        await asyncio.gather(*post_login_tasks, return_exceptions=True)
+        except Exception as e:
+            logging.warning(f"[LOGIN] log_activity failed (non-fatal): {e}")
+    asyncio.create_task(_bg_log_activity())
+
+    # FIRE-AND-FORGET: admin session + admin audit log (non-critical for response)
+    if user.get("role") in ["admin", "sub_admin"]:
+        async def _bg_admin_session():
+            try:
+                session_data = {
+                    "session_id": str(uuid.uuid4()),
+                    "uid": user["uid"],
+                    "token_id": token_id,
+                    "is_active": True,
+                    "ip_address": real_ip,
+                    "user_agent": user_agent,
+                    "device_id": device_id,
+                    "created_at": now_iso,
+                    "last_activity": now_iso,
+                    "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)).isoformat(),
+                }
+                await db.admin_sessions.insert_one(session_data)
+                await log_admin_action(
+                    admin_uid=user["uid"],
+                    action="login",
+                    entity_type="auth",
+                    details={"device_id": device_id, "identifier": identifier},
+                    ip_address=real_ip,
+                    user_agent=user_agent,
+                )
+            except Exception as e:
+                logging.warning(f"[LOGIN] admin session bg failed (non-fatal): {e}")
+        asyncio.create_task(_bg_admin_session())
     
     # Convert datetime strings
     for field in ["created_at", "updated_at", "last_login", "membership_expiry"]:

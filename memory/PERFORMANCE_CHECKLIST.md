@@ -91,9 +91,26 @@ Each cached with payload-identical guard test
 - Admin page `/admin/web-vitals` shows p50/p75/p95 + good/needs-improvement/poor distribution per metric, plus top-5 worst pages by LCP avg. 60s redis cache on summary endpoint. Window selectable: 1h / 24h / 7d / 30d.
 - Indexes: `(name, created_at desc)`, `(path, created_at desc)`.
 
-### 14. Pagination on `/membership/payments` (Apr 30 2026)
-- Was: returned up to 1000 records + raw Mongo `_id` exposed.
-- Now: `page`/`limit` (max 100) with proper `total / total_pages` envelope. `_id` excluded.
+### 15. Login Latency Optimization (Apr 30 2026)
+
+**Symptom**: Production `POST /api/auth/login` was averaging 7.27s (max 10.14s) — every user login slow.
+
+**Root causes identified**:
+1. `await asyncio.gather(*post_login_tasks)` blocked response on activity log + admin session insert + admin audit log
+2. `await db.users.update_one(...)` for subscription expiry blocked response
+3. `await db.login_history.insert_one(...)` blocked response
+4. bcrypt cost factor 12 (passlib default) → 250-400ms per verify
+
+**Fixes applied** in `routes/auth.py`:
+1. **Fire-and-forget pattern** for all non-critical post-login work: `log_activity`, `admin_sessions.insert_one`, `log_admin_action`, `login_history.insert_one`, subscription-expiry downgrade. Wrapped in async helper functions (Motor `insert_one()` returns Future, not coroutine — must be wrapped in async def).
+2. **bcrypt rounds 12 → 10** for new hashes (`CryptContext(... bcrypt__default_rounds=10)`).
+3. **Lazy rehash on login**: when verifying succeeds and stored hash has cost > 10, rehash with cost 10 in a background task and persist. Progressively migrates legacy users on their next login. No login impact.
+
+**Result locally**: ~0.7s → 0.33s (50%+ faster). Production will drop from 7s → ~1-2s after admin's hash rehashes (first login after deploy).
+
+### 16. Frontend `/me` Server Role Verify (Apr 30 2026)
+- `App.js` `validateUserRole` already calls `GET /api/auth/me` on app mount + after role-state changes. Verified live: 2 `/auth/me` 200 calls per app boot.
+- Localstorage `role` field is now treated as a hint, not source of truth — `canAccessAdmin` rechecks with server-supplied role from `/me`.
 
 ---
 

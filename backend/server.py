@@ -752,8 +752,12 @@ async def safe_db_operation(operation, fallback=None, operation_name="db_operati
 # Initialize Fraud Detector
 fraud_detector = FraudDetector(db)
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing — bcrypt rounds=10 (was passlib default 12).
+# Apr 30 2026 Phase: bcrypt verify cost grows exponentially with rounds —
+# rounds=12 ≈ 250-400ms per verify, rounds=10 ≈ 60-120ms (4× faster).
+# Still well above OWASP minimum (rounds≥10). Existing hashes verified with
+# their stored cost (transparent), but we lazy-upgrade to rounds=10 below.
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__default_rounds=10)
 
 def hash_password(password: str) -> str:
     """Hash a password"""
