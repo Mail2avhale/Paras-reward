@@ -104,9 +104,9 @@ class TestRazorpayDoubleActivationPrevention:
             headers={"Content-Type": "application/json"}
         )
         
-        # Should return 200 (webhook always returns ok to avoid retries)
-        # or 500 for processing error
-        assert response.status_code in [200, 500], f"Expected 200 or 500 for webhook, got {response.status_code}"
+        # Unsigned webhooks must fail closed when signature verification is
+        # missing or not configured.
+        assert response.status_code in [401, 503], f"Expected 401 or 503 for unsigned webhook, got {response.status_code}"
     
     def test_payment_history_returns_list(self):
         """Test that payment history returns proper list structure"""

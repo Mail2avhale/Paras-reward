@@ -1059,8 +1059,14 @@ class AdminAuthMiddleware(BaseHTTPMiddleware):
         token = auth_header.replace("Bearer ", "")
         
         try:
-            # Verify JWT token
+            # Verify JWT token. Admin routes must never accept long-lived
+            # refresh tokens even if they contain admin role claims.
             payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            if payload.get("type") != "access":
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid token type. Access token required."}
+                )
             
             # Check if user is admin
             role = payload.get("role", "user")

@@ -41,7 +41,7 @@ else:
 if RAZORPAY_WEBHOOK_SECRET:
     logging.info("Razorpay webhook secret configured")
 else:
-    logging.warning("Razorpay webhook secret NOT configured - webhooks may fail signature verification")
+    logging.warning("Razorpay webhook secret NOT configured - webhook requests will be rejected")
 
 # Database reference (set from server.py)
 db = None
@@ -650,23 +650,27 @@ async def razorpay_webhook(request: Request):
         
         logging.info(f"[WEBHOOK] Received webhook call, signature present: {bool(signature)}")
         
-        # Verify webhook signature using WEBHOOK SECRET (not API secret!)
-        webhook_secret = RAZORPAY_WEBHOOK_SECRET or RAZORPAY_KEY_SECRET
+        # Verify webhook signature using the dedicated webhook secret only.
+        webhook_secret = RAZORPAY_WEBHOOK_SECRET
         
-        if webhook_secret and signature:
-            expected_signature = hmac.new(
-                webhook_secret.encode('utf-8'),
-                body,
-                hashlib.sha256
-            ).hexdigest()
-            
-            if signature != expected_signature:
-                logging.warning(f"[WEBHOOK] Invalid signature. Expected: {expected_signature[:20]}..., Got: {signature[:20]}...")
-                # SECURITY FIX: Reject invalid signatures to prevent fake webhook attacks
-                raise HTTPException(status_code=401, detail="Invalid webhook signature")
-        else:
-            logging.warning("[WEBHOOK] No signature verification - WEBHOOK SECRET not configured!")
-            # Allow processing but log warning - admin should configure webhook secret
+        if not webhook_secret:
+            logging.error("[WEBHOOK] Webhook secret not configured; rejecting unsigned webhook")
+            raise HTTPException(status_code=503, detail="Webhook signature verification is not configured")
+
+        if not signature:
+            logging.warning("[WEBHOOK] Missing Razorpay signature header")
+            raise HTTPException(status_code=401, detail="Missing webhook signature")
+
+        expected_signature = hmac.new(
+            webhook_secret.encode('utf-8'),
+            body,
+            hashlib.sha256
+        ).hexdigest()
+
+        if not hmac.compare_digest(signature, expected_signature):
+            logging.warning(f"[WEBHOOK] Invalid signature. Expected: {expected_signature[:20]}..., Got: {signature[:20]}...")
+            # SECURITY FIX: Reject invalid signatures to prevent fake webhook attacks
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
         
         payload = await request.json()
         event = payload.get("event")
