@@ -3,6 +3,11 @@ apply plugin: 'com.android.application'
 android {
     namespace "com.parasreward.app"
     compileSdk rootProject.ext.compileSdkVersion
+    def releaseKeystorePath = System.getenv("PARAS_RELEASE_STORE_FILE")
+    def releaseKeystorePassword = System.getenv("PARAS_RELEASE_STORE_PASSWORD")
+    def releaseKeyAlias = System.getenv("PARAS_RELEASE_KEY_ALIAS")
+    def releaseKeyPassword = System.getenv("PARAS_RELEASE_KEY_PASSWORD")
+
     defaultConfig {
         applicationId "com.parasreward.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -16,9 +21,22 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (releaseKeystorePath && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword) {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
+            if (releaseKeystorePath && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword) {
+                signingConfig signingConfigs.release
+            }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
