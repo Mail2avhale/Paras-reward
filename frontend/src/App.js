@@ -14,6 +14,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import LiveTickerStrip from "@/components/LiveTickerStrip";
 import WebVitalsReporter from "@/components/WebVitalsReporter";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 // Lazy load heavy components
 const SupportChatbot = null; // REMOVED - chatbot feature removed
 // HoliCelebration removed as per user request
@@ -427,24 +428,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
     <>
       <OfflineIndicator />
       {/* HoliCelebration removed as per user request */}
-      {user?.is_impersonation && (
-        <div
-          data-testid="impersonation-banner"
-          className="w-full bg-orange-500 text-white text-xs sm:text-sm px-3 py-2 flex items-center justify-center gap-3 flex-wrap sticky top-0 z-[100] shadow-md"
-        >
-          <span className="font-semibold">
-            IMPERSONATION MODE: You are viewing as {user.name} ({user.mobile})
-          </span>
-          <button
-            type="button"
-            onClick={() => { handleLogout(false); window.close(); }}
-            data-testid="impersonation-exit-btn"
-            className="bg-white text-orange-700 px-3 py-1 rounded-md font-medium hover:bg-orange-50 transition-colors"
-          >
-            Exit Impersonation
-          </button>
-        </div>
-      )}
+      {user?.is_impersonation && <ImpersonationBanner user={user} onExit={() => { handleLogout(false); window.close(); }} />}
       <BrowserRouter>
         <PageTitleUpdater />
         <WebVitalsReporter user={user} />
