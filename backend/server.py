@@ -109,7 +109,13 @@ from routes.live_ticker import router as live_ticker_router, set_db as set_live_
 
 # ========== SECURITY CONFIGURATION ==========
 # SECURITY: Use stable JWT secret from env, fallback to fixed secret for consistency
-JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'paras-reward-secret-key-2024')
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
+if not JWT_SECRET_KEY:
+    raise RuntimeError(
+        "JWT_SECRET_KEY env var is required. Refusing to start with a "
+        "predictable fallback — that would let anyone forge admin tokens. "
+        "Set a strong random secret in .env (dev) or Emergent System Keys (prod)."
+    )
 JWT_ALGORITHM = "HS256"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour
 JWT_REFRESH_TOKEN_EXPIRE_DAYS = 7

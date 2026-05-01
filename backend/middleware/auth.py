@@ -11,7 +11,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 
 # JWT Configuration - Must match server.py JWT_SECRET_KEY
-JWT_SECRET = os.environ.get("JWT_SECRET_KEY", "paras-reward-secret-key-2024")
+JWT_SECRET = os.environ.get("JWT_SECRET_KEY")
+if not JWT_SECRET:
+    raise RuntimeError(
+        "JWT_SECRET_KEY env var is required. Set a strong random secret "
+        "in .env (dev) or Emergent System Keys (prod)."
+    )
 JWT_ALGORITHM = "HS256"
 
 security = HTTPBearer(auto_error=False)
