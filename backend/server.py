@@ -12444,12 +12444,31 @@ async def subscription_pay_with_prc(request: Request):
         plan_name = data.get("plan_name", "elite")  # Only Elite available now
         plan_type = data.get("plan_type", "monthly")
         prc_amount = data.get("prc_amount")
+        client_request_id = data.get("client_request_id")  # Idempotency key
         
         # VALIDATION: Check required fields
         if not user_id:
             raise HTTPException(status_code=400, detail="User ID is required. Please login again.")
         if not prc_amount or prc_amount <= 0:
             raise HTTPException(status_code=400, detail="Invalid PRC amount. Please refresh the page.")
+        
+        # ==================== IDEMPOTENCY GUARD (Layer 1) ====================
+        # Prevents double-submit from double-taps, network retries, or duplicate
+        # tab actions. Client MUST send a stable `client_request_id` (UUIDv4).
+        # Legacy clients without the key still work (no idempotency protection
+        # but atomic DB lock below still guards against concurrent double-charge).
+        idem_scope = f"prc_sub:{user_id}"
+        if client_request_id:
+            cached = await check_and_claim_idempotency_key(
+                client_request_id, idem_scope, ttl_seconds=300
+            )
+            if cached is not None:
+                if cached.get("_inflight"):
+                    # Another identical request is still processing — ask client to wait.
+                    raise HTTPException(status_code=409, detail=cached.get("message"))
+                # Replay previous successful response
+                logging.info(f"[PRC-SUB] idempotency replay for {user_id} / {client_request_id[:8]}")
+                return cached
         
         # Only Elite plan available
         plan_name = "elite"
@@ -12485,6 +12504,9 @@ async def subscription_pay_with_prc(request: Request):
             )
 
         # CHECK COOLDOWN: 7 days between any subscription (PRC/UPI/Manual)
+        # NOTE: This is a soft precheck for user-friendly error messages.
+        # The HARD guarantee is the atomic CAS on `last_prc_subscription` further
+        # below (Layer 2) which cannot be raced.
         try:
             cooldown = await check_service_cooldown(user_id, "subscription")
             if not cooldown["allowed"]:
@@ -12495,9 +12517,16 @@ async def subscription_pay_with_prc(request: Request):
                     detail=f"Cooldown active. Please wait {wait_days:.0f} more days. Last subscription was on {last_date[:10] if isinstance(last_date, str) and len(last_date) > 10 else last_date}."
                 )
         except HTTPException:
+            # FIX (May 2026): cooldown check now fails CLOSED — never swallow
+            # unexpected cooldown errors. 7-day cooldown is a critical business
+            # rule and must not be bypassed by a transient DB hiccup.
             raise
         except Exception as cooldown_err:
-            logging.warning(f"[PRC-SUB] Cooldown check error for {user_id}: {cooldown_err}")
+            logging.error(f"[PRC-SUB] Cooldown check error for {user_id}: {cooldown_err}")
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to verify subscription eligibility. Please try again in a moment.",
+            )
         
         # Calculate Elite pricing with new formula
         try:
@@ -12597,14 +12626,73 @@ async def subscription_pay_with_prc(request: Request):
             payment_id = str(_uuid.uuid4())
             new_expiry = (now + timedelta(days=duration_days)).isoformat()
         
-        # DEDUCT PRC
+        # DEDUCT PRC — ATOMIC CAS (Layer 2: race-safe guarantee)
+        # Filter checks ALL in one atomic operation:
+        #   - Balance sufficient
+        #   - Cooldown honored: no PRC subscription within last 7 days
+        # Update atomically:
+        #   - Deduct balance
+        #   - Mark last_prc_subscription = now (serializes future attempts)
+        # Double-tap scenario: 2nd concurrent request's filter fails on
+        # last_prc_subscription > 7d_ago → modified_count == 0 → rejected.
         try:
+            seven_days_ago = (now - timedelta(days=7)).isoformat()
             result = await db.users.update_one(
-                {"uid": user_id, "prc_balance": {"$gte": prc_amount}},
-                {"$inc": {"prc_balance": -prc_amount}}
+                {
+                    "uid": user_id,
+                    "prc_balance": {"$gte": prc_amount},
+                    "$or": [
+                        {"last_prc_subscription": {"$exists": False}},
+                        {"last_prc_subscription": None},
+                        {"last_prc_subscription": {"$lt": seven_days_ago}},
+                    ],
+                },
+                {
+                    "$inc": {"prc_balance": -prc_amount},
+                    "$set": {"last_prc_subscription": now.isoformat()},
+                },
             )
             if result.modified_count == 0:
-                raise HTTPException(status_code=400, detail="Could not deduct PRC. Please try again.")
+                # Figure out WHY it failed for a clearer error message.
+                fresh = await db.users.find_one(
+                    {"uid": user_id},
+                    {"_id": 0, "prc_balance": 1, "last_prc_subscription": 1},
+                )
+                if fresh:
+                    fresh_bal = float(fresh.get("prc_balance", 0) or 0)
+                    last_sub = fresh.get("last_prc_subscription")
+                    if last_sub and last_sub >= seven_days_ago:
+                        # Most likely cause under race: a concurrent request just
+                        # claimed the slot ~ms before this one.
+                        try:
+                            last_dt = datetime.fromisoformat(str(last_sub).replace("Z", "+00:00"))
+                            remaining_days = max(
+                                0,
+                                7 - int((now - last_dt).total_seconds() // 86400),
+                            )
+                        except Exception:
+                            remaining_days = 7
+                        raise HTTPException(
+                            status_code=429,
+                            detail=(
+                                f"Subscription cooldown active. Please wait "
+                                f"{remaining_days} more day(s). Last subscription "
+                                f"was on {str(last_sub)[:10]}."
+                            ),
+                        )
+                    if fresh_bal < prc_amount:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                f"Insufficient PRC Balance. You have "
+                                f"{fresh_bal:,.0f} PRC, but {prc_amount:,.0f} PRC "
+                                f"is required."
+                            ),
+                        )
+                raise HTTPException(
+                    status_code=409,
+                    detail="Could not activate subscription. Please refresh and try again.",
+                )
         except HTTPException:
             raise
         except Exception as deduct_err:
@@ -12768,7 +12856,7 @@ async def subscription_pay_with_prc(request: Request):
                 logging.warning(f"[COMMUNITY] subscription PRC post hook failed (non-fatal): {_e}")
 
         if is_upcoming:
-            return {
+            response = {
                 "success": True,
                 "message": "Elite subscription queued! It will activate after your current plan expires.",
                 "is_upcoming": True,
@@ -12782,7 +12870,7 @@ async def subscription_pay_with_prc(request: Request):
                 }
             }
         else:
-            return {
+            response = {
                 "success": True,
                 "message": "Elite subscription activated successfully!",
                 "is_upcoming": False,
@@ -12794,13 +12882,32 @@ async def subscription_pay_with_prc(request: Request):
                     "pricing_breakdown": pricing
                 }
             }
+        # Persist response for idempotent replay
+        if client_request_id:
+            await store_idempotency_response(
+                client_request_id, idem_scope, response, ttl_seconds=300
+            )
+        return response
         
     except HTTPException:
+        # Release the idempotency sentinel so the user can retry after fixing the
+        # error (e.g., correcting amount, waiting out cooldown). Without release
+        # they'd be locked out for the full TTL window.
+        if client_request_id:
+            try:
+                await release_idempotency_key(client_request_id, idem_scope)
+            except Exception:
+                pass
         raise
     except Exception as e:
         logging.error(f"[PRC-SUB] Unexpected error: {str(e)}")
         import traceback
         logging.error(traceback.format_exc())
+        if client_request_id:
+            try:
+                await release_idempotency_key(client_request_id, idem_scope)
+            except Exception:
+                pass
         raise HTTPException(status_code=500, detail=f"Subscription failed. Technical error: {str(e)}")
 
 
@@ -34845,6 +34952,22 @@ api_router.include_router(redeem_v2_router)
 # Manual Bank Transfer Router
 set_bank_transfer_db(db)
 set_sustainability_burn_db(db)
+
+# Idempotency helper for race-safe financial endpoints
+from routes.idempotency import (
+    set_db as set_idempotency_db,
+    ensure_indexes as ensure_idempotency_indexes,
+    check_and_claim_idempotency_key,
+    store_idempotency_response,
+    release_idempotency_key,
+)
+set_idempotency_db(db)
+# Schedule index creation on startup (async-safe)
+import asyncio as _asyncio_idem
+try:
+    _asyncio_idem.get_event_loop().create_task(ensure_idempotency_indexes())
+except Exception:
+    pass
 set_bank_transfer_limit_check(check_redeem_limit)
 set_bank_transfer_weekly_check(check_weekly_one_service_limit)
 set_bank_transfer_calc_limit(calculate_user_redeem_limit)

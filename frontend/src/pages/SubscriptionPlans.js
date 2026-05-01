@@ -1381,12 +1381,20 @@ const SubscriptionPlans = ({ user }) => {
               <button
                 onClick={async () => {
                   if (!selectedPlan || !user?.uid) return;
+                  if (prcLoading) return; // Extra safety — disabled attr already blocks, but be explicit
                   setPrcLoading(true);
+                  // Generate a stable idempotency key per click so accidental
+                  // network retries, double-taps, or background request retries
+                  // don't create duplicate subscriptions on the backend.
+                  const clientRequestId =
+                    (window.crypto?.randomUUID?.()) ||
+                    `pr-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
                   try {
                     const res = await axios.post(`${API}/subscription/pay-with-prc`, {
                       user_id: user.uid,
                       plan_name: selectedPlan.id || 'elite',
-                      prc_amount: prcPricing?.total_prc_required || 0
+                      prc_amount: prcPricing?.total_prc_required || 0,
+                      client_request_id: clientRequestId,
                     });
                     if (res.data.success) {
                       toast.success(res.data.message || 'Subscription activated with PRC!');
