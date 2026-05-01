@@ -1763,10 +1763,32 @@ async def ensure_critical_indexes_now(request: Request):
                 if name in existing:
                     results.append({"collection": collection_name, "name": name, "status": "exists"})
                     return
-                await col.create_index(create_keys, **opts)
-                results.append({"collection": collection_name, "name": name, "status": "created"})
+                try:
+                    await col.create_index(create_keys, **opts)
+                    results.append({"collection": collection_name, "name": name, "status": "created"})
+                except Exception as create_err:
+                    err_str = str(create_err).lower()
+                    # Unique constraint failed because of legacy duplicates —
+                    # fall back to a NON-UNIQUE index. This still fixes the
+                    # COLLSCAN performance issue while preserving the
+                    # duplicates for separate cleanup.
+                    if "duplicate key" in err_str and opts.get("unique"):
+                        non_unique_opts = {k: v for k, v in opts.items() if k != "unique"}
+                        try:
+                            await col.create_index(create_keys, **non_unique_opts)
+                            results.append({
+                                "collection": collection_name,
+                                "name": name,
+                                "status": "created_non_unique",
+                                "note": "Duplicates exist — created non-unique index (still fixes COLLSCAN). Run cleanup separately.",
+                            })
+                            return
+                        except Exception as e2:
+                            results.append({"collection": collection_name, "name": name, "status": "error", "error": str(e2)[:300]})
+                            return
+                    results.append({"collection": collection_name, "name": name, "status": "error", "error": str(create_err)[:300]})
             except Exception as e:
-                results.append({"collection": collection_name, "name": str(keys), "status": "error", "error": str(e)})
+                results.append({"collection": collection_name, "name": str(keys), "status": "error", "error": str(e)[:300]})
 
         # The critical missing index — payment_id unique
         await safe_create("vip_payments", "payment_id", unique=True)
@@ -35675,11 +35697,13 @@ async def initialize_database_indexes():
         existing_indexes = await db.vip_payments.index_information()
         
         # ✅ CRITICAL: payment_id is the PK used by approve/reject. Without
-        # this unique index, every approve/reject does a COLLSCAN — which
-        # is what was causing 6s+ timeouts on production (May 2026).
+        # this index, every approve/reject does a COLLSCAN — which is what
+        # was causing 6s+ timeouts on production (May 2026). NOT unique
+        # because legacy production data has Razorpay-race duplicates that
+        # need separate cleanup before unique constraint can be enforced.
         if "payment_id_1" not in existing_indexes:
-            await db.vip_payments.create_index("payment_id", unique=True)
-            print("✅ Created UNIQUE payment_id index on vip_payments (fixes approve/reject latency)")
+            await db.vip_payments.create_index("payment_id")
+            print("✅ Created payment_id index on vip_payments (fixes approve/reject latency)")
         
         # Index for status filtering (most common query)
         if "status_1_submitted_at_-1" not in existing_indexes:
