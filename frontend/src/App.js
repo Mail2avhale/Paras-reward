@@ -94,9 +94,22 @@ axios.defaults.timeout = 30000; // 30 seconds for slow mobile networks
 // 503 Service Unavailable, ECONNABORTED). Eliminates the "refresh 3-4 times
 // to load admin pages" pattern. Single retry with 800ms back-off; safe only
 // for idempotent methods (GET, HEAD).
+//
+// May 2026: Extended to whitelisted POST endpoints that the backend has
+// made idempotent (approve / reject / pay-with-prc / bank-transfer all
+// short-circuit on duplicate state). This eliminates the "Server is busy"
+// toast that admins were hitting during Atlas peak load.
 // ----------------------------------------------------------------------------
 const RETRY_STATUS_CODES = [502, 503, 504];
 const RETRY_METHODS = ['get', 'head'];
+// Idempotent POST endpoints — re-running them is safe at the backend.
+const RETRY_POST_PATHS = [
+  '/admin/vip-payment/',          // approve / reject (status CAS guards)
+  '/subscription/pay-with-prc',   // idempotency_key + cooldown CAS
+  '/bank-transfer/request',       // idempotency_key + balance CAS
+  '/bill-payment/request',        // idempotency_key + balance CAS
+  '/bank-redeem/request/',        // idempotency_key + balance CAS
+];
 const MAX_RETRIES = 1;
 const RETRY_DELAY_MS = 800;
 // ============================================================================
@@ -110,7 +123,10 @@ axios.interceptors.response.use(
     const method = (config.method || 'get').toLowerCase();
     const status = error.response?.status;
     const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
-    const isRetriable = RETRY_METHODS.includes(method) && (RETRY_STATUS_CODES.includes(status) || isTimeout);
+    const isIdempotentPostPath = method === 'post' && RETRY_POST_PATHS.some(p => url.includes(p));
+    const isRetriable =
+      (RETRY_METHODS.includes(method) || isIdempotentPostPath) &&
+      (RETRY_STATUS_CODES.includes(status) || isTimeout);
 
     // Auto-retry once for transient gateway failures / timeouts on GET requests
     if (isRetriable) {
