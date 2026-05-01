@@ -680,16 +680,32 @@ mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 # Detect if using MongoDB Atlas (contains mongodb+srv or mongodb.net)
 is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 
-# Configure connection options
+# Configure connection options.
+# Tightened May 2026 to match the 6s asyncio.wait_for timeouts in critical
+# admin endpoints. Goal: motor / pymongo's own timeouts fire BEFORE our
+# asyncio.wait_for so transient failures surface as clean
+# `ServerSelectionTimeoutError` we can map to HTTP 504, not after the
+# request has already been aborted by the frontend.
+#
+# Reasoning:
+#   serverSelectionTimeoutMS  → time to find a healthy primary (P95 <50ms)
+#   connectTimeoutMS          → TCP+TLS handshake to a server (P99 <2s)
+#   socketTimeoutMS           → max time a single op can take on the socket;
+#                               must be > our asyncio.wait_for (6s) so our
+#                               wait_for fires first cleanly, not the socket.
+#   waitQueueTimeoutMS        → max wait for a connection from pool;
+#                               critical at high concurrency.
+#   heartbeatFrequencyMS      → background ping to detect dead servers fast.
 connection_options = {
-    'serverSelectionTimeoutMS': 10000,
-    'connectTimeoutMS': 10000,
-    'socketTimeoutMS': 30000,
+    'serverSelectionTimeoutMS': 5000,
+    'connectTimeoutMS': 5000,
+    'socketTimeoutMS': 12000,
+    'waitQueueTimeoutMS': 5000,
     'maxPoolSize': 100,
-    'minPoolSize': 5,
+    'minPoolSize': 10,
     'retryWrites': True,
     'retryReads': True,
-    'heartbeatFrequencyMS': 10000,
+    'heartbeatFrequencyMS': 5000,
     'readPreference': 'primaryPreferred',
     'directConnection': not is_atlas,
 }
@@ -712,8 +728,8 @@ try:
     print(f"[STARTUP] MongoDB client created OK - DB: {os.environ.get('DB_NAME', 'paras_reward_db')}")
 except Exception as e:
     print(f"[STARTUP] MongoDB client creation failed: {e} - retrying with relaxed settings")
-    # Retry with minimal options instead of falling back to localhost
-    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=15000, connectTimeoutMS=15000)
+    # Retry with slightly more lenient timeouts (still fail-fast — never 30s+)
+    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=10000, connectTimeoutMS=10000)
     db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
 
 # ========== DATABASE CONNECTION HEALTH & AUTO-RECONNECT ==========
@@ -1711,6 +1727,78 @@ async def force_fix_get(identifier: str):
 async def migrate_to_pin_get(identifier: str):
     """GET version of migrate-user-to-pin for easy browser access"""
     return await migrate_user_to_pin(identifier)
+
+
+@api_router.post("/admin/ensure-critical-indexes")
+async def ensure_critical_indexes_now(request: Request):
+    """One-shot endpoint to force-create critical Mongo indexes on a running
+    production server WITHOUT a redeploy. Idempotent (safe to call repeatedly).
+
+    Specifically targets the missing `vip_payments.payment_id` unique index
+    that caused 6s+ COLLSCAN timeouts on approve/reject in May 2026. Also
+    creates compound index for fraud-prevention check.
+
+    Auth: Admin OPERATION_PIN required (header: X-Admin-Pin or body field
+    `admin_pin`).
+    """
+    try:
+        data = await request.json()
+        admin_pin = (data.get("admin_pin") or request.headers.get("X-Admin-Pin") or "")
+        if admin_pin != ADMIN_OPERATION_PIN:
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+
+        results: list[dict] = []
+
+        async def safe_create(collection_name: str, keys, **opts):
+            try:
+                col = db[collection_name]
+                existing = await col.index_information()
+                # Build the auto-generated index name pattern Mongo uses
+                if isinstance(keys, str):
+                    name = f"{keys}_1"
+                    create_keys = keys
+                else:
+                    name = "_".join(f"{k}_{d}" for k, d in keys)
+                    create_keys = keys
+                if name in existing:
+                    results.append({"collection": collection_name, "name": name, "status": "exists"})
+                    return
+                await col.create_index(create_keys, **opts)
+                results.append({"collection": collection_name, "name": name, "status": "created"})
+            except Exception as e:
+                results.append({"collection": collection_name, "name": str(keys), "status": "error", "error": str(e)})
+
+        # The critical missing index — payment_id unique
+        await safe_create("vip_payments", "payment_id", unique=True)
+        # Fraud-prevention compound index used by approve flow
+        await safe_create("vip_payments", [("user_id", 1), ("status", 1), ("approved_at", -1)])
+        # Belt & suspenders: ensure existing recommended indexes are present
+        await safe_create("vip_payments", [("status", 1), ("submitted_at", -1)])
+        await safe_create("vip_payments", "user_id")
+
+        # Also ensure subscription_payments has payment_id index (PRC flow)
+        await safe_create("subscription_payments", "payment_id")
+        await safe_create("subscription_payments", "user_id")
+
+        # Also ensure idempotency_keys TTL/unique indexes (race-guard support)
+        try:
+            await db.idempotency_keys.create_index("expires_at", expireAfterSeconds=0)
+        except Exception:
+            pass
+        try:
+            await db.idempotency_keys.create_index([("scope", 1), ("key", 1)], unique=True)
+        except Exception:
+            pass
+
+        return {
+            "success": True,
+            "message": "Indexes ensured. Approve/Reject latency should drop from 6s+ COLLSCAN to <100ms.",
+            "results": results,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @api_router.post("/admin/clear-all-lockouts")
@@ -14023,7 +14111,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
     """Approve VIP payment and activate membership.
 
     Hardened (May 2026): Critical-path operations execute synchronously with
-    fast 6s Atlas timeouts (was 25s causing client aborts). All non-critical
+    fast 8s Atlas timeouts (was 25s causing client aborts). All non-critical
     work — fund routing, activity logs, cache invalidation, community hooks —
     is dispatched to background tasks so the user gets a response in <2s
     typical instead of the previous worst-case 95s.
@@ -14034,8 +14122,11 @@ async def approve_vip_payment(payment_id: str, request: Request):
     The atomic CAS on the status update also guards against double-approve
     races between two concurrent admins clicking "Approve" simultaneously.
     """
-    # Tunable Atlas timeouts. Atlas P95 is ~500ms; 6s is 12× safe margin.
-    DB_FAST_TIMEOUT = 6.0
+    # Tunable Atlas timeouts. Atlas P95 is ~500ms in healthy state but cold
+    # connections + large COLLSCANs (pre-index) can push to 4-5s. 8s is a
+    # 16× margin over P95 and tolerates a single slow query while still
+    # aborting before frontend axios timeout (30s).
+    DB_FAST_TIMEOUT = 8.0
     try:
         print(f"VIP Payment approve request: payment_id={payment_id}")
 
@@ -14571,12 +14662,12 @@ async def get_referral_uids(referrer_uid: str) -> list:
 async def reject_vip_payment(payment_id: str, request: Request):
     """Reject VIP payment.
 
-    Hardened (May 2026): 25s Atlas timeouts replaced with 6s fast-fail. All
+    Hardened (May 2026): 25s Atlas timeouts replaced with 8s fast-fail. All
     non-critical work (notifications, activity logs, cache invalidation)
     runs in background so the admin gets a sub-2s "Rejected!" toast.
     Idempotent — re-rejecting an already-rejected payment returns success.
     """
-    DB_FAST_TIMEOUT = 6.0
+    DB_FAST_TIMEOUT = 8.0
     try:
         data = await request.json()
         admin_id = data.get("admin_id")
@@ -35583,6 +35674,13 @@ async def initialize_database_indexes():
     try:
         existing_indexes = await db.vip_payments.index_information()
         
+        # ✅ CRITICAL: payment_id is the PK used by approve/reject. Without
+        # this unique index, every approve/reject does a COLLSCAN — which
+        # is what was causing 6s+ timeouts on production (May 2026).
+        if "payment_id_1" not in existing_indexes:
+            await db.vip_payments.create_index("payment_id", unique=True)
+            print("✅ Created UNIQUE payment_id index on vip_payments (fixes approve/reject latency)")
+        
         # Index for status filtering (most common query)
         if "status_1_submitted_at_-1" not in existing_indexes:
             await db.vip_payments.create_index([("status", 1), ("submitted_at", -1)])
@@ -35602,6 +35700,13 @@ async def initialize_database_indexes():
         if "submitted_at_-1" not in existing_indexes:
             await db.vip_payments.create_index([("submitted_at", -1)])
             print("✅ Created submitted_at index on vip_payments")
+
+        # Index for fraud-prevention "recent approved" check used in approve flow
+        if "user_id_1_status_1_approved_at_-1" not in existing_indexes:
+            await db.vip_payments.create_index([
+                ("user_id", 1), ("status", 1), ("approved_at", -1)
+            ])
+            print("✅ Created compound index for fraud-prevention check")
             
         print("✅ VIP payments indexes ready")
     except Exception as e:
