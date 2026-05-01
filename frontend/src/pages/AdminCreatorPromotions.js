@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
-  BarChart3,
   CheckCircle,
   Clock,
   Edit2,
@@ -69,7 +68,7 @@ const platforms = ['youtube', 'instagram', 'facebook', 'other'];
 const statuses = ['draft', 'pending_payment', 'active', 'paused', 'completed', 'cancelled'];
 const paymentStatuses = ['unpaid', 'partial', 'paid', 'refunded'];
 
-const currency = (value) => `₹${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+const currency = (value) => `Rs ${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const inputClass = 'w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500';
 
 const AdminCreatorPromotions = () => {
@@ -319,14 +318,14 @@ const AdminCreatorPromotions = () => {
                     <tr key={campaign.campaign_id} className="hover:bg-slate-50/60">
                       <td className="px-4 py-4 min-w-[280px]">
                         <div className="font-semibold text-slate-900">{campaign.title}</div>
-                        <div className="text-xs text-slate-500 mt-1">{campaign.creator_name} • {campaign.platform}</div>
+                        <div className="text-xs text-slate-500 mt-1">{campaign.creator_name} - {campaign.platform}</div>
                         <a href={campaign.content_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-purple-700 mt-2 hover:underline">
                           Open content <ExternalLink className="w-3 h-3" />
                         </a>
                       </td>
                       <td className="px-4 py-4">
                         <div className="font-medium text-slate-800">{campaign.package_name}</div>
-                        <div className="text-xs text-slate-500">{campaign.duration_days} days • {(campaign.placements || []).join(', ')}</div>
+                        <div className="text-xs text-slate-500">{campaign.duration_days} days - {(campaign.placements || []).join(', ')}</div>
                       </td>
                       <td className="px-4 py-4">
                         <div className="font-semibold text-slate-900">{currency(campaign.total_amount || campaign.price)}</div>
