@@ -148,6 +148,162 @@ const RewardsHome = () => {
         </div>
       </section>
 
+      {/* ===== 2.5 TRUST PILLARS — 6 Reasons to Choose Us ===== */}
+      <section className="py-14 sm:py-20 px-6 bg-gradient-to-b from-gray-50 via-white to-gray-50" data-testid="trust-pillars-section">
+        <div className="max-w-6xl mx-auto">
+          {/* Section header */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={stagger}
+            className="text-center mb-10 sm:mb-14"
+          >
+            <motion.span
+              variants={fadeUp}
+              custom={0}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-xs font-bold uppercase tracking-wider text-blue-700"
+            >
+              <BadgeCheck className="h-3.5 w-3.5" /> Why Choose Us
+            </motion.span>
+            <motion.h2
+              variants={fadeUp}
+              custom={1}
+              className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight"
+            >
+              6 Pillars of Trust
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              custom={2}
+              className="mt-3 text-base text-gray-500 max-w-2xl mx-auto"
+            >
+              Built on transparency, secured by technology, powered by real utility — every feature engineered for your confidence.
+            </motion.p>
+          </motion.div>
+
+          {/* 6 Pillar cards */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-50px' }}
+            variants={stagger}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6"
+          >
+            {[
+              {
+                icon: BadgeCheck,
+                title: 'Registered Indian Company',
+                desc: 'CIN-registered pvt. ltd. company under MCA, fully compliant with Indian laws.',
+                gradient: 'from-emerald-500 to-green-600',
+                iconBg: 'bg-emerald-50',
+                iconTint: 'text-emerald-600',
+                ring: 'hover:ring-emerald-200',
+              },
+              {
+                icon: Eye,
+                title: '100% Transparent System',
+                desc: 'Public stats, real-time ledger, open PRC economy — every rupee traceable.',
+                gradient: 'from-blue-500 to-indigo-600',
+                iconBg: 'bg-blue-50',
+                iconTint: 'text-blue-600',
+                ring: 'hover:ring-blue-200',
+              },
+              {
+                icon: Shield,
+                title: 'Secure & Safe Platform',
+                desc: 'Bank-grade encryption, 2FA, KYC verification, and strict data privacy.',
+                gradient: 'from-purple-500 to-violet-600',
+                iconBg: 'bg-purple-50',
+                iconTint: 'text-purple-600',
+                ring: 'hover:ring-purple-200',
+              },
+              {
+                icon: Zap,
+                title: 'Real Utility Services',
+                desc: 'Mobile recharge, DTH, bill payments & instant bank redeem — not just points.',
+                gradient: 'from-amber-500 to-orange-600',
+                iconBg: 'bg-amber-50',
+                iconTint: 'text-amber-600',
+                ring: 'hover:ring-amber-200',
+              },
+              {
+                icon: Sparkles,
+                title: 'No Hidden Charges',
+                desc: 'Upfront pricing with platform fee & admin charge shown before every transaction.',
+                gradient: 'from-rose-500 to-pink-600',
+                iconBg: 'bg-rose-50',
+                iconTint: 'text-rose-600',
+                ring: 'hover:ring-rose-200',
+              },
+              {
+                icon: Activity,
+                title: 'Activity-Based Earning',
+                desc: 'Earn by mining, referrals & subscriptions — no guarantees, no empty promises.',
+                gradient: 'from-indigo-500 to-blue-700',
+                iconBg: 'bg-indigo-50',
+                iconTint: 'text-indigo-600',
+                ring: 'hover:ring-indigo-200',
+              },
+            ].map((pillar, i) => (
+              <motion.div
+                key={i}
+                variants={fadeUp}
+                custom={i}
+                whileHover={{ y: -4 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                data-testid={`trust-pillar-${i}`}
+                className={`group relative bg-white rounded-2xl border border-gray-100 p-6 sm:p-7 shadow-sm hover:shadow-xl hover:shadow-gray-200/60 ring-1 ring-transparent ${pillar.ring} transition-all duration-300`}
+              >
+                {/* Top-right check accent */}
+                <div className="absolute top-5 right-5 w-6 h-6 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center opacity-90 shadow-sm shadow-emerald-500/30">
+                  <CheckCircle className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                </div>
+
+                {/* Gradient Icon */}
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${pillar.gradient} flex items-center justify-center shadow-md shadow-gray-300/40 mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                  <pillar.icon className="h-7 w-7 text-white" strokeWidth={2.2} />
+                </div>
+
+                {/* Title */}
+                <h3 className="font-bold text-gray-900 text-lg leading-snug mb-2">
+                  {pillar.title}
+                </h3>
+
+                {/* Description */}
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  {pillar.desc}
+                </p>
+
+                {/* Decorative bottom-left corner glow */}
+                <div className={`absolute -bottom-1 -left-1 w-20 h-20 rounded-full bg-gradient-to-br ${pillar.gradient} opacity-0 group-hover:opacity-5 blur-2xl transition-opacity duration-500 pointer-events-none`} />
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Bottom assurance strip */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mt-10 sm:mt-14 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-500"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Lock className="h-4 w-4 text-gray-400" /> SSL Encrypted
+            </span>
+            <span className="hidden sm:inline text-gray-300">&bull;</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Scale className="h-4 w-4 text-gray-400" /> GST Compliant
+            </span>
+            <span className="hidden sm:inline text-gray-300">&bull;</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Heart className="h-4 w-4 text-gray-400" /> 10,000+ Happy Users
+            </span>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ===== 3. COMPANY TRUST BLOCK ===== */}
       <section className="py-12 sm:py-16 px-6" data-testid="company-trust-section">
         <div className="max-w-3xl mx-auto">
