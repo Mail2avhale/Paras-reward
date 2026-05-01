@@ -7,8 +7,10 @@ android {
         applicationId "com.parasreward.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // versionCode bumped from 1 → 2 for the SDK 35 / signing-config rollout.
+        // Play Console requires a strictly higher versionCode for every update.
+        versionCode 2
+        versionName "1.0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,11 +18,59 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // ─────────────────────────────────────────────────────────────────────
+    // RELEASE SIGNING — keystore is loaded from environment variables so the
+    // .keystore file and passwords never enter the repo.
+    //
+    // Set these in your shell / CI before `./gradlew bundleRelease`:
+    //   PARAS_KEYSTORE_FILE      = absolute path to .jks/.keystore file
+    //   PARAS_KEYSTORE_PASSWORD  = keystore password
+    //   PARAS_KEY_ALIAS          = key alias (e.g. paras-release)
+    //   PARAS_KEY_PASSWORD       = key password
+    //
+    // If env vars are not set, the release config is skipped silently and
+    // the build will fall back to debug signing — useful for CI smoke checks.
+    // ─────────────────────────────────────────────────────────────────────
+    def keystoreFile     = System.getenv("PARAS_KEYSTORE_FILE")
+    def keystorePassword = System.getenv("PARAS_KEYSTORE_PASSWORD")
+    def keyAlias         = System.getenv("PARAS_KEY_ALIAS")
+    def keyPassword      = System.getenv("PARAS_KEY_PASSWORD")
+    def hasReleaseSigning = keystoreFile && keystorePassword && keyAlias && keyPassword
+
+    if (hasReleaseSigning) {
+        signingConfigs {
+            release {
+                storeFile     file(keystoreFile)
+                storePassword keystorePassword
+                keyAlias      keyAlias
+                keyPassword   keyPassword
+                // Enables Play App Signing v2/v3/v4 — required for SDK 30+
+                enableV2Signing true
+                enableV3Signing true
+            }
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Code shrinking + resource shrinking — drops AAB size ~30-40%
+            // and obfuscates Java/Kotlin symbols. WebView + Capacitor keep
+            // rules are in proguard-rules.pro.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
+        debug {
+            // No shrinking in debug — fast iteration
+            minifyEnabled false
+        }
+    }
+    // SDK 35 (Android 15) requires Java 17 toolchain
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
