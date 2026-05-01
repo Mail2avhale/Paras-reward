@@ -950,7 +950,7 @@ DEFAULT_MANAGER_PERMISSIONS = [
     "dashboard", "members", "user360", "kyc",
     # Payment approvals
     "subscriptions", "bank-transfers", "razorpay-subs", "bbps-dashboard",
-    "eko-services", "gift-vouchers",
+    "eko-services", "gift-vouchers", "creator-promotions",
     # Operational
     "support", "contact-submissions", "popup-messages",
 ]
@@ -990,6 +990,7 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "bbps-dashboard", "label": "BBPS Instant", "category": "Payments"},
     {"id": "eko-services", "label": "Eko Direct Services", "category": "Payments"},
     {"id": "gift-vouchers", "label": "Gift Vouchers", "category": "Payments"},
+    {"id": "creator-promotions", "label": "Creator Promotions", "category": "Payments"},
     {"id": "service-charges", "label": "Service Charges Config", "category": "Payments"},
 
     # Finance

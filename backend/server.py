@@ -106,6 +106,7 @@ from routes.community import router as community_router, set_db as set_community
 from routes.careers_investors import router as public_pages_router, set_db as set_public_pages_db
 from routes.social_profile import router as social_profile_router, set_db as set_social_profile_db
 from routes.live_ticker import router as live_ticker_router, set_db as set_live_ticker_db, set_cache as set_live_ticker_cache
+from routes.creator_promotion import router as creator_promotion_router, set_db as set_creator_promotion_db
 
 # ========== SECURITY CONFIGURATION ==========
 # SECURITY: Use stable JWT secret from env, fallback to fixed secret for consistency
@@ -34936,6 +34937,10 @@ api_router.include_router(social_profile_router)
 set_live_ticker_db(db)
 set_live_ticker_cache(cache)
 api_router.include_router(live_ticker_router)
+
+# Creator Promotion Router (paid creator campaigns and in-app discovery)
+set_creator_promotion_db(db)
+api_router.include_router(creator_promotion_router)
 # Include bank redeem router (NEW - Bank Account Withdrawal)
 set_bank_redeem_db(db)
 set_bank_redeem_cache(cache)
