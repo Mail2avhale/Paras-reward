@@ -25,6 +25,12 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, validator
 import os
 
+from routes.idempotency import (
+    check_and_claim_idempotency_key,
+    store_idempotency_response,
+    release_idempotency_key,
+)
+
 router = APIRouter(prefix="/bank-transfer", tags=["Bank Transfer"])
 
 # Database reference (set by server.py)
@@ -112,6 +118,7 @@ class RedeemRequest(BaseModel):
     user_id: str
     amount: int = Field(..., ge=MIN_WITHDRAWAL, le=MAX_WITHDRAWAL)
     bank_details: BankDetails
+    client_request_id: Optional[str] = None  # Idempotency key (optional for backward compat)
 
 class AdminActionRequest(BaseModel):
     request_id: str
@@ -293,8 +300,31 @@ async def create_redeem_request(request: RedeemRequest):
     """
     from app.services.wallet_service_v2 import WalletServiceV2
     
+    user_id = request.user_id
+    client_request_id = request.client_request_id
+    idem_scope = f"bank_transfer:{user_id}"
+
+    # ==================== IDEMPOTENCY GUARD (Layer 1) ====================
+    # Peek-only replay for already-completed requests. Claim happens after
+    # validations to avoid locking the key on user-facing errors (KYC,
+    # cooldown, balance).
+    if client_request_id:
+        existing = await db.idempotency_keys.find_one(
+            {"scope": idem_scope, "key": client_request_id},
+            {"_id": 0},
+        )
+        if existing and existing.get("status") == "completed":
+            logging.info(f"[BANK-TRANSFER] idempotency replay {user_id} / {client_request_id[:8]}")
+            cached_response = existing.get("response")
+            if isinstance(cached_response, dict):
+                return {**cached_response, "_idempotency_replay": True}
+        elif existing and existing.get("status") == "claimed":
+            raise HTTPException(
+                status_code=409,
+                detail="A previous identical request is still processing. Please wait.",
+            )
+
     try:
-        user_id = request.user_id
         amount = request.amount
         bank = request.bank_details
         
@@ -460,6 +490,23 @@ async def create_redeem_request(request: RedeemRequest):
         # 8. Generate request ID
         request_id = f"BTR-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8].upper()}"
         
+        # Claim idempotency sentinel NOW (after all validations). If another
+        # concurrent request is also past validations, only one wins the claim;
+        # the other sees in-flight → 409 (Layer 1 race guard). Combined with
+        # WalletServiceV2.debit's atomic $inc (Layer 2), this prevents both
+        # double-submit (same key) and concurrent-double-charge (different keys).
+        if client_request_id:
+            claim = await check_and_claim_idempotency_key(
+                client_request_id, idem_scope, ttl_seconds=300
+            )
+            if claim is not None:
+                if claim.get("_inflight"):
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Duplicate request still processing. Please wait.",
+                    )
+                return claim
+
         # 9. Deduct PRC using WalletServiceV2
         debit_result = WalletServiceV2.debit(
             user_id=user_id,
@@ -471,6 +518,8 @@ async def create_redeem_request(request: RedeemRequest):
         )
         
         if not debit_result.get("success"):
+            if client_request_id:
+                await release_idempotency_key(client_request_id, idem_scope)
             raise HTTPException(status_code=400, detail=debit_result.get("error", "Failed to deduct PRC"))
         
         # 10. Create request record
@@ -515,7 +564,7 @@ async def create_redeem_request(request: RedeemRequest):
         
         logging.info(f"[BANK TRANSFER] New request: {request_id} | User: {user_id} | Amount: ₹{amount} | PRC: {total_prc}")
         
-        return {
+        response = {
             "success": True,
             "message": "Bank transfer request submitted successfully",
             "request": {
@@ -529,6 +578,12 @@ async def create_redeem_request(request: RedeemRequest):
             },
             "new_balance": debit_result.get("balance_after", 0)
         }
+        # Cache for idempotent replay
+        if client_request_id:
+            await store_idempotency_response(
+                client_request_id, idem_scope, response, ttl_seconds=300
+            )
+        return response
         
     except HTTPException:
         raise

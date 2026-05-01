@@ -12,6 +12,12 @@ from datetime import datetime, timezone, timedelta
 import uuid
 import logging
 
+from routes.idempotency import (
+    check_and_claim_idempotency_key,
+    store_idempotency_response,
+    release_idempotency_key,
+)
+
 # Create router
 router = APIRouter(tags=["Bank Redeem"])
 
@@ -580,6 +586,36 @@ async def check_withdrawal_eligibility(user_id: str):
 @router.post("/bank-redeem/request/{user_id}")
 async def create_withdrawal_request(user_id: str, request: Request):
     """Create a new bank withdrawal request"""
+    # Parse body once (need it for idempotency key AND for amount validation below)
+    data = await request.json()
+    amount_inr = data.get("amount_inr")
+    client_request_id = data.get("client_request_id")
+    idem_scope = f"bank_redeem:{user_id}"
+
+    # ==================== IDEMPOTENCY GUARD (Layer 1) ====================
+    # Early short-circuit: if this exact request was already completed, replay
+    # the cached response (avoids re-running validations that might have
+    # changed state since first submit). The claim itself happens LATER,
+    # right before the atomic deduction, so validation errors don't lock
+    # the key.
+    if client_request_id:
+        # Peek at existing key only (don't create a sentinel yet)
+        existing = await db.idempotency_keys.find_one(
+            {"scope": idem_scope, "key": client_request_id},
+            {"_id": 0},
+        )
+        if existing and existing.get("status") == "completed":
+            logging.info(f"[BANK-REDEEM] idempotency replay {user_id} / {client_request_id[:8]}")
+            cached_response = existing.get("response")
+            if isinstance(cached_response, dict):
+                return {**cached_response, "_idempotency_replay": True}
+        elif existing and existing.get("status") == "claimed":
+            # In-flight duplicate
+            raise HTTPException(
+                status_code=409,
+                detail="A previous identical request is still processing. Please wait.",
+            )
+
     user = await db.users.find_one({"uid": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -619,9 +655,6 @@ async def create_withdrawal_request(user_id: str, request: Request):
         except Exception as e:
             logging.warning(f"[BANK-REDEEM] Expiry parse error for {user_id}: {e}")
     # ================================================
-    
-    data = await request.json()
-    amount_inr = data.get("amount_inr")
     
     # ===== CHECK IF BANK REDEEM SERVICE IS ENABLED =====
     settings = await db.settings.find_one({}, {"_id": 0, "service_toggles": 1})
@@ -723,11 +756,43 @@ async def create_withdrawal_request(user_id: str, request: Request):
         "user_mobile": user.get("mobile", "")
     }
     
-    # Deduct PRC from user balance
-    await db.users.update_one(
-        {"uid": user_id},
+    # Deduct PRC from user balance — ATOMIC CAS (Layer 2: race-safe)
+    # Filter ensures balance is still sufficient at the EXACT moment of
+    # update. Two concurrent redeems cannot both succeed — the second's
+    # filter will fail (balance < required after first deducts).
+    # Claim idempotency sentinel NOW (after all validations passed). If
+    # another concurrent request is also past validations, only one wins
+    # the claim; the other sees "in-flight" and gets 409.
+    if client_request_id:
+        claim = await check_and_claim_idempotency_key(
+            client_request_id, idem_scope, ttl_seconds=300
+        )
+        if claim is not None:
+            if claim.get("_inflight"):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Duplicate request still processing. Please wait.",
+                )
+            # Completed — return cached
+            return claim
+
+    cas_result = await db.users.update_one(
+        {"uid": user_id, "prc_balance": {"$gte": total_prc}},
         {"$inc": {"prc_balance": -total_prc}}
     )
+    if cas_result.modified_count == 0:
+        # Fetch current balance for a user-friendly error
+        fresh = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
+        fresh_bal = float((fresh or {}).get("prc_balance", 0) or 0)
+        if client_request_id:
+            await release_idempotency_key(client_request_id, idem_scope)
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Insufficient PRC balance (concurrent transaction detected). "
+                f"Available: {fresh_bal:,.2f} PRC, Required: {total_prc:,.2f} PRC"
+            ),
+        )
     
     # Create the request
     await db.bank_withdrawal_requests.insert_one(withdrawal_request)
@@ -756,7 +821,7 @@ async def create_withdrawal_request(user_id: str, request: Request):
         except Exception as e:
             logging.error(f"Notification error: {e}")
     
-    return {
+    response = {
         "success": True,
         "message": "Withdrawal request submitted successfully",
         "request_id": request_id,
@@ -764,6 +829,12 @@ async def create_withdrawal_request(user_id: str, request: Request):
         "total_prc_deducted": total_prc,
         "charges": charges
     }
+    # Persist response for idempotent replay on retries
+    if client_request_id:
+        await store_idempotency_response(
+            client_request_id, idem_scope, response, ttl_seconds=300
+        )
+    return response
 
 
 @router.get("/bank-redeem/history/{user_id}")

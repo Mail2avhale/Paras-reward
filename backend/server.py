@@ -30376,6 +30376,27 @@ async def create_bill_payment_request(request: Request):
     request_type = data.get("request_type")
     amount_inr = float(data.get("amount_inr"))
     details = data.get("details", {})
+    client_request_id = data.get("client_request_id")
+    idem_scope = f"bill_payment:{user_id}:{request_type}"
+
+    # ==================== IDEMPOTENCY GUARD (Layer 1) ====================
+    # Peek-only check: if this exact request was already completed, replay.
+    # Validation errors don't lock the key (claim happens just before CAS).
+    if client_request_id:
+        existing = await db.idempotency_keys.find_one(
+            {"scope": idem_scope, "key": client_request_id},
+            {"_id": 0},
+        )
+        if existing and existing.get("status") == "completed":
+            logging.info(f"[BILL-PAYMENT] idempotency replay {user_id} / {client_request_id[:8]}")
+            cached_response = existing.get("response")
+            if isinstance(cached_response, dict):
+                return {**cached_response, "_idempotency_replay": True}
+        elif existing and existing.get("status") == "claimed":
+            raise HTTPException(
+                status_code=409,
+                detail="A previous identical request is still processing. Please wait.",
+            )
     
     # Validate request type
     valid_types = ["mobile_recharge", "dish_recharge", "electricity_bill", "credit_card_payment", "loan_emi", "bank_transfer", "postpaid_mobile", "broadband_bill", "landline_bill", "water_bill", "gas_bill", "lpg_booking", "insurance_premium", "fastag_recharge", "municipal_tax"]
@@ -30560,12 +30581,29 @@ async def create_bill_payment_request(request: Request):
     }
     
     # Atomic PRC deduction with balance check to prevent negative balance
+    # Claim idempotency sentinel NOW (after all validations). If two concurrent
+    # requests are both past validations, only one wins the claim; the other
+    # sees in-flight → 409 (Layer 1 race guard).
+    if client_request_id:
+        claim = await check_and_claim_idempotency_key(
+            client_request_id, idem_scope, ttl_seconds=300
+        )
+        if claim is not None:
+            if claim.get("_inflight"):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Duplicate request still processing. Please wait.",
+                )
+            return claim
+
     result = await db.users.update_one(
         {"uid": user_id, "prc_balance": {"$gte": total_prc}},  # Only update if sufficient balance
         {"$inc": {"prc_balance": -total_prc}}
     )
     
     if result.modified_count == 0:
+        if client_request_id:
+            await release_idempotency_key(client_request_id, idem_scope)
         raise HTTPException(status_code=400, detail="Insufficient PRC balance (concurrent transaction detected)")
     
     # Log transaction (skip_balance_update=True because we already deducted above)
@@ -30588,7 +30626,7 @@ async def create_bill_payment_request(request: Request):
     # Save request
     await db.bill_payment_requests.insert_one(bill_request)
     
-    return {
+    response = {
         "message": "Bill payment request created successfully",
         "request_id": bill_request["request_id"],
         "amount_inr": amount_inr,
@@ -30596,6 +30634,12 @@ async def create_bill_payment_request(request: Request):
         "status": "pending",
         "note": "PRC has been deducted. Admin will process your request shortly."
     }
+    # Cache for idempotent replay
+    if client_request_id:
+        await store_idempotency_response(
+            client_request_id, idem_scope, response, ttl_seconds=300
+        )
+    return response
 
 @api_router.get("/bill-payment/requests/{user_id}")
 async def get_user_bill_payment_requests(user_id: str):

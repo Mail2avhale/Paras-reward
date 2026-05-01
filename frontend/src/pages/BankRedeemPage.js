@@ -303,6 +303,12 @@ const BankRedeemPage = ({ user: initialUser }) => {
     }
     
     setSubmitting(true);
+    // Generate a stable idempotency key per click so accidental network
+    // retries, double-taps, or background request retries don't create
+    // duplicate bank transfer requests on the backend.
+    const clientRequestId =
+      (window.crypto?.randomUUID?.()) ||
+      `bt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     try {
       const res = await axios.post(`${API}/bank-transfer/request`, {
         user_id: user.uid,
@@ -311,7 +317,8 @@ const BankRedeemPage = ({ user: initialUser }) => {
           account_holder_name: accountHolder,
           account_number: accountNumber,
           ifsc_code: ifscCode
-        }
+        },
+        client_request_id: clientRequestId,
       });
       
       if (res.data.success) {
