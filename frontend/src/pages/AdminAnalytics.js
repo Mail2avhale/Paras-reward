@@ -18,7 +18,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { format, subDays, startOfWeek, startOfMonth, startOfYear } from 'date-fns';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const AdminAnalytics = ({ user }) => {
   const navigate = useNavigate();

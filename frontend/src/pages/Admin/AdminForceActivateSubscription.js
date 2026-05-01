@@ -40,7 +40,7 @@ import {
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../../lib/api";
 
 const formatPRC = (v) => (Number(v) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 const formatINR = (v) => `₹${(Number(v) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;

@@ -12,7 +12,7 @@ import {
   Eye, LayoutGrid, Banknote, CreditCard, IndianRupee
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const AdminAccountingDashboard = ({ user }) => {
   const navigate = useNavigate();

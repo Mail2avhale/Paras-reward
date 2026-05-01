@@ -9,7 +9,7 @@ import {
   DollarSign, Zap, Target, AlertTriangle, ArrowLeft
 } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL + '/api';
+import { API } from "../lib/api";
 
 const AdminSystemSettings = () => {
   const [loading, setLoading] = useState(true);

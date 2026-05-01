@@ -10,7 +10,7 @@ import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 import { useNavigate } from 'react-router-dom';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const AdminEkoServices = ({ user }) => {
   const navigate = useNavigate();

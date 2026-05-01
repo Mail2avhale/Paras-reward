@@ -16,7 +16,7 @@ import {
   Link, Unlink, X, Check, Eye, EyeOff, Settings, Lock, Network, Play, Pause, Pencil, Briefcase
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // ========== MODAL COMPONENT ==========
 const Modal = ({ show, onClose, title, children, size = "md" }) => {

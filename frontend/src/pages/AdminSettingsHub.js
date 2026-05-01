@@ -9,7 +9,7 @@ import {
   Play, Bell, UserX, RefreshCw, Clock
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // Lazy load components for embedded usage
 const AdminSettings = lazy(() => import('./AdminSettings'));

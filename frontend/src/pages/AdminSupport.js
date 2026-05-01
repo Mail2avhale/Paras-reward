@@ -13,8 +13,7 @@ import {
   Star, Zap, Eye, MoreVertical, Copy, Trash2, Archive
 } from 'lucide-react';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { API, BACKEND_URL } from "../lib/api";
 const ITEMS_PER_PAGE = 10;
 
 const AdminSupport = ({ user }) => {

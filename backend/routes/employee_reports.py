@@ -39,7 +39,9 @@ router = APIRouter(prefix="/employees/reports", tags=["Employee Reports"])
 
 db = None
 
-JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'paras-reward-secret-key-2024')
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
+if not JWT_SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY env var is required")
 JWT_ALGORITHM = "HS256"
 
 

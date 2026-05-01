@@ -5,8 +5,7 @@ import { ArrowLeft, MapPin, Phone, Mail, Globe, MessageSquare, Clock, Send } fro
 import { toast } from 'sonner';
 import SEO from '@/components/SEO';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { API, BACKEND_URL } from "../lib/api";
 
 const ContactUs = () => {
   const navigate = useNavigate();

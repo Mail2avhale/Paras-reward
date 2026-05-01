@@ -10,7 +10,7 @@ import {
   Filter, RefreshCw, FileText, Eye, Undo2
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const TYPE_COLORS = {
   'Reward': 'bg-emerald-100 text-emerald-700',

@@ -14,8 +14,7 @@ import {
   Clock, Shield, Target, Activity, Zap, Info, Save
 } from 'lucide-react';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { API, BACKEND_URL } from "../lib/api";
 
 const AdminLiquidity = ({ user }) => {
   const [loading, setLoading] = useState(true);

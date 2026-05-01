@@ -11,7 +11,7 @@ import {
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const AdminRazorpaySubscriptions = ({ user }) => {
   const navigate = useNavigate();

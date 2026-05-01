@@ -8,7 +8,7 @@ import {
   Building2, Phone, Mail, Edit2, DollarSign, Upload, Eye
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../../lib/api";
 
 const AdminEmployees = () => {
   const [employees, setEmployees] = useState([]);

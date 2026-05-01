@@ -14,7 +14,7 @@ import AdvancedDocumentUpload from '@/components/AdvancedDocumentUpload';
 import AutoKYCVerification from '@/components/AutoKYCVerification';
 import { formatAadhaar, formatPAN, validateAadhaar, validatePAN } from '@/utils/indianValidation';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // Component to show user's KYC documents with update option
 const MyKYCDocuments = ({ user, onUpdate }) => {

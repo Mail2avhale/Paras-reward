@@ -395,8 +395,7 @@ const RewardsHome = lazy(() => import("@/pages/RewardsHome"));
 const PRCStatement = lazy(() => import("@/pages/PRCStatement"));
 const PRCUsageHistory = lazy(() => import("@/pages/PRCUsageHistory"));
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { API, BACKEND_URL } from "./lib/api";
 
 function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser }) {
   const { toasts, removeToast } = useNotification();

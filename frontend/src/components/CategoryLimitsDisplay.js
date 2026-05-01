@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Lock, Unlock } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const UnifiedRedeemLimit = ({ userId, onLimitCheck }) => {
   const [limitData, setLimitData] = useState(null);

@@ -7,8 +7,7 @@ import { toast } from 'sonner';
 import { KeyRound, Shield, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import PinInput from '@/components/PinInput';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { API, BACKEND_URL } from "../lib/api";
 
 const SetNewPin = ({ onLogin }) => {
   const navigate = useNavigate();

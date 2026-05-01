@@ -7,7 +7,7 @@ import NotificationCenter from '@/components/NotificationCenter';
 import { LanguageSelectorCompact } from '@/components/LanguageSelector';
 import axios from 'axios';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 const LOGO_URL = "/paras-logo.png";
 
 const TopBar = ({ user, onLogout }) => {

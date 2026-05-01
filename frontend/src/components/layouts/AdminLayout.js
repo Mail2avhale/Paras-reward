@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 const LOGO_URL = "/paras-logo.png";
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../../lib/api";
 
 // Mapping of menu item IDs to permission IDs (Synced April 21, 2026)
 const MENU_TO_PERMISSION = {

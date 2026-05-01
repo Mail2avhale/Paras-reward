@@ -591,7 +591,7 @@ async def get_current_user_info(request: Request):
 
     try:
         import jwt
-        JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'paras-reward-secret-key-2024')
+        JWT_SECRET_KEY = os.environ["JWT_SECRET_KEY"]
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         
         user_id = payload.get("uid")

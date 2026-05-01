@@ -3,9 +3,9 @@ import { Mail, MapPin, Phone, Facebook, Twitter, Instagram, Linkedin, Youtube, S
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import LanguageSwitcher from './LanguageSwitcher';
+import { LanguageSelectorCompact } from './LanguageSelector';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const Footer = () => {
   const { t } = useTranslation();
@@ -179,7 +179,7 @@ const Footer = () => {
             </div>
             
             {/* Language Switcher in Footer */}
-            <LanguageSwitcher variant="footer" />
+            <LanguageSelectorCompact />
           </div>
 
         </div>

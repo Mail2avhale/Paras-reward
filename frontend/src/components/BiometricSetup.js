@@ -6,8 +6,7 @@ import { Fingerprint, Smartphone, X, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { API, BACKEND_URL } from "../lib/api";
 
 // Helper to convert base64url to Uint8Array
 const base64UrlToUint8Array = (base64url) => {

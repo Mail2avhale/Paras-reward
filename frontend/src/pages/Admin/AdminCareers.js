@@ -8,7 +8,7 @@ import {
   CheckCircle, XCircle, UserCheck
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../../lib/api";
 
 const STATUS_COLORS = {
   new: 'bg-blue-500/20 text-blue-600',

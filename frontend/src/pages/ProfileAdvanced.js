@@ -19,7 +19,7 @@ import { LanguageSelectorFull } from '@/components/LanguageSelector';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import { Label } from '@/components/ui/label';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // Security PIN Card Component
 const SecurityPinCard = ({ user }) => {

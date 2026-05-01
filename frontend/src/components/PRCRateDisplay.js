@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Info, Calculator, TrendingUp } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // Base rate for reference (old rate) - kept for change indicator only
 const BASE_RATE = 10;

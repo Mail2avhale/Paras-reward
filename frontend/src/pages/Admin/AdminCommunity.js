@@ -7,7 +7,7 @@ import {
   Filter, RefreshCw, X, Clock, User, Flag
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../../lib/api";
 
 const AdminCommunity = () => {
   const admin = JSON.parse(localStorage.getItem('paras_user') || '{}');

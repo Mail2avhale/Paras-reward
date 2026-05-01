@@ -6,7 +6,7 @@ import {
   IndianRupee, Clock, Send, Building2, CreditCard, User, Tag
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const SERVICE_COLORS = {
   'Mobile Recharge': 'bg-blue-100 text-blue-700 border-blue-200',

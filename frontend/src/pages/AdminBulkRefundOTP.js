@@ -9,7 +9,7 @@ import {
   AlertTriangle, Copy, Download,
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const AdminBulkRefundOTP = ({ user }) => {
   const [tidText, setTidText] = useState('');

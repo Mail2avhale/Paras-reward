@@ -159,9 +159,8 @@ SERVICE_TYPES = {
     "dmt": {"name": "Bank Transfer (DMT)", "icon": "banknote", "category": 0}
 }
 
-# Charging Logic
-PLATFORM_FEE = 10  # ₹10 flat fee
-ADMIN_CHARGE_PERCENT = 20  # 20% of transaction amount
+# Charging Logic — single source of truth in routes/growth_economy.py
+from routes.growth_economy import DEFAULT_PROCESSING_FEE_INR as PLATFORM_FEE, DEFAULT_ADMIN_CHARGE_PERCENT as ADMIN_CHARGE_PERCENT
 
 # Dynamic PRC Rate helper function
 async def get_dynamic_prc_rate():

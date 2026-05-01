@@ -39,7 +39,7 @@ const LiveDateTime = () => {
   );
 };
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // Get time-based greeting with emoji
 const getTimeGreeting = () => {

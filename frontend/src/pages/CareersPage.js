@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { HiringBadge } from '../components/HiringBadge';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const BENEFITS = [
   { icon: Heart, title: 'Health Insurance', desc: 'Comprehensive health coverage for you and your family' },

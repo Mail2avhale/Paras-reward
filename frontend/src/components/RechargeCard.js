@@ -9,7 +9,7 @@ import {
   ChevronUp, X, Copy
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const RechargeCard = ({ user, stats }) => {
   const [rechargeType, setRechargeType] = useState('mobile');

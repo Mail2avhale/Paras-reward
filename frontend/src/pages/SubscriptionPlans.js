@@ -16,7 +16,7 @@ import { validateUTR, formatUTR } from '@/utils/indianValidation';
 // PRCRateDisplay removed (PRC subscription payment deprecated April 2026)
 import InvoiceModal from '@/components/InvoiceModal';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // Load Razorpay script
 const loadRazorpayScript = () => {

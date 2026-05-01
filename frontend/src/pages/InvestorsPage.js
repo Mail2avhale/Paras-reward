@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { HiringBadge } from '../components/HiringBadge';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const MILESTONES = [
   { year: '2025', title: 'Founded', desc: 'Paras Reward Technologies Pvt Ltd incorporated in Maharashtra' },

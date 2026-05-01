@@ -15,7 +15,7 @@ import AdminLoginAsUser from '@/components/AdminLoginAsUser';
 import PaymentRetryQueueWidget from '@/components/admin/PaymentRetryQueueWidget';
 import GSTSummaryWidget from '@/components/GSTSummaryWidget';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // Skeleton Loading Component - BULKPE STYLE
 const SkeletonCard = ({ className = "" }) => (

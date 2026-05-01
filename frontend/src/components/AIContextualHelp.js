@@ -7,8 +7,7 @@ import {
   RefreshCw, Bot, Info
 } from 'lucide-react';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
-const API = `${BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // Map routes to page keys for help lookup
 const getPageKeyFromPath = (pathname) => {

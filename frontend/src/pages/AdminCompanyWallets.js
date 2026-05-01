@@ -15,7 +15,7 @@ import {
   CreditCard, Gift, Building, Smartphone, ArrowUpDown, Eye
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
 
 const AdminCompanyWallets = ({ user }) => {

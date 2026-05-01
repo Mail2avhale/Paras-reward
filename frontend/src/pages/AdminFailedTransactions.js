@@ -12,7 +12,7 @@ import {
   Eye, Ban, Check, X, FileText, IndianRupee, FileSpreadsheet
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // Modal Component
 const Modal = ({ show, onClose, title, children, size = "md" }) => {

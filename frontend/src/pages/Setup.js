@@ -9,8 +9,7 @@ import { Shield, User, Mail, Phone, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatMobile, validateMobile, validateEmail } from '@/utils/indianValidation';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { API, BACKEND_URL } from "../lib/api";
 
 const Setup = () => {
   const navigate = useNavigate();

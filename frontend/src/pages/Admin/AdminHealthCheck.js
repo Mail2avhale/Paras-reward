@@ -16,7 +16,7 @@ import axios from 'axios';
 import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Activity, Rocket, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../../lib/api";
 
 const STATUS_CFG = {
   pass: { color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', icon: CheckCircle2, label: 'PASS' },

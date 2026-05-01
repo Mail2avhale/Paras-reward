@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Trophy, MapPin, Crown, TrendingUp, Loader2, ShieldCheck } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const RANK_STYLE = (rank) => {
   if (rank === 1) return { badge: 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white shadow-lg shadow-amber-500/30', border: 'border-amber-300' };

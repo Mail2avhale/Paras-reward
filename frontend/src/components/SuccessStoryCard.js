@@ -3,7 +3,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { CheckCircle2, MapPin, Sparkles, Star } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const SERVICE_THEME = {
   mobile_recharge: {

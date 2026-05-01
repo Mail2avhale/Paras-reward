@@ -283,8 +283,8 @@ def get_processing_fee(amount_inr: int) -> int:
     else:
         return 10  # Flat ₹10
 
-# Admin charge percentage - 20%
-ADMIN_CHARGE_PERCENT = 20
+# Admin charge percentage — single source of truth in routes/growth_economy.py
+from routes.growth_economy import DEFAULT_ADMIN_CHARGE_PERCENT as ADMIN_CHARGE_PERCENT
 
 # Slider allows any amount from 100 to max
 MIN_AMOUNT = 100

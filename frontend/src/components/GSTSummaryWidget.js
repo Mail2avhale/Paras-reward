@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const GSTSummaryWidget = ({ token, adminId }) => {
   const [loading, setLoading] = useState(true);

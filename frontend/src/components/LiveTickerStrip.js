@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Smartphone, Tv, Banknote, Crown, MapPin, Zap, Flame, Droplet, Wifi, Shield, Receipt, Trophy } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const ICON_MAP = {
   mobile: Smartphone,

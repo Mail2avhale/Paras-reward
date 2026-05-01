@@ -18,7 +18,9 @@ from datetime import datetime, timezone, timedelta
 BASE_URL = os.environ["REACT_APP_BACKEND_URL"].rstrip("/")
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "paras_reward_db")
-JWT_SECRET = os.environ.get("JWT_SECRET_KEY", "paras-reward-secret-key-2024")
+JWT_SECRET = os.environ.get("JWT_SECRET_KEY")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET_KEY env var is required for tests")
 JWT_ALGO = "HS256"
 
 ADMIN_UID = "admin-test-123"

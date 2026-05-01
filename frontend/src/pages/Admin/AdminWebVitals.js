@@ -16,7 +16,7 @@ import axios from 'axios';
 import { Activity, RefreshCw, TrendingDown, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../../lib/api";
 
 const RATING_BG = {
   good: 'bg-emerald-50 border-emerald-200 text-emerald-700',

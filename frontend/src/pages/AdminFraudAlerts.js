@@ -11,7 +11,7 @@ import {
   Search, Filter, ChevronDown
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const AdminFraudAlerts = ({ user }) => {
   const navigate = useNavigate();

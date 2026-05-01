@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const AdminPerformanceReport = ({ user }) => {
   const [loading, setLoading] = useState(true);

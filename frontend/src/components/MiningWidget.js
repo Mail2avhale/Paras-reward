@@ -7,7 +7,7 @@ import smartToast from '@/utils/smartToast';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const triggerHaptic = (type = 'light') => {
   if ('vibrate' in navigator) {

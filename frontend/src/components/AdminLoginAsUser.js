@@ -16,7 +16,7 @@ import {
   User, Phone, Mail, Crown, Wallet, Shield
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');

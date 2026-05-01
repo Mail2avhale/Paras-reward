@@ -10,7 +10,7 @@ import {
   Calendar, AlertCircle, Download, ArrowUpDown, Loader2, Copy, Pencil, X
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../../lib/api";
 
 // Copy to clipboard helper
 const copyToClipboard = (text, label) => {

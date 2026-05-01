@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import SEO, { SEOConfigs } from '@/components/SEO';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const TermsConditions = () => {
   const navigate = useNavigate();

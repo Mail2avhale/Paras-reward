@@ -133,9 +133,8 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             "orders_count": 0
         }
         
-        # Fee settings (10 Rs fixed + 20% admin charge)
-        PROCESSING_FEE_INR = 10
-        ADMIN_CHARGE_PERCENT = 20
+        # Fee settings — single source of truth in routes/growth_economy.py
+        from routes.growth_economy import DEFAULT_PROCESSING_FEE_INR as PROCESSING_FEE_INR, DEFAULT_ADMIN_CHARGE_PERCENT as ADMIN_CHARGE_PERCENT
         
         # 1. Subscription Revenue (PRIMARY: subscription_payments with status="paid")
         subscription_payments = await db.subscription_payments.find({

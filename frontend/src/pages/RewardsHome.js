@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 import SEO, { SEOConfigs } from '@/components/SEO';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 const LOGO_URL = "/paras-logo.png";
 
 const fadeUp = {

@@ -15,7 +15,7 @@ import {
   History, ChevronRight, Shield, FileText, Search, Filter
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 // Status badge component
 const StatusBadge = ({ status }) => {

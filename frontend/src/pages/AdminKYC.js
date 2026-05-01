@@ -11,8 +11,7 @@ import {
   ChevronDown, ChevronUp, Image, Zap, CheckCheck, Square, CheckSquare
 } from 'lucide-react';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { API, BACKEND_URL } from "../lib/api";
 const ITEMS_PER_PAGE = 20;
 const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
 

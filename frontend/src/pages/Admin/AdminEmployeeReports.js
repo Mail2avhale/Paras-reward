@@ -7,7 +7,7 @@ import {
   FileSpreadsheet, FileDown, UserCheck, Clock
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../../lib/api";
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',

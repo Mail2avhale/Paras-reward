@@ -10,8 +10,7 @@ import { toast } from 'sonner';
 import PinInput from '@/components/PinInput';
 import SEO, { SEOConfigs } from '@/components/SEO';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { API, BACKEND_URL } from "../lib/api";
 
 const RegisterSimple = () => {
   const navigate = useNavigate();

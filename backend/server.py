@@ -120,6 +120,13 @@ JWT_ALGORITHM = "HS256"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour
 JWT_REFRESH_TOKEN_EXPIRE_DAYS = 7
 
+# Admin operation PINs — used for sensitive admin actions (bulk fail, force
+# activate, admin credit etc). Loaded from env so prod/dev can rotate without
+# code change. Fall back to historical values for dev parity; prod MUST set
+# explicit env values.
+ADMIN_OPERATION_PIN = os.environ.get("ADMIN_OPERATION_PIN", "123456")
+ADMIN_OVERRIDE_PIN_ENV = os.environ.get("ADMIN_OVERRIDE_PIN", "153759")
+
 # Rate limiting configuration
 RATE_LIMIT_LOGIN_ATTEMPTS = 5  # Max login attempts before final lockout
 RATE_LIMIT_API_CALLS = 100  # Max API calls per minute for admin
@@ -9594,7 +9601,7 @@ async def cleanup_fraudulent_razorpay_subscriptions(request: Request):
         admin_pin = data.get("admin_pin")
         
         # Security check - require admin PIN
-        if admin_pin != "123456":
+        if admin_pin != ADMIN_OPERATION_PIN:
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
         # Find all "paid" Razorpay orders
@@ -9726,7 +9733,7 @@ async def delete_pending_razorpay_orders(request: Request):
         data = await request.json()
         admin_pin = data.get("admin_pin")
         
-        if admin_pin != "123456":
+        if admin_pin != ADMIN_OPERATION_PIN:
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
         # Count pending orders
@@ -10065,7 +10072,7 @@ async def manual_activate_subscription(request: Request):
         plan_type = data.get("plan_type", "monthly")  # Optional: monthly/quarterly/etc
         admin_pin = data.get("admin_pin")
         
-        if admin_pin != "123456":
+        if admin_pin != ADMIN_OPERATION_PIN:
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
         if not payment_id:
@@ -10671,7 +10678,7 @@ async def delete_all_razorpay_orders(request: Request):
         admin_pin = data.get("admin_pin")
         confirm = data.get("confirm", False)
         
-        if admin_pin != "123456":
+        if admin_pin != ADMIN_OPERATION_PIN:
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
         if not confirm:
@@ -10743,7 +10750,7 @@ async def restore_users_from_vip_payments(request: Request):
         data = await request.json()
         admin_pin = data.get("admin_pin")
         
-        if admin_pin != "123456":
+        if admin_pin != ADMIN_OPERATION_PIN:
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
         # Find all users who were marked as fraudulent but have legitimate vip_payments
@@ -10890,7 +10897,7 @@ async def recalculate_prc_balance(request: Request):
         admin_pin = data.get("admin_pin")
         user_ids = data.get("user_ids", [])  # Optional: specific users to recalculate
         
-        if admin_pin != "123456":
+        if admin_pin != ADMIN_OPERATION_PIN:
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
         # If no specific users, find users with 0 PRC who might need fixing
@@ -11764,7 +11771,7 @@ async def toggle_manual_subscription(request: Request):
         enabled = data.get("enabled", True)
         admin_pin = data.get("admin_pin")
         
-        if admin_pin != "123456":
+        if admin_pin != ADMIN_OPERATION_PIN:
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
         await db.app_settings.update_one(
@@ -11795,7 +11802,7 @@ async def toggle_prc_subscription(request: Request):
         enabled = data.get("enabled", True)
         admin_pin = data.get("admin_pin")
         
-        if admin_pin != "123456":
+        if admin_pin != ADMIN_OPERATION_PIN:
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
         await db.app_settings.update_one(
@@ -11957,7 +11964,7 @@ async def update_prc_rate(request: Request):
         if not new_rate or new_rate <= 0:
             raise HTTPException(status_code=400, detail="Invalid rate. Must be a positive number")
         
-        if admin_pin != "123456":
+        if admin_pin != ADMIN_OPERATION_PIN:
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
         # Update rate in app_settings
@@ -12814,7 +12821,7 @@ async def subscription_pay_with_prc(request: Request):
 #  6. Full audit trail: admin_audit_logs + user transactions statement
 #  7. Auto-posts Success Story to Community Forum (immediate activations)
 # ============================================================================
-ADMIN_OVERRIDE_PIN = "153759"  # Matches existing hardcoded admin PIN pattern
+ADMIN_OVERRIDE_PIN = ADMIN_OVERRIDE_PIN_ENV  # Matches existing hardcoded admin PIN pattern
 
 @api_router.post("/admin/subscription/force-activate-elite-prc")
 async def admin_force_activate_elite_prc(request: Request):
@@ -22817,7 +22824,7 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
     data = await request.json()
     admin_pin = data.get("admin_pin")
     
-    if admin_pin != "123456":
+    if admin_pin != ADMIN_OPERATION_PIN:
         raise HTTPException(status_code=403, detail="Invalid admin PIN")
     
     user = await db.users.find_one({"uid": uid})
@@ -31646,7 +31653,7 @@ async def bulk_reject_all_pending_requests(request: Request):
     reject_reason = data.get("reject_reason", "BY ADMIN")
     
     # Verify admin PIN
-    if admin_pin != "123456":
+    if admin_pin != ADMIN_OPERATION_PIN:
         raise HTTPException(status_code=403, detail="Invalid admin PIN")
     
     # Get admin name

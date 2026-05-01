@@ -14,7 +14,7 @@ import {
 import BBPSDetailModal from './components/BBPSDetailModal';
 import BBPSReconcilePanel from './components/BBPSReconcilePanel';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../../lib/api";
 
 // Service icons mapping
 const SERVICE_ICONS = {

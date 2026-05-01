@@ -11,7 +11,7 @@ import {
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const AdminFinancialRatios = ({ user }) => {
   const navigate = useNavigate();

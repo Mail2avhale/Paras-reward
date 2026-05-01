@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import SEO from '@/components/SEO';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from "../lib/api";
 
 const Disclaimer = () => {
   const navigate = useNavigate();
