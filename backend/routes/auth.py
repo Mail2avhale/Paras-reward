@@ -727,7 +727,15 @@ async def login(request: Request):
     
     # Verify password - RUN IN THREAD POOL to avoid blocking event loop
     # SECURITY FIX: Check all possible password/pin field names for compatibility
-    stored_password = user.get("pin_hash") or user.get("hashed_pin") or user.get("password_hash") or user.get("password")
+    # Track WHICH field the hash came from so lazy-rehash updates the right one.
+    _PASSWORD_FIELDS = ("pin_hash", "hashed_pin", "password_hash", "password")
+    stored_password = None
+    stored_password_field = None
+    for _fld in _PASSWORD_FIELDS:
+        if user.get(_fld):
+            stored_password = user[_fld]
+            stored_password_field = _fld
+            break
     logging.info(f"[LOGIN DEBUG] User found: {user.get('uid')}, stored_password exists: {bool(stored_password)}")
     print(f"[LOGIN DEBUG] User found: {user.get('uid')}, stored_password exists: {bool(stored_password)}", flush=True)
     if stored_password:
@@ -747,6 +755,11 @@ async def login(request: Request):
         # migrates legacy users (cost=12 → cost=10) over their next login.
         # The rehash itself runs in a background task so it never blocks the
         # current login response.
+        #
+        # IMPORTANT: update ALL hash fields that currently hold the SAME legacy
+        # hash value, so the next login (which reads pin_hash → hashed_pin →
+        # password_hash → password in order) gets the cost=10 hash regardless
+        # of which field is consulted first.
         if is_valid and isinstance(stored_password, str) and stored_password.startswith("$2"):
             try:
                 # bcrypt format: $2b$<cost>$...
@@ -754,16 +767,28 @@ async def login(request: Request):
                 if len(parts) >= 4 and parts[2].isdigit() and int(parts[2]) > 10:
                     legacy_uid = user["uid"]
                     legacy_password = password
-                    async def _bg_rehash():
+                    legacy_hash_value = stored_password
+                    mirrored_fields = [
+                        f for f in _PASSWORD_FIELDS if user.get(f) == legacy_hash_value
+                    ]
+                    async def _bg_rehash(uid_local=legacy_uid,
+                                         password_local=legacy_password,
+                                         fields_local=mirrored_fields,
+                                         cost_local=parts[2]):
                         try:
                             new_hash = await loop.run_in_executor(
-                                _password_executor, hash_password, legacy_password
+                                _password_executor, hash_password, password_local
                             )
+                            set_fields = {f: new_hash for f in fields_local}
+                            set_fields["pin_migrated"] = True
                             await db.users.update_one(
-                                {"uid": legacy_uid},
-                                {"$set": {"password": new_hash, "pin_migrated": True}},
+                                {"uid": uid_local},
+                                {"$set": set_fields},
                             )
-                            logging.info(f"[LOGIN LAZY-REHASH] {legacy_uid} migrated bcrypt cost {parts[2]}→10")
+                            logging.info(
+                                f"[LOGIN LAZY-REHASH] {uid_local} migrated bcrypt cost "
+                                f"{cost_local}→10 across fields {fields_local}"
+                            )
                         except Exception as e:
                             logging.warning(f"[LOGIN LAZY-REHASH] failed (non-fatal): {e}")
                     asyncio.create_task(_bg_rehash())
@@ -915,22 +940,25 @@ async def login(request: Request):
                 if expiry_date < now:
                     days_expired = (now - expiry_date).days
                     subscription_expiry_message = f"Your {current_plan.capitalize()} subscription expired {days_expired} days ago. Please renew."
-                    # FIRE-AND-FORGET: downgrade plan in DB. Wrapped in async
-                    # helper because Motor returns a Future, not a coroutine.
-                    async def _bg_downgrade(uid_local=user["uid"], now_iso_local=now.isoformat()):
-                        try:
-                            await db.users.update_one(
-                                {"uid": uid_local},
-                                {"$set": {
-                                    "subscription_plan": "explorer",
-                                    "subscription_expired": True,
-                                    "subscription_expired_at": now_iso_local,
-                                    "subscription_status": "expired"
-                                }}
-                            )
-                        except Exception as e:
-                            logging.warning(f"[LOGIN] expiry downgrade failed (non-fatal): {e}")
-                    asyncio.create_task(_bg_downgrade())
+                    # BUSINESS-CRITICAL: downgrade must persist to DB.
+                    # If we background this and the task fails, DB keeps the
+                    # paid plan while the response says explorer → entitlement
+                    # drift. Keep this awaited; it's one cheap update.
+                    try:
+                        await db.users.update_one(
+                            {"uid": user["uid"]},
+                            {"$set": {
+                                "subscription_plan": "explorer",
+                                "subscription_expired": True,
+                                "subscription_expired_at": now.isoformat(),
+                                "subscription_status": "expired"
+                            }}
+                        )
+                    except Exception as e:
+                        logging.error(f"[LOGIN EXPIRY] downgrade persist failed for {user['uid']}: {e}")
+                        # Surface to client with original (paid) state to avoid
+                        # showing explorer UI while DB still has paid plan.
+                        raise HTTPException(status_code=500, detail="Could not refresh subscription state. Please try again.")
                     user["subscription_plan"] = "explorer"
                     user["subscription_expired"] = True
                     user["subscription_days_expired"] = days_expired
@@ -983,23 +1011,35 @@ async def login(request: Request):
             logging.warning(f"[LOGIN] log_activity failed (non-fatal): {e}")
     asyncio.create_task(_bg_log_activity())
 
-    # FIRE-AND-FORGET: admin session + admin audit log (non-critical for response)
+    # Admin session: MUST await. `get_current_user` checks `admin_sessions`
+    # for an active session — if we background it, the very next API call
+    # from the browser will 401 with "Session expired or logged out".
+    # Only the audit log (which is NOT checked at request time) is safe to
+    # background.
     if user.get("role") in ["admin", "sub_admin"]:
-        async def _bg_admin_session():
+        session_data = {
+            "session_id": str(uuid.uuid4()),
+            "uid": user["uid"],
+            "token_id": token_id,
+            "is_active": True,
+            "ip_address": real_ip,
+            "user_agent": user_agent,
+            "device_id": device_id,
+            "created_at": now_iso,
+            "last_activity": now_iso,
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)).isoformat(),
+        }
+        try:
+            await db.admin_sessions.insert_one(session_data)
+        except Exception as e:
+            logging.error(f"[LOGIN] admin_sessions insert failed: {e}")
+            # Don't fail the login — but subsequent admin calls will 401
+            # until the middleware can find the session. Log loud so we catch
+            # this in production monitoring.
+
+        # Audit log is not consulted at request time — safe to background.
+        async def _bg_admin_audit():
             try:
-                session_data = {
-                    "session_id": str(uuid.uuid4()),
-                    "uid": user["uid"],
-                    "token_id": token_id,
-                    "is_active": True,
-                    "ip_address": real_ip,
-                    "user_agent": user_agent,
-                    "device_id": device_id,
-                    "created_at": now_iso,
-                    "last_activity": now_iso,
-                    "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)).isoformat(),
-                }
-                await db.admin_sessions.insert_one(session_data)
                 await log_admin_action(
                     admin_uid=user["uid"],
                     action="login",
@@ -1009,8 +1049,8 @@ async def login(request: Request):
                     user_agent=user_agent,
                 )
             except Exception as e:
-                logging.warning(f"[LOGIN] admin session bg failed (non-fatal): {e}")
-        asyncio.create_task(_bg_admin_session())
+                logging.warning(f"[LOGIN] admin audit log failed (non-fatal): {e}")
+        asyncio.create_task(_bg_admin_audit())
     
     # Convert datetime strings
     for field in ["created_at", "updated_at", "last_login", "membership_expiry"]:

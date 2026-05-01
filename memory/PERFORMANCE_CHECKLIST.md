@@ -85,13 +85,13 @@ Each cached with payload-identical guard test
 - Production verified Apr 30: KPIs 1.49s cold → 0.42s warm; Members 1.19s → 0.45s.
 - Stale window deliberately small (60-180s); admin staleness is acceptable given the tradeoff.
 
-### 13. Web Vitals — Real User Monitoring (Apr 30 2026)
+### 10. Web Vitals — Real User Monitoring (Apr 30 2026)
 - Frontend `WebVitalsReporter` (mounted in `App.js`) sends LCP, INP, CLS, FCP, TTFB to `POST /api/metrics/web-vitals` via `navigator.sendBeacon` (zero perf cost on unload).
 - Backend ingest validates name + bounds, drops outliers, stores in `web_vitals` collection with **14-day TTL index** (auto-cleanup).
 - Admin page `/admin/web-vitals` shows p50/p75/p95 + good/needs-improvement/poor distribution per metric, plus top-5 worst pages by LCP avg. 60s redis cache on summary endpoint. Window selectable: 1h / 24h / 7d / 30d.
 - Indexes: `(name, created_at desc)`, `(path, created_at desc)`.
 
-### 15. Login Latency Optimization (Apr 30 2026)
+### 11. Login Latency Optimization (Apr 30 2026)
 
 **Symptom**: Production `POST /api/auth/login` was averaging 7.27s (max 10.14s) — every user login slow.
 
@@ -108,13 +108,13 @@ Each cached with payload-identical guard test
 
 **Result locally**: ~0.7s → 0.33s (50%+ faster). Production will drop from 7s → ~1-2s after admin's hash rehashes (first login after deploy).
 
-### 16. Frontend `/me` Server Role Verify (Apr 30 2026)
+### 12. Frontend `/me` Server Role Verify (Apr 30 2026)
 - `App.js` `validateUserRole` already calls `GET /api/auth/me` on app mount + after role-state changes. Verified live: 2 `/auth/me` 200 calls per app boot.
 - Localstorage `role` field is now treated as a hint, not source of truth — `canAccessAdmin` rechecks with server-supplied role from `/me`.
 
 ---
 
-### 12. Phase B Security Hardening (Apr 30 2026)
+### 13. Phase B Security Hardening (Apr 30 2026)
 
 **A. IDOR Protection on User Routes**
 - `routes/users.py`: 16 endpoints (`/users/{uid}`, `/user/{uid}/profile`, `/user/{uid}/dashboard`, `/user/stats/today/{uid}`, profile-picture upload/delete, change-pin, account-deletion, etc.) now require `Depends(get_current_user)` + `verify_user_access(uid, current_user)` (self-or-admin rule).
@@ -133,7 +133,7 @@ Each cached with payload-identical guard test
 
 ---
 
-### 11. Phase A Frontend Network Optimizations (Apr 30 2026)
+### 14. Phase A Frontend Network Optimizations (Apr 30 2026)
 
 **Section 10. User-360 Endpoint — Cache NOT applied (intentional)**
 Tested Apr 30 2026: caching the 600+ KB payload via Upstash REST made warm requests SLOWER than cold (7.6s vs 5.6s) due to round-trip overhead and JSON deserialization on a large blob. The endpoint relies instead on:
