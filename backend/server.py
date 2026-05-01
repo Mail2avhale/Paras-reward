@@ -164,8 +164,12 @@ def get_user_friendly_error(error: Exception) -> str:
             return "This email is already registered."
         return "This information is already registered with another account."
     
-    if "timeout" in error_str or "timed out" in error_str:
-        return "Server is busy. Please try again in a few seconds."
+    # Motor/pymongo timeouts bubble up as NetworkTimeout, ServerSelectionTimeoutError,
+    # ExecutionTimeout etc. All of these include "timeout" / "timed out" in their
+    # string. Treat them as transient and ask user to retry — their action IS safe
+    # to retry (backends are idempotent for approve/reject/pay flows).
+    if "timeout" in error_str or "timed out" in error_str or "serverselectiontimeouterror" in error_str or "networktimeout" in error_str:
+        return "Database is slow right now. Please try again — your action will work next time."
     
     if "connection" in error_str or "network" in error_str:
         return "Connection error. Please check your internet and try again."
@@ -14052,6 +14056,16 @@ async def approve_vip_payment(payment_id: str, request: Request):
                 status_code=504,
                 detail="Database is slow right now. Please try again — your action will work next time.",
             )
+        except Exception as db_err:
+            # Motor / pymongo timeouts (NetworkTimeout, ServerSelectionTimeoutError)
+            # don't surface as asyncio.TimeoutError. Treat them as 504 so the
+            # frontend's retry interceptor will replay the request.
+            if any(t in str(db_err).lower() for t in ["timeout", "timed out", "serverselection", "networktimeout"]):
+                raise HTTPException(
+                    status_code=504,
+                    detail="Database is slow right now. Please try again — your action will work next time.",
+                )
+            raise
 
         if not payment:
             print(f"VIP Payment not found: {payment_id}")
@@ -14098,6 +14112,13 @@ async def approve_vip_payment(payment_id: str, request: Request):
                 status_code=504,
                 detail="Database is slow right now. Please try again.",
             )
+        except Exception as db_err:
+            if any(t in str(db_err).lower() for t in ["timeout", "timed out", "serverselection", "networktimeout"]):
+                raise HTTPException(
+                    status_code=504,
+                    detail="Database is slow right now. Please try again.",
+                )
+            raise
         
         # ========== FRAUD PREVENTION: Check recent subscription activity ==========
         fraud_warning = None
@@ -14222,6 +14243,13 @@ async def approve_vip_payment(payment_id: str, request: Request):
                 status_code=504,
                 detail="Database is slow right now. Please try again.",
             )
+        except Exception as db_err:
+            if any(t in str(db_err).lower() for t in ["timeout", "timed out", "serverselection", "networktimeout"]):
+                raise HTTPException(
+                    status_code=504,
+                    detail="Database is slow right now. Please try again.",
+                )
+            raise
         
         # Update payment status with correction info
         # Generate TXN number
@@ -14351,6 +14379,15 @@ async def approve_vip_payment(payment_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
+        # If anything that escaped the inner try blocks looks like an Atlas
+        # transient timeout, surface 504 (frontend will auto-retry once)
+        # instead of 500 which is fatal in the eyes of the UI.
+        err_str = str(e).lower()
+        if any(t in err_str for t in ["timeout", "timed out", "serverselection", "networktimeout"]):
+            raise HTTPException(
+                status_code=504,
+                detail="Database is slow right now. Please try again — your action will work next time.",
+            )
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
@@ -14560,6 +14597,15 @@ async def reject_vip_payment(payment_id: str, request: Request):
                 status_code=504,
                 detail="Database is slow right now. Please try again — your action will work next time.",
             )
+        except Exception as db_err:
+            # Motor / pymongo timeouts surface as plain Exception, not asyncio.TimeoutError.
+            # Coerce to 504 so frontend auto-retry kicks in.
+            if any(t in str(db_err).lower() for t in ["timeout", "timed out", "serverselection", "networktimeout"]):
+                raise HTTPException(
+                    status_code=504,
+                    detail="Database is slow right now. Please try again — your action will work next time.",
+                )
+            raise
         if not payment:
             raise HTTPException(status_code=404, detail="Payment not found")
 
@@ -14598,6 +14644,13 @@ async def reject_vip_payment(payment_id: str, request: Request):
                 status_code=504,
                 detail="Database is slow right now. Please try again.",
             )
+        except Exception as db_err:
+            if any(t in str(db_err).lower() for t in ["timeout", "timed out", "serverselection", "networktimeout"]):
+                raise HTTPException(
+                    status_code=504,
+                    detail="Database is slow right now. Please try again.",
+                )
+            raise
 
         # ========== NON-CRITICAL POST-REJECT WORK — BACKGROUNDED ==========
         async def _post_reject_background():
@@ -14643,6 +14696,12 @@ async def reject_vip_payment(payment_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
+        err_str = str(e).lower()
+        if any(t in err_str for t in ["timeout", "timed out", "serverselection", "networktimeout"]):
+            raise HTTPException(
+                status_code=504,
+                detail="Database is slow right now. Please try again — your action will work next time.",
+            )
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
