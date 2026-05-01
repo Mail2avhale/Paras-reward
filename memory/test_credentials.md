@@ -14,3 +14,7 @@
 ## Admin
 - Email: admin@test.com
 - PIN: 153759
+
+## Admin Operation PINs (backend/.env)
+- ADMIN_OPERATION_PIN=123456 (for bulk-fail, admin-credit, approve-all type guards)
+- ADMIN_OVERRIDE_PIN=153759 (for force-activate-elite-prc override)

@@ -9,6 +9,21 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### Code Smell Cleanup — Plan B (DONE - 1 May 2026)
+
+**Goal**: Remove technical debt flagged in user's audit without touching core business logic.
+
+**Changes**:
+1. **JWT fail-fast across all files**: Removed hardcoded `'paras-reward-secret-key-2024'` fallback from `routes/auth.py:594`, `routes/employee_reports.py:42`, `tests/test_sustainability_burn_integration.py`. Now all read `JWT_SECRET_KEY` from env and raise `RuntimeError` if missing. Strong 64-char secret committed to `backend/.env`.
+2. **Frontend API URL centralization**: Created `/app/frontend/src/lib/api.js` as single source of truth (`export const API`, `export const BACKEND_URL`). Migrated 107 duplicate `const API = ...` declarations across `pages/`, `components/`, `utils/` to `import { API } from "../lib/api"`. Remaining 10 files (semantically different `API = BACKEND_URL` pattern) kept intact.
+3. **Service worker unification**: Deleted duplicate `/app/frontend/public/sw.js` + its inline registration in `public/index.html`. Only `/service-worker.js` remains (feature-rich with SKIP_WAITING + update logic), registered in `src/index.js`.
+4. **Language selector unification**: Deleted stub `/components/LanguageSwitcher.js` (fake `useState`-only, not wired to i18n). `Footer.js` now uses real `LanguageSelectorCompact` (connects to `LanguageContext`).
+5. **Business constants centralized**: `PLATFORM_FEE` + `ADMIN_CHARGE_PERCENT` now imported from `routes/growth_economy.DEFAULT_PROCESSING_FEE_INR` / `DEFAULT_ADMIN_CHARGE_PERCENT` in 3 files (`unified_redeem_v2.py`, `bank_redeem.py`, `admin_finance.py`).
+6. **Admin PINs moved to env**: Added `ADMIN_OPERATION_PIN` (was hardcoded `"123456"` in 15 checks) and `ADMIN_OVERRIDE_PIN` (was hardcoded `"153759"`) to `backend/.env`. `server.py` reads both at boot; production can rotate without code change.
+
+**Testing**: iteration_225.json — 15/15 backend cases PASSED (JWT, admin PIN guards at both 123456 and 153759, `/api/auth/me` decoding, fees constants live at PLATFORM_FEE=10/ADMIN_CHARGE_PERCENT=20, Eko refund auth). Frontend build succeeded, login page renders with 2 inputs. No regressions.
+
+
 ### Admin Force-Activate Elite (PRC Override) — DONE (30 Apr 2026)
 
 **Goal**: Let an admin manually activate an Elite subscription for a user using PRC, even when the user has insufficient PRC balance — with proper guardrails, audit trail, and auto debt-recovery.
