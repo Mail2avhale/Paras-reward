@@ -1,0 +1,47 @@
+{
+  "summary": "E2E frontend test on PRODUCTION https://parasreward.com for admin User-360 and Login-As-User flows using admin 9696969696/969696. Login works instantly. Login-As-User WORKS END-TO-END: 3-char validation, digit searches (9696=4 results, 999=5, 888=10), result rows show name+mobile+plan+PRC, no 'Search failed' toast. User-360 page shell loads fast (~1.7s) but the user data fetch is SLOW — after submitting search for admin's own mobile 9696969696, the UI stays stuck on 'Loading user data...' for 6+ seconds (did not complete in 6s wait window). Also detected a persistent 404 API (/api/rd/admin/redeem-requests) and a one-off 503 (/api/admin/redeem-limits-overview). No red 'Server is busy' / 'Database is slow' toast was observed.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "/api/user-360/{identifier} (GET after clicking Search on /admin/user360)", "issue": "Did not return within 6s during testing — UI remained stuck on 'Loading user data...'. Cold call was not measurable (no response body observed in 6s wait). User's original 'DB is slow' concern appears partially mitigated (no error toast) but the 3s latency target is NOT met for cold admin lookup. Refresh cycles of the page shell were 3.03s which is acceptable for the shell but does not include the user-360 payload.", "priority": "HIGH"},
+      {"endpoint": "/api/rd/admin/redeem-requests?status=pending&skip=0&limit=1", "issue": "Returns 404 {\"detail\":\"Not Found\"} on EVERY admin dashboard/user360 page load. Path prefix '/api/rd/...' looks like a stale/misconfigured route on the frontend. Appears as red console error each navigation.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "/api/admin/redeem-limits-overview", "issue": "One 503 observed during impersonation search flow: {\"error\":\"Network error\",\"message\":\"Please check your internet connection and refresh\"}. Intermittent."},
+      {"endpoint": "/api/admin/search-user-for-impersonation", "issue": "Works and returns 200 with correct results, but each query took ~3.0s wall-clock (999, 9696, 888 all 3.01s). Target was <1s. Indexed digit fast-path may still be warming or backend throttling."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminUser360New page", "issue": "After admin clicks 'Search' with 9696969696 (admin's own mobile), 'Loading user data...' spinner never resolves within 6s. No Profile/Stats/Referral/Subscription/KYC/Login-History sections render. Root-cause is backend-side (see /api/user-360 above). No red toast shown, but UX appears frozen.", "selector": "[data-testid='user360-search-input'] + Search button", "priority": "HIGH"}
+    ],
+    "integration_issues": [
+      {"flow": "Admin dashboard load", "issue": "Stale '/api/rd/admin/redeem-requests' call on every page visit returns 404, polluting console and potentially masking real integration errors.", "affected_selectors": ["dashboard root"]}
+    ],
+    "design_issues": [
+      {"screen": "User 360 View", "issues": ["Two buttons labelled 'Search' on the page (top-right toggle & orange primary) — confusing selector target for tests and possibly for users."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_226.json"
+  ],
+  "action_items": [
+    "HIGH: Investigate why /api/user-360/9696969696 takes >6s on production. Check backend logs around 16:34-16:35 UTC, verify parallel asyncio.gather for stats+referral+metadata actually completes, and whether the 207 background indexes relevant to this endpoint have finished building.",
+    "HIGH: Fix the stale '/api/rd/admin/redeem-requests?status=pending&skip=0&limit=1' 404 — find the frontend caller (likely a dashboard polling hook) and correct the path or remove the call. Repro: load /admin or /admin/user360 → browser Network tab shows 404.",
+    "MEDIUM: Verify /api/admin/redeem-limits-overview 503 root cause — only occurred once but error message is a generic 'Network error, check connection' which is misleading.",
+    "MEDIUM: Impersonation search latency ~3s/query — review index-backed digit fast-path effectiveness; target was <1s per spec.",
+    "LOW: Consider renaming the top-right 'Search' button on /admin/user360 to avoid ambiguity with the primary orange Search button."
+  ],
+  "critical_code_review_comments": [
+    "AdminUser360New shows only a generic 'Loading user data...' spinner with no timeout or user-friendly fallback — when backend is slow, admin has no signal whether to wait or retry. Add a 10s timeout + retry button.",
+    "The /api/rd/admin/... 404 indicates an unmaintained / dead code path still wired into dashboard polling — code-review the redeem-requests widget caller.",
+    "Impersonation search component triggers only on Enter/button click (no debounced onChange). This is intentional and correct, but worth documenting."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only per request)", "frontend": "67% (Login OK, LoginAsUser OK, User360 data load FAIL)"},
+  "test_credentials": "Production admin: 9696969696 / PIN 969696 — login confirmed working",
+  "seed_data_creation": "None — tested on live production data",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Login is 2-step: fill [data-testid=login-identifier-input] → click [data-testid=login-submit-btn] → 6 PIN inputs [data-testid=login-pin-0..5] → click submit. Admin redirects to /admin. User-360 at /admin/user360 has [data-testid=user360-search-input] and TWO 'Search' buttons (use orange one, or press Enter on the input). Login-As-User modal opens via [data-testid=admin-login-as-user-btn] on /admin; uses [data-testid=impersonation-search-input] + [data-testid=impersonation-search-btn]; results are [data-testid=impersonation-result-{uid}]. Key bug to retest: /api/user-360/{identifier} latency, and the stale /api/rd/admin/redeem-requests 404.",
+  "rca of the issue": "User-360 stuck-loading RCA is inconclusive from frontend-only testing — need backend logs / direct curl timing on /api/user-360/9696969696 to determine if (a) index still building, (b) aggregation pipeline too heavy, or (c) Atlas connection starvation. The '/api/rd/...' 404 is a frontend code path using an incorrect URL prefix; grep the frontend for 'rd/admin' to locate."
+}

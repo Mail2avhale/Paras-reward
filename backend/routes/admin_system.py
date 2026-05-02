@@ -6,6 +6,7 @@ Extracted from server.py for better code organization
 from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone, timedelta
 import logging
+import asyncio
 
 # Create router
 router = APIRouter(prefix="/admin", tags=["Admin System"])
@@ -33,12 +34,32 @@ def set_helpers(helpers: dict):
 # ========== DATABASE MANAGEMENT ==========
 
 @router.post("/db/create-indexes")
-async def create_database_indexes():
-    """Create ALL necessary database indexes for optimal performance"""
+async def create_database_indexes(background_mode: bool = True):
+    """Create ALL necessary database indexes for optimal performance.
+
+    By default runs FIRE-AND-FORGET so the HTTP response returns immediately
+    and the actual index creation continues in the background — prevents the
+    K8s ingress 60 s timeout on large production databases.
+
+    Pass `?background_mode=false` to wait for completion (debug only).
+    """
+    if background_mode:
+        # Spawn the heavy work as a true background task and return immediately.
+        asyncio.create_task(_create_database_indexes_inner())
+        return {
+            "success": True,
+            "message": "Index creation started in background. Check MongoDB Atlas / server logs to verify completion.",
+            "background": True,
+        }
+    return await _create_database_indexes_inner()
+
+
+async def _create_database_indexes_inner():
+    """Synchronous body of the index rebuild — runs ~200 idempotent calls."""
     try:
         indexes_created = []
         errors = []
-        
+
         async def safe_create_index(collection, index_spec, **kwargs):
             try:
                 await db[collection].create_index(index_spec, background=True, **kwargs)
