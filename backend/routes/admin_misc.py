@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone, timedelta
 import uuid
 import logging
+import re
 
 # Import WalletService for ledger-based PRC operations (Phase 4 Architecture)
 from app.services import WalletService
@@ -843,31 +844,58 @@ async def end_impersonation_session(request: Request):
 @router.get("/search-user-for-impersonation")
 async def search_user_for_impersonation(query: str):
     """Search users by mobile, name, or email for impersonation"""
-    if not query or len(query) < 3:
+    if not query or len(query.strip()) < 3:
         raise HTTPException(status_code=400, detail="Search query must be at least 3 characters")
-    
-    # Search by mobile, name, or email
-    search_filter = {
-        "$or": [
-            {"mobile": {"$regex": query, "$options": "i"}},
-            {"name": {"$regex": query, "$options": "i"}},
-            {"email": {"$regex": query, "$options": "i"}}
-        ]
+
+    query = query.strip()
+    escaped = re.escape(query)
+    projection = {
+        "_id": 0,
+        "uid": 1,
+        "name": 1,
+        "mobile": 1,
+        "phone": 1,
+        "email": 1,
+        "subscription_plan": 1,
+        "prc_balance": 1,
+        "kyc_status": 1
     }
-    
-    users = await db.users.find(
-        search_filter,
-        {
-            "_id": 0,
-            "uid": 1,
-            "name": 1,
-            "mobile": 1,
-            "email": 1,
-            "subscription_plan": 1,
-            "prc_balance": 1,
-            "kyc_status": 1
+
+    # Keep hot admin support searches index-friendly. Unanchored regex on
+    # mobile/email/name forces collection scans and times out on Atlas M10.
+    if query.isdigit():
+        search_filter = {
+            "$or": [
+                {"mobile": query},
+                {"phone": query},
+                {"uid": query},
+                {"mobile": {"$regex": f"^{escaped}"}},
+                {"phone": {"$regex": f"^{escaped}"}},
+            ]
         }
-    ).limit(10).to_list(length=10)
+    elif "@" in query:
+        search_filter = {
+            "$or": [
+                {"email": query.lower()},
+                {"email": query},
+                {"email": {"$regex": f"^{escaped}$", "$options": "i"}},
+            ]
+        }
+    else:
+        search_filter = {
+            "$or": [
+                {"uid": query},
+                {"referral_code": query.upper()},
+                {"name": {"$regex": f"^{escaped}", "$options": "i"}},
+                {"email": {"$regex": f"^{escaped}", "$options": "i"}},
+            ]
+        }
+
+    try:
+        users = await db.users.find(search_filter, projection).limit(10).to_list(length=10)
+    except Exception as e:
+        logging.warning(f"[IMP-SEARCH] user search failed for query={query[:24]}: {e}")
+        raise HTTPException(status_code=503, detail="Database is busy. Please try again.")
     
     return {
         "success": True,

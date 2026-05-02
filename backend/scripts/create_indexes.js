@@ -30,12 +30,14 @@ print("   ✅ indexes created\n");
 print("📁 bill_payment_requests");
 db.bill_payment_requests.createIndex({"user_id": 1, "status": 1}, {background: true, name: "user_status_idx"});
 db.bill_payment_requests.createIndex({"user_id": 1, "created_at": -1}, {background: true, name: "user_date_idx"});
+db.bill_payment_requests.createIndex({"request_type": 1, "created_at": -1}, {background: true, name: "request_type_date_idx"});
 print("   ✅ indexes created\n");
 
 // ========== GIFT VOUCHER REQUESTS ==========
 print("📁 gift_voucher_requests");
 db.gift_voucher_requests.createIndex({"user_id": 1, "status": 1}, {background: true, name: "user_status_idx"});
 db.gift_voucher_requests.createIndex({"user_id": 1, "created_at": -1}, {background: true, name: "user_date_idx"});
+db.gift_voucher_requests.createIndex({"status": 1, "created_at": -1}, {background: true, name: "status_date_idx"});
 print("   ✅ indexes created\n");
 
 // ========== BANK REDEEM REQUESTS ==========
@@ -106,8 +108,12 @@ print("📁 users");
 db.users.createIndex({"uid": 1}, {background: true, unique: true, name: "uid_unique_idx"});
 db.users.createIndex({"email": 1}, {background: true, name: "email_idx"});
 db.users.createIndex({"mobile": 1}, {background: true, sparse: true, name: "mobile_idx"});
+db.users.createIndex({"phone": 1}, {background: true, sparse: true, name: "phone_idx"});
+db.users.createIndex({"name": 1}, {background: true, sparse: true, name: "name_idx"});
+db.users.createIndex({"referral_code": 1}, {background: true, sparse: true, name: "referral_code_idx"});
 db.users.createIndex({"referred_by": 1}, {background: true, name: "referred_by_idx"});
 db.users.createIndex({"subscription_plan": 1}, {background: true, name: "plan_idx"});
+db.users.createIndex({"subscription_plan": 1, "mining_active": 1}, {background: true, name: "plan_mining_active_idx"});
 db.users.createIndex({"prc_balance": 1}, {background: true, name: "prc_balance_idx"});
 db.users.createIndex({"created_at": -1}, {background: true, name: "created_at_idx"});
 print("   ✅ indexes created\n");

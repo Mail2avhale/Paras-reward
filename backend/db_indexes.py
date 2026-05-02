@@ -67,6 +67,7 @@ async def create_performance_indexes(db):
     await ix(db.users, "uid", unique=True, background=True)
     await ix(db.users, "email", unique=True, background=True)
     await ix(db.users, "mobile", unique=True, sparse=True, background=True)
+    await ix(db.users, "phone", sparse=True, background=True)
     await ix(db.users, "referred_by", background=True)
     await ix(db.users, "referral_code", unique=True, sparse=True, background=True)
     await ix(db.users, "subscription_plan", background=True)
@@ -86,6 +87,10 @@ async def create_performance_indexes(db):
     await ix(db.users, [("created_at", 1), ("uid", 1)], background=True)
     await ix(db.users, "role", background=True)
     await ix(db.users, "is_admin", background=True)
+    await ix(db.users, [("name", 1), ("uid", 1)], background=True)
+    await ix(db.users, [("email", 1), ("uid", 1)], background=True)
+    await ix(db.users, [("mobile", 1), ("uid", 1)], background=True)
+    await ix(db.users, [("phone", 1), ("uid", 1)], background=True)
     await ix(db.users, [("referred_by", 1), ("uid", 1)], background=True)
     await ix(db.users, [("referred_by", 1), ("kyc_status", 1), ("subscription_expiry", 1)], background=True)
     await ix(db.users, [("subscription_plan", 1), ("prc_balance", 1)], background=True)
@@ -138,6 +143,8 @@ async def create_performance_indexes(db):
     await ix(db.orders, "user_id", background=True)
     await ix(db.orders, "status", background=True)
     await ix(db.orders, [("user_id", 1), ("status", 1)], background=True)
+    await ix(db.orders, [("user_id", 1), ("created_at", -1)], background=True)
+    await ix(db.orders, [("user_id", 1), ("status", 1), ("created_at", -1)], background=True)
     await ix(db.orders, "order_id", unique=True, sparse=True, background=True)
     print("  ✅ Orders indexes attempted")
 
@@ -205,6 +212,8 @@ async def create_performance_indexes(db):
     await ix(db.bank_redeem_requests, "status", background=True)
     await ix(db.bank_redeem_requests, [("status", 1), ("created_at", -1)], background=True)
     await ix(db.bank_redeem_requests, [("user_id", 1), ("status", 1)], background=True)
+    await ix(db.bank_redeem_requests, [("user_id", 1), ("created_at", -1)], background=True)
+    await ix(db.bank_redeem_requests, [("user_id", 1), ("status", 1), ("created_at", -1)], background=True)
     print("  ✅ Bank redeem requests indexes attempted")
 
     # ============ RECHARGE REQUESTS ============
@@ -224,6 +233,9 @@ async def create_performance_indexes(db):
     await ix(db.subscription_payments, "user_id", background=True)
     await ix(db.subscription_payments, "status", background=True)
     await ix(db.subscription_payments, [("status", 1), ("created_at", -1)], background=True)
+    await ix(db.subscription_payments, [("user_id", 1), ("created_at", -1)], background=True)
+    await ix(db.subscription_payments, [("user_id", 1), ("status", 1), ("created_at", -1)], background=True)
+    await ix(db.subscription_payments, [("user_id", 1), ("status", 1), ("scheduled_start", 1)], background=True)
     await ix(db.subscription_payments, "order_id", sparse=True, background=True)
     await ix(db.subscription_payments, "payment_id", sparse=True, background=True)
     await ix(db.subscription_payments, "razorpay_order_id", sparse=True, background=True)
@@ -244,14 +256,26 @@ async def create_performance_indexes(db):
 
     # ============ VIP PAYMENTS ============
     await ix(db.vip_payments, "user_id", background=True)
+    await ix(db.vip_payments, "user_uid", sparse=True, background=True)
+    await ix(db.vip_payments, "uid", sparse=True, background=True)
+    await ix(db.vip_payments, "payment_id", sparse=True, background=True)
+    await ix(db.vip_payments, "utr_number", unique=True, sparse=True, background=True)
     await ix(db.vip_payments, "status", background=True)
     await ix(db.vip_payments, [("user_id", 1), ("status", 1)], background=True)
+    await ix(db.vip_payments, [("user_id", 1), ("created_at", -1)], background=True)
+    await ix(db.vip_payments, [("user_id", 1), ("approved_at", -1)], background=True)
+    await ix(db.vip_payments, [("status", 1), ("submitted_at", -1)], background=True)
+    await ix(db.vip_payments, [("status", 1), ("created_at", -1)], background=True)
+    await ix(db.vip_payments, [("status", 1), ("approved_at", -1)], background=True)
+    await ix(db.vip_payments, [("status", 1), ("rejected_at", -1)], background=True)
     print("  ✅ VIP payments indexes attempted")
 
     # ============ GIFT VOUCHER / PRC LEDGER / PAYMENT REQUESTS ============
     await ix(db.gift_voucher_requests, "user_id", background=True)
     await ix(db.gift_voucher_requests, "status", background=True)
     await ix(db.gift_voucher_requests, [("user_id", 1), ("status", 1)], background=True)
+    await ix(db.gift_voucher_requests, [("user_id", 1), ("created_at", -1)], background=True)
+    await ix(db.gift_voucher_requests, [("user_id", 1), ("status", 1), ("created_at", -1)], background=True)
 
     await ix(db.prc_ledger, "user_id", background=True)
     await ix(db.prc_ledger, "type", background=True)
@@ -260,6 +284,8 @@ async def create_performance_indexes(db):
     await ix(db.payment_requests, "user_id", background=True)
     await ix(db.payment_requests, "status", background=True)
     await ix(db.payment_requests, [("user_id", 1), ("status", 1)], background=True)
+    await ix(db.payment_requests, [("user_id", 1), ("created_at", -1)], background=True)
+    await ix(db.payment_requests, [("user_id", 1), ("status", 1), ("created_at", -1)], background=True)
     print("  ✅ Gift voucher + PRC ledger + Payment requests indexes attempted")
 
     print(f"✅ Indexes summary: {created} created/existing, {skipped_or_failed} failed")
@@ -273,7 +299,8 @@ async def get_index_stats(db) -> dict:
         "users", "transactions", "bill_payment_requests", "bank_transfer_requests",
         "bank_redeem_requests", "recharge_requests", "dmt_transactions",
         "subscription_payments", "unified_redemptions", "bank_transfers",
-        "kyc", "notifications",
+        "kyc", "notifications", "vip_payments", "gift_voucher_requests",
+        "payment_requests", "orders", "activity_logs", "login_history",
     ]
     for collection_name in collections:
         try:
