@@ -20997,45 +20997,76 @@ async def get_user_360_view(query: str, request: Request):
     user = sanitize_mongo_doc(user)
     
     # ========== FINANCIAL STATS ==========
-    try:
-        # Calculate total mined
-        total_mined_result = await db.transactions.aggregate([
+    # ========== FINANCIAL STATS + REFERRAL PREP (PARALLELIZED) ==========
+    # Was 2 sequential awaits → now fire in parallel with referral section's first
+    # batch to eliminate wall-clock stacking on Atlas M10.
+    async def _agg_total_mined():
+        res = await db.transactions.aggregate([
             {"$match": {"user_id": uid, "type": {"$in": ["mining", "tap_game", "referral", "admin_credit", "prc_rain_gain"]}}},
             {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
         ]).to_list(1)
-        total_mined = total_mined_result[0]["total"] if total_mined_result else 0
-    except Exception as e:
-        logging.error(f"User360 total_mined error for {uid}: {e}")
-        total_mined = 0
-    
+        return res[0]["total"] if res else 0
+    async def _get_total_redeemed():
+        try:
+            return await get_user_all_time_redeemed(uid)
+        except Exception:
+            return 0
+    async def _get_referrer():
+        if not user.get("referred_by"):
+            return None
+        try:
+            return await db.users.find_one({"uid": user["referred_by"]}, {"_id": 0, "name": 1, "email": 1})
+        except Exception:
+            return None
+    async def _get_referrals_list():
+        try:
+            return await db.users.find(
+                {"referred_by": uid},
+                {"_id": 0, "uid": 1, "name": 1, "email": 1, "created_at": 1, "mining_active": 1}
+            ).sort("created_at", -1).limit(50).to_list(50)
+        except Exception:
+            return []
+    async def _agg_referral_earnings():
+        try:
+            referral_types = ["referral", "referral_bonus", "referral_reward"]
+            res = await db.transactions.aggregate([
+                {"$match": {"user_id": uid, "type": {"$in": referral_types}}},
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+            ]).to_list(1)
+            return res[0]["total"] if res else 0
+        except Exception:
+            return 0
+
     try:
-        # Calculate total redeemed using centralized function
-        total_redeemed = await get_user_all_time_redeemed(uid)
+        _stats_block = await asyncio.gather(
+            _agg_total_mined(),
+            _get_total_redeemed(),
+            _get_referrer(),
+            _get_referrals_list(),
+            _agg_referral_earnings(),
+            return_exceptions=True,
+        )
     except Exception as e:
-        logging.error(f"User360 total_redeemed error for {uid}: {e}")
-        total_redeemed = 0
-    
+        logging.error(f"User360 stats-block error for {uid}: {e}")
+        _stats_block = [0, 0, None, [], 0]
+    total_mined = _stats_block[0] if not isinstance(_stats_block[0], Exception) else 0
+    total_redeemed = _stats_block[1] if not isinstance(_stats_block[1], Exception) else 0
+    referrer = _stats_block[2] if not isinstance(_stats_block[2], Exception) else None
+    referrals = _stats_block[3] if not isinstance(_stats_block[3], Exception) else []
+    referral_earnings = _stats_block[4] if not isinstance(_stats_block[4], Exception) else 0
+
     stats = {
         "total_mined": round(total_mined, 2),
         "total_redeemed": round(total_redeemed, 2),
         "net_balance": round(float(user.get("prc_balance", 0) or 0), 2)
     }
-    
+
     # ========== REFERRAL NETWORK ==========
     try:
-        # Get who referred this user
         referred_by_name = None
-        if user.get("referred_by"):
-            referrer = await db.users.find_one({"uid": user["referred_by"]}, {"_id": 0, "name": 1, "email": 1})
-            if referrer:
-                referred_by_name = referrer.get("name") or referrer.get("email", "").split("@")[0]
-        
-        # Get direct referrals
-        referrals = await db.users.find(
-            {"referred_by": uid},
-            {"_id": 0, "uid": 1, "name": 1, "email": 1, "created_at": 1, "mining_active": 1}
-        ).sort("created_at", -1).limit(50).to_list(50)
-        
+        if referrer:
+            referred_by_name = referrer.get("name") or referrer.get("email", "").split("@")[0]
+
         # Count active referrals (users who have mining_active or have mined recently)
         # PERF: parallelize the recent_activity probe across all referrals (was N+1 sequential — 503 on heavy users)
         active_referrals = 0
@@ -21059,21 +21090,13 @@ async def get_user_360_view(query: str, request: Request):
                     return None
             probe_results = await asyncio.gather(*[_probe(ru) for ru in probe_uids], return_exceptions=True)
             active_referrals += sum(1 for r in probe_results if r and not isinstance(r, Exception))
-        
-        # Calculate referral earnings - check all referral-related transaction types
-        referral_types = ["referral", "referral_bonus", "referral_reward"]
-        referral_earnings_result = await db.transactions.aggregate([
-            {"$match": {"user_id": uid, "type": {"$in": referral_types}}},
-            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-        ]).to_list(1)
-        referral_earnings = referral_earnings_result[0]["total"] if referral_earnings_result else 0
-        
+
         # Also check users collection for total_referral_earnings field if transactions don't have data
         if referral_earnings == 0:
             user_data = await db.users.find_one({"uid": uid}, {"_id": 0, "total_referral_earnings": 1})
             if user_data:
                 referral_earnings = user_data.get("total_referral_earnings", 0)
-        
+
         referral_data = {
             "referred_by_name": referred_by_name,
             "total_referrals": len(referrals),
@@ -21230,25 +21253,89 @@ async def get_user_360_view(query: str, request: Request):
         logging.error(f"User360 prc_ledger error for {uid}: {e}")
         transactions["prc_ledger"] = []
     
-    # ========== ACTIVITY TIMELINE ==========
-    try:
-        # Get recent transactions as activity
-        recent_transactions = await db.transactions.find(
-            {"user_id": uid},
-            {"_id": 0, "type": 1, "amount": 1, "description": 1, "created_at": 1}
-        ).sort("created_at", -1).limit(30).to_list(30)
-    except:
-        recent_transactions = []
-    
-    try:
-        # Get recent activity logs
-        recent_activities = await db.activity_logs.find(
-            {"user_id": uid},
-            {"_id": 0, "action_type": 1, "description": 1, "created_at": 1, "timestamp": 1}
-        ).sort("created_at", -1).limit(20).to_list(20)
-    except:
-        recent_activities = []
-    
+    # ========== ACTIVITY + KYC + LOGIN + REDEEM LIMIT + SUBSCRIPTION HISTORY + PLAN CHANGES
+    # (ALL PARALLELIZED IN ONE BATCH — was 6 sequential awaits)
+    async def _fetch_recent_transactions():
+        try:
+            return await db.transactions.find(
+                {"user_id": uid},
+                {"_id": 0, "type": 1, "amount": 1, "description": 1, "created_at": 1}
+            ).sort("created_at", -1).limit(30).to_list(30)
+        except Exception:
+            return []
+    async def _fetch_recent_activities():
+        try:
+            return await db.activity_logs.find(
+                {"user_id": uid},
+                {"_id": 0, "action_type": 1, "description": 1, "created_at": 1, "timestamp": 1}
+            ).sort("created_at", -1).limit(20).to_list(20)
+        except Exception:
+            return []
+    async def _fetch_kyc():
+        try:
+            return await db.kyc_documents.find_one({"user_id": uid}, {"_id": 0})
+        except Exception:
+            return None
+    async def _fetch_login_history():
+        try:
+            return await db.login_history.find(
+                {"user_id": uid},
+                {"_id": 0, "timestamp": 1, "created_at": 1, "ip_address": 1, "user_agent": 1, "device": 1, "success": 1}
+            ).sort("timestamp", -1).limit(50).to_list(50)
+        except Exception:
+            return []
+    async def _fetch_redeem_limit():
+        try:
+            return await get_user_redeem_limit_internal(uid)
+        except Exception:
+            return {"total_limit": 0, "total_redeemed": 0, "remaining_limit": 0}
+    async def _fetch_razorpay_hist():
+        try:
+            return await db.razorpay_orders.find(
+                {"user_id": uid},
+                {"_id": 0, "order_id": 1, "payment_id": 1, "amount": 1, "plan_name": 1, "plan_type": 1,
+                 "status": 1, "created_at": 1, "paid_at": 1, "cancelled_at": 1, "failure_reason": 1}
+            ).sort("created_at", -1).limit(50).to_list(50)
+        except Exception:
+            return []
+    async def _fetch_vip_payments_hist():
+        try:
+            return await db.vip_payments.find(
+                {"$or": [{"user_uid": uid}, {"user_id": uid}, {"uid": uid}]},
+                {"_id": 0, "payment_id": 1, "amount": 1, "plan": 1, "plan_type": 1, "status": 1,
+                 "created_at": 1, "approved_at": 1, "rejected_at": 1, "utr_number": 1, "screenshot_url": 1}
+            ).sort("created_at", -1).limit(50).to_list(50)
+        except Exception:
+            return []
+    async def _fetch_plan_changes():
+        try:
+            return await db.admin_actions.find(
+                {"user_id": uid, "action": {"$in": ["plan_change", "subscription_update", "redeem_limit_override"]}},
+                {"_id": 0}
+            ).sort("timestamp", -1).limit(20).to_list(20)
+        except Exception:
+            return []
+
+    _meta = await asyncio.gather(
+        _fetch_recent_transactions(),
+        _fetch_recent_activities(),
+        _fetch_kyc(),
+        _fetch_login_history(),
+        _fetch_redeem_limit(),
+        _fetch_razorpay_hist(),
+        _fetch_vip_payments_hist(),
+        _fetch_plan_changes(),
+        return_exceptions=True,
+    )
+    recent_transactions = _meta[0] if not isinstance(_meta[0], Exception) else []
+    recent_activities   = _meta[1] if not isinstance(_meta[1], Exception) else []
+    kyc_docs            = _meta[2] if not isinstance(_meta[2], Exception) else None
+    login_history       = _meta[3] if not isinstance(_meta[3], Exception) else []
+    redeem_limit_data   = _meta[4] if not isinstance(_meta[4], Exception) else {"total_limit": 0, "total_redeemed": 0, "remaining_limit": 0}
+    razorpay_payments   = _meta[5] if not isinstance(_meta[5], Exception) else []
+    vip_payments_hist   = _meta[6] if not isinstance(_meta[6], Exception) else []
+    plan_changes        = _meta[7] if not isinstance(_meta[7], Exception) else []
+
     # Merge and format activity
     activity = []
     for txn in recent_transactions:
@@ -21269,30 +21356,6 @@ async def get_user_360_view(query: str, request: Request):
     
     # Sort by date (handle None values)
     activity.sort(key=lambda x: x.get("created_at") or "1970-01-01", reverse=True)
-    
-    # ========== KYC INFORMATION ==========
-    try:
-        kyc_docs = await db.kyc_documents.find_one({"user_id": uid}, {"_id": 0})
-    except Exception as e:
-        logging.error(f"User360 kyc error for {uid}: {e}")
-        kyc_docs = None
-    
-    # ========== LOGIN HISTORY ==========
-    try:
-        login_history = await db.login_history.find(
-            {"user_id": uid},
-            {"_id": 0, "timestamp": 1, "created_at": 1, "ip_address": 1, "user_agent": 1, "device": 1, "success": 1}
-        ).sort("timestamp", -1).limit(50).to_list(50)
-    except Exception as e:
-        logging.error(f"User360 login_history error for {uid}: {e}")
-        login_history = []
-    
-    # ========== REDEEM LIMIT INFO ==========
-    try:
-        redeem_limit_data = await get_user_redeem_limit_internal(uid)
-    except Exception as e:
-        logging.error(f"User360 redeem_limit error for {uid}: {e}")
-        redeem_limit_data = {"total_limit": 0, "total_redeemed": 0, "remaining_limit": 0}
     
     # ========== REDEEM BREAKDOWN BY SERVICE (PARALLELIZED) ==========
     redeem_breakdown = {}
@@ -21386,37 +21449,17 @@ async def get_user_360_view(query: str, request: Request):
     # ========== SUBSCRIPTION HISTORY & FRAUD CHECK ==========
     subscription_history = []
     fraud_indicators = []
-    
-    try:
-        # Get Razorpay payment history
-        razorpay_payments = await db.razorpay_orders.find(
-            {"user_id": uid},
-            {"_id": 0, "order_id": 1, "payment_id": 1, "amount": 1, "plan_name": 1, "plan_type": 1,
-             "status": 1, "created_at": 1, "paid_at": 1, "cancelled_at": 1, "failure_reason": 1}
-        ).sort("created_at", -1).limit(50).to_list(50)
-        
-        for rp in razorpay_payments:
-            rp["source"] = "razorpay"
-            rp["amount_display"] = f"₹{rp.get('amount', 0)}"
-            subscription_history.append(rp)
-    except Exception as e:
-        logging.error(f"User360 razorpay_payments error for {uid}: {e}")
-        razorpay_payments = []
-    
-    try:
-        # Get VIP/Manual payment history
-        vip_payments_hist = await db.vip_payments.find(
-            {"$or": [{"user_uid": uid}, {"user_id": uid}, {"uid": uid}]},
-            {"_id": 0, "payment_id": 1, "amount": 1, "plan": 1, "plan_type": 1, "status": 1,
-             "created_at": 1, "approved_at": 1, "rejected_at": 1, "utr_number": 1, "screenshot_url": 1}
-        ).sort("created_at", -1).limit(50).to_list(50)
-        
-        for vp in vip_payments_hist:
-            vp["source"] = "vip_manual"
-            vp["amount_display"] = f"₹{vp.get('amount', 0)}"
-            subscription_history.append(vp)
-    except Exception as e:
-        logging.error(f"User360 vip_payments_hist error for {uid}: {e}")
+
+    # razorpay_payments + vip_payments_hist were already fetched in the
+    # parallelized meta-batch above. Build unified subscription_history here.
+    for rp in razorpay_payments:
+        rp["source"] = "razorpay"
+        rp["amount_display"] = f"₹{rp.get('amount', 0)}"
+        subscription_history.append(rp)
+    for vp in vip_payments_hist:
+        vp["source"] = "vip_manual"
+        vp["amount_display"] = f"₹{vp.get('amount', 0)}"
+        subscription_history.append(vp)
     
     # Sort combined history (normalize datetime → iso string for stable sort)
     def _to_iso(v):
@@ -21468,12 +21511,7 @@ async def get_user_360_view(query: str, request: Request):
                     "action": "Check for coupon abuse or payment tampering"
                 })
     
-    # 4. Rapid plan changes
-    plan_changes = await db.admin_actions.find(
-        {"user_id": uid, "action": {"$in": ["plan_change", "subscription_update", "redeem_limit_override"]}},
-        {"_id": 0}
-    ).sort("timestamp", -1).limit(20).to_list(20)
-    
+    # 4. Rapid plan changes (plan_changes was pre-fetched in the parallel meta-batch)
     if len(plan_changes) >= 5:
         fraud_indicators.append({
             "type": "frequent_plan_changes",
@@ -21515,34 +21553,49 @@ async def get_user_360_view(query: str, request: Request):
     
     # Sanitize all data before returning to avoid ObjectId serialization errors
     try:
-        # Fetch earliest upcoming subscription for quick admin visibility
-        upcoming_plan = None
-        try:
-            up = await db.subscription_payments.find_one(
-                {"user_id": uid, "status": "upcoming"},
-                {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1,
-                 "duration_days": 1, "payment_method": 1, "prc_amount": 1, "created_at": 1},
-                sort=[("scheduled_start", 1)]
-            )
-            upcoming_plan = sanitize_mongo_doc(up) if up else None
-        except Exception:
-            upcoming_plan = None
-        
+        # Trailing metadata (upcoming plan + core team + employee) — parallelized
+        async def _fetch_upcoming():
+            try:
+                return await db.subscription_payments.find_one(
+                    {"user_id": uid, "status": "upcoming"},
+                    {"_id": 0, "plan_name": 1, "scheduled_start": 1, "scheduled_end": 1,
+                     "duration_days": 1, "payment_method": 1, "prc_amount": 1, "created_at": 1},
+                    sort=[("scheduled_start", 1)]
+                )
+            except Exception:
+                return None
+        async def _fetch_core_team():
+            try:
+                return await db.core_team_members.find_one(
+                    {"uid": uid, "status": "active"},
+                    {"_id": 0, "member_id": 1, "designation": 1, "added_at": 1}
+                )
+            except Exception:
+                return None
+        async def _fetch_employee():
+            try:
+                return await db.employees.find_one(
+                    {"user_id": uid, "status": "active"},
+                    {"_id": 0, "employee_id": 1, "designation": 1, "department": 1, "monthly_salary": 1, "joined_at": 1}
+                )
+            except Exception:
+                return None
+
+        _tail = await asyncio.gather(
+            _fetch_upcoming(), _fetch_core_team(), _fetch_employee(),
+            return_exceptions=True,
+        )
+        up = _tail[0] if not isinstance(_tail[0], Exception) else None
+        ctm = _tail[1] if not isinstance(_tail[1], Exception) else None
+        emp = _tail[2] if not isinstance(_tail[2], Exception) else None
+
+        upcoming_plan = sanitize_mongo_doc(up) if up else None
+
         sanitized_user = sanitize_mongo_doc(user)
         if isinstance(sanitized_user, dict):
             sanitized_user["upcoming_plan"] = upcoming_plan
-            # Core Team membership flag
-            try:
-                ctm = await db.core_team_members.find_one({"uid": uid, "status": "active"}, {"_id": 0, "member_id": 1, "designation": 1, "added_at": 1})
-                sanitized_user["core_team"] = sanitize_mongo_doc(ctm) if ctm else None
-            except Exception:
-                sanitized_user["core_team"] = None
-            # Employee membership flag
-            try:
-                emp = await db.employees.find_one({"user_id": uid, "status": "active"}, {"_id": 0, "employee_id": 1, "designation": 1, "department": 1, "monthly_salary": 1, "joined_at": 1})
-                sanitized_user["employee"] = sanitize_mongo_doc(emp) if emp else None
-            except Exception:
-                sanitized_user["employee"] = None
+            sanitized_user["core_team"] = sanitize_mongo_doc(ctm) if ctm else None
+            sanitized_user["employee"] = sanitize_mongo_doc(emp) if emp else None
         
         response_data = {
             "user": sanitized_user,

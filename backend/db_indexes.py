@@ -296,6 +296,29 @@ async def create_performance_indexes(db):
     await ix(db.admin_audit_logs, [("action", 1), ("created_at", -1)], background=True)
     print("  ✅ Admin audit logs indexes attempted")
 
+    # ============ USER-360 HOT COLLECTIONS (admin_actions, core_team, employees, etc.) ============
+    # Previously un-indexed → COLLSCAN on every User-360 load.
+    await ix(db.admin_actions, "user_id", background=True)
+    await ix(db.admin_actions, "action", background=True)
+    await ix(db.admin_actions, [("user_id", 1), ("action", 1), ("timestamp", -1)], background=True)
+    await ix(db.admin_actions, [("user_id", 1), ("timestamp", -1)], background=True)
+
+    await ix(db.core_team_members, "uid", background=True)
+    await ix(db.core_team_members, [("uid", 1), ("status", 1)], background=True)
+
+    await ix(db.employees, "user_id", background=True)
+    await ix(db.employees, [("user_id", 1), ("status", 1)], background=True)
+
+    await ix(db.redemption_requests, "user_id", background=True)
+    await ix(db.redemption_requests, "status", background=True)
+    await ix(db.redemption_requests, [("user_id", 1), ("created_at", -1)], background=True)
+
+    await ix(db.dmt_requests, "user_id", background=True)
+    await ix(db.dmt_requests, "status", background=True)
+    await ix(db.dmt_requests, [("user_id", 1), ("status", 1)], background=True)
+    await ix(db.dmt_requests, [("user_id", 1), ("created_at", -1)], background=True)
+    print("  ✅ User-360 hot collections indexes attempted")
+
     # ============ GIFT VOUCHER / PRC LEDGER / PAYMENT REQUESTS ============
     await ix(db.gift_voucher_requests, "user_id", background=True)
     await ix(db.gift_voucher_requests, "status", background=True)

@@ -933,6 +933,33 @@ Examined all 5 matched DMT transactions in production:
   - If you want to tune further per-traffic, set in production `.env`: `MONGO_MAX_POOL_SIZE=300`, `MONGO_SOCKET_TIMEOUT_MS=60000` (upper safety bound).
   - After deploy, one-time trigger of `POST /admin/db/create-indexes` is a safe idempotent belt-and-braces.
 
+### Admin User-360 — Further Parallelization for Atlas M10 (DONE - May 2, 2026)
+- **Context**: After the subscription-management timeouts were resolved, User-360 was the next slowest admin screen on production with the same M10 + 6000-user load pattern.
+- **What was still sequential** (despite earlier parallelization of transactions/redeem/failed blocks):
+  1. Financial stats: `total_mined` → `total_redeemed` (2 awaits).
+  2. Referral network: referrer → referrals list → referral_earnings (3 awaits).
+  3. Metadata chain: recent_transactions → recent_activities → kyc_docs → login_history → redeem_limit → razorpay_orders_history → vip_payments_history → plan_changes (8 awaits).
+  4. Trailing lookups: upcoming_plan → core_team_member → employee_record (3 awaits).
+  5. **Critical un-indexed collections**: `admin_actions` (5 docs but scanned on every load), `core_team_members`, `employees`, `redemption_requests`, `dmt_requests` — all had only `_id_` index → COLLSCAN on production.
+- **Fixes** (`server.py /admin/user-360` + `db_indexes.py`):
+  1. **Stats + Referral prep merged** into a single `asyncio.gather` (5 queries in parallel): `total_mined_agg`, `total_redeemed`, `referrer`, `referrals_list`, `referral_earnings_agg`.
+  2. **Metadata batch merged** into a single `asyncio.gather` (8 queries in parallel): recent_transactions, activity_logs, kyc_documents, login_history, redeem_limit, razorpay_orders history, vip_payments history, admin_actions plan_changes.
+  3. **Trailing batch merged** into a single `asyncio.gather` (3 queries in parallel): upcoming subscription, core_team membership, employee record.
+  4. **Duplicate fetches removed**: the now-parallel subscription history and plan_changes no longer run a second time in the fraud-check block.
+  5. **New indexes** (auto-created on startup, belt-and-braces exposed via `/admin/db/create-indexes`):
+     - `admin_actions`: `user_id`, `action`, `(user_id, action, timestamp)`, `(user_id, timestamp)`
+     - `core_team_members`: `uid`, `(uid, status)`
+     - `employees`: `user_id`, `(user_id, status)`
+     - `redemption_requests`: `user_id`, `status`, `(user_id, created_at)`
+     - `dmt_requests`: `user_id`, `status`, `(user_id, status)`, `(user_id, created_at)`
+- **Verified (preview)**: User-360 endpoint timings on heaviest available user (Test User DMT, 49 txns, fraud score 30):
+  - Email lookup cold: 239 ms
+  - Email lookup warm: 176 ms
+  - Mobile lookup: 169 ms
+  - UID exact lookup: 195 ms
+  - All wall-clocks reduced from max(Σ sequential awaits) to max(individual awaits) — observed ~3-4× speedup on cold-path vs. pre-fix preview timings.
+- **Startup log on restart**: `174 indexes created/existing, 0 failed`.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
