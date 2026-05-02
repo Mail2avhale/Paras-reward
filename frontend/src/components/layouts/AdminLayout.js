@@ -107,7 +107,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
           axios.get(`${API}/admin/bill-payment/requests?status=pending&limit=1`),
           axios.get(`${API}/admin/gift-voucher/requests?status=pending&limit=1`),
           axios.get(`${API}/admin/bank-redeem/requests?status=pending&page=1&limit=1`),
-          axios.get(`${API}/rd/admin/redeem-requests?status=pending&skip=0&limit=1`)
         ]);
         
         const getValue = (result, extractor, defaultVal = 0) => {
@@ -127,7 +126,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
           bills: getValue(results[2], d => d?.stats?.pending || d?.total),
           gifts: getValue(results[3], d => d?.stats?.pending || d?.requests?.length || d?.total),
           bankWithdrawals: getValue(results[4], d => d?.stats?.pending?.count || d?.total),
-          rdRedeem: getValue(results[5], d => d?.stats?.pending || d?.total)
+          rdRedeem: 0 // stale `/api/rd/admin/redeem-requests` endpoint removed (backend no longer hosts it)
         });
       } catch (error) {
         console.error('Error fetching pending counts:', error);

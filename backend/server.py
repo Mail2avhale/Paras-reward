@@ -20908,55 +20908,73 @@ async def get_user_360_view(query: str, request: Request):
         # Escape regex special characters to prevent injection and errors
         import re as regex_module
         escaped_query = regex_module.escape(query)
-        
-        # Build search query for multiple identifiers.
-        # Order matters: exact matches first (use indexes); regex fallback last.
-        search_conditions = [
-            # Exact matches — index-friendly, fast
-            {"uid": query},
-            {"mobile": query},
-            {"email": query.lower()},
-            {"referral_code": query.upper()},
-            {"pan_number": query.upper()},
+
+        # ----- INDEX-FIRST USER LOOKUP -----
+        # The previous implementation issued a single `$or` with 5+ regex variants.
+        # On Atlas with 6000+ users that pattern can't use any single index and
+        # always took 8 s (asyncio.wait_for cap). Now we try each lookup
+        # individually in priority order; first hit wins.
+        DB_FAST_TIMEOUT = 6.0  # per-attempt
+        DB_REGEX_TIMEOUT = 4.0
+        user = None
+
+        async def _try(coro):
+            try:
+                return await asyncio.wait_for(coro, timeout=DB_FAST_TIMEOUT)
+            except asyncio.TimeoutError:
+                return None
+            except Exception as inner:
+                logging.warning(f"[USER360] lookup attempt err: {inner}")
+                return None
+
+        # 1) Exact matches — all index-backed (uid, mobile, phone, email lower, referral_code upper, pan_number upper)
+        exact_lookups = [
+            db.users.find_one({"uid": query}),
+            db.users.find_one({"mobile": query}),
+            db.users.find_one({"phone": query}),
+            db.users.find_one({"email": query.lower()}),
+            db.users.find_one({"referral_code": query.upper()}),
+            db.users.find_one({"pan_number": query.upper()}),
         ]
-        # Case-insensitive regex fallbacks (only if exact match misses)
-        # Note: regex is NOT prefix-anchored on email here — use case-insensitive
-        # exact-match-via-regex which still uses index in Atlas.
-        search_conditions.extend([
-            {"email": {"$regex": f"^{escaped_query}$", "$options": "i"}},
-            {"referral_code": {"$regex": f"^{escaped_query}$", "$options": "i"}},
-            {"pan_number": {"$regex": f"^{escaped_query}$", "$options": "i"}},
-        ])
-        
-        # For Aadhaar, search by last 4 digits
-        if query.isdigit() and len(query) == 4:
-            search_conditions.append({"aadhaar_number": {"$regex": f"{escaped_query}$"}})
-        elif len(query) == 12 and query.isdigit():
-            search_conditions.append({"aadhaar_number": query})
-        
-        # Find user (with fast timeout — never hang on COLLSCAN)
-        DB_FAST_TIMEOUT = 8.0
         try:
-            user = await asyncio.wait_for(
-                db.users.find_one({"$or": search_conditions}),
-                timeout=DB_FAST_TIMEOUT,
-            )
-            logging.info(f"[USER360] User search result: {'found' if user else 'not found'} for query: {query}")
-        except asyncio.TimeoutError:
-            logging.warning(f"[USER360] Search timeout for query: {query}")
-            raise HTTPException(
-                status_code=504,
-                detail="Search is slow right now. Please try the exact UID or mobile number — that's the fastest path.",
-            )
+            exact_results = await asyncio.gather(*[_try(c) for c in exact_lookups], return_exceptions=False)
         except Exception as e:
-            err_str = str(e).lower()
-            if any(t in err_str for t in ["timeout", "timed out", "serverselection", "networktimeout"]):
-                raise HTTPException(
-                    status_code=504,
-                    detail="Database is slow right now. Please try again — your search will work next time.",
+            logging.error(f"[USER360] exact gather error: {e}")
+            exact_results = [None] * len(exact_lookups)
+        for r in exact_results:
+            if r:
+                user = r
+                break
+
+        # 2) Aadhaar (12-digit exact OR last-4 suffix)
+        if not user:
+            if len(query) == 12 and query.isdigit():
+                user = await _try(db.users.find_one({"aadhaar_number": query}))
+            elif query.isdigit() and len(query) == 4:
+                try:
+                    user = await asyncio.wait_for(
+                        db.users.find_one({"aadhaar_number": {"$regex": f"{escaped_query}$"}}),
+                        timeout=DB_REGEX_TIMEOUT,
+                    )
+                except (asyncio.TimeoutError, Exception):
+                    user = None
+
+        # 3) Final case-insensitive fallback (only if alpha chars present — avoids
+        # accidentally regex-scanning numeric mobile/aadhaar collections)
+        if not user and any(c.isalpha() for c in query):
+            try:
+                user = await asyncio.wait_for(
+                    db.users.find_one({"$or": [
+                        {"email":          {"$regex": f"^{escaped_query}$", "$options": "i"}},
+                        {"referral_code":  {"$regex": f"^{escaped_query}$", "$options": "i"}},
+                        {"pan_number":     {"$regex": f"^{escaped_query}$", "$options": "i"}},
+                    ]}),
+                    timeout=DB_REGEX_TIMEOUT,
                 )
-            logging.error(f"[USER360] Search error: {str(e)} for query: {query}")
-            raise HTTPException(status_code=500, detail="Search failed. Please try again with exact UID or mobile.")
+            except (asyncio.TimeoutError, Exception):
+                user = None
+
+        logging.info(f"[USER360] User search result: {'found' if user else 'not found'} for query: {query}")
         
         if not user:
             raise HTTPException(status_code=404, detail="User not found")

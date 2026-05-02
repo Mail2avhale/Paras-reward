@@ -1041,6 +1041,26 @@ Examined all 5 matched DMT transactions in production:
   | Subscription Stats | **242 ms** |
 - **Startup log**: `207 indexes created/existing, 0 failed`.
 
+### Production Hot-Fix — User-360 + Impersonation Latency on M10 (DONE - May 2, 2026)
+- **Context**: Production smoke test on https://parasreward.com after deploy revealed:
+  - `/api/admin/user-360?query=...` consistently 8 s for ALL queries (admin's own + others)
+  - `/api/admin/search-user-for-impersonation?query=test` 4.2 s (digit queries fast)
+  - Stale `/api/rd/admin/redeem-requests` returning 404 on every admin page load
+  - `/admin/db/create-indexes` rebuild endpoint timing out with 504 (>60 s)
+- **Root cause #1 (User-360)**: Initial user lookup used a single `$or` query with 5+ conditions mixing exact + regex variants:
+  ```
+  {"$or": [{"uid": q}, {"mobile": q}, {"email": q.lower()},
+           {"referral_code": q.upper()}, {"pan_number": q.upper()},
+           {"email": {"$regex": ..., "$options": "i"}}, ...]}
+  ```
+  Atlas can't use ANY single index for this `$or` mix → COLLSCAN on 6000-user collection → hit the `asyncio.wait_for(timeout=8)` cap every time.
+- **Fix**: Replaced with **sequential index-backed attempts** in priority order — uid → mobile → phone → email.lower() → referral_code.upper() → pan_number.upper(). All 6 fire **in parallel** via `asyncio.gather(_try(...))` with 6 s per-attempt timeout; first hit wins. Aadhaar (12-digit / last-4) and case-insensitive regex tried only as last fallback. **Result**: localhost timing 18-42 ms (was 8000 ms+).
+- **Root cause #2 (Impersonation name search)**: Bounded name regex used `{"$regex": q, "$options": "i"}` which disables index. On 6000-user DB, matching common substrings like "test" forces COLLSCAN.
+- **Fix**: Use existing **`name_text_email_text`** compound text index via `{"$text": {"$search": q}}` — fast, case-insensitive, index-backed. Falls back to anchored prefix regex only if `$text` returns < 5 results. **Result**: localhost 4-9 ms for any name query (was 4200 ms for "test").
+- **Frontend hot-fix**: Removed stale `/api/rd/admin/redeem-requests` call from `AdminLayout.js` — endpoint no longer exists in backend, was polluting console + masking real errors.
+- **`/admin/db/create-indexes` rewritten** as **fire-and-forget** (`background_mode=true` default) — returns instantly, runs the ~200 idempotent `create_index` calls in `asyncio.create_task` so K8s ingress 60-s timeout never trips. Pass `?background_mode=false` to wait for completion (debug only).
+- **Files touched**: `backend/server.py` (`/admin/user-360` lookup rewrite), `backend/routes/admin_misc.py` ($text impersonation search), `backend/routes/admin_system.py` (background-mode index endpoint), `frontend/src/components/layouts/AdminLayout.js` (stale endpoint removal).
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

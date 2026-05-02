@@ -928,19 +928,38 @@ async def search_user_for_impersonation(query: str):
             except asyncio.TimeoutError:
                 logging.warning(f"[IMP-SEARCH] email lookup timeout for '{q}'")
 
-        # -------- 3) Bounded name regex fallback --------
+        # -------- 3) Name search via existing $text index (fast, case-insensitive) --------
+        # The `users` collection has a compound text index `name_text_email_text` —
+        # using $text exploits it. Falls back to a bounded regex only if $text returns nothing.
         if len(results) < 10 and re.search(r"[a-zA-Z]", q):
             try:
-                name_docs = await asyncio.wait_for(
+                text_docs = await asyncio.wait_for(
                     db.users.find(
-                        {"name": {"$regex": re.escape(q), "$options": "i"}},
+                        {"$text": {"$search": q}},
                         projection,
                     ).limit(10).to_list(10),
-                    timeout=4.0,
+                    timeout=2.0,
                 )
-                _add(name_docs)
+                _add(text_docs)
             except asyncio.TimeoutError:
-                logging.warning(f"[IMP-SEARCH] name lookup timeout for '{q}'")
+                logging.warning(f"[IMP-SEARCH] $text name lookup timeout for '{q}'")
+            except Exception as txt_err:
+                logging.warning(f"[IMP-SEARCH] $text fallback ({txt_err}); using bounded regex")
+
+            # If $text returned nothing AND query is short / non-word-boundary
+            # match, try anchored prefix regex (still uses no index but bounded).
+            if len(results) < 5:
+                try:
+                    name_docs = await asyncio.wait_for(
+                        db.users.find(
+                            {"name": {"$regex": f"^{re.escape(q)}", "$options": "i"}},
+                            projection,
+                        ).limit(10).to_list(10),
+                        timeout=2.0,
+                    )
+                    _add(name_docs)
+                except asyncio.TimeoutError:
+                    logging.warning(f"[IMP-SEARCH] anchored name regex timeout for '{q}'")
 
         return {
             "success": True,
