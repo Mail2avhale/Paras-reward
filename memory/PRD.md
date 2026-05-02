@@ -915,6 +915,24 @@ Examined all 5 matched DMT transactions in production:
 - **Frontend** (`components/AdminLoginAsUser.js`): Error toast now shows the backend's `detail` (`Search failed: <reason>`) instead of a generic string.
 - **Verification (preview)**: All cases return in ~100–150 ms — 10-digit exact mobile, 3-digit prefix, email prefix, name regex, and a short-query 400 guard. UI search input populates the result row (e.g. "Test Admin — EXPLORER — 9999999999") without any toast.
 
+### Atlas M10 Scale-Up — Pool + Indexes + Parallel Stats (DONE - May 2, 2026)
+- **Context**: Production on MongoDB Atlas M10 with ~6000 live users was throwing timeouts across the admin surface ("Search failed", "mongodb.net:27017: read operation timed out", "Database is slow right now"). Reported with screenshots.
+- **Root cause bundle**:
+  1. `socketTimeoutMS=12000` was too aggressive for Atlas M10 heavy aggregations (user-360, dashboard stats, vip-payment lists).
+  2. `maxPoolSize=100` saturated when multiple admins + API workers hit the DB concurrently — new queries queued behind existing ones.
+  3. Several hot collections were missing compound + single-field indexes — COLLSCANs on `vip_payments.payment_id`, `prc_transactions.(user_id,created_at)`, `razorpay_orders.order_id`, etc.
+  4. `/admin/subscription-stats` ran 3 independent MongoDB queries sequentially on cold-cache path.
+- **Fixes**:
+  1. **Connection pool env-configurable** (`server.py`): `maxPoolSize=200` (was 100), `minPoolSize=20`, `socketTimeoutMS=45000`, `serverSelectionTimeoutMS=10000`, `waitQueueTimeoutMS=10000` — all overridable via `MONGO_MAX_POOL_SIZE`, `MONGO_MIN_POOL_SIZE`, `MONGO_SOCKET_TIMEOUT_MS`, etc. in `backend/.env`.
+  2. **Startup index creation extended** (`db_indexes.py`): Added 30+ critical compound indexes for `vip_payments` (payment_id unique, utr_number, 6 status+date sort variants, user+status), `prc_transactions` (user+created_at, type+created_at, user+type+created_at), `razorpay_orders` (order_id sparse, user+created_at), `vip_subscriptions` (user+status, expires_at), `success_stories` (ref_id sparse for idempotency), `admin_audit_logs` (action+created_at). Verified 159 indexes created/existing, 0 failed on restart.
+  3. **Manual rebuild endpoint extended** (`routes/admin_system.py`): `/admin/db/create-indexes` now mirrors the startup set — safe to re-run anytime. Each `safe_create_index` swallows `IndexKeySpecsConflict` so partial failures never abort the rest.
+  4. **`/admin/subscription-stats` parallelized** (`server.py`): The 3 independent queries (plan aggregate, expiring-this-week count, pending vip-payments count) now fire via `asyncio.gather` — cold-cache wall-clock drops from sum-of-all to max-of-each. Hot-cache hit still < 50 ms via 60 s cache.
+- **Verified (preview)**: `/admin/subscription-stats` → 719 ms cold, ~40 ms cached. `/admin/vip-payments?status=approved` → 149 ms. `/admin/search-user-for-impersonation?query=9999999999` → 158 ms. `vip_payments` collection index count went from 6 → 17. `prc_transactions` went from 0 → 7. `success_stories`, `razorpay_orders`, `vip_subscriptions`, `admin_audit_logs` all now indexed.
+- **Deploy checklist for prod**:
+  - Backend restart auto-creates all new indexes (background: true, non-blocking).
+  - If you want to tune further per-traffic, set in production `.env`: `MONGO_MAX_POOL_SIZE=300`, `MONGO_SOCKET_TIMEOUT_MS=60000` (upper safety bound).
+  - After deploy, one-time trigger of `POST /admin/db/create-indexes` is a safe idempotent belt-and-braces.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

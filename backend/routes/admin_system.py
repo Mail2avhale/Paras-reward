@@ -76,7 +76,19 @@ async def create_database_indexes():
         await safe_create_index("vip_payments", "plan")
         await safe_create_index("vip_payments", [("status", 1), ("created_at", -1)])
         await safe_create_index("vip_payments", "approved_at")
-        indexes_created.append("vip_payments: 6 indexes")
+        # CRITICAL: payment_id lookup (approve/reject endpoints) - unique, fixes 8s COLLSCAN
+        await safe_create_index("vip_payments", "payment_id", unique=True, sparse=True)
+        # CRITICAL: search by UTR (admin search)
+        await safe_create_index("vip_payments", "utr_number")
+        # CRITICAL: submitted_at sort for pending tab (used in /admin/vip-payments)
+        await safe_create_index("vip_payments", "submitted_at")
+        await safe_create_index("vip_payments", "rejected_at")
+        # Compound indexes for status-tab + sort (used by list API with pagination)
+        await safe_create_index("vip_payments", [("status", 1), ("submitted_at", -1)])
+        await safe_create_index("vip_payments", [("status", 1), ("approved_at", -1)])
+        await safe_create_index("vip_payments", [("status", 1), ("rejected_at", -1)])
+        await safe_create_index("vip_payments", [("user_id", 1), ("status", 1)])
+        indexes_created.append("vip_payments: 14 indexes")
         
         # ========== ORDERS ==========
         await safe_create_index("orders", "user_id")
@@ -135,6 +147,97 @@ async def create_database_indexes():
         await safe_create_index("notifications", "created_at")
         await safe_create_index("notifications", [("user_uid", 1), ("read", 1), ("created_at", -1)])
         indexes_created.append("notifications: 5 indexes")
+
+        # ========== PRC TRANSACTIONS (ledger / wallet history) ==========
+        await safe_create_index("prc_transactions", "user_id")
+        await safe_create_index("prc_transactions", "created_at")
+        await safe_create_index("prc_transactions", "type")
+        await safe_create_index("prc_transactions", [("user_id", 1), ("created_at", -1)])
+        await safe_create_index("prc_transactions", [("type", 1), ("created_at", -1)])
+        await safe_create_index("prc_transactions", [("user_id", 1), ("type", 1), ("created_at", -1)])
+        indexes_created.append("prc_transactions: 6 indexes")
+
+        # ========== REDEEM / BANK TRANSFER / DMT (COLLSCANs on admin panels) ==========
+        await safe_create_index("redeem_requests", "user_id")
+        await safe_create_index("redeem_requests", "status")
+        await safe_create_index("redeem_requests", "created_at")
+        await safe_create_index("redeem_requests", [("user_id", 1), ("created_at", -1)])
+        await safe_create_index("redeem_requests", [("status", 1), ("created_at", -1)])
+        await safe_create_index("redeem_requests", [("user_id", 1), ("status", 1)])
+        indexes_created.append("redeem_requests: 6 indexes")
+
+        await safe_create_index("bank_transfer_requests", "user_id")
+        await safe_create_index("bank_transfer_requests", "status")
+        await safe_create_index("bank_transfer_requests", "created_at")
+        await safe_create_index("bank_transfer_requests", [("user_id", 1), ("created_at", -1)])
+        await safe_create_index("bank_transfer_requests", [("status", 1), ("created_at", -1)])
+        await safe_create_index("bank_transfer_requests", [("user_id", 1), ("status", 1)])
+        indexes_created.append("bank_transfer_requests: 6 indexes")
+
+        await safe_create_index("bank_redeem_requests", "user_id")
+        await safe_create_index("bank_redeem_requests", "status")
+        await safe_create_index("bank_redeem_requests", "created_at")
+        await safe_create_index("bank_redeem_requests", [("user_id", 1), ("created_at", -1)])
+        await safe_create_index("bank_redeem_requests", [("status", 1), ("created_at", -1)])
+        indexes_created.append("bank_redeem_requests: 5 indexes")
+
+        await safe_create_index("dmt_transactions", "user_id")
+        await safe_create_index("dmt_transactions", "status")
+        await safe_create_index("dmt_transactions", "created_at")
+        await safe_create_index("dmt_transactions", [("user_id", 1), ("created_at", -1)])
+        await safe_create_index("dmt_transactions", [("status", 1), ("created_at", -1)])
+        indexes_created.append("dmt_transactions: 5 indexes")
+
+        # ========== SUBSCRIPTION PAYMENTS (Razorpay / subscription history) ==========
+        await safe_create_index("subscription_payments", "user_id")
+        await safe_create_index("subscription_payments", "status")
+        await safe_create_index("subscription_payments", "created_at")
+        await safe_create_index("subscription_payments", [("user_id", 1), ("created_at", -1)])
+        await safe_create_index("subscription_payments", "payment_id", sparse=True)
+        await safe_create_index("subscription_payments", "razorpay_order_id", sparse=True)
+        indexes_created.append("subscription_payments: 6 indexes")
+
+        await safe_create_index("razorpay_orders", "user_id")
+        await safe_create_index("razorpay_orders", "status")
+        await safe_create_index("razorpay_orders", "created_at")
+        await safe_create_index("razorpay_orders", [("user_id", 1), ("created_at", -1)])
+        await safe_create_index("razorpay_orders", "order_id", sparse=True)
+        indexes_created.append("razorpay_orders: 5 indexes")
+
+        await safe_create_index("payment_requests", "user_id")
+        await safe_create_index("payment_requests", "status")
+        await safe_create_index("payment_requests", "created_at")
+        await safe_create_index("payment_requests", [("user_id", 1), ("created_at", -1)])
+        await safe_create_index("payment_requests", [("status", 1), ("created_at", -1)])
+        indexes_created.append("payment_requests: 5 indexes")
+
+        # ========== VIP SUBSCRIPTIONS (user's active plan record) ==========
+        await safe_create_index("vip_subscriptions", "user_id")
+        await safe_create_index("vip_subscriptions", "status")
+        await safe_create_index("vip_subscriptions", "expires_at")
+        await safe_create_index("vip_subscriptions", [("user_id", 1), ("status", 1)])
+        indexes_created.append("vip_subscriptions: 4 indexes")
+
+        # ========== ADMIN AUDIT LOGS ==========
+        await safe_create_index("admin_audit_logs", "admin_id")
+        await safe_create_index("admin_audit_logs", "action")
+        await safe_create_index("admin_audit_logs", "created_at")
+        await safe_create_index("admin_audit_logs", [("action", 1), ("created_at", -1)])
+        indexes_created.append("admin_audit_logs: 4 indexes")
+
+        # ========== SUCCESS STORIES (community feed + idempotency) ==========
+        await safe_create_index("success_stories", "user_id")
+        await safe_create_index("success_stories", "created_at")
+        await safe_create_index("success_stories", "ref_id", sparse=True)
+        await safe_create_index("success_stories", [("user_id", 1), ("ref_id", 1)])
+        indexes_created.append("success_stories: 4 indexes")
+
+        # ========== MINING SESSIONS (user dashboard + leaderboard) ==========
+        await safe_create_index("mining_sessions", "user_id")
+        await safe_create_index("mining_sessions", "is_active")
+        await safe_create_index("mining_sessions", "created_at")
+        await safe_create_index("mining_sessions", [("user_id", 1), ("is_active", 1)])
+        indexes_created.append("mining_sessions: 4 indexes")
         
         return {
             "success": True, 

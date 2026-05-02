@@ -697,12 +697,12 @@ is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 #                               critical at high concurrency.
 #   heartbeatFrequencyMS      → background ping to detect dead servers fast.
 connection_options = {
-    'serverSelectionTimeoutMS': 5000,
-    'connectTimeoutMS': 5000,
-    'socketTimeoutMS': 12000,
-    'waitQueueTimeoutMS': 5000,
-    'maxPoolSize': 100,
-    'minPoolSize': 10,
+    'serverSelectionTimeoutMS': int(os.environ.get('MONGO_SERVER_SELECTION_TIMEOUT_MS', '10000')),
+    'connectTimeoutMS': int(os.environ.get('MONGO_CONNECT_TIMEOUT_MS', '10000')),
+    'socketTimeoutMS': int(os.environ.get('MONGO_SOCKET_TIMEOUT_MS', '45000')),
+    'waitQueueTimeoutMS': int(os.environ.get('MONGO_WAIT_QUEUE_TIMEOUT_MS', '10000')),
+    'maxPoolSize': int(os.environ.get('MONGO_MAX_POOL_SIZE', '200')),
+    'minPoolSize': int(os.environ.get('MONGO_MIN_POOL_SIZE', '20')),
     'retryWrites': True,
     'retryReads': True,
     'heartbeatFrequencyMS': 5000,
@@ -11477,15 +11477,27 @@ async def get_subscription_stats():
         except Exception:
             pass
     try:
-        # Use aggregation for fast counting
+        # Fire all 3 independent queries in parallel (cold-cache path ~3x faster).
+        now = datetime.now(timezone.utc)
+        week_later = now + timedelta(days=7)
         plan_counts_pipeline = [
             {"$group": {
                 "_id": {"$ifNull": ["$subscription_plan", "explorer"]},
                 "count": {"$sum": 1}
             }}
         ]
-        plan_counts_result = await db.users.aggregate(plan_counts_pipeline).to_list(10)
-        
+        plan_counts_task = db.users.aggregate(plan_counts_pipeline).to_list(10)
+        expiring_count_task = db.users.count_documents({
+            "subscription_expiry": {
+                "$gte": now.isoformat(),
+                "$lte": week_later.isoformat()
+            }
+        })
+        pending_payments_task = db.vip_payments.count_documents({"status": "pending"})
+        plan_counts_result, expiring_count, pending_payments = await asyncio.gather(
+            plan_counts_task, expiring_count_task, pending_payments_task
+        )
+
         plan_counts = {"explorer": 0, "startup": 0, "growth": 0, "elite": 0}
         total_users = 0
         for item in plan_counts_result:
@@ -11495,20 +11507,7 @@ async def get_subscription_stats():
             else:
                 plan_counts["explorer"] += item["count"]
             total_users += item["count"]
-        
-        # Count expiring this week
-        now = datetime.now(timezone.utc)
-        week_later = now + timedelta(days=7)
-        expiring_count = await db.users.count_documents({
-            "subscription_expiry": {
-                "$gte": now.isoformat(),
-                "$lte": week_later.isoformat()
-            }
-        })
-        
-        # Pending payments count
-        pending_payments = await db.vip_payments.count_documents({"status": "pending"})
-        
+
         # Calculate approximate revenue (current pricing: startup 299, growth 549, elite 999 base — GST excluded)
         monthly_revenue = (plan_counts["startup"] * 299) + (plan_counts["growth"] * 549) + (plan_counts["elite"] * 999)
         

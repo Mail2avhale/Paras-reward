@@ -246,7 +246,55 @@ async def create_performance_indexes(db):
     await ix(db.vip_payments, "user_id", background=True)
     await ix(db.vip_payments, "status", background=True)
     await ix(db.vip_payments, [("user_id", 1), ("status", 1)], background=True)
+    # CRITICAL: payment_id lookup drives approve/reject endpoints — without this
+    # a COLLSCAN over all VIP payments fires on every admin click (8s+ on prod).
+    await ix(db.vip_payments, "payment_id", unique=True, sparse=True, background=True)
+    await ix(db.vip_payments, "utr_number", sparse=True, background=True)
+    # List endpoint sorts by submitted_at/approved_at/rejected_at per tab.
+    await ix(db.vip_payments, "submitted_at", background=True)
+    await ix(db.vip_payments, "approved_at", background=True)
+    await ix(db.vip_payments, "rejected_at", background=True)
+    await ix(db.vip_payments, [("status", 1), ("submitted_at", -1)], background=True)
+    await ix(db.vip_payments, [("status", 1), ("approved_at", -1)], background=True)
+    await ix(db.vip_payments, [("status", 1), ("rejected_at", -1)], background=True)
+    await ix(db.vip_payments, [("user_id", 1), ("created_at", -1)], background=True)
     print("  ✅ VIP payments indexes attempted")
+
+    # ============ PRC TRANSACTIONS (hot path: wallet history, admin ledger) ============
+    await ix(db.prc_transactions, "user_id", background=True)
+    await ix(db.prc_transactions, "type", background=True)
+    await ix(db.prc_transactions, "created_at", background=True)
+    await ix(db.prc_transactions, [("user_id", 1), ("created_at", -1)], background=True)
+    await ix(db.prc_transactions, [("type", 1), ("created_at", -1)], background=True)
+    await ix(db.prc_transactions, [("user_id", 1), ("type", 1), ("created_at", -1)], background=True)
+    print("  ✅ PRC transactions indexes attempted")
+
+    # ============ RAZORPAY ORDERS ============
+    await ix(db.razorpay_orders, "user_id", background=True)
+    await ix(db.razorpay_orders, "status", background=True)
+    await ix(db.razorpay_orders, "order_id", sparse=True, background=True)
+    await ix(db.razorpay_orders, [("user_id", 1), ("created_at", -1)], background=True)
+    print("  ✅ Razorpay orders indexes attempted")
+
+    # ============ VIP SUBSCRIPTIONS (active plan lookup) ============
+    await ix(db.vip_subscriptions, "user_id", background=True)
+    await ix(db.vip_subscriptions, "status", background=True)
+    await ix(db.vip_subscriptions, "expires_at", background=True)
+    await ix(db.vip_subscriptions, [("user_id", 1), ("status", 1)], background=True)
+    print("  ✅ VIP subscriptions indexes attempted")
+
+    # ============ SUCCESS STORIES (community feed + idempotency) ============
+    await ix(db.success_stories, "user_id", background=True)
+    await ix(db.success_stories, "created_at", background=True)
+    await ix(db.success_stories, "ref_id", sparse=True, background=True)
+    print("  ✅ Success stories indexes attempted")
+
+    # ============ ADMIN AUDIT LOGS ============
+    await ix(db.admin_audit_logs, "admin_id", background=True)
+    await ix(db.admin_audit_logs, "action", background=True)
+    await ix(db.admin_audit_logs, "created_at", background=True)
+    await ix(db.admin_audit_logs, [("action", 1), ("created_at", -1)], background=True)
+    print("  ✅ Admin audit logs indexes attempted")
 
     # ============ GIFT VOUCHER / PRC LEDGER / PAYMENT REQUESTS ============
     await ix(db.gift_voucher_requests, "user_id", background=True)
