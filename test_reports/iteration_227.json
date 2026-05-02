@@ -1,0 +1,45 @@
+{
+  "summary": "LIVE PRODUCTION RETEST on https://parasreward.com with admin 9696969696/969696 after deploy. RESULT: MIXED — Admin Dashboard sanity FULLY FIXED (no more stale /api/rd/admin/redeem-requests 404, 0 console errors). Login-As-User name search IMPROVED (2.5s, was 4.2s) but still above <1s target; digit search excellent (0.05s); no 'Search failed' toast. CRITICAL REGRESSION STILL PRESENT: GET /api/admin/user-360?query=9696969696 returns HTTP 503 with body {\"error\":\"Network error\",\"message\":\"Please check your internet connection and refresh\"} — UI remains stuck on 'Loading user data...' indefinitely (>15s). Same stuck-loading reproduced for another live user 9876123405 (outcome=None after 10s). For non-existent 0000000000 the backend correctly returns 404 {\"detail\":\"User not found\"} but the UI never renders the 'User not found' message to the admin — it just clears the spinner and shows a blank page. Main agent's pre-test curl claim of 1.0-2.7s for user-360 admin-own is NOT observed on production from a real authenticated browser session — consistent 503 instead.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "/api/admin/user-360?query=9696969696", "issue": "Returns HTTP 503 with generic 'Network error' body for admin's own mobile lookup. Reproduced twice in back-to-back test runs. Body: {\"error\":\"Network error\",\"message\":\"Please check your internet connection and refresh\"}. This is likely the backend/proxy timing out (>30s) and returning a synthesized 503 — the classic symptom the fix was supposed to cure.", "priority": "CRITICAL"},
+      {"endpoint": "/api/admin/user-360?query=9876123405", "issue": "UI stuck on 'Loading user data...' for 10+s for a normal Explorer user pulled from impersonation search. Either also 503 or extremely slow. Confirms the issue is not isolated to the admin's own heavy profile.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "/api/admin/search-user-for-impersonation?q=test", "issue": "Name-based search returned in 2.50s wall-clock (1 result). Better than the previous 4.2s but still above the <1s spec target. $text index may not be selected by planner, or cold-cache."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminUser360New page — not-found state", "issue": "When backend returns 404 {\"detail\":\"User not found\"} (verified for query=0000000000), the UI silently clears the 'Loading user data...' spinner and shows a BLANK page — no 'User not found' message, no retry CTA. Admin has no feedback that the user doesn't exist.", "selector": "[data-testid='user360-search-input'] flow", "priority": "HIGH"},
+      {"component": "AdminUser360New page — 503 state", "issue": "When backend returns 503 (verified for admin's own 9696969696), the UI stays on 'Loading user data...' forever with no timeout, no error toast, no retry button. Admin cannot distinguish slow network from a hard failure.", "selector": "[data-testid='user360-search-input'] flow", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "User 360 View", "issues": ["Two 'Search' buttons remain on the page (top-right small one + main orange primary). Minor confusion for testers and potentially users."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_227.json"
+  ],
+  "action_items": [
+    "CRITICAL: Fix /api/admin/user-360?query=9696969696 — it is reproducibly returning 503 on production despite the claimed deploy. Check backend logs for this exact request; verify the $text index (or identifier-multi-lookup index) is actually built and being used. Check if the 503 is being synthesized by the FastAPI exception handler or by the k8s ingress timeout. curl with a VALID admin Bearer token (replicating the browser session) and capture full response + timing.",
+    "HIGH: Add a client-side timeout + error UI to AdminUser360New — after ~12s of 'Loading user data...' or on any 4xx/5xx, render a 'User not found' / 'Something went wrong, retry' card with a Retry button. Currently 503 and 404 both cause a blank screen.",
+    "HIGH: Verify other live users besides 'test@parasreward.com' actually load. 9876123405 (an Explorer user) failed to render within 10s. The 368ms pre-test curl number is not representative.",
+    "MEDIUM: Impersonation name search for 'test' is 2.5s — still not meeting the <1s target. Review $text index plan and if a prefix/collation index on user.name would be better for admin searches.",
+    "LOW: Remove/rename one of the two 'Search' buttons on /admin/user360."
+  ],
+  "critical_code_review_comments": [
+    "The 503 response body uses a misleading network-error copy — it should say 'Backend timeout loading user data, please retry' so callers can differentiate from genuine client connectivity. Suggest a dedicated error envelope.",
+    "AdminUser360New has no stale-response / timeout handling — if the fetch hangs or returns a non-2xx, the component stays in the loading branch. Add try/catch + AbortController with 12-15s timeout.",
+    "Confirm the pre-test curl timings (1.0-2.7s) were taken against the same production URL and same auth path the browser uses. The test-run evidence shows the same endpoint returning 503 twice in a row."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only request)", "frontend": "50% — Admin sanity PASS, Login-As-User PASS, User-360 FAIL on both admin-own (503) and another live user (stuck)"},
+  "test_credentials": "Production admin 9696969696 / PIN 969696 — login works in ~1s end-to-end.",
+  "seed_data_creation": "None — live production data.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login flow: [data-testid=login-identifier-input] 9696969696 → [data-testid=login-submit-btn] → [data-testid=login-pin-0..5] 969696 → auto-submit or 'Verify' button → redirects to /admin. User-360 at /admin/user360: [data-testid=user360-search-input], press Enter (two Search buttons exist; Enter is cleaner). Login-As-User: click [data-testid=admin-login-as-user-btn] on /admin (sometimes pre-opened modal intercepts clicks — press Escape first), then [data-testid=impersonation-search-input] + [data-testid=impersonation-search-btn]. Results: [data-testid=impersonation-result-{uid}]. Known-failing state to re-verify after main-agent fix: GET /api/admin/user-360?query=9696969696 must return 200 within 5s for admin to render profile sections. For GET /api/admin/user-360?query=0000000000 backend already returns 404 correctly; what is missing is the FRONTEND not surfacing that to the admin (blank page).",
+  "rca of the issue": "(1) User-360 503: Reproduced browser-side twice. URL is /api/admin/user-360?query=<identifier> (query param, rewritten from iteration_226's path-param version). Response body is a generic 'Network error' — likely the backend's own exception handler or k8s ingress gateway returning 503 after >30s upstream timeout. Root cause NOT confirmed from frontend alone — needs backend log correlation for request IDs at the timestamps of the two failing runs (roughly 2026-05-02 16:56 UTC and 16:58 UTC). Reproduction: login as admin → visit /admin/user360 → enter 9696969696 → Enter → observe 503 in Network tab and perpetual 'Loading user data...' in UI. (2) Blank-on-404: AdminUser360New component's conditional rendering does not handle the !isLoading && !userData case — it likely returns null or renders nothing when the API responds 404. (3) Impersonation name search 2.5s: still above target — likely $text index not yet picked by the planner for short 4-char tokens."
+}
