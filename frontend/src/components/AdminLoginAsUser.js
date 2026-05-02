@@ -47,7 +47,10 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
       }
     } catch (error) {
       const detail = error?.response?.data?.detail || error?.message || 'Search failed';
-      toast.error(`Search failed: ${detail}`);
+      const safe = /mongodb\.net|shard-\d|read operation timed out|connection.*closed/i.test(detail)
+        ? 'Database is busy right now. Please try again in a few seconds.'
+        : detail;
+      toast.error(`Search failed: ${safe}`);
       console.error('[IMP-SEARCH]', error);
     } finally {
       setSearching(false);

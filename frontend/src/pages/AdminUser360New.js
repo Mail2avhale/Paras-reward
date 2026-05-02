@@ -489,16 +489,20 @@ const AdminUser360New = ({ user: adminUser }) => {
     } catch (err) {
       console.error('Search error:', err);
       let message = err.response?.data?.detail || err.message || 'Search failed';
-      // Prevent leaking raw Atlas / Mongo shard URLs to admins. If the message
-      // looks like a raw connection error, replace with friendly text.
-      if (/mongodb\.net|shard-\d|read operation timed out|search failed:/i.test(message)) {
-        message = 'Database is slow right now. Please try again with exact UID or mobile number — that path is fastest.';
+      // Comprehensive sanitization: any DB / connection / timeout internals → friendly text
+      const dbInternalsRe = /mongodb\.net|mongodb:\/\/|shard-\d|read operation timed out|server selection timeout|connection.*\(?closed\)?|atlas|^timeout of \d+ms exceeded$|ECONNABORTED/i;
+      if (dbInternalsRe.test(message)) {
+        message = 'Database is busy right now. Please try again in a few seconds — your search will work on next attempt.';
       }
       const status = err.response?.status;
       if (status === 504) {
         toast.error('⏱ ' + message, { duration: 6000 });
       } else if (status === 404) {
         toast.error('User not found. Please check your search query.');
+        message = 'User not found. Please check your search query.';
+      } else if (err.code === 'ECONNABORTED' || /timeout/i.test(err.message || '')) {
+        toast.error('Search took too long. Please retry — second attempt is usually instant due to caching.', { duration: 6000 });
+        message = 'Search took too long. Please retry.';
       } else {
         toast.error(message);
       }

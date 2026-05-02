@@ -1074,6 +1074,28 @@ Examined all 5 matched DMT transactions in production:
 - **Production impact**: Under load the first admin click on a heavy user may still take 1-3 s, but every subsequent click on the same user is instant. Multiple admins navigating each other's profiles benefit from cache sharing on the same backend pod.
 - **Files touched**: `backend/server.py` (cache module + integration), `frontend/src/pages/AdminUser360New.js` (timeout: 30000).
 
+### Production Hot-Fix #3 — Global Error Sanitization (DONE - May 2, 2026)
+- **Reported issue**: User screenshot of /admin/user360 showed a toast leaking raw Atlas internals: `Search failed: customer-apps-shard-00-01.hfzqpg.mongodb.net:27017: The read operation timed out`. Plus a duplicate inline error card with the same text.
+- **Root causes**:
+  1. Several backend endpoints (`server.py` ~20 occurrences, plus `routes/*.py`) raise `HTTPException(detail=str(e))` directly — when the `e` is a `pymongo` timeout, the formatted shard hostname leaks into the response body and reaches the admin UI.
+  2. `AdminLoginAsUser.js` was rendering `Search failed: ${detail}` verbatim — earlier sanitization regex was only on `AdminUser360New.js`, missing this component.
+- **Fixes**:
+  1. **Global error sanitization handlers** in `server.py`: Added two FastAPI exception handlers (`@app.exception_handler(Exception)` and `@app.exception_handler(HTTPException)`) that run AFTER all endpoint code. Both call `_sanitize_error_text()` which regex-matches:
+     ```
+     [a-z0-9-]+-shard-\d+-\d+\.[a-z0-9]+\.mongodb\.net:\d+
+     mongodb\.net:\d+
+     mongodb://[^\s]+
+     the read operation timed out
+     server selection timeout error
+     connection.*\(closed\)
+     ```
+     Any match → response body becomes the friendly `"Database is busy right now. Please try again in a few seconds."`. Doesn't change endpoints that already return safe messages.
+  2. **`AdminLoginAsUser.js` defensive sanitization**: same regex applied client-side as belt-and-braces (in case backend sanitization is bypassed by a future endpoint). Toast becomes `Search failed: Database is busy right now...`.
+  3. **`AdminUser360New.js` enhanced sanitization**: Added patterns for axios timeout errors (`ECONNABORTED`, `timeout of 30000ms exceeded`) so even client-side timeouts show actionable text. Inline pink error card automatically reflects sanitized message via `setError(message)`.
+- **Removed stale comment** in `server.py` claiming the User-360 endpoint was cache-free (we now have in-process per-uid cache from Hot-Fix #2).
+- **Verified locally**: regex matches all variants of the leaked string. Normal HTTP 200 responses + cached User-360 still work (36 ms warm).
+- **Files**: `backend/server.py` (global handlers + comment cleanup), `frontend/src/components/AdminLoginAsUser.js`, `frontend/src/pages/AdminUser360New.js`.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

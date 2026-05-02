@@ -1050,6 +1050,52 @@ app.add_middleware(DatabaseCheckMiddleware)
 from starlette.middleware.gzip import GZipMiddleware
 app.add_middleware(GZipMiddleware, minimum_size=512, compresslevel=6)
 
+
+# ========== ERROR SANITIZATION HANDLER ==========
+# Strip MongoDB internals (shard hostnames, connection URLs, raw timeout phrases)
+# from any error response body so they never reach end-user toasts.
+import re as _err_re
+
+_MONGO_INTERNALS_PATTERNS = [
+    _err_re.compile(r"[a-z0-9-]+-shard-\d+-\d+\.[a-z0-9]+\.mongodb\.net:\d+", _err_re.I),
+    _err_re.compile(r"mongodb\.net:\d+", _err_re.I),
+    _err_re.compile(r"mongodb://[^\s]+", _err_re.I),
+    _err_re.compile(r"the read operation timed out", _err_re.I),
+    _err_re.compile(r"server selection timeout error", _err_re.I),
+    _err_re.compile(r"connection.*\(closed\)", _err_re.I),
+]
+
+_FRIENDLY_DB_MSG = "Database is busy right now. Please try again in a few seconds."
+
+
+def _sanitize_error_text(text: str) -> str:
+    """Replace any MongoDB internals with a generic friendly message."""
+    if not text or not isinstance(text, str):
+        return text
+    needs_replace = any(p.search(text) for p in _MONGO_INTERNALS_PATTERNS)
+    if needs_replace:
+        return _FRIENDLY_DB_MSG
+    return text
+
+
+@app.exception_handler(Exception)
+async def _sanitize_unhandled_errors(request, exc):
+    """Catch un-mapped exceptions, sanitize MongoDB internals, return 500."""
+    from starlette.responses import JSONResponse
+    raw = str(exc)
+    safe = _sanitize_error_text(raw)
+    return JSONResponse(status_code=500, content={"detail": safe})
+
+
+@app.exception_handler(HTTPException)
+async def _sanitize_http_exceptions(request, exc: HTTPException):
+    """Sanitize HTTPException detail before responding."""
+    from starlette.responses import JSONResponse
+    detail = exc.detail
+    if isinstance(detail, str):
+        detail = _sanitize_error_text(detail)
+    return JSONResponse(status_code=exc.status_code, content={"detail": detail})
+
 # ========== ADMIN AUTHENTICATION MIDDLEWARE ==========
 class AdminAuthMiddleware(BaseHTTPMiddleware):
     """
@@ -21023,11 +21069,6 @@ async def get_user_360_view(query: str, request: Request):
             return _cached
 
         logging.info(f"[USER360] Processing user: {uid}")
-
-        # NOTE: Redis caching for the full User-360 payload was tried (Apr 30 2026)
-        # but the 600+ KB payload made Upstash REST round-trips slower than
-        # recomputing. The endpoint is fast enough (~5s on prod) and the frontend
-        # axios auto-retry handles transient 503s. Keep this endpoint cache-free.
 
         # Remove sensitive data from user
         user.pop("password_hash", None)
