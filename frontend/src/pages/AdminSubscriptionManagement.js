@@ -60,9 +60,13 @@ const AdminSubscriptionManagement = () => {
   }, [searchQuery]);
 
   useEffect(() => {
-    fetchData();
-    // Clear selection whenever tab/page/filter changes
+    // Clear stale payments immediately on tab change so users don't see
+    // the previous tab's rows (or an empty state) during the fetch window.
+    setPayments([]);
+    setTotal(0);
     setSelectedIds([]);
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, page, debouncedSearch, dateFrom, dateTo]);
 
   const fetchData = async () => {
@@ -83,8 +87,20 @@ const AdminSubscriptionManagement = () => {
       }
 
       if (paymentsRes.status === 'fulfilled') {
-        setPayments(paymentsRes.value.data?.payments || []);
-        setTotal(paymentsRes.value.data?.total || 0);
+        const data = paymentsRes.value.data || {};
+        // Accept either `{payments: [...]}` or a raw array payload
+        const list = Array.isArray(data) ? data : (Array.isArray(data.payments) ? data.payments : []);
+        setPayments(list);
+        setTotal(typeof data.total === 'number' ? data.total : list.length);
+      } else {
+        // Surface the failure so admin doesn't silently see an empty list
+        // when the backend times out or errors out (e.g. "Server is busy").
+        setPayments([]);
+        setTotal(0);
+        const err = paymentsRes.reason;
+        const msg = err?.response?.data?.detail || err?.message || 'Failed to load payments';
+        console.error('[AdminSubscription] fetch failed:', err);
+        toast.error(`Failed to load ${activeTab} payments: ${msg}`);
       }
     } catch (error) {
       console.error('Fetch error:', error);
@@ -689,9 +705,14 @@ const AdminSubscriptionManagement = () => {
       )}
 
       {/* Payments List */}
-      <div className="bg-white rounded-xl border border-slate-200">
-        {filteredPayments.length === 0 ? (
-          <div className="p-8 text-center">
+      <div className="bg-white rounded-xl border border-slate-200" data-testid={`admin-sub-list-${activeTab}`}>
+        {loading && filteredPayments.length === 0 ? (
+          <div className="p-8 text-center" data-testid="admin-sub-list-loading">
+            <RefreshCw className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-3" />
+            <p className="text-slate-500">Loading {activeTab} payments...</p>
+          </div>
+        ) : filteredPayments.length === 0 ? (
+          <div className="p-8 text-center" data-testid="admin-sub-list-empty">
             <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
             <p className="text-slate-500">No {activeTab} payments</p>
           </div>

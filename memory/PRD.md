@@ -893,6 +893,16 @@ Examined all 5 matched DMT transactions in production:
   4. **Failed transactions → `asyncio.gather`**: 3 independent collection queries (bbps, vouchers, bank) fired in parallel.
 - **Result**: Wall-clock for primary user-360 endpoint reduced from sum-of-all to max-of-each. Verified on preview: 0.14–0.17s for SANTOSH (10 refs, 137 txns) and Test User DMT (49 txns). No data shape changes — frontend untouched.
 
+### Admin Subscription Management — Approved/Rejected Empty UI Fix (DONE - May 2, 2026)
+- **User report**: "Approved data not showing. Check Approved and Rejected." (screenshot showing empty list despite data existing in DB).
+- **Root cause (inherited)**: Backend `/admin/vip-payments` was occasionally returning 500/"Server is busy" due to missing MongoDB indexes (fixed earlier this session) + COLLSCANs. On failure, the React component (`AdminSubscriptionManagement.js`) silently left `payments=[]` and rendered "No approved payments" — masking the error.
+- **Verification (preview)**: With indexes live, backend returns 5 approved + 4 rejected records in ~135ms. UI now renders them correctly (screenshot captured — GROWTH UPGRADE #5 ₹499, STARTUP RENEWAL #4 ₹299, ELITE UPGRADE #3 ₹1178.82 etc.).
+- **Defensive frontend hardening** (`pages/AdminSubscriptionManagement.js`):
+  1. **Clear stale state on tab change**: `setPayments([]); setTotal(0); setSelectedIds([])` inside `useEffect` before `fetchData()` fires. Prevents showing the previous tab's rows during the fetch window.
+  2. **Surface fetch failures**: If `paymentsRes` promise rejects (timeout / 5xx), show a `toast.error('Failed to load {tab} payments: ...')` instead of silently displaying "No approved payments".
+  3. **Loading spinner**: New `data-testid="admin-sub-list-loading"` state with `RefreshCw` spinner + "Loading {activeTab} payments..." text shown while fetch is in flight — replaces the misleading empty-state CheckCircle.
+  4. **Payload shape safety**: Accepts both `{payments: [...], total: N}` and raw array responses.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
