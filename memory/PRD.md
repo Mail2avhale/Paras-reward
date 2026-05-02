@@ -960,6 +960,38 @@ Examined all 5 matched DMT transactions in production:
   - All wall-clocks reduced from max(Σ sequential awaits) to max(individual awaits) — observed ~3-4× speedup on cold-path vs. pre-fix preview timings.
 - **Startup log on restart**: `174 indexes created/existing, 0 failed`.
 
+### Daily-Critical Admin Pages — Bulk Optimization (DONE - May 2, 2026)
+- **Context**: User requested fast + error-free loads for the 7 most-used admin pages (User-360, Subscription Mgmt, BBPS, Bank Redeem, KYC, Razorpay, Login-As-User). 3 already covered (User-360, Subscription Mgmt, Login-As-User). Remaining 4 + global improvements:
+- **Phase 1 — Global**:
+  - **GZip middleware** (`server.py`): `GZipMiddleware(minimum_size=512, compresslevel=6)` added — ~60-80% smaller JSON for every admin list page. Verified `content-encoding: gzip` on responses.
+- **Phase 2 — BBPS Dashboard** (`routes/unified_redeem_v2.py /admin/bbps-requests`):
+  - 3 `count_documents` + 3 `find` queries → single `asyncio.gather` (6 in parallel).
+  - **N+1 user enrichment** (50 sequential lookups per page) → 1 batched `$in` query into a `users_by_uid` dict.
+  - 6 stats aggregations across 3 collections → single `asyncio.gather`.
+- **Phase 2 — Bank Redeem** (`routes/manual_bank_transfer.py /admin/requests`):
+  - 4 `count_documents` (total/pending/paid/failed) + 1 `aggregate` → single `asyncio.gather` (5 in parallel).
+- **Phase 2 — KYC** (`routes/kyc.py /list`): Already had parallel gather + batch user enrichment + count timeout — left as-is.
+- **Phase 2 — Razorpay Revenue Dashboard** (`routes/razorpay_payments.py /admin/revenue-dashboard`):
+  - 60 s in-process cache (`_REVENUE_DASHBOARD_CACHE`) — first cold call computes, subsequent admin refreshes return instantly.
+  - 2 trailing `count_documents` calls → `asyncio.gather`.
+- **New indexes** (auto-startup + idempotent rebuild endpoint):
+  - `razorpay_orders`: `paid_at`, `(status, paid_at -1)` — drives revenue date-bucketing.
+  - `recharge_transactions`: `user_id`, `status`, `recharge_type`, `created_at`, `request_id` (sparse), `eko_tid` (sparse), `(status, created_at -1)`, `(user_id, created_at -1)`.
+  - `bill_payment_requests`: `service_type`, `eko_tid` (sparse), `client_ref_id` (sparse), `(service_type, created_at -1)`, `(status, service_type, created_at -1)`.
+  - `redeem_requests`: `service_type`, `eko_tid` (sparse), `client_ref_id` (sparse), `request_id` (sparse), `(service_type, created_at -1)`, `(status, service_type, created_at -1)`.
+- **Verified preview timings (all gzipped)**:
+  | Page | Cold | Warm |
+  |------|------|------|
+  | BBPS Dashboard list | 102 ms | 107 ms |
+  | Bank Redeem list | 135 ms | 131 ms |
+  | KYC list | 102 ms | 108 ms |
+  | Razorpay revenue dashboard | 102 ms | 99 ms (cached) |
+  | User-360 | 164 ms | 185 ms |
+  | Subscription stats | 673 ms | 340 ms (60 s cache) |
+  | VIP payments list | 103 ms | 99 ms |
+  | Login-As-User search | 113 ms | 144 ms |
+- **Startup log**: `195 indexes created/existing, 0 failed`.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

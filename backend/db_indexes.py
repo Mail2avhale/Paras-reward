@@ -274,7 +274,38 @@ async def create_performance_indexes(db):
     await ix(db.razorpay_orders, "status", background=True)
     await ix(db.razorpay_orders, "order_id", sparse=True, background=True)
     await ix(db.razorpay_orders, [("user_id", 1), ("created_at", -1)], background=True)
+    # CRITICAL: revenue-dashboard scans `paid_at` for date-bucketing.
+    await ix(db.razorpay_orders, "paid_at", background=True)
+    await ix(db.razorpay_orders, [("status", 1), ("paid_at", -1)], background=True)
     print("  ✅ Razorpay orders indexes attempted")
+
+    # ============ RECHARGE TRANSACTIONS (BBPS dashboard) ============
+    await ix(db.recharge_transactions, "user_id", background=True)
+    await ix(db.recharge_transactions, "status", background=True)
+    await ix(db.recharge_transactions, "recharge_type", background=True)
+    await ix(db.recharge_transactions, "created_at", background=True)
+    await ix(db.recharge_transactions, "request_id", sparse=True, background=True)
+    await ix(db.recharge_transactions, "eko_tid", sparse=True, background=True)
+    await ix(db.recharge_transactions, [("status", 1), ("created_at", -1)], background=True)
+    await ix(db.recharge_transactions, [("user_id", 1), ("created_at", -1)], background=True)
+    print("  ✅ Recharge transactions indexes attempted")
+
+    # ============ BILL PAYMENT REQUESTS (BBPS dashboard joins) ============
+    await ix(db.bill_payment_requests, "service_type", background=True)
+    await ix(db.bill_payment_requests, "eko_tid", sparse=True, background=True)
+    await ix(db.bill_payment_requests, "client_ref_id", sparse=True, background=True)
+    await ix(db.bill_payment_requests, [("service_type", 1), ("created_at", -1)], background=True)
+    await ix(db.bill_payment_requests, [("status", 1), ("service_type", 1), ("created_at", -1)], background=True)
+    print("  ✅ Bill payment requests (BBPS) indexes attempted")
+
+    # ============ REDEEM REQUESTS (BBPS list filters: service_type + eko_tid) ============
+    await ix(db.redeem_requests, "service_type", background=True)
+    await ix(db.redeem_requests, "eko_tid", sparse=True, background=True)
+    await ix(db.redeem_requests, "client_ref_id", sparse=True, background=True)
+    await ix(db.redeem_requests, "request_id", sparse=True, background=True)
+    await ix(db.redeem_requests, [("service_type", 1), ("created_at", -1)], background=True)
+    await ix(db.redeem_requests, [("status", 1), ("service_type", 1), ("created_at", -1)], background=True)
+    print("  ✅ Redeem requests (BBPS) indexes attempted")
 
     # ============ VIP SUBSCRIPTIONS (active plan lookup) ============
     await ix(db.vip_subscriptions, "user_id", background=True)

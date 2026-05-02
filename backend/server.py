@@ -1044,6 +1044,12 @@ class DatabaseCheckMiddleware(BaseHTTPMiddleware):
 # Add middleware
 app.add_middleware(DatabaseCheckMiddleware)
 
+# ========== GZIP COMPRESSION (60-80% smaller JSON responses) ==========
+# Major win for admin list pages (BBPS, Bank Redeem, KYC, Razorpay) which
+# can return 50-500 KB JSON. minimum_size=512 skips trivial responses.
+from starlette.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=512, compresslevel=6)
+
 # ========== ADMIN AUTHENTICATION MIDDLEWARE ==========
 class AdminAuthMiddleware(BaseHTTPMiddleware):
     """

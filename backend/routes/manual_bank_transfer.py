@@ -863,15 +863,9 @@ async def get_all_requests(
         if sort_by == "total_redeemed":
             reverse = sort_order == "desc"
             requests.sort(key=lambda x: x.get("user_total_redeemed_prc", 0), reverse=reverse)
-        
-        total = await db.bank_transfer_requests.count_documents(query)
-        
-        # Get counts by status (without date filter for overall stats)
-        pending_count = await db.bank_transfer_requests.count_documents({"status": "pending"})
-        paid_count = await db.bank_transfer_requests.count_documents({"status": "paid"})
-        failed_count = await db.bank_transfer_requests.count_documents({"status": "failed"})
-        
-        # Calculate totals
+
+        # Run all 5 stat queries in parallel — was 4 sequential count_documents
+        # plus 1 aggregation = 5× wall-clock. Now max-of-each.
         pipeline = [
             {"$group": {
                 "_id": "$status",
@@ -879,7 +873,19 @@ async def get_all_requests(
                 "total_prc": {"$sum": "$prc_deducted"}
             }}
         ]
-        totals = await db.bank_transfer_requests.aggregate(pipeline).to_list(10)
+        _stat_results = await asyncio.gather(
+            db.bank_transfer_requests.count_documents(query),
+            db.bank_transfer_requests.count_documents({"status": "pending"}),
+            db.bank_transfer_requests.count_documents({"status": "paid"}),
+            db.bank_transfer_requests.count_documents({"status": "failed"}),
+            db.bank_transfer_requests.aggregate(pipeline).to_list(10),
+            return_exceptions=True,
+        )
+        total          = _stat_results[0] if not isinstance(_stat_results[0], Exception) else 0
+        pending_count  = _stat_results[1] if not isinstance(_stat_results[1], Exception) else 0
+        paid_count     = _stat_results[2] if not isinstance(_stat_results[2], Exception) else 0
+        failed_count   = _stat_results[3] if not isinstance(_stat_results[3], Exception) else 0
+        totals         = _stat_results[4] if not isinstance(_stat_results[4], Exception) else []
         totals_dict = {t["_id"]: t for t in totals}
         
         return {

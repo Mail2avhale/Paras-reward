@@ -19,10 +19,17 @@ except ImportError:
 import os
 import hmac
 import hashlib
+import asyncio
+import time as _time
 from datetime import datetime, timezone, timedelta
 import logging
 
 router = APIRouter(prefix="/razorpay", tags=["Razorpay Payments"])
+
+# Lightweight in-process cache for the heavy revenue-dashboard endpoint.
+# 60 s TTL — admin dashboard refresh stays sub-second after first load.
+_REVENUE_DASHBOARD_CACHE: dict = {"data": None, "ts": 0.0}
+_REVENUE_DASHBOARD_TTL = 60.0
 
 # Code version for deployment verification
 CODE_VERSION = "2.0-SECURE"
@@ -2541,10 +2548,21 @@ async def reverse_single_subscription(request: Request):
 
 @router.get("/admin/revenue-dashboard")
 async def get_revenue_dashboard():
-    """Get revenue statistics for dashboard with daily/weekly/monthly breakdown"""
+    """Get revenue statistics for dashboard with daily/weekly/monthly breakdown.
+
+    PERF: 60 s in-process cache + parallelized total/failed counts. The heavy
+    Python loop over up to 10 000 paid orders only fires on a cold cache —
+    subsequent admin refreshes return instantly.
+    """
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
-    
+
+    # Cache hit fast-path
+    now_mono = _time.monotonic()
+    if _REVENUE_DASHBOARD_CACHE["data"] is not None and \
+       (now_mono - _REVENUE_DASHBOARD_CACHE["ts"]) < _REVENUE_DASHBOARD_TTL:
+        return _REVENUE_DASHBOARD_CACHE["data"]
+
     try:
         now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -2656,14 +2674,17 @@ async def get_revenue_dashboard():
             for month in sorted(monthly_revenue.keys())
         ]
         
-        # Success rate
-        total_orders = await db.razorpay_orders.count_documents({})
+        # Success rate — fire BOTH counts in parallel
+        total_orders, failed_count = await asyncio.gather(
+            db.razorpay_orders.count_documents({}),
+            db.razorpay_orders.count_documents({"status": {"$in": ["failed", "error"]}}),
+            return_exceptions=False,
+        )
         paid_count = len(paid_orders)
-        failed_count = await db.razorpay_orders.count_documents({"status": {"$in": ["failed", "error"]}})
-        
+
         success_rate = (paid_count / total_orders * 100) if total_orders > 0 else 0
-        
-        return {
+
+        payload = {
             "success": True,
             "revenue": {
                 "total": total_revenue,
@@ -2685,6 +2706,10 @@ async def get_revenue_dashboard():
                 "success_rate": round(success_rate, 1)
             }
         }
+        # Warm the 60 s cache before returning
+        _REVENUE_DASHBOARD_CACHE["data"] = payload
+        _REVENUE_DASHBOARD_CACHE["ts"] = _time.monotonic()
+        return payload
         
     except Exception as e:
         logging.error(f"[REVENUE-DASHBOARD] Error: {e}")
