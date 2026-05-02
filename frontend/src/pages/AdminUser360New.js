@@ -488,9 +488,21 @@ const AdminUser360New = ({ user: adminUser }) => {
       
     } catch (err) {
       console.error('Search error:', err);
-      const message = err.response?.data?.detail || err.message || 'Search failed';
+      let message = err.response?.data?.detail || err.message || 'Search failed';
+      // Prevent leaking raw Atlas / Mongo shard URLs to admins. If the message
+      // looks like a raw connection error, replace with friendly text.
+      if (/mongodb\.net|shard-\d|read operation timed out|search failed:/i.test(message)) {
+        message = 'Database is slow right now. Please try again with exact UID or mobile number — that path is fastest.';
+      }
+      const status = err.response?.status;
+      if (status === 504) {
+        toast.error('⏱ ' + message, { duration: 6000 });
+      } else if (status === 404) {
+        toast.error('User not found. Please check your search query.');
+      } else {
+        toast.error(message);
+      }
       setError(message);
-      toast.error(message);
     } finally {
       setLoading(false);
     }

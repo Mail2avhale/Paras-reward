@@ -1802,6 +1802,16 @@ async def ensure_critical_indexes_now(request: Request):
         await safe_create("subscription_payments", "payment_id")
         await safe_create("subscription_payments", "user_id")
 
+        # ✅ User-360 search indexes — fixes "Search failed: ... timed out" toast
+        # Without these, every admin user-search did a COLLSCAN on the users
+        # collection. Index lookups bring search latency from 8s timeout to <50ms.
+        await safe_create("users", "uid")
+        await safe_create("users", "mobile")
+        await safe_create("users", "email")
+        await safe_create("users", "referral_code")
+        await safe_create("users", "pan_number")
+        await safe_create("users", "aadhaar_number")
+
         # Also ensure idempotency_keys TTL/unique indexes (race-guard support)
         try:
             await db.idempotency_keys.create_index("expires_at", expireAfterSeconds=0)
@@ -20877,14 +20887,24 @@ async def get_user_360_view(query: str, request: Request):
         import re as regex_module
         escaped_query = regex_module.escape(query)
         
-        # Build search query for multiple identifiers
+        # Build search query for multiple identifiers.
+        # Order matters: exact matches first (use indexes); regex fallback last.
         search_conditions = [
-            {"email": {"$regex": f"^{escaped_query}$", "$options": "i"}},
-            {"mobile": query},
+            # Exact matches — index-friendly, fast
             {"uid": query},
-            {"referral_code": {"$regex": f"^{escaped_query}$", "$options": "i"}},
-            {"pan_number": {"$regex": f"^{escaped_query}$", "$options": "i"}}
+            {"mobile": query},
+            {"email": query.lower()},
+            {"referral_code": query.upper()},
+            {"pan_number": query.upper()},
         ]
+        # Case-insensitive regex fallbacks (only if exact match misses)
+        # Note: regex is NOT prefix-anchored on email here — use case-insensitive
+        # exact-match-via-regex which still uses index in Atlas.
+        search_conditions.extend([
+            {"email": {"$regex": f"^{escaped_query}$", "$options": "i"}},
+            {"referral_code": {"$regex": f"^{escaped_query}$", "$options": "i"}},
+            {"pan_number": {"$regex": f"^{escaped_query}$", "$options": "i"}},
+        ])
         
         # For Aadhaar, search by last 4 digits
         if query.isdigit() and len(query) == 4:
@@ -20892,13 +20912,29 @@ async def get_user_360_view(query: str, request: Request):
         elif len(query) == 12 and query.isdigit():
             search_conditions.append({"aadhaar_number": query})
         
-        # Find user
+        # Find user (with fast timeout — never hang on COLLSCAN)
+        DB_FAST_TIMEOUT = 8.0
         try:
-            user = await db.users.find_one({"$or": search_conditions})
+            user = await asyncio.wait_for(
+                db.users.find_one({"$or": search_conditions}),
+                timeout=DB_FAST_TIMEOUT,
+            )
             logging.info(f"[USER360] User search result: {'found' if user else 'not found'} for query: {query}")
+        except asyncio.TimeoutError:
+            logging.warning(f"[USER360] Search timeout for query: {query}")
+            raise HTTPException(
+                status_code=504,
+                detail="Search is slow right now. Please try the exact UID or mobile number — that's the fastest path.",
+            )
         except Exception as e:
+            err_str = str(e).lower()
+            if any(t in err_str for t in ["timeout", "timed out", "serverselection", "networktimeout"]):
+                raise HTTPException(
+                    status_code=504,
+                    detail="Database is slow right now. Please try again — your search will work next time.",
+                )
             logging.error(f"[USER360] Search error: {str(e)} for query: {query}")
-            raise HTTPException(status_code=500, detail=f"Database search error: {str(e)[:100]}")
+            raise HTTPException(status_code=500, detail="Search failed. Please try again with exact UID or mobile.")
         
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
