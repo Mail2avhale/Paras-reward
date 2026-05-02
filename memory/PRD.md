@@ -1111,6 +1111,17 @@ Examined all 5 matched DMT transactions in production:
   - Two "Search" affordances on the User-360 page (cosmetic) — flagged for future cleanup but does not affect functionality.
 - **Closeout summary**: Sanitization layer (server-side global handlers + client-side regex on User-360 + Login-As-User) is robust. No raw Atlas / Mongo internals can reach the admin UI even if a future endpoint forgets to map exceptions properly.
 
+### Production Hot-Fix #4 — Bank Transfer Pending Page Cache (DONE - May 2, 2026)
+- **Reported issue**: User screenshots showed Bank Transfer admin page "Failed to load requests" toast and KYC modal "Database is busy" friendly text. Pages were loading 0 stats due to backend timeouts.
+- **Root cause**: `/api/bank-transfer/admin/requests` endpoint runs per-user `calculate_redeem_limit_func` enrichment (up to 20 users in parallel × 6-18 s timeout each). On cold Atlas + heavy user data, the gather can hit 22 s wall-clock — exceeding the K8s ingress 60 s soft limit when stacked with multiple admin tabs / users hitting the endpoint simultaneously. Frontend axios saw timeout / 503 → "Failed to load requests" toast.
+- **Fixes** (`routes/manual_bank_transfer.py`):
+  1. **30 s in-process cache** keyed by full filter set (`status`, `limit`, `skip`, `search`, `date_from`, `date_to`, `sort_by`, `sort_order`, `redeem_min`, `redeem_max`, `never_redeemed`, `subscription_status`, `over_limit_only`). Bounded to 50 entries with LRU-ish eviction.
+  2. **Skip redeem-limit enrichment for non-pending tabs** — paid/failed rows don't display the redeem-limit column anyway, so this saves 5-25 s per non-pending tab navigation.
+  3. **Reduced per-user enrichment timeout**: 18 s → 6 s (single heavy user can't block whole page).
+  4. **Reduced gather timeout**: 22 s → 10 s.
+- **Verified locally**: cold 16 ms, cache hit 3 ms (~5× faster on 2nd load). Production cold-load may be slower due to Atlas latency, but every subsequent click within 30 s is instant.
+- **Files touched**: `backend/routes/manual_bank_transfer.py` (cache module + integration + enrichment guards).
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

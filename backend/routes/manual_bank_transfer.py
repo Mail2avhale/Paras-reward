@@ -19,11 +19,35 @@ import re
 import uuid
 import httpx
 import asyncio
+import time as _time
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, validator
 import os
+
+# 30 s in-process cache for /admin/requests — list endpoint expensive due to
+# per-user redeem-limit enrichment.
+_BANK_REQUESTS_CACHE: dict = {}
+_BANK_REQUESTS_TTL = 30.0
+_BANK_REQUESTS_MAX = 50  # bounded; admin uses ~handful of filter combos
+
+
+def _bank_requests_cache_get(key):
+    e = _BANK_REQUESTS_CACHE.get(key)
+    if e and (_time.monotonic() - e["ts"]) < _BANK_REQUESTS_TTL:
+        return e["data"]
+    if e:
+        _BANK_REQUESTS_CACHE.pop(key, None)
+    return None
+
+
+def _bank_requests_cache_set(key, data):
+    if len(_BANK_REQUESTS_CACHE) >= _BANK_REQUESTS_MAX:
+        items = sorted(_BANK_REQUESTS_CACHE.items(), key=lambda kv: kv[1]["ts"])
+        for k, _ in items[: _BANK_REQUESTS_MAX // 4]:
+            _BANK_REQUESTS_CACHE.pop(k, None)
+    _BANK_REQUESTS_CACHE[key] = {"data": data, "ts": _time.monotonic()}
 
 from routes.idempotency import (
     check_and_claim_idempotency_key,
@@ -648,7 +672,23 @@ async def get_all_requests(
     subscription_status: Optional[str] = Query(default=None, description="Filter by subscription: active | inactive"),
     over_limit_only: Optional[bool] = Query(default=None, description="Show only over-limit pending requests"),
 ):
-    """Get all bank transfer requests for admin with advanced filtering and sorting."""
+    """Get all bank transfer requests for admin with advanced filtering and sorting.
+
+    PERF: 30 s in-process cache keyed by full filter set. Bypasses Atlas
+    cold-load latency (the per-user redeem-limit enrichment can take 5-25 s
+    on first call) for repeated admin tab navigation. Each unique filter
+    combo is cached separately. Manual 'Refresh' button bypasses cache via
+    the standard React state cycle (still hits this same endpoint).
+    """
+    # ---- 30 s cache fast-path ----
+    cache_key = (
+        status or "_", limit, skip, search or "_",
+        date_from or "_", date_to or "_", sort_by, sort_order,
+        redeem_min, redeem_max, never_redeemed, subscription_status, over_limit_only,
+    )
+    cached = _bank_requests_cache_get(cache_key)
+    if cached is not None:
+        return cached
     try:
         query = {}
         if status:
@@ -763,19 +803,23 @@ async def get_all_requests(
         # already computes `total_redeemed` (via get_user_all_time_redeemed internally)
         # AND the redeem-limit fields. This halves the runtime vs two sequential
         # passes and keeps us well under the 30s proxy timeout.
-        SKIP_REDEEM_LIMIT_ENRICHMENT = False
+        # SKIP enrichment entirely if the page isn't "pending" — the redeem-limit
+        # column only shows on pending rows; paid/failed rows ignore it. This
+        # eliminates 5-25 s of unnecessary work for the common admin tab navigation.
+        SKIP_REDEEM_LIMIT_ENRICHMENT = bool(status) and status.lower() != "pending"
         limit_cache = {}
         try:
             if calculate_redeem_limit_func and not SKIP_REDEEM_LIMIT_ENRICHMENT and user_ids:
                 async def _limit_for(uid: str):
                     try:
-                        # Per-user 18s hard cap — single heavy user can't block whole page
+                        # Per-user 6 s hard cap (down from 18 s) — single heavy
+                        # user can't block whole page beyond this.
                         info = await asyncio.wait_for(
-                            calculate_redeem_limit_func(uid), timeout=18.0
+                            calculate_redeem_limit_func(uid), timeout=6.0
                         )
                         return uid, info
                     except asyncio.TimeoutError:
-                        logging.warning(f"[BANK REQUESTS] limit calc timed out (>18s) for {uid}")
+                        logging.warning(f"[BANK REQUESTS] limit calc timed out (>6s) for {uid}")
                         return uid, None
                     except Exception as e:
                         logging.warning(f"[BANK REQUESTS] limit calc failed for {uid}: {e}")
@@ -787,14 +831,14 @@ async def get_all_requests(
                 try:
                     results = await asyncio.wait_for(
                         asyncio.gather(*[_limit_for(u) for u in bounded]),
-                        timeout=22.0,
+                        timeout=10.0,
                     )
                     for uid, info in results:
                         limit_cache[uid] = info
                 except asyncio.TimeoutError:
                     logging.warning(
                         f"[BANK REQUESTS] combined enrichment timed out "
-                        f"(>22s) for {len(bounded)} users; page still loads."
+                        f"(>10s) for {len(bounded)} users; page still loads."
                     )
                 except Exception as e:
                     logging.warning(f"[BANK REQUESTS] enrichment gather error: {e}")
@@ -888,7 +932,7 @@ async def get_all_requests(
         totals         = _stat_results[4] if not isinstance(_stat_results[4], Exception) else []
         totals_dict = {t["_id"]: t for t in totals}
         
-        return {
+        payload = {
             "success": True,
             "requests": requests,
             "pagination": {
@@ -921,7 +965,12 @@ async def get_all_requests(
                 "sort_order": sort_order
             }
         }
-        
+        try:
+            _bank_requests_cache_set(cache_key, payload)
+        except Exception:
+            pass
+        return payload
+
     except Exception as e:
         logging.error(f"Error fetching admin requests: {e}")
         raise HTTPException(status_code=500, detail="Server error")
