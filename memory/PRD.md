@@ -992,6 +992,17 @@ Examined all 5 matched DMT transactions in production:
   | Login-As-User search | 113 ms | 144 ms |
 - **Startup log**: `195 indexes created/existing, 0 failed`.
 
+### Razorpay Revenue Dashboard — `$facet` Server-Side Aggregation (DONE - May 2, 2026)
+- **Context**: Earlier fix added a 60 s cache + parallelized 2 trailing counts, but the cold path still ran `db.razorpay_orders.find({"status": "paid"}).to_list(10000)` followed by a Python loop building all bucket dicts. This scales linearly with paid-order count and pulls up to 10 000 raw documents into Python memory on every cache miss.
+- **Fix** (`routes/razorpay_payments.py /admin/revenue-dashboard`): Rewrote using a single MongoDB **`$facet`** aggregation that computes everything server-side:
+  1. Stage 1 `$match status:paid` — uses the `(status, paid_at -1)` index.
+  2. Stage 2 `$addFields` — parses `paid_at` ISO string once via `$dateFromString` (with `onError:None`).
+  3. Stage 3 `$facet` — runs **9 parallel sub-pipelines** in one round-trip: `totals`, `today`, `week`, `month`, `year`, `daily` (last 30 days bucketed via `$dateToString`), `monthly` (last 12 months), `payment_methods`, `plans`.
+  4. Aggregation + the 2 count_documents calls fire in `asyncio.gather` — true wall-clock = max-of-each.
+  5. Python only does final zero-fill for missing chart buckets and lightweight plan/method bucketing on tens of grouped rows (not thousands of raw orders).
+- **Result on preview**: Cold path 151 ms, cache hit ~137 ms (network-bound). On production with thousands of paid orders, the Python loop bottleneck is fully eliminated — wall-clock now scales with grouped row count (~hundreds), not raw order count (~thousands+).
+- **Bonus**: `allowDiskUse=True` set so the pipeline never fails on memory limits.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

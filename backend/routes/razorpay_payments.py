@@ -2548,11 +2548,13 @@ async def reverse_single_subscription(request: Request):
 
 @router.get("/admin/revenue-dashboard")
 async def get_revenue_dashboard():
-    """Get revenue statistics for dashboard with daily/weekly/monthly breakdown.
+    """Revenue dashboard powered by a single MongoDB `$facet` aggregation.
 
-    PERF: 60 s in-process cache + parallelized total/failed counts. The heavy
-    Python loop over up to 10 000 paid orders only fires on a cold cache —
-    subsequent admin refreshes return instantly.
+    PERF: All time-bucket groupings (today/week/month/year/total),
+    daily-30 + monthly-12 chart data, payment-method split and plan breakdown
+    are computed **server-side** in one round-trip — replacing the previous
+    `to_list(10000)` + Python loop that scaled linearly with paid-order count.
+    Plus a 60 s in-process cache so refreshes are instant.
     """
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
@@ -2569,90 +2571,121 @@ async def get_revenue_dashboard():
         week_start = today_start - timedelta(days=now.weekday())
         month_start = today_start.replace(day=1)
         year_start = today_start.replace(month=1, day=1)
-        
-        # Get all paid orders
-        paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(10000)
-        
-        # Calculate revenue metrics
-        total_revenue = 0
-        today_revenue = 0
-        week_revenue = 0
-        month_revenue = 0
-        year_revenue = 0
-        
-        # Daily revenue for last 30 days (for chart)
-        daily_revenue = {}
-        for i in range(30):
-            date = (today_start - timedelta(days=i)).strftime("%Y-%m-%d")
-            daily_revenue[date] = 0
-        
-        # Monthly revenue for last 12 months
-        monthly_revenue = {}
-        for i in range(12):
-            month_date = today_start.replace(day=1) - timedelta(days=i*30)
-            month_key = month_date.strftime("%Y-%m")
-            monthly_revenue[month_key] = 0
-        
-        # Payment method breakdown
+        thirty_days_ago = today_start - timedelta(days=30)
+        twelve_months_ago = today_start - timedelta(days=365)
+
+        # paid_at is stored as ISO string — parse server-side once, reuse across facets.
+        # status:paid filter runs first to leverage the index on (status, paid_at -1).
+        revenue_pipeline = [
+            {"$match": {"status": "paid"}},
+            {"$addFields": {
+                "_paid_at_dt": {
+                    "$dateFromString": {
+                        "dateString": {"$ifNull": ["$paid_at", "$created_at"]},
+                        "onError": None,
+                        "onNull": None,
+                    }
+                }
+            }},
+            {"$facet": {
+                "totals": [
+                    {"$group": {"_id": None, "amount": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+                ],
+                "today":     [{"$match": {"_paid_at_dt": {"$gte": today_start}}},
+                              {"$group": {"_id": None, "amount": {"$sum": "$amount"}}}],
+                "week":      [{"$match": {"_paid_at_dt": {"$gte": week_start}}},
+                              {"$group": {"_id": None, "amount": {"$sum": "$amount"}}}],
+                "month":     [{"$match": {"_paid_at_dt": {"$gte": month_start}}},
+                              {"$group": {"_id": None, "amount": {"$sum": "$amount"}}}],
+                "year":      [{"$match": {"_paid_at_dt": {"$gte": year_start}}},
+                              {"$group": {"_id": None, "amount": {"$sum": "$amount"}}}],
+                "daily": [
+                    {"$match": {"_paid_at_dt": {"$gte": thirty_days_ago}}},
+                    {"$group": {
+                        "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$_paid_at_dt"}},
+                        "revenue": {"$sum": "$amount"}
+                    }},
+                    {"$sort": {"_id": 1}}
+                ],
+                "monthly": [
+                    {"$match": {"_paid_at_dt": {"$gte": twelve_months_ago}}},
+                    {"$group": {
+                        "_id": {"$dateToString": {"format": "%Y-%m", "date": "$_paid_at_dt"}},
+                        "revenue": {"$sum": "$amount"}
+                    }},
+                    {"$sort": {"_id": 1}}
+                ],
+                "payment_methods": [
+                    {"$group": {
+                        "_id": {"$ifNull": ["$payment_method", "other"]},
+                        "amount": {"$sum": "$amount"}
+                    }}
+                ],
+                "plans": [
+                    {"$group": {
+                        "_id": {"$toLower": {"$ifNull": ["$plan_name", ""]}},
+                        "amount": {"$sum": "$amount"}
+                    }}
+                ],
+            }}
+        ]
+
+        # Fire the aggregation + 2 counts in parallel — true wall-clock = max(slowest)
+        agg_task = db.razorpay_orders.aggregate(revenue_pipeline, allowDiskUse=True).to_list(1)
+        total_orders_task = db.razorpay_orders.count_documents({})
+        failed_count_task = db.razorpay_orders.count_documents({"status": {"$in": ["failed", "error"]}})
+        agg_results, total_orders, failed_count = await asyncio.gather(
+            agg_task, total_orders_task, failed_count_task
+        )
+
+        facet = agg_results[0] if agg_results else {}
+
+        def _amount(key):
+            arr = facet.get(key) or []
+            return arr[0]["amount"] if arr else 0
+
+        total_revenue = _amount("totals")
+        paid_count = (facet.get("totals") or [{"count": 0}])[0].get("count", 0) if facet.get("totals") else 0
+        today_revenue = _amount("today")
+        week_revenue = _amount("week")
+        month_revenue = _amount("month")
+        year_revenue = _amount("year")
+
+        # Build full 30-day chart with zero-fill for missing days
+        daily_map = {row["_id"]: row["revenue"] for row in (facet.get("daily") or [])}
+        daily_chart = []
+        for i in range(29, -1, -1):
+            d = (today_start - timedelta(days=i)).strftime("%Y-%m-%d")
+            daily_chart.append({"date": d, "revenue": daily_map.get(d, 0)})
+
+        # Build full 12-month chart with zero-fill
+        monthly_map = {row["_id"]: row["revenue"] for row in (facet.get("monthly") or [])}
+        monthly_chart = []
+        m_iter = today_start.replace(day=1)
+        for _ in range(12):
+            mk = m_iter.strftime("%Y-%m")
+            monthly_chart.insert(0, {"month": mk, "revenue": monthly_map.get(mk, 0)})
+            # rewind one month
+            if m_iter.month == 1:
+                m_iter = m_iter.replace(year=m_iter.year - 1, month=12)
+            else:
+                m_iter = m_iter.replace(month=m_iter.month - 1)
+
+        # Payment methods — bucket unknowns into 'other'
         payment_methods = {"upi": 0, "card": 0, "netbanking": 0, "wallet": 0, "other": 0}
-        
-        # Plan breakdown
-        plan_revenue = {"elite": 0, "startup": 0, "growth": 0, "other": 0}
-        
-        for order in paid_orders:
-            amount = order.get("amount", 0)
-            paid_at = order.get("paid_at") or order.get("created_at")
-            
-            if isinstance(paid_at, str):
-                try:
-                    paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
-                except:
-                    continue
-            
-            if not paid_at:
-                continue
-                
-            # Make timezone aware if not
-            if paid_at.tzinfo is None:
-                paid_at = paid_at.replace(tzinfo=timezone.utc)
-            
-            total_revenue += amount
-            
-            # Today
-            if paid_at >= today_start:
-                today_revenue += amount
-            
-            # This week
-            if paid_at >= week_start:
-                week_revenue += amount
-            
-            # This month
-            if paid_at >= month_start:
-                month_revenue += amount
-            
-            # This year
-            if paid_at >= year_start:
-                year_revenue += amount
-            
-            # Daily breakdown (last 30 days)
-            date_key = paid_at.strftime("%Y-%m-%d")
-            if date_key in daily_revenue:
-                daily_revenue[date_key] += amount
-            
-            # Monthly breakdown
-            month_key = paid_at.strftime("%Y-%m")
-            if month_key in monthly_revenue:
-                monthly_revenue[month_key] += amount
-            
-            # Payment method
-            method = order.get("payment_method", "other") or "other"
+        for row in (facet.get("payment_methods") or []):
+            method = (row.get("_id") or "other")
+            amount = row.get("amount", 0)
             if method in payment_methods:
                 payment_methods[method] += amount
             else:
                 payment_methods["other"] += amount
-            
-            # Plan breakdown
-            plan = (order.get("plan_name", "") or "").lower()
+
+        # Plans — bucket by substring match (server returns ~tens of unique plan_names, fast in Python)
+        plan_revenue = {"elite": 0, "startup": 0, "growth": 0, "other": 0}
+        for row in (facet.get("plans") or []):
+            plan = (row.get("_id") or "").lower()
+            amount = row.get("amount", 0)
             if "elite" in plan:
                 plan_revenue["elite"] += amount
             elif "startup" in plan:
@@ -2661,26 +2694,6 @@ async def get_revenue_dashboard():
                 plan_revenue["growth"] += amount
             else:
                 plan_revenue["other"] += amount
-        
-        # Convert daily_revenue to sorted list for chart
-        daily_chart = [
-            {"date": date, "revenue": daily_revenue[date]}
-            for date in sorted(daily_revenue.keys())
-        ]
-        
-        # Convert monthly to sorted list
-        monthly_chart = [
-            {"month": month, "revenue": monthly_revenue[month]}
-            for month in sorted(monthly_revenue.keys())
-        ]
-        
-        # Success rate — fire BOTH counts in parallel
-        total_orders, failed_count = await asyncio.gather(
-            db.razorpay_orders.count_documents({}),
-            db.razorpay_orders.count_documents({"status": {"$in": ["failed", "error"]}}),
-            return_exceptions=False,
-        )
-        paid_count = len(paid_orders)
 
         success_rate = (paid_count / total_orders * 100) if total_orders > 0 else 0
 
