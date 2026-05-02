@@ -11483,26 +11483,39 @@ async def get_subscription_stats():
         except Exception:
             pass
     try:
-        # Fire all 3 independent queries in parallel (cold-cache path ~3x faster).
         now = datetime.now(timezone.utc)
         week_later = now + timedelta(days=7)
-        plan_counts_pipeline = [
-            {"$group": {
-                "_id": {"$ifNull": ["$subscription_plan", "explorer"]},
-                "count": {"$sum": 1}
+        # Single $facet over users collection — replaces 2 separate round-trips.
+        users_facet_pipeline = [
+            {"$facet": {
+                "plan_counts": [
+                    {"$group": {
+                        "_id": {"$ifNull": ["$subscription_plan", "explorer"]},
+                        "count": {"$sum": 1}
+                    }}
+                ],
+                "expiring_this_week": [
+                    {"$match": {
+                        "subscription_expiry": {
+                            "$gte": now.isoformat(),
+                            "$lte": week_later.isoformat()
+                        }
+                    }},
+                    {"$count": "n"}
+                ],
             }}
         ]
-        plan_counts_task = db.users.aggregate(plan_counts_pipeline).to_list(10)
-        expiring_count_task = db.users.count_documents({
-            "subscription_expiry": {
-                "$gte": now.isoformat(),
-                "$lte": week_later.isoformat()
-            }
-        })
+        # Fire users-facet + vip_payments count in parallel (different collections)
+        users_facet_task = db.users.aggregate(users_facet_pipeline, allowDiskUse=True).to_list(1)
         pending_payments_task = db.vip_payments.count_documents({"status": "pending"})
-        plan_counts_result, expiring_count, pending_payments = await asyncio.gather(
-            plan_counts_task, expiring_count_task, pending_payments_task
+        users_facet_result, pending_payments = await asyncio.gather(
+            users_facet_task, pending_payments_task
         )
+
+        facet_doc = users_facet_result[0] if users_facet_result else {}
+        plan_counts_result = facet_doc.get("plan_counts") or []
+        expiring_arr = facet_doc.get("expiring_this_week") or []
+        expiring_count = expiring_arr[0]["n"] if expiring_arr else 0
 
         plan_counts = {"explorer": 0, "startup": 0, "growth": 0, "elite": 0}
         total_users = 0
@@ -27790,10 +27803,26 @@ async def get_prc_analytics():
 
 @api_router.get("/admin/prc-analytics/detailed")
 async def get_detailed_prc_analytics(period: str = "month"):
-    """Get detailed PRC analytics with burn data, profit/loss, and time-based breakdown"""
+    """Get detailed PRC analytics with burn data, profit/loss, and time-based breakdown.
+
+    PERF (Phase-3): All 7 independent collection queries (current/prev period
+    aggregations on `transactions`, user stats, VIP revenue current/prev,
+    chart bucketing, total users) fire in parallel via `asyncio.gather`.
+    VIP-revenue uses `$group $sum` server-side instead of pulling 1000 docs.
+    60-s in-process cache (period-keyed) makes admin refreshes instant.
+    """
+    CACHE_KEY = f"admin:prc_analytics:detailed:{period}:v1"
+    if cache:
+        try:
+            cached = await cache.get(CACHE_KEY)
+            if cached:
+                return cached
+        except Exception:
+            pass
+
     try:
         now = datetime.now(timezone.utc)
-        
+
         # Calculate date ranges based on period
         if period == "day":
             start_date = now - timedelta(days=1)
@@ -27811,124 +27840,42 @@ async def get_detailed_prc_analytics(period: str = "month"):
             start_date = now - timedelta(days=30)
             prev_start = now - timedelta(days=60)
             prev_end = start_date
-        
+
         start_str = start_date.isoformat()
         prev_start_str = prev_start.isoformat()
         prev_end_str = prev_end.isoformat()
-        
-        # Use aggregation for efficiency instead of loading all transactions into memory
+
         credit_types = ["mining", "referral_bonus", "cashback", "admin_credit", "vip_bonus", "signup_bonus", "prc_rain_gain"]
         debit_types = ["order", "withdrawal", "bill_payment_request", "gift_voucher_request", "delivery_charge", "prc_rain_loss", "prc_burn"]
-        
-        async def aggregate_period(start, end=None):
-            # Handle both string and Date types for timestamp/created_at
-            match = {"$or": [{"timestamp": {"$gte": start}}, {"created_at": {"$gte": start}}]}
+
+        def _build_period_match(start, end=None):
             if end:
-                match = {"$or": [
+                return {"$or": [
                     {"timestamp": {"$gte": start, "$lt": end}},
                     {"created_at": {"$gte": start, "$lt": end}}
                 ]}
-            
-            pipeline = [
-                {"$match": match},
-                {"$group": {
-                    "_id": "$type",
-                    "total": {"$sum": {"$ifNull": ["$amount", 0]}},
-                    "abs_total": {"$sum": {"$abs": {"$ifNull": ["$amount", 0]}}},
-                    "count": {"$sum": 1}
-                }}
-            ]
-            try:
-                results = await db.transactions.aggregate(pipeline).to_list(100)
-            except Exception as agg_err:
-                logging.warning(f"Aggregation error: {agg_err}")
-                results = []
-            type_map = {r["_id"]: r for r in results if r["_id"]}
-            
-            created = sum(type_map.get(t, {}).get("total", 0) for t in credit_types)
-            used = sum(type_map.get(t, {}).get("abs_total", 0) for t in debit_types)
-            burned = type_map.get("prc_burn", {}).get("abs_total", 0)
-            
-            return {"created": created, "used": used, "burned": burned, "type_map": type_map}
-        
-        current_stats = await aggregate_period(start_str)
-        prev_stats = await aggregate_period(prev_start_str, prev_end_str)
-        
-        prc_created_current = current_stats["created"]
-        prc_created_prev = prev_stats["created"]
-        prc_used_current = current_stats["used"]
-        prc_used_prev = prev_stats["used"]
-        prc_burned_current = current_stats["burned"]
-        prc_burned_prev = prev_stats["burned"]
-        
-        # Get all users for balance calculation
-        try:
-            user_stats_pipeline = [
-                {"$group": {
-                    "_id": None,
-                    "total_prc_balance": {"$sum": {"$ifNull": ["$prc_balance", 0]}},
-                    "vip_count": {"$sum": {"$cond": [{"$eq": ["$membership_type", "vip"]}, 1, 0]}}
-                }}
-            ]
-            user_stats = await db.users.aggregate(user_stats_pipeline).to_list(1)
-            total_in_circulation = user_stats[0]["total_prc_balance"] if user_stats else 0
-            vip_user_count = user_stats[0]["vip_count"] if user_stats else 0
-        except Exception:
-            total_in_circulation = 0
-            vip_user_count = 0
-        
-        # Calculate Profit/Loss (Platform perspective)
-        # Profit = PRC Used + PRC Burned - PRC Created (ideally should be positive or balanced)
-        profit_loss_current = (prc_used_current + prc_burned_current) - prc_created_current
-        profit_loss_prev = (prc_used_prev + prc_burned_prev) - prc_created_prev
-        
-        # Get revenue from VIP memberships (actual money)
-        try:
-            vip_payments = await db.vip_payments.find({
-                "status": "approved",
-                "$or": [
-                    {"approved_at": {"$gte": start_str}},
-                    {"created_at": {"$gte": start_str}},
-                    {"updated_at": {"$gte": start_str}}
-                ]
-            }, {"_id": 0, "amount": 1}).limit(1000).to_list(length=1000)
-            vip_revenue_current = sum(p.get("amount", 0) for p in vip_payments)
-            
-            vip_payments_prev = await db.vip_payments.find({
-                "status": "approved",
-                "$or": [
-                    {"approved_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
-                    {"created_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
-                    {"updated_at": {"$gte": prev_start_str, "$lt": prev_end_str}}
-                ]
-            }, {"_id": 0, "amount": 1}).to_list(length=1000)
-            vip_revenue_prev = sum(p.get("amount", 0) for p in vip_payments_prev)
-        except Exception:
-            vip_revenue_current = 0
-            vip_revenue_prev = 0
-        
-        # Calculate percentage changes
-        def calc_change(current, prev):
-            if prev == 0:
-                return 100 if current > 0 else 0
-            return round(((current - prev) / prev) * 100, 1)
-        
-        # Build daily/weekly chart data using aggregation
-        chart_data = []
-        
-        # Use $toString to handle both Date and String timestamp fields
+            return {"$or": [
+                {"timestamp": {"$gte": start}},
+                {"created_at": {"$gte": start}}
+            ]}
+
+        period_group = {
+            "_id": "$type",
+            "total": {"$sum": {"$ifNull": ["$amount", 0]}},
+            "abs_total": {"$sum": {"$abs": {"$ifNull": ["$amount", 0]}}},
+            "count": {"$sum": 1}
+        }
+
+        # Build chart pipeline (period-specific) — runs in parallel with everything else.
         ts_field = {"$ifNull": ["$timestamp", "$created_at"]}
-        # Convert to string if it's a Date object, keep as-is if string
         ts_as_string = {"$cond": {
             "if": {"$eq": [{"$type": ts_field}, "date"]},
             "then": {"$dateToString": {"format": "%Y-%m-%dT%H:%M:%S", "date": ts_field}},
             "else": {"$toString": ts_field}
         }}
-        
         if period == "day":
-            # Hourly aggregation
-            hourly_pipeline = [
-                {"$match": {"$or": [{"timestamp": {"$gte": start_str}}, {"created_at": {"$gte": start_str}}]}},
+            chart_pipeline = [
+                {"$match": _build_period_match(start_str)},
                 {"$addFields": {"ts_str": ts_as_string}},
                 {"$addFields": {"hour_str": {"$substr": ["$ts_str", 11, 2]}}},
                 {"$group": {
@@ -27937,30 +27884,10 @@ async def get_detailed_prc_analytics(period: str = "month"):
                     "abs_total": {"$sum": {"$abs": {"$ifNull": ["$amount", 0]}}}
                 }}
             ]
-            try:
-                hourly_data = await db.transactions.aggregate(hourly_pipeline).to_list(500)
-            except Exception:
-                hourly_data = []
-            hourly_map = {}
-            for h in hourly_data:
-                hr = h["_id"]["hour"]
-                t = h["_id"]["type"]
-                if hr not in hourly_map:
-                    hourly_map[hr] = {}
-                hourly_map[hr][t] = h
-            
-            for i in range(24):
-                hour_label = f"{i:02d}:00"
-                hr_key = f"{i:02d}"
-                hr_data = hourly_map.get(hr_key, {})
-                created = sum(hr_data.get(t, {}).get("total", 0) for t in credit_types)
-                used = sum(hr_data.get(t, {}).get("abs_total", 0) for t in debit_types)
-                burned = hr_data.get("prc_burn", {}).get("abs_total", 0)
-                chart_data.append({"label": hour_label, "created": round(created, 2), "used": round(used, 2), "burned": round(burned, 2)})
+            chart_to_list_limit = 500
         else:
-            # Daily aggregation
-            daily_pipeline = [
-                {"$match": {"$or": [{"timestamp": {"$gte": start_str}}, {"created_at": {"$gte": start_str}}]}},
+            chart_pipeline = [
+                {"$match": _build_period_match(start_str)},
                 {"$addFields": {"ts_str": ts_as_string}},
                 {"$addFields": {"date_str": {"$substr": ["$ts_str", 0, 10]}}},
                 {"$group": {
@@ -27970,21 +27897,116 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 }},
                 {"$sort": {"_id.date": 1}}
             ]
-            try:
-                daily_data = await db.transactions.aggregate(daily_pipeline).to_list(5000)
-            except Exception:
-                daily_data = []
-            daily_map = {}
-            for d in daily_data:
+            chart_to_list_limit = 5000
+
+        user_stats_pipeline = [
+            {"$group": {
+                "_id": None,
+                "total_prc_balance": {"$sum": {"$ifNull": ["$prc_balance", 0]}},
+                "vip_count": {"$sum": {"$cond": [{"$eq": ["$membership_type", "vip"]}, 1, 0]}}
+            }}
+        ]
+        vip_rev_current_pipeline = [
+            {"$match": {
+                "status": "approved",
+                "$or": [
+                    {"approved_at": {"$gte": start_str}},
+                    {"created_at": {"$gte": start_str}},
+                    {"updated_at": {"$gte": start_str}}
+                ]
+            }},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$amount", 0]}}}}
+        ]
+        vip_rev_prev_pipeline = [
+            {"$match": {
+                "status": "approved",
+                "$or": [
+                    {"approved_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
+                    {"created_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
+                    {"updated_at": {"$gte": prev_start_str, "$lt": prev_end_str}}
+                ]
+            }},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$amount", 0]}}}}
+        ]
+
+        # Fire ALL 7 independent queries in parallel — was 7 sequential awaits.
+        _r = await asyncio.gather(
+            db.transactions.aggregate([{"$match": _build_period_match(start_str)}, {"$group": period_group}]).to_list(100),
+            db.transactions.aggregate([{"$match": _build_period_match(prev_start_str, prev_end_str)}, {"$group": period_group}]).to_list(100),
+            db.users.aggregate(user_stats_pipeline).to_list(1),
+            db.vip_payments.aggregate(vip_rev_current_pipeline).to_list(1),
+            db.vip_payments.aggregate(vip_rev_prev_pipeline).to_list(1),
+            db.transactions.aggregate(chart_pipeline, allowDiskUse=True).to_list(chart_to_list_limit),
+            db.users.count_documents({}),
+            return_exceptions=True,
+        )
+        cur_results       = _r[0] if not isinstance(_r[0], Exception) else []
+        prev_results      = _r[1] if not isinstance(_r[1], Exception) else []
+        user_stats        = _r[2] if not isinstance(_r[2], Exception) else []
+        vip_rev_cur_arr   = _r[3] if not isinstance(_r[3], Exception) else []
+        vip_rev_prev_arr  = _r[4] if not isinstance(_r[4], Exception) else []
+        chart_data_raw    = _r[5] if not isinstance(_r[5], Exception) else []
+        total_user_count  = _r[6] if not isinstance(_r[6], Exception) else 0
+
+        cur_type_map = {r["_id"]: r for r in cur_results if r["_id"]}
+        prev_type_map = {r["_id"]: r for r in prev_results if r["_id"]}
+
+        prc_created_current = sum(cur_type_map.get(t, {}).get("total", 0) for t in credit_types)
+        prc_created_prev    = sum(prev_type_map.get(t, {}).get("total", 0) for t in credit_types)
+        prc_used_current    = sum(cur_type_map.get(t, {}).get("abs_total", 0) for t in debit_types)
+        prc_used_prev       = sum(prev_type_map.get(t, {}).get("abs_total", 0) for t in debit_types)
+        prc_burned_current  = cur_type_map.get("prc_burn", {}).get("abs_total", 0)
+        prc_burned_prev     = prev_type_map.get("prc_burn", {}).get("abs_total", 0)
+        current_stats = {"type_map": cur_type_map}
+
+        total_in_circulation = user_stats[0]["total_prc_balance"] if user_stats else 0
+        vip_user_count = user_stats[0]["vip_count"] if user_stats else 0
+
+        # Calculate Profit/Loss (Platform perspective)
+        # Profit = PRC Used + PRC Burned - PRC Created (ideally should be positive or balanced)
+        profit_loss_current = (prc_used_current + prc_burned_current) - prc_created_current
+        profit_loss_prev = (prc_used_prev + prc_burned_prev) - prc_created_prev
+
+        vip_revenue_current = vip_rev_cur_arr[0]["total"] if vip_rev_cur_arr else 0
+        vip_revenue_prev    = vip_rev_prev_arr[0]["total"] if vip_rev_prev_arr else 0
+
+        # Calculate percentage changes
+        def calc_change(current, prev):
+            if prev == 0:
+                return 100 if current > 0 else 0
+            return round(((current - prev) / prev) * 100, 1)
+
+        # Build daily/weekly chart data using the pre-fetched chart_data_raw.
+        chart_data = []
+
+        if period == "day":
+            hourly_map: dict = {}
+            for h in chart_data_raw:
+                hr = h["_id"]["hour"]
+                t = h["_id"]["type"]
+                if hr not in hourly_map:
+                    hourly_map[hr] = {}
+                hourly_map[hr][t] = h
+            for i in range(24):
+                hour_label = f"{i:02d}:00"
+                hr_key = f"{i:02d}"
+                hr_data = hourly_map.get(hr_key, {})
+                created = sum(hr_data.get(t, {}).get("total", 0) for t in credit_types)
+                used = sum(hr_data.get(t, {}).get("abs_total", 0) for t in debit_types)
+                burned = hr_data.get("prc_burn", {}).get("abs_total", 0)
+                chart_data.append({"label": hour_label, "created": round(created, 2), "used": round(used, 2), "burned": round(burned, 2)})
+        else:
+            daily_map: dict = {}
+            for d in chart_data_raw:
                 dt = d["_id"]["date"]
                 t = d["_id"]["type"]
                 if dt not in daily_map:
                     daily_map[dt] = {}
                 daily_map[dt][t] = d
-            
+
             days_count = 7 if period == "week" else (365 if period == "year" else 30)
             step = 1 if period in ["day", "week"] else (30 if period == "year" else 1)
-            
+
             for i in range(0, days_count, step):
                 day_start_dt = now - timedelta(days=days_count-i)
                 day_str = day_start_dt.isoformat()[:10]
@@ -27994,7 +28016,7 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 burned = day_data.get("prc_burn", {}).get("abs_total", 0)
                 label = day_start_dt.strftime("%d %b") if period != "year" else day_start_dt.strftime("%b %Y")
                 chart_data.append({"label": label, "created": round(created, 2), "used": round(used, 2), "burned": round(burned, 2)})
-        
+
         # Usage breakdown by category (from aggregated data)
         usage_breakdown = []
         category_map = {
@@ -28027,10 +28049,8 @@ async def get_detailed_prc_analytics(period: str = "month"):
             amount = current_stats["type_map"].get(txn_type, {}).get("total", 0)
             if amount > 0:
                 source_breakdown.append({"source": label, "amount": round(amount, 2)})
-        
-        total_user_count = await db.users.count_documents({})
-        
-        return {
+
+        payload = {
             "period": period,
             "summary": {
                 "prc_created": round(prc_created_current, 2),
@@ -28057,6 +28077,12 @@ async def get_detailed_prc_analytics(period: str = "month"):
             "source_breakdown": sorted(source_breakdown, key=lambda x: x["amount"], reverse=True),
             "health_score": min(100, max(0, int(50 + (prc_used_current / max(prc_created_current, 1)) * 30 + (prc_burned_current / max(prc_created_current, 1)) * 20)))
         }
+        if cache:
+            try:
+                await cache.set(CACHE_KEY, payload, ttl=60)
+            except Exception:
+                pass
+        return payload
         
     except Exception as e:
         logging.error(f"Error in detailed PRC analytics: {e}")

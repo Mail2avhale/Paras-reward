@@ -334,6 +334,9 @@ async def create_performance_indexes(db):
     await ix(db.admin_actions, [("user_id", 1), ("action", 1), ("timestamp", -1)], background=True)
     await ix(db.admin_actions, [("user_id", 1), ("timestamp", -1)], background=True)
 
+    # subscription_expiry drives admin/subscription-stats "expiring this week" count.
+    await ix(db.users, "subscription_expiry", background=True)
+
     await ix(db.core_team_members, "uid", background=True)
     await ix(db.core_team_members, [("uid", 1), ("status", 1)], background=True)
 

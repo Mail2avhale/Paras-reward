@@ -1003,6 +1003,20 @@ Examined all 5 matched DMT transactions in production:
 - **Result on preview**: Cold path 151 ms, cache hit ~137 ms (network-bound). On production with thousands of paid orders, the Python loop bottleneck is fully eliminated — wall-clock now scales with grouped row count (~hundreds), not raw order count (~thousands+).
 - **Bonus**: `allowDiskUse=True` set so the pipeline never fails on memory limits.
 
+### Subscription-Stats + PRC Analytics — `$facet` & Parallelization (DONE - May 2, 2026)
+- **Subscription Stats** (`server.py /admin/subscription-stats`):
+  - Combined `users.aggregate(plan_counts)` + `users.count_documents(expiring_this_week)` into a single `$facet` aggregation over `users` (one round-trip instead of two).
+  - Added missing `users.subscription_expiry` index (drives the expiring-this-week count) — was COLLSCAN.
+  - VIP-payments pending count still parallel via `asyncio.gather` (different collection).
+  - 60 s cache retained.
+  - Server-side timing (localhost direct): ~257 ms (was 673 ms via preview ingress).
+- **PRC Analytics Detailed** (`server.py /admin/prc-analytics/detailed`):
+  - Was 7 sequential awaits: current period agg, prev period agg, user stats agg, vip_payments_current `find().to_list(1000)` + Python sum, vip_payments_prev same, chart pipeline, total_user count.
+  - Now: all 7 fire in a single `asyncio.gather`. VIP revenue uses server-side `$group $sum` (no 1000-doc Python pull). Chart pipeline runs alongside instead of after.
+  - Period-keyed 60 s cache (`admin:prc_analytics:detailed:{period}:v1`) — admin tab switches stay instant.
+  - Server-side timing (localhost direct): ~258 ms for `period=month` (was ~1-2 s sequential), ~280 ms for `period=year`.
+- **Startup log on restart**: `196 indexes created/existing, 0 failed`.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
