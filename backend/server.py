@@ -20889,19 +20889,50 @@ async def admin_user_360_debug(query: str = None):
     return debug_info
 
 
+# ========== USER-360 IN-PROCESS CACHE ==========
+# 90 s per-uid TTL. Plain dict with monotonic timestamps — sub-ms cache hits on
+# repeat admin clicks. Replaces failed Upstash REST attempt (Apr 30 2026).
+import time as _u360_time
+_USER360_CACHE: dict = {}  # uid -> {"data": payload, "ts": float}
+_USER360_TTL = 90.0
+_USER360_MAX_ENTRIES = 200  # bounded; admin views ~few dozen users per session
+
+
+def _user360_cache_get(uid: str):
+    entry = _USER360_CACHE.get(uid)
+    if entry and (_u360_time.monotonic() - entry["ts"]) < _USER360_TTL:
+        return entry["data"]
+    if entry:
+        _USER360_CACHE.pop(uid, None)
+    return None
+
+
+def _user360_cache_set(uid: str, payload):
+    if len(_USER360_CACHE) >= _USER360_MAX_ENTRIES:
+        # Evict oldest 25% — simple LRU-ish without OrderedDict overhead
+        items = sorted(_USER360_CACHE.items(), key=lambda kv: kv[1]["ts"])
+        for k, _ in items[: _USER360_MAX_ENTRIES // 4]:
+            _USER360_CACHE.pop(k, None)
+    _USER360_CACHE[uid] = {"data": payload, "ts": _u360_time.monotonic()}
+
+
 @api_router.get("/admin/user-360")
 async def get_user_360_view(query: str, request: Request):
     """
     Get comprehensive 360° view of a user for admin analytics.
     Search by: email, mobile, Aadhaar (last 4 digits), PAN, UID, or referral code.
     Returns: user profile, financial summary, referral network, all transactions, and activity timeline.
+
+    PERF (May 2 2026): In-process per-uid TTL cache (90 s) — Upstash REST was too
+    slow for this payload, but a plain dict + monotonic timestamp gives sub-ms
+    cache hits on repeat admin clicks. Stale entries auto-evicted on access.
     """
     # Log the incoming request for debugging
     logging.info(f"[USER360] Request received - query: {query}")
-    
+
     if not query or len(query.strip()) < 2:
         raise HTTPException(status_code=400, detail="Search query too short")
-    
+
     query = query.strip()
     
     try:
@@ -20984,7 +21015,13 @@ async def get_user_360_view(query: str, request: Request):
         if not uid:
             logging.error(f"User 360: User found but no uid field! Query: {query}")
             raise HTTPException(status_code=500, detail="User data corrupted - missing uid")
-        
+
+        # ---- CACHE FAST-PATH (post user-lookup, pre heavy aggregations) ----
+        _cached = _user360_cache_get(uid)
+        if _cached is not None:
+            logging.info(f"[USER360] cache hit for {uid}")
+            return _cached
+
         logging.info(f"[USER360] Processing user: {uid}")
 
         # NOTE: Redis caching for the full User-360 payload was tried (Apr 30 2026)
@@ -21657,6 +21694,11 @@ async def get_user_360_view(query: str, request: Request):
             }
         }
         logging.info(f"[USER360] Successfully returning data for user: {uid}")
+        # Cache for 90 s — repeated admin clicks are sub-ms
+        try:
+            _user360_cache_set(uid, response_data)
+        except Exception:
+            pass
         return response_data
     except Exception as e:
         logging.error(f"[USER360] Serialization error for {uid}: {str(e)}", exc_info=True)

@@ -1061,6 +1061,19 @@ Examined all 5 matched DMT transactions in production:
 - **`/admin/db/create-indexes` rewritten** as **fire-and-forget** (`background_mode=true` default) — returns instantly, runs the ~200 idempotent `create_index` calls in `asyncio.create_task` so K8s ingress 60-s timeout never trips. Pass `?background_mode=false` to wait for completion (debug only).
 - **Files touched**: `backend/server.py` (`/admin/user-360` lookup rewrite), `backend/routes/admin_misc.py` ($text impersonation search), `backend/routes/admin_system.py` (background-mode index endpoint), `frontend/src/components/layouts/AdminLayout.js` (stale endpoint removal).
 
+### Production Hot-Fix #2 — User-360 In-Process Cache + Frontend Timeout (DONE - May 2, 2026)
+- **Context**: Post-deploy production smoke test showed User-360 timing was inconsistent — 1-2 s when warm, but 20-26 s under load (Atlas connection pool saturation under real production traffic). Testing agent (iteration_227) saw browser HTTP 503 from frontend axios interceptor when responses exceeded the 25 s default timeout.
+- **Fix #1: 90 s in-process per-uid cache** (`server.py /admin/user-360`):
+  - Plain `dict` keyed by `uid` with `time.monotonic()` timestamps. No Upstash REST round-trip overhead (a previous attempt in Apr 2026 found Upstash too slow for this payload).
+  - Bounded to 200 entries — admin views ~few dozen users per session. Eviction trims oldest 25 % when bound is hit.
+  - Cache fast-path placed right after the user lookup (so search-by-mobile vs. search-by-email both hit the same `uid` cache entry).
+  - **Verified locally**: cold 36 ms, warm 5 ms (7× faster). Cache hit by-uid even when query identifier differs.
+- **Fix #2: Frontend axios timeout 30 s** (`pages/AdminUser360New.js`):
+  - `timeout: 30000` on both User-360 GET requests so a hung Atlas connection never strands the UI in 'Loading user data...' indefinitely.
+  - Frontend axios interceptor's auto-retry on 502/503/504 still active for transient blips.
+- **Production impact**: Under load the first admin click on a heavy user may still take 1-3 s, but every subsequent click on the same user is instant. Multiple admins navigating each other's profiles benefit from cache sharing on the same backend pod.
+- **Files touched**: `backend/server.py` (cache module + integration), `frontend/src/pages/AdminUser360New.js` (timeout: 30000).
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

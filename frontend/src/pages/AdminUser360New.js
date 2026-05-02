@@ -461,20 +461,20 @@ const AdminUser360New = ({ user: adminUser }) => {
     setAuditData(null);
     
     try {
-      // Try new endpoint first, fallback to old
+      // Try new endpoint first, fallback to old. Bound the request to 30 s so
+      // a hung Atlas connection doesn't strand the UI in 'Loading...' forever —
+      // the per-uid cache + auto-retry interceptor still recover quickly.
+      const reqOpts = {
+        headers: { Authorization: `Bearer ${adminUser?.token}` },
+        timeout: 30000,
+      };
       let response;
       try {
-        response = await axios.get(`${API}/admin/user-360?query=${encodeURIComponent(searchQuery.trim())}`, {
-          headers: { Authorization: `Bearer ${adminUser?.token}` }
-        });
+        response = await axios.get(`${API}/admin/user-360?query=${encodeURIComponent(searchQuery.trim())}`, reqOpts);
       } catch (e) {
         // Fallback to new modular endpoint
-        const searchResp = await axios.get(`${API}/admin/user360/search?q=${encodeURIComponent(searchQuery.trim())}`, {
-          headers: { Authorization: `Bearer ${adminUser?.token}` }
-        });
-        response = await axios.get(`${API}/admin/user360/full/${searchResp.data.user.uid}`, {
-          headers: { Authorization: `Bearer ${adminUser?.token}` }
-        });
+        const searchResp = await axios.get(`${API}/admin/user360/search?q=${encodeURIComponent(searchQuery.trim())}`, reqOpts);
+        response = await axios.get(`${API}/admin/user360/full/${searchResp.data.user.uid}`, reqOpts);
       }
       
       const data = response.data;
