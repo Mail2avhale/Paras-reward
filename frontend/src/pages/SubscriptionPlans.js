@@ -461,7 +461,13 @@ const SubscriptionPlans = ({ user }) => {
 
     try {
       setSubmitting(true);
-      
+
+      // Generate idempotency key per click — prevents accidental duplicate
+      // submissions on network retry, double-tap, or background sync.
+      const clientRequestId =
+        (window.crypto?.randomUUID?.()) ||
+        `sp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
       await axios.post(`${API}/subscription/payment/${user.uid}`, {
         plan: selectedPlan.id,
         duration: selectedDuration,
@@ -470,7 +476,8 @@ const SubscriptionPlans = ({ user }) => {
         utr_type: utrValidation.utrType,   // Send detected type
         screenshot_base64: formData.screenshot_url,
         date: formData.date,
-        time: formData.time
+        time: formData.time,
+        client_request_id: clientRequestId,
       });
       
       toast.success('✅ Payment Submitted Successfully!\n\nYour subscription will be activated within 24 hours after verification. You will receive a notification once approved.', {
@@ -480,12 +487,22 @@ const SubscriptionPlans = ({ user }) => {
       
     } catch (error) {
       console.error('Submit error:', error);
-      const errorMsg = error.response?.data?.detail || 'Failed to submit payment';
-      // Show specific message for UTR duplicate
+      const errorMsg = error.response?.data?.detail
+        || error.response?.data?.message
+        || error.message
+        || 'Failed to submit payment';
+      const status = error.response?.status;
+      // Better UX based on error type
       if (errorMsg.includes('UTR') || errorMsg.includes('already')) {
-        toast.error('⚠️ UTR ALREADY IN USE - ' + errorMsg);
+        toast.error('⚠️ ' + errorMsg, { duration: 6000 });
+      } else if (status === 504 || errorMsg.toLowerCase().includes('database is slow')) {
+        toast.error('⏱ Database is slow right now. Please wait a few seconds and try again.', { duration: 6000 });
+      } else if (status === 429) {
+        toast.error('🛑 ' + errorMsg, { duration: 6000 });
+      } else if (status === 409) {
+        toast.error('ℹ️ ' + errorMsg, { duration: 6000 });
       } else {
-        toast.error(errorMsg);
+        toast.error(errorMsg, { duration: 5000 });
       }
     } finally {
       setSubmitting(false);

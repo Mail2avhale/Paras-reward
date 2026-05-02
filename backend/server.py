@@ -11165,126 +11165,262 @@ async def preview_fraudulent_subscriptions():
 
 @api_router.post("/subscription/payment/{uid}")
 async def submit_subscription_payment(uid: str, request: Request):
-    """Submit subscription payment for verification with fraud prevention"""
-    data = await request.json()
-    
-    plan = data.get("plan")  # startup, growth, elite
-    duration = data.get("duration")  # monthly, quarterly, half_yearly, yearly
-    amount = data.get("amount")
-    utr_number = data.get("utr_number")
-    screenshot = data.get("screenshot_base64")
-    payment_date = data.get("date")
-    payment_time = data.get("time")
-    
-    # ==================== FRAUD PREVENTION ====================
-    
-    # 1. Validate plan
-    if plan not in ["startup", "growth", "elite"]:
-        raise HTTPException(status_code=400, detail="Invalid plan")
-    
-    if duration not in SUBSCRIPTION_DURATIONS:
-        raise HTTPException(status_code=400, detail="Invalid duration")
-    
-    # 2. STRICT UTR VALIDATION - Must be exactly 12 digits
-    if utr_number:
-        # Remove all non-digits and validate
+    """Submit subscription payment for verification with fraud prevention.
+
+    Hardened (May 2026):
+      • All Atlas calls wrapped in 8s asyncio.wait_for to prevent hangs.
+      • motor/pymongo timeout exceptions → HTTP 504 (frontend auto-retries).
+      • Idempotency key support via `client_request_id` to prevent
+        accidental duplicate submissions on retry.
+      • Better error messages so frontend shows the real reason, not
+        the generic "Failed to submit payment" toast.
+    """
+    DB_FAST_TIMEOUT = 8.0
+
+    def _is_timeout_err(e: Exception) -> bool:
+        s = str(e).lower()
+        return any(t in s for t in ["timeout", "timed out", "serverselection", "networktimeout"])
+
+    try:
+        data = await request.json()
+
+        plan = data.get("plan")
+        duration = data.get("duration")
+        amount = data.get("amount")
+        utr_number = data.get("utr_number")
+        screenshot = data.get("screenshot_base64")
+        payment_date = data.get("date")
+        payment_time = data.get("time")
+        client_request_id = data.get("client_request_id")
+
+        idem_scope = f"sub_payment:{uid}"
+        # Idempotency: if this exact request was already submitted, replay
+        if client_request_id:
+            try:
+                existing = await asyncio.wait_for(
+                    db.idempotency_keys.find_one(
+                        {"scope": idem_scope, "key": client_request_id},
+                        {"_id": 0},
+                    ),
+                    timeout=DB_FAST_TIMEOUT,
+                )
+                if existing and existing.get("status") == "completed":
+                    cached = existing.get("response")
+                    if isinstance(cached, dict):
+                        return {**cached, "_idempotency_replay": True}
+                elif existing and existing.get("status") == "claimed":
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Your previous payment submission is still being processed. Please wait a moment and check Subscription page — it may already be submitted.",
+                    )
+            except HTTPException:
+                raise
+            except Exception:
+                pass  # Idempotency check is best-effort
+
+        # ==================== FRAUD PREVENTION ====================
+
+        if plan not in ["startup", "growth", "elite"]:
+            raise HTTPException(status_code=400, detail="Invalid plan selected")
+
+        if duration not in SUBSCRIPTION_DURATIONS:
+            raise HTTPException(status_code=400, detail="Invalid duration selected")
+
+        # 2. STRICT UTR VALIDATION - Must be exactly 12 digits
+        if not utr_number:
+            raise HTTPException(status_code=400, detail="UTR number is required")
+
         utr_cleaned = ''.join(filter(str.isdigit, utr_number))
-        
         if len(utr_cleaned) != 12:
             raise HTTPException(
                 status_code=400,
-                detail=f"UTR number फक्त 12 अंकी असावा. Current: {len(utr_cleaned)} digits"
+                detail=f"UTR number must be exactly 12 digits. You entered: {len(utr_cleaned)} digits."
             )
-        
-        utr_number = utr_cleaned  # Use cleaned version
-        
-        # 3. Check for duplicate UTR
-        if not await check_unique_utr(utr_number):
-            utr_info = await get_utr_usage_info(utr_number)
-            info_msg = f" (Used in {utr_info['type']}, Status: {utr_info['status']})" if utr_info else ""
+        utr_number = utr_cleaned
+
+        # 3. Check for duplicate UTR (with timeout)
+        try:
+            is_unique = await asyncio.wait_for(
+                check_unique_utr(utr_number),
+                timeout=DB_FAST_TIMEOUT,
+            )
+            if not is_unique:
+                try:
+                    utr_info = await asyncio.wait_for(
+                        get_utr_usage_info(utr_number),
+                        timeout=DB_FAST_TIMEOUT,
+                    )
+                except Exception:
+                    utr_info = None
+                info_msg = f" (Used in {utr_info['type']}, Status: {utr_info['status']})" if utr_info else ""
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"UTR ALREADY IN USE! This UTR number '{utr_number}' has already been used{info_msg}. Please enter the correct UTR from your payment receipt."
+                )
+        except HTTPException:
+            raise
+        except asyncio.TimeoutError:
             raise HTTPException(
-                status_code=400, 
-                detail=f"UTR ALREADY IN USE! UTR number '{utr_number}' आधीच वापरला गेला आहे{info_msg}. कृपया योग्य UTR number टाका."
+                status_code=504,
+                detail="Database is slow right now. Please try again in a few seconds.",
             )
-    else:
-        raise HTTPException(status_code=400, detail="UTR number आवश्यक आहे")
-    
-    # 4. Rate limiting - Check how many payment submissions from this user in last 24 hours
-    now = datetime.now(timezone.utc)
-    yesterday = (now - timedelta(hours=24)).isoformat()
-    
-    recent_submissions = await db.vip_payments.count_documents({
-        "user_id": uid,
-        "submitted_at": {"$gte": yesterday}
-    })
-    
-    if recent_submissions >= 5:
-        raise HTTPException(
-            status_code=429,
-            detail="Too many payment submissions. कृपया 24 तासांनंतर पुन्हा प्रयत्न करा."
-        )
-    
-    # 5. Check for suspicious patterns - same amount submissions in short time
-    recent_same_amount = await db.vip_payments.count_documents({
-        "user_id": uid,
-        "amount": amount,
-        "submitted_at": {"$gte": (now - timedelta(hours=1)).isoformat()}
-    })
-    
-    if recent_same_amount >= 2:
-        raise HTTPException(
-            status_code=429,
-            detail="Duplicate amount submission detected. कृपया काही वेळाने पुन्हा प्रयत्न करा."
-        )
-    
-    # 6. Screenshot required
-    if not screenshot:
-        raise HTTPException(status_code=400, detail="Payment screenshot आवश्यक आहे")
-    
-    # ==================== CREATE PAYMENT RECORD ====================
-    
-    payment_id = str(uuid.uuid4())
-    
-    # Get client IP for fraud tracking (if available)
-    client_ip = request.headers.get("X-Forwarded-For", request.headers.get("X-Real-IP", "unknown"))
-    if client_ip and "," in client_ip:
-        client_ip = client_ip.split(",")[0].strip()
-    
-    payment_doc = {
-        "payment_id": payment_id,
-        "user_id": uid,
-        "subscription_plan": plan,
-        "plan_type": duration,
-        "amount": amount,
-        "utr_number": utr_number,
-        "screenshot_url": screenshot,
-        "date": payment_date,
-        "time": payment_time,
-        "status": "pending",
-        "submitted_at": now.isoformat(),
-        "created_at": now.isoformat(),
-        # Fraud prevention metadata
-        "client_ip": client_ip,
-        "user_agent": request.headers.get("User-Agent", "unknown")[:200],
-        "fraud_flags": [],
-        "verification_attempts": 0
-    }
-    
-    await db.vip_payments.insert_one(payment_doc)
-    
-    # Log activity
-    await log_activity(
-        user_id=uid,
-        action_type="payment_submission",
-        description=f"Submitted payment for {plan} ({duration})",
-        metadata={"payment_id": payment_id, "amount": amount, "utr": utr_number[-4:]}  # Only last 4 digits for security
-    )
-    
-    return {
-        "success": True,
-        "payment_id": payment_id,
-        "message": "Payment submitted for verification"
-    }
+        except Exception as e:
+            if _is_timeout_err(e):
+                raise HTTPException(status_code=504, detail="Database is slow right now. Please try again.")
+            raise
+
+        # 4. Rate limiting — count recent submissions
+        now = datetime.now(timezone.utc)
+        yesterday = (now - timedelta(hours=24)).isoformat()
+        try:
+            recent_submissions = await asyncio.wait_for(
+                db.vip_payments.count_documents({
+                    "user_id": uid,
+                    "submitted_at": {"$gte": yesterday}
+                }),
+                timeout=DB_FAST_TIMEOUT,
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Database is slow right now. Please try again.")
+        except Exception as e:
+            if _is_timeout_err(e):
+                raise HTTPException(status_code=504, detail="Database is slow right now. Please try again.")
+            raise
+
+        if recent_submissions >= 5:
+            raise HTTPException(
+                status_code=429,
+                detail="You have submitted too many payments today. Please wait 24 hours, or contact support if you believe this is an error."
+            )
+
+        # 5. Suspicious-pattern check — same amount in last hour
+        try:
+            recent_same_amount = await asyncio.wait_for(
+                db.vip_payments.count_documents({
+                    "user_id": uid,
+                    "amount": amount,
+                    "submitted_at": {"$gte": (now - timedelta(hours=1)).isoformat()}
+                }),
+                timeout=DB_FAST_TIMEOUT,
+            )
+        except Exception:
+            recent_same_amount = 0  # Best-effort; don't block submission on a DB hiccup
+
+        if recent_same_amount >= 2:
+            raise HTTPException(
+                status_code=429,
+                detail="A similar payment was already submitted recently. Please wait a few minutes — your earlier submission may already be in queue."
+            )
+
+        if not screenshot:
+            raise HTTPException(status_code=400, detail="Payment screenshot is required")
+
+        # ==================== CREATE PAYMENT RECORD ====================
+
+        payment_id = str(uuid.uuid4())
+
+        client_ip = request.headers.get("X-Forwarded-For", request.headers.get("X-Real-IP", "unknown"))
+        if client_ip and "," in client_ip:
+            client_ip = client_ip.split(",")[0].strip()
+
+        payment_doc = {
+            "payment_id": payment_id,
+            "user_id": uid,
+            "subscription_plan": plan,
+            "plan_type": duration,
+            "amount": amount,
+            "utr_number": utr_number,
+            "screenshot_url": screenshot,
+            "date": payment_date,
+            "time": payment_time,
+            "status": "pending",
+            "submitted_at": now.isoformat(),
+            "created_at": now.isoformat(),
+            "client_ip": client_ip,
+            "user_agent": request.headers.get("User-Agent", "unknown")[:200],
+            "fraud_flags": [],
+            "verification_attempts": 0
+        }
+
+        # Claim idempotency sentinel just before the insert.
+        if client_request_id:
+            try:
+                claim = await check_and_claim_idempotency_key(
+                    client_request_id, idem_scope, ttl_seconds=600
+                )
+                if claim is not None:
+                    if claim.get("_inflight"):
+                        raise HTTPException(
+                            status_code=409,
+                            detail="Your previous payment submission is still being processed. Please wait.",
+                        )
+                    return claim
+            except HTTPException:
+                raise
+            except Exception:
+                pass  # Best-effort
+
+        try:
+            await asyncio.wait_for(
+                db.vip_payments.insert_one(payment_doc),
+                timeout=DB_FAST_TIMEOUT,
+            )
+        except asyncio.TimeoutError:
+            if client_request_id:
+                try:
+                    await release_idempotency_key(client_request_id, idem_scope)
+                except Exception:
+                    pass
+            raise HTTPException(status_code=504, detail="Database is slow right now. Please try again.")
+        except Exception as e:
+            if client_request_id:
+                try:
+                    await release_idempotency_key(client_request_id, idem_scope)
+                except Exception:
+                    pass
+            if _is_timeout_err(e):
+                raise HTTPException(status_code=504, detail="Database is slow right now. Please try again.")
+            raise
+
+        # Activity log — best-effort, never block submission
+        try:
+            await asyncio.wait_for(
+                log_activity(
+                    user_id=uid,
+                    action_type="payment_submission",
+                    description=f"Submitted payment for {plan} ({duration})",
+                    metadata={"payment_id": payment_id, "amount": amount, "utr": utr_number[-4:]}
+                ),
+                timeout=5.0,
+            )
+        except Exception:
+            pass
+
+        response = {
+            "success": True,
+            "payment_id": payment_id,
+            "message": "Payment submitted for verification"
+        }
+        if client_request_id:
+            try:
+                await store_idempotency_response(
+                    client_request_id, idem_scope, response, ttl_seconds=600
+                )
+            except Exception:
+                pass
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        err_str = str(e).lower()
+        if any(t in err_str for t in ["timeout", "timed out", "serverselection", "networktimeout"]):
+            raise HTTPException(
+                status_code=504,
+                detail="Database is slow right now. Please try again — your action will work next time.",
+            )
+        logging.error(f"[SUB-PAYMENT] Unexpected error for {uid}: {e}")
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def update_subscription_pricing(request: Request):
     """Admin: Update subscription pricing"""

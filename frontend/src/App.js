@@ -106,6 +106,7 @@ const RETRY_METHODS = ['get', 'head'];
 const RETRY_POST_PATHS = [
   '/admin/vip-payment/',          // approve / reject (status CAS guards)
   '/subscription/pay-with-prc',   // idempotency_key + cooldown CAS
+  '/subscription/payment/',       // manual UTR submission (idempotency_key)
   '/bank-transfer/request',       // idempotency_key + balance CAS
   '/bill-payment/request',        // idempotency_key + balance CAS
   '/bank-redeem/request/',        // idempotency_key + balance CAS
