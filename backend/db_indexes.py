@@ -337,6 +337,26 @@ async def create_performance_indexes(db):
     # subscription_expiry drives admin/subscription-stats "expiring this week" count.
     await ix(db.users, "subscription_expiry", background=True)
 
+    # ============ TRANSACTIONS — analytics charts use timestamp + (transaction_)type ============
+    await ix(db.transactions, "timestamp", background=True)
+    await ix(db.transactions, [("type", 1), ("timestamp", -1)], background=True)
+    await ix(db.transactions, [("transaction_type", 1), ("timestamp", -1)], background=True)
+    await ix(db.transactions, [("type", 1), ("created_at", -1)], background=True)
+    print("  ✅ Transactions analytics indexes attempted")
+
+    # ============ PRC LEDGER (analytics redeem trend) ============
+    await ix(db.prc_ledger, "type", background=True)
+    await ix(db.prc_ledger, "entry_type", background=True)
+    await ix(db.prc_ledger, "created_at", background=True)
+    await ix(db.prc_ledger, [("type", 1), ("entry_type", 1), ("created_at", -1)], background=True)
+    await ix(db.prc_ledger, [("user_id", 1), ("created_at", -1)], background=True)
+    print("  ✅ PRC ledger indexes attempted")
+
+    # ============ BANK TRANSFER REQUESTS (analytics processed_at chart) ============
+    await ix(db.bank_transfer_requests, "processed_at", background=True)
+    await ix(db.bank_transfer_requests, [("status", 1), ("processed_at", -1)], background=True)
+    print("  ✅ Bank transfer analytics indexes attempted")
+
     await ix(db.core_team_members, "uid", background=True)
     await ix(db.core_team_members, [("uid", 1), ("status", 1)], background=True)
 

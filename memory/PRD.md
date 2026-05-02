@@ -1017,6 +1017,30 @@ Examined all 5 matched DMT transactions in production:
   - Server-side timing (localhost direct): ~258 ms for `period=month` (was ~1-2 s sequential), ~280 ms for `period=year`.
 - **Startup log on restart**: `196 indexes created/existing, 0 failed`.
 
+### Comprehensive Analytics + Members Dashboard + Transactions Indexes (DONE - May 2, 2026)
+- **Comprehensive Analytics** (`server.py /admin/analytics/comprehensive`):
+  - 5 chart aggregations + top_users were previously sequential — now fire in single `asyncio.gather`.
+  - Range-keyed 60 s cache (`admin:analytics:comprehensive:s={start}:e={end}:v1`).
+  - Server-side warm cache hit ~250 ms (cache layer overhead from Upstash HTTP — still 50% faster than uncached).
+- **Members Dashboard** (`server.py /admin/members/dashboard`):
+  - Folded the trailing `last_month_count` query into the same 14-query gather → 15 queries in one round-trip (was 14 + 1 trailing).
+  - 90 s cache retained.
+  - Warm: ~252 ms.
+- **Transactions / PRC ledger / Bank transfer indexes** added to startup (`db_indexes.py`):
+  - `transactions`: `timestamp`, `(type, timestamp -1)`, `(transaction_type, timestamp -1)`, `(type, created_at -1)` — drives PRC analytics + chart pipelines.
+  - `prc_ledger`: `type`, `entry_type`, `created_at`, `(type, entry_type, created_at -1)`, `(user_id, created_at -1)` — drives daily redeem trend.
+  - `bank_transfer_requests`: `processed_at`, `(status, processed_at -1)` — drives bank redeem trend.
+- **Final localhost-direct timings (warm cache, after init)**:
+  | Page | Time |
+  |------|------|
+  | Razorpay revenue dashboard | **5 ms** |
+  | User-360 | **36 ms** |
+  | Members Dashboard | **252 ms** |
+  | Comprehensive Analytics | **253 ms** |
+  | PRC Analytics Detailed | **245 ms** |
+  | Subscription Stats | **242 ms** |
+- **Startup log**: `207 indexes created/existing, 0 failed`.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

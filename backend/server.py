@@ -20446,7 +20446,17 @@ async def get_members_dashboard(
         "created_at": {"$gte": month_start.isoformat()}
     }
     
-    # Run all queries in parallel
+    # Calculate growth rate (this month vs last month) — fold into above gather
+    last_month_start = month_start - timedelta(days=30)
+    last_month_query = {
+        **base_query,
+        "created_at": {
+            "$gte": last_month_start.isoformat(),
+            "$lt": month_start.isoformat()
+        }
+    }
+
+    # Run all queries in parallel (15 queries — was 14 + 1 trailing await)
     results = await asyncio.gather(
         db.users.aggregate(active_inactive_pipeline).to_list(10),
         db.users.aggregate(subscription_pipeline).to_list(10),
@@ -20462,6 +20472,7 @@ async def get_members_dashboard(
         db.users.count_documents(base_query),  # Total members
         db.users.count_documents({**base_query, "is_active": True}),  # Active
         db.users.count_documents({**base_query, "is_active": False}),  # Inactive
+        db.users.count_documents(last_month_query),  # NEW: last month count for growth rate
         return_exceptions=True
     )
     
@@ -20480,6 +20491,9 @@ async def get_members_dashboard(
     total_members = results[11] if not isinstance(results[11], Exception) else 0
     active_count = results[12] if not isinstance(results[12], Exception) else 0
     inactive_count = results[13] if not isinstance(results[13], Exception) else 0
+    last_month_count = results[14] if not isinstance(results[14], Exception) else 0
+    
+    last_month_count = results[14] if not isinstance(results[14], Exception) else 0
     
     # Format subscription breakdown
     subscription_breakdown = {
@@ -20507,17 +20521,7 @@ async def get_members_dashboard(
     
     # Format state distribution
     states = [{"state": item["_id"], "count": item["count"]} for item in state_distribution]
-    
-    # Calculate growth rate (this month vs last month)
-    last_month_start = month_start - timedelta(days=30)
-    last_month_query = {
-        **base_query,
-        "created_at": {
-            "$gte": last_month_start.isoformat(),
-            "$lt": month_start.isoformat()
-        }
-    }
-    last_month_count = await db.users.count_documents(last_month_query)
+
     growth_rate = round(((month_count - last_month_count) / last_month_count * 100), 2) if last_month_count > 0 else 100
     
     # Calculate paid members percentage
@@ -25588,9 +25592,19 @@ async def get_comprehensive_analytics(
     Comprehensive Analytics Dashboard API
     Returns: PRC circulation, redemption stats, user stats, and charts
     Supports custom date ranges
+    PERF: 60 s cache (key includes range), all charts in parallel.
     """
     from datetime import timedelta
-    
+
+    CACHE_KEY = f"admin:analytics:comprehensive:s={start_date or '-'}:e={end_date or '-'}:v1"
+    if cache:
+        try:
+            cached = await cache.get(CACHE_KEY)
+            if cached:
+                return cached
+        except Exception:
+            pass
+
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     
@@ -25758,27 +25772,18 @@ async def get_comprehensive_analytics(
         }
     }
     
-    # ===== 4. CHARTS DATA =====
-    # User growth chart (last 30 days)
+    # ===== 4. CHARTS DATA — ALL 5 IN PARALLEL (was sequential) =====
     thirty_days_ago = now - timedelta(days=30)
-    user_growth_data = await db.users.aggregate([
-        {"$match": {"created_at": {"$gte": thirty_days_ago.isoformat()}}},
-        {"$addFields": {
-            "date_str": {"$substr": ["$created_at", 0, 10]}
-        }},
-        {"$group": {
-            "_id": "$date_str",
-            "count": {"$sum": 1}
-        }},
+    thirty_iso = thirty_days_ago.isoformat()
+    user_growth_pipe = [
+        {"$match": {"created_at": {"$gte": thirty_iso}}},
+        {"$addFields": {"date_str": {"$substr": ["$created_at", 0, 10]}}},
+        {"$group": {"_id": "$date_str", "count": {"$sum": 1}}},
         {"$sort": {"_id": 1}}
-    ]).to_list(30)
-    
-    # Redemption trend chart (last 30 days)
-    redemption_trend = await db.bill_payment_requests.aggregate([
-        {"$match": {"created_at": {"$gte": thirty_days_ago.isoformat()}, "status": {"$in": ["completed", "approved"]}}},
-        {"$addFields": {
-            "date_str": {"$substr": ["$created_at", 0, 10]}
-        }},
+    ]
+    redemption_trend_pipe = [
+        {"$match": {"created_at": {"$gte": thirty_iso}, "status": {"$in": ["completed", "approved"]}}},
+        {"$addFields": {"date_str": {"$substr": ["$created_at", 0, 10]}}},
         {"$group": {
             "_id": "$date_str",
             "total_prc": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}},
@@ -25786,50 +25791,57 @@ async def get_comprehensive_analytics(
             "count": {"$sum": 1}
         }},
         {"$sort": {"_id": 1}}
-    ]).to_list(30)
-    
-    # Daily Mining trend (last 30 days) from transactions collection
-    mining_trend = await db.transactions.aggregate([
-        {"$match": {"transaction_type": "mining", "timestamp": {"$gte": thirty_days_ago.isoformat()}}},
-        {"$addFields": {
-            "date_str": {"$substr": ["$timestamp", 0, 10]}
-        }},
+    ]
+    mining_trend_pipe = [
+        {"$match": {"transaction_type": "mining", "timestamp": {"$gte": thirty_iso}}},
+        {"$addFields": {"date_str": {"$substr": ["$timestamp", 0, 10]}}},
         {"$group": {
             "_id": "$date_str",
             "total_prc": {"$sum": {"$ifNull": ["$amount", 0]}},
             "count": {"$sum": 1}
         }},
         {"$sort": {"_id": 1}}
-    ]).to_list(30)
-    
-    # Daily Redeem trend (last 30 days) from prc_ledger (all redeems) + bank_transfer_requests
-    redeem_trend_ledger = await db.prc_ledger.aggregate([
-        {"$match": {"type": "redeem", "entry_type": "debit", "created_at": {"$gte": thirty_days_ago.isoformat()}}},
-        {"$addFields": {
-            "date_str": {"$substr": ["$created_at", 0, 10]}
-        }},
+    ]
+    redeem_trend_ledger_pipe = [
+        {"$match": {"type": "redeem", "entry_type": "debit", "created_at": {"$gte": thirty_iso}}},
+        {"$addFields": {"date_str": {"$substr": ["$created_at", 0, 10]}}},
         {"$group": {
             "_id": "$date_str",
             "total_prc": {"$sum": {"$abs": "$amount"}},
             "count": {"$sum": 1}
         }},
         {"$sort": {"_id": 1}}
-    ]).to_list(30)
-    
-    # Also include bank transfers (paid) in redeem trend
-    bank_redeem_trend = await db.bank_transfer_requests.aggregate([
-        {"$match": {"status": "paid", "processed_at": {"$gte": thirty_days_ago.isoformat()}}},
-        {"$addFields": {
-            "date_str": {"$substr": ["$processed_at", 0, 10]}
-        }},
+    ]
+    bank_redeem_trend_pipe = [
+        {"$match": {"status": "paid", "processed_at": {"$gte": thirty_iso}}},
+        {"$addFields": {"date_str": {"$substr": ["$processed_at", 0, 10]}}},
         {"$group": {
             "_id": "$date_str",
             "total_prc": {"$sum": {"$ifNull": ["$prc_deducted", 0]}},
             "count": {"$sum": 1}
         }},
         {"$sort": {"_id": 1}}
-    ]).to_list(30)
-    
+    ]
+
+    _chart_top = await asyncio.gather(
+        db.users.aggregate(user_growth_pipe).to_list(30),
+        db.bill_payment_requests.aggregate(redemption_trend_pipe).to_list(30),
+        db.transactions.aggregate(mining_trend_pipe).to_list(30),
+        db.prc_ledger.aggregate(redeem_trend_ledger_pipe).to_list(30),
+        db.bank_transfer_requests.aggregate(bank_redeem_trend_pipe).to_list(30),
+        db.users.find(
+            {"role": {"$ne": "admin"}},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "prc_balance": 1, "subscription_plan": 1, "total_mined": 1, "kyc_status": 1, "created_at": 1, "last_login": 1}
+        ).sort("prc_balance", -1).limit(10).to_list(10),
+        return_exceptions=True,
+    )
+    user_growth_data    = _chart_top[0] if not isinstance(_chart_top[0], Exception) else []
+    redemption_trend    = _chart_top[1] if not isinstance(_chart_top[1], Exception) else []
+    mining_trend        = _chart_top[2] if not isinstance(_chart_top[2], Exception) else []
+    redeem_trend_ledger = _chart_top[3] if not isinstance(_chart_top[3], Exception) else []
+    bank_redeem_trend   = _chart_top[4] if not isinstance(_chart_top[4], Exception) else []
+    top_users           = _chart_top[5] if not isinstance(_chart_top[5], Exception) else []
+
     # Merge redeem trends (ledger + bank transfers)
     redeem_by_date = {}
     for item in redeem_trend_ledger:
@@ -25843,7 +25855,7 @@ async def get_comprehensive_analytics(
         else:
             redeem_by_date[d] = {"_id": d, "total_prc": item["total_prc"], "count": item["count"]}
     daily_redeem_trend = sorted(redeem_by_date.values(), key=lambda x: x["_id"])
-    
+
     # Plan distribution for pie chart
     plan_distribution = [
         {"name": "Explorer (Free)", "value": user_stats[3], "color": "#6b7280"},
@@ -25866,14 +25878,8 @@ async def get_comprehensive_analytics(
         "plan_distribution": plan_distribution,
         "activity_distribution": activity_distribution
     }
-    
-    # ===== 5. TOP USERS BY BALANCE =====
-    top_users = await db.users.find(
-        {"role": {"$ne": "admin"}},
-        {"_id": 0, "uid": 1, "name": 1, "email": 1, "prc_balance": 1, "subscription_plan": 1, "total_mined": 1, "kyc_status": 1, "created_at": 1, "last_login": 1}
-    ).sort("prc_balance", -1).limit(10).to_list(10)
-    
-    return {
+
+    payload = {
         "prc_circulation": {
             "total_in_wallets": round(total_prc_balance, 2),
             "total_mined": round(total_prc_mined, 2),
@@ -25888,6 +25894,12 @@ async def get_comprehensive_analytics(
         "top_users": top_users,
         "generated_at": now.isoformat()
     }
+    if cache:
+        try:
+            await cache.set(CACHE_KEY, payload, ttl=60)
+        except Exception:
+            pass
+    return payload
 
 
 # ========== ANALYTICS ENDPOINTS ==========
