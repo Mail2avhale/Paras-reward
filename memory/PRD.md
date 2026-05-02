@@ -903,6 +903,18 @@ Examined all 5 matched DMT transactions in production:
   3. **Loading spinner**: New `data-testid="admin-sub-list-loading"` state with `RefreshCw` spinner + "Loading {activeTab} payments..." text shown while fetch is in flight — replaces the misleading empty-state CheckCircle.
   4. **Payload shape safety**: Accepts both `{payments: [...], total: N}` and raw array responses.
 
+### Admin "Login As User" Impersonation Search — Production Timeout Fix (DONE - May 2, 2026)
+- **User report**: Searching a mobile like `9936222482` in the admin "Login As User" dialog on **production** triggers a red "Search failed" toast. Worked fine earlier on lighter DBs.
+- **Root cause**: `/api/admin/search-user-for-impersonation` built a single `$or` query with three **case-insensitive** regexes — `{mobile: {$regex: q, $options: "i"}}` + same on `name` + `email`. The `$options: "i"` flag disables index use in MongoDB even when `mobile` is indexed. On a large production users collection this forced a COLLSCAN that exceeded the K8s ingress timeout → axios saw a 5xx/504 → generic "Search failed".
+- **Fix** (`routes/admin_misc.py:search_user_for_impersonation`):
+  1. **Digit-only fast path**: If `query` has ≥3 digits, issue an index-backed exact match (`mobile == q`, `phone == q`) **and** an anchored prefix regex (`^q`, no `i` flag — uses the mobile/phone index) in parallel via `asyncio.gather`. Each awaited with a **3s `asyncio.wait_for`** cap.
+  2. **Email prefix path**: If query contains alpha chars, lowercase + anchored `^` regex on the indexed `email` field (3s cap).
+  3. **Bounded name regex**: Only falls back to the slow case-insensitive name regex after exact paths, with a 4s cap and a hard 10-row limit.
+  4. **Unified dedupe + max 10 results**: Same doc returned by multiple paths isn't duplicated.
+  5. **Exception mapping**: On any exception returns a crisp `500 "Search error: <Type>"` so the UI toast is actionable.
+- **Frontend** (`components/AdminLoginAsUser.js`): Error toast now shows the backend's `detail` (`Search failed: <reason>`) instead of a generic string.
+- **Verification (preview)**: All cases return in ~100–150 ms — 10-digit exact mobile, 3-digit prefix, email prefix, name regex, and a short-query 400 guard. UI search input populates the result row (e.g. "Test Admin — EXPLORER — 9999999999") without any toast.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

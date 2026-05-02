@@ -46,8 +46,9 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
         }
       }
     } catch (error) {
-      toast.error('Search failed');
-      console.error(error);
+      const detail = error?.response?.data?.detail || error?.message || 'Search failed';
+      toast.error(`Search failed: ${detail}`);
+      console.error('[IMP-SEARCH]', error);
     } finally {
       setSearching(false);
     }

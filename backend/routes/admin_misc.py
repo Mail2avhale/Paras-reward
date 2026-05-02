@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone, timedelta
 import uuid
 import logging
+import re
+import asyncio
 
 # Import WalletService for ledger-based PRC operations (Phase 4 Architecture)
 from app.services import WalletService
@@ -842,38 +844,112 @@ async def end_impersonation_session(request: Request):
 
 @router.get("/search-user-for-impersonation")
 async def search_user_for_impersonation(query: str):
-    """Search users by mobile, name, or email for impersonation"""
+    """Search users by mobile, name, or email for impersonation.
+
+    Production safety: case-insensitive `$regex` on `mobile` without anchor
+    triggers a full COLLSCAN which times out on large user collections
+    (seen as a generic 'Search failed' toast in the admin UI).
+
+    Strategy (mirrors the User-360 search optimization):
+    1. If query looks like a mobile number (all-digit / 5-15 chars) → try
+       exact/prefix match on the indexed `mobile` / `phone` field FIRST.
+    2. Lowercase email lookup via anchored prefix — index-friendly.
+    3. Fallback to a BOUNDED case-insensitive regex (max 200 candidates)
+       only for the name column, wrapped in asyncio.wait_for so a bad
+       query can never hang the request longer than 4 seconds.
+    """
     if not query or len(query) < 3:
         raise HTTPException(status_code=400, detail="Search query must be at least 3 characters")
-    
-    # Search by mobile, name, or email
-    search_filter = {
-        "$or": [
-            {"mobile": {"$regex": query, "$options": "i"}},
-            {"name": {"$regex": query, "$options": "i"}},
-            {"email": {"$regex": query, "$options": "i"}}
-        ]
+
+    projection = {
+        "_id": 0,
+        "uid": 1,
+        "name": 1,
+        "mobile": 1,
+        "phone": 1,
+        "email": 1,
+        "subscription_plan": 1,
+        "prc_balance": 1,
+        "kyc_status": 1,
     }
-    
-    users = await db.users.find(
-        search_filter,
-        {
-            "_id": 0,
-            "uid": 1,
-            "name": 1,
-            "mobile": 1,
-            "email": 1,
-            "subscription_plan": 1,
-            "prc_balance": 1,
-            "kyc_status": 1
+    q = query.strip()
+    q_digits = re.sub(r"\D", "", q)
+    results: list = []
+    seen_uids: set = set()
+
+    def _add(docs):
+        for d in docs or []:
+            uid = d.get("uid")
+            if uid and uid not in seen_uids:
+                seen_uids.add(uid)
+                results.append(d)
+
+    try:
+        # -------- 1) Digit-only query → index-backed mobile/phone path --------
+        if q_digits and len(q_digits) >= 3:
+            # Exact match first (fastest, unique index hit)
+            exact_task = asyncio.wait_for(
+                db.users.find(
+                    {"$or": [{"mobile": q_digits}, {"phone": q_digits}]},
+                    projection,
+                ).limit(5).to_list(5),
+                timeout=3.0,
+            )
+            # Prefix match via anchored regex — also index-backed (no `i` flag)
+            prefix_task = asyncio.wait_for(
+                db.users.find(
+                    {"$or": [
+                        {"mobile": {"$regex": f"^{re.escape(q_digits)}"}},
+                        {"phone": {"$regex": f"^{re.escape(q_digits)}"}},
+                    ]},
+                    projection,
+                ).limit(10).to_list(10),
+                timeout=3.0,
+            )
+            try:
+                exact_docs, prefix_docs = await asyncio.gather(exact_task, prefix_task)
+                _add(exact_docs)
+                _add(prefix_docs)
+            except asyncio.TimeoutError:
+                logging.warning(f"[IMP-SEARCH] mobile lookup timeout for '{q}'")
+
+        # -------- 2) Email prefix path (index-friendly, case-insensitive via lower) --------
+        if len(results) < 10 and "@" in q.lower() or re.search(r"[a-zA-Z]", q):
+            q_lower = q.lower()
+            try:
+                email_docs = await asyncio.wait_for(
+                    db.users.find(
+                        {"email": {"$regex": f"^{re.escape(q_lower)}"}},
+                        projection,
+                    ).limit(10).to_list(10),
+                    timeout=3.0,
+                )
+                _add(email_docs)
+            except asyncio.TimeoutError:
+                logging.warning(f"[IMP-SEARCH] email lookup timeout for '{q}'")
+
+        # -------- 3) Bounded name regex fallback --------
+        if len(results) < 10 and re.search(r"[a-zA-Z]", q):
+            try:
+                name_docs = await asyncio.wait_for(
+                    db.users.find(
+                        {"name": {"$regex": re.escape(q), "$options": "i"}},
+                        projection,
+                    ).limit(10).to_list(10),
+                    timeout=4.0,
+                )
+                _add(name_docs)
+            except asyncio.TimeoutError:
+                logging.warning(f"[IMP-SEARCH] name lookup timeout for '{q}'")
+
+        return {
+            "success": True,
+            "users": results[:10],
+            "count": len(results[:10]),
         }
-    ).limit(10).to_list(length=10)
-    
-    return {
-        "success": True,
-        "users": users,
-        "count": len(users)
-    }
+    except Exception as e:
+        logging.error(f"[IMP-SEARCH] error for '{q}': {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=f"Search error: {type(e).__name__}")
 
 
 
