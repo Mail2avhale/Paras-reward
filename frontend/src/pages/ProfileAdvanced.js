@@ -544,24 +544,23 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
   // Get subscription plan info
   const subscriptionPlan = userData?.subscription_plan || 'explorer';
-  const hasPaidPlan = ['startup', 'growth', 'elite'].includes(subscriptionPlan);
+  // Legacy plans (startup/growth/vip/pro) are treated as Elite in backend
+  const hasPaidPlan = ['elite', 'startup', 'growth', 'vip', 'pro'].includes(subscriptionPlan);
   
   // Helper function to get plan display name
   const getPlanDisplayName = (plan) => {
     const planNames = {
       'explorer': 'Explorer',
-      'startup': 'Startup',
-      'growth': 'Growth',
       'elite': 'Elite'
     };
+    // Legacy plans show as Elite (graceful fallback)
+    if (['startup', 'growth', 'vip', 'pro'].includes(plan)) return 'Elite';
     return planNames[plan] || 'Explorer';
   };
   
   // Get plan badge gradient
   const getPlanGradient = (plan) => {
-    if (plan === 'elite') return 'from-amber-500 to-yellow-500';
-    if (plan === 'growth') return 'from-emerald-500 to-green-500';
-    if (plan === 'startup') return 'from-blue-500 to-cyan-500';
+    if (['elite', 'startup', 'growth', 'vip', 'pro'].includes(plan)) return 'from-amber-500 to-yellow-500';
     return 'from-gray-500 to-gray-600';
   };
 

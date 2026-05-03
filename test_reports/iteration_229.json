@@ -1,0 +1,51 @@
+{
+  "summary": "Frontend-only verification for Subscription Plans cleanup (Explorer + Elite only). Blocking compile error was found at app startup - fixed. AdminSubscriptionManagement.js page-level cleanup verified via source code (stat cards, plan filter dropdown, EditModal plan select, UserSubscriptionEditor new-plan select all show ONLY Explorer + Elite). However, a REGRESSION was found on AdminDashboard.js (Subscription Overview section still shows 4 cards including Startup and Growth) which is rendered on /admin route. Live UI session re-verification of /admin/subscriptions was blocked by login session flakiness after 3 tries - documented per loop prevention.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminDashboard.js (Subscription Overview section)", "issue": "Still renders 4 SubscriptionCard components including 'Startup' (\u20b9199-\u20b91,799) and 'Growth' (\u20b9499-\u20b94,499). Must be reduced to ONLY Explorer + Elite per cleanup spec. File: /app/frontend/src/pages/AdminDashboard.js L536-552.", "selector": "Subscription Overview grid", "priority": "HIGH"},
+      {"component": "AdminDashboard.js Elite card", "issue": "Elite price range shown as '\u20b9799 - \u20b97,191' but new Elite plan pricing is '\u20b9999 + GST'. Legacy multi-tier price was not updated. File: /app/frontend/src/pages/AdminDashboard.js L560.", "selector": "Elite SubscriptionCard", "priority": "HIGH"},
+      {"component": "AdminSubscriptionManagement.js eslint directive", "issue": "Line 69 used 'eslint-disable-next-line react-hooks/exhaustive-deps' but eslint-plugin-react-hooks is NOT installed (not in package.json). This caused 'webpack compiled with 1 error' at startup and the Compiled-with-problems red overlay, blocking entire frontend. I fixed it by changing to a generic 'eslint-disable-next-line'. Main agent should either install eslint-plugin-react-hooks or keep my fix.", "selector": "N/A", "priority": "HIGH-FIXED"},
+      {"component": "AdminDashboard render", "issue": "React console warning 'Each child in a list should have a unique key prop' fires in AdminDashboard render method.", "selector": "N/A", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Review request route path", "issue": "Review request references /admin/subscription-management, but actual route registered in App.js (L638) is /admin/subscriptions. /admin/subscription-management does not exist and falls through to Admin Dashboard (misleading when testing). Either add redirect or correct URL in docs.", "affected_selectors": ["route: /admin/subscription-management"]}
+    ],
+    "design_issues": []
+  },
+  "code_review_findings": {
+    "verified_clean": [
+      "AdminSubscriptionManagement.js L387-390: stat cards show ONLY Explorer + Elite (\u2713)",
+      "AdminSubscriptionManagement.js L528-529: plan filter dropdown has only 'All Plans', 'Explorer', 'Elite' (\u2713)",
+      "AdminSubscriptionManagement.js L1148: EditModal plan <select> contains ONLY <option value='elite'>Elite</option> (\u2713)",
+      "AdminSubscriptionManagement.js L1422-1423: UserSubscriptionEditor New Plan select has ONLY 'Explorer (Free)' + 'Elite (\u20b9999 + GST)' (\u2713)",
+      "SubscriptionPlans.js: no Startup/Growth references (\u2713)",
+      "ProfileAdvanced.js L547/557/563: legacy plan names (startup/growth/vip/pro) retained only as BACKWARD-COMPAT fallbacks that map to Elite - acceptable per spec (\u2713)",
+      "PublicProfile.js L171/186: same legacy fallback treatment - acceptable (\u2713)"
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Remove Startup + Growth SubscriptionCard entries from AdminDashboard.js Subscription Overview (L536-552) - keep only Explorer and Elite cards",
+    "Update Elite card pricing label in AdminDashboard.js L560 from '\u20b9799 - \u20b97,191' to '\u20b9999 + GST'",
+    "Remove subscriptionStats.startup and subscriptionStats.growth references if stats API no longer returns them",
+    "Install eslint-plugin-react-hooks OR keep the generic eslint-disable (I applied) so frontend compiles cleanly",
+    "Fix 'unique key prop' React warning in AdminDashboard render",
+    "Either add a redirect route /admin/subscription-management -> /admin/subscriptions or update any docs/test-request references to the correct path /admin/subscriptions"
+  ],
+  "critical_code_review_comments": [
+    "AdminDashboard.js contains hardcoded legacy plan data (Startup/Growth) that contradicts the current 2-tier cleanup - main regression.",
+    "ESLint configuration gap: rule react-hooks/exhaustive-deps is referenced in disable comment but plugin is not installed, causing CRA to fail compilation.",
+    "URL taxonomy inconsistency: sidebar + navigate() calls use /admin/subscriptions but external docs/tests call it /admin/subscription-management."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/AdminSubscriptionManagement.js (L69: changed eslint-disable-next-line react-hooks/exhaustive-deps -> eslint-disable-next-line to unblock compile)"
+  ],
+  "success_rate": {"backend": "skipped", "frontend": "80%"},
+  "test_credentials": "Admin: admin@test.com / PIN 153759 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "1) Compile error has been fixed via eslint directive change - frontend now loads. 2) Confirmed via source code that AdminSubscriptionManagement.js (/admin/subscriptions route) is CLEAN - only Explorer + Elite remain in stat cards, plan filter, EditModal, UserSubscriptionEditor. 3) AdminDashboard.js is NOT part of the current cleanup scope but it still shows legacy Startup + Growth cards - main agent should decide whether to also clean that up. 4) Route mismatch: review stated /admin/subscription-management but actual is /admin/subscriptions. 5) Live UI navigation to /admin/subscriptions was attempted but session persisted only on the admin dashboard view; a fresh login each browser instance is required - use data-testid login-identifier-input then login-pin-0..5 then Sign In button twice.",
+  "rca of the issue": "Frontend failed to compile because /app/frontend/src/pages/AdminSubscriptionManagement.js line 69 contained '// eslint-disable-next-line react-hooks/exhaustive-deps' but the React Hooks ESLint plugin is not installed (only eslint-plugin-react, eslint-plugin-import, eslint-plugin-jsx-a11y are declared in package.json). CRA's eslint integration raised a fatal 'Definition for rule react-hooks/exhaustive-deps was not found' error and displayed a full-screen red error overlay, preventing ANY page including admin dashboard + subscription management from rendering. Mitigation applied: changed the comment to a generic '// eslint-disable-next-line' which disables the next line without referring to an unknown rule. Permanent fix option: 'yarn add -D eslint-plugin-react-hooks' + plugin registration."
+}

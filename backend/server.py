@@ -11282,8 +11282,8 @@ async def submit_subscription_payment(uid: str, request: Request):
 
         # ==================== FRAUD PREVENTION ====================
 
-        if plan not in ["startup", "growth", "elite"]:
-            raise HTTPException(status_code=400, detail="Invalid plan selected")
+        if plan not in ["elite"]:
+            raise HTTPException(status_code=400, detail="Invalid plan selected. Only Elite plan is available.")
 
         if duration not in SUBSCRIPTION_DURATIONS:
             raise HTTPException(status_code=400, detail="Invalid duration selected")
@@ -12685,8 +12685,8 @@ async def upgrade_subscription(uid: str, request: Request):
     new_plan = data.get("plan")
     extend_days = data.get("extend_days", 0)
     
-    if new_plan not in ["startup", "growth", "elite"]:
-        raise HTTPException(status_code=400, detail="Invalid plan")
+    if new_plan not in ["explorer", "elite"]:
+        raise HTTPException(status_code=400, detail="Invalid plan. Only 'explorer' or 'elite' are allowed.")
     
     user = await db.users.find_one({"uid": uid})
     if not user:

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { 
-  Crown, Users, TrendingUp, Rocket, Clock, CheckCircle, XCircle,
+  Crown, Users, Clock, CheckCircle, XCircle,
   Search, RefreshCw, Eye, Edit, Trash2, X, Calendar, CreditCard, AlertCircle,
   ArrowUpDown, Filter, SlidersHorizontal, ChevronDown
 } from 'lucide-react';
@@ -30,7 +30,7 @@ const AdminSubscriptionManagement = () => {
   const [sortBy, setSortBy] = useState('created_at'); // created_at, processed_at, amount
   const [sortOrder, setSortOrder] = useState('newest'); // newest, oldest
   const [processedByFilter, setProcessedByFilter] = useState(''); // Filter by admin who processed
-  const [planFilter, setPlanFilter] = useState('all'); // all, startup, growth, elite
+  const [planFilter, setPlanFilter] = useState('all'); // all, explorer, elite
   const [amountMin, setAmountMin] = useState('');
   const [amountMax, setAmountMax] = useState('');
   const [subscriptionTypeFilter, setSubscriptionTypeFilter] = useState('all'); // all, new, renewal, upgrade
@@ -66,7 +66,7 @@ const AdminSubscriptionManagement = () => {
     setTotal(0);
     setSelectedIds([]);
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [activeTab, page, debouncedSearch, dateFrom, dateTo]);
 
   const fetchData = async () => {
@@ -385,10 +385,8 @@ const AdminSubscriptionManagement = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-6">
         <StatCard icon={<Users />} label="Explorer" value={planCounts.explorer || 0} color="gray" />
-        <StatCard icon={<Rocket />} label="Startup" value={planCounts.startup || 0} color="blue" />
-        <StatCard icon={<TrendingUp />} label="Growth" value={planCounts.growth || 0} color="green" />
         <StatCard icon={<Crown />} label="Elite" value={planCounts.elite || 0} color="amber" />
       </div>
 
@@ -527,8 +525,7 @@ const AdminSubscriptionManagement = () => {
                   className="w-full h-9 px-3 bg-white border border-slate-300 text-slate-800 rounded-lg text-sm"
                 >
                   <option value="all">All Plans</option>
-                  <option value="startup">Startup</option>
-                  <option value="growth">Growth</option>
+                  <option value="explorer">Explorer</option>
                   <option value="elite">Elite</option>
                 </select>
               </div>
@@ -887,8 +884,7 @@ const StatCard = ({ icon, label, value, color }) => {
 // Payment Card
 const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, onView, onDelete, onImageClick, selectable, selected, onToggleSelect }) => {
   const planColors = {
-    startup: 'bg-blue-500/20 text-blue-400',
-    growth: 'bg-emerald-500/20 text-emerald-400',
+    explorer: 'bg-slate-500/20 text-slate-500',
     elite: 'bg-amber-500/20 text-amber-400'
   };
 
@@ -1125,7 +1121,7 @@ const ViewModal = ({ payment, onClose }) => (
 // Edit Modal
 const EditModal = ({ payment, processing, onClose, onSave }) => {
   const [form, setForm] = useState({
-    plan: payment.subscription_plan || payment.plan || 'startup',
+    plan: payment.subscription_plan || payment.plan || 'elite',
     duration: payment.plan_type || payment.duration || 'monthly',
     amount: payment.amount || 0,
     expires_at: payment.new_expiry?.split('T')[0] || ''
@@ -1149,8 +1145,6 @@ const EditModal = ({ payment, processing, onClose, onSave }) => {
               onChange={(e) => setForm({...form, plan: e.target.value})}
               className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-slate-800"
             >
-              <option value="startup">Startup</option>
-              <option value="growth">Growth</option>
               <option value="elite">Elite</option>
             </select>
           </div>
@@ -1402,8 +1396,6 @@ const UserSubscriptionEditor = ({ onUpdate }) => {
               <p className="text-slate-500 text-xs">Current Plan</p>
               <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                 user.subscription_plan === 'elite' ? 'bg-amber-500/20 text-amber-400' :
-                user.subscription_plan === 'growth' ? 'bg-green-500/20 text-green-400' :
-                user.subscription_plan === 'startup' ? 'bg-blue-500/20 text-blue-400' :
                 'bg-gray-500/20 text-slate-500'
               }`}>
                 {(user.subscription_plan || 'explorer').toUpperCase()}
@@ -1428,9 +1420,7 @@ const UserSubscriptionEditor = ({ onUpdate }) => {
                 className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800"
               >
                 <option value="explorer">Explorer (Free)</option>
-                <option value="startup">Startup (₹299)</option>
-                <option value="growth">Growth (₹499)</option>
-                <option value="elite">Elite (₹799)</option>
+                <option value="elite">Elite (₹999 + GST)</option>
               </select>
             </div>
             
