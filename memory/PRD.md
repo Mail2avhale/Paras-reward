@@ -1172,6 +1172,31 @@ Examined all 5 matched DMT transactions in production:
 - **Tests** (`/app/backend/tests/test_subscription_plans_cleanup.py`): 13/13 PASSED end-to-end against live preview URL — plan list endpoint, submit-payment rejection of startup/growth/explorer, submit-payment acceptance of elite, admin upgrade rejection of startup/growth/junk, admin upgrade acceptance of explorer/elite, and regression auth/health checks.
 - **Follow-up (defensive, not blocking)**: many $facet/aggregation pipelines in `server.py` still use `$in: ["startup","growth","elite"]` filters for historical/analytics queries — left intact since they only read data; no new users can reach those plan states.
 
+### V1 Refund OTP — Full E2E Code Audit + Test Suite (DONE - May 3, 2026)
+- **User concern**: "बरेच युजर्स म्हणतात की आम्हाला otp mobile वरती येत नाही" — many production users complain refund OTP not received on mobile after a recharge/bill-pay failure puts the txn in `refund_pending`.
+- **Code audit findings** (`backend/routes/eko_recharge.py` lines 1495-2110):
+  - V1 endpoint URL/body/headers ALL match Eko official docs (https://developers.eko.in/v1/reference/resend-refund-otp-1) — `POST {BASE}/v1/transactions/{tid}/refund/otp` with `initiator_id` + `developer_key` form-encoded body, plus `developer_key`/`secret-key`/`secret-key-timestamp` headers via `_build_eko_headers()`.
+  - `EKO_USER_CODE` auto-correction (`19560001` instead of docs sample `20810200`) is in place via inline check at module load + `eko_credentials.py` helper module.
+  - Eko's "silent success" quirk (`status:0`, `data:{tid:"",otp_ref_id:""}`) is correctly classified as success in our code.
+  - Production "OTP not received" complaint is most likely **Eko-side SMS delivery delay/failure** — not a code bug. Our code correctly logs every send/verify attempt to `eko_refund_logs` for audit, with rate limit (5 sends/hour/TID/user).
+- **Bug found + fixed**: In `user_verify_refund_otp`, the `success` field could leak an empty string (instead of `False`) when Eko returned `data.tid=""` due to short-circuit `and` chain returning `""`. Wrapped in `bool(...)` so the public response always carries a boolean.
+- **New test suite** (`/app/backend/tests/test_refund_otp_v1_e2e.py` — 13/13 PASSED):
+  - Production-SMS happy path (Eko empty data, no inline OTP, template-token message normalised)
+  - Staging inline-OTP auto-completion path (Eko returns OTP inline → server self-calls V2 refund and credits PRC)
+  - Invalid TID → friendly error, audit log written, counts toward rate limit
+  - Rejects request when txn is not currently `refund_pending`
+  - Rejects request when txn belongs to a different user
+  - Rejects request when txn has only `client_ref_id` and no numeric `eko_tid` (Excel-imported rows)
+  - Rate-limit kicks in after 5 OTP-send attempts within 1 hour
+  - Pins exact V1 request shape (URL, body, headers) — guards against contract drift
+  - Verify happy path → marks `refunded`, increments user `prc_balance` by stored `total_prc_deducted`
+  - Verify wrong OTP → response success=False, txn stays `refund_pending`, failed audit log
+  - Verify with no numeric eko_tid → friendly error
+  - Pending refunds endpoint respects the global `refund_blocker_modal_enabled` kill switch (returns empty when disabled)
+  - Pending refunds endpoint surfaces rows when kill switch is enabled
+- **All Eko HTTP calls mocked with `respx`** (added to `requirements.txt` indirectly — installed via `pip install respx`). No real Eko traffic in tests.
+- **Recommended next step (NOT done — needs user decision)**: Add a "Resend OTP after 60s" button on the user-facing refund modal. If after 3 resends the user still hasn't received SMS, surface a "Contact Support" CTA so users aren't stuck. Eko itself has no SMS-delivery confirmation API, so we can't programmatically detect SMS failure.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

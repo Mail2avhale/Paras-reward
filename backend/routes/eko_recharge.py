@@ -2042,7 +2042,7 @@ async def user_verify_refund_otp(tid: str, data: UserManualRefundOTPRequest):
         # On wrong OTP / failure: invalid_params set OR data.refund_tid empty.
         # Don't rely on response_status_id (Eko sometimes returns -1 even on success here too).
         refund_data = result.get("data") or {}
-        success = (
+        success = bool(
             result.get("status") == 0
             and (refund_data.get("refund_tid") or refund_data.get("tid"))
             and not result.get("invalid_params")
