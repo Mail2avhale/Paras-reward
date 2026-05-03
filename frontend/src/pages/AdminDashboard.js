@@ -523,7 +523,7 @@ const AdminDashboard = ({ user }) => {
           </Button>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-4 mb-6">
           <SubscriptionCard 
             plan="Explorer" 
             count={subscriptionStats.explorer} 
@@ -534,30 +534,12 @@ const AdminDashboard = ({ user }) => {
             onClick={() => navigate('/admin/users?plan=explorer')}
           />
           <SubscriptionCard 
-            plan="Startup" 
-            count={subscriptionStats.startup} 
-            total={totalUsers}
-            color="blue"
-            icon="🚀"
-            price="₹199 - ₹1,799"
-            onClick={() => navigate('/admin/subscriptions?plan=startup')}
-          />
-          <SubscriptionCard 
-            plan="Growth" 
-            count={subscriptionStats.growth} 
-            total={totalUsers}
-            color="purple"
-            icon="📈"
-            price="₹499 - ₹4,499"
-            onClick={() => navigate('/admin/subscriptions?plan=growth')}
-          />
-          <SubscriptionCard 
             plan="Elite" 
             count={subscriptionStats.elite} 
             total={totalUsers}
             color="amber"
             icon="👑"
-            price="₹799 - ₹7,191"
+            price="₹999 + GST"
             onClick={() => navigate('/admin/subscriptions?plan=elite')}
           />
         </div>

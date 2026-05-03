@@ -1149,6 +1149,29 @@ Examined all 5 matched DMT transactions in production:
 - **Backend unchanged**: `/eko/balance`, `/eko/recharge`, `/eko/bbps/paybill`, `/admin/bank-redeem/verify-account`, `/admin/eko/dmt-transfer` all remain live — they're used by user-facing BBPS, DMT, and recharge flows. Removing them would break the live users' recharge feature.
 - **Smoke-test verified** via Playwright: dashboard renders, sidebar clean (no "Eko Direct Services", no "Gift Vouchers"), BBPS Instant preserved, direct URL redirects to `/admin`, no compile/lint errors.
 
+### Subscription Plans Cleanup — Keep Only Explorer + Elite (DONE - May 3, 2026)
+- **User decision**: "Clean up Subscription plans. Keep ONLY Explorer and Elite. Do not touch them. Clean up all others." + "Startup किंवा growth प्लान वरती आता कोणताच युजर नाही" (confirmed no existing users on Startup/Growth so no legacy migration needed).
+- **Backend (`server.py`)**:
+  - `POST /api/subscription/payment/{uid}` (line 11285): now rejects any plan other than `elite` with 400 "Invalid plan selected. Only Elite plan is available."
+  - `POST /api/subscription/upgrade/{uid}` (line 12688): admin upgrade endpoint now accepts only `explorer` or `elite`.
+  - `GET /api/subscription/plans`: already filtered by `ACTIVE_SUBSCRIPTION_PLANS = ["explorer","elite"]` — confirmed via curl (returns exactly those 2 plan IDs).
+  - `SUBSCRIPTION_PLANS` dict left intact with `_legacy_startup`/`_legacy_growth` entries carrying `treat_as:"elite"` for any future legacy data safety.
+- **Frontend**:
+  - `AdminDashboard.js` (L526-562): Subscription Overview grid reduced from 4 cards → 2 cards (Explorer + Elite). Elite card price updated to "₹999 + GST".
+  - `AdminSubscriptionManagement.js`:
+    - Stat cards: only Explorer + Elite (removed Startup/Growth cards and unused `Rocket`/`TrendingUp` imports).
+    - Plan filter dropdown: `All Plans / Explorer / Elite` only.
+    - `EditModal` plan select: only `Elite` option.
+    - `UserSubscriptionEditor` "New Plan" dropdown: only `Explorer (Free)` + `Elite (₹999 + GST)`.
+    - `PaymentCard.planColors` trimmed to explorer + elite.
+    - EditModal default `plan` is now `elite` (was `startup`).
+    - Current-plan badge colours collapsed to Elite (amber) vs default (slate).
+  - `ProfileAdvanced.js` (L545-566): `hasPaidPlan` + `getPlanDisplayName` + `getPlanGradient` simplified. Legacy `startup/growth/vip/pro` users (if any exist in data) are displayed as "Elite" with amber gradient (graceful fallback).
+  - `PublicProfile.js` (L171, L186): avatar gradient + Crown badge now triggered for Elite or any legacy paid plan.
+  - `SubscriptionPlans.js`: already only referenced `explorer`/`elite` — no change needed.
+- **Tests** (`/app/backend/tests/test_subscription_plans_cleanup.py`): 13/13 PASSED end-to-end against live preview URL — plan list endpoint, submit-payment rejection of startup/growth/explorer, submit-payment acceptance of elite, admin upgrade rejection of startup/growth/junk, admin upgrade acceptance of explorer/elite, and regression auth/health checks.
+- **Follow-up (defensive, not blocking)**: many $facet/aggregation pipelines in `server.py` still use `$in: ["startup","growth","elite"]` filters for historical/analytics queries — left intact since they only read data; no new users can reach those plan states.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
