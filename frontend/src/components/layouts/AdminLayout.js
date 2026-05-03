@@ -50,7 +50,6 @@ const MENU_TO_PERMISSION = {
   'bank-transfers': 'bank-transfers',
   'razorpay-subs': 'razorpay-subs',
   'bbps-dashboard': 'bbps-dashboard',
-  'eko-services': 'eko-services',
   'service-charges': 'service-charges',
 
   // Finance
@@ -200,7 +199,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'force-activate-subscription', label: 'Force Activate Elite (PRC)', icon: KeyRound, path: '/admin/force-activate-subscription', highlight: true },
         { id: 'razorpay-subs', label: 'Razorpay Payments', icon: CreditCard, path: '/admin/razorpay-subscriptions', highlight: true },
         { id: 'bbps-dashboard', label: 'BBPS Instant', icon: Activity, path: '/admin/bbps', highlight: true },
-        { id: 'eko-services', label: 'Eko Direct Services', icon: Zap, path: '/admin/eko-services', highlight: true },
       ]
     },
     finance: {
@@ -280,7 +278,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/bank-transfers': 'bank-transfers',
     '/admin/razorpay-subscriptions': 'razorpay-subs',
     '/admin/bbps': 'bbps-dashboard',
-    '/admin/eko-services': 'eko-services',
     '/admin/service-charges': 'service-charges',
 
     // Finance

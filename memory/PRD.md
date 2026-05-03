@@ -1139,6 +1139,16 @@ Examined all 5 matched DMT transactions in production:
 - **Result**: 0 references to live gift-voucher UI; 3 backend endpoints return 410; 1 historical read endpoint kept; lint clean; smoke-test screenshot confirms admin sidebar + dashboard render correctly.
 - **DB collection `gift_voucher_requests`**: **preserved** (audit trail) — no drop or purge performed.
 
+### Eko Direct Services Admin Page — REMOVED (DONE - May 3, 2026)
+- **User decision**: "हे pण page full cleanup पाहिजे" + pointed at 'Eko Direct Services' in sidebar (highlighted in blue).
+- **What it was**: A no-approval-required direct Eko API admin tool (`/admin/eko-services`) exposing direct DMT transfer, mobile/DTH recharge, bill pay, and wallet balance check — all via the same backend endpoints the regular user-facing BBPS/DMT flow uses.
+- **Cleanup** (frontend only — backend endpoints SHARED with user-facing flows, not removed):
+  - `/app/frontend/src/pages/AdminEkoServices.js` → **file deleted**.
+  - `App.js`: lazy import + Route both removed. Route replaced with `<Navigate to="/admin" replace />` so any bookmark silently redirects.
+  - `components/layouts/AdminLayout.js`: sidebar nav item removed; `serviceName` key map entry removed; path → key map entry removed.
+- **Backend unchanged**: `/eko/balance`, `/eko/recharge`, `/eko/bbps/paybill`, `/admin/bank-redeem/verify-account`, `/admin/eko/dmt-transfer` all remain live — they're used by user-facing BBPS, DMT, and recharge flows. Removing them would break the live users' recharge feature.
+- **Smoke-test verified** via Playwright: dashboard renders, sidebar clean (no "Eko Direct Services", no "Gift Vouchers"), BBPS Instant preserved, direct URL redirects to `/admin`, no compile/lint errors.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

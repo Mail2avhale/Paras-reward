@@ -376,7 +376,7 @@ const AdminFailedTransactions = IS_USER_BUILD ? null : lazy(() => import(/* webp
 // AdminRecurringDeposits - REMOVED (deprecated feature)
 const AdminPerformanceReport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
 // AdminUnifiedPayments - REMOVED (all pending rejected + refunded)
-const AdminEkoServices = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminEkoServices"));
+// AdminEkoServices - REMOVED (direct recharge admin tool discontinued May 2026)
 const AdminBBPSDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBBPSDashboard"));
 // AdminDMTDashboard - REMOVED (Eko API not working)
 const AdminLedgerView = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminLedgerView"));
@@ -607,7 +607,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/rd" element={<Navigate to="/admin" replace />} />
                 {/* AdminUnifiedPayments - REMOVED, redirect to admin */}
                 <Route path="/admin/unified-payments" element={<Navigate to="/admin" replace />} />
-                <Route path="/admin/eko-services" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEkoServices user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/eko-services" element={<Navigate to="/admin" replace />} />
                 {/* AdminRedeemDashboard - REMOVED (deprecated March 2026, no pending requests) */}
                 <Route path="/admin/redeem" element={<Navigate to="/admin/bbps" replace />} />
                 <Route path="/admin/bbps-requests" element={<Navigate to="/admin/bbps" replace />} />
