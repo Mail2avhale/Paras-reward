@@ -5,6 +5,65 @@ import "@/index.css";
 import App from "@/App";
 import './i18n/config'; // Initialize i18n
 
+// ============================================================
+// Global ChunkLoadError auto-recovery
+// ------------------------------------------------------------
+// After a fresh deploy, old clients may hold an index.html that
+// references stale webpack chunk hashes (e.g. `vendors-...-abcd.chunk.js`).
+// Those requests 404 back to index.html (HTML content) and the browser
+// explodes with "Unexpected token '<'" / "Loading chunk ... failed".
+//
+// We detect this and force-reload the page ONCE (sentinel in
+// sessionStorage so we never loop), which pulls the fresh index.html
+// and the new chunk hashes.
+// ============================================================
+(function setupChunkErrorRecovery() {
+  if (typeof window === 'undefined') return;
+
+  const CHUNK_RELOAD_KEY = 'paras_chunk_reload_ts';
+  const isChunkError = (msg) => {
+    if (!msg) return false;
+    const s = String(msg);
+    return (
+      s.includes('ChunkLoadError') ||
+      s.includes('Loading chunk') ||
+      s.includes("Unexpected token '<'") ||
+      s.includes('Unexpected token <')
+    );
+  };
+
+  const reloadOnce = async () => {
+    const last = parseInt(sessionStorage.getItem(CHUNK_RELOAD_KEY) || '0', 10);
+    const now = Date.now();
+    // Prevent infinite reload loop — only reload once per 30s window
+    if (now - last < 30000) return;
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(now));
+
+    try {
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map((n) => caches.delete(n)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch (_) { /* best effort */ }
+    window.location.reload();
+  };
+
+  window.addEventListener('error', (event) => {
+    if (isChunkError(event && event.message)) reloadOnce();
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event && event.reason;
+    const msg = reason && (reason.message || reason.toString && reason.toString());
+    if (isChunkError(msg) || (reason && reason.name === 'ChunkLoadError')) {
+      reloadOnce();
+    }
+  });
+})();
+
 // Silence console.log / console.debug / console.info in production
 // (keeps console.warn and console.error for real issues)
 if (process.env.NODE_ENV === 'production') {
