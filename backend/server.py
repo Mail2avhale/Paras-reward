@@ -32380,10 +32380,24 @@ async def process_bill_payment_request(request: Request):
         }
 
 # ==================== GIFT VOUCHER REDEMPTION ENDPOINTS ====================
+# FEATURE DISCONTINUED — May 2026. Endpoints kept for backward compatibility
+# with old clients but return HTTP 410 Gone. Historical DB data (gift_voucher_requests
+# collection) is preserved for accounting/audit; AdminProfitLoss still reads it.
+
+_GIFT_VOUCHER_DISCONTINUED_MSG = (
+    "The Gift Voucher feature has been discontinued. "
+    "Please use Bank Transfer or BBPS recharge instead."
+)
+
 
 @api_router.post("/gift-voucher/request")
 async def create_gift_voucher_request(request: Request):
-    """Create a PhonePe gift voucher redemption request (All user types)"""
+    """[DISCONTINUED] Gift voucher feature removed May 2026."""
+    raise HTTPException(status_code=410, detail=_GIFT_VOUCHER_DISCONTINUED_MSG)
+
+
+async def _legacy_gift_voucher_request_impl(request: Request):
+    """Old implementation kept inlined for reference — not callable."""
     data = await request.json()
     user_id = data.get("user_id")
     denomination = int(data.get("denomination"))
@@ -32634,17 +32648,26 @@ async def bulk_reject_all_pending_requests(request: Request):
 
 @api_router.get("/gift-voucher/requests/{user_id}")
 async def get_user_gift_voucher_requests(user_id: str):
-    """Get all gift voucher requests for a user"""
+    """Get all gift voucher requests for a user (historical — feature discontinued).
+    Returns the existing records so users can still see their old requests in
+    the account history, but no new requests can be created.
+    """
     requests = await db.gift_voucher_requests.find(
         {"user_id": user_id},
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
-    
+
     return {"requests": requests, "count": len(requests)}
+
 
 @api_router.get("/admin/gift-voucher/requests")
 async def get_all_gift_voucher_requests(status: Optional[str] = None, search: Optional[str] = None):
-    """Get all gift voucher requests (Admin only)"""
+    """[DISCONTINUED] Admin gift voucher list — feature removed May 2026."""
+    raise HTTPException(status_code=410, detail=_GIFT_VOUCHER_DISCONTINUED_MSG)
+
+
+async def _legacy_admin_gift_voucher_list(status: Optional[str] = None, search: Optional[str] = None):
+    """Old implementation — kept inlined for historical reference."""
     query = {}
     if status:
         query["status"] = status
@@ -32687,7 +32710,12 @@ async def get_all_gift_voucher_requests(status: Optional[str] = None, search: Op
 
 @api_router.post("/admin/gift-voucher/process")
 async def process_gift_voucher_request(request: Request):
-    """Process a gift voucher request - approve with voucher code or reject (Admin only)"""
+    """[DISCONTINUED] Gift voucher admin process — feature removed May 2026."""
+    raise HTTPException(status_code=410, detail=_GIFT_VOUCHER_DISCONTINUED_MSG)
+
+
+async def _legacy_admin_gift_voucher_process(request: Request):
+    """Old implementation — kept inlined for historical reference."""
     data = await request.json()
     request_id = data.get("request_id")
     action = data.get("action")  # approve, reject

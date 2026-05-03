@@ -1122,6 +1122,23 @@ Examined all 5 matched DMT transactions in production:
 - **Verified locally**: cold 16 ms, cache hit 3 ms (~5× faster on 2nd load). Production cold-load may be slower due to Atlas latency, but every subsequent click within 30 s is instant.
 - **Files touched**: `backend/routes/manual_bank_transfer.py` (cache module + integration + enrichment guards).
 
+### Gift Voucher Feature — FULL REMOVAL (DONE - May 3, 2026)
+- **User decision**: "Remove this page. Full cleanup related this page." + "Auto reject pending".
+- **Production pre-cleanup**: All 3 open pending gift voucher requests (`4f4f1f1d`, `adb3c7d1`, `c8c107f1`) auto-rejected via `/admin/gift-voucher/process` → PRC refunded to user wallets with reason "Gift voucher feature discontinued. PRC refunded to your wallet." Verified via subsequent `status=rejected` query (3/3 found with updated reason).
+- **Backend (server.py)**:
+  - `POST /gift-voucher/request` → returns HTTP 410 Gone with friendly message "The Gift Voucher feature has been discontinued. Please use Bank Transfer or BBPS recharge instead." Old implementation kept inlined as `_legacy_gift_voucher_request_impl` for historical reference only.
+  - `GET /admin/gift-voucher/requests` → 410 Gone (admin list, old body renamed `_legacy_admin_gift_voucher_list`).
+  - `POST /admin/gift-voucher/process` → 410 Gone (approve/reject, old body renamed `_legacy_admin_gift_voucher_process`).
+  - `GET /gift-voucher/requests/{user_id}` → **KEPT LIVE** (users can still see their past requests in account history; no new ones can be created).
+  - Historical readers in `server.py` and analytics endpoints left untouched (preserves audit trail and P&L reporting of past gift voucher revenue).
+- **Frontend cleanup**:
+  - `/app/frontend/src/pages/AdminGiftVouchers.js` → **file deleted**.
+  - `App.js`: lazy import line replaced with a comment; `/admin/gift-vouchers` Route replaced with `<Navigate to="/admin" replace />` so any bookmark is silently redirected.
+  - `components/layouts/AdminLayout.js`: sidebar nav item removed (including pending-count badge); `pendingCounts.gifts` key + polling axios call dropped; path-to-key map entry + route map entry removed.
+  - `pages/AdminServiceCharges.js`: Gift Voucher percentage/fixed config card and all related state (`giftVoucherConfig`, `setGiftVoucherConfig`, `save('gift_voucher')` handler branch) removed. Bill Payment card stays fully functional.
+- **Result**: 0 references to live gift-voucher UI; 3 backend endpoints return 410; 1 historical read endpoint kept; lint clean; smoke-test screenshot confirms admin sidebar + dashboard render correctly.
+- **DB collection `gift_voucher_requests`**: **preserved** (audit trail) — no drop or purge performed.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

@@ -51,7 +51,6 @@ const MENU_TO_PERMISSION = {
   'razorpay-subs': 'razorpay-subs',
   'bbps-dashboard': 'bbps-dashboard',
   'eko-services': 'eko-services',
-  'gift-vouchers': 'gift-vouchers',
   'service-charges': 'service-charges',
 
   // Finance
@@ -92,7 +91,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
     kyc: 0,
     subscriptions: 0,
     bills: 0,
-    gifts: 0,
     bankWithdrawals: 0,
     rdRedeem: 0
   });
@@ -105,7 +103,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
           axios.get(`${API}/kyc/stats`),
           axios.get(`${API}/admin/vip-payments?status=pending&limit=1`),
           axios.get(`${API}/admin/bill-payment/requests?status=pending&limit=1`),
-          axios.get(`${API}/admin/gift-voucher/requests?status=pending&limit=1`),
           axios.get(`${API}/admin/bank-redeem/requests?status=pending&page=1&limit=1`),
         ]);
         
@@ -124,9 +121,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
           kyc: getValue(results[0], d => d?.pending),
           subscriptions: getValue(results[1], d => d?.total || d?.payments?.length),
           bills: getValue(results[2], d => d?.stats?.pending || d?.total),
-          gifts: getValue(results[3], d => d?.stats?.pending || d?.requests?.length || d?.total),
-          bankWithdrawals: getValue(results[4], d => d?.stats?.pending?.count || d?.total),
-          rdRedeem: 0 // stale `/api/rd/admin/redeem-requests` endpoint removed (backend no longer hosts it)
+          bankWithdrawals: getValue(results[3], d => d?.stats?.pending?.count || d?.total),
+          rdRedeem: 0
         });
       } catch (error) {
         console.error('Error fetching pending counts:', error);
@@ -187,11 +183,10 @@ const AdminLayout = ({ children, user, onLogout }) => {
     'kyc': pendingCounts.kyc,
     'subscriptions': pendingCounts.subscriptions,
     'bill-payments': pendingCounts.bills,
-    'gift-vouchers': pendingCounts.gifts,
     'bank-withdrawals': pendingCounts.bankWithdrawals
   };
   
-  const totalPendingApprovals = pendingCounts.kyc + pendingCounts.subscriptions + pendingCounts.bills + pendingCounts.gifts + pendingCounts.bankWithdrawals;
+  const totalPendingApprovals = pendingCounts.kyc + pendingCounts.subscriptions + pendingCounts.bills + pendingCounts.bankWithdrawals;
 
   const menuGroups = {
     requestApprovals: {
@@ -206,7 +201,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'razorpay-subs', label: 'Razorpay Payments', icon: CreditCard, path: '/admin/razorpay-subscriptions', highlight: true },
         { id: 'bbps-dashboard', label: 'BBPS Instant', icon: Activity, path: '/admin/bbps', highlight: true },
         { id: 'eko-services', label: 'Eko Direct Services', icon: Zap, path: '/admin/eko-services', highlight: true },
-        { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers', pendingCount: pendingCounts.gifts },
       ]
     },
     finance: {
@@ -287,7 +281,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/razorpay-subscriptions': 'razorpay-subs',
     '/admin/bbps': 'bbps-dashboard',
     '/admin/eko-services': 'eko-services',
-    '/admin/gift-vouchers': 'gift-vouchers',
     '/admin/service-charges': 'service-charges',
 
     // Finance

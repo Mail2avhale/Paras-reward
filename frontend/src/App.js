@@ -355,7 +355,7 @@ const AdminHealthCheck = IS_USER_BUILD ? null : lazy(() => import(/* webpackChun
 const AdminForceActivateSubscription = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminForceActivateSubscription"));
 const AdminWebVitals = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminWebVitals"));
 // AdminBankWithdrawals removed - merged into AdminUnifiedPayments
-const AdminGiftVouchers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminGiftVouchers"));
+// AdminGiftVouchers - REMOVED (feature discontinued May 2026)
 const AdminServiceCharges = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceCharges"));
 const AdminServiceToggles = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceToggles"));
 const AdminPolicies = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPolicies"));
@@ -600,7 +600,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/razorpay-subscriptions" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRazorpaySubscriptions user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 {/* /admin/bank-withdrawals merged into /admin/unified-payments */}
                 <Route path="/admin/bank-withdrawals" element={<Navigate to="/admin/unified-payments" replace />} />
-                <Route path="/admin/gift-vouchers" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminGiftVouchers user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/gift-vouchers" element={<Navigate to="/admin" replace />} />
                 {/* /admin/luxury-claims route REMOVED - deprecated feature */}
                 {/* /admin/recurring-deposits route REMOVED - deprecated feature */}
                 <Route path="/admin/recurring-deposits" element={<Navigate to="/admin" replace />} />

@@ -17,11 +17,6 @@ const AdminServiceCharges = ({ user }) => {
     charge_percentage: 2.0,
     charge_fixed: 20.0
   });
-  const [giftVoucherConfig, setGiftVoucherConfig] = useState({
-    charge_type: 'percentage',
-    charge_percentage: 5.0,
-    charge_fixed: 50.0
-  });
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -35,7 +30,6 @@ const AdminServiceCharges = ({ user }) => {
     try {
       const response = await axios.get(`${API}/admin/service-charges`);
       setBillPaymentConfig(response.data.bill_payment);
-      setGiftVoucherConfig(response.data.gift_voucher);
     } catch (error) {
       console.error('Error fetching config:', error);
     }
@@ -44,16 +38,14 @@ const AdminServiceCharges = ({ user }) => {
   const handleSave = async (serviceType) => {
     setLoading(true);
     try {
-      const config = serviceType === 'bill_payment' ? billPaymentConfig : giftVoucherConfig;
-      
+      const config = billPaymentConfig;
       await axios.post(`${API}/admin/service-charges`, {
         service_type: serviceType,
         charge_type: config.charge_type,
         charge_percentage: parseFloat(config.charge_percentage),
         charge_fixed: parseFloat(config.charge_fixed)
       });
-
-      toast.success(`${serviceType === 'bill_payment' ? 'Bill Payment' : 'Gift Voucher'} service charge updated!`);
+      toast.success('Bill Payment service charge updated!');
       fetchConfig();
     } catch (error) {
       console.error('Error updating config:', error);
@@ -176,97 +168,6 @@ const AdminServiceCharges = ({ user }) => {
               >
                 <Save className="h-4 w-4 mr-2" />
                 Save Bill Payment Config
-              </Button>
-            </div>
-          </Card>
-
-          {/* Gift Voucher Service Charge */}
-          <Card className="p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Gift Voucher Redemption</h2>
-            
-            <div className="space-y-4">
-              {/* Charge Type Selection */}
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-2">Charge Type</label>
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setGiftVoucherConfig({ ...giftVoucherConfig, charge_type: 'percentage' })}
-                    className={`flex-1 p-4 border-2 rounded-lg transition-all ${
-                      giftVoucherConfig.charge_type === 'percentage'
-                        ? 'border-purple-500 bg-purple-500/10'
-                        : 'border-slate-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <Percent className="h-6 w-6 mx-auto mb-2 text-purple-600" />
-                    <p className="font-semibold">Percentage</p>
-                    <p className="text-xs text-gray-600">% of PRC amount</p>
-                  </button>
-                  <button
-                    onClick={() => setGiftVoucherConfig({ ...giftVoucherConfig, charge_type: 'fixed' })}
-                    className={`flex-1 p-4 border-2 rounded-lg transition-all ${
-                      giftVoucherConfig.charge_type === 'fixed'
-                        ? 'border-pink-500 bg-pink-500/10'
-                        : 'border-slate-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <DollarSign className="h-6 w-6 mx-auto mb-2 text-pink-600" />
-                    <p className="font-semibold">Fixed</p>
-                    <p className="text-xs text-gray-600">Fixed PRC amount</p>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-2">
-                    Percentage (%)
-                  </label>
-                  <Input
-                    type="number"
-                    value={giftVoucherConfig.charge_percentage}
-                    onChange={(e) => setGiftVoucherConfig({ ...giftVoucherConfig, charge_percentage: e.target.value })}
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    disabled={giftVoucherConfig.charge_type !== 'percentage'}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-2">
-                    Fixed Amount (PRC)
-                  </label>
-                  <Input
-                    type="number"
-                    value={giftVoucherConfig.charge_fixed}
-                    onChange={(e) => setGiftVoucherConfig({ ...giftVoucherConfig, charge_fixed: e.target.value })}
-                    min="0"
-                    step="1"
-                    disabled={giftVoucherConfig.charge_type !== 'fixed'}
-                  />
-                </div>
-              </div>
-
-              {/* Example Calculation */}
-              <div className="bg-purple-500/10 p-4 rounded-lg">
-                <p className="text-sm font-semibold text-gray-900 mb-2">Example Calculation</p>
-                <p className="text-sm text-slate-600">
-                  For a ₹100 voucher (1000 PRC):
-                </p>
-                <p className="text-lg font-bold text-purple-400 mt-1">
-                  Service Charge = {calculateExample(1000, giftVoucherConfig).toFixed(2)} PRC
-                </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  Total = {(1000 + calculateExample(1000, giftVoucherConfig)).toFixed(2)} PRC
-                </p>
-              </div>
-
-              <Button
-                onClick={() => handleSave('gift_voucher')}
-                disabled={loading}
-                className="w-full bg-purple-600 hover:bg-purple-700"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Save Gift Voucher Config
               </Button>
             </div>
           </Card>
