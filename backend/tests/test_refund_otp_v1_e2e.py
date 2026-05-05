@@ -113,8 +113,48 @@ async def _seed_refund_pending_recharge(db, eko_tid: str, prc_amount: int = 200)
 @pytest.mark.asyncio
 @respx.mock
 async def test_otp_send_happy_path_production_sms(db):
-    """Production case: Eko returns status:0 + empty data → SMS sent OTP-only."""
+    """Production case: Eko returns status:0 + populated data.otp_ref_id → SMS confirmed."""
     tid = "11111111111"
+    await _seed_refund_pending_recharge(db, tid)
+
+    respx.post(f"{EKO_BASE}/v1/transactions/{tid}/refund/otp").mock(
+        return_value=httpx.Response(200, json={
+            "response_status_id": -1,
+            "status": 0,
+            "invalid_params": None,
+            "message": "OTP for failed transaction has been sent to customers mobile {2} {3}",
+            "data": {"tid": "TID-OK", "otp_ref_id": "REF-XYZ"},
+        })
+    )
+
+    res = await eko_recharge.user_process_refund(
+        tid, eko_recharge.UserRefundRequest(user_id=TEST_USER)
+    )
+    assert res["success"] is True, res
+    assert res.get("otp_sent") is True
+    assert res.get("delivery_confirmed") is True
+    # Template-token message normalised away
+    assert "{" not in res["message"], res
+    # Audit log written with confirmed kind
+    log = await db.eko_refund_logs.find_one(
+        {"tid": tid, "user_id": TEST_USER, "action": "otp_send", "result": "success"}
+    )
+    assert log is not None
+    assert log.get("send_kind") == "confirmed"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_otp_send_ambiguous_silent_failure_returns_warning(db):
+    """Critical regression test for production bug:
+
+    Eko returns status:0 + invalid_params:null BUT data.tid="" (e.g. user_code
+    mismatch causes Eko to no-op the SMS dispatch). Older code reported plain
+    success; users complained "OTP not received". The fixed code MUST mark the
+    response as ambiguous so the UI can show a softer 'try resend' message and
+    the audit log records the full Eko payload for ops triage.
+    """
+    tid = "11111111112"
     await _seed_refund_pending_recharge(db, tid)
 
     respx.post(f"{EKO_BASE}/v1/transactions/{tid}/refund/otp").mock(
@@ -130,13 +170,48 @@ async def test_otp_send_happy_path_production_sms(db):
     res = await eko_recharge.user_process_refund(
         tid, eko_recharge.UserRefundRequest(user_id=TEST_USER)
     )
+    # Surface as success=True so the OTP entry input still appears on UI…
     assert res["success"] is True, res
-    assert res.get("otp_sent") is True
-    # Template-token message normalised away
-    assert "{" not in res["message"], res
-    # Audit log written
+    # …but delivery_confirmed=False so the UI knows to soften the messaging.
+    assert res.get("delivery_confirmed") is False, res
+    # User-visible message must hint at retry / contact support.
+    msg = res["message"].lower()
+    assert ("60 seconds" in msg) or ("resend" in msg) or ("contact support" in msg), res
+
+    # Audit log must capture the ambiguous send + full Eko response for triage.
     log = await db.eko_refund_logs.find_one(
-        {"tid": tid, "user_id": TEST_USER, "action": "otp_send", "result": "success"}
+        {"tid": tid, "user_id": TEST_USER, "action": "otp_send"}
+    )
+    assert log is not None, "Audit row missing for ambiguous OTP send"
+    assert log.get("result") == "ambiguous"
+    assert log.get("send_kind") == "ambiguous"
+    assert "eko_full_response" in log
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_otp_send_no_data_no_msg_treated_as_failure(db):
+    """If Eko returns no data AND the message doesn't say 'OTP sent', we should
+    NOT report success — that's pure silent failure (no signal of any send)."""
+    tid = "11111111113"
+    await _seed_refund_pending_recharge(db, tid)
+
+    respx.post(f"{EKO_BASE}/v1/transactions/{tid}/refund/otp").mock(
+        return_value=httpx.Response(200, json={
+            "response_status_id": -1,
+            "status": 0,
+            "invalid_params": None,
+            "message": "Operation completed",  # ← no 'OTP' / 'sent' wording
+            "data": {"tid": "", "otp_ref_id": ""},
+        })
+    )
+
+    res = await eko_recharge.user_process_refund(
+        tid, eko_recharge.UserRefundRequest(user_id=TEST_USER)
+    )
+    assert res["success"] is False, res
+    log = await db.eko_refund_logs.find_one(
+        {"tid": tid, "user_id": TEST_USER, "action": "otp_send", "result": "failed"}
     )
     assert log is not None
 

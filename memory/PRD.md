@@ -1197,6 +1197,60 @@ Examined all 5 matched DMT transactions in production:
 - **All Eko HTTP calls mocked with `respx`** (added to `requirements.txt` indirectly — installed via `pip install respx`). No real Eko traffic in tests.
 - **Recommended next step (NOT done — needs user decision)**: Add a "Resend OTP after 60s" button on the user-facing refund modal. If after 3 resends the user still hasn't received SMS, surface a "Contact Support" CTA so users aren't stuck. Eko itself has no SMS-delivery confirmation API, so we can't programmatically detect SMS failure.
 
+### Refund OTP Deep Bug Fix + Community Forum Gating + Moderation (DONE - May 3, 2026)
+
+**🚨 Refund OTP Deep Fix (Production: "बरेच users ना OTP येत नाही"):**
+- **Root cause** (git blame `fa9d7201` April 28): success-detection logic was relaxed from
+  `(response_status_id==0 AND data.tid OR data.otp_ref_id non-empty)` →
+  `(status==0 AND no invalid_params)`. This **REMOVED Eko's silent-failure detection**
+  — Eko returns `status:0` even when SMS is silently dropped (e.g. user_code mismatch,
+  rate-limit, customer mobile invalid). Old code rejected those; April 28 onwards code
+  reported success but no SMS arrived.
+- **Fix** (`backend/routes/eko_recharge.py` user_process_refund + verify):
+  - Three-bucket classification: HARD_FAIL / CONFIRMED_SEND / AMBIGUOUS_SEND.
+  - CONFIRMED requires non-empty `data.tid` OR `data.otp_ref_id` (Eko docs schema).
+  - AMBIGUOUS = status:0, no invalid_params, message says "OTP...sent", but data empty.
+    Returns `success:true, delivery_confirmed:false` so frontend shows softer "Try
+    again in 60s / contact support" hint instead of plain "OTP sent".
+  - Audit log writes `result="ambiguous"` + full Eko response payload to
+    `eko_refund_logs.eko_full_response` so admins can triage SMS failures with
+    raw Eko data.
+- **Frontend** (`RefundBlockerModal.js`): consumes `delivery_confirmed=false` to
+  show amber warning banner above OTP input + softer toast.
+- **Tests** (`test_refund_otp_v1_e2e.py`): 15/15 PASS — happy path (confirmed),
+  ambiguous silent-failure (NEW), no-data-no-msg failure (NEW), invalid TID,
+  wrong status, wrong user, missing eko_tid, rate-limit, V1 contract pinning,
+  verify happy/wrong-OTP, kill-switch on/off, etc. All Eko HTTP mocked via `respx`.
+
+**🛡️ Community Forum Hardening:**
+- **Explorer block** (`assert_can_interact` helper in `community.py`): Free /
+  Explorer users now get `403 "Upgrade to Elite to interact with the community"`
+  on EVERY interactive endpoint — create_post, comment, like, react, bookmark,
+  comment-like. Admins + moderators always allowed.
+- **Two-tier content moderation** (`backend/routes/community_moderation.py`):
+  - **Tier 1 — keyword blacklist**: English profanity, romanised Hindi/Marathi
+    (chutiya, madarchod, bhenchod, etc.), Devanagari (चूतिया, मादरचोद, etc.),
+    URL spam (≥3 links in <400 chars), shouting+punctuation patterns.
+    Boundary-aware regex, single compile, ~microsecond latency.
+  - **Tier 2 — Gemini 2.5 Flash classifier** (Emergent Universal LLM Key):
+    Called only for posts ≥25 chars that pass Tier 1. JSON output schema
+    `{category, reason}` parsed defensively (strips code fences, regex-matches
+    first JSON object). On AI error → fallback to "clean" so a broken LLM key
+    never blocks the feature.
+  - Negative/spam verdicts → 400 + friendly user message; post NEVER inserted
+    (effective hard delete of would-be content). Audit log written to
+    `community_moderation_logs` with full title/content preview + tier/category.
+  - Admins + moderators bypass moderation entirely.
+- **Tests** (`test_community_gating_and_moderation.py`): 19/19 PASS — Explorer
+  blocked on all 5 interactions, Elite/Admin/Mod allowed, Tier-1 catches
+  English+Hindi+Marathi profanity (romanised + Devanagari) + URL spam, Tier-2
+  AI mocked verdict path, AI-failure fallback to clean, audit log persistence,
+  comment-level moderation, admin moderation bypass.
+
+**Combined test summary**: 47/47 PASS across refund OTP (15) + subscription
+cleanup (13) + community gating/moderation (19) — all backend route handler
+tests on a single `pytest` run.
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download

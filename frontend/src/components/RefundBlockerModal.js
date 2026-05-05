@@ -59,9 +59,25 @@ const RefundBlockerModal = ({ userId, onAllRefundsComplete }) => {
           setTxn(tid, { sending: false, completed: true });
           setTimeout(() => fetchPendingRefunds(), 1500);
         } else {
-          // Production: OTP sent via SMS, user must enter
-          toast.success(res.data.message || 'OTP sent to your registered mobile');
-          setTxn(tid, { sending: false, otpSent: true, mobile_hint: res.data.mobile_hint });
+          // Production: OTP sent via SMS, user must enter.
+          // delivery_confirmed=false → Eko didn't return a confirmation token,
+          // SMS may not actually arrive. Soften the toast + flag the row so
+          // the OTP screen shows a 'Try again in 60s' hint.
+          const ambiguous = res.data.delivery_confirmed === false;
+          if (ambiguous) {
+            toast.warning(
+              res.data.message ||
+              "OTP request submitted. If you don't receive an SMS within 60 seconds, tap 'Resend OTP'."
+            );
+          } else {
+            toast.success(res.data.message || 'OTP sent to your registered mobile');
+          }
+          setTxn(tid, {
+            sending: false,
+            otpSent: true,
+            mobile_hint: res.data.mobile_hint,
+            delivery_confirmed: !ambiguous,
+          });
         }
       } else {
         const msg = res.data?.error || res.data?.message || 'Failed to send OTP';
@@ -278,6 +294,14 @@ const RefundBlockerModal = ({ userId, onAllRefundsComplete }) => {
                           <Shield className="w-4 h-4" />
                           OTP sent via SMS {s.mobile_hint ? `to ${s.mobile_hint}` : 'to your registered mobile'}. Enter below:
                         </div>
+                        {s.delivery_confirmed === false && (
+                          <div
+                            className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 leading-snug"
+                            data-testid={`refund-delivery-warning-${tid}`}
+                          >
+                            Delivery not confirmed by the gateway. If you don't receive an SMS within 60 seconds, tap <span className="font-semibold">Resend OTP</span> below or contact support.
+                          </div>
+                        )}
                         <div className="flex gap-2">
                           <input
                             type="text"

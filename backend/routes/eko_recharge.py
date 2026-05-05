@@ -1842,23 +1842,40 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
         except Exception:
             return {"success": False, "error": f"Eko OTP API returned invalid response (HTTP {otp_response.status_code})"}
 
-        # Eko OTP-send quirk (verified in production):
-        # When OTP is successfully sent, Eko returns:
-        #   status: 0, response_status_id: -1, invalid_params: null,
-        #   message: "OTP for failed transaction has been sent to customers mobile..."
-        #   data: {tid: "", otp_ref_id: ""}  (empty — refund_tid is generated only on verify)
+        # Eko V1 OTP-send response classification — three buckets:
+        # ──────────────────────────────────────────────────────────────────
+        # 1) HARD FAIL  → invalid_params is set (bad TID, expired txn, etc.)
+        # 2) CONFIRMED SEND → data.tid OR data.otp_ref_id is non-empty
+        #                      (Eko's documented happy path — SMS dispatched)
+        # 3) AMBIGUOUS  → status:0, no invalid_params, but data is empty
+        #                      (silent-failure pattern — Eko returns 0 but
+        #                       skips SMS delivery, e.g. user_code mismatch,
+        #                       Eko-side rate limit, customer mobile invalid).
+        #                      DO NOT report this as plain success. Surface as
+        #                      "ambiguous" so the UI can warn the user and the
+        #                      audit log captures the full Eko payload for ops.
         #
-        # When OTP rejected (e.g. invalid TID), Eko returns:
-        #   status: 0, response_status_id: -1, invalid_params: {"tid": "invalid tid"},
-        #   data: {tid: "", otp_ref_id: ""}
-        #
-        # So real success = status:0 AND invalid_params is null/empty.
-        # Don't rely on response_status_id (always -1 for OTP send) or data.tid (always empty).
+        # Earlier production users got OTPs because Eko returned populated
+        # data.tid / data.otp_ref_id for them. After April 28 the success
+        # check was relaxed to just (status:0 AND no invalid_params), which
+        # silently masked Eko's no-op responses → users complained "OTP not
+        # received" while UI said "OTP sent". This logic restores the
+        # data-non-empty check as the authoritative success signal.
         invalid = otp_result.get("invalid_params")
-        is_eko_success = (
-            otp_result.get("status") == 0
-            and not invalid  # null, {}, or [] — all falsy
+        eko_data_pre = otp_result.get("data") or {}
+        has_data_tid = bool(
+            (eko_data_pre.get("tid") or "").strip()
+            or (eko_data_pre.get("otp_ref_id") or "").strip()
+            or (eko_data_pre.get("otp") or "").strip()
         )
+        eko_msg_lower = str(otp_result.get("message") or "").lower()
+        msg_says_sent = ("otp" in eko_msg_lower) and ("sent" in eko_msg_lower)
+
+        is_hard_fail = bool(invalid) or (otp_result.get("status") != 0)
+        is_confirmed_send = (not is_hard_fail) and has_data_tid
+        is_ambiguous_send = (not is_hard_fail) and (not has_data_tid) and msg_says_sent
+
+        is_eko_success = is_confirmed_send or is_ambiguous_send
 
         if not is_eko_success:
             err_msg = (
@@ -1880,6 +1897,8 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
                     "eko_response_status_id": otp_result.get("response_status_id"),
                     "eko_invalid_params": otp_result.get("invalid_params"),
                     "eko_message": otp_result.get("message"),
+                    "eko_full_response": otp_result,
+                    "eko_http_status": otp_response.status_code,
                     "ts": datetime.now(timezone.utc).isoformat(),
                     "ts_epoch": datetime.now(timezone.utc).timestamp(),
                 })
@@ -1896,14 +1915,21 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
                 "eko_raw_message": otp_result.get("message"),
             }
 
-        # Audit successful OTP send
+        # Audit successful OTP send (capture full Eko response for ops debugging
+        # — production "OTP not received" cases need the raw payload to triage)
         try:
             await db.eko_refund_logs.insert_one({
                 "tid": str(tid),
                 "eko_api_tid": str(eko_api_tid),
                 "user_id": data.user_id,
                 "action": "otp_send",
-                "result": "success",
+                "result": "success" if is_confirmed_send else "ambiguous",
+                "send_kind": "confirmed" if is_confirmed_send else "ambiguous",
+                "eko_response_status_id": otp_result.get("response_status_id"),
+                "eko_message": otp_result.get("message"),
+                "eko_data": eko_data_pre,
+                "eko_full_response": otp_result,
+                "eko_http_status": otp_response.status_code,
                 "ts": datetime.now(timezone.utc).isoformat(),
                 "ts_epoch": datetime.now(timezone.utc).timestamp(),
             })
@@ -1951,6 +1977,8 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
 
         # Production flow: OTP sent via SMS, user must enter it
         # Eko's raw message sometimes contains unfilled template tokens like '{2} {3}';
+        # Production flow: OTP sent via SMS, user must enter it.
+        # Eko's raw message sometimes contains unfilled template tokens like '{2} {3}';
         # normalize to a clean user-facing message.
         raw_msg = otp_result.get("message") or ""
         if "{" in raw_msg and "}" in raw_msg:
@@ -1958,10 +1986,21 @@ async def user_process_refund(tid: str, data: UserRefundRequest):
         else:
             friendly_msg = raw_msg or "OTP sent to your registered mobile. Please enter it below."
 
+        # If Eko returned an ambiguous response (no data.tid populated), the SMS
+        # may not actually have been delivered. Tell the UI to surface a softer
+        # message and a "Try again in 60s" hint so the user isn't stuck waiting
+        # forever on an SMS that may never arrive.
+        if is_ambiguous_send:
+            friendly_msg = (
+                "OTP request submitted. If you don't receive an SMS within 60 seconds, "
+                "tap 'Resend OTP' or contact support."
+            )
+
         return {
             "success": True,
             "tid": tid,
             "otp_sent": True,
+            "delivery_confirmed": is_confirmed_send,  # False = ambiguous, may not arrive
             "message": friendly_msg,
             "mobile_hint": eko_data.get("mobile") or eko_data.get("customer_mobile") or "",
         }

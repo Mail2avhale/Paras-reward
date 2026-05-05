@@ -515,6 +515,33 @@ async def is_user_blocked(user_id: str) -> bool:
     return bool(blocked)
 
 
+async def assert_can_interact(user_id: str) -> None:
+    """Gate ALL community interactions (post, like, react, comment, bookmark)
+    behind a paid plan. Raises 403 if the user is on the free Explorer plan
+    or doesn't exist. Admins / moderators are always allowed.
+    """
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Login required")
+    if await is_user_blocked(user_id):
+        raise HTTPException(status_code=403, detail="You are blocked from the community")
+    user = await db.users.find_one(
+        {"uid": user_id},
+        {"_id": 0, "subscription_plan": 1, "is_admin": 1, "role": 1},
+    )
+    if not user:
+        raise HTTPException(status_code=403, detail="User not found")
+    if user.get("is_admin") or user.get("role") == "admin":
+        return
+    if await is_moderator_or_admin(user_id):
+        return
+    plan = (user.get("subscription_plan") or "explorer").lower()
+    if plan in ("explorer", "free", "", None):
+        raise HTTPException(
+            status_code=403,
+            detail="Upgrade to Elite to interact with the community.",
+        )
+
+
 async def get_user_reputation(user_id: str) -> dict:
     """Get user's community reputation."""
     post_count = await db.community_posts.count_documents({"user_id": user_id, "status": "active"})
@@ -541,8 +568,7 @@ async def get_categories():
 @router.post("/posts/create")
 async def create_post(data: CreatePostRequest):
     try:
-        if await is_user_blocked(data.user_id):
-            raise HTTPException(status_code=403, detail="You are blocked from the community")
+        await assert_can_interact(data.user_id)
 
         if data.category not in CATEGORIES:
             raise HTTPException(status_code=400, detail=f"Invalid category. Use: {CATEGORIES}")
@@ -556,17 +582,43 @@ async def create_post(data: CreatePostRequest):
             if not await is_moderator_or_admin(data.user_id):
                 raise HTTPException(status_code=403, detail="Only admins and moderators can post announcements")
 
+        # Get user — needed for denormalised plan label + admin moderation bypass.
+        user = await db.users.find_one(
+            {"uid": data.user_id},
+            {"_id": 0, "subscription_plan": 1, "is_admin": 1, "role": 1},
+        )
+        plan = (user.get("subscription_plan") or "explorer").lower() if user else "explorer"
+        is_priv = bool(user and (user.get("is_admin") or user.get("role") == "admin")) \
+            or await is_moderator_or_admin(data.user_id)
+
+        # ── Content moderation (admins/mods bypass) ─────────────────────
+        # Two-tier (keyword → Gemini). Negative/spam → reject & never insert
+        # (effective hard delete of the would-be post).
+        if not is_priv:
+            from routes.community_moderation import classify_post
+            verdict = await classify_post(data.title, data.content)
+            if verdict.get("auto_reject"):
+                logging.info(
+                    f"[COMMUNITY] Post auto-rejected — user={data.user_id}, "
+                    f"tier={verdict.get('tier')}, category={verdict.get('category')}"
+                )
+                cat = verdict.get("category")
+                if cat == "negative":
+                    msg = "Your post contains inappropriate content and was not published. Please rephrase and try again."
+                elif cat == "spam":
+                    msg = "Your post looks like spam and was not published. Please share something useful to the community."
+                else:
+                    msg = "Your post could not be published. Please rephrase and try again."
+                raise HTTPException(status_code=400, detail=msg)
+
         now = datetime.now(timezone.utc).isoformat()
         post_id = f"POST-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{str(uuid.uuid4())[:6]}"
-
-        # Get user subscription info
-        user = await db.users.find_one({"uid": data.user_id}, {"_id": 0, "subscription_plan": 1})
 
         post = {
             "post_id": post_id,
             "user_id": data.user_id,
             "user_name": data.user_name,
-            "user_plan": user.get("subscription_plan", "explorer") if user else "explorer",
+            "user_plan": plan,
             "category": data.category,
             "title": data.title,
             "content": data.content,
@@ -841,8 +893,7 @@ async def toggle_like(post_id: str, request: Request):
         data = await request.json()
         user_id = data.get("user_id")
 
-        if await is_user_blocked(user_id):
-            raise HTTPException(status_code=403, detail="Blocked")
+        await assert_can_interact(user_id)
 
         existing = await db.community_likes.find_one({"post_id": post_id, "user_id": user_id})
         if existing:
@@ -873,8 +924,7 @@ async def toggle_reaction(post_id: str, request: Request):
 
         if emoji not in ALLOWED_REACTIONS:
             raise HTTPException(status_code=400, detail="Invalid reaction emoji")
-        if await is_user_blocked(user_id):
-            raise HTTPException(status_code=403, detail="Blocked")
+        await assert_can_interact(user_id)
 
         now_iso = datetime.now(timezone.utc).isoformat()
         existing = await db.community_reactions.find_one(
@@ -941,6 +991,8 @@ async def toggle_bookmark(post_id: str, request: Request):
         data = await request.json()
         user_id = data.get("user_id")
 
+        await assert_can_interact(user_id)
+
         existing = await db.community_bookmarks.find_one({"post_id": post_id, "user_id": user_id})
         if existing:
             await db.community_bookmarks.delete_one({"post_id": post_id, "user_id": user_id})
@@ -982,12 +1034,26 @@ async def get_user_bookmarks(user_id: str, page: int = 1, limit: int = 20):
 @router.post("/posts/{post_id}/comment")
 async def add_comment(post_id: str, data: CommentRequest):
     try:
-        if await is_user_blocked(data.user_id):
-            raise HTTPException(status_code=403, detail="Blocked")
+        await assert_can_interact(data.user_id)
 
         post = await db.community_posts.find_one({"post_id": post_id, "status": "active"})
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
+
+        # Moderate comment text (admins/mods bypass)
+        is_priv = await is_moderator_or_admin(data.user_id)
+        if not is_priv:
+            from routes.community_moderation import classify_post
+            verdict = await classify_post("", data.content)
+            if verdict.get("auto_reject"):
+                cat = verdict.get("category")
+                if cat == "negative":
+                    msg = "Your comment contains inappropriate content and was not posted."
+                elif cat == "spam":
+                    msg = "Your comment looks like spam and was not posted."
+                else:
+                    msg = "Your comment could not be posted. Please rephrase."
+                raise HTTPException(status_code=400, detail=msg)
 
         now = datetime.now(timezone.utc).isoformat()
         comment_id = f"CMT-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{str(uuid.uuid4())[:6]}"
@@ -1054,6 +1120,8 @@ async def toggle_comment_like(comment_id: str, request: Request):
     try:
         data = await request.json()
         user_id = data.get("user_id")
+
+        await assert_can_interact(user_id)
 
         existing = await db.community_comment_likes.find_one({"comment_id": comment_id, "user_id": user_id})
         if existing:

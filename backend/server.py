@@ -35624,6 +35624,9 @@ set_employee_reports_db(db)
 set_employee_cache(cache)
 set_community_db(db)
 set_community_cache(cache)
+# Community moderation (Gemini-backed) shares the same DB for audit logs.
+from routes.community_moderation import set_db as set_community_moderation_db
+set_community_moderation_db(db)
 set_public_pages_db(db)
 
 # Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
