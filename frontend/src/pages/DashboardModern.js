@@ -143,6 +143,26 @@ const DashboardModern = ({ user, onLogout }) => {
     }
   }, [user?.subscription_plan, user?.subscription_expiry, user?.prc_balance]);
 
+  // Read the global "Quick Recharge" admin kill-switch on every dashboard load.
+  // Endpoint is in EXCLUDED_ROUTES (auth-bypass) so anonymous fetch works too.
+  // Cache-busting query param avoids stale service-worker / browser caching that
+  // would otherwise prevent the toggle from taking effect for already-loaded apps.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.get(
+          `${API}/admin/failed-transactions/quick-recharge-status?_=${Date.now()}`,
+          { headers: { 'Cache-Control': 'no-cache' } }
+        );
+        if (!cancelled) setQuickRechargeEnabled(res.data?.enabled !== false);
+      } catch {
+        // Network/server error — fail-open (keep card visible).
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // Fetch dashboard data - optimized with parallel requests
   useEffect(() => {
     if (user?.uid) {
