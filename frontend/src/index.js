@@ -83,8 +83,8 @@ root.render(
 );
 
 // Clear old service worker caches on version mismatch
-// v8: Fix app stuck issue - timeout protection - March 2026
-const CURRENT_CACHE_VERSION = 'v8';
+// v9: May 5, 2026 — quick-recharge toggle fix; bump version to evict old bundles.
+const CURRENT_CACHE_VERSION = 'v9';
 
 async function clearOldCaches() {
   if ('caches' in window) {
@@ -115,6 +115,32 @@ async function forceUpdateServiceWorker() {
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
+  // ── One-time forced refresh after a known-bad release ─────────────────
+  // The dashboard build prior to May 5, 2026 was cached aggressively by
+  // the old service worker, so users kept seeing the Quick Recharge card
+  // even after the admin disabled it (the new useEffect that fetches the
+  // toggle was missing from the cached bundle). On the FIRST page load
+  // after this version ships, unregister all service workers, wipe every
+  // cache, and hard-reload once so the browser pulls the fresh JS.
+  // We gate this on a localStorage marker so we never loop or punish
+  // users who already have the new code.
+  const FORCE_REFRESH_MARKER = 'paras_force_refresh_v9';
+  if (!localStorage.getItem(FORCE_REFRESH_MARKER)) {
+    localStorage.setItem(FORCE_REFRESH_MARKER, String(Date.now()));
+    (async () => {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+        if ('caches' in window) {
+          const names = await caches.keys();
+          await Promise.all(names.map((n) => caches.delete(n)));
+        }
+      } catch (_) { /* best effort */ }
+      // Hard reload — bypass HTTP cache too
+      window.location.reload();
+    })();
+  }
+
   window.addEventListener('load', () => {
     // Clear old caches first
     clearOldCaches();

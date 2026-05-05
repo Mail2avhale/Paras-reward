@@ -1,9 +1,12 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v8: Fix app stuck issue - timeout protection - March 2026
-const CACHE_NAME = 'paras-reward-v8';
-const RUNTIME_CACHE = 'paras-runtime-v8';
-const API_CACHE = 'paras-api-v8';
+// v9: May 5, 2026 — force-clear stale dashboard JS bundle that was caching
+// the pre-quick-recharge-toggle code. Bumping CACHE_NAME triggers automatic
+// old-cache eviction in install/activate handlers below, and the v9 marker
+// in /index.js triggers a one-time unregister-and-reload on first load.
+const CACHE_NAME = 'paras-reward-v9';
+const RUNTIME_CACHE = 'paras-runtime-v9';
+const API_CACHE = 'paras-api-v9';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
