@@ -168,7 +168,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'community', label: 'Community Forum', icon: MessageSquare, path: '/admin/community' },
     { id: 'careers', label: 'Careers', icon: Briefcase, path: '/admin/careers' },
     { id: 'investors', label: 'Investors', icon: TrendingUp, path: '/admin/investors' },
-    { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },
     { id: 'bulk-refund-otp', label: 'Bulk Refund OTP (Eko)', icon: Send, path: '/admin/bulk-refund-otp' },
@@ -246,7 +245,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
   const ROUTE_TO_PERMISSION = {
     // General
-    '/admin/members': 'members',
     '/admin/user360': 'user360',
     '/admin/core-team': 'core-team',
     '/admin/failed-transactions': 'failed-transactions',

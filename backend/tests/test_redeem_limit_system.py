@@ -97,23 +97,13 @@ class TestUserRedeemLimit:
             assert field in limit, f"Missing field: {field}"
     
     def test_elite_user_has_correct_limit(self, api_session):
-        """Elite users should have 39,950 PRC base limit"""
-        # Get an elite user from admin members list
-        response = api_session.get(f"{BASE_URL}/api/admin/members/list?subscription=elite&limit=1")
-        if response.status_code != 200 or not response.json().get("members"):
-            pytest.skip("No Elite users found in system")
-        
-        elite_user = response.json()["members"][0]
-        redeem_limit = elite_user.get("redeem_limit", {})
-        
-        # Elite: 799 × 5 × 10 = 39,950 for first month
-        # With no referrals, base should be 39,950
-        total_limit = redeem_limit.get("total_limit", 0)
-        months_active = redeem_limit.get("months_active", 1)
-        
-        # Base limit per month for Elite = 39,950
-        expected_base = 39950.0 * months_active
-        assert total_limit == expected_base, f"Expected {expected_base}, got {total_limit}"
+        """Elite users should have 39,950 PRC base limit.
+
+        NOTE: Previously this verified against /api/admin/members/list; that
+        endpoint was removed on May 5, 2026 along with the Members Dashboard
+        admin page. The assertion is kept skip-safe so the suite stays green.
+        """
+        pytest.skip("/api/admin/members/list removed on May 5, 2026; covered indirectly by /api/user/{uid}/redeem-limit tests")
     
     def test_explorer_user_has_zero_limit(self, api_session):
         """Explorer (free) users should have 0 PRC redeem limit"""
@@ -129,77 +119,15 @@ class TestUserRedeemLimit:
 
 
 class TestAdminMembersSorting:
-    """Test Admin Members list API with sorting"""
-    
-    def test_members_list_returns_redeem_limit_data(self, api_session):
-        """Verify members list includes redeem_limit object"""
-        response = api_session.get(f"{BASE_URL}/api/admin/members/list?limit=5")
-        assert response.status_code == 200
-        data = response.json()
-        
-        assert "members" in data
-        if data["members"]:
-            member = data["members"][0]
-            assert "redeem_limit" in member, "Each member should have redeem_limit data"
-            
-            redeem_limit = member["redeem_limit"]
-            assert "total_limit" in redeem_limit
-            assert "total_redeemed" in redeem_limit
-            assert "remaining_limit" in redeem_limit
-    
-    def test_sort_by_prc_balance(self, api_session):
-        """Test sorting by PRC balance works"""
-        # Descending order - using correct param names: sort_by and sort_order
-        response = api_session.get(f"{BASE_URL}/api/admin/members/list?sort_by=prc_balance&sort_order=desc&limit=10")
-        assert response.status_code == 200
-        members = response.json().get("members", [])
-        
-        if len(members) > 1:
-            balances = [m.get("prc_balance", 0) for m in members]
-            # Filter out None values
-            balances = [b if b is not None else 0 for b in balances]
-            assert balances == sorted(balances, reverse=True), "Members should be sorted by PRC balance descending"
-    
-    def test_sort_by_redeem_limit(self, api_session):
-        """Test sorting by redeem_limit (total_limit) works"""
-        response = api_session.get(f"{BASE_URL}/api/admin/members/list?sort_by=redeem_limit&sort_order=desc&limit=10")
-        assert response.status_code == 200
-        members = response.json().get("members", [])
-        
-        if len(members) > 1:
-            limits = [m.get("redeem_limit", {}).get("total_limit", 0) for m in members]
-            assert limits == sorted(limits, reverse=True), "Members should be sorted by redeem limit descending"
-    
-    def test_sort_by_used_limit(self, api_session):
-        """Test sorting by used_limit (total_redeemed) works"""
-        response = api_session.get(f"{BASE_URL}/api/admin/members/list?sort_by=used_limit&sort_order=desc&limit=10")
-        assert response.status_code == 200
-        members = response.json().get("members", [])
-        
-        if len(members) > 1:
-            used = [m.get("redeem_limit", {}).get("total_redeemed", 0) for m in members]
-            assert used == sorted(used, reverse=True), "Members should be sorted by used limit descending"
-    
-    def test_sort_by_available_limit(self, api_session):
-        """Test sorting by available_limit (remaining_limit) works"""
-        response = api_session.get(f"{BASE_URL}/api/admin/members/list?sort_by=available_limit&sort_order=desc&limit=10")
-        assert response.status_code == 200
-        members = response.json().get("members", [])
-        
-        if len(members) > 1:
-            available = [m.get("redeem_limit", {}).get("remaining_limit", 0) for m in members]
-            assert available == sorted(available, reverse=True), f"Members should be sorted by available limit descending. Got: {available}"
-    
-    def test_sort_by_joined_date(self, api_session):
-        """Test sorting by created_at (joined) works"""
-        response = api_session.get(f"{BASE_URL}/api/admin/members/list?sort_by=created_at&sort_order=desc&limit=10")
-        assert response.status_code == 200
-        members = response.json().get("members", [])
-        
-        if len(members) > 1:
-            dates = [m.get("created_at") for m in members if m.get("created_at")]
-            # Dates should be in descending order (most recent first)
-            assert dates == sorted(dates, reverse=True), "Members should be sorted by join date descending"
+    """Admin Members list API REMOVED on May 5, 2026 (Members Dashboard page deleted).
+
+    Class retained as a single skipped placeholder so anyone running the suite
+    sees the reason instead of silently missing coverage. If a replacement
+    listing endpoint is added later, re-populate this class against it.
+    """
+
+    def test_admin_members_list_removed(self):
+        pytest.skip("/api/admin/members/list removed on May 5, 2026; page deleted.")
 
 
 class TestSubscriptionPlans:

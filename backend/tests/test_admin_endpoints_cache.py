@@ -18,7 +18,7 @@ CACHED_ENDPOINTS = [
     "/api/admin/dashboard/kpis",
     "/api/admin/dashboard/growth?period=daily",
     "/api/admin/subscription-stats",
-    "/api/admin/members/dashboard?period=month",
+    # "/api/admin/members/dashboard" REMOVED May 5, 2026 — page deleted.
     "/api/admin/paid-users-wallet-summary",
     "/api/admin/prc-subscription-stats",
     "/api/admin/reports/financial",
