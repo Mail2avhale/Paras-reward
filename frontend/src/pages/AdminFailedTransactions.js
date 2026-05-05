@@ -94,6 +94,10 @@ const AdminFailedTransactions = ({ user }) => {
   const [modalEnabled, setModalEnabled] = useState(false);
   const [toggling, setToggling] = useState(false);
 
+  // Quick Recharge card toggle state (default ON until status loads)
+  const [quickRechargeEnabled, setQuickRechargeEnabled] = useState(true);
+  const [togglingQuickRecharge, setTogglingQuickRecharge] = useState(false);
+
   useEffect(() => {
     (async () => {
       if (!user?.token) return;
@@ -102,6 +106,12 @@ const AdminFailedTransactions = ({ user }) => {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setModalEnabled(!!res.data?.enabled);
+      } catch { /* ignore */ }
+      try {
+        const res = await axios.get(`${API}/admin/failed-transactions/quick-recharge-status`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        setQuickRechargeEnabled(res.data?.enabled !== false);
       } catch { /* ignore */ }
     })();
   }, [user?.token]);
@@ -132,6 +142,35 @@ const AdminFailedTransactions = ({ user }) => {
       toast.error(err?.response?.data?.detail || 'Toggle failed');
     } finally {
       setToggling(false);
+    }
+  };
+
+  const handleToggleQuickRecharge = async () => {
+    if (!user?.uid || !user?.token) return;
+    const newState = !quickRechargeEnabled;
+    const confirmed = window.confirm(
+      newState
+        ? 'ENABLE Quick Recharge card on the user dashboard? All users will see the recharge card.'
+        : 'DISABLE Quick Recharge card on the user dashboard? Hides the card for ALL users — useful when BBPS/Eko is down or refund queue is backed up.'
+    );
+    if (!confirmed) return;
+    setTogglingQuickRecharge(true);
+    try {
+      const res = await axios.post(
+        `${API}/admin/failed-transactions/quick-recharge-toggle`,
+        { admin_id: user.uid, enabled: newState },
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      if (res.data?.success) {
+        setQuickRechargeEnabled(newState);
+        toast.success(res.data.message);
+      } else {
+        toast.error('Toggle failed');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'Toggle failed');
+    } finally {
+      setTogglingQuickRecharge(false);
     }
   };
 
@@ -507,6 +546,23 @@ const AdminFailedTransactions = ({ user }) => {
               <XCircle className="h-4 w-4 mr-2" />
             )}
             Refund Modal: {modalEnabled ? 'ENABLED' : 'DISABLED'}
+          </Button>
+          <Button
+            onClick={handleToggleQuickRecharge}
+            disabled={togglingQuickRecharge}
+            className={quickRechargeEnabled
+              ? "bg-cyan-600 hover:bg-cyan-700 text-white"
+              : "bg-slate-400 hover:bg-slate-500 text-white"}
+            data-testid="toggle-quick-recharge-btn"
+          >
+            {togglingQuickRecharge ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : quickRechargeEnabled ? (
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+            ) : (
+              <XCircle className="h-4 w-4 mr-2" />
+            )}
+            Quick Recharge: {quickRechargeEnabled ? 'ENABLED' : 'DISABLED'}
           </Button>
           <Button
             onClick={handleReconcilePendingRefunds}

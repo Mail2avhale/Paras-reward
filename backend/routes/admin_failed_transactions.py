@@ -1382,3 +1382,73 @@ async def toggle_refund_modal(request: ToggleRefundModalRequest):
         "message": f"Refund Blocker Modal is now {'ENABLED' if request.enabled else 'DISABLED'} for all users",
     }
 
+
+
+# ========================================================================
+# Quick Recharge Card Toggle — system-wide admin control
+# Lets admins hide the dashboard "Quick Recharge" card when Eko BBPS is
+# unstable, under maintenance, or refund queue is too long. When disabled,
+# no user sees the card on the home dashboard.
+# ========================================================================
+
+class ToggleQuickRechargeRequest(BaseModel):
+    admin_id: str
+    enabled: bool
+
+
+@router.get("/quick-recharge-status")
+async def get_quick_recharge_status():
+    """Public-readable: returns whether Quick Recharge card is globally enabled.
+    Default = True (enabled) so existing deployments don't accidentally hide
+    the feature when this flag is missing from system_config."""
+    if db is None:
+        return {"enabled": True}
+    cfg = await db.system_config.find_one(
+        {"key": "quick_recharge_enabled"},
+        {"_id": 0, "value": 1, "updated_at": 1, "updated_by": 1, "updated_by_name": 1}
+    )
+    if cfg is None:
+        return {"enabled": True}  # default ON
+    return {
+        "enabled": bool(cfg.get("value")),
+        "updated_at": cfg.get("updated_at"),
+        "updated_by": cfg.get("updated_by"),
+        "updated_by_name": cfg.get("updated_by_name"),
+    }
+
+
+@router.post("/quick-recharge-toggle")
+async def toggle_quick_recharge(request: ToggleQuickRechargeRequest):
+    """Admin-only: enable/disable the Quick Recharge card globally."""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    admin = await db.users.find_one({"uid": request.admin_id}, {"_id": 0, "role": 1, "name": 1})
+    if not admin or admin.get("role") not in ("admin", "sub_admin", "super_admin", "manager"):
+        raise HTTPException(status_code=403, detail="Only admins allowed")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    await db.system_config.update_one(
+        {"key": "quick_recharge_enabled"},
+        {"$set": {
+            "key": "quick_recharge_enabled",
+            "value": bool(request.enabled),
+            "updated_at": now_iso,
+            "updated_by": request.admin_id,
+            "updated_by_name": admin.get("name"),
+        }},
+        upsert=True,
+    )
+
+    await db.admin_audit_logs.insert_one({
+        "admin_id": request.admin_id,
+        "admin_name": admin.get("name"),
+        "action": "quick_recharge_toggle",
+        "enabled": bool(request.enabled),
+        "timestamp": now_iso,
+    })
+
+    return {
+        "success": True,
+        "enabled": bool(request.enabled),
+        "message": f"Quick Recharge is now {'ENABLED' if request.enabled else 'DISABLED'} for all users",
+    }

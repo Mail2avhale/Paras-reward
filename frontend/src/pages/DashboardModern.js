@@ -96,6 +96,9 @@ const DashboardModern = ({ user, onLogout }) => {
   const [birthdayGreeting, setBirthdayGreeting] = useState(null);
   const [redeemLimit, setRedeemLimit] = useState(null);
   const [performanceSummary, setPerformanceSummary] = useState(null);
+  // Global feature flag: admin can hide the Quick Recharge card. Default true
+  // so the card stays visible if the API call fails or hasn't returned yet.
+  const [quickRechargeEnabled, setQuickRechargeEnabled] = useState(true);
 
   // Stats - Initialize with user prop data to prevent flickering
   const [stats, setStats] = useState({
@@ -1149,8 +1152,8 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* Quick Recharge Card */}
-      {user && stats && (
+      {/* Quick Recharge Card — hidden globally when admin disables via system_config */}
+      {user && stats && quickRechargeEnabled && (
         <div className="px-5 mb-4" data-testid="dashboard-recharge-card">
           <RechargeCard user={user} stats={stats} />
         </div>
