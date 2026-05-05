@@ -1106,6 +1106,12 @@ class AdminAuthMiddleware(BaseHTTPMiddleware):
     EXCLUDED_ROUTES = [
         "/api/admin/payment-gateways-status",  # Public payment gateway status
         "/api/admin/popup/active",  # Public popup for user dashboard
+        # Read-only feature flags consumed by the user dashboard. These must be
+        # readable by ANY authenticated user (and even unauthenticated callers,
+        # since the dashboard fetches them before auth state is resolved).
+        # Toggling endpoints (POST) remain admin-only via inner role check.
+        "/api/admin/failed-transactions/quick-recharge-status",
+        "/api/admin/failed-transactions/refund-modal-status",
     ]
     
     async def dispatch(self, request, call_next):

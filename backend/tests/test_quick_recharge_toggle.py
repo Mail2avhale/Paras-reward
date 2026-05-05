@@ -95,3 +95,30 @@ def test_non_admin_cannot_toggle(admin_token):
     )
     # Must reject — admin role check uses request.admin_id, not the bearer token
     assert r.status_code == 403, r.text
+
+
+def test_status_endpoint_is_publicly_readable():
+    """Regression for May 5 production bug:
+    User dashboard fetches the status flag BEFORE the user is authenticated.
+    The /admin/* middleware was returning 401/403 for the GET, so the card
+    stayed visible even when admins disabled it. Endpoint must now be on the
+    EXCLUDED_ROUTES list so any caller can read it.
+    """
+    r = requests.get(
+        f"{BASE}/api/admin/failed-transactions/quick-recharge-status",
+        timeout=10,
+    )
+    assert r.status_code == 200, f"Status endpoint must be public, got {r.status_code}: {r.text}"
+    body = r.json()
+    assert "enabled" in body
+    assert isinstance(body["enabled"], bool)
+
+
+def test_refund_modal_status_endpoint_is_publicly_readable():
+    """Same regression — refund modal status is also consumed by user UI."""
+    r = requests.get(
+        f"{BASE}/api/admin/failed-transactions/refund-modal-status",
+        timeout=10,
+    )
+    assert r.status_code == 200, r.text
+    assert "enabled" in r.json()
