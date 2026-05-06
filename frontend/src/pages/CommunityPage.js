@@ -317,7 +317,18 @@ const CommunityPage = ({ user }) => {
               {post.user_name?.charAt(0)?.toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-900 hover:text-blue-600 cursor-pointer" onClick={(e) => { e.stopPropagation(); openProfile(post.user_id); }}>{post.user_name}</p>
+              <p className="text-sm font-medium text-slate-900 hover:text-blue-600 cursor-pointer inline-flex items-center gap-1.5" onClick={(e) => { e.stopPropagation(); openProfile(post.user_id); }}>
+                <span>{post.user_name}</span>
+                {post.user_total_redeemed_inr > 0 && (
+                  <span
+                    className="px-1.5 py-0.5 text-[10px] font-semibold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    title={`Lifetime redeemed: ₹${post.user_total_redeemed_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
+                    data-testid={`post-lifetime-${post.post_id}`}
+                  >
+                    ₹{post.user_total_redeemed_inr.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </span>
+                )}
+              </p>
               <p className="text-[10px] text-slate-400">{timeAgo(post.created_at)} {post.view_count > 0 ? `· ${post.view_count} views` : ''}</p>
             </div>
           </div>
@@ -380,7 +391,18 @@ const CommunityPage = ({ user }) => {
                     {postDetail.post.user_name?.charAt(0)?.toUpperCase()}
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">{postDetail.post.user_name}</p>
+                    <p className="font-medium text-slate-900 inline-flex items-center gap-2">
+                      <span>{postDetail.post.user_name}</span>
+                      {postDetail.post.user_total_redeemed_inr > 0 && (
+                        <span
+                          className="px-1.5 py-0.5 text-[11px] font-semibold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          title={`Lifetime redeemed: ₹${postDetail.post.user_total_redeemed_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
+                          data-testid="post-detail-lifetime"
+                        >
+                          ₹{postDetail.post.user_total_redeemed_inr.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-slate-400">{timeAgo(postDetail.post.created_at)} | {postDetail.post.category}</p>
                   </div>
                 </div>

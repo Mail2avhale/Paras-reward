@@ -650,11 +650,30 @@ async def create_post(data: CreatePostRequest):
         now = datetime.now(timezone.utc).isoformat()
         post_id = f"POST-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{str(uuid.uuid4())[:6]}"
 
+        # Snapshot the author's lifetime-redeemed INR so every post card can show
+        # the same number the admin Bank Redeem panel shows (social proof +
+        # scammer detection). Uses the SAME helpers wired up for Success Story
+        # posts so the two surfaces stay consistent. Fails open to 0 on any
+        # error — a broken lifetime calc must never block a normal post.
+        try:
+            if all_time_redeemed_func and prc_rate_getter:
+                total_prc = float(await all_time_redeemed_func(data.user_id) or 0)
+                rate = float(await prc_rate_getter() or 0) or 1.0
+                user_lifetime_inr = round(total_prc / rate, 2) if rate > 0 else 0.0
+            else:
+                user_lifetime_inr = 0.0
+        except Exception as _life_err:
+            logging.warning(f"[COMMUNITY] lifetime calc failed for {data.user_id}: {_life_err}")
+            user_lifetime_inr = 0.0
+
         post = {
             "post_id": post_id,
             "user_id": data.user_id,
             "user_name": data.user_name,
             "user_plan": plan,
+            # Snapshot at post-time — shown inline next to user_name on post cards
+            # across the whole community feed (General, Questions, Success, etc.).
+            "user_total_redeemed_inr": user_lifetime_inr,
             "category": data.category,
             "title": data.title,
             "content": data.content,
