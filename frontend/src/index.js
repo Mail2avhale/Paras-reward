@@ -124,7 +124,7 @@ if ('serviceWorker' in navigator) {
   // cache, and hard-reload once so the browser pulls the fresh JS.
   // We gate this on a localStorage marker so we never loop or punish
   // users who already have the new code.
-  const FORCE_REFRESH_MARKER = 'paras_force_refresh_v9';
+  const FORCE_REFRESH_MARKER = 'paras_force_refresh_v10';
   if (!localStorage.getItem(FORCE_REFRESH_MARKER)) {
     localStorage.setItem(FORCE_REFRESH_MARKER, String(Date.now()));
     (async () => {
