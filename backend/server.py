@@ -35219,6 +35219,16 @@ set_employee_reports_db(db)
 set_employee_cache(cache)
 set_community_db(db)
 set_community_cache(cache)
+# Wire up the same lifetime-redeemed + PRC-rate functions the admin panel uses,
+# so community Success Story posts show identical "Redeemed till ₹X" numbers
+# as the admin Bank Redeem panel's "Lifetime: ₹X" column. Without this wiring,
+# the community page used a narrower aggregation that under-reported lifetime.
+from routes.community import (
+    set_all_time_redeemed as set_community_all_time_redeemed,
+    set_prc_rate_getter as set_community_prc_rate_getter,
+)
+set_community_all_time_redeemed(get_user_all_time_redeemed)
+set_community_prc_rate_getter(get_dynamic_prc_rate)
 # Community moderation (Gemini-backed) shares the same DB for audit logs.
 from routes.community_moderation import set_db as set_community_moderation_db
 set_community_moderation_db(db)

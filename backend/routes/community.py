@@ -148,12 +148,22 @@ async def create_success_story_post(
         }
         label, icon = service_labels.get(service_type, ("Transaction", "✅"))
 
-        # Snapshot of user's lifetime redeemed INR (mobile+DTH+bank).
-        # For subscription posts, this metric isn't relevant — skip the aggregation.
+        # Snapshot of user's lifetime redeemed INR (mobile+DTH+bank+gift+subscription PRC spend).
+        # Source of truth: same `get_user_all_time_redeemed` helper that powers
+        # the admin Bank Redeem panel's "Lifetime: ₹X" display, so user-facing
+        # community posts and admin views are always consistent. Falls back to
+        # the older narrow aggregation only if the helpers weren't injected.
         try:
             if service_type == "subscription":
                 db_total = 0.0
+            elif all_time_redeemed_func and prc_rate_getter:
+                # Authoritative path — total PRC redeemed, converted with current rate.
+                total_prc = float(await all_time_redeemed_func(user_id) or 0)
+                rate = float(await prc_rate_getter() or 0) or 1.0
+                db_total = round(total_prc / rate, 2) if rate > 0 else 0.0
             else:
+                # Legacy fallback — narrow per-collection sum (kept for safety; will
+                # be removed once helpers are guaranteed wired on every deploy).
                 success_statuses = ["success", "SUCCESS", "Success", "completed", "COMPLETED"]
                 bank_paid_statuses = ["paid", "Paid", "PAID"]
                 rech_agg = await db.recharge_transactions.aggregate([
@@ -178,7 +188,8 @@ async def create_success_story_post(
                     }}}
                 ]).to_list(1)
                 db_total = float((rech_agg[0]["total"] if rech_agg else 0) or 0) + float((bank_agg[0]["total"] if bank_agg else 0) or 0)
-        except Exception:
+        except Exception as _calc_err:
+            logging.warning(f"[SUCCESS STORY] lifetime calc failed: {_calc_err}")
             db_total = 0.0
         lifetime_redeemed = max(db_total, float(amount_inr) if service_type != "subscription" else 0.0)
 
@@ -480,6 +491,31 @@ def set_db(database):
 def set_cache(cache_instance):
     global cache
     cache = cache_instance
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Wired-in helpers from server.py — let community Success Story posts surface
+# the SAME "Lifetime Redeemed (INR)" number that the admin Bank-Redeem panel
+# shows. Without this wiring the community page was running its own narrow
+# INR aggregation (only `recharge_transactions` + `bank_transfer_requests`),
+# which under-reported the lifetime spend versus admin's PRC-rate-based total.
+#
+# These two callables are injected from server.py at startup:
+#   - all_time_redeemed_func(user_id) -> total PRC ever spent (lifetime)
+#   - prc_rate_getter()              -> current PRC-to-INR rate
+# ────────────────────────────────────────────────────────────────────────────
+all_time_redeemed_func = None
+prc_rate_getter = None
+
+
+def set_all_time_redeemed(func):
+    global all_time_redeemed_func
+    all_time_redeemed_func = func
+
+
+def set_prc_rate_getter(func):
+    global prc_rate_getter
+    prc_rate_getter = func
 
 
 # ==================== MODELS ====================
