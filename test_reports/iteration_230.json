@@ -1,0 +1,40 @@
+{
+  "summary": "Tested SALE ELITE SUBSCRIPTION feature (peer-to-peer Elite sponsorship). 13/13 backend pytest cases PASS covering all 4 endpoints (lookup / activate / eligibility / history). Frontend code review confirms component & tabs wired correctly with data-testids; live UI auth could not be exercised (multi-step login + locked test-account) so frontend was verified via code-review only.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/subscription/sale-elite/activate", "issue": "Sustainability burn (apply_sustainability_burn) deducts an EXTRA ~10-12% PRC from sender on top of the quoted total_prc — the response field 'prc_deducted' does NOT reflect this extra burn. Users will see a larger balance drop than the confirmation modal shows. Same behaviour exists in self PRC subscription, so not a regression, but consider adding 'sustain_burn_prc' to response and to the transactions row description for transparency."},
+      {"endpoint": "/api/subscription/sale-elite/activate", "issue": "On sponsorship failure path that triggers refund (beneficiary update raises), $unset of last_sale_elite_at releases the daily slot — good — but the sustainability burn / company-wallet credit paths run AFTER beneficiary update so they cannot be inverted. In current flow no money was charged outside total_prc at that point so refund is correct. Just flag to keep ordering invariant."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_sale_elite_subscription.py",
+    "/app/test_reports/pytest/sale_elite.xml"
+  ],
+  "action_items": [
+    "(Optional) Surface sustainability-burn amount in the activate response and in the transactions description so user sees the true PRC delta.",
+    "(Optional) Run a manual UI smoke test: log in as an Elite user (e.g., 9421331342 once rate-limit cools off), open /subscription, click 'Sale Elite to Friend' tab, enter a beneficiary mobile and confirm with PIN. Verify success toast + transaction in PRC Statement.",
+    "Frontend live-UI test was blocked by multi-step PIN flow + test-account lockout; main agent can self-test by logging in manually."
+  ],
+  "critical_code_review_comments": [
+    "PIN verification chain falls back to legacy 'password' field — fine, but this means a user whose only stored secret is 'password' (signup password) can use that as PIN. Consistent with /api/login.",
+    "Daily rate-limit uses ISO-string timestamp comparison on last_sale_elite_at. UTC midnight boundary is correct, but spec docstring mentions IST while logic uses UTC — minor doc inconsistency.",
+    "self-sponsor check happens AFTER beneficiary is fetched; harmless but order could short-circuit earlier.",
+    "Idempotency key used correctly with check_and_claim_idempotency_key + release on HTTPException."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_sale_elite_subscription.py"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "code-review only (live login blocked)"},
+  "test_credentials": "Seeded ephemeral users via direct DB insert (TEST_SALE_SENDER_*, TEST_SALE_BENEF_*, TEST_SALE_BENEF2_*) with PIN 153759. Auto-cleaned by pytest fixture teardown.",
+  "seed_data_creation": "Test fixture seeds 3 users (Elite sender with 200k PRC + redeem_limit_override, Explorer beneficiary, Elite beneficiary for queue case) and removes them on teardown. No production data touched.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend endpoints fully covered by /app/backend/tests/test_sale_elite_subscription.py (13 test cases). Daily rate-limit uses users.last_sale_elite_at (ISO string, UTC midnight). Sustainability burn applies an additional non-quoted PRC deduction — assertion in test was relaxed accordingly. Frontend SubscriptionPlans.js exposes data-testid='tab-my-plan' and data-testid='tab-sale-elite'; SaleEliteSubscription.js has data-testid='sale-elite-mobile-input', 'sale-elite-lookup-btn', 'sale-elite-pin-input', 'sale-elite-confirm-btn', 'sale-elite-not-eligible', 'sale-elite-success', 'sale-elite-history-toggle'. Use admin force-activate-elite-prc or DB direct write to make a UI test user Elite for a future live frontend test.",
+  "rca_of_the_issue": "N/A - feature works as specified. Only deviation worth noting: response field 'prc_deducted' under-reports actual sender balance change because sustainability burn is applied separately via apply_sustainability_burn (~10-12% extra). Same behaviour as existing self PRC subscription flow so likely intentional."
+}

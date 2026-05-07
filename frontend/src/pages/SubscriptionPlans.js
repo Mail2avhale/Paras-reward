@@ -15,6 +15,7 @@ import ImageUpload from '@/components/ImageUpload';
 import { validateUTR, formatUTR } from '@/utils/indianValidation';
 // PRCRateDisplay removed (PRC subscription payment deprecated April 2026)
 import InvoiceModal from '@/components/InvoiceModal';
+import SaleEliteSubscription from '@/components/SaleEliteSubscription';
 
 import { API } from "../lib/api";
 
@@ -67,6 +68,9 @@ const SubscriptionPlans = ({ user }) => {
   
   // Steps: 1=Select Plan, 2=Select Duration, 3=Payment Info, 4=Upload Proof
   const [currentStep, setCurrentStep] = useState(1);
+  
+  // Tabs: 'my-plan' | 'sale-elite'
+  const [activeTab, setActiveTab] = useState('my-plan');
   
   const [formData, setFormData] = useState({
     utr_number: '',
@@ -527,8 +531,43 @@ const SubscriptionPlans = ({ user }) => {
           </button>
           <h1 className="text-xl font-bold text-white">{t('subscriptionPlans')}</h1>
         </div>
+
+        {/* Tab Switcher */}
+        <div className="mt-4 flex gap-1 p-1 bg-gray-900/80 border border-white/5 rounded-xl">
+          <button
+            data-testid="tab-my-plan"
+            onClick={() => { setActiveTab('my-plan'); setCurrentStep(1); }}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === 'my-plan'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-black shadow-lg'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            My Plan
+          </button>
+          <button
+            data-testid="tab-sale-elite"
+            onClick={() => setActiveTab('sale-elite')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'sale-elite'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-black shadow-lg'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Gift className="w-3.5 h-3.5" />
+            Sale Elite to Friend
+          </button>
+        </div>
       </div>
 
+      {/* ============ SALE ELITE TAB ============ */}
+      {activeTab === 'sale-elite' && (
+        <SaleEliteSubscription user={user} />
+      )}
+
+      {/* ============ MY PLAN TAB (existing flow) ============ */}
+      {activeTab === 'my-plan' && (
+        <>
 
       {/* ALERT: Payment received but subscription not activated */}
       {hasUnactivatedPayment && (
@@ -1731,6 +1770,8 @@ const SubscriptionPlans = ({ user }) => {
           user={userData || user}
           onClose={() => setInvoicePayment(null)}
         />
+      )}
+        </>
       )}
     </div>
   );

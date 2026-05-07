@@ -13242,6 +13242,766 @@ async def subscription_pay_with_prc(request: Request):
 
 
 # ============================================================================
+# SALE ELITE SUBSCRIPTION (Peer-to-Peer)
+# ----------------------------------------------------------------------------
+# Allows an Elite-subscribed user (sender) to purchase an Elite subscription
+# for ANOTHER registered user (beneficiary) using sender's own PRC balance.
+#
+# RULES (confirmed with user, Feb 2026):
+#  1. Only ACTIVE Elite subscribers can sell/sponsor.
+#  2. Cost = same formula as self PRC subscription: ₹999 + 18% GST + ₹10
+#     processing + 20% admin → × dynamic PRC rate.
+#  3. Sender MUST have redeem limit >= cost (same check as Bank Redeem).
+#  4. Sender PRC balance must cover cost.
+#  5. Rate limit: max 1 sale per sender per calendar day (IST).
+#  6. Beneficiary can be ANY registered user. If beneficiary already has an
+#     active Elite plan, the new 28-day plan is QUEUED as upcoming.
+#  7. Sender's transaction is recorded in `transactions` collection with
+#     type="sale_elite_subscription" so it shows up in PRC Statement / History.
+#  8. Separate audit record stored in `sponsored_subscriptions` collection.
+#  9. Beneficiary receives in-app notification + subscription_history entry.
+# 10. Sender auth = standard login PIN (same field chain as /api/login).
+# ============================================================================
+
+class SaleEliteLookupRequest(BaseModel):
+    sender_uid: str
+    beneficiary_mobile: str
+
+
+class SaleEliteActivateRequest(BaseModel):
+    sender_uid: str
+    beneficiary_mobile: str
+    pin: str  # Sender's login PIN
+    client_request_id: Optional[str] = None  # Idempotency key
+
+
+def _normalize_mobile(mobile: str) -> str:
+    """Strip +91 / spaces / dashes → keep digits; take last 10 digits."""
+    digits = ''.join(filter(str.isdigit, mobile or ''))
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
+async def _find_user_by_mobile(mobile: str) -> Optional[dict]:
+    """Find user by mobile/phone (matches last 10 digits)."""
+    if not mobile:
+        return None
+    norm = _normalize_mobile(mobile)
+    if len(norm) < 10:
+        return None
+    # Try exact match on common fields
+    for fld in ("mobile", "phone"):
+        doc = await db.users.find_one({fld: norm})
+        if doc:
+            return doc
+        doc = await db.users.find_one({fld: f"+91{norm}"})
+        if doc:
+            return doc
+    # Fallback: regex anchored on last 10 digits
+    doc = await db.users.find_one({"mobile": {"$regex": f"{norm}$"}})
+    return doc
+
+
+async def _sender_is_active_elite(user: dict) -> bool:
+    """Sender must currently hold an active Elite plan."""
+    if not user:
+        return False
+    plan = (user.get("subscription_plan") or "").lower()
+    if plan != "elite":
+        return False
+    if user.get("subscription_expired", False):
+        return False
+    now = datetime.now(timezone.utc)
+    expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+    if not expiry:
+        return False
+    try:
+        if isinstance(expiry, str):
+            exp_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+        else:
+            exp_dt = expiry
+        if exp_dt.tzinfo is None:
+            exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+        return exp_dt > now
+    except Exception:
+        return False
+
+
+def _mask_name(name: str) -> str:
+    """Mask name for preview (privacy): 'Rahul Sharma' → 'Rahul S.'"""
+    if not name:
+        return "User"
+    parts = str(name).strip().split()
+    if len(parts) == 1:
+        return parts[0]
+    return f"{parts[0]} {parts[-1][0]}."
+
+
+@api_router.post("/subscription/sale-elite/lookup")
+async def sale_elite_lookup_beneficiary(request: SaleEliteLookupRequest):
+    """Preview the beneficiary linked to a mobile number before charging.
+
+    Returns minimal info: masked name + current subscription status.
+    """
+    sender = await db.users.find_one({"uid": request.sender_uid})
+    if not sender:
+        raise HTTPException(status_code=404, detail="Sender account not found.")
+
+    if not await _sender_is_active_elite(sender):
+        raise HTTPException(
+            status_code=403,
+            detail="Only active Elite subscribers can sponsor subscriptions."
+        )
+
+    beneficiary = await _find_user_by_mobile(request.beneficiary_mobile)
+    if not beneficiary:
+        raise HTTPException(
+            status_code=404,
+            detail="No registered user found with this mobile number."
+        )
+
+    # Prevent self-sponsoring
+    if beneficiary.get("uid") == sender.get("uid"):
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot sponsor a subscription for yourself."
+        )
+
+    # Active plan status
+    now = datetime.now(timezone.utc)
+    beneficiary_plan = (beneficiary.get("subscription_plan") or "explorer").lower()
+    beneficiary_has_active_elite = False
+    current_expiry_display = None
+    expiry = beneficiary.get("subscription_expiry") or beneficiary.get("subscription_expires")
+    if expiry and not beneficiary.get("subscription_expired", False):
+        try:
+            if isinstance(expiry, str):
+                exp_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+            else:
+                exp_dt = expiry
+            if exp_dt.tzinfo is None:
+                exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+            if exp_dt > now and beneficiary_plan == "elite":
+                beneficiary_has_active_elite = True
+                current_expiry_display = exp_dt.isoformat()
+        except Exception:
+            pass
+
+    # Pricing
+    pricing = await calculate_elite_prc_price()
+
+    # Redeem-limit + balance snapshot for sender
+    try:
+        limit_info = await calculate_user_redeem_limit(sender.get("uid"))
+        effective_available = float(limit_info.get("effective_available") or 0)
+        unlock_percent = limit_info.get("unlock_percent", 0)
+    except Exception:
+        effective_available = 0
+        unlock_percent = 0
+
+    sender_balance = float(sender.get("prc_balance", 0) or 0)
+
+    # Rate limit: 1 per day
+    today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    today_count = await db.sponsored_subscriptions.count_documents({
+        "sender_uid": sender.get("uid"),
+        "created_at": {"$gte": today_start.isoformat()},
+        "status": {"$in": ["active", "upcoming"]},
+    })
+    daily_limit_ok = today_count < 1
+
+    return {
+        "success": True,
+        "beneficiary": {
+            "uid": beneficiary.get("uid"),
+            "masked_name": _mask_name(beneficiary.get("name", "User")),
+            "mobile_last4": _normalize_mobile(request.beneficiary_mobile)[-4:],
+            "current_plan": beneficiary_plan,
+            "has_active_elite": beneficiary_has_active_elite,
+            "current_expiry": current_expiry_display,
+            "will_be_queued": beneficiary_has_active_elite,
+        },
+        "pricing": {
+            "base_inr": pricing["base_inr"],
+            "gst_inr": pricing["gst_inr"],
+            "processing_fee_inr": pricing["processing_fee_inr"],
+            "admin_charges_inr": pricing["admin_charges_inr"],
+            "total_prc": pricing["total_prc"],
+            "prc_rate": pricing["prc_rate"],
+            "inr_equivalent": pricing["base_with_gst_inr"],
+        },
+        "sender": {
+            "prc_balance": sender_balance,
+            "effective_available": effective_available,
+            "unlock_percent": unlock_percent,
+            "can_afford_balance": sender_balance >= pricing["total_prc"],
+            "can_afford_redeem_limit": effective_available >= pricing["total_prc"],
+            "daily_limit_ok": daily_limit_ok,
+            "sales_today": today_count,
+        },
+    }
+
+
+@api_router.post("/subscription/sale-elite/activate")
+async def sale_elite_activate(request: SaleEliteActivateRequest):
+    """Activate / queue an Elite subscription for another user.
+
+    Atomic flow:
+      1. Validate sender Elite + PIN + rate-limit.
+      2. Validate beneficiary exists.
+      3. Calculate price + verify redeem limit + balance.
+      4. CAS-deduct sender PRC with race-safe daily-limit guard.
+      5. Activate or queue beneficiary Elite plan.
+      6. Record `sponsored_subscriptions`, `transactions` (sender ledger),
+         subscription_payments, beneficiary subscription_history.
+      7. Credit company wallets (GST / processing / admin / subscription).
+      8. Notify beneficiary.
+    """
+    idem_scope = f"sale_elite:{request.sender_uid}"
+    client_request_id = request.client_request_id
+
+    # ===== Idempotency (Layer 1) =====
+    if client_request_id:
+        cached = await check_and_claim_idempotency_key(
+            client_request_id, idem_scope, ttl_seconds=300
+        )
+        if cached is not None:
+            if cached.get("_inflight"):
+                raise HTTPException(status_code=409, detail=cached.get("message"))
+            return cached
+
+    try:
+        # ===== Validate sender =====
+        sender = await db.users.find_one({"uid": request.sender_uid})
+        if not sender:
+            raise HTTPException(status_code=404, detail="Sender account not found.")
+        if not await _sender_is_active_elite(sender):
+            raise HTTPException(
+                status_code=403,
+                detail="Only active Elite subscribers can sponsor subscriptions."
+            )
+
+        # ===== Verify sender PIN =====
+        stored_pin = (
+            sender.get("pin_hash")
+            or sender.get("hashed_pin")
+            or sender.get("password_hash")
+            or sender.get("password")
+        )
+        if not stored_pin:
+            raise HTTPException(status_code=400, detail="PIN is not set on your account.")
+        loop = asyncio.get_event_loop()
+        pin_ok = await loop.run_in_executor(
+            None, verify_password, request.pin, stored_pin
+        )
+        if not pin_ok:
+            raise HTTPException(status_code=401, detail="Incorrect PIN. Please try again.")
+
+        # ===== Validate beneficiary =====
+        beneficiary = await _find_user_by_mobile(request.beneficiary_mobile)
+        if not beneficiary:
+            raise HTTPException(
+                status_code=404,
+                detail="No registered user found with this mobile number."
+            )
+        if beneficiary.get("uid") == sender.get("uid"):
+            raise HTTPException(
+                status_code=400,
+                detail="You cannot sponsor a subscription for yourself."
+            )
+
+        # ===== Pricing =====
+        pricing = await calculate_elite_prc_price()
+        total_prc = pricing["total_prc"]
+
+        # ===== Redeem limit =====
+        try:
+            limit_info = await calculate_user_redeem_limit(sender.get("uid"))
+        except Exception as _le:
+            logging.error(f"[SALE-ELITE] Redeem limit calc error: {_le}")
+            raise HTTPException(status_code=500, detail="Could not verify your redeem limit. Please try again.")
+
+        effective_available = float(limit_info.get("effective_available") or 0)
+        unlock_percent = limit_info.get("unlock_percent", 0)
+        if total_prc > effective_available:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Insufficient redeem limit. Available: {effective_available:,.0f} PRC "
+                    f"(Unlock: {unlock_percent}%). Required: {total_prc:,.0f} PRC."
+                ),
+            )
+
+        # ===== Balance defense-in-depth =====
+        sender_balance = float(sender.get("prc_balance", 0) or 0)
+        if sender_balance < total_prc:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Insufficient PRC Balance. You have {sender_balance:,.0f} PRC, "
+                    f"but {total_prc:,.0f} PRC is required."
+                ),
+            )
+
+        now = datetime.now(timezone.utc)
+        today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+
+        # ===== Daily rate limit precheck =====
+        today_count = await db.sponsored_subscriptions.count_documents({
+            "sender_uid": sender.get("uid"),
+            "created_at": {"$gte": today_start.isoformat()},
+            "status": {"$in": ["active", "upcoming"]},
+        })
+        if today_count >= 1:
+            raise HTTPException(
+                status_code=429,
+                detail="Daily limit reached: you can sponsor only 1 Elite subscription per day."
+            )
+
+        # ===== CAS deduct sender PRC (race-safe daily guard) =====
+        result = await db.users.update_one(
+            {
+                "uid": sender.get("uid"),
+                "prc_balance": {"$gte": total_prc},
+                "$or": [
+                    {"last_sale_elite_at": {"$exists": False}},
+                    {"last_sale_elite_at": None},
+                    {"last_sale_elite_at": {"$lt": today_start.isoformat()}},
+                ],
+            },
+            {
+                "$inc": {"prc_balance": -total_prc},
+                "$set": {"last_sale_elite_at": now.isoformat()},
+            },
+        )
+        if result.modified_count == 0:
+            # Figure out why
+            fresh = await db.users.find_one(
+                {"uid": sender.get("uid")},
+                {"_id": 0, "prc_balance": 1, "last_sale_elite_at": 1},
+            )
+            if fresh:
+                fb = float(fresh.get("prc_balance", 0) or 0)
+                last_at = fresh.get("last_sale_elite_at")
+                if last_at and last_at >= today_start.isoformat():
+                    raise HTTPException(
+                        status_code=429,
+                        detail="Daily limit reached: you can sponsor only 1 Elite subscription per day."
+                    )
+                if fb < total_prc:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Insufficient PRC Balance. You have {fb:,.0f} PRC."
+                    )
+            raise HTTPException(status_code=409, detail="Could not process. Please retry.")
+
+        sale_id = f"SALE-{uuid.uuid4()}"
+        duration_days = 28
+
+        # ===== Beneficiary: activate OR queue =====
+        benef_current_expiry = beneficiary.get("subscription_expiry") or beneficiary.get("subscription_expires")
+        benef_plan = (beneficiary.get("subscription_plan") or "explorer").lower()
+        benef_expired_flag = beneficiary.get("subscription_expired", False)
+
+        benef_has_active_elite = False
+        benef_expiry_dt = None
+        if benef_current_expiry and not benef_expired_flag and benef_plan == "elite":
+            try:
+                if isinstance(benef_current_expiry, str):
+                    benef_expiry_dt = datetime.fromisoformat(benef_current_expiry.replace('Z', '+00:00'))
+                else:
+                    benef_expiry_dt = benef_current_expiry
+                if benef_expiry_dt.tzinfo is None:
+                    benef_expiry_dt = benef_expiry_dt.replace(tzinfo=timezone.utc)
+                if benef_expiry_dt > now:
+                    benef_has_active_elite = True
+            except Exception:
+                pass
+
+        is_upcoming = benef_has_active_elite
+
+        try:
+            if is_upcoming:
+                scheduled_start = benef_expiry_dt.isoformat()
+                scheduled_end = (benef_expiry_dt + timedelta(days=duration_days)).isoformat()
+                await db.users.update_one(
+                    {"uid": beneficiary.get("uid")},
+                    {
+                        "$push": {
+                            "subscription_history": {
+                                "type": "sale_elite_received_upcoming",
+                                "plan": "elite",
+                                "duration_days": duration_days,
+                                "sponsor_uid": sender.get("uid"),
+                                "sponsor_name": sender.get("name", "A friend"),
+                                "sale_id": sale_id,
+                                "scheduled_start": scheduled_start,
+                                "scheduled_end": scheduled_end,
+                                "created_at": now.isoformat(),
+                            }
+                        }
+                    }
+                )
+            else:
+                new_expiry = (now + timedelta(days=duration_days)).isoformat()
+                await db.users.update_one(
+                    {"uid": beneficiary.get("uid")},
+                    {
+                        "$set": {
+                            "subscription_plan": "elite",
+                            "subscription_expiry": new_expiry,
+                            "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
+                            "subscription_start": now.isoformat(),
+                            "membership_type": "vip",
+                            "subscription_status": "active",
+                            "subscription_payment_type": "sale_elite_subscription",
+                            "subscription_expired": False,
+                            "sponsored_by": sender.get("uid"),
+                            "sponsored_by_name": sender.get("name", "A friend"),
+                            "sponsored_at": now.isoformat(),
+                        },
+                        "$push": {
+                            "subscription_history": {
+                                "type": "sale_elite_received",
+                                "plan": "elite",
+                                "duration_days": duration_days,
+                                "sponsor_uid": sender.get("uid"),
+                                "sponsor_name": sender.get("name", "A friend"),
+                                "sale_id": sale_id,
+                                "activated_at": now.isoformat(),
+                                "expires_at": new_expiry,
+                            }
+                        }
+                    }
+                )
+                # Assign mining position
+                try:
+                    await assign_subscription_position(beneficiary.get("uid"))
+                except Exception as _pos:
+                    logging.warning(f"[SALE-ELITE] position assign error: {_pos}")
+        except Exception as be_err:
+            # CRITICAL: refund sender PRC + release daily slot
+            logging.error(f"[SALE-ELITE] beneficiary update failed, refunding: {be_err}")
+            await db.users.update_one(
+                {"uid": sender.get("uid")},
+                {
+                    "$inc": {"prc_balance": total_prc},
+                    "$unset": {"last_sale_elite_at": ""},
+                },
+            )
+            raise HTTPException(status_code=500, detail="Activation failed. Your PRC has been refunded.")
+
+        # ===== Company wallets =====
+        try:
+            await credit_company_wallets_for_subscription(
+                sender.get("uid"), pricing, sender.get("name", "User")
+            )
+        except Exception as wallet_err:
+            logging.error(f"[SALE-ELITE] Company wallet credit failed (non-fatal): {wallet_err}")
+
+        # ===== subscription_payments (audit) =====
+        payment_record = {
+            "payment_id": sale_id,
+            "user_id": beneficiary.get("uid"),
+            "user_name": beneficiary.get("name", "User"),
+            "plan_name": "elite",
+            "plan_type": "monthly",
+            "payment_method": "sale_elite_subscription",
+            "sponsor_uid": sender.get("uid"),
+            "sponsor_name": sender.get("name", "User"),
+            "prc_amount": round(total_prc, 2),
+            "prc_rate_used": pricing["prc_rate"],
+            "pricing_breakdown": {
+                "base_inr": pricing["base_inr"],
+                "gst_inr": pricing["gst_inr"],
+                "processing_fee_inr": pricing["processing_fee_inr"],
+                "admin_charges_inr": pricing["admin_charges_inr"],
+                "total_prc": pricing["total_prc"],
+            },
+            "inr_equivalent": pricing["base_with_gst_inr"],
+            "status": "upcoming" if is_upcoming else "paid",
+            "created_at": now.isoformat(),
+            "duration_days": duration_days,
+        }
+        if is_upcoming:
+            payment_record["scheduled_start"] = scheduled_start
+            payment_record["scheduled_end"] = scheduled_end
+        else:
+            payment_record["subscription_start"] = now.isoformat()
+            payment_record["subscription_expiry"] = new_expiry
+        await db.subscription_payments.insert_one(payment_record)
+
+        # ===== sponsored_subscriptions (dedicated audit collection) =====
+        sponsored_doc = {
+            "sale_id": sale_id,
+            "sender_uid": sender.get("uid"),
+            "sender_name": sender.get("name", "User"),
+            "beneficiary_uid": beneficiary.get("uid"),
+            "beneficiary_name": beneficiary.get("name", "User"),
+            "beneficiary_mobile": _normalize_mobile(request.beneficiary_mobile),
+            "plan": "elite",
+            "duration_days": duration_days,
+            "prc_cost": round(total_prc, 2),
+            "prc_rate": pricing["prc_rate"],
+            "inr_equivalent": pricing["base_with_gst_inr"],
+            "status": "upcoming" if is_upcoming else "active",
+            "created_at": now.isoformat(),
+            "activated_at": None if is_upcoming else now.isoformat(),
+            "expires_at": scheduled_end if is_upcoming else new_expiry,
+            "scheduled_start": scheduled_start if is_upcoming else None,
+        }
+        await db.sponsored_subscriptions.insert_one(sponsored_doc)
+
+        # ===== Sender transactions / PRC statement =====
+        updated_sender = await db.users.find_one(
+            {"uid": sender.get("uid")}, {"_id": 0, "prc_balance": 1}
+        )
+        balance_after = round(float(updated_sender.get("prc_balance", 0)), 2) if updated_sender else 0
+
+        desc_tail = "(Queued - beneficiary already Elite)" if is_upcoming else "(Activated)"
+        await db.transactions.insert_one({
+            "user_id": sender.get("uid"),
+            "transaction_id": f"SALE-PRC-{sale_id}",
+            "type": "sale_elite_subscription",
+            "amount": -total_prc,
+            "prc_amount": total_prc,
+            "inr_value": pricing["base_with_gst_inr"],
+            "description": (
+                f"Sponsored Elite subscription for "
+                f"{_mask_name(beneficiary.get('name', 'User'))} "
+                f"(Mobile ****{_normalize_mobile(request.beneficiary_mobile)[-4:]}) "
+                f"{desc_tail}"
+            ),
+            "balance_after": balance_after,
+            "reference_id": sale_id,
+            "beneficiary_uid": beneficiary.get("uid"),
+            "timestamp": now,
+            "created_at": now.isoformat(),
+            "status": "completed",
+        })
+
+        # ===== Sender prc_transactions array (some UIs read this) =====
+        try:
+            await db.users.update_one(
+                {"uid": sender.get("uid")},
+                {
+                    "$push": {
+                        "prc_transactions": {
+                            "type": "sale_elite_subscription",
+                            "amount": -total_prc,
+                            "beneficiary_uid": beneficiary.get("uid"),
+                            "beneficiary_name": _mask_name(beneficiary.get("name", "User")),
+                            "sale_id": sale_id,
+                            "timestamp": now.isoformat(),
+                        }
+                    }
+                },
+            )
+        except Exception:
+            pass
+
+        # ===== Beneficiary notification =====
+        try:
+            if is_upcoming:
+                title = "Elite Subscription Gift Queued!"
+                msg = (
+                    f"{sender.get('name', 'A friend')} has sponsored an Elite "
+                    f"subscription for you. It will activate after your current "
+                    f"plan ends on {scheduled_start[:10]}."
+                )
+            else:
+                title = "Elite Subscription Activated!"
+                msg = (
+                    f"{sender.get('name', 'A friend')} has sponsored a 28-day "
+                    f"Elite subscription for you. Enjoy all premium features!"
+                )
+            await create_notification(
+                user_id=beneficiary.get("uid"),
+                title=title,
+                message=msg,
+                notification_type="subscription",
+            )
+        except Exception:
+            pass
+
+        # ===== Sustainability burn =====
+        try:
+            await apply_sustainability_burn(
+                user_id=sender.get("uid"),
+                service_type="sale_elite_subscription",
+                service_ref_id=sale_id,
+                amount_inr=pricing.get("base_with_gst_inr"),
+            )
+        except Exception as burn_err:
+            logging.warning(f"[SALE-ELITE] sustain burn non-fatal: {burn_err}")
+
+        # ===== Activity log =====
+        try:
+            await log_activity(
+                user_id=sender.get("uid"),
+                action_type="sale_elite_subscription",
+                description=(
+                    f"Sponsored Elite subscription for "
+                    f"{_mask_name(beneficiary.get('name', 'User'))} "
+                    f"({total_prc:.0f} PRC)"
+                ),
+                metadata={"sale_id": sale_id, "beneficiary_uid": beneficiary.get("uid")},
+            )
+        except Exception:
+            pass
+
+        # ===== Invalidate caches =====
+        if cache:
+            try:
+                await cache.delete(f"user_data:{sender.get('uid')}")
+                await cache.delete(f"user_data:{beneficiary.get('uid')}")
+                await cache.delete(f"user:dashboard:{sender.get('uid')}")
+                await cache.delete(f"user:dashboard:{beneficiary.get('uid')}")
+            except Exception:
+                pass
+
+        logging.info(
+            f"[SALE-ELITE] {sender.get('uid')} sponsored Elite for "
+            f"{beneficiary.get('uid')} ({total_prc:.0f} PRC, "
+            f"{'upcoming' if is_upcoming else 'active'})"
+        )
+
+        response = {
+            "success": True,
+            "message": (
+                "Elite subscription queued for beneficiary (activates after current plan expires)."
+                if is_upcoming
+                else "Elite subscription activated for beneficiary!"
+            ),
+            "sale_id": sale_id,
+            "is_upcoming": is_upcoming,
+            "beneficiary": {
+                "uid": beneficiary.get("uid"),
+                "masked_name": _mask_name(beneficiary.get("name", "User")),
+                "mobile_last4": _normalize_mobile(request.beneficiary_mobile)[-4:],
+            },
+            "prc_deducted": round(total_prc, 2),
+            "inr_value": pricing["base_with_gst_inr"],
+            "sender_new_balance": balance_after,
+            "duration_days": duration_days,
+            "expires_at": (scheduled_end if is_upcoming else new_expiry)[:10],
+        }
+
+        if client_request_id:
+            await store_idempotency_response(
+                client_request_id, idem_scope, response, ttl_seconds=300
+            )
+        return response
+
+    except HTTPException:
+        if client_request_id:
+            try:
+                await release_idempotency_key(client_request_id, idem_scope)
+            except Exception:
+                pass
+        raise
+    except Exception as e:
+        logging.error(f"[SALE-ELITE] Unexpected error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        if client_request_id:
+            try:
+                await release_idempotency_key(client_request_id, idem_scope)
+            except Exception:
+                pass
+        raise HTTPException(status_code=500, detail=f"Sponsor failed: {str(e)}")
+
+
+@api_router.get("/subscription/sale-elite/history/{uid}")
+async def sale_elite_history(uid: str):
+    """Get sponsorship history: sales SENT by this user and sales RECEIVED."""
+    sent = await db.sponsored_subscriptions.find(
+        {"sender_uid": uid},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+
+    received = await db.sponsored_subscriptions.find(
+        {"beneficiary_uid": uid},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+
+    # Mask beneficiary names in sent history (privacy)
+    for s in sent:
+        if s.get("beneficiary_name"):
+            s["beneficiary_name"] = _mask_name(s["beneficiary_name"])
+        if s.get("beneficiary_mobile"):
+            m = str(s["beneficiary_mobile"])
+            s["beneficiary_mobile"] = f"****{m[-4:]}" if len(m) >= 4 else "****"
+    # Mask sender names in received history
+    for r in received:
+        if r.get("sender_name"):
+            r["sender_name"] = _mask_name(r["sender_name"])
+
+    return {
+        "success": True,
+        "uid": uid,
+        "sent_count": len(sent),
+        "received_count": len(received),
+        "sent": sent,
+        "received": received,
+    }
+
+
+@api_router.get("/subscription/sale-elite/eligibility/{uid}")
+async def sale_elite_eligibility(uid: str):
+    """Quick eligibility check for UI to show/hide the tab."""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    is_elite = await _sender_is_active_elite(user)
+    pricing = await calculate_elite_prc_price()
+    try:
+        limit_info = await calculate_user_redeem_limit(uid)
+        effective_available = float(limit_info.get("effective_available") or 0)
+        unlock_percent = limit_info.get("unlock_percent", 0)
+    except Exception:
+        effective_available = 0
+        unlock_percent = 0
+
+    now = datetime.now(timezone.utc)
+    today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    today_count = await db.sponsored_subscriptions.count_documents({
+        "sender_uid": uid,
+        "created_at": {"$gte": today_start.isoformat()},
+        "status": {"$in": ["active", "upcoming"]},
+    })
+
+    return {
+        "success": True,
+        "is_eligible": is_elite and today_count < 1
+                        and effective_available >= pricing["total_prc"]
+                        and float(user.get("prc_balance", 0) or 0) >= pricing["total_prc"],
+        "is_active_elite": is_elite,
+        "reason": (
+            None if is_elite else "Only active Elite subscribers can sponsor subscriptions."
+        ),
+        "pricing": {
+            "base_inr": pricing["base_inr"],
+            "gst_inr": pricing["gst_inr"],
+            "processing_fee_inr": pricing["processing_fee_inr"],
+            "admin_charges_inr": pricing["admin_charges_inr"],
+            "total_prc": pricing["total_prc"],
+            "prc_rate": pricing["prc_rate"],
+            "inr_equivalent": pricing["base_with_gst_inr"],
+        },
+        "sender": {
+            "prc_balance": float(user.get("prc_balance", 0) or 0),
+            "effective_available": effective_available,
+            "unlock_percent": unlock_percent,
+            "daily_limit_ok": today_count < 1,
+            "sales_today": today_count,
+        },
+    }
+
+
+
+
+# ============================================================================
 # ADMIN OVERRIDE: Force Activate Elite Subscription via PRC
 # ----------------------------------------------------------------------------
 # Allows admin to manually activate an Elite plan for a user using PRC,
