@@ -9,6 +9,51 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### Sale Elite Subscription (Peer-to-Peer) — DONE (7 Feb 2026)
+
+**Goal**: Allow active Elite subscribers to sponsor a 28-day Elite subscription for ANY registered user using their own PRC balance + redeem limit. Recorded in PRC Statement / History. Exposed as a new tab "Sale Elite to Friend" on the Subscription page.
+
+**Rules (confirmed with user)**:
+- Only ACTIVE Elite subscribers can sponsor (Explorer / non-Elite blocked with 403).
+- Cost = same formula as self PRC subscription: `₹999 + 18% GST + ₹10 processing + 20% admin → × dynamic PRC rate` (reuses `calculate_elite_prc_price()`).
+- Redeem limit check ENFORCED (`calculate_user_redeem_limit.effective_available >= total_prc`).
+- PRC balance defense-in-depth (redundant after redeem-limit check).
+- Rate limit: **1 sponsorship per sender per UTC calendar day**; CAS-guarded via new field `users.last_sale_elite_at`.
+- Any registered user is an eligible beneficiary (Explorer / Elite / expired — all allowed).
+  - If beneficiary already has ACTIVE Elite plan → new 28-day plan is QUEUED as upcoming (`subscription_history` entry with `type='sale_elite_received_upcoming'`, scheduled_start = current expiry).
+  - Otherwise → immediate activation (`subscription_plan='elite'`, expiry = now+28d, subscription_payment_type='sale_elite_subscription').
+- Sender authentication: standard login PIN (same hash-chain as `/api/login`: `pin_hash → hashed_pin → password_hash → password`).
+- Self-sponsorship blocked (sender_uid == beneficiary_uid → 400).
+- Atomic refund: if beneficiary update fails, sender PRC is restored and `last_sale_elite_at` is `$unset` (daily slot released).
+- Company wallet credits: GST / processing / admin / subscription revenue (same breakdown as self PRC sub).
+- Sender's `transactions` row: `type='sale_elite_subscription'`, amount=`-total_prc`, description includes masked beneficiary name + mobile last 4 — visible in PRC Statement.
+- Separate audit collection `sponsored_subscriptions` (sale_id, sender_uid, beneficiary_uid, prc_cost, status, expires_at).
+- Beneficiary notification (`create_notification`) sent on both activate / queue paths.
+- Sustainability burn hook applied (same as self sub).
+
+**New endpoints (backend/server.py)**:
+- `POST /api/subscription/sale-elite/lookup` — validates sender Elite status, looks up beneficiary by mobile (matches last 10 digits), returns masked name + beneficiary plan + pricing snapshot + sender balance/limit snapshot + daily_limit flag. No PIN required.
+- `POST /api/subscription/sale-elite/activate` — end-to-end atomic flow (PIN verify → limits → CAS deduct → activate/queue → wallets → transactions → notifications). Idempotency-key protected (`client_request_id`).
+- `GET /api/subscription/sale-elite/eligibility/{uid}` — boolean eligibility for UI gating + pricing + sender snapshot.
+- `GET /api/subscription/sale-elite/history/{uid}` — masked sent + received sponsorships list.
+
+**Frontend**:
+- `/app/frontend/src/components/SaleEliteSubscription.js` — new component: 3-step flow (mobile lookup → preview with beneficiary name + balance/limit → PIN confirm) + success card + sponsorship history drawer. Shows "Elite Feature Locked" card for non-Elite users.
+- `/app/frontend/src/pages/SubscriptionPlans.js` — tab switcher below header: `data-testid='tab-my-plan'` + `data-testid='tab-sale-elite'`. Existing flow wrapped inside `activeTab === 'my-plan'`.
+
+**Data-testids**: `tab-my-plan`, `tab-sale-elite`, `sale-elite-loading`, `sale-elite-not-eligible`, `sale-elite-tab`, `sale-elite-mobile-input`, `sale-elite-lookup-btn`, `sale-elite-preview`, `sale-elite-pin-input`, `sale-elite-confirm-btn`, `sale-elite-success`, `sale-elite-sponsor-another-btn`, `sale-elite-history-toggle`, `sale-elite-history-list`.
+
+**New DB entities**:
+- Field `users.last_sale_elite_at` (ISO string, UTC)
+- Field `users.sponsored_by`, `users.sponsored_by_name`, `users.sponsored_at` (on beneficiary during immediate activate)
+- Collection `sponsored_subscriptions` (one doc per sale)
+- `transactions` row `type='sale_elite_subscription'` (PRC Statement visibility)
+- `subscription_payments` row with `payment_method='sale_elite_subscription'` + `sponsor_uid`/`sponsor_name`
+
+**Testing**: iteration_230.json — 13/13 backend pytest cases PASS. Frontend code-review verified all wiring + data-testids. Non-blocking observations documented (sustainability burn adds extra PRC deduction outside quoted total — consistent with existing self sub flow).
+
+
+
 ### Code Smell Cleanup — Plan B (DONE - 1 May 2026)
 
 **Goal**: Remove technical debt flagged in user's audit without touching core business logic.

@@ -13253,7 +13253,7 @@ async def subscription_pay_with_prc(request: Request):
 #     processing + 20% admin → × dynamic PRC rate.
 #  3. Sender MUST have redeem limit >= cost (same check as Bank Redeem).
 #  4. Sender PRC balance must cover cost.
-#  5. Rate limit: max 1 sale per sender per calendar day (IST).
+#  5. Rate limit: max 1 sale per sender per calendar day (UTC midnight).
 #  6. Beneficiary can be ANY registered user. If beneficiary already has an
 #     active Elite plan, the new 28-day plan is QUEUED as upcoming.
 #  7. Sender's transaction is recorded in `transactions` collection with
