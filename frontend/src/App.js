@@ -113,6 +113,11 @@ const RETRY_POST_PATHS = [
 ];
 const MAX_RETRIES = 1;
 const RETRY_DELAY_MS = 800;
+// May 10, 2026 — Production Atlas was returning 500s with the friendly
+// "Database is busy" message on transient mongo timeouts. We treat them
+// the same as 503/504 for retry purposes AND tag the resulting error so
+// callers (e.g., AdminKYC auto-refresh) can silently swallow them.
+const FRIENDLY_DB_BUSY_TEXT = 'Database is busy right now';
 // ============================================================================
 
 // Axios response interceptor - suppress 404 toast errors for optional APIs
@@ -125,9 +130,11 @@ axios.interceptors.response.use(
     const status = error.response?.status;
     const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
     const isIdempotentPostPath = method === 'post' && RETRY_POST_PATHS.some(p => url.includes(p));
+    const detailText = (error.response?.data?.detail || '').toString();
+    const isFriendlyDBBusy = status === 500 && detailText.includes(FRIENDLY_DB_BUSY_TEXT);
     const isRetriable =
       (RETRY_METHODS.includes(method) || isIdempotentPostPath) &&
-      (RETRY_STATUS_CODES.includes(status) || isTimeout);
+      (RETRY_STATUS_CODES.includes(status) || isTimeout || isFriendlyDBBusy);
 
     // Auto-retry once for transient gateway failures / timeouts on GET requests
     if (isRetriable) {
@@ -142,6 +149,12 @@ axios.interceptors.response.use(
           error = retryErr;
         }
       }
+    }
+
+    // Tag transient "Database is busy" errors so callers can silently swallow.
+    const finalDetail = (error.response?.data?.detail || '').toString();
+    if (error.response?.status === 500 && finalDetail.includes(FRIENDLY_DB_BUSY_TEXT)) {
+      error.__isFriendlyDBBusy = true;
     }
 
     // Don't show toast for 404 errors on optional/stats endpoints

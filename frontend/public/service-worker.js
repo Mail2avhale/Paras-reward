@@ -1,11 +1,11 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v11: May 10, 2026 — Admin KYC Approve/Reject button fix: legacy KYC records
-// without kyc_id were causing buttons to be permanently disabled. Bump SW to
-// evict old AdminKYC chunk on production clients.
-const CACHE_NAME = 'paras-reward-v11';
-const RUNTIME_CACHE = 'paras-runtime-v11';
-const API_CACHE = 'paras-api-v11';
+// v12: May 10, 2026 — Suppress transient "Database is busy" toast on Admin KYC
+// (axios retry + silent auto-refresh + backend graceful degrade). Bump SW so
+// production clients pull the new App.js + AdminKYC.js bundles.
+const CACHE_NAME = 'paras-reward-v12';
+const RUNTIME_CACHE = 'paras-runtime-v12';
+const API_CACHE = 'paras-api-v12';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

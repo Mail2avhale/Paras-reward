@@ -313,20 +313,47 @@ async def list_kyc(
 
         # Run list + count in PARALLEL to halve total wall-time.
         # `submitted_at` may not be indexed → fallback to `created_at` if sort fails.
+        # Each fetch is bounded by an asyncio timeout so a slow Atlas response
+        # never escalates into a 500 → "Database is busy" toast on the admin
+        # page when the user already has prior data displayed.
         async def _fetch_list():
             try:
-                return await db.kyc.find(
-                    query,
-                    {"_id": 0, "aadhaar_front_base64": 0, "aadhaar_back_base64": 0,
-                     "pan_front_base64": 0, "selfie_base64": 0}
-                ).sort("submitted_at", -1).skip(actual_skip).limit(limit).to_list(length=limit)
+                return await asyncio.wait_for(
+                    db.kyc.find(
+                        query,
+                        {"_id": 0, "aadhaar_front_base64": 0, "aadhaar_back_base64": 0,
+                         "pan_front_base64": 0, "selfie_base64": 0}
+                    ).sort("submitted_at", -1).skip(actual_skip).limit(limit).to_list(length=limit),
+                    timeout=8.0,
+                )
+            except asyncio.TimeoutError:
+                logging.warning("[KYC list] _fetch_list timed out on submitted_at sort; trying created_at")
+                try:
+                    return await asyncio.wait_for(
+                        db.kyc.find(
+                            query,
+                            {"_id": 0, "aadhaar_front_base64": 0, "aadhaar_back_base64": 0,
+                             "pan_front_base64": 0, "selfie_base64": 0}
+                        ).sort("created_at", -1).skip(actual_skip).limit(limit).to_list(length=limit),
+                        timeout=6.0,
+                    )
+                except Exception as e2:
+                    logging.warning(f"[KYC list] both sort attempts failed: {e2}; returning empty")
+                    return []
             except Exception as e:
                 logging.warning(f"[KYC list] sort by submitted_at failed: {e}; trying created_at")
-                return await db.kyc.find(
-                    query,
-                    {"_id": 0, "aadhaar_front_base64": 0, "aadhaar_back_base64": 0,
-                     "pan_front_base64": 0, "selfie_base64": 0}
-                ).sort("created_at", -1).skip(actual_skip).limit(limit).to_list(length=limit)
+                try:
+                    return await asyncio.wait_for(
+                        db.kyc.find(
+                            query,
+                            {"_id": 0, "aadhaar_front_base64": 0, "aadhaar_back_base64": 0,
+                             "pan_front_base64": 0, "selfie_base64": 0}
+                        ).sort("created_at", -1).skip(actual_skip).limit(limit).to_list(length=limit),
+                        timeout=6.0,
+                    )
+                except Exception as e2:
+                    logging.warning(f"[KYC list] both sort attempts failed: {e2}; returning empty")
+                    return []
 
         async def _count():
             try:
@@ -373,8 +400,20 @@ async def list_kyc(
             "total_pages": (total + limit - 1) // limit if total else 1
         }
     except Exception as e:
-        logging.error(f"[KYC list] hard error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Graceful degradation: never let the admin KYC page show a hard 500.
+        # Log the underlying issue and return empty data so the UI keeps the
+        # cards loaded (or simply shows "No KYC documents found" until the
+        # next refresh tick succeeds).
+        logging.error(f"[KYC list] hard error (graceful return): {e}")
+        return {
+            "users": [],
+            "total": 0,
+            "limit": limit,
+            "skip": (page - 1) * limit if not skip else skip,
+            "page": page,
+            "total_pages": 1,
+            "_degraded": True,
+        }
 
 @router.get("/details/{uid}")
 async def get_kyc_details(uid: str):

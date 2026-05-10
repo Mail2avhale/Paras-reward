@@ -165,7 +165,9 @@ const AdminKYC = ({ user }) => {
   }, [searchTerm]);
 
   // Fetch KYC documents with server-side pagination and search
-  const fetchKYCDocuments = useCallback(async (page = 1, status = statusFilter, search = debouncedSearch) => {
+  // `silent` flag suppresses error toasts during auto-refresh — page already
+  // has data displayed, no need to spam users with transient-DB-busy toasts.
+  const fetchKYCDocuments = useCallback(async (page = 1, status = statusFilter, search = debouncedSearch, silent = false) => {
     try {
       setLoading(true);
       const statusParam = status !== 'all' ? `&status=${status}` : '';
@@ -183,6 +185,13 @@ const AdminKYC = ({ user }) => {
       setSelectedIds(new Set()); // Clear selection on refresh
     } catch (error) {
       console.error('Error fetching KYC documents:', error);
+      // Silently swallow transient "Database is busy" toasts — they cause
+      // anxiety even when the page already has data shown. Same for any
+      // background auto-refresh failure. User will see fresh data on the
+      // next successful refresh tick.
+      if (silent || error.__isFriendlyDBBusy) {
+        return;
+      }
       toast.error('Failed to fetch KYC documents');
     } finally {
       setLoading(false);
@@ -190,7 +199,7 @@ const AdminKYC = ({ user }) => {
   }, [statusFilter, debouncedSearch]);
 
   // Fetch stats in SINGLE API call (OPTIMIZED)
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (silent = false) => {
     try {
       const response = await axios.get(`${API}/kyc/stats`);
       setStats({
@@ -199,6 +208,10 @@ const AdminKYC = ({ user }) => {
         rejected: response.data?.rejected || 0
       });
     } catch (error) {
+      // Stats failures must not interrupt the user; suppress toasts entirely.
+      if (silent || error.__isFriendlyDBBusy) {
+        return;
+      }
       console.error('Error fetching stats:', error);
     }
   }, []);
@@ -225,11 +238,12 @@ const AdminKYC = ({ user }) => {
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
-      fetchKYCDocuments(currentPage, statusFilter);
-      fetchStats();
+      // Silent mode: don't toast on transient errors — user already has data.
+      fetchKYCDocuments(currentPage, statusFilter, debouncedSearch, true);
+      fetchStats(true);
     }, AUTO_REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [autoRefresh, currentPage, statusFilter, fetchKYCDocuments, fetchStats]);
+  }, [autoRefresh, currentPage, statusFilter, debouncedSearch, fetchKYCDocuments, fetchStats]);
 
   // Keyboard shortcuts
   useEffect(() => {

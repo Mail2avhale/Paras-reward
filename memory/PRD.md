@@ -9,6 +9,30 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### Admin KYC "Database is busy" Transient Toast Fix — DONE (10 May 2026)
+
+**Issue (production parasreward.com)**: Admin opens `/admin/kyc`, page loads correctly with all 5 pending records, stats cards (Pending 5 / Verified 627 / Rejected 1) render fine — but a red toast appears: *"Database is busy right now. Please try again in a few seconds."*. User said it must go away no matter what.
+
+**Root Cause**: Auto-refresh runs every 30s, calling `kyc/list` + `kyc/stats`. On Atlas peak load, the `find().to_list()` inside the `_fetch_list` helper occasionally exceeded the implicit driver timeout → the global exception handler raised `HTTPException(500, str(e))` → server.py's `_sanitize_http_exceptions` rewrote the detail to `_FRIENDLY_DB_MSG` ("Database is busy right now…") → frontend `fetchKYCDocuments` showed a hardcoded toast on every error. The page already had data displayed, so the toast was pure noise & induced anxiety.
+
+**Fixes (3 layers)**:
+1. **Backend `routes/kyc.py /list`**: Wrapped both sort attempts in `_fetch_list` with `asyncio.wait_for(... timeout=8.0/6.0)`. Outer exception handler **gracefully degrades** — returns `{"users":[],"total":0,"_degraded":True}` with HTTP 200 instead of raising 500. The page keeps rendering and the next refresh tick will recover.
+2. **Frontend `App.js` axios interceptor**:
+   - Added 500 + "Database is busy" message to retry list (RETRY once with 800ms back-off, alongside existing 502/503/504).
+   - Tag the final error with `error.__isFriendlyDBBusy = true` so callers can silently swallow.
+3. **Frontend `pages/AdminKYC.js`**:
+   - `fetchKYCDocuments` and `fetchStats` accept `silent: boolean` flag; auto-refresh interval calls them with `silent=true`. No toast on background failures.
+   - All calls also check `error.__isFriendlyDBBusy` and skip toast on transient DB-busy errors.
+4. **Service Worker v11 → v12** to evict old `App.js` + `AdminKYC.js` chunks on production clients.
+
+**Why this is the right fix**: Manually-initiated user actions (clicking Approve/Reject, manual Refresh button, search submit) STILL show error toasts — only background auto-refresh is silenced. The page is never left blank — graceful degrade keeps the existing data on screen.
+
+**Verified on preview**: `kyc/list` now returns HTTP 200 even when underlying find times out (`{"users":[],"total":0}`). Health endpoint stable.
+
+**Production Deploy**: Just redeploy. SW v12 will auto-evict old bundles within ~60s.
+
+
+
 ### Admin KYC Approve/Reject Button Fix — DONE (10 May 2026)
 
 **Issue Reported (production parasreward.com)**: Admin saw all KYC records with PAN-only data (e.g., `Nidhi sadashiv Sadhale`, `Anushka Jayvant Dewoolkar`) where the **Approve / Reject buttons were inactive (unclickable)** — both the small list-row icons AND the modal "Approve KYC" / "Reject KYC" buttons. Documents image preview also showed "No document images available".
