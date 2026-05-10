@@ -518,6 +518,40 @@ async def reject_kyc_by_id(kyc_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ---------------------------------------------------------------------------
+# Backfill: ensure every KYC record has a kyc_id.
+# Some legacy records (auto-verified via Eko PAN-lite that used `upsert=True`
+# without `$setOnInsert`) lack `kyc_id`, which makes the admin Approve/Reject
+# buttons appear inactive in the UI (the disabled check matches `undefined`
+# on both sides). Run once after deploy to repair existing data.
+# ---------------------------------------------------------------------------
+@router.post("/admin/backfill-kyc-ids")
+async def backfill_kyc_ids():
+    """Assign a kyc_id to any kyc record missing one. Idempotent."""
+    try:
+        cursor = db.kyc.find(
+            {"$or": [{"kyc_id": {"$exists": False}}, {"kyc_id": None}, {"kyc_id": ""}]},
+            {"_id": 1, "uid": 1}
+        )
+        repaired = 0
+        async for doc in cursor:
+            await db.kyc.update_one(
+                {"_id": doc["_id"]},
+                {"$set": {"kyc_id": str(uuid.uuid4())}}
+            )
+            repaired += 1
+        return {
+            "success": True,
+            "repaired": repaired,
+            "message": f"Backfilled kyc_id for {repaired} legacy KYC record(s)."
+        }
+    except Exception as e:
+        logging.error(f"[KYC backfill] error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @router.post("/verify/{uid}")
 async def verify_kyc(uid: str, request: Request):
     """Verify/Approve KYC (Admin)"""
@@ -888,6 +922,14 @@ async def auto_verify_pan(uid: str, data: PANVerifyRequest):
                     "pan_holder_name": pan_holder_name,
                     "verified_at": now,
                     "verification_method": "auto_pan"
+                },
+                "$setOnInsert": {
+                    # Ensure new auto-verified PAN-only KYC records always get a
+                    # kyc_id so admin Approve/Reject buttons work later if a user
+                    # later submits documents and the status flips back to pending.
+                    "kyc_id": str(uuid.uuid4()),
+                    "uid": uid,
+                    "submitted_at": now
                 }
             },
             upsert=True

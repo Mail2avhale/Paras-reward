@@ -237,7 +237,7 @@ const AdminKYC = ({ user }) => {
       // Ctrl+A - Select all on current page
       if (e.ctrlKey && e.key === 'a' && statusFilter === 'pending') {
         e.preventDefault();
-        const pendingIds = kycDocuments.filter(d => d.status === 'pending').map(d => d.kyc_id);
+        const pendingIds = kycDocuments.filter(d => d.status === 'pending').map(d => d.kyc_id || d.uid);
         setSelectedIds(new Set(pendingIds));
         toast.info(`${pendingIds.length} documents selected`);
       }
@@ -276,7 +276,7 @@ const AdminKYC = ({ user }) => {
 
   // Select all pending on current page
   const selectAllPending = () => {
-    const pendingIds = filteredDocs.filter(d => d.status === 'pending').map(d => d.kyc_id);
+    const pendingIds = filteredDocs.filter(d => d.status === 'pending').map(d => d.kyc_id || d.uid);
     setSelectedIds(new Set(pendingIds));
   };
 
@@ -317,7 +317,7 @@ const AdminKYC = ({ user }) => {
       // Optimistic update
       const newStatus = action === 'approve' ? 'verified' : 'rejected';
       setKycDocuments(prev => prev.map(doc =>
-        selectedIds.has(doc.kyc_id) 
+        selectedIds.has(doc.kyc_id || doc.uid) 
           ? { ...doc, status: newStatus, verified_at: new Date().toISOString() }
           : doc
       ));
@@ -338,7 +338,14 @@ const AdminKYC = ({ user }) => {
   // Quick action handlers - NO CONFIRM for approve (instant), only for reject
   const handleQuickApprove = async (doc, e) => {
     e.stopPropagation();
-    const kycId = doc.kyc_id;
+    // Some legacy KYC records (auto-verified via Eko PAN-lite) have no kyc_id;
+    // backend's /verify endpoint falls back to lookup by uid, so we send uid as
+    // the path param when kyc_id is missing.
+    const kycId = doc.kyc_id || doc.uid;
+    if (!kycId) {
+      toast.error('Cannot approve: missing KYC identifier');
+      return;
+    }
     if (processing?.kyc_id === kycId) return; // Already processing this doc
     
     const userName = doc.user_name || doc.user_id;
@@ -354,7 +361,7 @@ const AdminKYC = ({ user }) => {
         toast.success(`✅ KYC Approved: ${userName}`);
         
         // Optimistic update - remove from list immediately
-        setKycDocuments(prev => prev.filter(d => d.kyc_id !== kycId));
+        setKycDocuments(prev => prev.filter(d => (d.kyc_id || d.uid) !== kycId));
         
         // Update stats immediately
         setStats(prev => ({
@@ -394,7 +401,11 @@ const AdminKYC = ({ user }) => {
 
   const handleQuickReject = async (doc, e) => {
     e.stopPropagation();
-    const kycId = doc.kyc_id;
+    const kycId = doc.kyc_id || doc.uid; // Fallback to uid for legacy records
+    if (!kycId) {
+      toast.error('Cannot reject: missing KYC identifier');
+      return;
+    }
     if (processing?.kyc_id === kycId) return; // Already processing this doc
     
     const reason = window.prompt('Rejection reason (optional):');
@@ -414,7 +425,7 @@ const AdminKYC = ({ user }) => {
         toast.success(`❌ KYC Rejected: ${userName}`);
         
         // Optimistic update - remove from list immediately
-        setKycDocuments(prev => prev.filter(d => d.kyc_id !== kycId));
+        setKycDocuments(prev => prev.filter(d => (d.kyc_id || d.uid) !== kycId));
         
         // Update stats immediately
         setStats(prev => ({
@@ -453,6 +464,10 @@ const AdminKYC = ({ user }) => {
   };
 
   const handleVerify = async (kycId, action) => {
+    if (!kycId) {
+      toast.error('Missing KYC identifier');
+      return;
+    }
     if (processing?.kyc_id === kycId) return;
     
     const attemptVerify = async (retryCount = 0) => {
@@ -467,7 +482,7 @@ const AdminKYC = ({ user }) => {
         
         const newStatus = action === 'approve' ? 'verified' : 'rejected';
         setKycDocuments(prev => prev.map(doc => 
-          doc.kyc_id === kycId 
+          (doc.kyc_id || doc.uid) === kycId 
             ? {...doc, status: newStatus, verified_at: new Date().toISOString()} 
             : doc
         ));
@@ -527,7 +542,7 @@ const AdminKYC = ({ user }) => {
     }) + ' IST';
   };
 
-  const pendingInSelection = filteredDocs.filter(d => selectedIds.has(d.kyc_id) && d.status === 'pending').length;
+  const pendingInSelection = filteredDocs.filter(d => selectedIds.has(d.kyc_id || d.uid) && d.status === 'pending').length;
 
   return (
     <div className="p-4 md:p-6 bg-white min-h-screen">
@@ -742,10 +757,10 @@ const AdminKYC = ({ user }) => {
         <div className="space-y-3">
           {filteredDocs.map((doc) => (
             <Card
-              key={doc.kyc_id}
+              key={doc.kyc_id || doc.uid}
               className={`p-4 bg-white border-slate-200 hover:border-slate-200 transition-all cursor-pointer ${
                 doc.status === 'pending' ? 'border-l-4 border-l-yellow-500' : ''
-              } ${selectedIds.has(doc.kyc_id) ? 'ring-2 ring-blue-500 bg-blue-900/20' : ''}`}
+              } ${selectedIds.has(doc.kyc_id || doc.uid) ? 'ring-2 ring-blue-500 bg-blue-900/20' : ''}`}
               onClick={async () => {
                 // Fetch full details with images
                 try {
@@ -771,10 +786,10 @@ const AdminKYC = ({ user }) => {
                   {/* Selection checkbox for pending */}
                   {doc.status === 'pending' && (
                     <button
-                      onClick={(e) => toggleSelect(doc.kyc_id, e)}
+                      onClick={(e) => toggleSelect(doc.kyc_id || doc.uid, e)}
                       className="p-1 hover:bg-slate-100 rounded"
                     >
-                      {selectedIds.has(doc.kyc_id) ? (
+                      {selectedIds.has(doc.kyc_id || doc.uid) ? (
                         <CheckSquare className="w-5 h-5 text-blue-400" />
                       ) : (
                         <Square className="w-5 h-5 text-slate-500" />
@@ -810,9 +825,9 @@ const AdminKYC = ({ user }) => {
                         size="sm"
                         className="bg-green-600 hover:bg-green-700 h-8 min-w-[40px]"
                         onClick={(e) => handleQuickApprove(doc, e)}
-                        disabled={processing?.kyc_id === doc.kyc_id}
+                        disabled={processing != null && processing.kyc_id === (doc.kyc_id || doc.uid)}
                       >
-                        {processing?.kyc_id === doc.kyc_id && processing?.action === 'approve' ? (
+                        {processing?.kyc_id === (doc.kyc_id || doc.uid) && processing?.action === 'approve' ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <CheckCircle className="w-4 h-4" />
@@ -823,9 +838,9 @@ const AdminKYC = ({ user }) => {
                         variant="destructive"
                         className="h-8 min-w-[40px]"
                         onClick={(e) => handleQuickReject(doc, e)}
-                        disabled={processing?.kyc_id === doc.kyc_id}
+                        disabled={processing != null && processing.kyc_id === (doc.kyc_id || doc.uid)}
                       >
-                        {processing?.kyc_id === doc.kyc_id && processing?.action === 'reject' ? (
+                        {processing?.kyc_id === (doc.kyc_id || doc.uid) && processing?.action === 'reject' ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <XCircle className="w-4 h-4" />
@@ -954,11 +969,11 @@ const AdminKYC = ({ user }) => {
               {selectedDoc.status === 'pending' && (
                 <div className="flex gap-3">
                   <Button
-                    onClick={() => handleVerify(selectedDoc.kyc_id, 'approve')}
-                    disabled={processing?.kyc_id === selectedDoc.kyc_id}
+                    onClick={() => handleVerify(selectedDoc.kyc_id || selectedDoc.uid, 'approve')}
+                    disabled={processing != null && processing.kyc_id === (selectedDoc.kyc_id || selectedDoc.uid)}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
-                    {processing?.kyc_id === selectedDoc.kyc_id && processing?.action === 'approve' ? (
+                    {processing?.kyc_id === (selectedDoc.kyc_id || selectedDoc.uid) && processing?.action === 'approve' ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     ) : (
                       <CheckCircle className="w-4 h-4 mr-2" />
@@ -966,12 +981,12 @@ const AdminKYC = ({ user }) => {
                     Approve KYC
                   </Button>
                   <Button
-                    onClick={() => handleVerify(selectedDoc.kyc_id, 'reject')}
-                    disabled={processing?.kyc_id === selectedDoc.kyc_id}
+                    onClick={() => handleVerify(selectedDoc.kyc_id || selectedDoc.uid, 'reject')}
+                    disabled={processing != null && processing.kyc_id === (selectedDoc.kyc_id || selectedDoc.uid)}
                     variant="destructive"
                     className="flex-1"
                   >
-                    {processing?.kyc_id === selectedDoc.kyc_id && processing?.action === 'reject' ? (
+                    {processing?.kyc_id === (selectedDoc.kyc_id || selectedDoc.uid) && processing?.action === 'reject' ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     ) : (
                       <XCircle className="w-4 h-4 mr-2" />

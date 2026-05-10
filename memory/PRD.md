@@ -9,6 +9,35 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### Admin KYC Approve/Reject Button Fix — DONE (10 May 2026)
+
+**Issue Reported (production parasreward.com)**: Admin saw all KYC records with PAN-only data (e.g., `Nidhi sadashiv Sadhale`, `Anushka Jayvant Dewoolkar`) where the **Approve / Reject buttons were inactive (unclickable)** — both the small list-row icons AND the modal "Approve KYC" / "Reject KYC" buttons. Documents image preview also showed "No document images available".
+
+**Root Cause**:
+1. Some legacy KYC records in `db.kyc` were created via `auto_verify_pan` (Eko PAN-lite) using `update_one(...upsert=True)` **WITHOUT setting `kyc_id`** in the upsert. Result: docs in DB without a `kyc_id` field.
+2. Frontend `AdminKYC.js` disabled-check was `disabled={processing?.kyc_id === doc.kyc_id}`. When `processing` is `null` and `doc.kyc_id` is missing, both sides evaluate to `undefined`, and `undefined === undefined → true`. Shadcn `Button` then applied `disabled:pointer-events-none` so click events were silently swallowed.
+
+**Fixes**:
+1. **Backend `routes/kyc.py auto_verify_pan` (line ~881)**: Added `$setOnInsert: {kyc_id: uuid4(), uid, submitted_at}` to the upsert so any future PAN-only auto-verified record gets a stable `kyc_id`.
+2. **Backend `routes/kyc.py` new `POST /api/kyc/admin/backfill-kyc-ids`**: Idempotent endpoint that scans `db.kyc` for docs missing/null/empty `kyc_id` and assigns a fresh UUID. Run once after deploy to repair existing prod data.
+3. **Frontend `pages/AdminKYC.js`**: Every place that used `doc.kyc_id` now falls back to `doc.uid` (`doc.kyc_id || doc.uid`). Backend `verify_kyc_by_id` already supports both via the existing fallback `find_one({"uid": kyc_id})`. Disabled checks rewritten to `processing != null && processing.kyc_id === (doc.kyc_id || doc.uid)` so the comparison fails cleanly when both are missing.
+4. **Service Worker bumped to v11** (`paras-reward-v11`) to evict the old `AdminKYC` chunk on production clients.
+
+**Why "No document images available" is correct (not a bug)**: PAN-only auto-verification through Eko doesn't upload Aadhaar/PAN images. Users only entered PAN number → no base64 in DB → modal correctly shows "No document images available". Admin can still Approve / Reject based on the PAN number shown.
+
+**Testing**: Reproduced on preview by inserting a legacy KYC doc (no `kyc_id`) directly into MongoDB. Verified:
+  - List endpoint returns the doc with `kyc_id: None`
+  - `POST /api/kyc/{uid}/verify` (uid as fallback) returns `200 {"message":"KYC verified successfully"}`
+  - DB record correctly transitions `status: pending → verified`
+  - Backfill endpoint repairs missing `kyc_id` (`{"success":true,"repaired":1}`)
+
+**Production Deploy Steps**:
+1. Redeploy frontend + backend.
+2. Run `curl -X POST https://www.parasreward.com/api/kyc/admin/backfill-kyc-ids -H "Authorization: Bearer $ADMIN_TOKEN"` once to repair existing legacy records.
+3. Hard-refresh admin browser (or wait for SW v11 to auto-evict cache).
+
+
+
 ### Sale Elite Subscription (Peer-to-Peer) — DONE (7 Feb 2026)
 
 **Goal**: Allow active Elite subscribers to sponsor a 28-day Elite subscription for ANY registered user using their own PRC balance + redeem limit. Recorded in PRC Statement / History. Exposed as a new tab "Sale Elite to Friend" on the Subscription page.

@@ -1,11 +1,11 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v10: May 6, 2026 — community lifetime ₹ badge: deploy-time SW bump so the
-// old CommunityPage chunk (without the badge JSX) gets evicted from clients
-// that hit the v9 force-refresh-and-reload last time.
-const CACHE_NAME = 'paras-reward-v10';
-const RUNTIME_CACHE = 'paras-runtime-v10';
-const API_CACHE = 'paras-api-v10';
+// v11: May 10, 2026 — Admin KYC Approve/Reject button fix: legacy KYC records
+// without kyc_id were causing buttons to be permanently disabled. Bump SW to
+// evict old AdminKYC chunk on production clients.
+const CACHE_NAME = 'paras-reward-v11';
+const RUNTIME_CACHE = 'paras-runtime-v11';
+const API_CACHE = 'paras-api-v11';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
