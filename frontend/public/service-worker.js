@@ -1,12 +1,11 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v18: May 11, 2026 — Sale Elite now creates TWO community posts (sender's
-// "Sale Subscription" pink-badge + beneficiary's "Subscription Elite Upgraded"
-// gold-badge). Frontend SuccessStoryCard supports the new sale_elite_*
-// service_types so they no longer fallback to "Mobile Recharge".
-const CACHE_NAME = 'paras-reward-v18';
-const RUNTIME_CACHE = 'paras-runtime-v18';
-const API_CACHE = 'paras-api-v18';
+// v19: May 11, 2026 — Beneficiary post on Sale Elite now visually distinct:
+// "🎁 Elite • Sponsored Gift" chip + "Sponsored by X" completion badge.
+// Differentiates from self-subscription Upgraded posts.
+const CACHE_NAME = 'paras-reward-v19';
+const RUNTIME_CACHE = 'paras-runtime-v19';
+const API_CACHE = 'paras-api-v19';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

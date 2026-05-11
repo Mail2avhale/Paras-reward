@@ -65,9 +65,10 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
   let chipLabel = theme.label;
   if (isSubscription && planName) chipLabel = `${theme.label} • ${planName}`;
   else if (isSaleElite) chipLabel = 'Sale Subscription';
-  else if (isSaleEliteReceived) chipLabel = `Subscription • ${planName || 'Elite'}`;
+  else if (isSaleEliteReceived) chipLabel = `🎁 ${planName || 'Elite'} • Sponsored Gift`;
   let completionLabel = 'Successfully Completed';
-  if (isSubscription || isSaleEliteReceived) completionLabel = 'Upgraded';
+  if (isSubscription) completionLabel = 'Upgraded';
+  else if (isSaleEliteReceived) completionLabel = `Sponsored by ${meta.sender_masked_name || 'a friend'}`;
   else if (isSaleElite) completionLabel = 'Sponsored';
   const isOwn = !!currentUserId && meta.beneficiary_user_id === currentUserId;
 
