@@ -9,6 +9,48 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### Sale Elite — Two Community Posts + Correct Badge — DONE (11 May 2026)
+
+**Issue (production parasreward.com)**: User sponsored Elite for Khushbun N. The community post appeared as **"Mobile Recharge — Successfully Completed"** instead of "Sale Subscription". Also, only Mobin's (sender's) post was shown — Khushbun's (beneficiary's) "Subscription Elite Upgraded" post was missing.
+
+**Root Causes**:
+1. Frontend `SuccessStoryCard.js` SERVICE_THEME map had no entry for `sale_elite_subscription` → fallback to `mobile_recharge` theme (blue card with 📱 Mobile Recharge badge).
+2. Backend `_create_sale_elite_community_post` only inserted ONE post (sender's). Beneficiary's celebration card was never created.
+
+**Fixes**:
+1. **Frontend `components/SuccessStoryCard.js`**:
+   - Added 2 new themes: `sale_elite_subscription` (pink/rose gradient, 🎁 "Sale Subscription" chip) + `sale_elite_received` (gold/amber, 👑 "Subscription • Elite" chip — same theme as self subscription so it visually matches existing Upgraded posts).
+   - Updated `completionLabel` logic: `"Sponsored"` for sender, `"Upgraded"` for beneficiary.
+
+2. **Backend `_create_sale_elite_community_post`** now inserts TWO posts atomically via `insert_many`:
+   - **POST 1 (Sender)**: pink/rose theme, "🎁 Mobin S. ➡️ Khushbun N. (Elite Sponsored)" — `service_type='sale_elite_subscription'`, badge: "Sale Subscription · Sponsored".
+   - **POST 2 (Beneficiary)**: gold theme, "👑 Khushbun N. upgraded to Elite!" — `service_type='sale_elite_received'`, badge: "Subscription · Elite · Upgraded", with "Sponsored by Mobin S." in body.
+   - Each post stamped with `metadata.post_side` (`'sender'` / `'beneficiary'`) for future analytics.
+
+3. **Backend backfill endpoint upgraded** — `POST /api/admin/sale-elite/backfill-community-posts`:
+   - Now deletes all existing posts for each `sale_id` first (cleans up the legacy single + mis-themed "Mobile Recharge" cards), then recreates the new dual-post format.
+   - Returns `{success, scanned, recreated}`.
+   - Safe to run multiple times.
+
+4. **Service Worker v17 → v18**.
+
+**Production Deploy Steps**:
+1. Save to Github + redeploy
+2. Login as admin → run backfill once via browser console:
+   ```js
+   fetch('/api/admin/sale-elite/backfill-community-posts', {
+     method:'POST',
+     headers:{'Authorization':'Bearer '+localStorage.getItem('paras_token')}
+   }).then(r=>r.json()).then(console.log)
+   ```
+3. Mobin → Khushbun's mis-themed "Mobile Recharge" card will be wiped and re-created as:
+   - 🎁 Pink "Sale Subscription · Sponsored" (Mobin)
+   - 👑 Gold "Subscription · Elite · Upgraded" (Khushbun)
+
+**Future sales**: All new Sale Elite sponsorships will automatically post BOTH cards with correct themes.
+
+
+
 ### Inactive User Cleanup System — DONE (11 May 2026)
 
 **Goal**: Keep user base lean by auto-purging dormant accounts.

@@ -13349,24 +13349,32 @@ async def _create_sale_elite_community_post(
     amount_inr: float,
     sale_id: str,
 ):
-    """Insert a celebratory Community Forum post for a Sale Elite sponsorship.
-    Per user choice (May 11, 2026, option C): show BOTH masked names —
-    "Vishal R. ➡️ Suwarna A. (Elite Sponsored) — ₹1,178.82".
+    """Insert TWO Community Forum posts for a Sale Elite sponsorship:
+
+    1. SENDER post  — 🎁 "Sale Subscription" badge (pink/rose theme)
+                      Title: "Mobin S. ➡️ Khushbun N. (Elite Sponsored)"
+    2. BENEFICIARY post — 👑 "Subscription • Elite" Upgraded badge
+                          Title: "Khushbun N. upgraded to Elite!"
+
+    Per user feedback (May 11, 2026): two entries should appear in community
+    feed. Previously the sender post was rendering as "Mobile Recharge" because
+    SuccessStoryCard.js defaulted unknown service_types to mobile_recharge —
+    that's fixed now with the new sale_elite_subscription + sale_elite_received
+    themes in the frontend SERVICE_THEME map.
     Fire-and-forget — errors logged, never raised.
     """
     try:
         if db is None:
             return
-        # Skip test/internal accounts
         bad_prefixes = ("admin-test", "test-", "__TEST", "__test", "burn-test", "system")
         if any(str(sender_uid).startswith(p) for p in bad_prefixes):
             return
         if any(str(beneficiary_uid).startswith(p) for p in bad_prefixes):
             return
 
-        # Idempotency: skip if a post already exists for this sale_id
+        # Idempotency: skip if posts already exist for this sale_id
         existing = await db.community_posts.find_one(
-            {"metadata.ref_id": f"sale_elite_{sale_id}", "is_success_story": True},
+            {"metadata.ref_id": f"sale_elite_{sale_id}"},
             {"_id": 1}
         )
         if existing:
@@ -13375,34 +13383,36 @@ async def _create_sale_elite_community_post(
         sender_masked = _mask_name(sender_name)
         benef_masked = _mask_name(beneficiary_name)
 
-        # Sender city/state (for location chip)
+        # Sender + beneficiary locations
         sender_doc = await db.users.find_one(
             {"uid": sender_uid},
             {"_id": 0, "city": 1, "state": 1, "address": 1}
         ) or {}
-        city = (sender_doc.get("city") or
-                ((sender_doc.get("address") or {}).get("city")
-                 if isinstance(sender_doc.get("address"), dict) else "") or "").strip()
-        state = (sender_doc.get("state") or
-                 ((sender_doc.get("address") or {}).get("state")
-                  if isinstance(sender_doc.get("address"), dict) else "") or "").strip()
-        location = ", ".join([p for p in [city, state] if p]) or "India"
+        benef_doc = await db.users.find_one(
+            {"uid": beneficiary_uid},
+            {"_id": 0, "city": 1, "state": 1, "address": 1}
+        ) or {}
 
-        title = f"👑 {sender_masked} ➡️ {benef_masked} (Elite Sponsored)"
-        content = "\n".join([
-            f"🎁 Congratulations! **{sender_masked}** from **{location}** just sponsored an Elite subscription for **{benef_masked}**.",
-            "",
-            f"💎 Sponsored Plan: **Elite** — 28 days",
-            f"💰 Value: **₹{float(amount_inr):,.2f}**",
-            "",
-            "✅ Peer-to-Peer subscription via Paras Reward",
-        ])
+        def _loc(doc):
+            city = (doc.get("city") or
+                    ((doc.get("address") or {}).get("city")
+                     if isinstance(doc.get("address"), dict) else "") or "").strip()
+            state = (doc.get("state") or
+                     ((doc.get("address") or {}).get("state")
+                      if isinstance(doc.get("address"), dict) else "") or "").strip()
+            return city, state, (", ".join([p for p in [city, state] if p]) or "India")
 
-        post_id = str(uuid.uuid4())
+        s_city, s_state, s_loc = _loc(sender_doc)
+        b_city, b_state, b_loc = _loc(benef_doc)
+
+        amount = float(amount_inr or 0)
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        post_doc = {
-            "post_id": post_id,
+        # ====================================================================
+        # POST 1 — SENDER side ("Sale Subscription" pink/rose theme)
+        # ====================================================================
+        sender_post = {
+            "post_id": str(uuid.uuid4()),
             "user_id": "system",
             "user_name": "Paras Reward",
             "user_plan": "admin",
@@ -13415,20 +13425,27 @@ async def _create_sale_elite_community_post(
             "is_admin_post": True,
             "is_success_story": True,
             "category": "Success Story",
-            "title": title,
-            "content": content,
+            "title": f"🎁 {sender_masked} ➡️ {benef_masked} (Elite Sponsored)",
+            "content": "\n".join([
+                f"🎁 **{sender_masked}** from **{s_loc}** just sponsored an Elite subscription for **{benef_masked}**.",
+                "",
+                "💎 Plan: **Elite** — 28 days",
+                f"💰 Value: **₹{amount:,.2f}**",
+                "",
+                "✅ Peer-to-Peer subscription via Paras Reward",
+            ]),
             "image_url": None,
             "images": [],
             "tags": ["sale_elite_subscription", "subscription", "elite", "success"],
             "metadata": {
                 "service_type": "sale_elite_subscription",
-                "service_label": "Elite Sponsored",
-                "service_icon": "👑",
-                "amount_inr": float(amount_inr),
+                "service_label": "Sale Subscription",
+                "service_icon": "🎁",
+                "amount_inr": amount,
                 "first_name": sender_masked,
-                "location": location,
-                "city": city,
-                "state": state,
+                "location": s_loc,
+                "city": s_city,
+                "state": s_state,
                 "ref_id": f"sale_elite_{sale_id}",
                 "sale_id": sale_id,
                 "sender_uid": sender_uid,
@@ -13436,6 +13453,7 @@ async def _create_sale_elite_community_post(
                 "beneficiary_user_id": beneficiary_uid,
                 "beneficiary_masked_name": benef_masked,
                 "plan_name": "Elite",
+                "post_side": "sender",
             },
             "like_count": 0,
             "reactions_count": {"celebrate": 0, "love": 0, "fire": 0},
@@ -13449,8 +13467,73 @@ async def _create_sale_elite_community_post(
             "created_at": now_iso,
             "updated_at": now_iso,
         }
-        await db.community_posts.insert_one(post_doc)
-        logging.info(f"[SALE-ELITE COMMUNITY] Posted {sale_id}: {sender_masked} -> {benef_masked}")
+
+        # ====================================================================
+        # POST 2 — BENEFICIARY side (renders as "Subscription • Elite" Upgraded)
+        # ====================================================================
+        benef_post = {
+            "post_id": str(uuid.uuid4()),
+            "user_id": "system",
+            "user_name": "Paras Reward",
+            "user_plan": "admin",
+            "status": "active",
+            "is_helpful": False,
+            "report_count": 0,
+            "author_uid": "system",
+            "author_name": "Paras Reward",
+            "author_role": "admin",
+            "is_admin_post": True,
+            "is_success_story": True,
+            "category": "Success Story",
+            "title": f"👑 {benef_masked} upgraded to Elite!",
+            "content": "\n".join([
+                f"👑 **{benef_masked}** from **{b_loc}** is now an **Elite Subscriber**.",
+                "",
+                f"🎁 Sponsored by **{sender_masked}**",
+                "💎 Plan: **Elite** — 28 days",
+                f"💰 Value: **₹{amount:,.2f}**",
+                "",
+                "✅ Activated via Paras Reward",
+            ]),
+            "image_url": None,
+            "images": [],
+            "tags": ["subscription", "elite", "success", "sponsored"],
+            "metadata": {
+                "service_type": "sale_elite_received",
+                "service_label": "Subscription",
+                "service_icon": "👑",
+                "amount_inr": amount,
+                "first_name": benef_masked,
+                "location": b_loc,
+                "city": b_city,
+                "state": b_state,
+                "ref_id": f"sale_elite_{sale_id}",
+                "sale_id": sale_id,
+                "sender_uid": sender_uid,
+                "sender_masked_name": sender_masked,
+                "beneficiary_user_id": beneficiary_uid,
+                "beneficiary_masked_name": benef_masked,
+                "plan_name": "Elite",
+                "post_side": "beneficiary",
+            },
+            "like_count": 0,
+            "reactions_count": {"celebrate": 0, "love": 0, "fire": 0},
+            "comment_count": 0,
+            "view_count": 0,
+            "bookmark_count": 0,
+            "helpful_count": 0,
+            "is_pinned": False,
+            "is_deleted": False,
+            "is_reported": False,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+        }
+
+        await db.community_posts.insert_many([sender_post, benef_post])
+        logging.info(
+            f"[SALE-ELITE COMMUNITY] Posted 2 cards for {sale_id}: "
+            f"sender={sender_masked}, beneficiary={benef_masked}"
+        )
     except Exception as e:
         logging.warning(f"[SALE-ELITE COMMUNITY] post create failed (non-fatal): {e}")
 
@@ -14150,10 +14233,10 @@ async def sale_elite_eligibility(uid: str):
 @api_router.post("/admin/sale-elite/backfill-community-posts")
 async def admin_backfill_sale_elite_community_posts():
     """One-time admin backfill: for every existing `sponsored_subscriptions`
-    record without a corresponding Community Forum post, create one now.
-
-    Idempotent (skips records that already have a community post). Safe to run
-    multiple times. Returns counts.
+    record, ensure 2 Community Forum posts (sender + beneficiary) exist with
+    the correct service_type metadata. Re-runs are safe — deletes any
+    legacy / wrongly-themed posts for the same sale_id first, then recreates
+    with the new dual-post format.
     """
     try:
         cursor = db.sponsored_subscriptions.find(
@@ -14162,20 +14245,22 @@ async def admin_backfill_sale_elite_community_posts():
         ).sort("created_at", -1).limit(500)
 
         scanned = 0
-        created = 0
-        skipped_existing = 0
+        recreated = 0
         async for s in cursor:
             scanned += 1
             sale_id = s.get("sale_id")
             if not sale_id:
                 continue
-            existing = await db.community_posts.find_one(
-                {"metadata.ref_id": f"sale_elite_{sale_id}", "is_success_story": True},
-                {"_id": 1}
+
+            # Wipe any prior posts for this sale_id (legacy single post or
+            # mis-themed Mobile-Recharge cards).
+            await db.community_posts.delete_many(
+                {"$or": [
+                    {"metadata.ref_id": f"sale_elite_{sale_id}"},
+                    {"metadata.sale_id": sale_id},
+                ]}
             )
-            if existing:
-                skipped_existing += 1
-                continue
+
             await _create_sale_elite_community_post(
                 sender_uid=s.get("sender_uid"),
                 sender_name=s.get("sender_name", "User"),
@@ -14184,13 +14269,12 @@ async def admin_backfill_sale_elite_community_posts():
                 amount_inr=s.get("inr_equivalent", 0),
                 sale_id=sale_id,
             )
-            created += 1
+            recreated += 1
 
         return {
             "success": True,
             "scanned": scanned,
-            "created": created,
-            "skipped_existing": skipped_existing,
+            "recreated": recreated,
         }
     except Exception as e:
         logging.error(f"[SALE-ELITE BACKFILL] {e}")

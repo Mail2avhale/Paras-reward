@@ -1,11 +1,12 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v17: May 11, 2026 — Inactive User Cleanup admin page added. New endpoints
-// under /api/admin/inactive-cleanup/* with dry-run + execute + scheduler.
-// Bump SW so production clients pull the new admin chunk + App.js bundle.
-const CACHE_NAME = 'paras-reward-v17';
-const RUNTIME_CACHE = 'paras-runtime-v17';
-const API_CACHE = 'paras-api-v17';
+// v18: May 11, 2026 — Sale Elite now creates TWO community posts (sender's
+// "Sale Subscription" pink-badge + beneficiary's "Subscription Elite Upgraded"
+// gold-badge). Frontend SuccessStoryCard supports the new sale_elite_*
+// service_types so they no longer fallback to "Mobile Recharge".
+const CACHE_NAME = 'paras-reward-v18';
+const RUNTIME_CACHE = 'paras-runtime-v18';
+const API_CACHE = 'paras-api-v18';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
