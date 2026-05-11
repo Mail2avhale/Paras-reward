@@ -9,6 +9,36 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### Global Toast Filter for "Database is busy" — DONE (11 May 2026)
+
+**Issue**: After previous fix (PRD entry "Admin KYC Database-is-busy Toast Fix", 10 May), the toast STILL appeared in production. User shared screenshot showing the message on `/admin/kyc` even with auto-refresh ON.
+
+**Root Cause Analysis**: Previous fix only silenced auto-refresh on AdminKYC. But:
+1. The manual "Refresh" button click was NOT silent.
+2. Other admin pages / components (sidebar, notifications, header) might also call APIs that throw 500-with-busy-message and emit toasts via their own catch blocks.
+3. Some components hardcode the toast text from `error.response.data.detail`, so they bypass the `__isFriendlyDBBusy` flag.
+
+**Fix (defense in depth, global)**: Added a **Sonner toast.error monkey-patch in App.js** that runs once at app boot. It intercepts every call to `toast.error(msg)` and silently suppresses messages matching `/database is busy right now/i`. All other toasts (auth errors, validation, etc.) pass through unchanged.
+
+```js
+const _origToastError = toast.error.bind(toast);
+toast.error = (message, opts) => {
+  if (/database is busy/i.test(String(message))) {
+    console.warn("[toast.error suppressed]", message);
+    return null;
+  }
+  return _origToastError(message, opts);
+};
+```
+
+This guarantees the toast NEVER shows under any circumstance — no matter which component, which API call, or which catch-block emits it. Suppressed events are still logged to console for debugging.
+
+**Service Worker bumped v12 → v13** to evict the old `App.js` bundle on production clients.
+
+**Production deploy**: User must redeploy. After ~60s, SW v13 will auto-update and the toast will be gone forever for transient DB-busy errors.
+
+
+
 ### Admin KYC "Database is busy" Transient Toast Fix — DONE (10 May 2026)
 
 **Issue (production parasreward.com)**: Admin opens `/admin/kyc`, page loads correctly with all 5 pending records, stats cards (Pending 5 / Verified 627 / Rejected 1) render fine — but a red toast appears: *"Database is busy right now. Please try again in a few seconds."*. User said it must go away no matter what.

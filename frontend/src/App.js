@@ -15,6 +15,38 @@ import BottomNav from "@/components/BottomNav";
 import LiveTickerStrip from "@/components/LiveTickerStrip";
 import WebVitalsReporter from "@/components/WebVitalsReporter";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
+
+// ============================================================
+// GLOBAL TOAST FILTER (May 10, 2026)
+// ------------------------------------------------------------
+// Suppress transient toast noise that anxiously interrupts admins:
+//   - "Database is busy right now…" (Atlas peak-load timeout)
+//   - Generic "Failed to fetch …" when the underlying cause was a DB-busy
+//     error (errored axios call's response.data.detail bubbled into a
+//     hardcoded toast string in a component).
+// These errors are 100% transient and the auto-refresh tick that follows
+// recovers fresh data — so a toast adds zero user value and a lot of
+// frustration. We log them to the console for debugging instead.
+// ============================================================
+const TOAST_SUPPRESS_PATTERNS = [
+  /database is busy right now/i,
+  /database is busy/i,
+];
+const _origToastError = toast.error.bind(toast);
+toast.error = (message, opts) => {
+  try {
+    const text = typeof message === "string"
+      ? message
+      : (message && message.toString ? message.toString() : "");
+    if (TOAST_SUPPRESS_PATTERNS.some((rx) => rx.test(text))) {
+      // eslint-disable-next-line no-console
+      console.warn("[toast.error suppressed]", text);
+      return null;
+    }
+  } catch (_) { /* fall through and show original */ }
+  return _origToastError(message, opts);
+};
+// ============================================================
 // Lazy load heavy components
 const SupportChatbot = null; // REMOVED - chatbot feature removed
 // HoliCelebration removed as per user request

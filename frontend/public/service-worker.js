@@ -1,11 +1,11 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v12: May 10, 2026 — Suppress transient "Database is busy" toast on Admin KYC
-// (axios retry + silent auto-refresh + backend graceful degrade). Bump SW so
-// production clients pull the new App.js + AdminKYC.js bundles.
-const CACHE_NAME = 'paras-reward-v12';
-const RUNTIME_CACHE = 'paras-runtime-v12';
-const API_CACHE = 'paras-api-v12';
+// v13: May 11, 2026 — Global Sonner toast filter added in App.js to suppress
+// the transient "Database is busy" message regardless of which component
+// emits it. Bump SW so production clients pull the new App.js bundle.
+const CACHE_NAME = 'paras-reward-v13';
+const RUNTIME_CACHE = 'paras-runtime-v13';
+const API_CACHE = 'paras-api-v13';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
