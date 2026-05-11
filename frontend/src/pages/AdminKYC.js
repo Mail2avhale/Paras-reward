@@ -36,6 +36,39 @@ const AdminKYC = ({ user }) => {
   const [showOrphanedModal, setShowOrphanedModal] = useState(false);
   const [fixingOrphaned, setFixingOrphaned] = useState(false);
 
+  // Force Approve modal (May 11, 2026 — admin escape hatch for stuck KYCs)
+  const [showForceApproveModal, setShowForceApproveModal] = useState(false);
+  const [forceApproveIdentifier, setForceApproveIdentifier] = useState('');
+  const [forceApproving, setForceApproving] = useState(false);
+
+  const handleForceApprove = async () => {
+    const id = (forceApproveIdentifier || '').trim();
+    if (!id) {
+      toast.error('Enter mobile / email / kyc_id / uid');
+      return;
+    }
+    setForceApproving(true);
+    try {
+      const res = await axios.post(`${API}/kyc/admin/force-approve`, {
+        identifier: id,
+        admin_id: user?.uid,
+      }, { timeout: 20000 });
+      const d = res.data || {};
+      toast.success(
+        `✅ Approved: ${d.user_name || d.uid}${d.auto_created ? ' (record auto-created)' : ''}`,
+        { duration: 5000 }
+      );
+      setForceApproveIdentifier('');
+      setShowForceApproveModal(false);
+      fetchKYCDocuments(currentPage, statusFilter, debouncedSearch);
+      fetchStats();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Force approve failed');
+    } finally {
+      setForceApproving(false);
+    }
+  };
+
   // Sync all KYC statuses
   const syncAllKYCStatus = async () => {
     if (!confirm('This will sync KYC status for all users. Continue?')) return;
@@ -582,6 +615,16 @@ const AdminKYC = ({ user }) => {
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button
+            onClick={() => setShowForceApproveModal(true)}
+            variant="outline"
+            size="sm"
+            className="border-amber-500 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20"
+            data-testid="force-approve-btn"
+          >
+            <Zap className="w-4 h-4 mr-2" />
+            Force Approve
           </Button>
           <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer">
             <input
@@ -1170,6 +1213,80 @@ const AdminKYC = ({ user }) => {
                   </Button>
                 </div>
               </div>
+            </div>
+          </Card>
+        </div>
+      )}
+      {/* ============ FORCE APPROVE MODAL (Admin Escape Hatch) ============ */}
+      {showForceApproveModal && (
+        <div
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          onClick={() => !forceApproving && setShowForceApproveModal(false)}
+          data-testid="force-approve-modal"
+        >
+          <Card
+            className="max-w-md w-full p-6 bg-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Force Approve KYC</h3>
+                <p className="text-xs text-slate-500">Admin override — auto-creates record if missing</p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
+              <strong>Use when</strong>: a user's KYC won't show in the list, can't be found,
+              or buttons stay inactive. Paste their mobile / email / kyc_id / uid below.
+            </div>
+
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Identifier
+            </label>
+            <Input
+              type="text"
+              placeholder="Mobile / Email / kyc_id / uid"
+              value={forceApproveIdentifier}
+              onChange={(e) => setForceApproveIdentifier(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !forceApproving) handleForceApprove();
+              }}
+              disabled={forceApproving}
+              autoFocus
+              data-testid="force-approve-input"
+              className="mb-4"
+            />
+
+            <div className="flex gap-2">
+              <Button
+                onClick={handleForceApprove}
+                disabled={forceApproving || !forceApproveIdentifier.trim()}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                data-testid="force-approve-confirm-btn"
+              >
+                {forceApproving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Approving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Force Approve
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowForceApproveModal(false)}
+                disabled={forceApproving}
+                className="border-slate-300"
+              >
+                Cancel
+              </Button>
             </div>
           </Card>
         </div>

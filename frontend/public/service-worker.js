@@ -1,11 +1,12 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v14: May 11, 2026 — Sale Elite tab "Look Up" button overflow fix on mobile
-// (stack vertically on screens <640px). Bump SW so production clients pull the
-// new SaleEliteSubscription.js bundle.
-const CACHE_NAME = 'paras-reward-v14';
-const RUNTIME_CACHE = 'paras-runtime-v14';
-const API_CACHE = 'paras-api-v14';
+// v15: May 11, 2026 — Admin KYC bulletproof force-approve. New endpoint
+// /api/kyc/admin/force-approve supports kyc_id / uid / mobile / email / name.
+// New "Force Approve" button on Admin KYC page + auto-create missing records.
+// Bump SW so production clients pull the updated AdminKYC.js bundle.
+const CACHE_NAME = 'paras-reward-v15';
+const RUNTIME_CACHE = 'paras-runtime-v15';
+const API_CACHE = 'paras-api-v15';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

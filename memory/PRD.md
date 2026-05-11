@@ -9,6 +9,58 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### Admin KYC — Bulletproof Force-Approve Solution — DONE (11 May 2026)
+
+**Issue (production parasreward.com)**: Even after May 10 fix (frontend `doc.kyc_id || doc.uid` fallback + service-worker bump), KYC approve still wasn't working for the admin. User asked for a **100% guaranteed approval solution** that works for ANY KYC record in any state.
+
+**Root Cause (post-mortem of prior fix limits)**: The fix only addressed the frontend disabled-button bug. But there were OTHER failure paths:
+1. Some users had `users.kyc_status` set but **no `kyc` collection record at all** → frontend list never showed them.
+2. Bulk-verify endpoint **didn't exist** in backend (frontend was calling missing route).
+3. `verify_kyc_by_id` filter was `{"kyc_id": kyc_id} if kyc.get("kyc_id") else {"uid": uid}` — fine for found records but no flexible identifier matching.
+
+**Comprehensive Fix (3 layers, backend + frontend)**:
+
+1. **Backend `routes/kyc.py /{kyc_id}/verify`** — Now SUPER RESILIENT:
+   - Path param can be `kyc_id`, `uid`, `mobile (10-digit)`, or `email`.
+   - Tries 4 lookups in order; covers all legacy data shapes.
+   - Auto-creates a `kyc` doc if user exists but record is missing.
+   - All updates use `$or` so we never miss the right doc.
+
+2. **Backend `routes/kyc.py /bulk-verify`** — NEW endpoint:
+   - Frontend was calling this but it didn't exist → frontend bulk approve silently failed.
+   - Loops through `kyc_ids[]` (each may be kyc_id or uid), updates with `$or` filter.
+   - Returns `{success, modified, total, failures[], action}` for partial-success reporting.
+
+3. **Backend `routes/kyc.py /admin/force-approve`** — NEW dedicated escape-hatch endpoint:
+   - Body: `{identifier: <any>, admin_id, reason}`.
+   - Identifier accepts kyc_id, uid, mobile (any format), email, or name (regex partial).
+   - **Auto-creates** the kyc record with `verification_method='admin_force_approve'` if missing.
+   - Returns `{success, message, uid, user_name, user_mobile, auto_created}`.
+
+4. **Frontend `pages/AdminKYC.js`** — NEW "Force Approve" button + modal:
+   - Top-right toolbar `[Zap] Force Approve` button (amber-themed).
+   - Modal: input for `Mobile / Email / kyc_id / uid` + Force Approve confirmation.
+   - Press Enter or click → calls `POST /api/kyc/admin/force-approve`.
+   - On success: refreshes list + stats, shows toast with user name + "(record auto-created)" if applicable.
+   - data-testids: `force-approve-btn`, `force-approve-modal`, `force-approve-input`, `force-approve-confirm-btn`.
+
+5. **Service Worker v14 → v15** to evict old frontend bundle.
+
+**E2E Testing on Preview (all 6 cases PASS)**:
+- ✅ Force approve by mobile (10-digit) → auto-created kyc record
+- ✅ Force approve by email → auto-created
+- ✅ Force approve by uid (existing user)
+- ✅ Truly non-existent identifier → clean 404
+- ✅ Bulk-verify with mix of kyc_id + uid → 2/2 modified
+- ✅ Status correctly flips `pending → verified` in both `users` and `kyc` collections
+
+**Production Workflow Now**:
+- **Normal case**: Admin sees KYC in list → clicks Approve button → works (single verify endpoint with resilient matching).
+- **Mass approval**: Admin selects checkboxes → "Approve All" → works (bulk-verify endpoint).
+- **Stuck/missing case**: Admin clicks "Force Approve" → pastes user's mobile/email → instant approval, record auto-created if needed.
+
+
+
 ### Sale Elite — Community Post + Network Cache Sync — DONE (11 May 2026)
 
 **Issue (production)**: User sponsored an Elite subscription for "Suwarna A." successfully (14,265.84 PRC deducted, PRC Statement shows "Sponsored Elite subscription for Suwarna A."). But:

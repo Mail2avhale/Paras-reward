@@ -446,34 +446,101 @@ async def get_kyc_details(uid: str):
 # New endpoint to match frontend path: /kyc/{kyc_id}/verify
 @router.post("/{kyc_id}/verify")
 async def verify_kyc_by_id(kyc_id: str, request: Request):
-    """Verify/Approve KYC by kyc_id (Admin) - matches frontend path"""
+    """Verify/Approve KYC by kyc_id (Admin) - matches frontend path.
+
+    SUPER RESILIENT (May 11, 2026 fix):
+    - The path param `kyc_id` may actually be kyc_id, uid, mobile, OR email.
+    - Tries ALL four lookups in order; finds the right record no matter what.
+    - If no KYC record exists but the user does → AUTO-CREATES a verified KYC
+      record on the fly (admin force-approve semantics — Admin trust path).
+    - All update queries use $or so we never miss an update on legacy data.
+    """
     try:
         data = await request.json()
-        admin_id = data.get("admin_id") or data.get("admin_uid")
+        admin_id = data.get("admin_id") or data.get("admin_uid") or "admin"
         action = data.get("action", "approve")
-        
-        # Find KYC by kyc_id
-        kyc = await db.kyc.find_one({"kyc_id": kyc_id})
+
+        identifier = (kyc_id or "").strip()
+        if not identifier:
+            raise HTTPException(status_code=400, detail="Missing identifier")
+
+        # --- Robust multi-field lookup -------------------------------------
+        kyc = None
+        # 1. Try kyc_id (exact)
+        kyc = await db.kyc.find_one({"kyc_id": identifier})
+        # 2. Try uid (exact) — covers legacy records without kyc_id
         if not kyc:
-            # Try finding by uid as fallback
-            kyc = await db.kyc.find_one({"uid": kyc_id})
-        
-        if not kyc:
-            raise HTTPException(status_code=404, detail="KYC not found")
-        
-        uid = kyc.get("uid")
-        now = datetime.now(timezone.utc).isoformat()
-        
-        if action == "approve":
-            await db.kyc.update_one(
-                {"kyc_id": kyc_id} if kyc.get("kyc_id") else {"uid": uid},
-                {"$set": {
-                    "status": "verified",
-                    "verified_at": now,
-                    "verified_by": admin_id
-                }}
+            kyc = await db.kyc.find_one({"uid": identifier})
+        # 3. Treat as mobile (last 10 digits)
+        if not kyc and identifier.replace("+", "").replace("-", "").isdigit():
+            digits = "".join(c for c in identifier if c.isdigit())[-10:]
+            if digits:
+                user_doc = await db.users.find_one(
+                    {"$or": [{"mobile": digits}, {"mobile": f"+91{digits}"},
+                             {"phone": digits}, {"phone": f"+91{digits}"}]},
+                    {"_id": 0, "uid": 1}
+                )
+                if user_doc:
+                    kyc = await db.kyc.find_one({"uid": user_doc["uid"]})
+                    if not kyc:
+                        # No KYC record at all → ghost record from a sync issue.
+                        # We'll auto-create one below if action=approve.
+                        kyc = {"uid": user_doc["uid"], "kyc_id": None, "_ghost": True}
+        # 4. Treat as email
+        if not kyc and "@" in identifier:
+            user_doc = await db.users.find_one(
+                {"email": identifier}, {"_id": 0, "uid": 1}
             )
-            
+            if user_doc:
+                kyc = await db.kyc.find_one({"uid": user_doc["uid"]})
+                if not kyc:
+                    kyc = {"uid": user_doc["uid"], "kyc_id": None, "_ghost": True}
+
+        if not kyc:
+            raise HTTPException(status_code=404, detail="KYC / user not found for this identifier")
+
+        uid = kyc.get("uid")
+        if not uid:
+            raise HTTPException(status_code=400, detail="KYC record has no associated user")
+
+        now = datetime.now(timezone.utc).isoformat()
+
+        # Build a $or-based filter so we update the right doc regardless of
+        # which lookup matched.
+        update_filter = {"$or": [{"kyc_id": identifier}, {"uid": uid}]}
+        if kyc.get("kyc_id"):
+            update_filter = {"$or": [{"kyc_id": kyc["kyc_id"]}, {"uid": uid}]}
+
+        if action == "approve":
+            # Auto-create kyc doc if it's a ghost (user exists but no kyc record)
+            if kyc.get("_ghost"):
+                await db.kyc.update_one(
+                    {"uid": uid},
+                    {
+                        "$setOnInsert": {
+                            "kyc_id": str(uuid.uuid4()),
+                            "uid": uid,
+                            "submitted_at": now,
+                            "verification_method": "admin_force_approve",
+                        },
+                        "$set": {
+                            "status": "verified",
+                            "verified_at": now,
+                            "verified_by": admin_id,
+                        }
+                    },
+                    upsert=True
+                )
+            else:
+                await db.kyc.update_one(
+                    update_filter,
+                    {"$set": {
+                        "status": "verified",
+                        "verified_at": now,
+                        "verified_by": admin_id,
+                    }}
+                )
+
             await db.users.update_one(
                 {"uid": uid},
                 {"$set": {
@@ -482,20 +549,21 @@ async def verify_kyc_by_id(kyc_id: str, request: Request):
                     "kyc_verified_by": admin_id
                 }}
             )
-            
-            return {"message": "KYC verified successfully", "status": "verified"}
+
+            logging.info(f"[KYC verify] approved uid={uid} via identifier={identifier} by admin={admin_id}")
+            return {"message": "KYC verified successfully", "status": "verified", "uid": uid}
         else:
-            reason = data.get("reason", "Documents not clear or invalid")
-            await db.kyc.update_one(
-                {"kyc_id": kyc_id} if kyc.get("kyc_id") else {"uid": uid},
-                {"$set": {
-                    "status": "rejected",
-                    "rejection_reason": reason,
-                    "rejected_at": now,
-                    "rejected_by": admin_id
-                }}
-            )
-            
+            reason = data.get("reason") or data.get("notes") or "Documents not clear or invalid"
+            if not kyc.get("_ghost"):
+                await db.kyc.update_one(
+                    update_filter,
+                    {"$set": {
+                        "status": "rejected",
+                        "rejection_reason": reason,
+                        "rejected_at": now,
+                        "rejected_by": admin_id
+                    }}
+                )
             await db.users.update_one(
                 {"uid": uid},
                 {"$set": {
@@ -504,12 +572,264 @@ async def verify_kyc_by_id(kyc_id: str, request: Request):
                     "kyc_rejected_at": now
                 }}
             )
-            
-            return {"message": "KYC rejected", "status": "rejected"}
+            logging.info(f"[KYC verify] rejected uid={uid} via identifier={identifier} by admin={admin_id}")
+            return {"message": "KYC rejected", "status": "rejected", "uid": uid}
     except HTTPException:
         raise
     except Exception as e:
+        logging.error(f"[KYC verify] error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# BULLETPROOF BULK VERIFY (May 11, 2026)
+# ---------------------------------------------------------------------------
+# Frontend AdminKYC.js calls POST /kyc/bulk-verify with {kyc_ids:[...], action,
+# admin_id, reason}. Each entry in kyc_ids may be a kyc_id OR a uid (legacy
+# records). We loop through each ID and call the same resilient logic as the
+# single-verify endpoint so admin can mass-approve without any failures.
+# ---------------------------------------------------------------------------
+@router.post("/bulk-verify")
+async def bulk_verify_kyc(request: Request):
+    """Approve / reject multiple KYC records in one call (Admin)."""
+    try:
+        data = await request.json()
+        ids = data.get("kyc_ids") or []
+        action = data.get("action", "approve")
+        admin_id = data.get("admin_id") or data.get("admin_uid") or "admin"
+        reason = data.get("reason") or data.get("notes") or "Documents not clear or invalid"
+
+        if not ids:
+            raise HTTPException(status_code=400, detail="No KYC IDs provided")
+        if action not in ("approve", "reject"):
+            raise HTTPException(status_code=400, detail="Invalid action")
+
+        now = datetime.now(timezone.utc).isoformat()
+        modified = 0
+        failures = []
+
+        for ident in ids:
+            try:
+                # Find by kyc_id OR uid (legacy fallback)
+                kyc = await db.kyc.find_one(
+                    {"$or": [{"kyc_id": ident}, {"uid": ident}]}
+                )
+                if not kyc:
+                    failures.append({"id": ident, "reason": "not_found"})
+                    continue
+
+                uid = kyc.get("uid")
+                update_filter = {"$or": [
+                    {"kyc_id": kyc.get("kyc_id")} if kyc.get("kyc_id") else {"uid": uid},
+                    {"uid": uid}
+                ]}
+
+                if action == "approve":
+                    await db.kyc.update_one(
+                        update_filter,
+                        {"$set": {
+                            "status": "verified",
+                            "verified_at": now,
+                            "verified_by": admin_id
+                        }}
+                    )
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {
+                            "kyc_status": "verified",
+                            "kyc_verified_at": now,
+                            "kyc_verified_by": admin_id
+                        }}
+                    )
+                else:
+                    await db.kyc.update_one(
+                        update_filter,
+                        {"$set": {
+                            "status": "rejected",
+                            "rejection_reason": reason,
+                            "rejected_at": now,
+                            "rejected_by": admin_id
+                        }}
+                    )
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {
+                            "kyc_status": "rejected",
+                            "kyc_rejection_reason": reason,
+                            "kyc_rejected_at": now
+                        }}
+                    )
+                modified += 1
+            except Exception as inner_err:
+                logging.warning(f"[KYC bulk-verify] {ident} failed: {inner_err}")
+                failures.append({"id": ident, "reason": str(inner_err)})
+
+        return {
+            "success": True,
+            "modified": modified,
+            "total": len(ids),
+            "failures": failures,
+            "action": action,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[KYC bulk-verify] hard error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# FORCE APPROVE BY ANY IDENTIFIER (May 11, 2026)
+# ---------------------------------------------------------------------------
+# Admin escape-hatch: when a user comes to admin saying "approve my KYC" but
+# their record can't be found in the UI, admin can paste ANY identifier here
+# (kyc_id, uid, mobile, email, name partial) and get an instant verified
+# status. Auto-creates a kyc doc if the user exists but no kyc record.
+#
+# This endpoint is intended to be hit from the new "Force Approve" modal in
+# the Admin KYC page. It uses the same resilient logic as `/verify` but
+# additionally supports name-partial search.
+# ---------------------------------------------------------------------------
+@router.post("/admin/force-approve")
+async def admin_force_approve_kyc(request: Request):
+    """Force-approve a KYC by ANY identifier. Auto-creates record if missing.
+
+    Body: {identifier: str, admin_id: str, reason: str (optional)}
+    `identifier` accepts: kyc_id, uid, mobile (10-digit), email, or name part.
+    """
+    try:
+        data = await request.json()
+        identifier = (data.get("identifier") or "").strip()
+        admin_id = data.get("admin_id") or data.get("admin_uid") or "admin"
+
+        if not identifier:
+            raise HTTPException(status_code=400, detail="Identifier required")
+
+        # --- Find user via any of the lookups -----------------------------
+        user = None
+        uid = None
+        kyc = None
+
+        # 1. KYC by kyc_id
+        kyc = await db.kyc.find_one({"kyc_id": identifier})
+        if kyc:
+            uid = kyc.get("uid")
+
+        # 2. KYC / users by uid
+        if not kyc:
+            kyc = await db.kyc.find_one({"uid": identifier})
+            if kyc:
+                uid = kyc.get("uid")
+            else:
+                user = await db.users.find_one({"uid": identifier})
+                if user:
+                    uid = user.get("uid")
+
+        # 3. Mobile (10-digit anywhere in string)
+        if not uid:
+            digits = "".join(c for c in identifier if c.isdigit())
+            if len(digits) >= 10:
+                tail = digits[-10:]
+                user = await db.users.find_one({
+                    "$or": [
+                        {"mobile": tail}, {"mobile": f"+91{tail}"},
+                        {"phone": tail}, {"phone": f"+91{tail}"},
+                        {"mobile": {"$regex": f"{tail}$"}}
+                    ]
+                })
+                if user:
+                    uid = user.get("uid")
+                    kyc = await db.kyc.find_one({"uid": uid})
+
+        # 4. Email
+        if not uid and "@" in identifier:
+            user = await db.users.find_one({"email": identifier.lower()})
+            if user:
+                uid = user.get("uid")
+                kyc = await db.kyc.find_one({"uid": uid})
+
+        # 5. Name partial (best-effort, case-insensitive)
+        if not uid:
+            user = await db.users.find_one({
+                "$or": [
+                    {"name": {"$regex": identifier, "$options": "i"}},
+                    {"first_name": {"$regex": identifier, "$options": "i"}}
+                ]
+            })
+            if user:
+                uid = user.get("uid")
+                kyc = await db.kyc.find_one({"uid": uid})
+
+        if not uid:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No user found matching identifier '{identifier}'"
+            )
+
+        # Resolve user details for response
+        if not user:
+            user = await db.users.find_one(
+                {"uid": uid}, {"_id": 0, "name": 1, "mobile": 1, "email": 1}
+            ) or {}
+
+        now = datetime.now(timezone.utc).isoformat()
+
+        # AUTO-CREATE kyc doc if missing — admin trust path
+        if not kyc:
+            await db.kyc.insert_one({
+                "kyc_id": str(uuid.uuid4()),
+                "uid": uid,
+                "submitted_at": now,
+                "status": "verified",
+                "verified_at": now,
+                "verified_by": admin_id,
+                "verification_method": "admin_force_approve",
+            })
+            created = True
+        else:
+            created = False
+            await db.kyc.update_one(
+                {"$or": [{"kyc_id": kyc.get("kyc_id")} if kyc.get("kyc_id") else {"uid": uid},
+                         {"uid": uid}]},
+                {"$set": {
+                    "status": "verified",
+                    "verified_at": now,
+                    "verified_by": admin_id,
+                    "force_approved_by_admin": True,
+                }}
+            )
+
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "kyc_status": "verified",
+                "kyc_verified_at": now,
+                "kyc_verified_by": admin_id
+            }}
+        )
+
+        logging.info(
+            f"[KYC force-approve] uid={uid} via '{identifier}' by admin={admin_id} "
+            f"(created={created})"
+        )
+        return {
+            "success": True,
+            "message": (
+                "KYC force-approved successfully (auto-created record)" if created
+                else "KYC force-approved successfully"
+            ),
+            "uid": uid,
+            "user_name": user.get("name") if user else None,
+            "user_mobile": user.get("mobile") if user else None,
+            "auto_created": created,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[KYC force-approve] error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 # New endpoint: /kyc/{kyc_id}/reject  
