@@ -33,7 +33,7 @@ const SERVICE_THEME = {
   sale_elite_subscription: {
     gradient: 'from-pink-500 via-rose-500 to-orange-500',
     chip: 'bg-rose-100 text-rose-700 border-rose-200',
-    icon: '🎁',
+    icon: '💼',
     label: 'Sale Subscription',
   },
   sale_elite_received: {
@@ -65,11 +65,11 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
   let chipLabel = theme.label;
   if (isSubscription && planName) chipLabel = `${theme.label} • ${planName}`;
   else if (isSaleElite) chipLabel = 'Sale Subscription';
-  else if (isSaleEliteReceived) chipLabel = `🎁 ${planName || 'Elite'} • Sponsored Gift`;
+  else if (isSaleEliteReceived) chipLabel = `Subscription • ${planName || 'Elite'}`;
   let completionLabel = 'Successfully Completed';
   if (isSubscription) completionLabel = 'Upgraded';
-  else if (isSaleEliteReceived) completionLabel = `Sponsored by ${meta.sender_masked_name || 'a friend'}`;
-  else if (isSaleElite) completionLabel = 'Sponsored';
+  else if (isSaleEliteReceived) completionLabel = `Purchased from ${meta.sender_masked_name || 'a seller'}`;
+  else if (isSaleElite) completionLabel = `Sold to ${meta.beneficiary_masked_name || 'a buyer'}`;
   const isOwn = !!currentUserId && meta.beneficiary_user_id === currentUserId;
 
   const [reactions, setReactions] = useState(post.reactions_count || { celebrate: 0, love: 0, fire: 0 });

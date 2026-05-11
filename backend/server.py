@@ -13425,9 +13425,9 @@ async def _create_sale_elite_community_post(
             "is_admin_post": True,
             "is_success_story": True,
             "category": "Success Story",
-            "title": f"🎁 {sender_masked} ➡️ {benef_masked} (Elite Sponsored)",
+            "title": f"💼 {sender_masked} ➡️ {benef_masked} (Sale Subscription)",
             "content": "\n".join([
-                f"🎁 **{sender_masked}** from **{s_loc}** just sponsored an Elite subscription for **{benef_masked}**.",
+                f"💼 **{sender_masked}** from **{s_loc}** sold an Elite subscription to **{benef_masked}**.",
                 "",
                 "💎 Plan: **Elite** — 28 days",
                 f"💰 Value: **₹{amount:,.2f}**",
@@ -13440,7 +13440,7 @@ async def _create_sale_elite_community_post(
             "metadata": {
                 "service_type": "sale_elite_subscription",
                 "service_label": "Sale Subscription",
-                "service_icon": "🎁",
+                "service_icon": "💼",
                 "amount_inr": amount,
                 "first_name": sender_masked,
                 "location": s_loc,
@@ -13489,7 +13489,7 @@ async def _create_sale_elite_community_post(
             "content": "\n".join([
                 f"👑 **{benef_masked}** from **{b_loc}** is now an **Elite Subscriber**.",
                 "",
-                f"🎁 Sponsored by **{sender_masked}**",
+                f"🛒 Purchased from **{sender_masked}**",
                 "💎 Plan: **Elite** — 28 days",
                 f"💰 Value: **₹{amount:,.2f}**",
                 "",

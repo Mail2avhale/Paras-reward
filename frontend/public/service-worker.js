@@ -1,11 +1,11 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v19: May 11, 2026 — Beneficiary post on Sale Elite now visually distinct:
-// "🎁 Elite • Sponsored Gift" chip + "Sponsored by X" completion badge.
-// Differentiates from self-subscription Upgraded posts.
-const CACHE_NAME = 'paras-reward-v19';
-const RUNTIME_CACHE = 'paras-runtime-v19';
-const API_CACHE = 'paras-api-v19';
+// v20: May 11, 2026 — Sale Elite framing fix: it's a SALE-PURCHASE not a
+// gift/sponsorship. Sender post: "Sold to X". Beneficiary post: "Purchased
+// from Y". Removed gift emoji.
+const CACHE_NAME = 'paras-reward-v20';
+const RUNTIME_CACHE = 'paras-runtime-v20';
+const API_CACHE = 'paras-api-v20';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
