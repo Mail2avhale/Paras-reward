@@ -13968,7 +13968,7 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
             "prc_amount": total_prc,
             "inr_value": pricing["base_with_gst_inr"],
             "description": (
-                f"Sponsored Elite subscription for "
+                f"Sold Elite subscription to "
                 f"{_mask_name(beneficiary.get('name', 'User'))} "
                 f"(Mobile ****{_normalize_mobile(request.beneficiary_mobile)[-4:]}) "
                 f"{desc_tail}"
