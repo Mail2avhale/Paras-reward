@@ -9,6 +9,38 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### Sale Elite — Community Post + Network Cache Sync — DONE (11 May 2026)
+
+**Issue (production)**: User sponsored an Elite subscription for "Suwarna A." successfully (14,265.84 PRC deducted, PRC Statement shows "Sponsored Elite subscription for Suwarna A."). But:
+1. Community forum मध्ये Sale Elite saying "X ➡️ Y" post तयार झाला नाही.
+2. Sender च्या mining-network-size / mining rate live update झाली नाही (60s cache lag).
+
+**Root Causes**:
+1. Sale Elite endpoint mga `create_success_story_post()` call केला नाही (Self PRC subscription does it, Sale Elite forgot to).
+2. `growth_economy._ACTIVE_NETWORK_CACHE` was not invalidated after the beneficiary was added → mining rate page reflected stale 0-count for up to 60s.
+
+**Fixes (`server.py` only)**:
+1. **New helper `_create_sale_elite_community_post()`** — inserts a celebratory post with BOTH masked names (user choice option **C**: `"Vishal R. ➡️ Suwarna A. (Elite Sponsored)"`). Stores `metadata.sender_uid`, `metadata.beneficiary_user_id`, `metadata.amount_inr`, `metadata.ref_id` (= `sale_elite_<sale_id>`) for idempotency. Skipped for upcoming/queued plans — fires only on actual activation.
+2. **Hook in `sale_elite_activate`**: `asyncio.create_task(_create_sale_elite_community_post(...))` after company-wallet credits, fire-and-forget.
+3. **Cache invalidation**: `invalidate_active_network_cache(sender_uid)` + `invalidate_active_network_cache(beneficiary_uid)` so the dashboard mining-rate calculation reflects the +1 immediately.
+4. **New admin endpoint `POST /api/admin/sale-elite/backfill-community-posts`** — idempotent recovery for the production user's existing sponsorship (Suwarna A.) that activated before this fix. Scans `sponsored_subscriptions` collection, creates missing community posts. Auth required.
+
+**Verified on preview**: Endpoint returns `{success, scanned, created, skipped_existing}`. Healthy.
+
+**Production Deploy Steps**:
+1. Save to Github + redeploy backend
+2. As admin, call once to recover the recent Suwarna A. post:
+   ```
+   curl -X POST https://www.parasreward.com/api/admin/sale-elite/backfill-community-posts \
+     -H "Authorization: Bearer $ADMIN_TOKEN"
+   ```
+3. Open Community → Success Story tab. New "Vishal R. ➡️ Suwarna A. (Elite Sponsored)" post will appear.
+4. Future sponsorships automatically post (no manual step needed).
+
+**Network size**: Was already correctly counting via `assign_subscription_position(beneficiary)` — the issue was only cache lag, now fixed. Sender's mining rate updates within seconds.
+
+
+
 ### Community "Lifetime" Badge vs Top 10 Leaderboard Sync — DONE (11 May 2026)
 
 **Issue (production parasreward.com)**: Same user (Nimesh, Nadia) showed different lifetime amounts:

@@ -13336,6 +13336,120 @@ def _mask_name(name: str) -> str:
     return f"{parts[0]} {parts[-1][0]}."
 
 
+async def _create_sale_elite_community_post(
+    sender_uid: str,
+    sender_name: str,
+    beneficiary_uid: str,
+    beneficiary_name: str,
+    amount_inr: float,
+    sale_id: str,
+):
+    """Insert a celebratory Community Forum post for a Sale Elite sponsorship.
+    Per user choice (May 11, 2026, option C): show BOTH masked names —
+    "Vishal R. ➡️ Suwarna A. (Elite Sponsored) — ₹1,178.82".
+    Fire-and-forget — errors logged, never raised.
+    """
+    try:
+        if db is None:
+            return
+        # Skip test/internal accounts
+        bad_prefixes = ("admin-test", "test-", "__TEST", "__test", "burn-test", "system")
+        if any(str(sender_uid).startswith(p) for p in bad_prefixes):
+            return
+        if any(str(beneficiary_uid).startswith(p) for p in bad_prefixes):
+            return
+
+        # Idempotency: skip if a post already exists for this sale_id
+        existing = await db.community_posts.find_one(
+            {"metadata.ref_id": f"sale_elite_{sale_id}", "is_success_story": True},
+            {"_id": 1}
+        )
+        if existing:
+            return
+
+        sender_masked = _mask_name(sender_name)
+        benef_masked = _mask_name(beneficiary_name)
+
+        # Sender city/state (for location chip)
+        sender_doc = await db.users.find_one(
+            {"uid": sender_uid},
+            {"_id": 0, "city": 1, "state": 1, "address": 1}
+        ) or {}
+        city = (sender_doc.get("city") or
+                ((sender_doc.get("address") or {}).get("city")
+                 if isinstance(sender_doc.get("address"), dict) else "") or "").strip()
+        state = (sender_doc.get("state") or
+                 ((sender_doc.get("address") or {}).get("state")
+                  if isinstance(sender_doc.get("address"), dict) else "") or "").strip()
+        location = ", ".join([p for p in [city, state] if p]) or "India"
+
+        title = f"👑 {sender_masked} ➡️ {benef_masked} (Elite Sponsored)"
+        content = "\n".join([
+            f"🎁 Congratulations! **{sender_masked}** from **{location}** just sponsored an Elite subscription for **{benef_masked}**.",
+            "",
+            f"💎 Sponsored Plan: **Elite** — 28 days",
+            f"💰 Value: **₹{float(amount_inr):,.2f}**",
+            "",
+            "✅ Peer-to-Peer subscription via Paras Reward",
+        ])
+
+        post_id = str(uuid.uuid4())
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        post_doc = {
+            "post_id": post_id,
+            "user_id": "system",
+            "user_name": "Paras Reward",
+            "user_plan": "admin",
+            "status": "active",
+            "is_helpful": False,
+            "report_count": 0,
+            "author_uid": "system",
+            "author_name": "Paras Reward",
+            "author_role": "admin",
+            "is_admin_post": True,
+            "is_success_story": True,
+            "category": "Success Story",
+            "title": title,
+            "content": content,
+            "image_url": None,
+            "images": [],
+            "tags": ["sale_elite_subscription", "subscription", "elite", "success"],
+            "metadata": {
+                "service_type": "sale_elite_subscription",
+                "service_label": "Elite Sponsored",
+                "service_icon": "👑",
+                "amount_inr": float(amount_inr),
+                "first_name": sender_masked,
+                "location": location,
+                "city": city,
+                "state": state,
+                "ref_id": f"sale_elite_{sale_id}",
+                "sale_id": sale_id,
+                "sender_uid": sender_uid,
+                "sender_masked_name": sender_masked,
+                "beneficiary_user_id": beneficiary_uid,
+                "beneficiary_masked_name": benef_masked,
+                "plan_name": "Elite",
+            },
+            "like_count": 0,
+            "reactions_count": {"celebrate": 0, "love": 0, "fire": 0},
+            "comment_count": 0,
+            "view_count": 0,
+            "bookmark_count": 0,
+            "helpful_count": 0,
+            "is_pinned": False,
+            "is_deleted": False,
+            "is_reported": False,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+        }
+        await db.community_posts.insert_one(post_doc)
+        logging.info(f"[SALE-ELITE COMMUNITY] Posted {sale_id}: {sender_masked} -> {benef_masked}")
+    except Exception as e:
+        logging.warning(f"[SALE-ELITE COMMUNITY] post create failed (non-fatal): {e}")
+
+
 @api_router.post("/subscription/sale-elite/lookup")
 async def sale_elite_lookup_beneficiary(request: SaleEliteLookupRequest):
     """Preview the beneficiary linked to a mobile number before charging.
@@ -13859,6 +13973,34 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
             except Exception:
                 pass
 
+        # Active network cache — sender's mining-network-size memoization must
+        # be cleared so the dashboard / mining rate calc immediately reflect
+        # the newly-added beneficiary instead of waiting up to 60s for TTL.
+        # This also benefits the beneficiary (no stale "0 network" badge).
+        try:
+            from routes.growth_economy import invalidate_active_network_cache
+            invalidate_active_network_cache(sender.get("uid"))
+            invalidate_active_network_cache(beneficiary.get("uid"))
+        except Exception as _net_err:
+            logging.warning(f"[SALE-ELITE] network cache invalidation non-fatal: {_net_err}")
+
+        # ===== Community Forum Success-Story post =====
+        # Show BOTH sender and beneficiary names ("Vishal R. ➡️ Suwarna A.")
+        # per user choice (May 11, 2026). Skipped for queued/upcoming
+        # subscriptions so the post fires on actual activation only.
+        if not is_upcoming:
+            try:
+                asyncio.create_task(_create_sale_elite_community_post(
+                    sender_uid=sender.get("uid"),
+                    sender_name=sender.get("name", "User"),
+                    beneficiary_uid=beneficiary.get("uid"),
+                    beneficiary_name=beneficiary.get("name", "User"),
+                    amount_inr=pricing.get("base_with_gst_inr") or 0,
+                    sale_id=sale_id,
+                ))
+            except Exception as _cp_err:
+                logging.warning(f"[SALE-ELITE] community post hook failed (non-fatal): {_cp_err}")
+
         logging.info(
             f"[SALE-ELITE] {sender.get('uid')} sponsored Elite for "
             f"{beneficiary.get('uid')} ({total_prc:.0f} PRC, "
@@ -13997,6 +14139,59 @@ async def sale_elite_eligibility(uid: str):
             "sales_today": today_count,
         },
     }
+
+
+
+@api_router.post("/admin/sale-elite/backfill-community-posts")
+async def admin_backfill_sale_elite_community_posts():
+    """One-time admin backfill: for every existing `sponsored_subscriptions`
+    record without a corresponding Community Forum post, create one now.
+
+    Idempotent (skips records that already have a community post). Safe to run
+    multiple times. Returns counts.
+    """
+    try:
+        cursor = db.sponsored_subscriptions.find(
+            {"status": {"$in": ["active", "completed"]}},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(500)
+
+        scanned = 0
+        created = 0
+        skipped_existing = 0
+        async for s in cursor:
+            scanned += 1
+            sale_id = s.get("sale_id")
+            if not sale_id:
+                continue
+            existing = await db.community_posts.find_one(
+                {"metadata.ref_id": f"sale_elite_{sale_id}", "is_success_story": True},
+                {"_id": 1}
+            )
+            if existing:
+                skipped_existing += 1
+                continue
+            await _create_sale_elite_community_post(
+                sender_uid=s.get("sender_uid"),
+                sender_name=s.get("sender_name", "User"),
+                beneficiary_uid=s.get("beneficiary_uid"),
+                beneficiary_name=s.get("beneficiary_name", "User"),
+                amount_inr=s.get("inr_equivalent", 0),
+                sale_id=sale_id,
+            )
+            created += 1
+
+        return {
+            "success": True,
+            "scanned": scanned,
+            "created": created,
+            "skipped_existing": skipped_existing,
+        }
+    except Exception as e:
+        logging.error(f"[SALE-ELITE BACKFILL] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 
