@@ -1,12 +1,11 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v16: May 11, 2026 — NUCLEAR "Approve ALL Pending" button + GET URL fallback.
-// New endpoint /api/kyc/admin/approve-all-pending (GET/POST) — admin PIN auth.
-// Approves every pending kyc record + every user with kyc_status=pending,
-// auto-creating stub records when needed. Bump SW to evict old AdminKYC chunk.
-const CACHE_NAME = 'paras-reward-v16';
-const RUNTIME_CACHE = 'paras-runtime-v16';
-const API_CACHE = 'paras-api-v16';
+// v17: May 11, 2026 — Inactive User Cleanup admin page added. New endpoints
+// under /api/admin/inactive-cleanup/* with dry-run + execute + scheduler.
+// Bump SW so production clients pull the new admin chunk + App.js bundle.
+const CACHE_NAME = 'paras-reward-v17';
+const RUNTIME_CACHE = 'paras-runtime-v17';
+const API_CACHE = 'paras-api-v17';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

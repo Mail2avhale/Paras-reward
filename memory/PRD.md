@@ -9,6 +9,67 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### Inactive User Cleanup System — DONE (11 May 2026)
+
+**Goal**: Keep user base lean by auto-purging dormant accounts.
+
+**Confirmed Rules**:
+1. **Rule 1**: Users with NO subscription ever + registered >7 days ago → auto-delete daily
+2. **Rule 2**: Users inactive >60 days (no login/activity) → auto-delete daily
+3. **Cascade**: When deleted, downline `referred_by = null` (downline reduces for parent)
+
+**ALWAYS-PROTECTED guards (cannot bypass)**:
+- KYC verified users — NEVER delete (RBI PMLA Act 5-year compliance)
+- Admin/staff/manager role
+- Pending Eko refunds / withdrawals / bank redeems
+- `is_protected: true` flag (VIP marker)
+- Users with active subscription
+- PRC balance > 0 is **NOT a protector** (user decision: delete allowed)
+
+**Backend** — New module `routes/inactive_user_cleanup.py`:
+- `GET /api/admin/inactive-cleanup/dry-run` — preview counts + sample users (no delete)
+- `POST /api/admin/inactive-cleanup/execute` — actual cascade delete (PIN required)
+- `GET /api/admin/inactive-cleanup/settings` — scheduler config
+- `POST /api/admin/inactive-cleanup/settings` — toggle auto-run, PIN required
+- `POST /api/admin/inactive-cleanup/scheduler/run` — manual trigger
+- Background `daily_inactive_cleanup_task()` — 24h loop, only runs if `auto_run_enabled=true`
+
+**Cascade delete** (per deleted user):
+- Hard-delete from `users` collection
+- Cascade-delete: transactions, mining_sessions, notifications, kyc_documents, luxury_savings, activity_logs, kyc, prc_ledger, wallets, community_posts, support_tickets, withdrawals, bill_payments, subscription_payments, vip_payments, bank_redeems, sponsored_subscriptions, user_logs
+- Orphan: `users.referred_by` set to null (downline count decreases)
+- Snapshot kept in `deleted_users_audit` collection (1-year retention recommended)
+
+**Frontend** — New page `/admin/inactive-cleanup`:
+- Live dry-run preview (counts: Rule 1 / Rule 2 / Protected-skipped)
+- Adjustable thresholds (days_no_sub, days_inactive)
+- Sample list (top 20 users from each rule)
+- Red "Delete N Inactive Users Now" CTA (admin PIN prompt)
+- Daily auto-cleanup toggle (Enable/Disable) with PIN
+- Last-run timestamp + count
+- data-testids: `admin-inactive-cleanup`, `days-no-sub-input`, `days-inactive-input`, `rule1-count`, `rule2-count`, `skipped-count`, `execute-cleanup-btn`, `auto-run-toggle`
+
+**Service Worker bumped v16 → v17**.
+
+**E2E Tested on Preview (7/7 cases PASS)**:
+- ✅ Rule 1 candidate (no sub, 10d old) → DELETED
+- ✅ KYC verified → SKIPPED (RBI compliance)
+- ✅ Recent user (<7d) → SKIPPED
+- ✅ Rule 2 candidate (90d inactive) → DELETED
+- ✅ Admin role → SKIPPED
+- ✅ Active subscription → SKIPPED
+- ✅ Child referred by deleted parent → KEPT, `referred_by` cleaned to null
+- ✅ Audit log written (79 snapshot records during full preview run)
+
+**Production Workflow**:
+1. Visit `/admin/inactive-cleanup`
+2. Adjust days_no_sub / days_inactive sliders
+3. See preview counts update live
+4. Click "Delete N Users" → confirm + PIN → execute (1-2 min for 5000 users)
+5. OR Enable Daily Auto-Cleanup toggle → runs once every 24h
+
+
+
 ### Admin KYC — NUCLEAR "Approve ALL Pending" Solution — DONE (11 May 2026)
 
 **User's frustration**: After multiple iterations of fix, the admin STILL couldn't approve KYCs in production. Frustrated, asked for "something simple, immediate". Built the simplest possible solution.

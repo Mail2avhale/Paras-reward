@@ -79,6 +79,11 @@ from routes.manual_bank_transfer import router as bank_transfer_router, set_db a
 from routes.sustainability_burn import set_db as set_sustainability_burn_db, apply_sustainability_burn, reverse_sustainability_burn
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
+from routes.inactive_user_cleanup import (
+    router as inactive_cleanup_router,
+    set_db as set_inactive_cleanup_db,
+    daily_inactive_cleanup_task,
+)
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
 from routes.leaderboard import router as leaderboard_router, set_db as set_leaderboard_db
 # Chatbot withdrawal routes REMOVED - feature deprecated (March 2026)
@@ -36236,6 +36241,10 @@ api_router.include_router(monitor_router)
 set_kyc_db(db)
 api_router.include_router(kyc_router)
 
+# Inactive user cleanup (auto + manual)
+set_inactive_cleanup_db(db)
+api_router.include_router(inactive_cleanup_router)
+
 # BBPS Services Router (Clean Implementation)
 set_bbps_db(db)
 set_bbps_redeem_limit_check(check_redeem_limit)
@@ -37086,8 +37095,6 @@ async def startup_db():
         print("   → Background retry started. Server will serve requests immediately.")
         asyncio.create_task(retry_db_connection())
         
-        print("✅ Database initialization complete!")
-    
     # Start Task Queue Worker (Phase 4 - Background Tasks)
     print("🔄 Starting background task worker...")
     try:
@@ -37096,6 +37103,14 @@ async def startup_db():
         print("✅ Task queue worker started (10s interval)")
     except Exception as e:
         print(f"⚠️ Task worker start failed (non-critical): {e}")
+
+    # Daily inactive-user cleanup background loop (May 11, 2026)
+    try:
+        asyncio.create_task(daily_inactive_cleanup_task())
+        print("🧹 Daily inactive-user cleanup task scheduled (24h interval, opt-in)")
+    except Exception as e:
+        print(f"⚠️ Inactive cleanup scheduler start failed (non-critical): {e}")
+
     
     # Start scheduler for automated tasks
     print("⏰ Starting scheduled tasks...")
