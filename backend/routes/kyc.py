@@ -8,6 +8,7 @@ from typing import Optional
 from datetime import datetime, timezone
 import asyncio
 import logging
+import os
 import uuid
 
 # Initialize router
@@ -828,6 +829,154 @@ async def admin_force_approve_kyc(request: Request):
     except Exception as e:
         logging.error(f"[KYC force-approve] error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ============================================================================
+# 🚨 NUCLEAR OPTION — APPROVE ALL PENDING KYCs IN ONE SHOT  (May 11, 2026)
+# ----------------------------------------------------------------------------
+# Simple as it gets: one call, every pending KYC + every user with
+# kyc_status="pending" or "submitted" gets approved instantly.
+#
+# Supports BOTH GET and POST so admin can simply visit:
+#   https://www.parasreward.com/api/kyc/admin/approve-all-pending?pin=153759
+# from a browser to approve everything in one shot when the UI buttons are
+# misbehaving (cache / chunk issues / browser quirks).
+# ============================================================================
+@router.api_route("/admin/approve-all-pending", methods=["GET", "POST"])
+async def approve_all_pending_kyc(request: Request):
+    """Approve ALL pending KYCs in one call. Admin PIN required.
+
+    Auth: pass admin PIN via either:
+      - Query param: ?pin=153759
+      - Body JSON: {"pin":"153759","admin_id":"..."}
+      - Header: X-Admin-Pin: 153759
+    The PIN is checked against ADMIN_OVERRIDE_PIN env (defaults to "153759").
+    """
+    try:
+        # ===== Resolve PIN =====
+        pin = request.query_params.get("pin", "")
+        if not pin:
+            try:
+                body = await request.json()
+                pin = (body or {}).get("pin", "") or (body or {}).get("admin_pin", "")
+            except Exception:
+                pin = ""
+        if not pin:
+            pin = request.headers.get("x-admin-pin", "")
+        if not pin:
+            pin = request.headers.get("X-Admin-Pin", "")
+
+        expected = os.environ.get("ADMIN_OVERRIDE_PIN", "153759")
+        if pin != expected:
+            raise HTTPException(status_code=401, detail="Invalid admin PIN")
+
+        admin_id = (
+            request.query_params.get("admin_id")
+            or (await _safe_body(request)).get("admin_id")
+            or "admin-nuclear-approve"
+        )
+
+        now = datetime.now(timezone.utc).isoformat()
+
+        # ===== Phase 1: Approve every pending kyc record =====
+        pending_kyc_result = await db.kyc.update_many(
+            {"status": {"$in": ["pending", "Pending", "PENDING", "submitted", "Submitted", "in_review"]}},
+            {"$set": {
+                "status": "verified",
+                "verified_at": now,
+                "verified_by": admin_id,
+                "force_approved_bulk": True,
+            }}
+        )
+
+        # Backfill missing kyc_id on every record at the same time (safe)
+        await db.kyc.update_many(
+            {"$or": [{"kyc_id": {"$exists": False}}, {"kyc_id": None}, {"kyc_id": ""}]},
+            [{"$set": {"kyc_id": {"$toString": "$_id"}}}]  # MongoDB 4.2+ aggregation pipeline update
+        )
+
+        # ===== Phase 2: Sync ALL kyc-verified records into users.kyc_status =====
+        verified_kyc_uids = [
+            d["uid"] async for d in db.kyc.find(
+                {"status": "verified"}, {"_id": 0, "uid": 1}
+            )
+            if d.get("uid")
+        ]
+        user_sync_result = await db.users.update_many(
+            {"uid": {"$in": verified_kyc_uids}},
+            {"$set": {
+                "kyc_status": "verified",
+                "kyc_verified_at": now,
+                "kyc_verified_by": admin_id,
+            }}
+        )
+
+        # ===== Phase 3: Approve any user with kyc_status="pending"/"submitted" =====
+        # even if they have no kyc record (auto-create stub)
+        ghost_users_cursor = db.users.find(
+            {
+                "kyc_status": {"$in": ["pending", "submitted", "Pending", "Submitted", "in_review"]}
+            },
+            {"_id": 0, "uid": 1}
+        )
+        ghost_count = 0
+        async for u in ghost_users_cursor:
+            uid = u.get("uid")
+            if not uid:
+                continue
+            # Insert a verified stub if not already present
+            exists = await db.kyc.find_one({"uid": uid}, {"_id": 1})
+            if not exists:
+                await db.kyc.insert_one({
+                    "kyc_id": str(uuid.uuid4()),
+                    "uid": uid,
+                    "submitted_at": now,
+                    "status": "verified",
+                    "verified_at": now,
+                    "verified_by": admin_id,
+                    "verification_method": "admin_nuclear_approve",
+                })
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    "kyc_status": "verified",
+                    "kyc_verified_at": now,
+                    "kyc_verified_by": admin_id,
+                }}
+            )
+            ghost_count += 1
+
+        logging.warning(
+            f"[KYC NUCLEAR APPROVE] {admin_id} approved {pending_kyc_result.modified_count} kyc + "
+            f"{user_sync_result.modified_count} users + {ghost_count} ghost users."
+        )
+
+        return {
+            "success": True,
+            "message": "All pending KYCs approved.",
+            "kyc_records_approved": pending_kyc_result.modified_count,
+            "users_synced": user_sync_result.modified_count,
+            "ghost_users_approved": ghost_count,
+            "total_users_now_verified": len(verified_kyc_uids) + ghost_count,
+            "admin_id": admin_id,
+            "timestamp": now,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[KYC NUCLEAR APPROVE] error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _safe_body(request: Request) -> dict:
+    """Best-effort JSON body parse; returns {} on failure."""
+    try:
+        return await request.json() or {}
+    except Exception:
+        return {}
+
+
 
 
 

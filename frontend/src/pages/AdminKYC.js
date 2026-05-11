@@ -41,6 +41,44 @@ const AdminKYC = ({ user }) => {
   const [forceApproveIdentifier, setForceApproveIdentifier] = useState('');
   const [forceApproving, setForceApproving] = useState(false);
 
+  // 🚨 Nuclear: Approve ALL Pending KYCs in one shot
+  const [approveAllProcessing, setApproveAllProcessing] = useState(false);
+
+  const handleApproveAllPending = async () => {
+    if (!window.confirm(
+      `⚠️ Approve ALL ${stats.pending} pending KYC documents at once?\n\n` +
+      `This is irreversible. Make sure you actually want to bulk-approve everyone.\n\n` +
+      `Continue?`
+    )) return;
+
+    const pin = window.prompt('Admin PIN required:');
+    if (!pin) return;
+
+    setApproveAllProcessing(true);
+    try {
+      const res = await axios.post(`${API}/kyc/admin/approve-all-pending`, {
+        pin,
+        admin_id: user?.uid,
+      }, { timeout: 60000 });
+
+      const d = res.data || {};
+      toast.success(
+        `✅ Approved ${d.kyc_records_approved} KYC + ${d.ghost_users_approved} ghost users (${d.users_synced} users synced)`,
+        { duration: 8000 }
+      );
+      // Hard refresh data
+      fetchKYCDocuments(1, statusFilter, debouncedSearch);
+      fetchStats();
+    } catch (error) {
+      toast.error(
+        error.response?.data?.detail || error.message || 'Bulk approve failed',
+        { duration: 8000 }
+      );
+    } finally {
+      setApproveAllProcessing(false);
+    }
+  };
+
   const handleForceApprove = async () => {
     const id = (forceApproveIdentifier || '').trim();
     if (!id) {
@@ -615,6 +653,25 @@ const AdminKYC = ({ user }) => {
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button
+            onClick={handleApproveAllPending}
+            disabled={approveAllProcessing || stats.pending === 0}
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white font-bold"
+            data-testid="approve-all-pending-btn"
+          >
+            {approveAllProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Approving...
+              </>
+            ) : (
+              <>
+                <CheckCheck className="w-4 h-4 mr-2" />
+                Approve ALL Pending ({stats.pending})
+              </>
+            )}
           </Button>
           <Button
             onClick={() => setShowForceApproveModal(true)}

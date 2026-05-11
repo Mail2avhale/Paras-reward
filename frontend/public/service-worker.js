@@ -1,12 +1,12 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v15: May 11, 2026 — Admin KYC bulletproof force-approve. New endpoint
-// /api/kyc/admin/force-approve supports kyc_id / uid / mobile / email / name.
-// New "Force Approve" button on Admin KYC page + auto-create missing records.
-// Bump SW so production clients pull the updated AdminKYC.js bundle.
-const CACHE_NAME = 'paras-reward-v15';
-const RUNTIME_CACHE = 'paras-runtime-v15';
-const API_CACHE = 'paras-api-v15';
+// v16: May 11, 2026 — NUCLEAR "Approve ALL Pending" button + GET URL fallback.
+// New endpoint /api/kyc/admin/approve-all-pending (GET/POST) — admin PIN auth.
+// Approves every pending kyc record + every user with kyc_status=pending,
+// auto-creating stub records when needed. Bump SW to evict old AdminKYC chunk.
+const CACHE_NAME = 'paras-reward-v16';
+const RUNTIME_CACHE = 'paras-runtime-v16';
+const API_CACHE = 'paras-api-v16';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
