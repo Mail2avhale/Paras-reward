@@ -9,6 +9,32 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### Community "Lifetime" Badge vs Top 10 Leaderboard Sync — DONE (11 May 2026)
+
+**Issue (production parasreward.com)**: Same user (Nimesh, Nadia) showed different lifetime amounts:
+- Community Feed Bank Redeem post badge: "Redeemed till ₹21,244"
+- Top 10 Leaderboard #28: "₹19,119.48 / 1,91,194.81 PRC"
+
+User: both must show ₹21,244 (the canonical lifetime redeemed).
+
+**Root Cause**: Two completely separate freshness models for the same metric:
+1. **Community Feed badge** stored on each `community_posts` doc as `user_total_redeemed_inr` at POST CREATION TIME. Frozen snapshot — never updated again. After Nimesh's next redeem, the badge stays at the old value forever.
+2. **Leaderboard `/top-redeemers`** cached for **2 HOURS** in memory. So even immediately after a redeem completes, the leaderboard lags by up to 2 hours.
+
+Both endpoints call the same canonical fn `get_user_all_time_redeemed()` (which has its own 60s in-memory cache) — but their downstream caching layers caused the mismatch.
+
+**Fix (2 changes, backend-only)**:
+1. **`routes/community.py /posts`**: After fetching posts, dedup unique user_ids and re-run `get_user_all_time_redeemed(uid)` concurrently (bounded by `Semaphore(25)`) — the 60s in-memory cache makes this cheap. Patch every post's `user_total_redeemed_inr` with the **fresh** value. Fall back to stored snapshot if the lookup fails.
+2. **`routes/leaderboard.py /top-redeemers`**: Reduce cache TTL from `2 * 60 * 60` (2 hours) → `5 * 60` (5 minutes). Short enough that the leaderboard tracks within a single auto-refresh tick, long enough to absorb spike traffic.
+
+**Result**: Both Community Feed badge and Top 10 Leaderboard now show the SAME lifetime value, with a worst-case skew of ~5 minutes (leaderboard cache window) but typically within 60 seconds.
+
+**Frontend**: NO changes needed. Same JSON shape, same field name.
+
+**Production Deploy**: Backend-only redeploy. No SW bump needed.
+
+
+
 ### Global Toast Filter for "Database is busy" — DONE (11 May 2026)
 
 **Issue**: After previous fix (PRD entry "Admin KYC Database-is-busy Toast Fix", 10 May), the toast STILL appeared in production. User shared screenshot showing the message on `/admin/kyc` even with auto-refresh ON.

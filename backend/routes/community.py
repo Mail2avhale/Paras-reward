@@ -830,6 +830,46 @@ async def get_posts(
         else:
             all_posts = posts
 
+        # =====================================================================
+        # LIFETIME REDEEMED — refresh badge at fetch time so the green
+        # "₹X,XXX" badge next to each user_name matches what the leaderboard /
+        # admin panel shows. The on-post snapshot is updated only at creation
+        # time and goes stale once a user does more redeems/recharges, which
+        # caused mismatches between Community Feed and Top 10 Leaderboard
+        # (reported May 11, 2026).
+        #
+        # Performance: `get_user_all_time_redeemed` has a 60s in-memory cache,
+        # so unique-user lookups stay O(1) within the cache window. We dedup
+        # by user_id and run lookups in parallel.
+        # =====================================================================
+        if all_time_redeemed_func and prc_rate_getter and all_posts:
+            try:
+                unique_uids = list({p.get("user_id") for p in all_posts if p.get("user_id")})
+                rate = float(await prc_rate_getter() or 0) or 1.0
+                # Concurrent lookups bounded by 25 (DB pool friendly)
+                import asyncio as _asyncio
+                sem = _asyncio.Semaphore(25)
+
+                async def _lookup(uid):
+                    async with sem:
+                        try:
+                            prc = float(await all_time_redeemed_func(uid) or 0)
+                            return uid, round(prc / rate, 2) if rate > 0 else 0.0
+                        except Exception:
+                            return uid, None
+
+                results = await _asyncio.gather(*[_lookup(u) for u in unique_uids])
+                fresh_map = {uid: val for uid, val in results if val is not None}
+
+                # Patch posts with fresh lifetime value when available;
+                # fall back to stored snapshot otherwise.
+                for p in all_posts:
+                    fresh = fresh_map.get(p.get("user_id"))
+                    if fresh is not None:
+                        p["user_total_redeemed_inr"] = fresh
+            except Exception as _enrich_err:
+                logging.warning(f"[COMMUNITY] lifetime enrich failed: {_enrich_err}")
+
         # Enrich with user's like/bookmark status
         if user_id:
             for post in all_posts:

@@ -184,7 +184,12 @@ async def get_weekly_leaderboard(limit: int = 50):
 # TOP REDEEMERS — Lifetime across ALL services (for Community + Live Strip)
 # ============================================================================
 _TOP_REDEEMERS_CACHE: dict = {"ts": 0, "data": None}
-_TOP_REDEEMERS_TTL = 2 * 60 * 60  # 2 hours (was 30 min — reduce cold-start DB storm)
+# Cache TTL chosen to match the rough "freshness" users expect after a redeem.
+# Pre-May-11: 2 hours — caused Top 10 to lag behind the Community feed badge by
+# multiple redeems for the same user. New: 5 minutes — short enough that the
+# leaderboard tracks Community Feed within one auto-refresh tick, long enough
+# to absorb crawler spikes without overloading the dedup-heavy 2-pass aggregation.
+_TOP_REDEEMERS_TTL = 5 * 60  # 5 minutes
 
 
 def _mask_name(full_name: str, first_name: str = "") -> str:
