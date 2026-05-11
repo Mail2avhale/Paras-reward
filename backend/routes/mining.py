@@ -818,6 +818,74 @@ async def get_rate_breakdown(uid: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+# ============================================================================
+# DIAGNOSTIC — Compare mining rates across users (admin only)
+# ----------------------------------------------------------------------------
+# Added May 11, 2026 in response to "all users show 50.1 PRC/hour" report.
+# Returns per-user rate breakdown so admin can verify whether rates are
+# actually uniform or merely *look* similar in the UI.
+# ============================================================================
+@router.get("/admin/rates-diagnostic")
+async def admin_mining_rates_diagnostic(limit: int = 30, plan: str = "elite"):
+    """For every Elite-active user, dump the network + cap + per-user PRC.
+    Helps spot the case where many users share the same effective_network
+    (capped at 800) → same mining rate.
+    """
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+        users = await db.users.find(
+            {
+                "subscription_plan": {"$in": [plan.lower(), plan.upper(), plan.title()]},
+                "$or": [
+                    {"subscription_expiry": {"$gt": now}},
+                    {"subscription_expires": {"$gt": now}},
+                ],
+            },
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "subscription_position": 1}
+        ).limit(limit).to_list(length=limit)
+
+        rows = []
+        unique_rates = set()
+        for u in users:
+            try:
+                rate = await calculate_mining_rate(u["uid"])
+                if rate.get("error"):
+                    continue
+                per_hour = round(rate["per_second_rate"] * 3600, 2)
+                unique_rates.add(per_hour)
+                rows.append({
+                    "uid": u["uid"],
+                    "name": u.get("name"),
+                    "mobile": u.get("mobile"),
+                    "subscription_position": u.get("subscription_position"),
+                    "raw_network_size": rate.get("raw_network_size"),
+                    "network_cap": rate.get("network_cap"),
+                    "effective_network": rate.get("network_size"),
+                    "direct_referrals": rate.get("direct_referrals"),
+                    "l1_indirect_referrals": rate.get("l1_indirect_referrals"),
+                    "base_rate": rate.get("base_rate"),
+                    "network_rate": rate.get("network_rate"),
+                    "total_daily_rate": rate.get("total_daily_rate"),
+                    "per_hour": per_hour,
+                })
+            except Exception as e:
+                logging.warning(f"diagnostic error for {u['uid']}: {e}")
+
+        return {
+            "success": True,
+            "users_checked": len(rows),
+            "unique_rates_count": len(unique_rates),
+            "unique_rates": sorted(unique_rates),
+            "is_suspiciously_uniform": len(unique_rates) <= 2 and len(rows) >= 5,
+            "rows": rows,
+        }
+    except Exception as e:
+        logging.error(f"Mining rates diagnostic error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @router.get("/history/{uid}")
 async def get_mining_history(uid: str, limit: int = 20):
     """Get mining collection history"""
