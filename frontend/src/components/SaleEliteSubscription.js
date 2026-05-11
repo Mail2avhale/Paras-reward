@@ -296,7 +296,7 @@ const SaleEliteSubscription = ({ user }) => {
         <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">
           Beneficiary Mobile Number
         </label>
-        <div className="flex gap-2 mt-2">
+        <div className="flex flex-col sm:flex-row gap-2 mt-2">
           <input
             type="tel"
             inputMode="numeric"
@@ -309,13 +309,13 @@ const SaleEliteSubscription = ({ user }) => {
             }}
             disabled={!sender.daily_limit_ok || previewLoading}
             data-testid="sale-elite-mobile-input"
-            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:border-amber-500/50 focus:outline-none disabled:opacity-50"
+            className="w-full sm:flex-1 min-w-0 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:border-amber-500/50 focus:outline-none disabled:opacity-50"
           />
           <button
             onClick={handleLookup}
             disabled={previewLoading || !mobile || !sender.daily_limit_ok}
             data-testid="sale-elite-lookup-btn"
-            className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-black font-semibold flex items-center gap-2 transition-colors"
+            className="w-full sm:w-auto sm:flex-shrink-0 px-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-black font-semibold flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
           >
             {previewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             Look Up

@@ -1,11 +1,11 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v13: May 11, 2026 — Global Sonner toast filter added in App.js to suppress
-// the transient "Database is busy" message regardless of which component
-// emits it. Bump SW so production clients pull the new App.js bundle.
-const CACHE_NAME = 'paras-reward-v13';
-const RUNTIME_CACHE = 'paras-runtime-v13';
-const API_CACHE = 'paras-api-v13';
+// v14: May 11, 2026 — Sale Elite tab "Look Up" button overflow fix on mobile
+// (stack vertically on screens <640px). Bump SW so production clients pull the
+// new SaleEliteSubscription.js bundle.
+const CACHE_NAME = 'paras-reward-v14';
+const RUNTIME_CACHE = 'paras-runtime-v14';
+const API_CACHE = 'paras-api-v14';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
