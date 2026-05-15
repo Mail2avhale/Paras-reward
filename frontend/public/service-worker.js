@@ -1,11 +1,11 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v20: May 11, 2026 — Sale Elite framing fix: it's a SALE-PURCHASE not a
-// gift/sponsorship. Sender post: "Sold to X". Beneficiary post: "Purchased
-// from Y". Removed gift emoji.
-const CACHE_NAME = 'paras-reward-v20';
-const RUNTIME_CACHE = 'paras-runtime-v20';
-const API_CACHE = 'paras-api-v20';
+// v21: May 15, 2026 — Google AdSense Auto Ads integration (pub-3556805218952480).
+// ads.txt updated, AdSense script added to <head>. SW bump so production
+// clients pull the new index.html with the AdSense snippet.
+const CACHE_NAME = 'paras-reward-v21';
+const RUNTIME_CACHE = 'paras-runtime-v21';
+const API_CACHE = 'paras-api-v21';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
