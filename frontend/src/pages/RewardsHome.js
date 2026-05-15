@@ -657,7 +657,7 @@ const RewardsHome = () => {
       {/* ===== 12. FOOTER ===== */}
       <footer className="bg-gray-900 text-white py-12 px-6" data-testid="footer-section">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-10">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-auto object-contain" />
@@ -672,6 +672,15 @@ const RewardsHome = () => {
                 <li><Link to="/careers" className="hover:text-white transition-colors">Careers</Link></li>
                 <li><Link to="/investors" className="hover:text-white transition-colors">Investors</Link></li>
                 <li><Link to="/contact-us" className="hover:text-white transition-colors">Contact</Link></li>
+              </ul>
+            </div>
+            <div data-testid="footer-free-tools">
+              <h4 className="font-semibold mb-4 text-white">Free Tools</h4>
+              <ul className="space-y-2.5 text-gray-400 text-sm">
+                <li><Link to="/referral-calculator" data-testid="footer-link-referral-calculator" className="hover:text-white transition-colors">Earnings Calculator</Link></li>
+                <li><Link to="/prc-to-inr-converter" data-testid="footer-link-prc-to-inr" className="hover:text-white transition-colors">PRC to INR Converter</Link></li>
+                <li><Link to="/recharge-cashback-calculator" data-testid="footer-link-cashback" className="hover:text-white transition-colors">Recharge Cashback Calculator</Link></li>
+                <li><Link to="/how-to-earn-money-online-india" data-testid="footer-link-earn-online" className="hover:text-white transition-colors">How to Earn Money Online</Link></li>
               </ul>
             </div>
             <div>

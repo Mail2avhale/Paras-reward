@@ -1,11 +1,12 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v22: May 15, 2026 — New SEO landing page /referral-calculator (interactive
-// PRC earnings calculator with FAQ schema for Google rich snippets).
-// Sitemap updated. Bump SW to evict old App.js bundle.
-const CACHE_NAME = 'paras-reward-v22';
-const RUNTIME_CACHE = 'paras-runtime-v22';
-const API_CACHE = 'paras-api-v22';
+// v23: May 15, 2026 — Wired 3 new SEO landing pages into App.js + sitemap:
+// /prc-to-inr-converter, /recharge-cashback-calculator,
+// /how-to-earn-money-online-india. Added "Free Tools" footer column on
+// RewardsHome. Bump SW to evict old App.js bundle.
+const CACHE_NAME = 'paras-reward-v23';
+const RUNTIME_CACHE = 'paras-runtime-v23';
+const API_CACHE = 'paras-api-v23';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

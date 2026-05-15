@@ -124,4 +124,28 @@
     <mobile:mobile/>
   </url>
 
+  <url>
+    <loc>https://www.parasreward.com/prc-to-inr-converter</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <mobile:mobile/>
+  </url>
+
+  <url>
+    <loc>https://www.parasreward.com/recharge-cashback-calculator</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <mobile:mobile/>
+  </url>
+
+  <url>
+    <loc>https://www.parasreward.com/how-to-earn-money-online-india</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <mobile:mobile/>
+  </url>
+
 </urlset>

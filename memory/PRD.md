@@ -1629,11 +1629,31 @@ Examined all 5 matched DMT transactions in production:
 cleanup (13) + community gating/moderation (19) — all backend route handler
 tests on a single `pytest` run.
 
+## SEO Landing Pages — Phase 2 (Feb 2026)
+- Wired 3 new orphaned SEO landing pages into the application:
+  - `/prc-to-inr-converter` — Live PRC → INR conversion calculator with chip
+    presets (100/500/1k/5k/10k/50k). Targets keyword "PRC to INR".
+  - `/recharge-cashback-calculator` — Explorer (0.5%) vs Elite (2.5%) cashback
+    comparison for mobile/DTH/electricity recharges. Drives Elite upsell.
+  - `/how-to-earn-money-online-india` — 2026 guide with 4 legitimate income
+    methods (referral, cashback, mining, P2P sale). Anti-scam warning box.
+- All three include canonical `document.title`, cross-link footer to each
+  other + `/referral-calculator`, and route to `/login` for conversion CTAs.
+- Aliases registered: `/prc-to-inr`, `/cashback-calculator`, `/earn-money-online`.
+- `sitemap.xml` updated with priority 0.9, weekly changefreq, lastmod 2026-05-15.
+- `RewardsHome.js` footer expanded to 5 columns with new "Free Tools" section
+  exposing all 4 SEO pages (orphan-page fix for AdSense traffic).
+- `service-worker.js` bumped to **v23** to evict old App.js bundle on prod PWA.
+- Smoke tested all 3 URLs via Playwright (correct titles, content render,
+  hrefs verified).
+
 ## Upcoming Tasks
 - P1: HRMS Reporting Phase D — Email salary slips/Form 16 (needs Resend/SendGrid)
 - P1: Invoice PDF Download
 - P1: Run Notification Script for 606 "Over Limit" failed bank-redeem users
 - P2: WhatsApp Share Receipt
+- P2: Audit Trail for admin KYC force-approvals (`/admin/audit/kyc-force-approvals`)
+- P2: Beneficiary "Sponsored by [Name]" badge + Top Sponsors Leaderboard
 
 ## Future/Backlog
 - P2: server.py monolith refactor
