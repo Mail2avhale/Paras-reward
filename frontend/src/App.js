@@ -452,6 +452,7 @@ const Setup = lazy(() => import("@/pages/Setup"));
 const AboutUs = lazy(() => import("@/pages/AboutUs"));
 const Disclaimer = lazy(() => import("@/pages/Disclaimer"));
 const ContactUs = lazy(() => import("@/pages/ContactUs"));
+const ReferralCalculator = lazy(() => import("@/pages/ReferralCalculator"));
 const TermsConditions = lazy(() => import("@/pages/TermsConditions"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
@@ -521,6 +522,11 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/refund" element={<RefundPolicy />} />
             <Route path="/rewards-home" element={<RewardsHome />} />
+
+            {/* SEO Landing Pages (public, no auth) */}
+            <Route path="/referral-calculator" element={<Suspense fallback={<LoadingFallback />}><ReferralCalculator /></Suspense>} />
+            <Route path="/calculator" element={<Navigate to="/referral-calculator" replace />} />
+            <Route path="/earnings-calculator" element={<Navigate to="/referral-calculator" replace />} />
             
             {/* Protected Routes - User Only (Admin/Manager redirected to /admin) */}
             <Route path="/dashboard" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DashboardModern user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />

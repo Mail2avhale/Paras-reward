@@ -115,4 +115,13 @@
     <mobile:mobile/>
   </url>
 
+  <!-- SEO Landing Pages -->
+  <url>
+    <loc>https://www.parasreward.com/referral-calculator</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <mobile:mobile/>
+  </url>
+
 </urlset>

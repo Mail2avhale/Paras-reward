@@ -1,11 +1,11 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v21: May 15, 2026 — Google AdSense Auto Ads integration (pub-3556805218952480).
-// ads.txt updated, AdSense script added to <head>. SW bump so production
-// clients pull the new index.html with the AdSense snippet.
-const CACHE_NAME = 'paras-reward-v21';
-const RUNTIME_CACHE = 'paras-runtime-v21';
-const API_CACHE = 'paras-api-v21';
+// v22: May 15, 2026 — New SEO landing page /referral-calculator (interactive
+// PRC earnings calculator with FAQ schema for Google rich snippets).
+// Sitemap updated. Bump SW to evict old App.js bundle.
+const CACHE_NAME = 'paras-reward-v22';
+const RUNTIME_CACHE = 'paras-runtime-v22';
+const API_CACHE = 'paras-api-v22';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
