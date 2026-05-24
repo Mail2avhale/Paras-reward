@@ -28901,13 +28901,20 @@ async def backfill_razorpay_missing_hooks(request: Request):
         # Find candidates: paid razorpay_orders with payment_captured=True,
         # whose user has subscription_plan set but is missing subscription_position
         # OR is missing community post for that payment.
+        # CHRONOLOGICAL ORDER: process oldest paid_at first so subscription_position
+        # numbers preserve actual purchase chronology. Otherwise late-paid users
+        # would get LATER positions than their earlier-paid referrals, breaking
+        # the position-based network calculation (Network = users with position
+        # GREATER than yours).
         query = {"status": "paid", "payment_captured": True}
         if target_uid:
             query["user_id"] = target_uid
         orders = await db.razorpay_orders.find(
             query,
-            {"_id": 0, "order_id": 1, "user_id": 1, "payment_id": 1, "amount": 1, "plan_name": 1}
-        ).to_list(10000)
+            {"_id": 0, "order_id": 1, "user_id": 1, "payment_id": 1, "amount": 1,
+             "plan_name": 1, "paid_at": 1, "razorpay_payment_time": 1,
+             "synced_at": 1, "created_at": 1}
+        ).sort([("paid_at", 1), ("razorpay_payment_time", 1), ("created_at", 1)]).to_list(10000)
 
         position_fixed = 0
         posts_created = 0
@@ -28942,13 +28949,24 @@ async def backfill_razorpay_missing_hooks(request: Request):
                 position_fixed += 1
                 did_anything = True
 
-            # 2. Create community post if missing
+            # 2. Create community post if missing (back-dated to actual paid_at
+            # so the Community Feed retains chronological order — backfill posts
+            # won't all bunch up at the top with "just now" timestamps).
             ref_id = f"sub_{pid}"
             existing_post = await db.community_posts.find_one(
                 {"metadata.ref_id": ref_id, "is_success_story": True},
                 {"_id": 1}
             )
             if not existing_post:
+                # Pick the best available historical timestamp
+                paid_ts = (o.get("paid_at") or o.get("razorpay_payment_time")
+                           or o.get("synced_at") or o.get("created_at"))
+                if isinstance(paid_ts, datetime):
+                    paid_ts_iso = paid_ts.isoformat()
+                elif isinstance(paid_ts, str):
+                    paid_ts_iso = paid_ts
+                else:
+                    paid_ts_iso = None
                 if not dry_run:
                     try:
                         await create_success_story_post(
@@ -28957,6 +28975,7 @@ async def backfill_razorpay_missing_hooks(request: Request):
                             amount_inr=float(o.get("amount") or 0),
                             plan_name=o.get("plan_name", "elite"),
                             ref_id=ref_id,
+                            created_at_override=paid_ts_iso,
                         )
                     except Exception as _e:
                         logging.warning(f"[BACKFILL] post create failed for {uid}: {_e}")
