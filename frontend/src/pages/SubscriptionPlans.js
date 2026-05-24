@@ -1291,10 +1291,10 @@ const SubscriptionPlans = ({ user }) => {
                   {prcPricing &&
                     Number(prcPricing.total_prc_required || 0) > Number(redeemLimitInfo.effective_available || 0) && (
                       <p
-                        className="text-xs text-amber-400 mt-1"
-                        data-testid="redeem-limit-insufficient-warning"
+                        className="text-xs text-cyan-300 mt-1"
+                        data-testid="redeem-limit-info-notice"
                       >
-                        Insufficient redeem limit. Earn more by mining or growing your network.
+                        Your monthly redeem limit is lower than the plan price — that's OK. Self-subscriptions are not capped by redeem limit. As long as your PRC balance is sufficient, you can activate.
                       </p>
                     )}
                   <p className="text-xs text-gray-500">

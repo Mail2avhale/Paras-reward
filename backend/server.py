@@ -12884,37 +12884,25 @@ async def subscription_pay_with_prc(request: Request):
         # Use expected amount for accuracy
         prc_amount = expected_prc
         
-        # ==================== REDEEM LIMIT ENFORCEMENT (April 2026 update) ====================
-        # PRC subscription must respect the user's redeem limit (effective_available),
-        # same way as Bank Redeem / Bill Pay. This prevents users with locked-PRC from
-        # exceeding their unlocked redeem limit via subscriptions.
+        # ==================== REDEEM LIMIT — REMOVED for SELF-Subscription (May 2026) ====================
+        # Business decision: A user must always be able to renew/activate their OWN
+        # Elite subscription using their available PRC balance — regardless of
+        # months-active, network size, or redeem-limit unlock %. This is NOT a
+        # service redemption (no INR leaves the system); it's an internal
+        # purchase that keeps the user active and the company wallet credited.
+        # Guards still active: (a) balance check below, (b) 3-time PRC cap above,
+        # (c) 7-day cooldown above. Sale Elite (P2P) flow is unaffected.
         try:
             limit_info = await calculate_user_redeem_limit(user_id)
-        except Exception as _le:
-            logging.error(f"[PRC-SUB] Redeem limit calc error for {user_id}: {_le}")
-            raise HTTPException(status_code=500, detail="Could not verify your redeem limit. Please try again.")
-
-        effective_available = float(limit_info.get("effective_available") or 0)
-        unlock_percent = limit_info.get("unlock_percent", 0)
-
-        if prc_amount > effective_available:
+            effective_available = float(limit_info.get("effective_available") or 0)
+            unlock_percent = limit_info.get("unlock_percent", 0)
             logging.info(
-                f"[PRC-SUB] Redeem limit blocked: user={user_id}, "
-                f"required={prc_amount:.2f}, available={effective_available:.2f}, unlock={unlock_percent}%"
+                f"[PRC-SUB] Self-sub: redeem limit check SKIPPED for {user_id} "
+                f"(available={effective_available:.0f}, unlock={unlock_percent}%) — "
+                f"required={prc_amount:.0f}"
             )
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Insufficient redeem limit. Available: {effective_available:,.0f} PRC "
-                    f"(Unlock: {unlock_percent}%). Required: {prc_amount:,.0f} PRC. "
-                    f"Earn more by mining or growing your network."
-                ),
-            )
-
-        logging.info(
-            f"[PRC-SUB] Redeem limit OK: user={user_id}, "
-            f"required={prc_amount:.2f}, available={effective_available:.2f}, balance={current_balance:.2f}"
-        )
+        except Exception as _le:
+            logging.warning(f"[PRC-SUB] Redeem limit info fetch error (non-blocking) for {user_id}: {_le}")
 
         # Check PRC balance (must also have raw balance — defense in depth)
         if current_balance < prc_amount:
@@ -28888,6 +28876,109 @@ async def migrate_subscription_positions():
         }
     except Exception as e:
         logging.error(f"Migration error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/razorpay/backfill-missing-hooks")
+async def backfill_razorpay_missing_hooks(request: Request):
+    """
+    BACKFILL: For every Razorpay-paid user whose verify-payment ran BEFORE the
+    May 2026 fix (which adds assign_subscription_position + community post hook),
+    retroactively:
+      1. Assign subscription_position if missing.
+      2. Create Community Forum Success Story post (idempotent via ref_id).
+    
+    Body: {"admin_pin": "153759", "dry_run": true, "uid": "optional-specific-uid"}
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin", "")
+        dry_run = bool(data.get("dry_run", True))
+        target_uid = data.get("uid")  # optional: backfill a single user
+        if admin_pin != "153759":
+            raise HTTPException(status_code=403, detail="Invalid admin pin")
+
+        # Find candidates: paid razorpay_orders with payment_captured=True,
+        # whose user has subscription_plan set but is missing subscription_position
+        # OR is missing community post for that payment.
+        query = {"status": "paid", "payment_captured": True}
+        if target_uid:
+            query["user_id"] = target_uid
+        orders = await db.razorpay_orders.find(
+            query,
+            {"_id": 0, "order_id": 1, "user_id": 1, "payment_id": 1, "amount": 1, "plan_name": 1}
+        ).to_list(10000)
+
+        position_fixed = 0
+        posts_created = 0
+        already_ok = 0
+        skipped = []
+
+        from routes.mining import assign_subscription_position
+        from routes.community import create_success_story_post
+
+        for o in orders:
+            uid = o.get("user_id")
+            pid = o.get("payment_id")
+            if not uid or not pid:
+                continue
+            user = await db.users.find_one(
+                {"uid": uid},
+                {"_id": 0, "uid": 1, "subscription_position": 1, "subscription_plan": 1}
+            )
+            if not user:
+                skipped.append({"uid": uid, "reason": "user_not_found"})
+                continue
+
+            did_anything = False
+
+            # 1. Fix subscription_position if missing
+            if not user.get("subscription_position"):
+                if not dry_run:
+                    try:
+                        await assign_subscription_position(uid)
+                    except Exception as _e:
+                        logging.warning(f"[BACKFILL] position assign failed for {uid}: {_e}")
+                position_fixed += 1
+                did_anything = True
+
+            # 2. Create community post if missing
+            ref_id = f"sub_{pid}"
+            existing_post = await db.community_posts.find_one(
+                {"metadata.ref_id": ref_id, "is_success_story": True},
+                {"_id": 1}
+            )
+            if not existing_post:
+                if not dry_run:
+                    try:
+                        await create_success_story_post(
+                            user_id=uid,
+                            service_type="subscription",
+                            amount_inr=float(o.get("amount") or 0),
+                            plan_name=o.get("plan_name", "elite"),
+                            ref_id=ref_id,
+                        )
+                    except Exception as _e:
+                        logging.warning(f"[BACKFILL] post create failed for {uid}: {_e}")
+                posts_created += 1
+                did_anything = True
+
+            if not did_anything:
+                already_ok += 1
+
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "scanned": len(orders),
+            "position_fixed": position_fixed,
+            "posts_created": posts_created,
+            "already_ok": already_ok,
+            "skipped": skipped[:50],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[BACKFILL] error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

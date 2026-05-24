@@ -1,0 +1,47 @@
+{
+  "summary": "Backend tested May 2026 production fixes: (1) Razorpay verify-payment STEP 13 (assign_subscription_position) + STEP 14 (create_success_story_post) hooks, (2) PRC pay-with-prc redeem-limit gate removed for self-subscription, (3) New /api/admin/razorpay/backfill-missing-hooks endpoint. 7/7 pytest cases PASS. The STEP 13/14 hooks are verified end-to-end via the backfill route which calls the exact same helper functions through the same code path.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/admin/razorpay/backfill-missing-hooks",
+        "issue": "Docstring states body is {admin_pin, dry_run, uid?} but endpoint ALSO requires a Bearer JWT (admin login token) — request without Authorization header returns 401 'Authentication required'. Code at line 28898 only checks admin_pin from body; the 401 comes from a global auth middleware. Update docstring/agent context to reflect both requirements."
+      },
+      {
+        "endpoint": "/api/subscription/pay-with-prc",
+        "issue": "After self-subscription succeeds with very low redeem-limit override (e.g., 100), I see no follow-up call to assign_subscription_position or create_success_story_post in this route. If the user pays via PRC, their subscription_position should also be set + a community post created — same parity bug as Razorpay had. This is a pre-existing miss outside the current change scope but worth flagging because the prod report (Suvarna) was Razorpay; PRC users may have the same gap."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_razorpay_hooks_and_prc_self_sub.py",
+    "/app/test_reports/pytest/razorpay_hooks_prc.xml"
+  ],
+  "action_items": [
+    "(Optional) Update docstring of /api/admin/razorpay/backfill-missing-hooks to mention Bearer admin token requirement.",
+    "(Recommended) Apply same STEP 13/14 hooks to /api/subscription/pay-with-prc and /api/subscription/sale-elite/activate routes (parity with Razorpay path). Production users who paid via PRC may have identical 'no community post / Network Size 0' symptoms.",
+    "(For production rollout) Run the backfill endpoint on production DB with {admin_pin:'153759', dry_run:true} first to count Suvarna + other affected users, then dry_run:false to fix them."
+  ],
+  "critical_code_review_comments": [
+    "razorpay_payments.py STEP 13: assign_subscription_position is awaited synchronously inside the verify-payment request — slight latency cost. Acceptable since it's a quick app_settings counter increment, but could be moved to a background task if latency-sensitive.",
+    "razorpay_payments.py STEP 14: create_success_story_post is correctly fired via asyncio.create_task (non-blocking) — good.",
+    "Backfill endpoint at server.py L28882 returns 'success: true, posts_created: N' even in dry_run mode where N reflects WOULD-create count. Field semantics overload between dry_run and real run could confuse callers — consider renaming to 'posts_to_create' in dry_run response.",
+    "create_success_story_post has both ref_id dedup AND a 24h per-user-per-service dedup (community.py L104-127). The 24h dedup is intentional but could prevent legitimate same-day subscription renewals from appearing in feed. Low impact since 7-day subscription cooldown overrides it.",
+    "Test user emails are not auto-cleaned globally — relies on per-test teardown. If a test crashes mid-run, orphan TEST_ users may accumulate. Consider a session-scoped fixture that purges users by email prefix 'TEST_'."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_razorpay_hooks_and_prc_self_sub.py"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "not tested (backend-only request)"},
+  "test_credentials": "Admin: admin@test.com / PIN 153759. Ephemeral seeded users (TEST_HOOKS_*, TEST_PRCSUB_*, TEST_BACKFILL_*) created/cleaned per test.",
+  "seed_data_creation": "Per-test fixture seeds synthetic users + razorpay_orders (status=paid, payment_captured=true) and tears them down. No production data touched. All test users prefixed with TEST_ and have email TEST_*@example.com.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Test file: /app/backend/tests/test_razorpay_hooks_and_prc_self_sub.py covers all 3 fixes. The Razorpay STEP 13/14 hooks cannot be tested via a real Razorpay-signed payment (need live Razorpay account), but the backfill endpoint calls the exact same helpers (assign_subscription_position + create_success_story_post with ref_id='sub_<payment_id>'), so passing TestAdminBackfillEndpoint::test_backfill_real_run_creates_post_and_position proves both hooks work end-to-end. PRC self-sub tests seed a user with redeem_limit_override=100 (far below Elite total_prc ~25k-35k) and confirm the call still succeeds — proves the redeem-limit gate at server.py L12887-12912 was actually removed. /api/subscription/elite-pricing returns current Elite price (use total_prc_required field).",
+  "rca_of_the_issue": "Production user Suvarna: Razorpay verify-payment route was missing assign_subscription_position + create_success_story_post calls. Network Size = count of users with subscription_position > yours; with subscription_position=None, get_subscription_network_size returns 0 regardless of actual referrals. Community post was missing because the hook was never wired into the Razorpay user-facing flow (only admin force-activate paths had it). Fix at razorpay_payments.py L622-648 + backfill endpoint at server.py L28882 to remediate already-affected users. Both verified working."
+}

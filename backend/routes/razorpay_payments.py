@@ -618,7 +618,35 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         )
         
         logging.info(f"[RAZORPAY] SUCCESS - Subscription activated for user {request.user_id}, plan: {plan_name}, total days: {total_days}")
-        
+
+        # ==================== STEP 13: ASSIGN SUBSCRIPTION POSITION (Mining Network) ====================
+        # CRITICAL FIX (May 2026): Previously missing here — caused users who paid via
+        # Razorpay popup to have subscription_position=None, which made
+        # get_subscription_network_size() return 0 (mining Network Size stuck at 0).
+        try:
+            from routes.mining import assign_subscription_position
+            await assign_subscription_position(request.user_id)
+            logging.info(f"[RAZORPAY] Assigned subscription_position for {request.user_id}")
+        except Exception as _pos_err:
+            logging.warning(f"[RAZORPAY] assign_subscription_position failed (non-fatal): {_pos_err}")
+
+        # ==================== STEP 14: COMMUNITY SUCCESS-STORY POST ====================
+        # CRITICAL FIX (May 2026): Previously missing here — caused users who paid via
+        # Razorpay popup to NOT appear in Community Forum Live Wins feed. Admin
+        # bulk-sync / manual-activate paths already did this; user-facing path
+        # was the only one without the hook.
+        try:
+            from routes.community import create_success_story_post
+            asyncio.create_task(create_success_story_post(
+                user_id=request.user_id,
+                service_type="subscription",
+                amount_inr=float(payment_amount or 0),
+                plan_name=plan_name,
+                ref_id=f"sub_{request.razorpay_payment_id}",
+            ))
+        except Exception as _post_err:
+            logging.warning(f"[RAZORPAY] community post hook failed (non-fatal): {_post_err}")
+
         return {
             "success": True,
             "message": "Payment verified and subscription activated",
