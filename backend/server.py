@@ -3827,20 +3827,25 @@ async def get_elite_pricing():
 @api_router.get("/subscription/prc-eligibility/{uid}")
 async def get_prc_subscription_eligibility(uid: str):
     """Check whether a user is eligible to avail PRC subscription.
-    Users get up to 3 PRC subscriptions lifetime (counting only successful prior ones).
+    
+    UPDATED (May 2026): The lifetime 3-time PRC subscription cap has been
+    REMOVED. PRC subscriptions are now unlimited — users can subscribe as
+    many times as they like as long as they have:
+      - sufficient PRC balance
+      - 7-day cooldown elapsed since last subscription
+    
     Returns: {eligible: bool, used_count: int, max_allowed: int, remaining: int, last_used_at?, last_plan?}
+    NOTE: `max_allowed` and `remaining` are kept for backward-compatible response
+    shape (frontend reads them) but effectively report unlimited.
     """
     try:
         COUNTING_STATUSES = ["paid", "upcoming", "active", "completed", "expired"]
-        MAX_PRC_SUBSCRIPTIONS = 3
 
         used_count = await db.subscription_payments.count_documents({
             "user_id": uid,
             "payment_method": "prc",
             "status": {"$in": COUNTING_STATUSES},
         })
-        remaining = max(0, MAX_PRC_SUBSCRIPTIONS - used_count)
-        eligible = remaining > 0
 
         # Fetch latest prior payment for context (if any)
         prior = await db.subscription_payments.find_one(
@@ -3853,10 +3858,11 @@ async def get_prc_subscription_eligibility(uid: str):
             projection={"_id": 0, "created_at": 1, "plan_name": 1, "plan_type": 1, "status": 1},
         )
         return {
-            "eligible": eligible,
+            "eligible": True,  # Always eligible (cap removed)
             "used_count": used_count,
-            "max_allowed": MAX_PRC_SUBSCRIPTIONS,
-            "remaining": remaining,
+            "max_allowed": None,  # Unlimited
+            "remaining": None,    # Unlimited
+            "unlimited": True,
             "last_used_at": prior.get("created_at") if prior else None,
             "last_plan": (prior.get("plan_name") if prior else None) or ("elite" if prior else None),
             "last_plan_type": prior.get("plan_type") if prior else None,
@@ -3865,7 +3871,7 @@ async def get_prc_subscription_eligibility(uid: str):
     except Exception as e:
         logging.error(f"prc-eligibility error for {uid}: {e}")
         # Fail open — don't block user if DB hiccup
-        return {"eligible": True, "used_count": 0, "max_allowed": 3, "remaining": 3, "error": str(e)}
+        return {"eligible": True, "used_count": 0, "max_allowed": None, "remaining": None, "unlimited": True, "error": str(e)}
 
 
 # ==================== NEW ELITE PRICING (Active - 29 March 2026) ====================
@@ -12818,25 +12824,18 @@ async def subscription_pay_with_prc(request: Request):
         
         logging.info(f"[PRC-SUB] Request: User={user_id}, Plan={plan_name}, Amount={prc_amount}, Balance={current_balance}")
 
-        # ==================== 3-TIME PRC BENEFIT GUARD ====================
-        # PRC-based subscription is allowed up to 3 times per user (any plan/duration).
-        # Counts only successful prior PRC payments (pending/failed/cancelled do NOT consume the benefit).
-        # No admin override — applies uniformly.
+        # ==================== UNLIMITED PRC SUBSCRIPTIONS (May 2026) ====================
+        # Previously: 3-time PRC subscription lifetime cap. REMOVED per user
+        # decision — users can now PRC-subscribe unlimited times. Only balance
+        # and 7-day cooldown gate the flow now. The used_count is still tracked
+        # for analytics but never blocks.
         COUNTING_STATUSES = ["paid", "upcoming", "active", "completed", "expired"]
-        MAX_PRC_SUBSCRIPTIONS = 3
         prior_count = await db.subscription_payments.count_documents({
             "user_id": user_id,
             "payment_method": "prc",
             "status": {"$in": COUNTING_STATUSES},
         })
-        if prior_count >= MAX_PRC_SUBSCRIPTIONS:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"PRC Subscription limit reached ({prior_count}/{MAX_PRC_SUBSCRIPTIONS}). "
-                    f"Please use UPI or Manual Payment for further subscriptions."
-                ),
-            )
+        logging.info(f"[PRC-SUB] User {user_id} has {prior_count} prior PRC subscriptions (unlimited cap)")
 
         # CHECK COOLDOWN: 7 days between any subscription (PRC/UPI/Manual)
         # NOTE: This is a soft precheck for user-friendly error messages.
@@ -12890,7 +12889,8 @@ async def subscription_pay_with_prc(request: Request):
         # months-active, network size, or redeem-limit unlock %. This is NOT a
         # service redemption (no INR leaves the system); it's an internal
         # purchase that keeps the user active and the company wallet credited.
-        # Guards still active: (a) balance check below, (b) 3-time PRC cap above,
+        # Guards still active: (a) balance check below, 7-day cooldown above.
+        # 3-time PRC cap removed May 2026 — unlimited.
         # (c) 7-day cooldown above. Sale Elite (P2P) flow is unaffected.
         try:
             limit_info = await calculate_user_redeem_limit(user_id)
@@ -14331,19 +14331,15 @@ async def admin_force_activate_elite_prc(request: Request):
 
         logging.info(f"[ADMIN-FORCE-SUB] admin={admin_uid} target={user_id} ({user_name}) balance={current_balance}")
 
-        # 3) 3-time PRC subscription lifetime cap
+        # 3) PRC subscription cap — REMOVED May 2026 (unlimited)
+        # Previously: lifetime cap of 3. Now tracked only for analytics.
         COUNTING_STATUSES = ["paid", "upcoming", "active", "completed", "expired"]
-        MAX_PRC_SUBSCRIPTIONS = 3
         prior_count = await db.subscription_payments.count_documents({
             "user_id": user_id,
             "payment_method": "prc",
             "status": {"$in": COUNTING_STATUSES},
         })
-        if prior_count >= MAX_PRC_SUBSCRIPTIONS:
-            raise HTTPException(
-                status_code=400,
-                detail=f"User has already used {prior_count}/{MAX_PRC_SUBSCRIPTIONS} PRC subscription chances. Admin override cannot bypass lifetime cap.",
-            )
+        logging.info(f"[ADMIN-FORCE-SUB] {user_id} prior_count={prior_count} (unlimited)")
 
         # 4) 7-day cooldown (NOT bypassed per user rule)
         try:
@@ -14458,7 +14454,9 @@ async def admin_force_activate_elite_prc(request: Request):
         except Exception as w_err:
             logging.error(f"[ADMIN-FORCE-SUB] Company wallet credit failed: {w_err}")
 
-        # 11) subscription_payments record (counts toward 3-time cap)
+        # ==================== STEP 11: ADD TO VIP_PAYMENTS (IDEMPOTENT) ====================
+        # NOTE: removed redeem-limit gate + 3-time cap May 2026.
+        # remaining_days_added counts toward analytics only (not capped).
         payment_record = {
             "payment_id": payment_id,
             "user_id": user_id,
@@ -14639,7 +14637,8 @@ async def admin_force_activate_elite_prc(request: Request):
             "chances": {
                 "used_before": prior_count,
                 "used_after": prior_count + 1,
-                "remaining": max(0, MAX_PRC_SUBSCRIPTIONS - (prior_count + 1)),
+                "remaining": None,
+                "unlimited": True,
             },
             "payment_id": payment_id,
         }
@@ -14719,8 +14718,8 @@ async def admin_force_activate_preview(identifier: str):
         projected_balance = round(current_balance - prc_required, 2)
         overdraft_will_apply = projected_balance < 0
 
-        MAX_PRC_SUBSCRIPTIONS = 3
-        chances_exhausted = used_count >= MAX_PRC_SUBSCRIPTIONS
+        # PRC cap removed May 2026 — unlimited
+        chances_exhausted = False
 
         return {
             "user": {
@@ -14746,16 +14745,14 @@ async def admin_force_activate_preview(identifier: str):
             },
             "eligibility": {
                 "chances_used": used_count,
-                "chances_max": MAX_PRC_SUBSCRIPTIONS,
-                "chances_remaining": max(0, MAX_PRC_SUBSCRIPTIONS - used_count),
+                "chances_max": None,
+                "chances_remaining": None,
                 "chances_exhausted": chances_exhausted,
+                "unlimited": True,
                 "cooldown_blocked": cooldown_blocked,
                 "cooldown_reason": cooldown_reason,
-                "can_proceed": (not chances_exhausted) and (not cooldown_blocked),
-                "blockers": (
-                    ([f"Lifetime PRC cap reached ({used_count}/{MAX_PRC_SUBSCRIPTIONS})"] if chances_exhausted else [])
-                    + ([cooldown_reason] if cooldown_blocked else [])
-                ),
+                "can_proceed": not cooldown_blocked,
+                "blockers": ([cooldown_reason] if cooldown_blocked else []),
             },
         }
     except HTTPException:

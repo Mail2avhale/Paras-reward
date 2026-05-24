@@ -163,18 +163,14 @@ const SubscriptionPlans = ({ user }) => {
       // PRC eligibility — may downgrade default payment method
       let isPrcEligible = true;
       if (eligRes?.data) {
-        isPrcEligible = eligRes.data?.eligible !== false;
-        setPrcEligible(isPrcEligible);
+        // PRC subscriptions are now unlimited (May 2026) — always eligible
+        isPrcEligible = true;
+        setPrcEligible(true);
         setPrcLastUsedAt(eligRes.data?.last_used_at || null);
         setPrcLastPlan(eligRes.data?.last_plan || null);
         setPrcUsedCount(eligRes.data?.used_count ?? 0);
-        setPrcMaxAllowed(eligRes.data?.max_allowed ?? 3);
-        setPrcRemaining(eligRes.data?.remaining ?? 3);
-
-        // Re-evaluate default payment method if PRC was pre-selected but user is ineligible
-        if (isPrcEnabled && !isPrcEligible && !isRazorpayEnabled && isManualEnabled) {
-          setPaymentMethod('manual');
-        }
+        setPrcMaxAllowed(eligRes.data?.max_allowed ?? null);
+        setPrcRemaining(eligRes.data?.remaining ?? null);
       }
 
       // Redeem limit info
@@ -1176,15 +1172,12 @@ const SubscriptionPlans = ({ user }) => {
             </button>
             )}
 
-            {/* Pay with PRC */}
+            {/* Pay with PRC — unlimited (May 2026) */}
             {prcEnabled && (
             <button
-              onClick={() => prcEligible && setPaymentMethod('prc')}
-              disabled={!prcEligible}
+              onClick={() => setPaymentMethod('prc')}
               className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${
-                !prcEligible
-                  ? 'border-gray-800 bg-gray-900/30 opacity-60 cursor-not-allowed'
-                  : paymentMethod === 'prc'
+                paymentMethod === 'prc'
                   ? 'border-cyan-500 bg-cyan-500/10'
                   : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'
               }`}
@@ -1192,38 +1185,30 @@ const SubscriptionPlans = ({ user }) => {
             >
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  paymentMethod === 'prc' && prcEligible ? 'bg-cyan-500/20' : 'bg-gray-800'
+                  paymentMethod === 'prc' ? 'bg-cyan-500/20' : 'bg-gray-800'
                 }`}>
-                  <Wallet className={`w-6 h-6 ${paymentMethod === 'prc' && prcEligible ? 'text-cyan-400' : 'text-gray-400'}`} />
+                  <Wallet className={`w-6 h-6 ${paymentMethod === 'prc' ? 'text-cyan-400' : 'text-gray-400'}`} />
                 </div>
                 <div className="flex-1 text-left">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className={`font-semibold ${paymentMethod === 'prc' && prcEligible ? 'text-cyan-400' : 'text-white'}`}>
+                    <p className={`font-semibold ${paymentMethod === 'prc' ? 'text-cyan-400' : 'text-white'}`}>
                       Pay with PRC
                     </p>
-                    {prcEligible ? (
-                      <span
-                        className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full font-medium"
-                        data-testid="prc-usage-badge"
-                      >
-                        {`${prcUsedCount}/${prcMaxAllowed} used`}
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full font-medium" data-testid="prc-limit-reached-badge">
-                        Limit reached ({prcUsedCount}/{prcMaxAllowed})
-                      </span>
-                    )}
+                    <span
+                      className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full font-medium"
+                      data-testid="prc-usage-badge"
+                    >
+                      Unlimited
+                    </span>
                   </div>
                   <p className="text-gray-400 text-sm">
-                    {!prcEligible
-                      ? `${prcMaxAllowed} PRC subscriptions used${prcLastUsedAt ? `, last on ${String(prcLastUsedAt).slice(0, 10)}` : ''} — use UPI or Manual Payment for renewals`
-                      : (prcPricing ? `${Number(prcPricing.total_prc_required).toLocaleString('en-IN')} PRC required` : 'Use your PRC balance')}
+                    {prcPricing ? `${Number(prcPricing.total_prc_required).toLocaleString('en-IN')} PRC required` : 'Use your PRC balance'}
                   </p>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  paymentMethod === 'prc' && prcEligible ? 'border-cyan-500 bg-cyan-500' : 'border-gray-600'
+                  paymentMethod === 'prc' ? 'border-cyan-500 bg-cyan-500' : 'border-gray-600'
                 }`}>
-                  {paymentMethod === 'prc' && prcEligible && <Check className="w-3 h-3 text-white" />}
+                  {paymentMethod === 'prc' && <Check className="w-3 h-3 text-white" />}
                 </div>
               </div>
             </button>
@@ -1243,28 +1228,19 @@ const SubscriptionPlans = ({ user }) => {
                 </div>
               </div>
 
-              {/* Usage progress */}
+              {/* Usage info (unlimited — May 2026) */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-400">PRC subscriptions used</span>
                   <span
-                    className={`font-mono font-bold ${prcRemaining > 0 ? 'text-cyan-400' : 'text-amber-400'}`}
+                    className="font-mono font-bold text-cyan-400"
                     data-testid="prc-usage-text"
                   >
-                    {prcUsedCount} / {prcMaxAllowed}
+                    {prcUsedCount} · Unlimited
                   </span>
                 </div>
-                <div className="w-full h-1.5 rounded-full bg-gray-800 overflow-hidden">
-                  <div
-                    className={`h-full transition-all ${prcRemaining > 0 ? 'bg-cyan-500' : 'bg-amber-500'}`}
-                    style={{ width: `${Math.min(100, (prcUsedCount / prcMaxAllowed) * 100)}%` }}
-                    data-testid="prc-usage-progress"
-                  />
-                </div>
-                <p className="text-xs text-gray-500">
-                  {prcRemaining > 0
-                    ? `${prcRemaining} PRC subscription${prcRemaining === 1 ? '' : 's'} remaining`
-                    : 'No PRC subscriptions remaining — use UPI or Manual Payment'}
+                <p className="text-xs text-gray-500" data-testid="prc-unlimited-note">
+                  No cap on PRC subscriptions — renew as many times as you like (7-day cooldown applies).
                 </p>
               </div>
 

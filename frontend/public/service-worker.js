@@ -1,13 +1,15 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v24: May 24, 2026 — Razorpay verify-payment now wires
-// assign_subscription_position + community success-story post (fixes
-// Network Size = 0 + missing community post for Razorpay users). Self PRC
-// subscription redeem-limit gate removed — users can always renew with PRC
-// balance. Frontend warning text softened. Bump SW to evict stale bundle.
-const CACHE_NAME = 'paras-reward-v24';
-const RUNTIME_CACHE = 'paras-runtime-v24';
-const API_CACHE = 'paras-api-v24';
+// v25: May 24, 2026 — Removed 3-time PRC subscription lifetime cap. PRC
+// subscriptions are now UNLIMITED (only 7-day cooldown + balance gate).
+// Backend: get_prc_subscription_eligibility, subscription_pay_with_prc,
+// force-activate-elite-prc, preview all updated. Frontend: SubscriptionPlans
+// PRC card shows "Unlimited" badge instead of "X/3 used". Admin
+// ForceActivateSubscription shows "Used · Unlimited". Bump SW to evict
+// old App.js bundle.
+const CACHE_NAME = 'paras-reward-v25';
+const RUNTIME_CACHE = 'paras-runtime-v25';
+const API_CACHE = 'paras-api-v25';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

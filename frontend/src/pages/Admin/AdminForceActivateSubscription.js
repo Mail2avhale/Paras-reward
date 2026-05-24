@@ -271,9 +271,9 @@ export default function AdminForceActivateSubscription() {
             <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2">Eligibility</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
               <Stat
-                label="PRC Chances Used"
-                value={`${preview.eligibility?.chances_used}/${preview.eligibility?.chances_max}`}
-                tone={preview.eligibility?.chances_exhausted ? 'red' : 'slate'}
+                label="PRC Subscriptions Used"
+                value={`${preview.eligibility?.chances_used ?? 0} · Unlimited`}
+                tone="slate"
                 testid="elig-chances"
               />
               <Stat
