@@ -1,15 +1,14 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v25: May 24, 2026 — Removed 3-time PRC subscription lifetime cap. PRC
-// subscriptions are now UNLIMITED (only 7-day cooldown + balance gate).
-// Backend: get_prc_subscription_eligibility, subscription_pay_with_prc,
-// force-activate-elite-prc, preview all updated. Frontend: SubscriptionPlans
-// PRC card shows "Unlimited" badge instead of "X/3 used". Admin
-// ForceActivateSubscription shows "Used · Unlimited". Bump SW to evict
-// old App.js bundle.
-const CACHE_NAME = 'paras-reward-v25';
-const RUNTIME_CACHE = 'paras-runtime-v25';
-const API_CACHE = 'paras-api-v25';
+// v26: May 24, 2026 — bulk-sync-captured idempotency hole patched (was
+// double-activating subscriptions when user.last_payment_id was overwritten
+// between bulk-sync sweeps — Rutuja Sunil reported 55-day plan instead of
+// 28). Added /api/admin/razorpay/find-double-activations diagnostic+fix
+// endpoint to identify and correct affected users in bulk. Bump SW to
+// evict old App.js bundle.
+const CACHE_NAME = 'paras-reward-v26';
+const RUNTIME_CACHE = 'paras-runtime-v26';
+const API_CACHE = 'paras-api-v26';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

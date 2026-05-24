@@ -10509,16 +10509,50 @@ async def bulk_sync_captured_payments(request: Request):
                     not_found += 1
                     continue
                 
-                # Check if already paid/activated
+                # ==================== HARD IDEMPOTENCY GUARD (May 2026 fix) ====================
+                # PRIOR BUG: Code only skipped when (order.status=paid AND user.last_payment_id == this payment_id).
+                # If user.last_payment_id was later overwritten by a newer payment, the
+                # OLD order would re-activate on the next bulk_sync sweep, adding 28
+                # MORE days on top of the original activation. Example: Rutuja Sunil
+                # was activated 26 Apr 26 (28 days → expiry 24 May) then re-activated
+                # again, expiry stretched to 20 Jun 26 (55 days).
+                # FIX: Treat ANY of these as definitive "already activated":
+                #   (a) vip_payments has a doc with this payment_id (canonical idempotency key)
+                #   (b) transactions has a subscription_payment doc with this payment_id
+                #   (c) order.status="paid" AND user.last_payment_id matches (legacy check)
+                already_activated_check = await db.vip_payments.find_one(
+                    {"payment_id": payment_id}, {"_id": 1}
+                )
+                if not already_activated_check:
+                    already_activated_check = await db.transactions.find_one(
+                        {"payment_id": payment_id, "type": "subscription_payment"},
+                        {"_id": 1}
+                    )
+                if already_activated_check:
+                    already_active += 1
+                    logging.info(f"[BULK-SYNC] Skipping payment {payment_id} — already has vip_payment/transaction record (idempotent)")
+                    continue
+
+                # Legacy fallback check (kept for very-old orders without vip_payment record)
                 if order.get("status") == "paid":
-                    # Check if user subscription is actually active
                     user_id = order.get("user_id")
                     user = await db.users.find_one({"uid": user_id})
-                    
+
                     if user and user.get("last_payment_id") == payment_id:
                         already_active += 1
                         continue
-                
+                    # If status=paid but no canonical record exists AND last_payment_id
+                    # mismatches, we STILL skip to be safe (prior bug: this fell through
+                    # and double-activated). Log as a warning so the operator can
+                    # investigate orphan paid-but-unrecorded orders manually.
+                    logging.warning(
+                        f"[BULK-SYNC] Order {order_id} marked paid but no vip_payment/"
+                        f"transaction record; user.last_payment_id={user.get('last_payment_id') if user else None}. "
+                        f"Skipping to prevent double-activation. Manual review needed."
+                    )
+                    already_active += 1
+                    continue
+
                 # Need to activate!
                 user_id = order.get("user_id")
                 plan_type = order.get("plan_type", "monthly")
@@ -28873,6 +28907,134 @@ async def migrate_subscription_positions():
         }
     except Exception as e:
         logging.error(f"Migration error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/razorpay/find-double-activations")
+async def find_double_activations(request: Request):
+    """
+    DIAGNOSTIC: Find users whose subscription duration is significantly longer
+    than expected (28 days × payment count + carry-over). Caused by the
+    bulk-sync-captured dedup hole (fixed May 2026) — same payment_id was
+    re-activated when user.last_payment_id was overwritten by a newer order.
+    
+    Body: {"admin_pin": "153759", "fix": false, "uid": "optional-specific-uid"}
+    Returns list of suspect users. Pass fix=true to RESET expiry to the
+    correct value: subscription_start + 28 × (payment_count for this user).
+    """
+    try:
+        data = await request.json()
+        if data.get("admin_pin") != "153759":
+            raise HTTPException(status_code=403, detail="Invalid admin pin")
+        do_fix = bool(data.get("fix", False))
+        target_uid = data.get("uid")
+
+        # Find Elite users with subscription_start, subscription_expires set
+        query = {
+            "subscription_plan": "elite",
+            "subscription_start": {"$exists": True, "$ne": None},
+            "subscription_expires": {"$exists": True, "$ne": None},
+        }
+        if target_uid:
+            query["uid"] = target_uid
+
+        users = await db.users.find(
+            query,
+            {
+                "_id": 0, "uid": 1, "name": 1, "mobile": 1,
+                "subscription_start": 1, "subscription_expires": 1,
+                "subscription_expiry": 1, "subscription_type": 1,
+                "previous_remaining_days_added": 1,
+                "last_payment_id": 1, "activated_via": 1,
+            }
+        ).to_list(20000)
+
+        suspects = []
+        fixed = []
+        ok_count = 0
+
+        for u in users:
+            uid = u["uid"]
+            start = u.get("subscription_start")
+            expires = u.get("subscription_expires") or u.get("subscription_expiry")
+            sub_type = u.get("subscription_type") or "monthly"
+
+            # Parse dates
+            def to_dt(x):
+                if isinstance(x, datetime):
+                    return x if x.tzinfo else x.replace(tzinfo=timezone.utc)
+                if isinstance(x, str):
+                    try:
+                        d = datetime.fromisoformat(x.replace("Z", "+00:00"))
+                        return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+                    except Exception:
+                        return None
+                return None
+
+            start_dt = to_dt(start)
+            expires_dt = to_dt(expires)
+            if not start_dt or not expires_dt:
+                continue
+
+            actual_days = (expires_dt - start_dt).total_seconds() / 86400.0
+
+            # Count how many CASH payments this user has on record (each = 28 days)
+            payment_count = await db.vip_payments.count_documents({
+                "user_id": uid, "status": "approved", "payment_method": "razorpay"
+            })
+            if payment_count == 0:
+                payment_count = await db.razorpay_orders.count_documents({
+                    "user_id": uid, "status": "paid", "payment_captured": True
+                })
+
+            duration_days_per_payment = {"monthly": 28, "quarterly": 84, "half_yearly": 168, "yearly": 336}.get(sub_type, 28)
+            expected_days = duration_days_per_payment * max(1, payment_count) + (u.get("previous_remaining_days_added") or 0)
+
+            # Suspect if actual > expected + 2 days tolerance
+            if actual_days > expected_days + 2:
+                expected_expiry = start_dt + timedelta(days=expected_days)
+                suspects.append({
+                    "uid": uid,
+                    "name": u.get("name"),
+                    "mobile": u.get("mobile"),
+                    "start": start_dt.isoformat(),
+                    "current_expires": expires_dt.isoformat(),
+                    "expected_expires": expected_expiry.isoformat(),
+                    "actual_days": round(actual_days, 1),
+                    "expected_days": expected_days,
+                    "extra_days": round(actual_days - expected_days, 1),
+                    "payment_count": payment_count,
+                    "activated_via": u.get("activated_via"),
+                })
+
+                if do_fix:
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {
+                            "subscription_expires": expected_expiry,
+                            "subscription_expiry": expected_expiry.isoformat(),
+                            "vip_expiry": expected_expiry.isoformat(),
+                            "double_activation_fixed_at": datetime.now(timezone.utc).isoformat(),
+                            "double_activation_old_expires": expires_dt.isoformat(),
+                        }}
+                    )
+                    fixed.append(uid)
+            else:
+                ok_count += 1
+
+        return {
+            "success": True,
+            "fix_applied": do_fix,
+            "total_scanned": len(users),
+            "suspects": len(suspects),
+            "ok": ok_count,
+            "fixed": len(fixed),
+            "suspect_users": suspects[:200],  # cap for response size
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[FIND-DOUBLE-ACTIVATION] error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
