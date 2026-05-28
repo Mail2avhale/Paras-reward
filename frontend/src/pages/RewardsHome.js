@@ -148,6 +148,58 @@ const RewardsHome = () => {
         </div>
       </section>
 
+      {/* ===== 2.6 BANKING PARTNERS ===== */}
+      <section className="bg-white border-y border-gray-100 py-8 sm:py-10 px-6" data-testid="banking-partners-section">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-6">
+            <p className="text-xs font-bold tracking-[0.18em] text-gray-400 uppercase">
+              Powered by Trusted Banking Partners
+            </p>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mt-2">
+              Your money flows through RBI-regulated banks
+            </h3>
+          </div>
+          <div className="grid grid-cols-3 gap-4 sm:gap-8 items-center justify-items-center">
+            <div className="flex flex-col items-center gap-2" data-testid="partner-hdfc">
+              <div className="h-14 sm:h-16 w-full max-w-[140px] flex items-center justify-center rounded-xl border border-gray-200 bg-white px-3 hover:shadow-md transition-shadow">
+                <img
+                  src="/partners/hdfc.svg"
+                  alt="HDFC Bank"
+                  loading="lazy"
+                  className="max-h-8 sm:max-h-10 w-auto object-contain"
+                />
+              </div>
+              <span className="text-[11px] text-gray-500">HDFC Bank</span>
+            </div>
+            <div className="flex flex-col items-center gap-2" data-testid="partner-kotak">
+              <div className="h-14 sm:h-16 w-full max-w-[140px] flex items-center justify-center rounded-xl border border-gray-200 bg-white px-3 hover:shadow-md transition-shadow">
+                <img
+                  src="/partners/kotak.svg"
+                  alt="Kotak Mahindra Bank"
+                  loading="lazy"
+                  className="max-h-9 sm:max-h-11 w-auto object-contain"
+                />
+              </div>
+              <span className="text-[11px] text-gray-500">Kotak Mahindra</span>
+            </div>
+            <div className="flex flex-col items-center gap-2" data-testid="partner-razorpay">
+              <div className="h-14 sm:h-16 w-full max-w-[140px] flex items-center justify-center rounded-xl border border-gray-200 bg-white px-3 hover:shadow-md transition-shadow">
+                <img
+                  src="/partners/razorpay.svg"
+                  alt="Razorpay Payment Gateway"
+                  loading="lazy"
+                  className="max-h-7 sm:max-h-9 w-auto object-contain"
+                />
+              </div>
+              <span className="text-[11px] text-gray-500">Razorpay</span>
+            </div>
+          </div>
+          <p className="text-center text-[11px] text-gray-400 mt-5">
+            All bank transfers are processed via licensed BBPS &amp; payment-gateway partners under RBI guidelines.
+          </p>
+        </div>
+      </section>
+
       {/* ===== 2.5 TRUST PILLARS — 6 Reasons to Choose Us ===== */}
       <section className="py-14 sm:py-20 px-6 bg-gradient-to-b from-gray-50 via-white to-gray-50" data-testid="trust-pillars-section">
         <div className="max-w-6xl mx-auto">

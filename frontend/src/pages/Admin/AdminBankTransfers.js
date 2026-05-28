@@ -563,11 +563,23 @@ const AdminBankTransfers = () => {
             {/* Sort By Dropdown */}
             <select
               data-testid="sort-by-select"
-              value={sortBy === 'total_redeemed' && sortOrder === 'asc' ? 'lifetime_low' : sortBy}
+              value={
+                sortBy === 'total_redeemed' && sortOrder === 'asc'
+                  ? 'lifetime_low'
+                  : sortBy === 'user_joining_date'
+                  ? (sortOrder === 'desc' ? 'newest_joined' : 'oldest_joined')
+                  : sortBy
+              }
               onChange={(e) => {
                 const v = e.target.value;
                 if (v === 'lifetime_low') {
                   setSortBy('total_redeemed');
+                  setSortOrder('asc');
+                } else if (v === 'newest_joined') {
+                  setSortBy('user_joining_date');
+                  setSortOrder('desc');
+                } else if (v === 'oldest_joined') {
+                  setSortBy('user_joining_date');
                   setSortOrder('asc');
                 } else {
                   setSortBy(v);
@@ -575,10 +587,12 @@ const AdminBankTransfers = () => {
               }}
               className="bg-white border border-slate-300 text-slate-900 rounded-md px-3 py-2 text-sm"
             >
-              <option value="created_at">Sort by: Date</option>
+              <option value="created_at">Sort by: Request Date</option>
               <option value="amount">Sort by: Amount</option>
               <option value="user_name">Sort by: Name</option>
-              <option value="total_redeemed">Sort by: Lifetime Uses</option>
+              <option value="newest_joined">Sort by: Newest Joined Users</option>
+              <option value="oldest_joined">Sort by: Oldest Joined Users</option>
+              <option value="total_redeemed">Sort by: Lifetime Uses (High → Low)</option>
               <option value="lifetime_low">Sort by: Lifetime Uses (Low → High)</option>
             </select>
             

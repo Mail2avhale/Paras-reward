@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" role="img" aria-label="Kotak Mahindra Bank">
+  <defs>
+    <linearGradient id="kmRed" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ED2026"/>
+      <stop offset="100%" stop-color="#C8161D"/>
+    </linearGradient>
+  </defs>
+  <text x="0" y="50" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="46" font-weight="800" fill="url(#kmRed)" letter-spacing="-1">Kotak</text>
+  <text x="0" y="95" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#003D7B" letter-spacing="2">MAHINDRA BANK</text>
+</svg>

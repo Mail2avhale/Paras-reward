@@ -1,14 +1,14 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v26: May 24, 2026 — bulk-sync-captured idempotency hole patched (was
-// double-activating subscriptions when user.last_payment_id was overwritten
-// between bulk-sync sweeps — Rutuja Sunil reported 55-day plan instead of
-// 28). Added /api/admin/razorpay/find-double-activations diagnostic+fix
-// endpoint to identify and correct affected users in bulk. Bump SW to
-// evict old App.js bundle.
-const CACHE_NAME = 'paras-reward-v26';
-const RUNTIME_CACHE = 'paras-runtime-v26';
-const API_CACHE = 'paras-api-v26';
+// v27: May 24, 2026 — Added Banking Partners section (HDFC + Kotak Mahindra
+// + Razorpay logos) on RewardsHome landing page below the social-proof
+// strip. Admin AdminBankTransfers sort dropdown gained "Newest Joined
+// Users" and "Oldest Joined Users" options (backed by new
+// user_joining_date sort path in manual_bank_transfer.py /admin/requests
+// endpoint). Bump SW to evict stale bundle.
+const CACHE_NAME = 'paras-reward-v27';
+const RUNTIME_CACHE = 'paras-runtime-v27';
+const API_CACHE = 'paras-api-v27';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

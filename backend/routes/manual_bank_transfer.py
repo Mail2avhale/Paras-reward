@@ -727,8 +727,11 @@ async def get_all_requests(
             "date": "created_at",
             "amount": "withdrawal_amount",
             "name": "user_name",
-            "user_name": "user_name"
+            "user_name": "user_name",
         }
+        # `user_joining_date` is special — it's NOT a field on bank_transfer_requests
+        # itself. We resolve it via post-enrichment after fetching user docs.
+        is_user_joining_sort = sort_by == "user_joining_date"
         sort_field = sort_field_map.get(sort_by, "created_at")
         sort_direction = 1 if sort_order == "asc" else -1  # 1 = ascending, -1 = descending
         
@@ -744,12 +747,19 @@ async def get_all_requests(
                 return
             req_user = await db.users.find_one(
                 {"uid": req_user_id},
-                {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expires": 1, "vip_expiry": 1}
+                {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expires": 1, "vip_expiry": 1, "created_at": 1}
             )
             if not req_user:
                 req["subscription_active"] = False
                 req["subscription_plan"] = "unknown"
+                req["user_joining_date"] = None
                 return
+            # User join date (for sorting by latest-joined users)
+            joined = req_user.get("created_at")
+            if isinstance(joined, datetime):
+                req["user_joining_date"] = joined.isoformat()
+            else:
+                req["user_joining_date"] = str(joined) if joined else None
             plan = (req_user.get("subscription_plan") or "explorer").lower()
             is_active = plan not in ["explorer", "free", ""]
             if is_active:
@@ -907,6 +917,14 @@ async def get_all_requests(
         if sort_by == "total_redeemed":
             reverse = sort_order == "desc"
             requests.sort(key=lambda x: x.get("user_total_redeemed_prc", 0), reverse=reverse)
+
+        # Sort by user_joining_date (latest joined users first by default = desc)
+        if is_user_joining_sort:
+            reverse = sort_order == "desc"
+            requests.sort(
+                key=lambda x: (x.get("user_joining_date") or ""),
+                reverse=reverse,
+            )
 
         # Run all 5 stat queries in parallel — was 4 sequential count_documents
         # plus 1 aggregation = 5× wall-clock. Now max-of-each.
