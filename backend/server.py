@@ -13570,11 +13570,9 @@ async def sale_elite_lookup_beneficiary(request: SaleEliteLookupRequest):
     if not sender:
         raise HTTPException(status_code=404, detail="Sender account not found.")
 
-    if not await _sender_is_active_elite(sender):
-        raise HTTPException(
-            status_code=403,
-            detail="Only active Elite subscribers can sponsor subscriptions."
-        )
+    # ELITE-ONLY (active) gate removed May 2026: inactive (expired) Elite users
+    # AND Explorer users can now sponsor subscriptions for friends. Only
+    # business gates are: sufficient PRC balance + daily 1-per-day cap + PIN.
 
     beneficiary = await _find_user_by_mobile(request.beneficiary_mobile)
     if not beneficiary:
@@ -13698,11 +13696,7 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
         sender = await db.users.find_one({"uid": request.sender_uid})
         if not sender:
             raise HTTPException(status_code=404, detail="Sender account not found.")
-        if not await _sender_is_active_elite(sender):
-            raise HTTPException(
-                status_code=403,
-                detail="Only active Elite subscribers can sponsor subscriptions."
-            )
+        # ELITE-ONLY gate removed May 2026 — inactive/Explorer can sponsor too.
 
         # ===== Verify sender PIN =====
         stored_pin = (
@@ -13737,23 +13731,22 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
         pricing = await calculate_elite_prc_price()
         total_prc = pricing["total_prc"]
 
-        # ===== Redeem limit =====
+        # ===== Redeem limit — REMOVED for Sale Elite (May 2026) =====
+        # Business decision: Sale Elite sponsorship is INTERNAL value exchange
+        # (no INR leaves the system; sender's PRC → beneficiary's Elite plan
+        # → company wallet credited). It should not be gated by the monthly
+        # redeem-limit cap. Balance + daily-1-cap + PIN are sufficient guards.
         try:
             limit_info = await calculate_user_redeem_limit(sender.get("uid"))
-        except Exception as _le:
-            logging.error(f"[SALE-ELITE] Redeem limit calc error: {_le}")
-            raise HTTPException(status_code=500, detail="Could not verify your redeem limit. Please try again.")
-
-        effective_available = float(limit_info.get("effective_available") or 0)
-        unlock_percent = limit_info.get("unlock_percent", 0)
-        if total_prc > effective_available:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Insufficient redeem limit. Available: {effective_available:,.0f} PRC "
-                    f"(Unlock: {unlock_percent}%). Required: {total_prc:,.0f} PRC."
-                ),
+            effective_available = float(limit_info.get("effective_available") or 0)
+            unlock_percent = limit_info.get("unlock_percent", 0)
+            logging.info(
+                f"[SALE-ELITE] Redeem limit check SKIPPED for {sender.get('uid')} "
+                f"(available={effective_available:.0f}, unlock={unlock_percent}%) — "
+                f"required={total_prc:.0f}"
             )
+        except Exception as _le:
+            logging.warning(f"[SALE-ELITE] Redeem limit info fetch error (non-blocking): {_le}")
 
         # ===== Balance defense-in-depth =====
         sender_balance = float(sender.get("prc_balance", 0) or 0)
@@ -14207,6 +14200,7 @@ async def sale_elite_eligibility(uid: str):
 
     is_elite = await _sender_is_active_elite(user)
     pricing = await calculate_elite_prc_price()
+    # Redeem limit info is still computed for display, but no longer blocks eligibility.
     try:
         limit_info = await calculate_user_redeem_limit(uid)
         effective_available = float(limit_info.get("effective_available") or 0)
@@ -14223,15 +14217,26 @@ async def sale_elite_eligibility(uid: str):
         "status": {"$in": ["active", "upcoming"]},
     })
 
+    prc_balance = float(user.get("prc_balance", 0) or 0)
+    # ELIGIBILITY (May 2026 update): Removed Elite-active gate and redeem-limit
+    # gate. Sale Elite is open to ALL users with enough PRC + daily quota.
+    is_eligible = (today_count < 1) and (prc_balance >= pricing["total_prc"])
+
+    if today_count >= 1:
+        reason = "Daily limit reached: you can sponsor only 1 Elite subscription per day."
+    elif prc_balance < pricing["total_prc"]:
+        reason = (
+            f"Insufficient PRC. You have {prc_balance:,.0f} PRC, "
+            f"but {pricing['total_prc']:,.0f} PRC is required."
+        )
+    else:
+        reason = None
+
     return {
         "success": True,
-        "is_eligible": is_elite and today_count < 1
-                        and effective_available >= pricing["total_prc"]
-                        and float(user.get("prc_balance", 0) or 0) >= pricing["total_prc"],
+        "is_eligible": is_eligible,
         "is_active_elite": is_elite,
-        "reason": (
-            None if is_elite else "Only active Elite subscribers can sponsor subscriptions."
-        ),
+        "reason": reason,
         "pricing": {
             "base_inr": pricing["base_inr"],
             "gst_inr": pricing["gst_inr"],
@@ -14242,7 +14247,7 @@ async def sale_elite_eligibility(uid: str):
             "inr_equivalent": pricing["base_with_gst_inr"],
         },
         "sender": {
-            "prc_balance": float(user.get("prc_balance", 0) or 0),
+            "prc_balance": prc_balance,
             "effective_available": effective_available,
             "unlock_percent": unlock_percent,
             "daily_limit_ok": today_count < 1,

@@ -128,18 +128,33 @@ const SaleEliteSubscription = ({ user }) => {
   }
 
   // ============ NOT ELIGIBLE STATE ============
-  if (!eligibility?.is_active_elite) {
+  // (May 2026) Elite-active gate removed — all users can sponsor as long as
+  // they have sufficient PRC balance and have not exceeded the daily 1-sale
+  // limit. We now only show a friendly notice if the user is genuinely
+  // ineligible based on those two rules.
+  if (eligibility && eligibility.is_eligible === false) {
+    const sender = eligibility.sender || {};
+    const pricing = eligibility.pricing || {};
+    const insufficientBalance = Number(sender.prc_balance ?? 0) < Number(pricing.total_prc ?? 0);
+    const dailyHit = (sender.sales_today ?? 0) >= 1;
+
     return (
       <div className="px-5 mt-6" data-testid="sale-elite-not-eligible">
         <div className="rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 p-6 text-center">
           <div className="w-14 h-14 mx-auto rounded-full bg-amber-500/20 flex items-center justify-center mb-4">
             <Lock className="w-7 h-7 text-amber-400" />
           </div>
-          <h3 className="text-lg font-semibold text-white mb-2">Elite Feature Locked</h3>
+          <h3 className="text-lg font-semibold text-white mb-2" data-testid="sale-elite-not-eligible-title">
+            {dailyHit ? 'Daily Limit Reached' : insufficientBalance ? 'Not Enough PRC Balance' : 'Sponsorship Not Available'}
+          </h3>
           <p className="text-sm text-gray-400 leading-relaxed">
-            Only active Elite subscribers can sponsor an Elite subscription for friends.
-            Upgrade to Elite first to unlock this feature.
+            {eligibility.reason || 'You are currently not eligible to sponsor an Elite subscription.'}
           </p>
+          {insufficientBalance && (
+            <p className="text-xs text-gray-500 mt-3" data-testid="sale-elite-not-eligible-balance-hint">
+              Earn more PRC by mining or referring friends, then come back to sponsor.
+            </p>
+          )}
         </div>
       </div>
     );

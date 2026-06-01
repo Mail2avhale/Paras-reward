@@ -1,14 +1,15 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v27: May 24, 2026 — Added Banking Partners section (HDFC + Kotak Mahindra
-// + Razorpay logos) on RewardsHome landing page below the social-proof
-// strip. Admin AdminBankTransfers sort dropdown gained "Newest Joined
-// Users" and "Oldest Joined Users" options (backed by new
-// user_joining_date sort path in manual_bank_transfer.py /admin/requests
-// endpoint). Bump SW to evict stale bundle.
-const CACHE_NAME = 'paras-reward-v27';
-const RUNTIME_CACHE = 'paras-runtime-v27';
-const API_CACHE = 'paras-api-v27';
+// v28: May 30, 2026 — Sale Elite ("Sell Elite to Friend") opened to ALL
+// users (not just active Elite subscribers). Removed:
+//  (a) _sender_is_active_elite gate in lookup + activate + eligibility
+//  (b) redeem-limit gate in activate + eligibility
+// Frontend SaleEliteSubscription updated — friendly not-eligible UI keys
+// off daily-cap / insufficient-PRC reasons instead of "Elite locked".
+// Bump SW to evict old App.js bundle.
+const CACHE_NAME = 'paras-reward-v28';
+const RUNTIME_CACHE = 'paras-runtime-v28';
+const API_CACHE = 'paras-api-v28';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
