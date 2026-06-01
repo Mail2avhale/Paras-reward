@@ -1,15 +1,16 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v28: May 30, 2026 — Sale Elite ("Sell Elite to Friend") opened to ALL
-// users (not just active Elite subscribers). Removed:
-//  (a) _sender_is_active_elite gate in lookup + activate + eligibility
-//  (b) redeem-limit gate in activate + eligibility
-// Frontend SaleEliteSubscription updated — friendly not-eligible UI keys
-// off daily-cap / insufficient-PRC reasons instead of "Elite locked".
-// Bump SW to evict old App.js bundle.
-const CACHE_NAME = 'paras-reward-v28';
-const RUNTIME_CACHE = 'paras-runtime-v28';
-const API_CACHE = 'paras-api-v28';
+// v29: May 30, 2026 — Progressive minimum withdrawal feature for Bank
+// Redeem. Each approved redeem raises user's next minimum floor to 1.5×
+// the approved amount. Base minimum ₹100 (down from ₹1,000 flat); legacy
+// users seeded from lifetime_total × 1.5. Backend:
+// compute_progressive_min_withdrawal helper, updated /config and /request
+// endpoints, plus mark-paid and bulk-mark-paid hooks. Frontend
+// BankRedeemPage shows per-user minimum + "next minimum will be ..."
+// preview. Bump SW to evict old App.js bundle.
+const CACHE_NAME = 'paras-reward-v29';
+const RUNTIME_CACHE = 'paras-runtime-v29';
+const API_CACHE = 'paras-api-v29';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

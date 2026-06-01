@@ -103,8 +103,80 @@ def set_prc_rate_getter(func):
 
 TRANSACTION_FEE = 10  # ₹10 flat fee
 ADMIN_FEE_PERCENT = 20  # 20% admin fee
-MIN_WITHDRAWAL = 1000  # ₹1,000 minimum
+MIN_WITHDRAWAL_BASE = 100  # ₹100 base minimum (May 2026 — was ₹1,000 flat)
+MIN_WITHDRAWAL = MIN_WITHDRAWAL_BASE  # legacy alias used elsewhere in code
 MAX_WITHDRAWAL = 10000  # ₹10,000 maximum
+PROGRESSIVE_MULTIPLIER = 1.5  # Each approved redeem raises next min by 1.5×
+
+
+async def compute_progressive_min_withdrawal(user_id: str) -> dict:
+    """Compute the user's CURRENT minimum withdrawal floor.
+
+    Rules (May 2026):
+      • Brand-new user (0 approved redeems): minimum = ₹100 (BASE).
+      • Going forward: each approved redeem of amount X raises the next
+        min to ceil(X × 1.5). Stored on user as `next_min_withdrawal_inr`.
+      • Legacy/old users (no stored field, but have prior approved
+        redeems): min = max(BASE, ceil(lifetime_total_approved × 1.5)).
+      • Cap: none (compounds indefinitely).
+
+    Returns: {
+        "minimum": int,                  # current floor in INR
+        "next_minimum_preview": int|None,# what min becomes if they submit `minimum`
+        "basis": "base" | "stored" | "legacy_total",
+        "total_approved_count": int,
+        "total_approved_amount": int,
+        "last_approved_amount": int|None,
+    }
+    """
+    import math
+
+    user = await db.users.find_one(
+        {"uid": user_id},
+        {"_id": 0, "next_min_withdrawal_inr": 1}
+    ) or {}
+    stored = user.get("next_min_withdrawal_inr")
+
+    # Aggregate prior approved redeems (only "approved" / "paid" statuses count)
+    APPROVED_STATUSES = ["approved", "paid", "completed"]
+    cursor = db.bank_transfer_requests.find(
+        {"user_id": user_id, "status": {"$in": APPROVED_STATUSES}},
+        {"_id": 0, "withdrawal_amount": 1, "approved_at": 1, "paid_at": 1, "created_at": 1}
+    )
+    docs = await cursor.to_list(20000)
+    total_amount = 0
+    last_amount = None
+    last_when = None
+    for d in docs:
+        amt = int(d.get("withdrawal_amount") or 0)
+        total_amount += amt
+        when = d.get("paid_at") or d.get("approved_at") or d.get("created_at")
+        if when and (last_when is None or str(when) > str(last_when)):
+            last_when = when
+            last_amount = amt
+
+    count = len(docs)
+    if stored is not None:
+        minimum = max(MIN_WITHDRAWAL_BASE, int(stored))
+        basis = "stored"
+    elif count == 0:
+        minimum = MIN_WITHDRAWAL_BASE
+        basis = "base"
+    else:
+        # Legacy / pre-feature user — bootstrap from lifetime total
+        minimum = max(MIN_WITHDRAWAL_BASE, int(math.ceil(total_amount * PROGRESSIVE_MULTIPLIER)))
+        basis = "legacy_total"
+
+    next_preview = max(MIN_WITHDRAWAL_BASE, int(math.ceil(minimum * PROGRESSIVE_MULTIPLIER)))
+
+    return {
+        "minimum": minimum,
+        "next_minimum_preview": next_preview,
+        "basis": basis,
+        "total_approved_count": count,
+        "total_approved_amount": total_amount,
+        "last_approved_amount": last_amount,
+    }
 
 # Eko API for IFSC verification
 EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
@@ -140,7 +212,9 @@ class BankDetails(BaseModel):
 
 class RedeemRequest(BaseModel):
     user_id: str
-    amount: int = Field(..., ge=MIN_WITHDRAWAL, le=MAX_WITHDRAWAL)
+    # ge=MIN_WITHDRAWAL_BASE (100). The PROGRESSIVE minimum per user is
+    # enforced inside the route handler via compute_progressive_min_withdrawal().
+    amount: int = Field(..., ge=MIN_WITHDRAWAL_BASE, le=MAX_WITHDRAWAL)
     bank_details: BankDetails
     client_request_id: Optional[str] = None  # Idempotency key (optional for backward compat)
 
@@ -269,23 +343,36 @@ async def verify_ifsc_eko(ifsc: str) -> dict:
 # ==================== USER APIs ====================
 
 @router.get("/config")
-async def get_config():
-    """Get redeem configuration for frontend with dynamic PRC rate."""
+async def get_config(user_id: Optional[str] = Query(None)):
+    """Get redeem configuration for frontend with dynamic PRC rate.
+
+    If `user_id` is provided, the response also includes that user's
+    PROGRESSIVE minimum withdrawal floor (May 2026 feature) under the
+    `progressive` key.
+    """
     from utils.helpers import get_prc_rate
     prc_rate = await get_prc_rate(db)
-    
-    return {
+
+    payload = {
         "prc_rate": prc_rate,
         "transaction_fee": TRANSACTION_FEE,
         "admin_fee_percent": ADMIN_FEE_PERCENT,
-        "min_withdrawal": MIN_WITHDRAWAL,
+        "min_withdrawal_base": MIN_WITHDRAWAL_BASE,
+        "min_withdrawal": MIN_WITHDRAWAL_BASE,  # legacy field (UI fallback)
         "max_withdrawal": MAX_WITHDRAWAL,
+        "progressive_multiplier": PROGRESSIVE_MULTIPLIER,
         "cooldown_hours": 24,
-        "note": f"1 INR = {prc_rate} PRC | 1 redeem per 24 hours"
+        "note": f"1 INR = {prc_rate} PRC | 1 redeem per 24 hours",
     }
+    if user_id:
+        prog = await compute_progressive_min_withdrawal(user_id)
+        payload["progressive"] = prog
+        # Override min_withdrawal so legacy UI fields display the user-specific floor.
+        payload["min_withdrawal"] = prog["minimum"]
+    return payload
 
 @router.get("/calculate-fees")
-async def calculate_fees_api(amount: int = Query(..., ge=MIN_WITHDRAWAL, le=MAX_WITHDRAWAL)):
+async def calculate_fees_api(amount: int = Query(..., ge=MIN_WITHDRAWAL_BASE, le=MAX_WITHDRAWAL)):
     """Calculate fees for a given withdrawal amount."""
     return {
         "success": True,
@@ -352,11 +439,26 @@ async def create_redeem_request(request: RedeemRequest):
         amount = request.amount
         bank = request.bank_details
         
-        # 1. Validate amount limits
-        if amount < MIN_WITHDRAWAL:
-            raise HTTPException(status_code=400, detail=f"Minimum withdrawal is ₹{MIN_WITHDRAWAL}")
+        # 1. Validate amount limits (base + progressive per-user floor)
         if amount > MAX_WITHDRAWAL:
             raise HTTPException(status_code=400, detail=f"Maximum withdrawal is ₹{MAX_WITHDRAWAL}")
+        progressive = await compute_progressive_min_withdrawal(user_id)
+        user_min = progressive["minimum"]
+        if amount < user_min:
+            # Build helpful error message
+            if progressive["basis"] == "legacy_total":
+                msg = (
+                    f"Minimum withdrawal for your account is ₹{user_min:,} (based on your lifetime "
+                    f"redeem total of ₹{progressive['total_approved_amount']:,} × 1.5)."
+                )
+            elif progressive["basis"] == "stored":
+                msg = (
+                    f"Minimum withdrawal for your account is ₹{user_min:,} (1.5× of your last "
+                    f"approved redeem amount)."
+                )
+            else:
+                msg = f"Minimum withdrawal is ₹{user_min:,}."
+            raise HTTPException(status_code=400, detail=msg)
         
         # 2. Get user
         user = await db.users.find_one({"uid": user_id})
@@ -1057,6 +1159,27 @@ async def mark_request_paid(action: AdminActionRequest):
         )
         
         logging.info(f"[BANK TRANSFER] Marked PAID: {action.request_id} | Admin: {action.admin_id} | UTR: {action.utr_number}")
+
+        # PROGRESSIVE MIN-WITHDRAWAL (May 2026): every approved/paid redeem
+        # raises the user's next minimum floor to amount × 1.5. Updated atomically
+        # via $max so concurrent admin actions never lower the floor.
+        try:
+            import math as _math
+            paid_amt = int(request.get("withdrawal_amount") or 0)
+            new_floor = max(MIN_WITHDRAWAL_BASE, int(_math.ceil(paid_amt * PROGRESSIVE_MULTIPLIER)))
+            if paid_amt > 0:
+                await db.users.update_one(
+                    {"uid": request.get("user_id")},
+                    {"$max": {"next_min_withdrawal_inr": new_floor},
+                     "$set": {"last_redeem_amount_inr": paid_amt,
+                              "last_redeem_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                logging.info(
+                    f"[PROGRESSIVE-MIN] user={request.get('user_id')} "
+                    f"paid={paid_amt} → next_min raised to ₹{new_floor}"
+                )
+        except Exception as _e:
+            logging.warning(f"[PROGRESSIVE-MIN] update failed (non-fatal): {_e}")
         
         # Create community Success Story post (fire-and-forget)
         try:
@@ -1429,6 +1552,24 @@ async def bulk_mark_paid(action: BulkActionRequest):
                     }
                 )
                 paid_count += 1
+
+                # PROGRESSIVE MIN-WITHDRAWAL (May 2026): raise floor 1.5×
+                try:
+                    import math as _math
+                    paid_amt_p = int(request.get("withdrawal_amount") or 0)
+                    if paid_amt_p > 0:
+                        new_floor_p = max(
+                            MIN_WITHDRAWAL_BASE,
+                            int(_math.ceil(paid_amt_p * PROGRESSIVE_MULTIPLIER)),
+                        )
+                        await db.users.update_one(
+                            {"uid": request.get("user_id")},
+                            {"$max": {"next_min_withdrawal_inr": new_floor_p},
+                             "$set": {"last_redeem_amount_inr": paid_amt_p,
+                                      "last_redeem_at": datetime.now(timezone.utc).isoformat()}}
+                        )
+                except Exception as _floor_err:
+                    logging.warning(f"[PROGRESSIVE-MIN] bulk update failed (non-fatal): {_floor_err}")
 
                 # Sustainability auto-burn (1% of post-deduction balance, threshold 30k)
                 try:

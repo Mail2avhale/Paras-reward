@@ -114,7 +114,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
         
         const [userRes, configRes, limitRes, burnRes] = await Promise.all([
           axios.get(`${API}/users/${userData.uid}`),
-          axios.get(`${API}/bank-transfer/config`),
+          axios.get(`${API}/bank-transfer/config?user_id=${userData.uid}`),
           fetchRedeemLimit(),
           axios.get(`${API}/redemption/calculate-charges?amount_inr=100&user_id=${userData.uid}`).catch(() => ({ data: null }))
         ]);
@@ -480,6 +480,29 @@ const BankRedeemPage = ({ user: initialUser }) => {
               <p className="text-slate-500 text-xs mt-2">
                 Rate: 1 INR = {config.prc_rate} PRC | Fee: ₹{config.transaction_fee} + {config.admin_fee_percent}%
               </p>
+              {config.progressive && config.progressive.total_approved_count > 0 && (
+                <div
+                  className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-200/90"
+                  data-testid="progressive-min-notice"
+                >
+                  <p className="font-semibold text-amber-300">
+                    Your minimum withdrawal: ₹{Number(config.progressive.minimum).toLocaleString('en-IN')}
+                  </p>
+                  <p className="mt-1 text-amber-200/70">
+                    {config.progressive.basis === 'legacy_total'
+                      ? `Calculated from your lifetime redeem total of ₹${Number(config.progressive.total_approved_amount).toLocaleString('en-IN')} × 1.5.`
+                      : `1.5× of your last approved redeem of ₹${Number(config.progressive.last_approved_amount || 0).toLocaleString('en-IN')}.`}
+                  </p>
+                  <p className="mt-1 text-amber-200/60">
+                    Next minimum after this redeem will be approx ₹{Number(Math.ceil((parseFloat(amount) || config.progressive.minimum) * 1.5)).toLocaleString('en-IN')}.
+                  </p>
+                </div>
+              )}
+              {config.progressive && config.progressive.total_approved_count === 0 && (
+                <p className="text-slate-500 text-xs mt-2" data-testid="progressive-min-first">
+                  First-time redeem: minimum is ₹{Number(config.progressive.minimum).toLocaleString('en-IN')}. Each future redeem raises your floor 1.5×.
+                </p>
+              )}
             </Card>
 
             {/* Fee Breakdown via PRCRateDisplay */}
