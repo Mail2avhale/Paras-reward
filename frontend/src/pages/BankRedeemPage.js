@@ -464,7 +464,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder={`Min ₹${config.min_withdrawal} - Max ₹${config.max_withdrawal}`}
+                  placeholder={`Min ₹${Number(config.min_withdrawal).toLocaleString('en-IN')}`}
                   className="pl-10 bg-slate-900 border-slate-600 text-white"
                   min={config.min_withdrawal}
                   max={config.max_withdrawal}

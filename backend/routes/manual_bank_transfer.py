@@ -169,8 +169,13 @@ async def compute_progressive_min_withdrawal(user_id: str) -> dict:
 
     next_preview = max(MIN_WITHDRAWAL_BASE, int(math.ceil(minimum * PROGRESSIVE_MULTIPLIER)))
 
+    # Effective per-user MAX must always be >= minimum (with 2× headroom)
+    # else the UI shows the nonsensical "Min ₹30,000 – Max ₹10,000" state.
+    effective_max = max(MAX_WITHDRAWAL, int(minimum * 2))
+
     return {
         "minimum": minimum,
+        "maximum": effective_max,
         "next_minimum_preview": next_preview,
         "basis": basis,
         "total_approved_count": count,
@@ -367,8 +372,9 @@ async def get_config(user_id: Optional[str] = Query(None)):
     if user_id:
         prog = await compute_progressive_min_withdrawal(user_id)
         payload["progressive"] = prog
-        # Override min_withdrawal so legacy UI fields display the user-specific floor.
+        # Override min/max so legacy UI fields display the user-specific floor/ceiling.
         payload["min_withdrawal"] = prog["minimum"]
+        payload["max_withdrawal"] = prog["maximum"]
     return payload
 
 @router.get("/calculate-fees")
@@ -439,11 +445,12 @@ async def create_redeem_request(request: RedeemRequest):
         amount = request.amount
         bank = request.bank_details
         
-        # 1. Validate amount limits (base + progressive per-user floor)
-        if amount > MAX_WITHDRAWAL:
-            raise HTTPException(status_code=400, detail=f"Maximum withdrawal is ₹{MAX_WITHDRAWAL}")
+        # 1. Validate amount limits (per-user dynamic min/max from progressive)
         progressive = await compute_progressive_min_withdrawal(user_id)
         user_min = progressive["minimum"]
+        user_max = progressive["maximum"]
+        if amount > user_max:
+            raise HTTPException(status_code=400, detail=f"Maximum withdrawal is ₹{user_max:,}")
         if amount < user_min:
             # Build helpful error message
             if progressive["basis"] == "legacy_total":

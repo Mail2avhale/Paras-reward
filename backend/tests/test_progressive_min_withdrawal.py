@@ -115,6 +115,33 @@ async def test_user_example_1000_then_1500(db):
     assert result["next_minimum_preview"] == 2250  # 1500 × 1.5
 
 
+@pytest.mark.asyncio
+async def test_maximum_always_above_minimum(db):
+    """Bug fix (June 2026): maximum must never be < minimum.
+
+    Previously MAX_WITHDRAWAL was a static ₹10,000 cap, so legacy users with
+    minimum=30,000 saw the impossible state "Min ₹30,000 – Max ₹10,000".
+    """
+    uid = "prog_min_test_maxfix"
+    await db.users.insert_one({"uid": uid, "email": f"{uid}@test.local", "next_min_withdrawal_inr": 30000})
+    result = await mbt.compute_progressive_min_withdrawal(uid)
+    assert result["minimum"] == 30000
+    assert result["maximum"] >= result["minimum"], "maximum must always be >= minimum"
+    # With 2× headroom, max should be 60,000 (above legacy MAX 10,000)
+    assert result["maximum"] == 60000
+
+
+@pytest.mark.asyncio
+async def test_maximum_is_legacy_cap_for_small_minimums(db):
+    """When minimum is small, maximum stays at MAX_WITHDRAWAL (₹10,000)."""
+    uid = "prog_min_test_small_max"
+    await db.users.insert_one({"uid": uid, "email": f"{uid}@test.local"})
+    result = await mbt.compute_progressive_min_withdrawal(uid)
+    assert result["minimum"] == 100
+    # 2 × 100 = 200, but MAX_WITHDRAWAL is 10000, so max = 10000
+    assert result["maximum"] == mbt.MAX_WITHDRAWAL
+
+
 if __name__ == "__main__":
     # Allow direct execution for fast local feedback
     pytest.main([__file__, "-v", "-s"])
