@@ -9,6 +9,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import PRCRateDisplay, { PRCRateBadge } from '../components/PRCRateDisplay';
 import CategoryLimitsDisplay from '../components/CategoryLimitsDisplay';
+import { RedeemTierBadge } from '../components/RedeemTierBadge';
 import {
   ArrowLeft, Banknote, Building2, CheckCircle, Clock, XCircle, 
   AlertCircle, Info, Loader2, RefreshCw, IndianRupee, CreditCard,
@@ -430,6 +431,14 @@ const BankRedeemPage = ({ user: initialUser }) => {
 
         {activeTab === 'new' ? (
           <form onSubmit={handleSubmit} data-testid="bank-redeem-form" className="space-y-4">
+            {/* Gamified Redeem Tier Badge */}
+            {config?.progressive?.minimum != null && (
+              <RedeemTierBadge
+                minimum={config.progressive.minimum}
+                nextPreview={config.progressive.next_minimum_preview}
+              />
+            )}
+
             {/* KYC Check */}
             {user?.kyc_status !== 'verified' && (
               <Card data-testid="kyc-warning" className="bg-yellow-500/10 border-yellow-500/30 p-4">

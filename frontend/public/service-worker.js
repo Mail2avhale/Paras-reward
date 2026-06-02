@@ -1,13 +1,13 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v30: June 1, 2026 — Hotfix progressive-min "Min ₹30000 – Max ₹10000"
-// impossible state. /config now returns a dynamic per-user maximum
-// (max(MAX_WITHDRAWAL, minimum × 2)) so max is always ≥ min with 2×
-// headroom. Frontend placeholder shows only "Min ₹X" to avoid future
-// confusion. Bump SW to evict old App.js bundle.
-const CACHE_NAME = 'paras-reward-v30';
-const RUNTIME_CACHE = 'paras-runtime-v30';
-const API_CACHE = 'paras-api-v30';
+// v31: June 1, 2026 — Gamified Redeem Tier badge on Bank Redeem page
+// (Bronze/Silver/Gold/Diamond/Platinum) with progress bar to next tier
+// and "next minimum" preview. New component:
+// /app/frontend/src/components/RedeemTierBadge.js. Bump SW to evict
+// old App.js bundle.
+const CACHE_NAME = 'paras-reward-v31';
+const RUNTIME_CACHE = 'paras-runtime-v31';
+const API_CACHE = 'paras-api-v31';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
