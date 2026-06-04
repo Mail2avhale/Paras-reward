@@ -1,13 +1,13 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v32: June 4, 2026 — Admin Redeem Limits dashboard at /admin/redeem-limits
-// (list/sort/filter/search + Excel export + two-step Direct Redeem with
-// real UTR). User Profile gains a Bank & UPI Details card (account #,
-// IFSC, bank, UPI, PhonePe/GPay) used by admin Direct Redeem. New
-// backend routes file: routes/admin_redeem_limits.py. Bump SW.
-const CACHE_NAME = 'paras-reward-v32';
-const RUNTIME_CACHE = 'paras-runtime-v32';
-const API_CACHE = 'paras-api-v32';
+// v33: June 4, 2026 — Hotfix: Bank Details save was failing with
+// "Admin access required" because the user-facing PUT/GET was mounted
+// under /admin/redeem-limits prefix. Moved to /api/users/:uid/bank-details
+// (no admin middleware) so users can self-edit their own bank details.
+// Bump SW to evict old App.js bundle.
+const CACHE_NAME = 'paras-reward-v33';
+const RUNTIME_CACHE = 'paras-runtime-v33';
+const API_CACHE = 'paras-api-v33';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

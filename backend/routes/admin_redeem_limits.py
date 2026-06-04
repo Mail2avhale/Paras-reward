@@ -24,6 +24,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 router = APIRouter()
+user_bank_router = APIRouter()  # NOT under /admin — for self-service profile saves
 
 db = None  # injected via set_db()
 # Optional dependency injectors — server.py exposes these helpers globally.
@@ -520,9 +521,15 @@ class UserBankDetailsUpdate(BaseModel):
     phonepe_gpay_number: Optional[str] = Field(None, min_length=10, max_length=15)
 
 
-@router.put("/users/{uid}/bank-details")
+@user_bank_router.put("/{uid}/bank-details")
 async def upsert_user_bank_details(uid: str, payload: UserBankDetailsUpdate):
-    """Allow a user (or admin) to save bank/UPI details on their profile."""
+    """Allow a user (or admin) to save bank/UPI details on their profile.
+    
+    NOTE: Mounted under /api/users (NOT /admin/redeem-limits) so non-admin
+    users can self-edit their own bank details. Server middleware that
+    enforces "user can only mutate their own /api/users/:uid/* resources"
+    governs ownership; the endpoint itself is permissive.
+    """
     if db is None:
         raise HTTPException(status_code=500, detail="DB not initialised")
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "uid": 1})
@@ -563,7 +570,7 @@ async def upsert_user_bank_details(uid: str, payload: UserBankDetailsUpdate):
     return {"success": True, "updated": len(update_doc) - 1, "fields": list(update_doc.keys())}
 
 
-@router.get("/users/{uid}/bank-details")
+@user_bank_router.get("/{uid}/bank-details")
 async def get_user_bank_details(uid: str):
     """Return current saved bank/UPI details for the user."""
     if db is None:

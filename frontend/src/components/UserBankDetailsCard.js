@@ -43,7 +43,7 @@ export default function UserBankDetailsCard({ uid }) {
     let cancelled = false;
     setLoading(true);
     axios
-      .get(`${API}/admin/redeem-limits/users/${uid}/bank-details`)
+      .get(`${API}/users/${uid}/bank-details`)
       .then((res) => {
         if (cancelled || !res.data?.success) return;
         setForm({
@@ -85,7 +85,7 @@ export default function UserBankDetailsCard({ uid }) {
 
     setSaving(true);
     try {
-      const res = await axios.put(`${API}/admin/redeem-limits/users/${uid}/bank-details`, {
+      const res = await axios.put(`${API}/users/${uid}/bank-details`, {
         account_holder_name: form.account_holder_name || null,
         account_number: form.account_number || null,
         ifsc_code: form.ifsc_code ? form.ifsc_code.toUpperCase() : null,

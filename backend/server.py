@@ -36469,6 +36469,7 @@ api_router.include_router(admin_withdrawals_router)
 # Include admin redeem-limits router (June 2026)
 from routes.admin_redeem_limits import (
     router as admin_redeem_limits_router,
+    user_bank_router as user_bank_details_router,
     set_db as set_admin_redeem_limits_db,
     set_helpers as set_admin_redeem_limits_helpers,
 )
@@ -36481,6 +36482,8 @@ set_admin_redeem_limits_helpers(
     compute_progressive_min=_compute_progressive_min,
 )
 api_router.include_router(admin_redeem_limits_router, prefix="/admin/redeem-limits")
+# User-facing bank details (NOT admin-only) — allows self-service profile saves
+api_router.include_router(user_bank_details_router, prefix="/users")
 
 # Include admin dashboard router (refactored)
 set_admin_dashboard_db(db)
