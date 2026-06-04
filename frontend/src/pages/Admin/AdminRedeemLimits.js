@@ -31,12 +31,12 @@ const FILTER_OPTIONS = [
 ];
 
 const SORT_FIELDS = [
-  { value: 'balance_redeemable', label: 'Balance Redeemable' },
   { value: 'total_prc', label: 'Total PRC' },
-  { value: 'redeem_limit', label: 'Redeem Limit' },
-  { value: 'used', label: 'Used PRC' },
   { value: 'name', label: 'Name' },
   { value: 'mobile', label: 'Mobile' },
+  { value: 'balance_redeemable', label: 'Balance Redeemable' },
+  { value: 'redeem_limit', label: 'Redeem Limit' },
+  { value: 'used', label: 'Used PRC' },
 ];
 
 function n(v) {
@@ -47,7 +47,7 @@ function n(v) {
 export default function AdminRedeemLimits() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
-  const [sortBy, setSortBy] = useState('balance_redeemable');
+  const [sortBy, setSortBy] = useState('total_prc');
   const [sortOrder, setSortOrder] = useState('desc');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);

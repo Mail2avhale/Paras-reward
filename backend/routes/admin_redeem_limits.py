@@ -74,11 +74,19 @@ def _is_active_elite(user: dict) -> bool:
 
 
 async def _row_for_user(user: dict) -> dict:
-    """Compute a single user's redeem-limit row (used by both list + Excel export)."""
+    """Compute a single user's redeem-limit row (used by both list + Excel export).
+
+    Wraps redeem-limit calc in a try/except so one bad user row never tanks
+    the whole list response.
+    """
     uid = user.get("uid")
-    rl = await _calculate_redeem_limit_func(uid) if _calculate_redeem_limit_func else {}
+    try:
+        rl = await _calculate_redeem_limit_func(uid) if _calculate_redeem_limit_func else {}
+    except Exception as e:
+        logging.warning(f"[REDEEM-LIMITS] calc failed for {uid}: {e}")
+        rl = {}
     total_prc = float(user.get("prc_balance", 0) or 0)
-    redeem_limit_prc = float(rl.get("redeemable", 0) or 0)  # absolute cap
+    redeem_limit_prc = float(rl.get("redeemable", 0) or 0)
     used_prc = float(rl.get("total_redeemed", 0) or 0)
     balance_redeemable_prc = float(rl.get("effective_available", 0) or 0)
     return {
@@ -106,31 +114,48 @@ async def _row_for_user(user: dict) -> dict:
 
 # ==================== USERS LIST ====================
 
+# Sort fields that can be served by a direct DB index (fast path)
+_DB_SORTABLE = {
+    "name": "name",
+    "mobile": "mobile",
+    "total_prc": "prc_balance",
+}
+# Sort fields that require per-user computation (slow path)
+_COMPUTED_SORT = {"redeem_limit", "used", "balance_redeemable"}
+
+
 @router.get("/users")
 async def list_redeem_limit_users(
     search: Optional[str] = Query(None, description="Search by name or mobile"),
     status: str = Query("all", regex="^(all|active|inactive)$"),
-    sort_by: str = Query("balance_redeemable", regex="^(name|mobile|total_prc|redeem_limit|used|balance_redeemable)$"),
+    sort_by: str = Query("total_prc", regex="^(name|mobile|total_prc|redeem_limit|used|balance_redeemable)$"),
     sort_order: str = Query("desc", regex="^(asc|desc)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ):
-    """Paginated list with filters/sort/search."""
+    """Paginated list with filters/sort/search.
+
+    Two execution paths:
+      • FAST: when sort_by is in `_DB_SORTABLE`, paginate at the DB level
+        and compute redeem-limit only for the visible page (concurrent via
+        asyncio.gather).
+      • SLOW: when sort_by is in `_COMPUTED_SORT`, fetch up to 2000 candidate
+        users (top-by-balance), compute redeem-limit concurrently, sort
+        in-memory, then paginate.
+    """
+    import asyncio as _asyncio
     if db is None:
         raise HTTPException(status_code=500, detail="DB not initialised")
 
     base_query: dict = {}
     if search:
         s = search.strip()
-        # Case-insensitive partial match on name OR mobile
         base_query["$or"] = [
             {"name": {"$regex": s, "$options": "i"}},
             {"mobile": {"$regex": s}},
             {"phone": {"$regex": s}},
         ]
 
-    # Fetch all matching users (we compute redeem-limit + sort in-app since
-    # those fields are derived, not stored on the user doc).
     projection = {
         "_id": 0, "uid": 1, "name": 1, "mobile": 1, "phone": 1,
         "prc_balance": 1, "subscription_plan": 1, "subscription_expiry": 1,
@@ -139,22 +164,73 @@ async def list_redeem_limit_users(
         "bank_ifsc_code": 1, "bank_name": 1, "upi_id": 1,
         "phonepe_gpay_number": 1,
     }
-    cursor = db.users.find(base_query, projection)
-    users = await cursor.to_list(50000)
 
-    rows = []
-    for u in users:
-        row = await _row_for_user(u)
-        if status == "active" and not row["is_active_elite"]:
-            continue
-        if status == "inactive" and row["is_active_elite"]:
-            continue
-        rows.append(row)
+    # ---------- FAST PATH ----------
+    if sort_by in _DB_SORTABLE:
+        db_sort_field = _DB_SORTABLE[sort_by]
+        direction = -1 if sort_order == "desc" else 1
+
+        # Build status-aware query (best-effort at DB level for active filter)
+        if status == "active":
+            base_query["subscription_plan"] = "elite"
+        elif status == "inactive":
+            base_query["subscription_plan"] = {"$ne": "elite"}
+
+        total = await db.users.count_documents(base_query)
+        # Fetch ONLY the requested page, sorted at DB level
+        cursor = (
+            db.users.find(base_query, projection)
+            .sort(db_sort_field, direction)
+            .skip((page - 1) * page_size)
+            .limit(page_size)
+        )
+        users = await cursor.to_list(page_size)
+
+        # Compute redeem-limit concurrently for the small page
+        rows = await _asyncio.gather(*[_row_for_user(u) for u in users])
+
+        # In rare cases the DB-level `active` filter may include expired Elite
+        # users; do a final precise filter.
+        if status == "active":
+            rows = [r for r in rows if r["is_active_elite"]]
+        elif status == "inactive":
+            rows = [r for r in rows if not r["is_active_elite"]]
+
+        return {
+            "success": True,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "pages": math.ceil(total / page_size) if page_size else 1,
+            "filters": {"search": search, "status": status, "sort_by": sort_by, "sort_order": sort_order},
+            "rows": rows,
+        }
+
+    # ---------- SLOW PATH (computed sort) ----------
+    # Cap at top 2000 users by prc_balance to avoid timeouts.
+    CANDIDATE_CAP = 2000
+    cursor = (
+        db.users.find(base_query, projection)
+        .sort("prc_balance", -1)
+        .limit(CANDIDATE_CAP)
+    )
+    users = await cursor.to_list(CANDIDATE_CAP)
+
+    # Compute concurrently in batches of 100 to avoid hammering the DB
+    rows: list = []
+    BATCH = 100
+    for i in range(0, len(users), BATCH):
+        batch = users[i:i + BATCH]
+        batch_rows = await _asyncio.gather(*[_row_for_user(u) for u in batch])
+        rows.extend(batch_rows)
+
+    # Apply status filter post-compute
+    if status == "active":
+        rows = [r for r in rows if r["is_active_elite"]]
+    elif status == "inactive":
+        rows = [r for r in rows if not r["is_active_elite"]]
 
     sort_field_map = {
-        "name": lambda r: (r["name"] or "").lower(),
-        "mobile": lambda r: r["mobile"] or "",
-        "total_prc": lambda r: r["total_prc"],
         "redeem_limit": lambda r: r["redeem_limit_prc"],
         "used": lambda r: r["used_prc"],
         "balance_redeemable": lambda r: r["balance_redeemable_prc"],
@@ -172,6 +248,7 @@ async def list_redeem_limit_users(
         "pages": math.ceil(total / page_size) if page_size else 1,
         "filters": {"search": search, "status": status, "sort_by": sort_by, "sort_order": sort_order},
         "rows": rows[start:end],
+        "note": f"Top {CANDIDATE_CAP} users by PRC balance (sort is on a computed field).",
     }
 
 
@@ -181,23 +258,65 @@ async def list_redeem_limit_users(
 async def export_redeem_limits_excel(
     search: Optional[str] = Query(None),
     status: str = Query("all", regex="^(all|active|inactive)$"),
-    sort_by: str = Query("balance_redeemable", regex="^(name|mobile|total_prc|redeem_limit|used|balance_redeemable)$"),
+    sort_by: str = Query("total_prc", regex="^(name|mobile|total_prc|redeem_limit|used|balance_redeemable)$"),
     sort_order: str = Query("desc", regex="^(asc|desc)$"),
 ):
-    """Stream the full (un-paginated) dataset as an Excel file."""
-    # Reuse the list endpoint with a huge page_size to get all rows
-    listing = await list_redeem_limit_users(
-        search=search, status=status, sort_by=sort_by, sort_order=sort_order,
-        page=1, page_size=200,
-    )
-    # We still need everything — re-fetch without pagination
-    all_rows = []
-    for p in range(1, listing["pages"] + 1):
-        sub = await list_redeem_limit_users(
-            search=search, status=status, sort_by=sort_by, sort_order=sort_order,
-            page=p, page_size=200,
-        )
-        all_rows.extend(sub["rows"])
+    """Stream the (capped) dataset as an Excel file.
+
+    Uses a SINGLE fetch (top 5000 users by prc_balance) instead of repeated
+    paginated calls. Computes redeem-limit concurrently in batches of 100.
+    """
+    import asyncio as _asyncio
+    if db is None:
+        raise HTTPException(status_code=500, detail="DB not initialised")
+
+    base_query: dict = {}
+    if search:
+        s = search.strip()
+        base_query["$or"] = [
+            {"name": {"$regex": s, "$options": "i"}},
+            {"mobile": {"$regex": s}},
+            {"phone": {"$regex": s}},
+        ]
+    if status == "active":
+        base_query["subscription_plan"] = "elite"
+    elif status == "inactive":
+        base_query["subscription_plan"] = {"$ne": "elite"}
+
+    projection = {
+        "_id": 0, "uid": 1, "name": 1, "mobile": 1, "phone": 1,
+        "prc_balance": 1, "subscription_plan": 1, "subscription_expiry": 1,
+        "subscription_expires": 1, "vip_expiry": 1, "subscription_expired": 1,
+        "bank_account_holder_name": 1, "bank_account_number": 1,
+        "bank_ifsc_code": 1, "bank_name": 1, "upi_id": 1,
+        "phonepe_gpay_number": 1,
+    }
+    EXCEL_CAP = 5000
+    cursor = db.users.find(base_query, projection).sort("prc_balance", -1).limit(EXCEL_CAP)
+    users = await cursor.to_list(EXCEL_CAP)
+
+    all_rows: list = []
+    BATCH = 100
+    for i in range(0, len(users), BATCH):
+        batch = users[i:i + BATCH]
+        batch_rows = await _asyncio.gather(*[_row_for_user(u) for u in batch])
+        all_rows.extend(batch_rows)
+
+    if status == "active":
+        all_rows = [r for r in all_rows if r["is_active_elite"]]
+    elif status == "inactive":
+        all_rows = [r for r in all_rows if not r["is_active_elite"]]
+
+    # Sort
+    sort_field_map = {
+        "name": lambda r: (r["name"] or "").lower(),
+        "mobile": lambda r: r["mobile"] or "",
+        "total_prc": lambda r: r["total_prc"],
+        "redeem_limit": lambda r: r["redeem_limit_prc"],
+        "used": lambda r: r["used_prc"],
+        "balance_redeemable": lambda r: r["balance_redeemable_prc"],
+    }
+    all_rows.sort(key=sort_field_map[sort_by], reverse=(sort_order == "desc"))
 
     try:
         from openpyxl import Workbook

@@ -1,13 +1,15 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v33: June 4, 2026 — Hotfix: Bank Details save was failing with
-// "Admin access required" because the user-facing PUT/GET was mounted
-// under /admin/redeem-limits prefix. Moved to /api/users/:uid/bank-details
-// (no admin middleware) so users can self-edit their own bank details.
-// Bump SW to evict old App.js bundle.
-const CACHE_NAME = 'paras-reward-v33';
-const RUNTIME_CACHE = 'paras-runtime-v33';
-const API_CACHE = 'paras-api-v33';
+// v34: June 4, 2026 — Hotfix admin /redeem-limits "Failed to load" on
+// production (5000+ users → 30s proxy timeout). New endpoint takes a
+// fast DB-paginated path for name/mobile/total_prc sorts and a capped
+// (top 2000) concurrent compute for derived sorts. Per-user errors are
+// now swallowed so one bad user can't tank the whole list. Excel export
+// rewritten to a single fetch + asyncio.gather batches of 100. Frontend
+// default sort changed to Total PRC. Bump SW.
+const CACHE_NAME = 'paras-reward-v34';
+const RUNTIME_CACHE = 'paras-runtime-v34';
+const API_CACHE = 'paras-api-v34';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
