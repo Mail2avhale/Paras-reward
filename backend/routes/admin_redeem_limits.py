@@ -370,6 +370,41 @@ async def admin_direct_redeem(request: DirectRedeemRequest):
     if not request.utr_number:
         raise HTTPException(status_code=400, detail="UTR / transaction reference is required.")
 
+    # 0) Idempotency guard — same admin+user+UTR must never debit twice.
+    # We use a tiny dedup collection that asserts a unique compound key.
+    dedup_key = f"adm:{request.admin_id}:{request.user_id}:{request.utr_number}"
+    try:
+        await db.admin_direct_redeem_dedup.create_index(
+            "key", unique=True, name="adm_direct_dedup_uniq"
+        )
+    except Exception:
+        pass  # Index already exists
+    try:
+        await db.admin_direct_redeem_dedup.insert_one({
+            "key": dedup_key,
+            "admin_id": request.admin_id,
+            "user_id": request.user_id,
+            "utr_number": request.utr_number,
+            "amount_inr": request.amount_inr,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as dup_err:
+        # Duplicate key → this {admin,user,UTR} was already processed
+        if "duplicate key" in str(dup_err).lower() or "e11000" in str(dup_err).lower():
+            existing = await db.bank_transfer_requests.find_one(
+                {"user_id": request.user_id, "utr_number": request.utr_number,
+                 "channel": "admin_direct_redeem"},
+                {"_id": 0, "request_id": 1, "withdrawal_amount": 1, "processed_at": 1}
+            )
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "This UTR was already processed for this user.",
+                    "existing_request": existing,
+                },
+            )
+        raise
+
     # 1) Atomic CAS debit on PRC balance (race-safe vs concurrent user spends)
     debit_res = await db.users.update_one(
         {"uid": user["uid"], "prc_balance": {"$gte": total_prc}},
@@ -378,6 +413,8 @@ async def admin_direct_redeem(request: DirectRedeemRequest):
                   "last_redeem_amount_inr": request.amount_inr}},
     )
     if debit_res.modified_count == 0:
+        # Roll back the dedup key so the admin can retry with a different UTR
+        await db.admin_direct_redeem_dedup.delete_one({"key": dedup_key})
         raise HTTPException(status_code=409, detail="Concurrent state change — user balance moved. Retry.")
 
     # 2) Create a "paid" bank_transfer_request (instant — no pending queue)
@@ -404,24 +441,40 @@ async def admin_direct_redeem(request: DirectRedeemRequest):
         "updated_at": now_iso,
         "channel": "admin_direct_redeem",
     }
-    await db.bank_transfer_requests.insert_one(bank_req_doc)
+    try:
+        await db.bank_transfer_requests.insert_one(bank_req_doc)
+    except Exception as e:
+        # COMPENSATING ACTION: re-credit PRC and clean up dedup key — never
+        # leave a user debited without an audit row.
+        logging.error(f"[ADMIN-DIRECT-REDEEM] bank_transfer insert failed, rolling back PRC: {e}")
+        await db.users.update_one(
+            {"uid": user["uid"]},
+            {"$inc": {"prc_balance": total_prc, "total_redeemed_prc": -total_prc}}
+        )
+        await db.admin_direct_redeem_dedup.delete_one({"key": dedup_key})
+        raise HTTPException(status_code=500, detail=f"Failed to record bank request — PRC re-credited: {e}")
 
     # 3) Transaction record (PRC statement)
-    await db.transactions.insert_one({
-        "user_id": user["uid"],
-        "type": "bank_redeem_admin_direct",
-        "amount_prc": -round(total_prc, 2),
-        "amount_inr": -request.amount_inr,
-        "balance_after": round(current_balance - total_prc, 2),
-        "description": f"Admin direct redeem ₹{request.amount_inr:,} (UTR {request.utr_number})",
-        "ref_id": request_id,
-        "created_at": now_iso,
-        "metadata": {
-            "admin_id": request.admin_id,
-            "utr_number": request.utr_number,
-            "bank_account_last4": (bank_snapshot.get("account_number") or "")[-4:],
-        },
-    })
+    try:
+        await db.transactions.insert_one({
+            "user_id": user["uid"],
+            "type": "bank_redeem_admin_direct",
+            "amount_prc": -round(total_prc, 2),
+            "amount_inr": -request.amount_inr,
+            "balance_after": round(current_balance - total_prc, 2),
+            "description": f"Admin direct redeem ₹{request.amount_inr:,} (UTR {request.utr_number})",
+            "ref_id": request_id,
+            "created_at": now_iso,
+            "metadata": {
+                "admin_id": request.admin_id,
+                "utr_number": request.utr_number,
+                "bank_account_last4": (bank_snapshot.get("account_number") or "")[-4:],
+            },
+        })
+    except Exception as e:
+        # PRC statement row is best-effort; bank_transfer doc is the source of
+        # truth for accounting. Log and continue.
+        logging.warning(f"[ADMIN-DIRECT-REDEEM] transactions insert failed (non-fatal): {e}")
 
     # 4) Raise progressive minimum
     try:
