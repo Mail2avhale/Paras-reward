@@ -194,6 +194,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       subItems: [
         { id: 'kyc', label: 'KYC', icon: Shield, path: '/admin/kyc', pendingCount: pendingCounts.kyc },
         { id: 'bank-transfers', label: 'Redeem to Bank', icon: Banknote, path: '/admin/bank-transfers', highlight: true },
+        { id: 'redeem-limits', label: 'Redeem Limits + Direct', icon: Banknote, path: '/admin/redeem-limits', highlight: true },
         { id: 'subscriptions', label: 'Subscription', icon: Crown, path: '/admin/subscriptions', pendingCount: pendingCounts.subscriptions },
         { id: 'force-activate-subscription', label: 'Force Activate Elite (PRC)', icon: KeyRound, path: '/admin/force-activate-subscription', highlight: true },
         { id: 'razorpay-subs', label: 'Razorpay Payments', icon: CreditCard, path: '/admin/razorpay-subscriptions', highlight: true },
@@ -274,6 +275,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/subscriptions': 'subscriptions',
     '/admin/force-activate-subscription': 'subscriptions',
     '/admin/bank-transfers': 'bank-transfers',
+    '/admin/redeem-limits': 'redeem-limits',
     '/admin/razorpay-subscriptions': 'razorpay-subs',
     '/admin/bbps': 'bbps-dashboard',
     '/admin/service-charges': 'service-charges',

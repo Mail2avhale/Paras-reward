@@ -1,13 +1,13 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v31: June 1, 2026 — Gamified Redeem Tier badge on Bank Redeem page
-// (Bronze/Silver/Gold/Diamond/Platinum) with progress bar to next tier
-// and "next minimum" preview. New component:
-// /app/frontend/src/components/RedeemTierBadge.js. Bump SW to evict
-// old App.js bundle.
-const CACHE_NAME = 'paras-reward-v31';
-const RUNTIME_CACHE = 'paras-runtime-v31';
-const API_CACHE = 'paras-api-v31';
+// v32: June 4, 2026 — Admin Redeem Limits dashboard at /admin/redeem-limits
+// (list/sort/filter/search + Excel export + two-step Direct Redeem with
+// real UTR). User Profile gains a Bank & UPI Details card (account #,
+// IFSC, bank, UPI, PhonePe/GPay) used by admin Direct Redeem. New
+// backend routes file: routes/admin_redeem_limits.py. Bump SW.
+const CACHE_NAME = 'paras-reward-v32';
+const RUNTIME_CACHE = 'paras-runtime-v32';
+const API_CACHE = 'paras-api-v32';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

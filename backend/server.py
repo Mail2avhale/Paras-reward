@@ -36466,6 +36466,22 @@ set_admin_withdrawals_cache(cache)
 set_admin_withdrawals_helpers({'log_admin_action': log_admin_action})
 api_router.include_router(admin_withdrawals_router)
 
+# Include admin redeem-limits router (June 2026)
+from routes.admin_redeem_limits import (
+    router as admin_redeem_limits_router,
+    set_db as set_admin_redeem_limits_db,
+    set_helpers as set_admin_redeem_limits_helpers,
+)
+from routes.community import create_success_story_post as _create_success_story_post
+from routes.manual_bank_transfer import compute_progressive_min_withdrawal as _compute_progressive_min
+set_admin_redeem_limits_db(db)
+set_admin_redeem_limits_helpers(
+    calc_redeem_limit=calculate_user_redeem_limit,
+    create_success_story=_create_success_story_post,
+    compute_progressive_min=_compute_progressive_min,
+)
+api_router.include_router(admin_redeem_limits_router, prefix="/admin/redeem-limits")
+
 # Include admin dashboard router (refactored)
 set_admin_dashboard_db(db)
 set_admin_dashboard_cache(cache)

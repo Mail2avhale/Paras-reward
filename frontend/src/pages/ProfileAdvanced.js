@@ -18,6 +18,7 @@ import { LanguageSelectorFull } from '@/components/LanguageSelector';
 // ShareApp removed (April 2026)
 import { InfoTooltip } from '@/components/InfoTooltip';
 import { Label } from '@/components/ui/label';
+import UserBankDetailsCard from '@/components/UserBankDetailsCard';
 
 import { API } from "../lib/api";
 
@@ -822,6 +823,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
         {/* Security PIN - Important for PIN Reset */}
         <SecurityPinCard user={user} />
+
+        {/* Bank & UPI Details — June 2026 (used by admin for direct Bank Redeem) */}
+        <UserBankDetailsCard uid={user?.uid} />
 
         {/* Privacy Settings removed (April 2026) */}
 
