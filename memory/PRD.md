@@ -9,6 +9,41 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🚨 KYC Drift Heal — Real Root Cause Fix (`/api/user/{uid}`) — DONE (9 Jun 2026)
+
+**User Report (production)**: Admin पॅनेल मध्ये Vinod Vasantrao Sonawane → KYC **verified**, पण User Profile view मध्ये **Pending** दिसत होतं.
+
+**Investigation findings (Option B — root-cause hunt)**:
+- Frontend `ProfileAdvanced.js` reads `userData?.kyc_status` from `GET /api/user/{uid}` (NOT `/api/kyc/status/{uid}`).
+- `BankRedeemPage.js` also reads `user.kyc_status` from the same `/api/user/{uid}` payload.
+- Earlier session's auto-heal lived only on `/api/kyc/status/{uid}` — but **no frontend page calls that endpoint for routine reads**.
+- `/api/kyc/check-status/{uid}` (called by `KYCVerification.js`) returns **HTTP 404** — endpoint doesn't even exist.
+- `server.py` line 8733-8754 already had an auto-sync block — **but it queried the WRONG collection**: `db.kyc_documents` (0 docs) with field `user_id`, while canonical data is in `db.kyc` (3 docs) with field `uid`. So the heal never fired in production.
+
+**Fix (`/app/backend/server.py` lines 8733-8770, inside `GET /api/user/{uid}`)**:
+1. Query `db.kyc` (canonical) with `uid` field instead of `db.kyc_documents` / `user_id`.
+2. Status filter includes legacy variants: `verified`, `approved`, `Verified`, `VERIFIED`.
+3. Properly `await` the `update_one` (previous code did fire-and-forget on a sync method — silently dropped on the event loop).
+4. Stamp `kyc_verified_at` + `kyc_auto_healed_at` for audit.
+5. **Invalidate the 2-minute cache** after heal so the next page-load returns fresh data.
+6. Reflect healed status in the current response so the user sees "Verified" on the same load (no extra refresh needed).
+
+**Verified end-to-end** with `pytest backend/tests/test_user_endpoint_kyc_heal.py`:
+- drift → heals + auto_healed_at stamp ✅
+- already-verified → no extra writes ✅
+- rejected → never heals ✅
+- pending → never heals ✅
+- no KYC doc → no crash ✅
+- mixed-case `Verified` / `VERIFIED` / `approved` → all heal ✅
+
+Combined with `test_kyc_auto_heal.py` (older endpoint coverage) → **12/12 passing**.
+
+**Production Impact**: As soon as Vinod (or any drifted user) opens Profile / BankRedeem on parasreward.com, the page-load itself heals `users.kyc_status` to verified and the UI flips from "Pending" → "Verified" on the SAME render. No backfill or admin action required.
+
+**Deploy step**: Save to Github + redeploy (backend-only change, no SW bump needed).
+
+
+
 ### 🚨 KYC Auto-Heal Sync Gap Fix — DONE (9 Jun 2026)
 
 **Critical Production Down Bug**: Previous session attempted an auto-heal fix in `/app/backend/routes/kyc.py` but the edit left a malformed function (two `try:` blocks, dangling docstring, no `except:` clause) → Python `SyntaxError` → **entire backend was crashed** (supervisor in retry loop, all `/api/*` returning HTTP 000). Discovered immediately on resumption.

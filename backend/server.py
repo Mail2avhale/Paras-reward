@@ -8730,27 +8730,42 @@ async def get_user_data(uid: str, request: Request):
         # Return 0 taps for a new day
         user["taps_today"] = 0
     
-    # AUTO-SYNC KYC STATUS: Check if user has verified KYC in kyc_documents but not synced
-    # OPTIMIZED: Add timeout to prevent slow queries
-    current_kyc_status = user.get("kyc_status")
+    # AUTO-SYNC KYC STATUS: Check canonical `kyc` collection (uid field) and
+    # heal stale `users.kyc_status` if a verified KYC document exists.
+    # FIX (Jun 9, 2026 — Vinod 9325250224): previous code looked in the empty
+    # `kyc_documents` collection with `user_id` field, so it NEVER healed
+    # drift. The canonical KYC data lives in `db.kyc` keyed by `uid`.
+    current_kyc_status = (user.get("kyc_status") or "").lower()
     if current_kyc_status != "verified":
         try:
-            # Check if there's a verified KYC document for this user
-            verified_kyc = await db.kyc_documents.find_one(
-                {"user_id": uid, "status": {"$in": ["verified", "approved"]}},
-                max_time_ms=2000  # 2 second timeout
+            verified_kyc = await db.kyc.find_one(
+                {"uid": uid, "status": {"$in": ["verified", "approved", "Verified", "VERIFIED"]}},
+                {"_id": 0, "verified_at": 1},
+                max_time_ms=2000
             )
             if verified_kyc:
-                # Update user's kyc_status to verified (don't await - fire and forget)
-                db.users.update_one(
+                heal_now = datetime.now(timezone.utc).isoformat()
+                await db.users.update_one(
                     {"uid": uid},
-                    {"$set": {"kyc_status": "verified"}}
+                    {"$set": {
+                        "kyc_status": "verified",
+                        "kyc_verified_at": verified_kyc.get("verified_at") or heal_now,
+                        "kyc_auto_healed_at": heal_now,
+                    }}
                 )
                 user["kyc_status"] = "verified"
+                user["kyc_verified_at"] = verified_kyc.get("verified_at") or heal_now
+                # Invalidate cache so subsequent reads aren't stale
+                if cache:
+                    try:
+                        await cache.delete(cache_key)
+                    except Exception:
+                        pass
+                print(f"[KYC AUTO-HEAL /user/{{uid}}] uid={uid} mirrored kyc.verified → users.kyc_status")
             else:
                 user["kyc_status"] = user.get("kyc_status") or "not_submitted"
         except Exception as e:
-            print(f"[KYC SYNC] Skipped due to timeout: {e}")
+            print(f"[KYC SYNC] Skipped due to error: {e}")
             user["kyc_status"] = user.get("kyc_status") or "not_submitted"
     
     # OPTIMIZED: Use aggregation pipeline to get all counts in parallel
