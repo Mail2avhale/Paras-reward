@@ -263,18 +263,44 @@ async def submit_kyc(uid: str, kyc_data: KYCSubmit):
 
 @router.get("/status/{uid}")
 async def get_kyc_status(uid: str):
-    """Get KYC status for a user"""
+    """Return current KYC status for a user.
+
+    LAZY AUTO-HEAL (June 2026): If `kyc.status == "verified"` but
+    `users.kyc_status != "verified"` (legacy sync gap from older approvals),
+    silently mirror the canonical KYC status back onto the user document
+    BEFORE responding. Eliminates "submit disabled, KYC already approved"
+    user complaints (Vinod Sonawane, etc.).
+    """
     try:
         kyc = await db.kyc.find_one({"uid": uid}, {"_id": 0, "aadhaar_front_base64": 0, "aadhaar_back_base64": 0, "pan_front_base64": 0, "selfie_base64": 0})
         user = await db.users.find_one({"uid": uid}, {"kyc_status": 1, "kyc_verified_at": 1})
-        
+
+        # ---- AUTO-HEAL: mirror kyc.verified → users.kyc_status if drifted ----
+        if kyc and user:
+            canonical = (kyc.get("status") or "").lower()
+            current = (user.get("kyc_status") or "").lower()
+            if canonical == "verified" and current != "verified":
+                heal_now = datetime.now(timezone.utc).isoformat()
+                try:
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {
+                            "kyc_status": "verified",
+                            "kyc_verified_at": kyc.get("verified_at") or heal_now,
+                            "kyc_auto_healed_at": heal_now,
+                        }}
+                    )
+                    logging.info(f"[KYC AUTO-HEAL] uid={uid} mirrored kyc.verified → users.kyc_status")
+                except Exception as heal_err:
+                    logging.warning(f"[KYC AUTO-HEAL] uid={uid} update failed: {heal_err}")
+
         if not kyc:
             return {
                 "status": user.get("kyc_status", "not_submitted") if user else "not_submitted",
                 "submitted": False,
                 "verified": False
             }
-        
+
         return {
             "status": kyc.get("status", "pending"),
             "submitted": True,

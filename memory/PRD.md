@@ -9,6 +9,31 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🚨 KYC Auto-Heal Sync Gap Fix — DONE (9 Jun 2026)
+
+**Critical Production Down Bug**: Previous session attempted an auto-heal fix in `/app/backend/routes/kyc.py` but the edit left a malformed function (two `try:` blocks, dangling docstring, no `except:` clause) → Python `SyntaxError` → **entire backend was crashed** (supervisor in retry loop, all `/api/*` returning HTTP 000). Discovered immediately on resumption.
+
+**Root Cause Recap (Vinod / 9325250224 complaint)**: KYC admin approval writes `kyc.status = "verified"` but legacy records did not propagate to `users.kyc_status`, leaving Bank Redeem silently disabled even after KYC approval.
+
+**Fix (`/app/backend/routes/kyc.py` → `get_kyc_status`)**:
+- Replaced broken double-try block with a single, correctly-structured handler.
+- Lazy auto-heal: on every read, if `kyc.status.lower() == "verified"` and `users.kyc_status.lower() != "verified"`, silently `update_one` to mirror canonical state + stamp `kyc_auto_healed_at`. Case-insensitive ("Verified"/"VERIFIED" all heal). Heal failures swallowed via inner try so they never break the read.
+- Rejected/pending/missing KYC paths are unchanged — auto-heal never escalates a non-verified status.
+
+**Verified end-to-end**:
+- Backend recovered (HTTP 200 on `/api/health`).
+- New regression test file `backend/tests/test_kyc_auto_heal.py` — **6/6 passing**:
+  - drift → auto-heal ✅
+  - already-verified → no re-heal ✅
+  - rejected → no heal ✅
+  - pending → no heal ✅
+  - no KYC submitted → returns submitted=false ✅
+  - mixed-case "Verified" → still heals ✅
+
+**Production Impact**: Vinod and any drifted user will be auto-healed the next time the frontend hits `/api/kyc/status/{uid}` (typically on Bank Redeem page load). No backfill script required; the heal is idempotent and lazy.
+
+
+
 ### Sale Elite — Two Community Posts + Correct Badge — DONE (11 May 2026)
 
 **Issue (production parasreward.com)**: User sponsored Elite for Khushbun N. The community post appeared as **"Mobile Recharge — Successfully Completed"** instead of "Sale Subscription". Also, only Mobin's (sender's) post was shown — Khushbun's (beneficiary's) "Subscription Elite Upgraded" post was missing.
