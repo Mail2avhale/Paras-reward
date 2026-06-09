@@ -1,15 +1,13 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v34: June 4, 2026 — Hotfix admin /redeem-limits "Failed to load" on
-// production (5000+ users → 30s proxy timeout). New endpoint takes a
-// fast DB-paginated path for name/mobile/total_prc sorts and a capped
-// (top 2000) concurrent compute for derived sorts. Per-user errors are
-// now swallowed so one bad user can't tank the whole list. Excel export
-// rewritten to a single fetch + asyncio.gather batches of 100. Frontend
-// default sort changed to Total PRC. Bump SW.
-const CACHE_NAME = 'paras-reward-v34';
-const RUNTIME_CACHE = 'paras-runtime-v34';
-const API_CACHE = 'paras-api-v34';
+// v35: June 4, 2026 — Bank Redeem submit button silently disabled when
+// user's kyc_status !== 'verified'. Added a clear amber notice block
+// above Submit explaining the blocker (KYC pending / rejected / missing)
+// with a CTA button to navigate to /kyc. Production user VINOD SONAWANE
+// (kyc_status=pending) reported being stuck. Bump SW.
+const CACHE_NAME = 'paras-reward-v35';
+const RUNTIME_CACHE = 'paras-runtime-v35';
+const API_CACHE = 'paras-api-v35';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

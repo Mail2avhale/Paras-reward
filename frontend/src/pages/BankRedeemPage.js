@@ -641,6 +641,37 @@ const BankRedeemPage = ({ user: initialUser }) => {
               </div>
             </Card>
 
+            {/* KYC required notice — visible only when user hasn't verified KYC */}
+            {user?.kyc_status !== 'verified' && (
+              <div
+                className="rounded-xl border-2 border-amber-500/60 bg-amber-500/10 p-4 flex items-start gap-3"
+                data-testid="kyc-required-notice"
+              >
+                <Info className="w-5 h-5 text-amber-300 mt-0.5 flex-shrink-0" />
+                <div className="text-sm flex-1">
+                  <p className="font-semibold text-amber-200 mb-1">
+                    KYC Verification Required
+                  </p>
+                  <p className="text-amber-100/80 mb-3">
+                    {user?.kyc_status === 'pending'
+                      ? 'Your KYC is pending review by our team. Submit takes 1-2 working days.'
+                      : user?.kyc_status === 'rejected'
+                      ? 'Your KYC was rejected. Please re-submit with valid documents.'
+                      : 'Bank redemptions require completed KYC to comply with RBI guidelines.'}
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={() => navigate('/kyc')}
+                    size="sm"
+                    className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold"
+                    data-testid="kyc-required-cta"
+                  >
+                    {user?.kyc_status === 'pending' ? 'View KYC Status' : 'Complete KYC Now'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Submit Button */}
             <Button
               data-testid="submit-request-btn"
