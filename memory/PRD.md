@@ -9,6 +9,38 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🎯 Sale Elite Daily Quota Raised: 1 → 3 per Day — DONE (9 Jun 2026)
+
+**User Request**: Daily 1-per-day quota → 3 per day.
+
+**Implementation**:
+
+**Backend (`/app/backend/server.py`)**:
+- `/api/subscription/sale-elite/activate`: Precheck now allows up to 3 sponsorships per day. Replaced the old `last_sale_elite_at` boolean daily lock with a **race-safe atomic CAS** using two new user fields:
+  - `sale_elite_day_bucket` (date string e.g. `"2026-06-09"`)
+  - `sale_elite_day_count` (0-3 integer)
+  - Pipeline-update `update_one` increments the counter atomically when the day-bucket matches, OR resets to 1 when the day rolls over. CAS filter `{$or: [bucket != today, count < 3]}` guarantees no over-spend even under concurrent requests.
+- Rollback path (beneficiary update failure) now `-1`s the counter while refunding PRC.
+- `/api/subscription/sale-elite/lookup` & `/eligibility/{uid}`: limit raised to `< 3`, error message updated, added `daily_quota: 3` and `sales_remaining` fields for UI.
+
+**Frontend (`/app/frontend/src/components/SaleEliteSubscription.js`)**:
+- Daily-limit copy updated: "up to 3 Elite subscriptions per day".
+- Added blue progress card: **"X of 3 sponsored today · Y remaining"** (visible only after first sponsorship of the day).
+- `data-testid="sale-elite-daily-counter"` and `sale-elite-daily-limit-reached` for QA.
+- Service Worker → **v37**.
+
+**Verified end-to-end** with synthetic sender (60,000 PRC, valid PIN, Elite plan) + 4 beneficiaries:
+- Attempts #1, #2, #3 → HTTP **200** (all 3 activated successfully)
+- Attempt #4 → HTTP **429** (`Daily limit reached: you can sponsor up to 3 Elite subscriptions per day.`)
+- DB state after: `sale_elite_day_count=3`, `sponsored_subscriptions.count=3`, eligibility `sales_remaining=0`
+- Balance properly debited: 60,000 − 3 × 12,839 = ~21,500 PRC remaining ✅
+
+**Race Safety**: Atomic CAS pipeline-update prevents the classic "two parallel requests both pass precheck and over-spend" attack. Even 100 concurrent activations from one user would result in exactly 3 successes and 97 × HTTP 429.
+
+**Deploy step**: Save to Github + redeploy. Service Worker v37 auto-updates users on next visit.
+
+
+
 ### 🎯 Sale Elite Redeem-Limit Frontend Gate Removal — DONE (9 Jun 2026)
 
 **User Report (production)**: "Redeem limit नसेल तरीही Sale Elite to friends user कडे sufficient PRC available असेल तर व्हायला पाहिजे" — users with enough PRC but no redeem limit were blocked from sponsoring friends.

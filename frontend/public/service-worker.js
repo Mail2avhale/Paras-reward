@@ -1,13 +1,12 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v36: June 9, 2026 — Sale Elite "Insufficient redeem limit" frontend gate
-// was still blocking the Activate button even though backend removed the
-// redeem-limit gate in May 2026. Removed the can_afford_redeem_limit
-// check + error block from SaleEliteSubscription.js so users with enough
-// PRC balance can sponsor friends regardless of redeem limit. Bump SW.
-const CACHE_NAME = 'paras-reward-v36';
-const RUNTIME_CACHE = 'paras-runtime-v36';
-const API_CACHE = 'paras-api-v36';
+// v37: June 9, 2026 — Sale Elite daily quota raised from 1 → 3 per day.
+// Backend: atomic CAS with `sale_elite_day_bucket` + `sale_elite_day_count`
+// for race-safe 3-per-day enforcement. Frontend: copy updated to "3 per day"
+// + new blue progress card showing "X of 3 sponsored today · Y remaining".
+const CACHE_NAME = 'paras-reward-v37';
+const RUNTIME_CACHE = 'paras-runtime-v37';
+const API_CACHE = 'paras-api-v37';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

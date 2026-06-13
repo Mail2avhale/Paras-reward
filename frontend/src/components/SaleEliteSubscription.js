@@ -296,14 +296,23 @@ const SaleEliteSubscription = ({ user }) => {
         </div>
       </div>
 
-      {/* Daily limit */}
-      {!sender.daily_limit_ok && (
-        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 flex items-center gap-2">
+      {/* Daily limit indicator (3 per day quota) */}
+      {!sender.daily_limit_ok ? (
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 flex items-center gap-2" data-testid="sale-elite-daily-limit-reached">
           <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
           <p className="text-xs text-amber-300">
-            Daily limit reached. You can sponsor only 1 Elite subscription per day.
+            Daily limit reached. You can sponsor up to 3 Elite subscriptions per day.
           </p>
         </div>
+      ) : (
+        (sender.sales_today || 0) > 0 && (
+          <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-3 flex items-center gap-2" data-testid="sale-elite-daily-counter">
+            <Clock className="w-4 h-4 text-blue-400 flex-shrink-0" />
+            <p className="text-xs text-blue-300">
+              {sender.sales_today} of 3 sponsored today · {sender.sales_remaining ?? (3 - (sender.sales_today || 0))} remaining
+            </p>
+          </div>
+        )
       )}
 
       {/* Mobile lookup */}

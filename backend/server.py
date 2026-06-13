@@ -13637,14 +13637,14 @@ async def sale_elite_lookup_beneficiary(request: SaleEliteLookupRequest):
 
     sender_balance = float(sender.get("prc_balance", 0) or 0)
 
-    # Rate limit: 1 per day
+    # Rate limit: 3 per day (raised from 1 in Jun 2026)
     today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
     today_count = await db.sponsored_subscriptions.count_documents({
         "sender_uid": sender.get("uid"),
         "created_at": {"$gte": today_start.isoformat()},
         "status": {"$in": ["active", "upcoming"]},
     })
-    daily_limit_ok = today_count < 1
+    daily_limit_ok = today_count < 3
 
     return {
         "success": True,
@@ -13674,6 +13674,8 @@ async def sale_elite_lookup_beneficiary(request: SaleEliteLookupRequest):
             "can_afford_redeem_limit": effective_available >= pricing["total_prc"],
             "daily_limit_ok": daily_limit_ok,
             "sales_today": today_count,
+            "daily_quota": 3,
+            "sales_remaining": max(0, 3 - today_count),
         },
     }
 
@@ -13777,47 +13779,61 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
         now = datetime.now(timezone.utc)
         today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
 
-        # ===== Daily rate limit precheck =====
+        # ===== Daily rate limit precheck (3 per day) =====
         today_count = await db.sponsored_subscriptions.count_documents({
             "sender_uid": sender.get("uid"),
             "created_at": {"$gte": today_start.isoformat()},
             "status": {"$in": ["active", "upcoming"]},
         })
-        if today_count >= 1:
+        if today_count >= 3:
             raise HTTPException(
                 status_code=429,
-                detail="Daily limit reached: you can sponsor only 1 Elite subscription per day."
+                detail="Daily limit reached: you can sponsor up to 3 Elite subscriptions per day."
             )
 
-        # ===== CAS deduct sender PRC (race-safe daily guard) =====
+        # ===== CAS deduct sender PRC + atomic daily-counter increment =====
+        # Race-safe: bumps `sale_elite_day_count` atomically per day-bucket
+        # and bounds it to < 3. Resets to 1 when day-bucket rolls over.
+        today_bucket = today_start.date().isoformat()  # e.g. "2026-06-09"
         result = await db.users.update_one(
             {
                 "uid": sender.get("uid"),
                 "prc_balance": {"$gte": total_prc},
                 "$or": [
-                    {"last_sale_elite_at": {"$exists": False}},
-                    {"last_sale_elite_at": None},
-                    {"last_sale_elite_at": {"$lt": today_start.isoformat()}},
+                    {"sale_elite_day_bucket": {"$ne": today_bucket}},   # new day → reset
+                    {"sale_elite_day_count": {"$lt": 3}},                # same day, slot free
+                    {"sale_elite_day_count": {"$exists": False}},        # legacy doc
                 ],
             },
-            {
-                "$inc": {"prc_balance": -total_prc},
-                "$set": {"last_sale_elite_at": now.isoformat()},
-            },
+            [{
+                "$set": {
+                    "prc_balance": {"$subtract": ["$prc_balance", total_prc]},
+                    "sale_elite_day_bucket": today_bucket,
+                    "sale_elite_day_count": {
+                        "$cond": [
+                            {"$eq": [{"$ifNull": ["$sale_elite_day_bucket", ""]}, today_bucket]},
+                            {"$add": [{"$ifNull": ["$sale_elite_day_count", 0]}, 1]},
+                            1,
+                        ]
+                    },
+                    "last_sale_elite_at": now.isoformat(),
+                }
+            }],
         )
         if result.modified_count == 0:
             # Figure out why
             fresh = await db.users.find_one(
                 {"uid": sender.get("uid")},
-                {"_id": 0, "prc_balance": 1, "last_sale_elite_at": 1},
+                {"_id": 0, "prc_balance": 1, "sale_elite_day_bucket": 1, "sale_elite_day_count": 1},
             )
             if fresh:
                 fb = float(fresh.get("prc_balance", 0) or 0)
-                last_at = fresh.get("last_sale_elite_at")
-                if last_at and last_at >= today_start.isoformat():
+                bucket = fresh.get("sale_elite_day_bucket")
+                count = int(fresh.get("sale_elite_day_count") or 0)
+                if bucket == today_bucket and count >= 3:
                     raise HTTPException(
                         status_code=429,
-                        detail="Daily limit reached: you can sponsor only 1 Elite subscription per day."
+                        detail="Daily limit reached: you can sponsor up to 3 Elite subscriptions per day."
                     )
                 if fb < total_prc:
                     raise HTTPException(
@@ -13911,12 +13927,15 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
                 except Exception as _pos:
                     logging.warning(f"[SALE-ELITE] position assign error: {_pos}")
         except Exception as be_err:
-            # CRITICAL: refund sender PRC + release daily slot
+            # CRITICAL: refund sender PRC + decrement daily counter
             logging.error(f"[SALE-ELITE] beneficiary update failed, refunding: {be_err}")
             await db.users.update_one(
                 {"uid": sender.get("uid")},
                 {
-                    "$inc": {"prc_balance": total_prc},
+                    "$inc": {
+                        "prc_balance": total_prc,
+                        "sale_elite_day_count": -1,
+                    },
                     "$unset": {"last_sale_elite_at": ""},
                 },
             )
@@ -14233,12 +14252,11 @@ async def sale_elite_eligibility(uid: str):
     })
 
     prc_balance = float(user.get("prc_balance", 0) or 0)
-    # ELIGIBILITY (May 2026 update): Removed Elite-active gate and redeem-limit
-    # gate. Sale Elite is open to ALL users with enough PRC + daily quota.
-    is_eligible = (today_count < 1) and (prc_balance >= pricing["total_prc"])
+    # ELIGIBILITY (Jun 2026 update): Daily quota raised from 1 → 3 per day.
+    is_eligible = (today_count < 3) and (prc_balance >= pricing["total_prc"])
 
-    if today_count >= 1:
-        reason = "Daily limit reached: you can sponsor only 1 Elite subscription per day."
+    if today_count >= 3:
+        reason = "Daily limit reached: you can sponsor up to 3 Elite subscriptions per day."
     elif prc_balance < pricing["total_prc"]:
         reason = (
             f"Insufficient PRC. You have {prc_balance:,.0f} PRC, "
@@ -14265,8 +14283,10 @@ async def sale_elite_eligibility(uid: str):
             "prc_balance": prc_balance,
             "effective_available": effective_available,
             "unlock_percent": unlock_percent,
-            "daily_limit_ok": today_count < 1,
+            "daily_limit_ok": today_count < 3,
             "sales_today": today_count,
+            "daily_quota": 3,
+            "sales_remaining": max(0, 3 - today_count),
         },
     }
 
