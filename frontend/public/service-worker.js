@@ -1,13 +1,13 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v35: June 4, 2026 — Bank Redeem submit button silently disabled when
-// user's kyc_status !== 'verified'. Added a clear amber notice block
-// above Submit explaining the blocker (KYC pending / rejected / missing)
-// with a CTA button to navigate to /kyc. Production user VINOD SONAWANE
-// (kyc_status=pending) reported being stuck. Bump SW.
-const CACHE_NAME = 'paras-reward-v35';
-const RUNTIME_CACHE = 'paras-runtime-v35';
-const API_CACHE = 'paras-api-v35';
+// v36: June 9, 2026 — Sale Elite "Insufficient redeem limit" frontend gate
+// was still blocking the Activate button even though backend removed the
+// redeem-limit gate in May 2026. Removed the can_afford_redeem_limit
+// check + error block from SaleEliteSubscription.js so users with enough
+// PRC balance can sponsor friends regardless of redeem limit. Bump SW.
+const CACHE_NAME = 'paras-reward-v36';
+const RUNTIME_CACHE = 'paras-runtime-v36';
+const API_CACHE = 'paras-api-v36';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

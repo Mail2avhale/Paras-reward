@@ -9,6 +9,32 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🎯 Sale Elite Redeem-Limit Frontend Gate Removal — DONE (9 Jun 2026)
+
+**User Report (production)**: "Redeem limit नसेल तरीही Sale Elite to friends user कडे sufficient PRC available असेल तर व्हायला पाहिजे" — users with enough PRC but no redeem limit were blocked from sponsoring friends.
+
+**Root Cause**: Backend `lookup` + `activate` + `eligibility` endpoints already had the redeem-limit gate REMOVED (May 2026). But `frontend/src/components/SaleEliteSubscription.js` still had two leftover client-side blocks:
+- Red error banner: "Insufficient redeem limit." (lines 379-384)
+- Activate button `disabled` condition included `!preview.sender?.can_afford_redeem_limit` (line 409)
+
+The backend `lookup` still returns the `can_afford_redeem_limit` field (kept for display/backwards-compat), and the frontend was treating it as a hard block.
+
+**Fix**:
+1. Removed the "Insufficient redeem limit" error block from `SaleEliteSubscription.js`.
+2. Removed `!preview.sender?.can_afford_redeem_limit` from the Activate button's `disabled` condition.
+3. Bumped service-worker to **v36** to bust the PWA cache so production users see the change immediately.
+
+**Effective gates after fix** (consistent with backend):
+- ✅ Sufficient PRC balance (`can_afford_balance`)
+- ✅ Daily 1-per-day quota (`daily_limit_ok`)
+- ✅ Valid PIN
+
+**Production Impact**: Users with even 0 redeem limit can now sponsor Sale Elite for friends as long as their PRC balance ≥ price (~330 PRC). Removes one of the largest virality blockers on the platform — Sale Elite was originally designed as INTERNAL P2P value transfer that doesn't drain INR from the system, so gating by redeem-limit was contradictory to its purpose.
+
+**Deploy step**: Save to Github + redeploy. SW v36 will auto-update on user's next visit.
+
+
+
 ### 🚨 KYC Drift Heal — Real Root Cause Fix (`/api/user/{uid}`) — DONE (9 Jun 2026)
 
 **User Report (production)**: Admin पॅनेल मध्ये Vinod Vasantrao Sonawane → KYC **verified**, पण User Profile view मध्ये **Pending** दिसत होतं.

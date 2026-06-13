@@ -376,12 +376,9 @@ const SaleEliteSubscription = ({ user }) => {
               <p className="text-xs text-red-300">Insufficient PRC balance.</p>
             </div>
           )}
-          {!preview.sender?.can_afford_redeem_limit && (
-            <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400" />
-              <p className="text-xs text-red-300">Insufficient redeem limit.</p>
-            </div>
-          )}
+          {/* Redeem-limit gate removed (Jun 2026): Sale Elite is open to ALL
+              users with sufficient PRC balance + daily quota. Redeem limit is
+              irrelevant for internal P2P value transfer. */}
 
           {/* PIN confirm */}
           <div>
@@ -406,7 +403,6 @@ const SaleEliteSubscription = ({ user }) => {
               activating ||
               !pin ||
               !preview.sender?.can_afford_balance ||
-              !preview.sender?.can_afford_redeem_limit ||
               !preview.sender?.daily_limit_ok
             }
             data-testid="sale-elite-confirm-btn"
