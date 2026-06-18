@@ -196,6 +196,57 @@ const AdminBankTransfers = () => {
     }
   };
 
+  // Bulk reject ALL pending requests above a minimum INR threshold (Jun 2026)
+  // Use case: "tech issue" — reject all pending withdrawals above ₹1,000 in one click.
+  const handleBulkRejectByAmount = async () => {
+    const minAmountStr = window.prompt(
+      'Bulk REJECT all pending requests above which INR amount?',
+      '1000'
+    );
+    if (!minAmountStr) return;
+    const minAmount = parseFloat(minAmountStr);
+    if (!Number.isFinite(minAmount) || minAmount <= 0) {
+      toast.error('Enter a valid positive amount');
+      return;
+    }
+    const reason = window.prompt(
+      'Rejection reason (shown to users):',
+      'technical issue'
+    );
+    if (!reason || !reason.trim()) return;
+
+    if (!window.confirm(
+      `⚠ This will reject ALL pending bank-transfer requests with amount > ₹${minAmount.toLocaleString()}.\n\n` +
+      `Reason: "${reason}"\n\n` +
+      `PRC will be refunded to each user. THIS CANNOT BE UNDONE.\n\nContinue?`
+    )) return;
+
+    try {
+      setLoading(true);
+      const admin = JSON.parse(localStorage.getItem('user') || '{}');
+      const res = await axios.post(`${API}/bank-transfer/admin/bulk-mark-failed`, {
+        admin_id: admin.uid || 'admin',
+        remark: reason.trim(),
+        mark_all_pending: true,
+        min_amount_inr: minAmount,
+      }, { timeout: 180000 });
+
+      if (res.data.success) {
+        toast.success(
+          `${res.data.failed_count} requests rejected · ${(res.data.total_refunded || 0).toLocaleString()} PRC refunded`,
+          { duration: 15000 }
+        );
+        setSelectedIds([]);
+        setSelectAll(false);
+        loadRequests();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || err.message || 'Bulk reject failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Edit withdrawal amount
   const handleSaveAmount = async (requestId) => {
     const newAmount = parseInt(editAmountValue);
@@ -415,6 +466,17 @@ const AdminBankTransfers = () => {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                {/* Always-available: bulk reject by amount (no individual selection needed) */}
+                <Button
+                  onClick={handleBulkRejectByAmount}
+                  className="bg-rose-700 hover:bg-rose-800 text-white"
+                  disabled={loading}
+                  data-testid="bulk-reject-by-amount-btn"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Bulk Reject by Amount …
+                </Button>
+
                 {/* Selected Actions */}
                 {selectedIds.length > 0 && (
                   <>

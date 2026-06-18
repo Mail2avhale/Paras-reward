@@ -1400,6 +1400,10 @@ class BulkActionRequest(BaseModel):
     admin_id: str = Field(..., description="Admin user ID")
     remark: str = Field(default="Bulk action", description="Reason for bulk action")
     mark_all_pending: bool = Field(default=False, description="If true, mark ALL pending requests")
+    min_amount_inr: Optional[float] = Field(
+        default=None,
+        description="When mark_all_pending=True, only target pending requests with amount > this INR value"
+    )
 
 
 @router.post("/admin/bulk-mark-failed")
@@ -1418,10 +1422,21 @@ async def bulk_mark_failed(action: BulkActionRequest):
         
         # Get requests to process
         if action.mark_all_pending:
-            # Get ALL pending requests
-            requests_to_fail = await db.bank_transfer_requests.find(
-                {"status": "pending"}
-            ).to_list(1000)
+            # Get ALL pending requests, optionally filtered by min_amount_inr
+            query = {"status": "pending"}
+            if action.min_amount_inr is not None and action.min_amount_inr > 0:
+                # bank_transfer_requests stores INR under 'amount_inr' (and sometimes 'amount')
+                # Use $or to cover both shapes.
+                query = {
+                    "$and": [
+                        {"status": "pending"},
+                        {"$or": [
+                            {"amount_inr": {"$gt": float(action.min_amount_inr)}},
+                            {"amount": {"$gt": float(action.min_amount_inr)}},
+                        ]},
+                    ]
+                }
+            requests_to_fail = await db.bank_transfer_requests.find(query).to_list(2000)
         else:
             # Get specific requests
             requests_to_fail = await db.bank_transfer_requests.find(

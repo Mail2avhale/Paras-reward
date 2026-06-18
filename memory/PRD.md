@@ -9,6 +9,36 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 💰 Admin Bulk Reject Pending Bank Transfers by Amount — DONE (9 Jun 2026)
+
+**Owner Use Case**: Production वर platform-wide tech issue मुळे high-value pending withdrawals एकत्र cancel + refund करायचे होते (`amount > ₹1000`, reason "technical issue").
+
+**Backend (`/app/backend/routes/manual_bank_transfer.py`)**:
+- Extended `BulkActionRequest` Pydantic model with new optional field `min_amount_inr: Optional[float]`.
+- Updated `/api/bank-transfer/admin/bulk-mark-failed`: when `mark_all_pending=True` AND `min_amount_inr` is set, query filter becomes `{status: pending, $or: [{amount_inr: >X}, {amount: >X}]}` (covers both legacy `amount` and current `amount_inr` field shapes). Strict `$gt` (not `$gte`) — so ₹1000 exactly is NOT rejected if threshold=1000.
+- Existing refund logic (`prc_deducted → users.prc_balance`) untouched; remark stored as the user-supplied reason.
+
+**Frontend (`/app/frontend/src/pages/Admin/AdminBankTransfers.js`)**:
+- New always-visible button: **"Bulk Reject by Amount …"** (rose-700, XCircle icon, `data-testid="bulk-reject-by-amount-btn"`) inside the Bulk Actions row of pending tab.
+- Click → `window.prompt` for minimum INR (default `1000`) → second `prompt` for reason (default `technical issue`) → `window.confirm` with summary → POST to bulk-mark-failed with `mark_all_pending=true` + `min_amount_inr`.
+- Success toast: `"N requests rejected · M PRC refunded"` (15s).
+- Per-call axios timeout 180s.
+
+**SW → v42** (cache bust).
+
+**End-to-end verified** with 5 synthetic pending requests at ₹500/₹1000/₹1500/₹3000/₹5000:
+- 3 above ₹1000 → status=failed, remark="technical issue", PRC refunded to user balance ✅
+- 2 at/below ₹1000 → unchanged pending ✅
+- Response: `failed_count=3, total_refunded=950`
+
+**Production usage steps**:
+1. Open `/admin/bank-transfers` → pending tab
+2. Click red **"Bulk Reject by Amount …"** button (top of Bulk Actions row)
+3. Enter minimum INR (e.g., `1000`) → enter reason (`technical issue`)
+4. Confirm popup → wait for toast: `"N requests rejected · M PRC refunded"`
+
+
+
 ### 🚑 Chunked-Resumable Cleanup — Production Hardening v2 (9 Jun 2026)
 
 **Production Incident continued**: Even after v40's per-cascade try/except, production still hit:

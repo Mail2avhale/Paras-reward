@@ -5,17 +5,16 @@
 // arbitrary date range who are NOT actively subscribed, NOT mining, and
 // have NOT logged in for N days. Pending bank-redeems for these users
 // are deleted alongside. KYC-verified users always protected (RBI).
-// v41: June 9, 2026 — Production v40 still hit MaxTimeMSExpired during
-// preview load AND 503 during big deletes (proxy ~60s cap). Restructured:
-// (a) Preview: rule1/rule2 finds capped at 1500 each, wrapped in try/except,
-//     batch_size(500) to reduce getMore calls. Protection scan limited to
-//     first 500 candidates with chunked find() + max_time_ms(15s).
-// (b) Execute: chunked + resumable. Each HTTP call processes max 250 users
-//     and returns `more_to_do` + `remaining`. Frontend auto-loops up to 30x
-//     showing per-chunk toast. Hard cap 120s per chunk fits under proxy.
-const CACHE_NAME = 'paras-reward-v41';
-const RUNTIME_CACHE = 'paras-runtime-v41';
-const API_CACHE = 'paras-api-v41';
+// v42: June 9, 2026 — AdminBankTransfers page now has a "Bulk Reject by
+// Amount …" button (always visible in the Bulk Actions row). Prompts for
+// min INR threshold (default ₹1000) + rejection reason (default "technical
+// issue") → calls /bank-transfer/admin/bulk-mark-failed with min_amount_inr
+// filter → rejects + refunds PRC in one go. Use case: owner wants to
+// cancel-and-refund all pending withdrawals above a threshold due to a
+// platform-wide technical issue.
+const CACHE_NAME = 'paras-reward-v42';
+const RUNTIME_CACHE = 'paras-runtime-v42';
+const API_CACHE = 'paras-api-v42';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
