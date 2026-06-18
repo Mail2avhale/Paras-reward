@@ -194,8 +194,9 @@ const AdminInactiveCleanup = ({ user }) => {
         if (d.errors && d.errors.length) lastErrors = d.errors;
         toast.info(
           `Chunk ${iter}: restored ${d.restored} · ${d.remaining} remaining` +
+          (d.candidates_available !== undefined ? ` (${d.candidates_available} candidates)` : '') +
           (d.error_count > 0 ? ` · ⚠ ${d.error_count} errors` : ''),
-          { duration: 3000 }
+          { duration: 3500 }
         );
         if (!d.more_to_do) break;
         await new Promise(res => setTimeout(res, 700));

@@ -1041,16 +1041,22 @@ async def restore_deleted_execute(request: Request):
         if only_kyc_verified:
             snap_match["kyc_status"] = {"$in": ["verified", "approved", "Verified", "VERIFIED"]}
 
+        # Production-safe fetch (Jun 9, 2026): sort by deleted_at DESC so we
+        # always work on the most-recent failures first. Then exclude already-
+        # restored UIDs in-memory and take batch. Previously we limited the
+        # fetch to `max_users * 2` snapshots in insertion order — if those
+        # happened to be already-restored ones, candidates came out to 0.
+        # Fetch up to 5000 per call so we have plenty after filtering.
         snapshots = await db.deleted_users_audit.find(
             snap_match
-        ).max_time_ms(45_000).limit(max_users * 2).to_list(length=max_users * 2)
+        ).sort("deleted_at", -1).max_time_ms(60_000).limit(5000).to_list(length=5000)
 
         existing_uids = set()
         if snapshots:
             existing = await db.users.find(
                 {"uid": {"$in": [s["uid"] for s in snapshots if s.get("uid")]}},
                 {"_id": 0, "uid": 1}
-            ).to_list(len(snapshots))
+            ).max_time_ms(45_000).to_list(len(snapshots))
             existing_uids = {u["uid"] for u in existing}
 
         candidates = [s for s in snapshots if s.get("uid") and s.get("uid") not in existing_uids]
@@ -1137,6 +1143,9 @@ async def restore_deleted_execute(request: Request):
             "success": True,
             "restored": restored,
             "processed_this_call": len(batch),
+            "fetched_snapshots": len(snapshots),
+            "already_restored_in_batch": len(existing_uids),
+            "candidates_available": len(candidates),
             "more_to_do": remaining_after > 0,
             "remaining": remaining_after,
             "errors": errors[:20],

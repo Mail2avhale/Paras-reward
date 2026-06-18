@@ -9,6 +9,44 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🔧 Restore Tool 0-Restored Bug FIXED v2 — Pagination Fix (9 Jun 2026)
+
+**Owner Report (after v45 deploy)**: Restore STILL returned 0 users even though Preview showed 1,456 restorable.
+
+**Root Cause v2**: My execute endpoint fetched snapshots with `.limit(max_users * 2)` = 500 in **default insertion order** (oldest first). Production's `deleted_users_audit` had **544 already-restored** UIDs at the head of the collection. So:
+- Fetched 500 snapshots → ALL 500 were already-restored
+- `candidates = [s for s in snapshots if uid not in existing_uids]` → 0
+- restored=0, error_count=0 — silent zero, no errors visible
+
+**Fix (`routes/inactive_user_cleanup.py`)**:
+1. **Sort by `deleted_at DESC`** — most recent failures fetched first
+2. **Raise limit to 5,000** per call — gives enough headroom to find candidates after filtering
+3. **Then filter** out already-restored UIDs in memory
+4. **Take batch up to `max_users`** from remaining candidates
+
+**Diagnostic fields added to response**:
+- `fetched_snapshots` — how many audit rows the query found
+- `already_restored_in_batch` — how many of those were skipped (already in `users`)
+- `candidates_available` — actual restorable count for this call
+
+**Frontend toast** now shows `(N candidates)` in each chunk for live diagnosis.
+
+**SW → v46** (cache bust).
+
+**Verified with production-like scenario**:
+- Setup: 600 already-restored snapshots (older) + 50 new restorable (recent)
+- Without fix: 0 restored (first 500 are old)
+- **With fix**: `fetched=655, already_restored=605, candidates_available=50, restored=50` ✅
+
+**Production Recovery (after v46 redeploy)**:
+1. Hard refresh `/admin/inactive-cleanup`
+2. **Preview** → 1,456 restorable
+3. **Restore** → PIN `153759`
+4. Per-chunk toast now shows e.g. `"Chunk 1: restored 250 · 1206 remaining (250 candidates)"`
+5. Auto-loops through all chunks until done
+
+
+
 ### 🔧 Restore Tool: Silent 0-Restored Bug FIXED (9 Jun 2026)
 
 **Owner Report**: Preview found 1,456 restorable users on production, but Restore returned `TOTAL Restored: 0 users`. Silent failure.

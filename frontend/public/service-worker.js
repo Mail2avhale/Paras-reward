@@ -26,9 +26,16 @@
 // the `users` collection has unique indexes on those fields. Switched to
 // `update_one(upsert=True)` filtered by uid + strip null unique-indexed
 // fields before insert. Errors now surfaced in toast + browser console.
-const CACHE_NAME = 'paras-reward-v45';
-const RUNTIME_CACHE = 'paras-runtime-v45';
-const API_CACHE = 'paras-api-v45';
+// v46: June 9, 2026 — Restore still returned 0 even with v45 upsert fix.
+// Root cause: execute fetched only `max_users*2 = 500` snapshots in audit
+// insertion order. If first 500 were already-restored, `candidates` came
+// out to 0. Fixed: fetch up to 5000 snapshots sorted by `deleted_at DESC`,
+// THEN filter out already-restored UIDs. Also expose `fetched_snapshots`,
+// `already_restored_in_batch`, `candidates_available` in response so admin
+// can diagnose. Per-chunk toast now shows `(N candidates)` count.
+const CACHE_NAME = 'paras-reward-v46';
+const RUNTIME_CACHE = 'paras-runtime-v46';
+const API_CACHE = 'paras-api-v46';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
