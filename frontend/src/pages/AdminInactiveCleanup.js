@@ -31,6 +31,75 @@ const AdminInactiveCleanup = ({ user }) => {
   const [executing, setExecuting] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
 
+  // ============ CUSTOM PURGE (Jun 2026 — Reg-date-range based) ============
+  const [customStart, setCustomStart] = useState('2026-01-01');
+  const [customEnd, setCustomEnd] = useState('2026-04-30');
+  const [customInactiveDays, setCustomInactiveDays] = useState(10);
+  const [customPreview, setCustomPreview] = useState(null);
+  const [customLoading, setCustomLoading] = useState(false);
+  const [customExecuting, setCustomExecuting] = useState(false);
+
+  const fetchCustomPreview = async () => {
+    try {
+      setCustomLoading(true);
+      const res = await axios.get(
+        `${API}/admin/inactive-cleanup/custom-dry-run?start_date=${customStart}&end_date=${customEnd}&inactive_days=${customInactiveDays}&sample_size=50`
+      );
+      setCustomPreview(res.data);
+      toast.success(`Found ${res.data.total_to_delete} users matching criteria`);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Custom preview failed');
+    } finally {
+      setCustomLoading(false);
+    }
+  };
+
+  const executeCustomPurge = async () => {
+    const total = customPreview?.total_to_delete || 0;
+    if (total === 0) {
+      toast.info('No users match — run Preview first');
+      return;
+    }
+    const breakdown = Object.entries(customPreview.month_breakdown || {})
+      .map(([m, c]) => `   ${m}: ${c}`)
+      .join('\n');
+    if (!window.confirm(
+      `⚠️ HARD DELETE ${total} users PERMANENTLY?\n\n` +
+      `Registration: ${customStart} → ${customEnd}\n` +
+      `Inactive: ${customInactiveDays}+ days · No active sub · No mining\n` +
+      `KYC-verified, admin & is_protected users are SKIPPED.\n\n` +
+      `Month breakdown:\n${breakdown}\n\n` +
+      `Plus pending bank-redeems for these users will be deleted.\n\n` +
+      `THIS CANNOT BE UNDONE. Continue?`
+    )) return;
+
+    const pin = window.prompt('Admin PIN required:');
+    if (!pin) return;
+
+    try {
+      setCustomExecuting(true);
+      const res = await axios.post(`${API}/admin/inactive-cleanup/custom-execute`, {
+        pin,
+        admin_id: user?.uid,
+        start_date: customStart,
+        end_date: customEnd,
+        inactive_days: customInactiveDays,
+      }, { timeout: 600000 });
+
+      const d = res.data || {};
+      toast.success(
+        `✅ Deleted ${d.deleted_users} users · ${d.pending_redeems_deleted} pending redeems · ${d.referral_orphans} downline cleaned`,
+        { duration: 15000 }
+      );
+      setCustomPreview(null);
+      fetchPreview();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Custom purge failed');
+    } finally {
+      setCustomExecuting(false);
+    }
+  };
+
   const fetchPreview = useCallback(async (override) => {
     try {
       setLoading(true);
@@ -353,6 +422,130 @@ const AdminInactiveCleanup = ({ user }) => {
             )}
           </>
         )}
+
+        {/* ============ CUSTOM PURGE — Registration Date Window ============ */}
+        <Card className="p-4 border-rose-200 bg-rose-50/40 mt-6" data-testid="custom-purge-card">
+          <div className="flex items-center gap-2 mb-3">
+            <Trash2 className="w-4 h-4 text-rose-700" />
+            <h3 className="text-sm font-bold text-rose-900">
+              Custom Purge — by Registration Window
+            </h3>
+          </div>
+          <p className="text-[11px] text-rose-800 mb-3 leading-relaxed">
+            Delete users registered in a specific date window <strong>who have no
+            active subscription, no active mining, and have not logged in for N
+            days</strong>. <em>Pending bank-redeems for these users will also be
+            deleted.</em> KYC-verified / admin / is_protected accounts are
+            always skipped (RBI compliance).
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <label className="block text-[11px] font-medium text-rose-900 mb-1">From</label>
+              <Input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                data-testid="custom-start-date"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-rose-900 mb-1">To</label>
+              <Input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                data-testid="custom-end-date"
+              />
+            </div>
+          </div>
+          <label className="block text-[11px] font-medium text-rose-900 mb-1">
+            Inactive Days (no login since)
+          </label>
+          <Input
+            type="number"
+            min={1}
+            max={365}
+            value={customInactiveDays}
+            onChange={(e) => setCustomInactiveDays(parseInt(e.target.value) || 10)}
+            data-testid="custom-inactive-days"
+            className="mb-3"
+          />
+
+          <div className="flex gap-2 mb-3">
+            <Button
+              onClick={fetchCustomPreview}
+              disabled={customLoading}
+              className="flex-1 bg-slate-700 hover:bg-slate-800 text-white"
+              data-testid="custom-preview-btn"
+            >
+              {customLoading
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <><Eye className="w-4 h-4 mr-1" /> Preview</>}
+            </Button>
+            <Button
+              onClick={executeCustomPurge}
+              disabled={customExecuting || !customPreview || customPreview.total_to_delete === 0}
+              className="flex-1 bg-rose-700 hover:bg-rose-800 text-white"
+              data-testid="custom-execute-btn"
+            >
+              {customExecuting
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <><Trash2 className="w-4 h-4 mr-1" /> Delete</>}
+            </Button>
+          </div>
+
+          {customPreview && (
+            <div className="rounded-lg bg-white border border-rose-200 p-3" data-testid="custom-preview-result">
+              <div className="flex items-baseline justify-between mb-2">
+                <span className="text-xs font-semibold text-slate-700">Total to delete</span>
+                <span className="text-2xl font-bold text-rose-700">
+                  {customPreview.total_to_delete}
+                </span>
+              </div>
+              {customPreview.pending_redeems_will_delete_for > 0 && (
+                <p className="text-[11px] text-amber-700 mb-2">
+                  ⚠ {customPreview.pending_redeems_will_delete_for} users have pending bank-redeem
+                  requests that will also be deleted.
+                </p>
+              )}
+              {Object.keys(customPreview.month_breakdown || {}).length > 0 && (
+                <div className="grid grid-cols-4 gap-2 mb-2">
+                  {Object.entries(customPreview.month_breakdown).sort().map(([m, c]) => (
+                    <div key={m} className="text-center bg-slate-50 rounded p-1.5">
+                      <p className="text-[10px] text-slate-500">{m}</p>
+                      <p className="text-sm font-bold text-slate-800">{c}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {customPreview.sample?.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-[11px] font-medium text-slate-600 mb-1">
+                    Sample (first {customPreview.sample.length}):
+                  </p>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {customPreview.sample.map((u) => (
+                      <div key={u.uid} className="flex items-center justify-between p-1.5 bg-slate-50 rounded text-[11px]">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-slate-700 truncate">{u.name || 'No name'}</p>
+                          <p className="text-slate-500 truncate">
+                            {u.mobile || u.email || u.uid} · reg {u.created_at?.slice(0, 10)}
+                          </p>
+                        </div>
+                        {u.prc_balance > 0 && (
+                          <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded ml-2">
+                            {Math.round(u.prc_balance)} PRC
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );

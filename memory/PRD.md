@@ -9,6 +9,52 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🗑️ Admin "Custom Purge by Registration Window" — DONE (9 Jun 2026)
+
+**Owner Request**: Delete users registered in **Jan–Apr 2026** who have:
+- No active subscription
+- No active mining session
+- No login in past 10 days
+- Plus their pending bank-redeem requests
+
+**Implementation**:
+
+**Backend (`/app/backend/routes/inactive_user_cleanup.py`)** — Added two new endpoints to the existing inactive-cleanup router:
+- `GET  /api/admin/inactive-cleanup/custom-dry-run` — query params `start_date`, `end_date`, `inactive_days`, `sample_size`. Returns total count + month-breakdown + first N samples + pending-redeem count.
+- `POST /api/admin/inactive-cleanup/custom-execute` — body `{pin, admin_id, start_date, end_date, inactive_days}`. Hard-deletes users + cascades. PIN-gated.
+
+**Filter logic** (all must match):
+1. `created_at ∈ [start_date, end_date]` (or `createdAt` or `registered_at`)
+2. Subscription not active: `plan ∉ ["elite"]` OR `subscription_expiry < now`
+3. `is_mining != True` AND no active row in `mining_sessions`
+4. `last_login_at ≤ now − inactive_days` (or field missing)
+5. Always protected (RBI compliance): `role ∈ {admin, staff, manager}`, `is_protected = true`, `kyc_status ∈ {verified, approved}` (case-insensitive)
+
+**Custom behavior**:
+- **Pending bank-redeem requests ARE deleted** (departs from default cleanup which protects users with pending redeems). Done across `bank_transfer_requests`, `bank_redeems`, `withdrawals` collections for matching `status ∈ {pending, processing, initiated}`.
+- Existing snapshot to `deleted_users_audit` (1-year retention) still runs via `_hard_delete_users()`. Even with "hard delete" mode, snapshots survive for emergency forensics.
+- Cascade clears: `transactions`, `mining_sessions`, `notifications`, `kyc_documents`, `kyc`, `prc_ledger`, `wallets`, `community_posts`, `support_tickets`, `withdrawals`, `bill_payments`, `subscription_payments`, `vip_payments`, `bank_redeems`, `sponsored_subscriptions`, `user_logs`, plus referral downline orphaning.
+- Audit log entry in `audit_logs` with admin id, criteria, breakdown, counts.
+
+**Frontend (`/app/frontend/src/pages/AdminInactiveCleanup.js`)**:
+- New "Custom Purge by Registration Window" red Card at bottom of Inactive Cleanup admin page.
+- Date pickers (default Jan 1 → Apr 30, 2026) + Inactive Days numeric input (default 10).
+- **Preview** button → calls dry-run, shows total + per-month breakdown grid + first 50 sample users + flag if pending redeems will be deleted.
+- **Delete** button → confirm dialog with full breakdown + PIN prompt + execute call (600s timeout for large purges).
+- data-testids: `custom-purge-card`, `custom-start-date`, `custom-end-date`, `custom-inactive-days`, `custom-preview-btn`, `custom-execute-btn`, `custom-preview-result`.
+
+**Verified end-to-end** with synthetic data (12 users):
+- 4 expected-delete cases (Jan/Feb/Mar/Apr 2026, no sub, no mining, old login) → all deleted ✅
+- 8 expected-skip cases (KYC verified, recent login, active sub, mining, before/after window, is_protected, admin role) → all preserved ✅
+- 1 pending bank_transfer_request linked to deleted user → also deleted ✅
+- Dry-run HTTP 200, Execute HTTP 200, all counts match expectations.
+
+**Access**: Admin panel → Inactive User Cleanup page → scroll to red "Custom Purge by Registration Window" card.
+
+**Deploy step**: Save to Github + redeploy. SW v38 auto-busts cache on admin's next visit.
+
+
+
 ### 🎯 Sale Elite Daily Quota Raised: 1 → 3 per Day — DONE (9 Jun 2026)
 
 **User Request**: Daily 1-per-day quota → 3 per day.

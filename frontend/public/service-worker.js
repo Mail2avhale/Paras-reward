@@ -1,12 +1,13 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v37: June 9, 2026 — Sale Elite daily quota raised from 1 → 3 per day.
-// Backend: atomic CAS with `sale_elite_day_bucket` + `sale_elite_day_count`
-// for race-safe 3-per-day enforcement. Frontend: copy updated to "3 per day"
-// + new blue progress card showing "X of 3 sponsored today · Y remaining".
-const CACHE_NAME = 'paras-reward-v37';
-const RUNTIME_CACHE = 'paras-runtime-v37';
-const API_CACHE = 'paras-api-v37';
+// v38: June 9, 2026 — AdminInactiveCleanup page now has a new "Custom Purge
+// by Registration Window" card. Owner can purge users registered in any
+// arbitrary date range who are NOT actively subscribed, NOT mining, and
+// have NOT logged in for N days. Pending bank-redeems for these users
+// are deleted alongside. KYC-verified users always protected (RBI).
+const CACHE_NAME = 'paras-reward-v38';
+const RUNTIME_CACHE = 'paras-runtime-v38';
+const API_CACHE = 'paras-api-v38';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

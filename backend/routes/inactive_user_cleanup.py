@@ -474,3 +474,254 @@ async def daily_inactive_cleanup_task():
             logging.error(f"[INACTIVE-CLEANUP auto] error: {e}", exc_info=True)
 
         await asyncio.sleep(24 * 60 * 60)  # 24 hours
+
+
+# ============================================================================
+# CUSTOM PURGE BY REGISTRATION DATE RANGE  (Jun 2026)
+# ============================================================================
+# Owner request (9 Jun 2026):
+#   "Janewari/Feb/Mar/Apr 2026 मध्ये ज्या युजरची रजिस्ट्रेशन date आहे,
+#    pn त्याची session active nahi, subcription active nahi, ani 10 divsapasun
+#    login pn nahi — ase sarv users delete kar. tyanchya pending redeem to
+#    bank requests pn delete kar."
+#
+# Differences vs Rule 1 / Rule 2:
+#   • Filters by REGISTRATION date window (inclusive)
+#   • Mining must be inactive (`is_mining != True`)
+#   • Subscription must be NOT active (not elite OR expired)
+#   • Last login older than `inactive_days` (default 10)
+#   • Pending bank-redeems are NOT a skip-guard — they get DELETED with
+#     the user (per explicit owner instruction)
+#   • KYC-verified, admin/staff, is_protected remain LEGAL protections
+
+
+async def _find_custom_candidates(
+    start_date: str,
+    end_date: str,
+    inactive_days: int = 10,
+    sample_size: int = 50,
+) -> dict:
+    """Find users matching the custom purge criteria.
+
+    Args:
+        start_date / end_date: 'YYYY-MM-DD' inclusive registration window.
+        inactive_days: last_login_at must be older than now - inactive_days.
+    """
+    now = datetime.now(timezone.utc)
+    inactive_cutoff = (now - timedelta(days=inactive_days)).isoformat()
+    now_iso = now.isoformat()
+
+    start_iso = f"{start_date}T00:00:00+00:00"
+    end_iso = f"{end_date}T23:59:59+00:00"
+
+    base_protection = {
+        "$and": [
+            {"role": {"$nin": ["admin", "staff", "manager"]}},
+            {"is_protected": {"$ne": True}},
+            # KYC verified users protected by RBI PMLA Act (5 yr retention)
+            {"kyc_status": {"$nin": ["verified", "approved", "Verified", "VERIFIED"]}},
+            {"uid": {"$nin": ["system", None, ""]}},
+            {"uid": {"$not": {"$regex": "^admin-"}}},
+        ]
+    }
+
+    # Registration window — match either field
+    reg_window = {
+        "$or": [
+            {"created_at": {"$gte": start_iso, "$lte": end_iso}},
+            {"createdAt": {"$gte": start_iso, "$lte": end_iso}},
+            {"registered_at": {"$gte": start_iso, "$lte": end_iso}},
+        ]
+    }
+
+    # Subscription NOT active = not elite OR expired
+    sub_not_active = {
+        "$or": [
+            {"subscription_plan": {"$in": [None, "", "explorer", "free"]}},
+            {"subscription_plan": {"$exists": False}},
+            # Has elite but expired
+            {"$and": [
+                {"subscription_plan": {"$in": ["elite", "Elite", "ELITE"]}},
+                {"$or": [
+                    {"subscription_expiry": {"$exists": False}},
+                    {"subscription_expiry": None},
+                    {"subscription_expiry": ""},
+                    {"subscription_expiry": {"$lt": now_iso}},
+                ]},
+            ]},
+        ]
+    }
+
+    # Mining NOT active (is_mining flag, or never started)
+    mining_not_active = {
+        "$or": [
+            {"is_mining": {"$ne": True}},
+            {"is_mining": {"$exists": False}},
+        ]
+    }
+
+    # Login NOT recent (10 days)
+    login_inactive = {
+        "$or": [
+            {"last_login_at": {"$lte": inactive_cutoff}},
+            {"last_login_at": {"$exists": False}},
+            {"last_login_at": None},
+        ]
+    }
+
+    full_query = {
+        "$and": [
+            base_protection,
+            reg_window,
+            sub_not_active,
+            mining_not_active,
+            login_inactive,
+        ]
+    }
+
+    candidates = await db.users.find(
+        full_query,
+        {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1, "created_at": 1,
+         "last_login_at": 1, "subscription_plan": 1, "subscription_expiry": 1,
+         "is_mining": 1, "kyc_status": 1, "prc_balance": 1}
+    ).limit(20000).to_list(length=20000)
+
+    # Cross-check mining_sessions: if any candidate has an ACTIVE mining session
+    # in the collection (regardless of flag), exclude them (safety)
+    candidate_uids = [u["uid"] for u in candidates]
+    active_mining_uids = set()
+    if candidate_uids and "mining_sessions" in await db.list_collection_names():
+        try:
+            async for s in db.mining_sessions.find(
+                {"user_id": {"$in": candidate_uids}, "status": {"$in": ["active", "running"]}},
+                {"_id": 0, "user_id": 1}
+            ):
+                active_mining_uids.add(s.get("user_id"))
+        except Exception as e:
+            logging.warning(f"[CUSTOM-PURGE] mining_sessions check failed: {e}")
+
+    final = [u for u in candidates if u["uid"] not in active_mining_uids]
+
+    # Month-by-month breakdown for owner clarity
+    breakdown = {}
+    for u in final:
+        ca = u.get("created_at") or ""
+        month_key = ca[:7] if isinstance(ca, str) and len(ca) >= 7 else "unknown"
+        breakdown[month_key] = breakdown.get(month_key, 0) + 1
+
+    # Pending bank-redeem requests we'll delete alongside
+    pending_redeems_uids = set()
+    if final:
+        for coll in ("bank_transfer_requests", "bank_redeems", "withdrawals"):
+            if coll in await db.list_collection_names():
+                try:
+                    uids = await db[coll].distinct(
+                        "user_id",
+                        {
+                            "user_id": {"$in": [u["uid"] for u in final]},
+                            "status": {"$in": ["pending", "processing", "initiated"]},
+                        }
+                    )
+                    pending_redeems_uids.update(uids)
+                except Exception:
+                    pass
+
+    return {
+        "total_to_delete": len(final),
+        "active_mining_skipped": len(active_mining_uids),
+        "month_breakdown": breakdown,
+        "sample": final[:sample_size],
+        "all_uids": [u["uid"] for u in final],  # internal use for execute
+        "pending_redeems_will_delete_for": len(pending_redeems_uids),
+        "criteria": {
+            "registration_window": f"{start_date} → {end_date}",
+            "inactive_days": inactive_days,
+            "subscription_active_required": False,
+            "mining_active_required": False,
+            "kyc_protected": True,
+            "delete_pending_redeems": True,
+        },
+    }
+
+
+@router.get("/custom-dry-run")
+async def custom_dry_run(
+    start_date: str = "2026-01-01",
+    end_date: str = "2026-04-30",
+    inactive_days: int = 10,
+    sample_size: int = 50,
+):
+    """Preview custom-purge candidates (no delete)."""
+    try:
+        res = await _find_custom_candidates(start_date, end_date, inactive_days, sample_size)
+        # Drop the full uid list from response (large)
+        res.pop("all_uids", None)
+        return {"success": True, **res}
+    except Exception as e:
+        logging.error(f"[CUSTOM-PURGE dry-run] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/custom-execute")
+async def custom_execute(request: Request):
+    """Execute the custom purge. Admin PIN required.
+
+    Body: {pin, admin_id, start_date, end_date, inactive_days?}
+    """
+    try:
+        body = await request.json()
+        if not _verify_admin_pin(body.get("pin", "")):
+            raise HTTPException(status_code=401, detail="Invalid admin PIN")
+
+        start_date = body.get("start_date", "2026-01-01")
+        end_date = body.get("end_date", "2026-04-30")
+        inactive_days = int(body.get("inactive_days", 10))
+        admin_id = body.get("admin_id") or "admin"
+
+        cand = await _find_custom_candidates(start_date, end_date, inactive_days, sample_size=0)
+        uids = cand["all_uids"]
+
+        # ----- DELETE pending bank-redeem-type requests for these users FIRST -----
+        redeem_deleted = 0
+        if uids:
+            for coll in ("bank_transfer_requests", "bank_redeems", "withdrawals"):
+                if coll in await db.list_collection_names():
+                    try:
+                        r = await db[coll].delete_many({
+                            "user_id": {"$in": uids},
+                            "status": {"$in": ["pending", "processing", "initiated"]},
+                        })
+                        redeem_deleted += r.deleted_count
+                    except Exception as ce:
+                        logging.warning(f"[CUSTOM-PURGE] redeem delete in {coll} failed: {ce}")
+
+        # ----- Cascade-delete users + related data -----
+        del_result = await _hard_delete_users(uids, admin_id)
+
+        # Audit log
+        await db.audit_logs.insert_one({
+            "action": "custom_inactive_purge",
+            "performed_by": admin_id,
+            "criteria": cand["criteria"],
+            "month_breakdown": cand["month_breakdown"],
+            "deleted_users": del_result["deleted_users"],
+            "cascades": del_result["cascades"],
+            "referral_orphans": del_result["referral_orphans"],
+            "pending_redeems_deleted": redeem_deleted,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
+        return {
+            "success": True,
+            "deleted_users": del_result["deleted_users"],
+            "pending_redeems_deleted": redeem_deleted,
+            "cascades": del_result["cascades"],
+            "referral_orphans": del_result["referral_orphans"],
+            "month_breakdown": cand["month_breakdown"],
+            "criteria": cand["criteria"],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[CUSTOM-PURGE execute] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
