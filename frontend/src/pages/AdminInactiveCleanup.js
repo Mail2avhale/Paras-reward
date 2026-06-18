@@ -78,29 +78,50 @@ const AdminInactiveCleanup = ({ user }) => {
 
     try {
       setCustomExecuting(true);
-      const res = await axios.post(`${API}/admin/inactive-cleanup/custom-execute`, {
-        pin,
-        admin_id: user?.uid,
-        start_date: customStart,
-        end_date: customEnd,
-        inactive_days: customInactiveDays,
-      }, { timeout: 600000 });
+      let totalDeleted = 0;
+      let totalRedeems = 0;
+      let totalOrphans = 0;
+      let totalErrors = 0;
+      let iteration = 0;
+      const MAX_ITERATIONS = 50;
 
-      const d = res.data || {};
-      const errSuffix = d.error_count > 0
-        ? ` · ⚠ ${d.error_count} cascade timeouts (re-run to finish)`
-        : '';
-      toast.success(
-        `✅ Deleted ${d.deleted_users} users · ${d.pending_redeems_deleted} pending redeems · ${d.referral_orphans || 0} downline${errSuffix}`,
-        { duration: 15000 }
-      );
-      if (d.error_count > 0) {
-        console.warn('[CUSTOM-PURGE errors]', d.errors);
+      while (iteration < MAX_ITERATIONS) {
+        iteration++;
+        const res = await axios.post(`${API}/admin/inactive-cleanup/custom-execute`, {
+          pin,
+          admin_id: user?.uid,
+          start_date: customStart,
+          end_date: customEnd,
+          inactive_days: customInactiveDays,
+          max_users: 250,
+        }, { timeout: 120000 });
+
+        const d = res.data || {};
+        totalDeleted += d.deleted_users || 0;
+        totalRedeems += d.pending_redeems_deleted || 0;
+        totalOrphans += d.referral_orphans || 0;
+        totalErrors += d.error_count || 0;
+
+        toast.info(
+          `Chunk ${iteration}: ${d.deleted_users} deleted · ${d.remaining} remaining`,
+          { duration: 3000 }
+        );
+
+        if (!d.more_to_do || (d.deleted_users === 0 && d.remaining === 0)) {
+          break;
+        }
+        await new Promise(r => setTimeout(r, 800));
       }
+
+      const errSuffix = totalErrors > 0 ? ` · ⚠ ${totalErrors} cascade timeouts (re-run)` : '';
+      toast.success(
+        `✅ TOTAL: ${totalDeleted} users · ${totalRedeems} pending redeems · ${totalOrphans} downline${errSuffix}`,
+        { duration: 20000 }
+      );
       setCustomPreview(null);
       fetchPreview();
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'Custom purge failed');
+      toast.error(e.response?.data?.detail || e.message || 'Custom purge failed');
     } finally {
       setCustomExecuting(false);
     }
@@ -158,24 +179,44 @@ const AdminInactiveCleanup = ({ user }) => {
 
     try {
       setExecuting(true);
-      const res = await axios.post(`${API}/admin/inactive-cleanup/execute`, {
-        pin,
-        admin_id: user?.uid,
-        days_no_sub: daysNoSub,
-        days_inactive: daysInactive,
-      }, { timeout: 600000 });  // 10 min for large purges
+      let totalDeleted = 0;
+      let totalOrphans = 0;
+      let totalErrors = 0;
+      let iteration = 0;
+      const MAX_ITERATIONS = 30;  // safety cap
 
-      const d = res.data || {};
-      const errSuffix = d.error_count > 0
-        ? ` · ⚠ ${d.error_count} cascade timeouts (re-run to clean up)`
-        : '';
-      toast.success(
-        `✅ Deleted ${d.deleted_users} users · ${d.referral_orphans || 0} downline${errSuffix}`,
-        { duration: 15000 }
-      );
-      if (d.error_count > 0) {
-        console.warn('[INACTIVE-CLEANUP errors]', d.errors);
+      while (iteration < MAX_ITERATIONS) {
+        iteration++;
+        const res = await axios.post(`${API}/admin/inactive-cleanup/execute`, {
+          pin,
+          admin_id: user?.uid,
+          days_no_sub: daysNoSub,
+          days_inactive: daysInactive,
+          max_users: 250,
+        }, { timeout: 120000 });  // 2 min per chunk
+
+        const d = res.data || {};
+        totalDeleted += d.deleted_users || 0;
+        totalOrphans += d.referral_orphans || 0;
+        totalErrors += d.error_count || 0;
+
+        toast.info(
+          `Chunk ${iteration}: ${d.deleted_users} deleted · ${d.remaining} remaining`,
+          { duration: 3000 }
+        );
+
+        if (!d.more_to_do || (d.deleted_users === 0 && d.remaining === 0)) {
+          break;
+        }
+        // brief pause so backend connection settles
+        await new Promise(r => setTimeout(r, 800));
       }
+
+      const errSuffix = totalErrors > 0 ? ` · ⚠ ${totalErrors} cascade timeouts (re-run)` : '';
+      toast.success(
+        `✅ TOTAL: Deleted ${totalDeleted} users · ${totalOrphans} downline${errSuffix}`,
+        { duration: 20000 }
+      );
       fetchPreview();
     } catch (e) {
       toast.error(e.response?.data?.detail || e.message || 'Cleanup failed');

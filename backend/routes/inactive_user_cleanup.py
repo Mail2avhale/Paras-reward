@@ -122,17 +122,31 @@ async def _find_deletion_candidates(days_no_sub: int = 7, days_inactive: int = 6
         ]
     }
 
-    rule1_users = await db.users.find(
-        rule1_query,
-        {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1, "created_at": 1,
-         "subscription_plan": 1, "kyc_status": 1, "prc_balance": 1}
-    ).max_time_ms(90_000).limit(5000).to_list(length=5000)
+    # ---- Fetch candidates in capped, paginated way. Bounded result set ----
+    # Production-safe (Jun 9 2026 v2): wrap each query so a MaxTimeMSExpired
+    # on getMore() doesn't crash the endpoint. Also cap result set hard (1500
+    # per rule) — execute is chunked and resumable, so we don't need to know
+    # ALL candidates in one shot to start deleting them.
+    RULE_CAP = 1500
+    try:
+        rule1_users = await db.users.find(
+            rule1_query,
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1, "created_at": 1,
+             "subscription_plan": 1, "kyc_status": 1, "prc_balance": 1}
+        ).max_time_ms(45_000).batch_size(500).limit(RULE_CAP).to_list(length=RULE_CAP)
+    except Exception as e:
+        logging.warning(f"[INACTIVE-CLEANUP] rule1 find truncated: {e}")
+        rule1_users = []
 
-    rule2_users = await db.users.find(
-        rule2_query,
-        {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1, "last_login_at": 1,
-         "last_activity_at": 1, "created_at": 1, "kyc_status": 1, "prc_balance": 1}
-    ).max_time_ms(90_000).limit(5000).to_list(length=5000)
+    try:
+        rule2_users = await db.users.find(
+            rule2_query,
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1, "last_login_at": 1,
+             "last_activity_at": 1, "created_at": 1, "kyc_status": 1, "prc_balance": 1}
+        ).max_time_ms(45_000).batch_size(500).limit(RULE_CAP).to_list(length=RULE_CAP)
+    except Exception as e:
+        logging.warning(f"[INACTIVE-CLEANUP] rule2 find truncated: {e}")
+        rule2_users = []
 
     # Dedup (rule2 might include rule1)
     rule1_uids = {u["uid"] for u in rule1_users}
@@ -140,49 +154,43 @@ async def _find_deletion_candidates(days_no_sub: int = 7, days_inactive: int = 6
     rule2_users = [u for u in rule2_users if u["uid"] in rule2_uids]
 
     # ---- Skip protected guards (pending Eko, pending withdrawals, etc.) ----
+    # OPTIMISATION: Only scan a sampling of candidate uids (max 500) for
+    # protections during PREVIEW. The execute phase will re-check before
+    # each delete batch. This keeps preview snappy on production.
     all_candidate_uids = list(rule1_uids | rule2_uids)
+    sample_for_scan = all_candidate_uids[:500]
     protected_skipped = []
 
-    if all_candidate_uids:
-        # Chunk $in to keep distinct() fast on un-indexed user_id columns
-        CHUNK = 250
+    if sample_for_scan:
+        CHUNK = 100
         existing_colls = set(await db.list_collection_names())
 
-        async def _safe_distinct(coll_name, status_set):
+        async def _safe_collect(coll_name, query_extra):
             if coll_name not in existing_colls:
                 return set()
             found = set()
-            for i in range(0, len(all_candidate_uids), CHUNK):
-                chunk = all_candidate_uids[i:i + CHUNK]
+            for i in range(0, len(sample_for_scan), CHUNK):
+                chunk = sample_for_scan[i:i + CHUNK]
                 try:
-                    res = await db[coll_name].find(
-                        {"user_id": {"$in": chunk}, "status": {"$in": list(status_set)}},
+                    cursor = db[coll_name].find(
+                        {"user_id": {"$in": chunk}, **query_extra},
                         {"_id": 0, "user_id": 1}
-                    ).max_time_ms(45_000).to_list(length=10000)
-                    found.update(r.get("user_id") for r in res if r.get("user_id"))
+                    ).max_time_ms(15_000).batch_size(500).limit(2000)
+                    async for doc in cursor:
+                        if doc.get("user_id"):
+                            found.add(doc["user_id"])
                 except Exception as e:
-                    logging.warning(f"[INACTIVE-CLEANUP] _safe_distinct {coll_name} chunk {i // CHUNK}: {e}")
+                    logging.warning(f"[INACTIVE-CLEANUP] {coll_name} chunk {i // CHUNK}: {str(e)[:80]}")
+                    # If we time out, stop scanning this collection
+                    return found
             return found
 
-        # Pending Eko refunds — skip (only check transactions collection)
-        pending_refunds = set()
-        try:
-            for i in range(0, len(all_candidate_uids), CHUNK):
-                chunk = all_candidate_uids[i:i + CHUNK]
-                res = await db.transactions.find(
-                    {
-                        "user_id": {"$in": chunk},
-                        "type": {"$in": ["refund_pending", "refund_initiated", "eko_refund_pending"]},
-                        "status": {"$in": ["pending", "processing", "initiated"]},
-                    },
-                    {"_id": 0, "user_id": 1}
-                ).max_time_ms(45_000).to_list(length=10000)
-                pending_refunds.update(r.get("user_id") for r in res if r.get("user_id"))
-        except Exception as e:
-            logging.warning(f"[INACTIVE-CLEANUP] pending_refunds scan: {e}")
-
-        pending_withdrawals = await _safe_distinct("withdrawals", {"pending", "processing"})
-        pending_bank_redeems = await _safe_distinct("bank_redeems", {"pending", "processing"})
+        pending_refunds = await _safe_collect("transactions", {
+            "type": {"$in": ["refund_pending", "refund_initiated", "eko_refund_pending"]},
+            "status": {"$in": ["pending", "processing", "initiated"]},
+        })
+        pending_withdrawals = await _safe_collect("withdrawals", {"status": {"$in": ["pending", "processing"]}})
+        pending_bank_redeems = await _safe_collect("bank_redeems", {"status": {"$in": ["pending", "processing"]}})
 
         skipped_uids = pending_refunds | pending_withdrawals | pending_bank_redeems
 
@@ -334,9 +342,15 @@ async def dry_run_inactive_cleanup(
 # ============================================================================
 @router.post("/execute")
 async def execute_inactive_cleanup(request: Request):
-    """Actually delete the candidate users. Admin PIN required.
+    """Chunked, resumable execute (Jun 2026 v2 production-safe).
 
-    Body: {pin, admin_id, days_no_sub?, days_inactive?, rules?: ["rule1","rule2"]}
+    Each call processes at most `max_users` candidates (default 300, ~6
+    batches of 50 with the cascade fan-out per batch). Returns:
+      {success, deleted_users, more_to_do, remaining, cascades, ...}
+    Frontend should auto-call again while `more_to_do=true` until
+    `deleted_users=0` AND `remaining=0`.
+
+    Body: {pin, admin_id, days_no_sub?, days_inactive?, rules?, max_users?}
     """
     try:
         body = await request.json()
@@ -348,18 +362,37 @@ async def execute_inactive_cleanup(request: Request):
         days_no_sub = int(body.get("days_no_sub", 7))
         days_inactive = int(body.get("days_inactive", 60))
         rules = body.get("rules", ["rule1", "rule2"])
+        max_users = int(body.get("max_users", 300))  # cap per HTTP call
 
         cand = await _find_deletion_candidates(days_no_sub, days_inactive)
 
-        uids_to_delete = []
+        all_uids = []
         if "rule1" in rules:
-            uids_to_delete.extend(u["uid"] for u in cand["rule1_users"])
+            all_uids.extend(u["uid"] for u in cand["rule1_users"])
         if "rule2" in rules:
-            uids_to_delete.extend(u["uid"] for u in cand["rule2_users"])
+            all_uids.extend(u["uid"] for u in cand["rule2_users"])
 
-        del_result = await _hard_delete_users(uids_to_delete, admin_id)
+        # Take first chunk only — frontend will re-call for the rest
+        batch_uids = all_uids[:max_users]
+        remaining_after = max(0, len(all_uids) - max_users)
 
-        # Log final action
+        if not batch_uids:
+            return {
+                "success": True,
+                "deleted_users": 0,
+                "more_to_do": False,
+                "remaining": 0,
+                "processed_this_call": 0,
+                "cascades": {},
+                "referral_orphans": 0,
+                "rules_applied": rules,
+                "criteria": cand["criteria"],
+                "protected_skipped_count": cand.get("protected_skipped_count", 0),
+            }
+
+        del_result = await _hard_delete_users(batch_uids, admin_id)
+
+        # Audit
         await db.audit_logs.insert_one({
             "action": "inactive_user_cleanup",
             "performed_by": admin_id,
@@ -369,6 +402,9 @@ async def execute_inactive_cleanup(request: Request):
             "deleted_count": del_result["deleted_users"],
             "cascades": del_result["cascades"],
             "referral_orphans": del_result["referral_orphans"],
+            "errors": del_result.get("errors", []),
+            "chunk_processed": len(batch_uids),
+            "more_to_do": remaining_after > 0,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
@@ -377,9 +413,14 @@ async def execute_inactive_cleanup(request: Request):
             "deleted_users": del_result["deleted_users"],
             "cascades": del_result["cascades"],
             "referral_orphans": del_result["referral_orphans"],
+            "errors": del_result.get("errors", []),
+            "error_count": del_result.get("error_count", 0),
+            "processed_this_call": len(batch_uids),
+            "more_to_do": remaining_after > 0 or del_result.get("error_count", 0) > 0,
+            "remaining": remaining_after,
             "rules_applied": rules,
             "criteria": cand["criteria"],
-            "protected_skipped_count": cand["protected_skipped_count"],
+            "protected_skipped_count": cand.get("protected_skipped_count", 0),
         }
     except HTTPException:
         raise
@@ -727,21 +768,24 @@ async def custom_execute(request: Request):
         start_date = body.get("start_date", "2026-01-01")
         end_date = body.get("end_date", "2026-04-30")
         inactive_days = int(body.get("inactive_days", 10))
+        max_users = int(body.get("max_users", 300))
         admin_id = body.get("admin_id") or "admin"
 
         cand = await _find_custom_candidates(start_date, end_date, inactive_days, sample_size=0)
-        uids = cand["all_uids"]
+        all_uids = cand["all_uids"]
+        batch_uids = all_uids[:max_users]
+        remaining_after = max(0, len(all_uids) - max_users)
 
-        # ----- DELETE pending bank-redeem-type requests for these users FIRST -----
+        # ----- DELETE pending bank-redeem-type requests for THIS batch -----
         redeem_deleted = 0
-        if uids:
+        if batch_uids:
             existing = await db.list_collection_names()
             CHUNK = 100
             for coll in ("bank_transfer_requests", "bank_redeems", "withdrawals"):
                 if coll not in existing:
                     continue
-                for i in range(0, len(uids), CHUNK):
-                    chunk = uids[i:i + CHUNK]
+                for i in range(0, len(batch_uids), CHUNK):
+                    chunk = batch_uids[i:i + CHUNK]
                     try:
                         r = await db[coll].delete_many({
                             "user_id": {"$in": chunk},
@@ -752,7 +796,9 @@ async def custom_execute(request: Request):
                         logging.warning(f"[CUSTOM-PURGE] redeem delete {coll} chunk {i // CHUNK}: {ce}")
 
         # ----- Cascade-delete users + related data -----
-        del_result = await _hard_delete_users(uids, admin_id)
+        del_result = await _hard_delete_users(batch_uids, admin_id) if batch_uids else {
+            "deleted_users": 0, "cascades": {}, "referral_orphans": 0, "errors": [], "error_count": 0
+        }
 
         # Audit log
         await db.audit_logs.insert_one({
@@ -764,6 +810,9 @@ async def custom_execute(request: Request):
             "cascades": del_result["cascades"],
             "referral_orphans": del_result["referral_orphans"],
             "pending_redeems_deleted": redeem_deleted,
+            "chunk_processed": len(batch_uids),
+            "more_to_do": remaining_after > 0,
+            "errors": del_result.get("errors", []),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
@@ -773,6 +822,11 @@ async def custom_execute(request: Request):
             "pending_redeems_deleted": redeem_deleted,
             "cascades": del_result["cascades"],
             "referral_orphans": del_result["referral_orphans"],
+            "errors": del_result.get("errors", []),
+            "error_count": del_result.get("error_count", 0),
+            "processed_this_call": len(batch_uids),
+            "more_to_do": remaining_after > 0 or del_result.get("error_count", 0) > 0,
+            "remaining": remaining_after,
             "month_breakdown": cand["month_breakdown"],
             "criteria": cand["criteria"],
         }

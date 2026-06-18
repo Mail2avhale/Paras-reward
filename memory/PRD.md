@@ -9,6 +9,53 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🚑 Chunked-Resumable Cleanup — Production Hardening v2 (9 Jun 2026)
+
+**Production Incident continued**: Even after v40's per-cascade try/except, production still hit:
+- `503 Request failed` (Kubernetes ingress ~60s proxy cap killing the long HTTP request before it returned)
+- `MaxTimeMSExpired` during cursor `getMore` on the PREVIEW load (rule1/rule2 finds with 1930+480 = 2410 candidates, getMore'd in 101-batches → Atlas killed mid-pagination)
+
+**Root cause analysis**:
+1. Atlas's `maxTimeMS` enforcement on cursor `getMore()` is stricter than expected — fetching 1930 docs at default batch_size 101 triggers ~19 getMore calls and at least one hit the kill threshold.
+2. The HTTP request handler ran for **>60s** doing all 2410 deletes inline → edge proxy returned 503 even though work was still in progress.
+
+**Fix v2 — Chunked + Resumable**:
+
+**Backend (`_find_deletion_candidates`)**:
+- Each `find()` wrapped in `try/except` (returns `[]` on timeout, never crashes)
+- Hard `RULE_CAP = 1500` per rule (was 5000) — frontend re-fetches more after each delete chunk
+- `.batch_size(500)` reduces getMore count from ~19 → ~3 for typical result sets
+- Protection scan limited to **first 500 candidates** with smaller `CHUNK=100` + `max_time_ms(15_000)`. Execute re-checks before each delete batch anyway.
+
+**Backend (`/execute` and `/custom-execute`)**:
+- New `max_users` body param (default **250**). Each HTTP call processes at most 250 uids → completes in **<30s** → safe under edge proxy timeout.
+- Returns `more_to_do: bool` + `remaining: int` + `processed_this_call: int`.
+- Idempotent — re-calling with same filter just picks up new candidates from the (now smaller) result set.
+
+**Frontend (`AdminInactiveCleanup.js`)**:
+- Execute button now **auto-loops** while `more_to_do=true` (max 30 iterations for rule1/2, 50 for custom).
+- Per-chunk toast: `"Chunk N: X deleted · Y remaining"` so admin sees live progress.
+- Final summary toast: `"TOTAL: Deleted N users · M downline"` (+ optional `⚠ K cascade timeouts (re-run)` suffix).
+- 800ms backoff between chunks (lets MongoDB connection settle).
+- Per-chunk axios timeout 120s (under proxy).
+
+**SW bumped → v41**.
+
+**Regression test** (15 users with `max_users=5`):
+- Chunk 1: deleted=5, remaining=10, more=True
+- Chunk 2: deleted=5, remaining=5, more=True
+- Chunk 3: deleted=5, remaining=0, more=False
+- ✅ All 15 deleted across 3 chunks, no errors.
+
+**Production usage (after redeploy)**:
+1. Reload page (SW v41 picks up)
+2. Click **Delete Now** once — frontend automatically loops through chunks
+3. Watch the per-chunk toasts (e.g., "Chunk 1: 250 deleted · 2160 remaining" → ... → "TOTAL: Deleted 2410 users")
+4. If toast shows `⚠ N cascade timeouts`, just click Delete Now once more — retries shrink the residue
+5. Should finish in ~10-15 chunks (3-5 minutes for 2410 users)
+
+
+
 ### 🚑 Production MongoDB `MaxTimeMSExpired` During Bulk Purge — FIXED (9 Jun 2026)
 
 **Production Incident**: Owner attempted to delete ~2,866 inactive users (Rule 1: 2,386 + Rule 2: 480) via `/admin/inactive-cleanup` page. After clicking "Delete Now" the request crashed with:

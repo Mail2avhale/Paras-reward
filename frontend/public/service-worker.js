@@ -5,17 +5,17 @@
 // arbitrary date range who are NOT actively subscribed, NOT mining, and
 // have NOT logged in for N days. Pending bank-redeems for these users
 // are deleted alongside. KYC-verified users always protected (RBI).
-// v40: June 9, 2026 — Production hit MongoDB `MaxTimeMSExpired` (code 50)
-// during bulk delete of ~2,866 inactive users. Fixed `_hard_delete_users`
-// + `_find_deletion_candidates`: smaller per-batch size (500 → 100), explicit
-// per-query `max_time_ms()`, chunked `$in` filters (250 uids/chunk),
-// per-cascade try/except so one timed-out collection doesn't abort the
-// whole purge, partial-success error array surfaced to the UI. Frontend
-// toast shows "⚠ N cascade timeouts (re-run to finish)" + console.warn
-// with full error details. Increased axios timeout 180s → 600s.
-const CACHE_NAME = 'paras-reward-v40';
-const RUNTIME_CACHE = 'paras-runtime-v40';
-const API_CACHE = 'paras-api-v40';
+// v41: June 9, 2026 — Production v40 still hit MaxTimeMSExpired during
+// preview load AND 503 during big deletes (proxy ~60s cap). Restructured:
+// (a) Preview: rule1/rule2 finds capped at 1500 each, wrapped in try/except,
+//     batch_size(500) to reduce getMore calls. Protection scan limited to
+//     first 500 candidates with chunked find() + max_time_ms(15s).
+// (b) Execute: chunked + resumable. Each HTTP call processes max 250 users
+//     and returns `more_to_do` + `remaining`. Frontend auto-loops up to 30x
+//     showing per-chunk toast. Hard cap 120s per chunk fits under proxy.
+const CACHE_NAME = 'paras-reward-v41';
+const RUNTIME_CACHE = 'paras-runtime-v41';
+const API_CACHE = 'paras-api-v41';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
