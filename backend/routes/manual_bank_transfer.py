@@ -601,12 +601,21 @@ async def create_redeem_request(request: RedeemRequest):
         ifsc_result = await verify_ifsc_eko(bank.ifsc_code)
         bank_name = ifsc_result.get("bank_name", "Unknown Bank")
         
-        # 7. Check PRC balance
-        current_balance = float(user.get("prc_balance", 0))
+        # 7. Check PRC balance (excluding any locked PRC — Jun 9, 2026)
+        raw_balance = float(user.get("prc_balance", 0))
+        prc_locked = float(user.get("prc_locked", 0) or 0)
+        current_balance = max(0.0, raw_balance - prc_locked)
         if current_balance < total_prc:
+            locked_note = (
+                f" (₹{prc_locked:,.0f} PRC locked, unlocks "
+                f"{(user.get('prc_unlock_at') or '')[:10]})" if prc_locked > 0 else ""
+            )
             raise HTTPException(
                 status_code=400,
-                detail=f"Insufficient PRC balance. Required: {total_prc:,} PRC, Available: {current_balance:,.2f} PRC"
+                detail=(
+                    f"Insufficient available PRC. Required: {total_prc:,.0f}, "
+                    f"Available: {current_balance:,.2f}{locked_note}"
+                )
             )
         
         # 8. Check for duplicate pending request

@@ -5,16 +5,18 @@
 // arbitrary date range who are NOT actively subscribed, NOT mining, and
 // have NOT logged in for N days. Pending bank-redeems for these users
 // are deleted alongside. KYC-verified users always protected (RBI).
-// v42: June 9, 2026 — AdminBankTransfers page now has a "Bulk Reject by
-// Amount …" button (always visible in the Bulk Actions row). Prompts for
-// min INR threshold (default ₹1000) + rejection reason (default "technical
-// issue") → calls /bank-transfer/admin/bulk-mark-failed with min_amount_inr
-// filter → rejects + refunds PRC in one go. Use case: owner wants to
-// cancel-and-refund all pending withdrawals above a threshold due to a
-// platform-wide technical issue.
-const CACHE_NAME = 'paras-reward-v42';
-const RUNTIME_CACHE = 'paras-runtime-v42';
-const API_CACHE = 'paras-api-v42';
+// v43: June 9, 2026 — NEW FEATURE: 25k PRC Lock-In Vault.
+// • Users with prc_balance > ₹25,000 → excess gets locked for 365 days
+// • Existing pending bank-redeems cancelled + refunded BEFORE lock applies
+// • Available = max(0, prc_balance - prc_locked) — enforced in Bank Redeem
+//   submit + Sale Elite lookup/activate
+// • New LockedPRCCard mounted on user Dashboard (auto-hides when not locked)
+// • New AdminPRCLock page at /admin/prc-lock with execute button +
+//   per-user % unlock form
+// • Daily background task auto-unlocks at prc_unlock_at <= now
+const CACHE_NAME = 'paras-reward-v43';
+const RUNTIME_CACHE = 'paras-runtime-v43';
+const API_CACHE = 'paras-api-v43';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

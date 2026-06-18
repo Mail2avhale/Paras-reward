@@ -79,6 +79,12 @@ from routes.manual_bank_transfer import router as bank_transfer_router, set_db a
 from routes.sustainability_burn import set_db as set_sustainability_burn_db, apply_sustainability_burn, reverse_sustainability_burn
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
+from routes.prc_lock import (
+    router as prc_lock_admin_router,
+    user_router as prc_lock_user_router,
+    prc_auto_unlock_task,
+    get_available_prc,
+)
 from routes.inactive_user_cleanup import (
     router as inactive_cleanup_router,
     set_db as set_inactive_cleanup_db,
@@ -13636,6 +13642,8 @@ async def sale_elite_lookup_beneficiary(request: SaleEliteLookupRequest):
         unlock_percent = 0
 
     sender_balance = float(sender.get("prc_balance", 0) or 0)
+    sender_locked = float(sender.get("prc_locked", 0) or 0)
+    sender_available = max(0.0, sender_balance - sender_locked)
 
     # Rate limit: 3 per day (raised from 1 in Jun 2026)
     today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
@@ -13668,9 +13676,11 @@ async def sale_elite_lookup_beneficiary(request: SaleEliteLookupRequest):
         },
         "sender": {
             "prc_balance": sender_balance,
+            "prc_locked": sender_locked,
+            "available_prc": sender_available,
             "effective_available": effective_available,
             "unlock_percent": unlock_percent,
-            "can_afford_balance": sender_balance >= pricing["total_prc"],
+            "can_afford_balance": sender_available >= pricing["total_prc"],
             "can_afford_redeem_limit": effective_available >= pricing["total_prc"],
             "daily_limit_ok": daily_limit_ok,
             "sales_today": today_count,
@@ -13765,14 +13775,20 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
         except Exception as _le:
             logging.warning(f"[SALE-ELITE] Redeem limit info fetch error (non-blocking): {_le}")
 
-        # ===== Balance defense-in-depth =====
+        # ===== Balance defense-in-depth (subtract locked PRC — Jun 9 2026) =====
         sender_balance = float(sender.get("prc_balance", 0) or 0)
-        if sender_balance < total_prc:
+        sender_locked = float(sender.get("prc_locked", 0) or 0)
+        sender_available = max(0.0, sender_balance - sender_locked)
+        if sender_available < total_prc:
+            locked_note = (
+                f" ({sender_locked:,.0f} PRC locked till "
+                f"{(sender.get('prc_unlock_at') or '')[:10]})" if sender_locked > 0 else ""
+            )
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    f"Insufficient PRC Balance. You have {sender_balance:,.0f} PRC, "
-                    f"but {total_prc:,.0f} PRC is required."
+                    f"Insufficient PRC Balance. You have {sender_available:,.0f} PRC available, "
+                    f"but {total_prc:,.0f} PRC is required{locked_note}."
                 ),
             )
 
@@ -13798,7 +13814,16 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
         result = await db.users.update_one(
             {
                 "uid": sender.get("uid"),
-                "prc_balance": {"$gte": total_prc},
+                # Available (balance − locked) must cover total_prc
+                "$expr": {
+                    "$gte": [
+                        {"$subtract": [
+                            {"$ifNull": ["$prc_balance", 0]},
+                            {"$ifNull": ["$prc_locked", 0]},
+                        ]},
+                        total_prc,
+                    ]
+                },
                 "$or": [
                     {"sale_elite_day_bucket": {"$ne": today_bucket}},   # new day → reset
                     {"sale_elite_day_count": {"$lt": 3}},                # same day, slot free
@@ -36656,6 +36681,8 @@ api_router.include_router(kyc_router)
 # Inactive user cleanup (auto + manual)
 set_inactive_cleanup_db(db)
 api_router.include_router(inactive_cleanup_router)
+api_router.include_router(prc_lock_admin_router)
+api_router.include_router(prc_lock_user_router)
 
 # BBPS Services Router (Clean Implementation)
 set_bbps_db(db)
@@ -37522,6 +37549,13 @@ async def startup_db():
         print("🧹 Daily inactive-user cleanup task scheduled (24h interval, opt-in)")
     except Exception as e:
         print(f"⚠️ Inactive cleanup scheduler start failed (non-critical): {e}")
+
+    # Daily PRC auto-unlock background loop (Jun 9, 2026 — 25k lock vault)
+    try:
+        asyncio.create_task(prc_auto_unlock_task())
+        print("🔓 Daily PRC auto-unlock task scheduled (24h interval)")
+    except Exception as e:
+        print(f"⚠️ PRC auto-unlock scheduler start failed (non-critical): {e}")
 
     
     # Start scheduler for automated tasks

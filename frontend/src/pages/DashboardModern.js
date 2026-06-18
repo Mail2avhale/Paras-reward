@@ -12,6 +12,7 @@ import {
 
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/ProfileCompletionComponents';
+import LockedPRCCard from '@/components/LockedPRCCard';
 // AIChatbotEnhanced REMOVED - chatbot feature deprecated (March 2026)
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
@@ -791,6 +792,13 @@ const DashboardModern = ({ user, onLogout }) => {
           {/* PRC Expiry removed - PRC no longer expires */}
         </motion.div>
       </div>
+
+      {/* PRC Locked Vault Card (25k lock, 365-day) — auto-hides if not locked */}
+      {user?.uid && (
+        <div className="px-5 mb-4">
+          <LockedPRCCard uid={user.uid} />
+        </div>
+      )}
 
       {/* Core Team Pool Wallet Card — Only visible to Core Team members */}
       {stats.poolWallet?.is_core_member && (

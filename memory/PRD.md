@@ -9,6 +9,72 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🔐 25k PRC Lock-In Vault — NEW FEATURE (9 Jun 2026)
+
+**Owner Request**: Users holding `> ₹25,000 PRC` का excess over 25k 365 days साठी lock करायचा. आजपासून mining/cashback ने जे नवीन PRC जमा होईल ते unlocked. एका click ने admin trigger. Admin ला कोणत्याही user चे X% PRC unlock करण्याची सुविधा.
+
+**Decisions confirmed by owner**:
+1. Lock only **excess over ₹25k** (1L balance → 75k locked, 25k available)
+2. **One-time admin trigger** (no recurring auto-lock for future holders)
+3. **Once-only snapshot** — future ₹25k+ holders are NOT locked
+4. **Cancel + refund** existing pending bank-redeems BEFORE lock applies
+5. Display **only on user Dashboard** (clean, minimal)
+6. Admin can manually unlock any user's PRC by % (e.g. release 30% of remaining locked)
+
+**Schema** (new fields on `users`):
+- `prc_locked` (float, mutable) — current locked amount
+- `prc_locked_initial` (float, immutable) — snapshot at lock time
+- `prc_locked_at`, `prc_unlock_at` (ISO timestamps)
+- `prc_locked_reason: "system_lock_25k_2026"`
+- Existing `prc_balance` semantics UNCHANGED. Available = `max(0, balance − locked)`.
+
+**Backend** (`/app/backend/routes/prc_lock.py`, new module):
+- `POST /api/admin/prc-lock/execute-25k-lock` (PIN, chunked + resumable, `max_users=500` per call)
+  - Step 1: cancels + refunds pending bank-redeems for each candidate (sets `status="failed"`, `admin_remark="Auto-cancelled before 25k PRC lock-in"`, refunds `prc_deducted` to user balance)
+  - Step 2: re-reads fresh balance, computes `excess = balance − 25k`
+  - Step 3: atomic CAS-update sets all lock fields (race-guard against already-locked)
+  - Returns `users_locked`, `total_prc_locked`, `pending_redeems_refunded`, `more_to_do`, `remaining_estimate`
+- `POST /api/admin/prc-lock/unlock-percent` (PIN) — `{uid, percent: 1-100}` → reduces `prc_locked` by `percent%` of current locked. Fully clears lock fields when locked reaches 0.
+- `GET /api/admin/prc-lock/stats` — aggregation: user_count, total_locked, total_initial, total_unlocked_so_far
+- `GET /api/prc-lock/status/{uid}` (user) — returns `{is_locked, prc_balance, prc_locked, prc_locked_initial, available_prc, days_remaining, unlock_at}` for the Dashboard card
+- Background task `prc_auto_unlock_task()` — 24h interval, sets `prc_locked=0` for any user whose `prc_unlock_at ≤ now`
+- Helper `get_available_prc(user)` — single source of truth for "spendable" PRC
+
+**Enforcement in spend paths**:
+- `/api/bank-transfer/submit` (`routes/manual_bank_transfer.py`) — `current_balance = balance − locked`. Error message now shows lock info (e.g. "Available: ₹X (₹Y locked till YYYY-MM-DD)")
+- `/api/subscription/sale-elite/lookup` — returns `prc_locked`, `available_prc` in sender block; `can_afford_balance` based on available
+- `/api/subscription/sale-elite/activate` — defense-in-depth balance check uses available; CAS deduct uses `$expr: $subtract($prc_balance, $prc_locked) >= total_prc` for atomic race-safe check that respects the lock
+
+**Frontend**:
+- New `LockedPRCCard.js` component — amber gradient card with lock icon, locked amount (big), days remaining, available PRC, unlock date, progress bar (% released so far if admin has partial-unlocked). Auto-hides when `is_locked=false`. Polls `/api/prc-lock/status/{uid}` on mount.
+- Mounted on `DashboardModern.js` right above the Core Team Pool Wallet card.
+- New admin page `AdminPRCLock.js` at `/admin/prc-lock`:
+  - Stats card (users locked, total locked PRC, released so far)
+  - Big red "Execute 25k Lock Now" button (PIN-protected, auto-loops chunks of 500)
+  - Manual % unlock form (UID + 1-100% input + Release button)
+- Added to admin sidebar menu as "PRC Lock Vault (25k)" with KeyRound icon
+- Route added in `App.js`
+- Service Worker → **v43** (cache bust)
+
+**End-to-end tests passed**:
+- ₹20k user → no lock (below threshold) ✅
+- ₹25k user → no lock (strict `>`) ✅
+- ₹100k user → 75k locked, 25k available ✅
+- ₹80k user + ₹5k pending redeem → refunded → 85k balance → 60k locked ✅
+- Sale Elite with available=25k → 1st attempt (12.8k) succeeds, 2nd (12.8k vs 11.8k avail) → HTTP 400 with `"locked till 2027-06-18"` clear message ✅
+- Manual 30% unlock: 75k → 52.5k (released 22.5k) ✅
+- Auto-unlock background task scheduled (24h interval) ✅
+
+**Production usage steps (after redeploy)**:
+1. Open `Admin → PRC Lock Vault (25k)` from sidebar
+2. Review current Stats card (should show 0 locked initially)
+3. Click red **"Execute 25k Lock Now"** → PIN `153759` → confirm
+4. Watch per-chunk toasts: `"Chunk N: locked X users"` until final TOTAL toast
+5. For per-user % unlock: enter UID + percent (1-100) → PIN → Release
+6. End-users with locks will see the amber **PRC Locked Vault** card on their dashboard automatically
+
+
+
 ### 💰 Admin Bulk Reject Pending Bank Transfers by Amount — DONE (9 Jun 2026)
 
 **Owner Use Case**: Production वर platform-wide tech issue मुळे high-value pending withdrawals एकत्र cancel + refund करायचे होते (`amount > ₹1000`, reason "technical issue").

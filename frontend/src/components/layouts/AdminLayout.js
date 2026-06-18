@@ -170,6 +170,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'investors', label: 'Investors', icon: TrendingUp, path: '/admin/investors' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
     { id: 'inactive-cleanup', label: 'Inactive User Cleanup', icon: Trash2, path: '/admin/inactive-cleanup', highlight: true },
+    { id: 'prc-lock', label: 'PRC Lock Vault (25k)', icon: KeyRound, path: '/admin/prc-lock', highlight: true },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },
     { id: 'bulk-refund-otp', label: 'Bulk Refund OTP (Eko)', icon: Send, path: '/admin/bulk-refund-otp' },
     { id: 'transaction-manager', label: 'Transaction Manager', icon: FileText, path: '/admin/transaction-manager' },
