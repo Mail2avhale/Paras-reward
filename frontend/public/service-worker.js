@@ -5,9 +5,12 @@
 // arbitrary date range who are NOT actively subscribed, NOT mining, and
 // have NOT logged in for N days. Pending bank-redeems for these users
 // are deleted alongside. KYC-verified users always protected (RBI).
-const CACHE_NAME = 'paras-reward-v38';
-const RUNTIME_CACHE = 'paras-runtime-v38';
-const API_CACHE = 'paras-api-v38';
+// v39: June 9, 2026 — Added "Inactive User Cleanup" entry to Admin sidebar
+// (was missing despite the page + route existing). Icon: Trash2. Placed
+// right after "User 360° View" in the regular menu group.
+const CACHE_NAME = 'paras-reward-v39';
+const RUNTIME_CACHE = 'paras-runtime-v39';
+const API_CACHE = 'paras-api-v39';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

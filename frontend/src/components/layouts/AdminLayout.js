@@ -10,7 +10,7 @@ import {
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
   AlertTriangle, Smartphone, Building, Crown, AlertOctagon, Database, Eye,
   ShieldAlert, CheckCircle, Building2, Zap, Receipt, Send, MessageSquare, Banknote,
-  Coins, Flame, Briefcase, KeyRound
+  Coins, Flame, Briefcase, KeyRound, Trash2
 } from 'lucide-react';
 
 const LOGO_URL = "/paras-logo.png";
@@ -169,6 +169,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'careers', label: 'Careers', icon: Briefcase, path: '/admin/careers' },
     { id: 'investors', label: 'Investors', icon: TrendingUp, path: '/admin/investors' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
+    { id: 'inactive-cleanup', label: 'Inactive User Cleanup', icon: Trash2, path: '/admin/inactive-cleanup', highlight: true },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },
     { id: 'bulk-refund-otp', label: 'Bulk Refund OTP (Eko)', icon: Send, path: '/admin/bulk-refund-otp' },
     { id: 'transaction-manager', label: 'Transaction Manager', icon: FileText, path: '/admin/transaction-manager' },
