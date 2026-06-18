@@ -9,6 +9,42 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🔧 Restore Tool: Silent 0-Restored Bug FIXED (9 Jun 2026)
+
+**Owner Report**: Preview found 1,456 restorable users on production, but Restore returned `TOTAL Restored: 0 users`. Silent failure.
+
+**Root Cause**: The `users` collection has **unique indexes on `email`, `mobile`, `referral_code`**. Production has many user snapshots with `email=null` and/or `mobile=null` (legacy registrations). On `insert_one`, MongoDB throws `DuplicateKeyError: E11000 dup key: { email: null }` because the unique index treats `null` and missing-field as conflicting values across documents.
+
+**Why hidden**: The frontend toast only displayed `d.restored` count — not the `errors[]` array. So 1,456 silent `DuplicateKeyError`s appeared as "0 restored" with no feedback.
+
+**Fix** (`routes/inactive_user_cleanup.py`):
+1. Changed `insert_one` → `update_one(upsert=True)` filtered by `uid` (idempotent, no duplicates on re-run)
+2. For null/empty unique-indexed fields (`email`, `mobile`, `referral_code`), assigned per-user **UNIQUE placeholders** with random salt:
+   - `email = "restored_{salt}_{uid_prefix}@parasreward.local"`
+   - `mobile = "9{uid_hash_9digits}"`
+   - `referral_code = "RST{salt_upper}{uid_hash_4digits}"`
+   - Owner can prompt users to update real values later.
+3. Surface `error_count` + `errors[]` in execute response with proper handling on frontend.
+
+**Frontend** (`AdminInactiveCleanup.js`):
+- Per-chunk toast now shows `⚠ N errors` suffix when present
+- Final toast: if errors > 0 → warning toast `"Restored N · ⚠ X skipped. Open browser console for details."` (30s duration) + full `errors[]` array logged to console via `console.warn`
+
+**SW → v45** (cache bust).
+
+**Verified end-to-end** with synthetic 10 snapshots ALL having `email=null + mobile=null + referral_code=null`:
+- HTTP 200, **restored=10, error_count=0** ✅
+- Idempotent re-run: restored=0, final user count still 10 (no duplicates) ✅
+
+**Production Recovery Steps (after redeploy)**:
+1. Hard refresh `/admin/inactive-cleanup` (SW v45 picks up)
+2. Click **Preview** → confirms restorable count
+3. Click **Restore** → PIN `153759`
+4. Per-chunk toasts will now show real restored counts. If anything fails, error toast persists 30s + browser console has full details.
+5. Restored users will have placeholder emails like `restored_abc123_xyz@parasreward.local` — these can be updated by users from their Profile page when they log in.
+
+
+
 ### 🚨 P0 INCIDENT — Active Users Wrongly Deleted (9 Jun 2026)
 
 **User Report**: "जे युजर्स delete झाले आहेत त्यामध्ये active users पण delete झाले आहेत. हे कस शक्य आहे." — owner discovered after the bulk cleanup ran that some active subscribers / recent loggers / KYC-verified users were among the deleted.

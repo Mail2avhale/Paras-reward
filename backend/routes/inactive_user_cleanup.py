@@ -37,6 +37,7 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 import logging
 import os
+import uuid
 
 router = APIRouter(prefix="/admin/inactive-cleanup", tags=["admin-inactive-cleanup"])
 
@@ -1072,18 +1073,44 @@ async def restore_deleted_execute(request: Request):
                     "subscription_plan": snap.get("subscription_plan"),
                     "created_at": snap.get("created_at"),
                 }
-                # Add restoration audit fields
+                # Strip Mongo internal field
+                user_doc.pop("_id", None)
+                if not user_doc.get("uid"):
+                    errors.append(f"skip: snapshot missing uid")
+                    continue
+
+                # Unique-indexed fields on `users` cannot have multiple null
+                # values. If snapshot's email/mobile/referral_code was null,
+                # assign a per-user UNIQUE placeholder so insert succeeds.
+                uid_safe = user_doc["uid"]
+                uid_hash = abs(hash(uid_safe))
+                # Add a tiny entropy salt to ensure uniqueness even when uids
+                # share prefixes after slugifying (e.g. "t_restore3_xyz")
+                salt = uuid.uuid4().hex[:6]
+                for k in ("email", "mobile", "referral_code"):
+                    v = user_doc.get(k)
+                    if v in (None, "", " "):
+                        if k == "email":
+                            user_doc[k] = f"restored_{salt}_{uid_safe[:12]}@parasreward.local"
+                        elif k == "mobile":
+                            user_doc[k] = "9" + str(uid_hash)[:9].rjust(9, "0")
+                        else:  # referral_code
+                            user_doc[k] = f"RST{salt.upper()}{str(uid_hash)[:4]}"
+
                 user_doc["restored_at"] = now_iso
                 user_doc["restored_by"] = admin_id
                 user_doc["restored_from_audit"] = True
 
-                # Ensure no _id collision
-                user_doc.pop("_id", None)
-
-                await db.users.insert_one(user_doc)
-                restored += 1
+                # UPSERT by uid (idempotent)
+                result = await db.users.update_one(
+                    {"uid": user_doc["uid"]},
+                    {"$setOnInsert": user_doc},
+                    upsert=True,
+                )
+                if result.upserted_id is not None:
+                    restored += 1
             except Exception as e:
-                err = f"uid={snap.get('uid')}: {str(e)[:100]}"
+                err = f"uid={snap.get('uid')}: {type(e).__name__}: {str(e)[:120]}"
                 errors.append(err)
                 logging.warning(f"[RESTORE] {err}")
 

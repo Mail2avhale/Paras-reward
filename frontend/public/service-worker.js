@@ -20,9 +20,15 @@
 //    excluded, active elite subscription excluded, prc_balance >= 100
 //    excluded. Rule 2 now requires BOTH login + activity to be stale.
 // 5. Protection scan restored to ALL candidates (was capped at 500 in v41).
-const CACHE_NAME = 'paras-reward-v44';
-const RUNTIME_CACHE = 'paras-runtime-v44';
-const API_CACHE = 'paras-api-v44';
+// v45: June 9, 2026 — Restore returned 0 users even though Preview found
+// 1456. Root cause: insert_one() silently failed on production users
+// because production has multiple snapshots with null email/mobile and
+// the `users` collection has unique indexes on those fields. Switched to
+// `update_one(upsert=True)` filtered by uid + strip null unique-indexed
+// fields before insert. Errors now surfaced in toast + browser console.
+const CACHE_NAME = 'paras-reward-v45';
+const RUNTIME_CACHE = 'paras-runtime-v45';
+const API_CACHE = 'paras-api-v45';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

@@ -174,6 +174,8 @@ const AdminInactiveCleanup = ({ user }) => {
     try {
       setRestoring(true);
       let totalRestored = 0;
+      let totalErrors = 0;
+      let lastErrors = [];
       let iter = 0;
       while (iter < 30) {
         iter++;
@@ -188,14 +190,25 @@ const AdminInactiveCleanup = ({ user }) => {
         }, { timeout: 120000 });
         const d = r.data || {};
         totalRestored += d.restored || 0;
+        totalErrors += d.error_count || 0;
+        if (d.errors && d.errors.length) lastErrors = d.errors;
         toast.info(
-          `Chunk ${iter}: restored ${d.restored} · ${d.remaining} remaining`,
-          { duration: 2500 }
+          `Chunk ${iter}: restored ${d.restored} · ${d.remaining} remaining` +
+          (d.error_count > 0 ? ` · ⚠ ${d.error_count} errors` : ''),
+          { duration: 3000 }
         );
         if (!d.more_to_do) break;
         await new Promise(res => setTimeout(res, 700));
       }
-      toast.success(`✅ TOTAL Restored: ${totalRestored} users`, { duration: 15000 });
+      if (totalErrors > 0) {
+        console.warn('[RESTORE errors]', lastErrors);
+        toast.warning(
+          `Restored ${totalRestored} · ⚠ ${totalErrors} skipped. Open browser console for details.`,
+          { duration: 30000 }
+        );
+      } else {
+        toast.success(`✅ TOTAL Restored: ${totalRestored} users`, { duration: 15000 });
+      }
       setRestorePreview(null);
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Restore failed');
