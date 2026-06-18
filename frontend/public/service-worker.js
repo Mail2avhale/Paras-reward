@@ -5,12 +5,17 @@
 // arbitrary date range who are NOT actively subscribed, NOT mining, and
 // have NOT logged in for N days. Pending bank-redeems for these users
 // are deleted alongside. KYC-verified users always protected (RBI).
-// v39: June 9, 2026 — Added "Inactive User Cleanup" entry to Admin sidebar
-// (was missing despite the page + route existing). Icon: Trash2. Placed
-// right after "User 360° View" in the regular menu group.
-const CACHE_NAME = 'paras-reward-v39';
-const RUNTIME_CACHE = 'paras-runtime-v39';
-const API_CACHE = 'paras-api-v39';
+// v40: June 9, 2026 — Production hit MongoDB `MaxTimeMSExpired` (code 50)
+// during bulk delete of ~2,866 inactive users. Fixed `_hard_delete_users`
+// + `_find_deletion_candidates`: smaller per-batch size (500 → 100), explicit
+// per-query `max_time_ms()`, chunked `$in` filters (250 uids/chunk),
+// per-cascade try/except so one timed-out collection doesn't abort the
+// whole purge, partial-success error array surfaced to the UI. Frontend
+// toast shows "⚠ N cascade timeouts (re-run to finish)" + console.warn
+// with full error details. Increased axios timeout 180s → 600s.
+const CACHE_NAME = 'paras-reward-v40';
+const RUNTIME_CACHE = 'paras-runtime-v40';
+const API_CACHE = 'paras-api-v40';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

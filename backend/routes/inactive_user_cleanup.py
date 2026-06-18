@@ -126,13 +126,13 @@ async def _find_deletion_candidates(days_no_sub: int = 7, days_inactive: int = 6
         rule1_query,
         {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1, "created_at": 1,
          "subscription_plan": 1, "kyc_status": 1, "prc_balance": 1}
-    ).limit(5000).to_list(length=5000)
+    ).max_time_ms(90_000).limit(5000).to_list(length=5000)
 
     rule2_users = await db.users.find(
         rule2_query,
         {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1, "last_login_at": 1,
          "last_activity_at": 1, "created_at": 1, "kyc_status": 1, "prc_balance": 1}
-    ).limit(5000).to_list(length=5000)
+    ).max_time_ms(90_000).limit(5000).to_list(length=5000)
 
     # Dedup (rule2 might include rule1)
     rule1_uids = {u["uid"] for u in rule1_users}
@@ -144,28 +144,47 @@ async def _find_deletion_candidates(days_no_sub: int = 7, days_inactive: int = 6
     protected_skipped = []
 
     if all_candidate_uids:
-        # Pending Eko refunds — skip
-        pending_refunds = await db.transactions.distinct(
-            "user_id",
-            {
-                "user_id": {"$in": all_candidate_uids},
-                "type": {"$in": ["refund_pending", "refund_initiated", "eko_refund_pending"]},
-                "status": {"$in": ["pending", "processing", "initiated"]},
-            }
-        )
-        # Pending withdrawals
-        pending_withdrawals = await db.withdrawals.distinct(
-            "user_id",
-            {"user_id": {"$in": all_candidate_uids}, "status": {"$in": ["pending", "processing"]}}
-        ) if "withdrawals" in await db.list_collection_names() else []
+        # Chunk $in to keep distinct() fast on un-indexed user_id columns
+        CHUNK = 250
+        existing_colls = set(await db.list_collection_names())
 
-        # Pending bank redeems
-        pending_bank_redeems = await db.bank_redeems.distinct(
-            "user_id",
-            {"user_id": {"$in": all_candidate_uids}, "status": {"$in": ["pending", "processing"]}}
-        ) if "bank_redeems" in await db.list_collection_names() else []
+        async def _safe_distinct(coll_name, status_set):
+            if coll_name not in existing_colls:
+                return set()
+            found = set()
+            for i in range(0, len(all_candidate_uids), CHUNK):
+                chunk = all_candidate_uids[i:i + CHUNK]
+                try:
+                    res = await db[coll_name].find(
+                        {"user_id": {"$in": chunk}, "status": {"$in": list(status_set)}},
+                        {"_id": 0, "user_id": 1}
+                    ).max_time_ms(45_000).to_list(length=10000)
+                    found.update(r.get("user_id") for r in res if r.get("user_id"))
+                except Exception as e:
+                    logging.warning(f"[INACTIVE-CLEANUP] _safe_distinct {coll_name} chunk {i // CHUNK}: {e}")
+            return found
 
-        skipped_uids = set(pending_refunds) | set(pending_withdrawals) | set(pending_bank_redeems)
+        # Pending Eko refunds — skip (only check transactions collection)
+        pending_refunds = set()
+        try:
+            for i in range(0, len(all_candidate_uids), CHUNK):
+                chunk = all_candidate_uids[i:i + CHUNK]
+                res = await db.transactions.find(
+                    {
+                        "user_id": {"$in": chunk},
+                        "type": {"$in": ["refund_pending", "refund_initiated", "eko_refund_pending"]},
+                        "status": {"$in": ["pending", "processing", "initiated"]},
+                    },
+                    {"_id": 0, "user_id": 1}
+                ).max_time_ms(45_000).to_list(length=10000)
+                pending_refunds.update(r.get("user_id") for r in res if r.get("user_id"))
+        except Exception as e:
+            logging.warning(f"[INACTIVE-CLEANUP] pending_refunds scan: {e}")
+
+        pending_withdrawals = await _safe_distinct("withdrawals", {"pending", "processing"})
+        pending_bank_redeems = await _safe_distinct("bank_redeems", {"pending", "processing"})
+
+        skipped_uids = pending_refunds | pending_withdrawals | pending_bank_redeems
 
         # Filter them out
         rule1_users = [u for u in rule1_users if u["uid"] not in skipped_uids]
@@ -192,74 +211,97 @@ async def _find_deletion_candidates(days_no_sub: int = 7, days_inactive: int = 6
 async def _hard_delete_users(uids: list, admin_id: str) -> dict:
     """Cascade-delete a list of users + their related records.
     Returns counts of records deleted per collection.
+
+    Production-safe (Jun 9 2026 fix for MaxTimeMSExpired): smaller batches,
+    explicit per-query maxTimeMS, per-batch try/except so a single timed-out
+    cascade collection doesn't abort the entire purge, and partial-success
+    progress logging.
     """
     if not uids:
-        return {"deleted_users": 0, "cascades": {}}
+        return {"deleted_users": 0, "cascades": {}, "referral_orphans": 0, "errors": []}
 
     deleted_users = 0
     cascade_counts = {}
     referral_orphans_count = 0
+    errors = []
     now = datetime.now(timezone.utc).isoformat()
 
-    # Cap per-batch size to keep memory + tx-log sane
-    BATCH = 500
-    for batch_start in range(0, len(uids), BATCH):
-        batch = uids[batch_start:batch_start + BATCH]
+    # Per-batch + per-query timeouts. Atlas operations >120s get killed.
+    BATCH = 100              # was 500 — too heavy on un-indexed cascade collections
+    QUERY_TIMEOUT_MS = 60_000
 
-        # ===== Snapshot audit BEFORE delete =====
-        snapshots = []
-        async for u in db.users.find({"uid": {"$in": batch}}, {"_id": 0}):
-            snapshots.append(u)
-        if snapshots:
-            await db.deleted_users_audit.insert_many([
-                {
-                    "uid": u.get("uid"),
-                    "name": u.get("name"),
-                    "mobile": u.get("mobile"),
-                    "email": u.get("email"),
-                    "kyc_status": u.get("kyc_status"),
-                    "prc_balance": u.get("prc_balance"),
-                    "subscription_plan": u.get("subscription_plan"),
-                    "created_at": u.get("created_at"),
-                    "deleted_by": admin_id,
-                    "deleted_at": now,
-                    "reason": "inactive_cleanup",
-                    "snapshot": u,
-                } for u in snapshots
-            ])
+    existing_collections = set(await db.list_collection_names())
+
+    for batch_idx, batch_start in enumerate(range(0, len(uids), BATCH)):
+        batch = uids[batch_start:batch_start + BATCH]
+        logging.info(f"[INACTIVE-CLEANUP] batch {batch_idx + 1}/{(len(uids) + BATCH - 1) // BATCH} ({len(batch)} uids)")
+
+        # ===== Snapshot audit BEFORE delete (best-effort) =====
+        try:
+            snapshots = await db.users.find(
+                {"uid": {"$in": batch}}, {"_id": 0}
+            ).max_time_ms(QUERY_TIMEOUT_MS).to_list(length=len(batch))
+            if snapshots:
+                await db.deleted_users_audit.insert_many([
+                    {
+                        "uid": u.get("uid"),
+                        "name": u.get("name"),
+                        "mobile": u.get("mobile"),
+                        "email": u.get("email"),
+                        "kyc_status": u.get("kyc_status"),
+                        "prc_balance": u.get("prc_balance"),
+                        "subscription_plan": u.get("subscription_plan"),
+                        "created_at": u.get("created_at"),
+                        "deleted_by": admin_id,
+                        "deleted_at": now,
+                        "reason": "inactive_cleanup",
+                        "snapshot": u,
+                    } for u in snapshots
+                ])
+        except Exception as se:
+            logging.warning(f"[INACTIVE-CLEANUP] snapshot batch {batch_idx + 1} failed: {se}")
+            errors.append(f"snapshot batch {batch_idx + 1}: {str(se)[:120]}")
 
         # ===== Hard delete users =====
-        del_res = await db.users.delete_many({"uid": {"$in": batch}})
-        deleted_users += del_res.deleted_count
+        try:
+            del_res = await db.users.delete_many({"uid": {"$in": batch}})
+            deleted_users += del_res.deleted_count
+        except Exception as ue:
+            logging.error(f"[INACTIVE-CLEANUP] user delete batch {batch_idx + 1} failed: {ue}")
+            errors.append(f"users batch {batch_idx + 1}: {str(ue)[:120]}")
+            continue  # If we can't delete the users, skip cascades (they'd orphan)
 
-        # ===== Cascade: related records =====
-        existing_collections = set(await db.list_collection_names())
+        # ===== Cascade: related records (per-collection isolated) =====
         for coll_name in COLLECTIONS_TO_CASCADE:
             if coll_name not in existing_collections:
                 continue
-            # Most use "user_id", but some use "uid"
-            try:
-                r1 = await db[coll_name].delete_many({"user_id": {"$in": batch}})
-                r2 = await db[coll_name].delete_many({"uid": {"$in": batch}})
-                cascade_counts[coll_name] = cascade_counts.get(coll_name, 0) + r1.deleted_count + r2.deleted_count
-            except Exception as ce:
-                logging.warning(f"[INACTIVE-CLEANUP] cascade {coll_name} failed: {ce}")
+            for field in ("user_id", "uid"):
+                try:
+                    r = await db[coll_name].delete_many({field: {"$in": batch}})
+                    cascade_counts[coll_name] = cascade_counts.get(coll_name, 0) + r.deleted_count
+                except Exception as ce:
+                    # Most likely MaxTimeMSExpired due to missing index — DON'T abort
+                    err_short = str(ce)[:120]
+                    logging.warning(f"[INACTIVE-CLEANUP] cascade {coll_name}.{field} batch {batch_idx + 1}: {err_short}")
+                    errors.append(f"{coll_name}.{field} batch {batch_idx + 1}: {err_short}")
 
         # ===== Referral downline cleanup =====
-        # Any user who was referred BY a deleted user — orphan their referral chain
         try:
             r_orphan = await db.users.update_many(
                 {"referred_by": {"$in": batch}},
                 {"$set": {"referred_by": None, "referrer_lost_at": now, "referrer_lost_reason": "parent_deleted"}}
             )
             referral_orphans_count += r_orphan.modified_count
-        except Exception as re:
-            logging.warning(f"[INACTIVE-CLEANUP] referral orphan failed: {re}")
+        except Exception as ree:
+            logging.warning(f"[INACTIVE-CLEANUP] referral orphan batch {batch_idx + 1} failed: {ree}")
+            errors.append(f"referral orphan batch {batch_idx + 1}: {str(ree)[:120]}")
 
     return {
         "deleted_users": deleted_users,
         "cascades": cascade_counts,
         "referral_orphans": referral_orphans_count,
+        "errors": errors[:25],  # cap for response size
+        "error_count": len(errors),
     }
 
 
@@ -584,21 +626,24 @@ async def _find_custom_candidates(
         {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1, "created_at": 1,
          "last_login_at": 1, "subscription_plan": 1, "subscription_expiry": 1,
          "is_mining": 1, "kyc_status": 1, "prc_balance": 1}
-    ).limit(20000).to_list(length=20000)
+    ).max_time_ms(90_000).limit(20000).to_list(length=20000)
 
     # Cross-check mining_sessions: if any candidate has an ACTIVE mining session
     # in the collection (regardless of flag), exclude them (safety)
     candidate_uids = [u["uid"] for u in candidates]
     active_mining_uids = set()
     if candidate_uids and "mining_sessions" in await db.list_collection_names():
-        try:
-            async for s in db.mining_sessions.find(
-                {"user_id": {"$in": candidate_uids}, "status": {"$in": ["active", "running"]}},
-                {"_id": 0, "user_id": 1}
-            ):
-                active_mining_uids.add(s.get("user_id"))
-        except Exception as e:
-            logging.warning(f"[CUSTOM-PURGE] mining_sessions check failed: {e}")
+        CHUNK = 250
+        for i in range(0, len(candidate_uids), CHUNK):
+            chunk = candidate_uids[i:i + CHUNK]
+            try:
+                async for s in db.mining_sessions.find(
+                    {"user_id": {"$in": chunk}, "status": {"$in": ["active", "running"]}},
+                    {"_id": 0, "user_id": 1}
+                ).max_time_ms(30_000):
+                    active_mining_uids.add(s.get("user_id"))
+            except Exception as e:
+                logging.warning(f"[CUSTOM-PURGE] mining_sessions chunk {i // CHUNK}: {e}")
 
     final = [u for u in candidates if u["uid"] not in active_mining_uids]
 
@@ -609,22 +654,28 @@ async def _find_custom_candidates(
         month_key = ca[:7] if isinstance(ca, str) and len(ca) >= 7 else "unknown"
         breakdown[month_key] = breakdown.get(month_key, 0) + 1
 
-    # Pending bank-redeem requests we'll delete alongside
+    # Pending bank-redeem requests we'll delete alongside (chunked $in)
     pending_redeems_uids = set()
     if final:
+        existing = await db.list_collection_names()
+        CHUNK = 250
+        target_uids = [u["uid"] for u in final]
         for coll in ("bank_transfer_requests", "bank_redeems", "withdrawals"):
-            if coll in await db.list_collection_names():
+            if coll not in existing:
+                continue
+            for i in range(0, len(target_uids), CHUNK):
+                chunk = target_uids[i:i + CHUNK]
                 try:
-                    uids = await db[coll].distinct(
-                        "user_id",
+                    res = await db[coll].find(
                         {
-                            "user_id": {"$in": [u["uid"] for u in final]},
+                            "user_id": {"$in": chunk},
                             "status": {"$in": ["pending", "processing", "initiated"]},
-                        }
-                    )
-                    pending_redeems_uids.update(uids)
-                except Exception:
-                    pass
+                        },
+                        {"_id": 0, "user_id": 1}
+                    ).max_time_ms(30_000).to_list(length=10000)
+                    pending_redeems_uids.update(r.get("user_id") for r in res if r.get("user_id"))
+                except Exception as e:
+                    logging.warning(f"[CUSTOM-PURGE] pending {coll} chunk {i // CHUNK}: {e}")
 
     return {
         "total_to_delete": len(final),
@@ -684,16 +735,21 @@ async def custom_execute(request: Request):
         # ----- DELETE pending bank-redeem-type requests for these users FIRST -----
         redeem_deleted = 0
         if uids:
+            existing = await db.list_collection_names()
+            CHUNK = 100
             for coll in ("bank_transfer_requests", "bank_redeems", "withdrawals"):
-                if coll in await db.list_collection_names():
+                if coll not in existing:
+                    continue
+                for i in range(0, len(uids), CHUNK):
+                    chunk = uids[i:i + CHUNK]
                     try:
                         r = await db[coll].delete_many({
-                            "user_id": {"$in": uids},
+                            "user_id": {"$in": chunk},
                             "status": {"$in": ["pending", "processing", "initiated"]},
                         })
                         redeem_deleted += r.deleted_count
                     except Exception as ce:
-                        logging.warning(f"[CUSTOM-PURGE] redeem delete in {coll} failed: {ce}")
+                        logging.warning(f"[CUSTOM-PURGE] redeem delete {coll} chunk {i // CHUNK}: {ce}")
 
         # ----- Cascade-delete users + related data -----
         del_result = await _hard_delete_users(uids, admin_id)

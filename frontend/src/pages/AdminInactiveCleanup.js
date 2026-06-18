@@ -87,10 +87,16 @@ const AdminInactiveCleanup = ({ user }) => {
       }, { timeout: 600000 });
 
       const d = res.data || {};
+      const errSuffix = d.error_count > 0
+        ? ` · ⚠ ${d.error_count} cascade timeouts (re-run to finish)`
+        : '';
       toast.success(
-        `✅ Deleted ${d.deleted_users} users · ${d.pending_redeems_deleted} pending redeems · ${d.referral_orphans} downline cleaned`,
+        `✅ Deleted ${d.deleted_users} users · ${d.pending_redeems_deleted} pending redeems · ${d.referral_orphans || 0} downline${errSuffix}`,
         { duration: 15000 }
       );
+      if (d.error_count > 0) {
+        console.warn('[CUSTOM-PURGE errors]', d.errors);
+      }
       setCustomPreview(null);
       fetchPreview();
     } catch (e) {
@@ -157,16 +163,22 @@ const AdminInactiveCleanup = ({ user }) => {
         admin_id: user?.uid,
         days_no_sub: daysNoSub,
         days_inactive: daysInactive,
-      }, { timeout: 180000 });
+      }, { timeout: 600000 });  // 10 min for large purges
 
       const d = res.data || {};
+      const errSuffix = d.error_count > 0
+        ? ` · ⚠ ${d.error_count} cascade timeouts (re-run to clean up)`
+        : '';
       toast.success(
-        `✅ Deleted ${d.deleted_users} users · ${d.referral_orphans} downline cleaned`,
-        { duration: 10000 }
+        `✅ Deleted ${d.deleted_users} users · ${d.referral_orphans || 0} downline${errSuffix}`,
+        { duration: 15000 }
       );
+      if (d.error_count > 0) {
+        console.warn('[INACTIVE-CLEANUP errors]', d.errors);
+      }
       fetchPreview();
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'Cleanup failed');
+      toast.error(e.response?.data?.detail || e.message || 'Cleanup failed');
     } finally {
       setExecuting(false);
     }

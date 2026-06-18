@@ -9,6 +9,56 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🚑 Production MongoDB `MaxTimeMSExpired` During Bulk Purge — FIXED (9 Jun 2026)
+
+**Production Incident**: Owner attempted to delete ~2,866 inactive users (Rule 1: 2,386 + Rule 2: 480) via `/admin/inactive-cleanup` page. After clicking "Delete Now" the request crashed with:
+
+```
+Executor error during getMore :: caused by :: operation exceeded time limit
+code: 50, codeName: MaxTimeMSExpired
+```
+
+**Root Cause**: `_hard_delete_users` ran each batch with `BATCH=500` uids. For every batch, it issued `delete_many({user_id: {$in: [500 uids]}})` across 18 cascade collections. Several of those collections (likely `transactions`, `prc_ledger`) have NO index on `user_id` in production → MongoDB does a full collection scan per query. With Atlas's default `maxTimeMS` (~30-60s for getMore cursor iteration), one slow collection scan tripped the limit and the whole batch aborted.
+
+Additionally `_find_deletion_candidates` used unbounded `distinct()` with `{user_id: {$in: [all 2,866 uids]}}` — same scan-timeout risk on the dry-run side.
+
+**Fixes (`/app/backend/routes/inactive_user_cleanup.py`)**:
+
+1. **`_hard_delete_users` (used by Rule 1/2 Execute AND custom-execute)**:
+   - `BATCH` 500 → 100 (smaller cascade workload per batch)
+   - Snapshot fetch wrapped in try/except + `max_time_ms(60_000)` + bounded `.to_list(length=len(batch))`
+   - Each cascade `delete_many` per (collection, field) is its own try/except — one timed-out collection no longer aborts the whole batch
+   - Referral orphan update also wrapped in try/except
+   - New return field `errors: [...]` (capped 25) + `error_count` so the UI can surface partial-success
+   - Per-batch logging: `[INACTIVE-CLEANUP] batch X/Y (N uids)`
+
+2. **`_find_deletion_candidates`**:
+   - `find().to_list()` on rule1/rule2 queries now use `max_time_ms(90_000)`
+   - Pending-protection scans no longer use `distinct({...$in: [all uids]})` — replaced with chunked `find()` loop (250 uids per chunk, `max_time_ms(45_000)` per chunk)
+
+3. **`_find_custom_candidates`** (Custom Purge): same chunked-find pattern (250/chunk) for mining-session check + pending-redeem check. Custom-execute also chunks the redeem `delete_many` (100/chunk).
+
+**Frontend (`AdminInactiveCleanup.js`)**:
+- Axios timeout 180s → **600s** (10 min) for big purges
+- Toast surfaces partial-success: `"⚠ N cascade timeouts (re-run to finish)"` when `error_count > 0`
+- Full error list logged to console for diagnosis
+- Re-running execute is **idempotent** — already-deleted users are skipped, only the previously-timed-out cascades retry
+
+**SW bumped → v40** (cache bust).
+
+**Regression**: synthetic 15-user multi-batch test passes (HTTP 200, all 15 deleted, 1 pending redeem deleted, error_count=0).
+
+**Production Recovery Steps**:
+1. Wait for redeploy → SW v40 picks up
+2. Open `Admin → Inactive User Cleanup` page  
+3. Click **Delete Now** again (or **Custom Purge → Delete**) — it will resume from where the previous attempt left off (idempotent on already-deleted users)
+4. If toast shows `⚠ N cascade timeouts`, run it once more — each retry shrinks the residue
+5. Final clean state when toast shows `0 deleted` and no error count
+
+**Long-term**: Owner should consider creating MongoDB indexes on `user_id` for `transactions`, `prc_ledger`, `mining_sessions` if not present — but that's a separate Atlas console action. The new resilient cleanup code works regardless.
+
+
+
 ### 🗑️ Admin "Custom Purge by Registration Window" — DONE (9 Jun 2026)
 
 **Owner Request**: Delete users registered in **Jan–Apr 2026** who have:
