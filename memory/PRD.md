@@ -9,6 +9,85 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🚨 P0 INCIDENT — Active Users Wrongly Deleted (9 Jun 2026)
+
+**User Report**: "जे युजर्स delete झाले आहेत त्यामध्ये active users पण delete झाले आहेत. हे कस शक्य आहे." — owner discovered after the bulk cleanup ran that some active subscribers / recent loggers / KYC-verified users were among the deleted.
+
+**Root Cause Analysis** (4 bugs found in `_find_deletion_candidates`):
+
+1. **Rule 2 used `$or` between `last_login_at` and `last_activity_at`** — a user with a recent login but a stale `last_activity_at` (legacy users where this field is rarely updated, or set to `null`) matched as "inactive". Should have been **AND** (both signals stale to delete).
+
+2. **No active-subscription guard in `base_protection`** — users with `subscription_plan = "elite"` and `subscription_expiry > now` were eligible for Rule 2 deletion.
+
+3. **No active-mining guard in `base_protection`** — users with `is_mining = true` could match deletion rules.
+
+4. **KYC protection was case-sensitive** — `["verified", "approved"]` only. Production data with `"Verified"` or `"VERIFIED"` slipped through.
+
+5. **Protection scan capped at first 500 candidates** in v41 — for 2,410 candidates, ~1,910 went unchecked for pending refunds/withdrawals.
+
+**Emergency Response (3 layers)**:
+
+### Layer 1 — Kill switch (immediate stop)
+Both `/api/admin/inactive-cleanup/execute` and `/custom-execute` now return:
+```
+HTTP 423 LOCKED
+"🚨 Inactive cleanup is LOCKED due to a production incident.
+ Use /admin/inactive-cleanup/restore-deleted first to recover
+ active users that were wrongly deleted."
+```
+
+### Layer 2 — Restore tool
+New endpoints to recover users from `deleted_users_audit` (1-year retained snapshots):
+- `GET /api/admin/inactive-cleanup/restore-deleted/preview?hours=72&min_prc_balance=0&only_subscribed=false&only_kyc_verified=false`
+  - Returns count + sample + stats breakdown
+- `POST /api/admin/inactive-cleanup/restore-deleted/execute` (PIN, chunked auto-loop, max_users=250/call)
+  - Filters: `hours`, `min_prc_balance`, `only_subscribed`, `only_kyc_verified`
+  - Re-inserts snapshots into `users` collection
+  - Skips already-restored UIDs (idempotent)
+  - **Limitation**: cascade collections (`transactions`, `kyc_documents`, `prc_ledger`, etc.) were hard-deleted with the user — NOT recoverable. Only user profile + PRC balance + role/plan are restored.
+
+### Layer 3 — Bug fixes (so cleanup is safe to re-enable later)
+`base_protection` hardened in `_find_deletion_candidates`:
+- KYC verified: case-insensitive (`verified`, `Verified`, `VERIFIED`, `approved`, `Approved`, `APPROVED`)
+- `is_mining != True` (active miners protected)
+- Active elite subscription (`subscription_plan ∈ {elite} AND subscription_expiry > now`) protected
+- `prc_balance >= 100` protected (these were earning users)
+
+Rule 2 logic fixed:
+- `$or` → strict **AND**: both `last_login_at` AND `last_activity_at` must be stale
+- Stale = missing/null/empty OR older than cutoff
+- Created-at also must be older than cutoff (i.e., minimum age before considering inactive)
+
+Protection scan: restored to ALL candidates (not just first 500).
+
+**Frontend** (`AdminInactiveCleanup.js`):
+- New green **"🚑 Emergency Restore — Recover Deleted Users"** card at the TOP of the page
+- Filters: Hours back (default 72), Min PRC balance, Only had Elite, Only had KYC verified
+- Preview button → shows restorable count + sample + stats breakdown (Had Elite / KYC verified / Had PRC)
+- Restore button → PIN → chunked auto-loop (250/call) with per-chunk toast
+- Red "Execute is LOCKED" notice replaces the old warning banner
+
+**SW → v44** (cache bust).
+
+**Verified end-to-end** with 5 synthetic snapshots:
+- only_subscribed filter → only Elite users (u_elite1 + u_elite2) restored ✅
+- Other users (no sub, no KYC, no balance) → NOT restored ✅
+- Kill-switch returns HTTP 423 ✅
+
+**Production Recovery Steps**:
+1. After redeploy → open `/admin/inactive-cleanup`
+2. At the top: green "Emergency Restore" card
+3. Set Hours = `72` (covers all recent purges from last 3 days)
+4. Tick **"Only had Elite subscription"** OR set **Min PRC balance = 100** (these are the active users most likely to be wrongly deleted)
+5. Click **Preview** — review the count + stats (Had Elite, KYC, PRC)
+6. Click **Restore** → PIN `153759`
+7. Per-chunk toasts will run. Final summary toast shows TOTAL restored.
+8. Repeat with different filters if needed (e.g., `only_kyc_verified=true` after Elite restore)
+
+**Note about cascade data**: Restored users will have their **PRC balance + name + mobile + email + subscription_plan + KYC status** back. But their **transaction history, mining session history, network referral chain** are LOST (hard-deleted from cascade collections). They'll have to re-establish those naturally.
+
+
+
 ### 🔐 25k PRC Lock-In Vault — NEW FEATURE (9 Jun 2026)
 
 **Owner Request**: Users holding `> ₹25,000 PRC` का excess over 25k 365 days साठी lock करायचा. आजपासून mining/cashback ने जे नवीन PRC जमा होईल ते unlocked. एका click ने admin trigger. Admin ला कोणत्याही user चे X% PRC unlock करण्याची सुविधा.

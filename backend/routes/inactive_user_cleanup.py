@@ -69,12 +69,35 @@ async def _find_deletion_candidates(days_no_sub: int = 7, days_inactive: int = 6
     cutoff_no_sub = (now - timedelta(days=days_no_sub)).isoformat()
     cutoff_inactive = (now - timedelta(days=days_inactive)).isoformat()
 
-    # Common protection filter — NEVER delete these
+    # Common protection filter — NEVER delete these (Jun 9, 2026 hardened)
     base_protection = {
         "$and": [
             {"role": {"$nin": ["admin", "staff", "manager"]}},
             {"is_protected": {"$ne": True}},
-            {"kyc_status": {"$nin": ["verified", "approved"]}},  # RBI compliance
+            # RBI compliance — case-insensitive verified KYC always protected
+            {"kyc_status": {"$nin": ["verified", "approved", "Verified", "VERIFIED", "Approved", "APPROVED"]}},
+            # Active mining users ALWAYS protected (new — was missing before)
+            {"is_mining": {"$ne": True}},
+            # Active elite subscription ALWAYS protected (new)
+            {"$or": [
+                {"subscription_plan": {"$nin": ["elite", "Elite", "ELITE"]}},
+                {"subscription_plan": {"$exists": False}},
+                {"$and": [
+                    {"subscription_plan": {"$in": ["elite", "Elite", "ELITE"]}},
+                    {"$or": [
+                        {"subscription_expiry": {"$exists": False}},
+                        {"subscription_expiry": None},
+                        {"subscription_expiry": ""},
+                        {"subscription_expiry": {"$lt": now.isoformat()}},
+                    ]},
+                ]},
+            ]},
+            # PRC balance significantly > 0 → protected (these were earning users)
+            {"$or": [
+                {"prc_balance": {"$exists": False}},
+                {"prc_balance": None},
+                {"prc_balance": {"$lt": 100}},
+            ]},
             # uid must be a real user (not the system / synthetic placeholder)
             {"uid": {"$nin": ["system", None, ""]}},
             {"uid": {"$not": {"$regex": "^admin-"}}},
@@ -103,21 +126,57 @@ async def _find_deletion_candidates(days_no_sub: int = 7, days_inactive: int = 6
         ]
     }
 
-    # ---- Rule 2: long inactivity (>60 days) ----
+    # ---- Rule 2: long inactivity (>60 days) — FIXED Jun 9, 2026 ----
+    # Previous bug: used `$or` between last_login_at + last_activity_at,
+    # so an active user with stale `last_activity_at` (null or old) matched
+    # even with a recent login. Now requires BOTH signals to be old AND
+    # excludes users with an active elite subscription OR active mining session.
+    cutoff_active_login = (now - timedelta(days=days_inactive)).isoformat()
+    now_iso = now.isoformat()
+
+    # Helper: a field is "stale" if missing/null/empty OR older than cutoff
+    def _stale(field):
+        return {"$or": [
+            {field: {"$exists": False}},
+            {field: None},
+            {field: ""},
+            {field: {"$lte": cutoff_inactive}},
+        ]}
+
+    # Helper: subscription is NOT active (not elite OR expired)
+    sub_not_active = {"$or": [
+        {"subscription_plan": {"$in": [None, "", "explorer", "free"]}},
+        {"subscription_plan": {"$exists": False}},
+        # Has elite but expired
+        {"$and": [
+            {"subscription_plan": {"$in": ["elite", "Elite", "ELITE"]}},
+            {"$or": [
+                {"subscription_expiry": {"$exists": False}},
+                {"subscription_expiry": None},
+                {"subscription_expiry": ""},
+                {"subscription_expiry": {"$lt": now_iso}},
+            ]},
+        ]},
+    ]}
+
+    # Helper: mining NOT active
+    mining_not_active = {"$or": [
+        {"is_mining": {"$ne": True}},
+        {"is_mining": {"$exists": False}},
+    ]}
+
     rule2_query = {
         "$and": [
             base_protection,
+            sub_not_active,
+            mining_not_active,
+            # BOTH login + activity must be stale (was `$or` previously — BUG)
+            _stale("last_login_at"),
+            _stale("last_activity_at"),
+            # And the user must have been created at least `days_inactive` ago
             {"$or": [
-                {"last_login_at": {"$lte": cutoff_inactive}},
-                {"last_activity_at": {"$lte": cutoff_inactive}},
-                # If last_login_at doesn't exist AND user is old enough → inactive
-                {"$and": [
-                    {"last_login_at": {"$exists": False}},
-                    {"$or": [
-                        {"created_at": {"$lte": cutoff_inactive}},
-                        {"createdAt": {"$lte": cutoff_inactive}},
-                    ]},
-                ]},
+                {"created_at": {"$lte": cutoff_inactive}},
+                {"createdAt": {"$lte": cutoff_inactive}},
             ]},
         ]
     }
@@ -154,11 +213,10 @@ async def _find_deletion_candidates(days_no_sub: int = 7, days_inactive: int = 6
     rule2_users = [u for u in rule2_users if u["uid"] in rule2_uids]
 
     # ---- Skip protected guards (pending Eko, pending withdrawals, etc.) ----
-    # OPTIMISATION: Only scan a sampling of candidate uids (max 500) for
-    # protections during PREVIEW. The execute phase will re-check before
-    # each delete batch. This keeps preview snappy on production.
+    # Jun 9, 2026 (post-incident): scan ALL candidates, not just first 500.
+    # Chunked + bounded per-query timeout keeps this safe.
     all_candidate_uids = list(rule1_uids | rule2_uids)
-    sample_for_scan = all_candidate_uids[:500]
+    sample_for_scan = all_candidate_uids  # all, not just 500
     protected_skipped = []
 
     if sample_for_scan:
@@ -342,6 +400,19 @@ async def dry_run_inactive_cleanup(
 # ============================================================================
 @router.post("/execute")
 async def execute_inactive_cleanup(request: Request):
+    """⚠️ EMERGENCY KILL-SWITCH ACTIVE (Jun 9, 2026) — Active users were
+    incorrectly deleted due to Rule 2 `$or` logic + missing active-subscription
+    guard. Endpoint disabled until rules are corrected AND restore is complete.
+    """
+    raise HTTPException(
+        status_code=423,
+        detail="🚨 Inactive cleanup is LOCKED due to a production incident. "
+               "Use /admin/inactive-cleanup/restore-deleted first to recover "
+               "active users that were wrongly deleted. Contact engineering before unlocking."
+    )
+
+
+async def execute_inactive_cleanup_real(request: Request):
     """Chunked, resumable execute (Jun 2026 v2 production-safe).
 
     Each call processes at most `max_users` candidates (default 300, ~6
@@ -756,6 +827,15 @@ async def custom_dry_run(
 
 @router.post("/custom-execute")
 async def custom_execute(request: Request):
+    """⚠️ EMERGENCY KILL-SWITCH ACTIVE (Jun 9, 2026). See /execute for context."""
+    raise HTTPException(
+        status_code=423,
+        detail="🚨 Custom purge is LOCKED due to a production incident. "
+               "Use /admin/inactive-cleanup/restore-deleted first."
+    )
+
+
+async def custom_execute_real(request: Request):
     """Execute the custom purge. Admin PIN required.
 
     Body: {pin, admin_id, start_date, end_date, inactive_days?}
@@ -834,4 +914,214 @@ async def custom_execute(request: Request):
         raise
     except Exception as e:
         logging.error(f"[CUSTOM-PURGE execute] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# 🚑 EMERGENCY RESTORE (Jun 9, 2026)
+# ============================================================================
+# Active users were incorrectly deleted by the prior cleanup runs due to:
+#   • Rule 2 used `$or` between last_login_at + last_activity_at — a user
+#     with recent login but stale/null last_activity_at matched as inactive.
+#   • Rule 2 had no guard against active subscriptions OR active mining.
+#   • Protection scan was capped at first 500 candidates only.
+#
+# Recovery path: every delete goes through `_hard_delete_users` which
+# snapshots the full user document into `deleted_users_audit` BEFORE the
+# delete. We can read snapshots and re-insert into `users`.
+#
+# Limitation: cascade collections (transactions, kyc, prc_ledger, etc.) are
+# HARD-DELETED. Only the user account / PRC balance / profile is recoverable.
+# ============================================================================
+
+
+@router.get("/restore-deleted/preview")
+async def restore_deleted_preview(
+    hours: int = 72,
+    min_prc_balance: float = 0,
+    only_subscribed: bool = False,
+    only_kyc_verified: bool = False,
+):
+    """Preview which deleted-user snapshots match restore criteria."""
+    try:
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+
+        # Build snapshot-level match filter
+        snap_match = {
+            "deleted_at": {"$gte": cutoff},
+            "reason": "inactive_cleanup",
+        }
+        if min_prc_balance > 0:
+            snap_match["prc_balance"] = {"$gte": min_prc_balance}
+        if only_subscribed:
+            snap_match["subscription_plan"] = {"$in": ["elite", "Elite", "ELITE"]}
+        if only_kyc_verified:
+            snap_match["kyc_status"] = {"$in": ["verified", "approved", "Verified", "VERIFIED"]}
+
+        # Count by reason — overall picture
+        snapshots = await db.deleted_users_audit.find(
+            snap_match,
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1,
+             "kyc_status": 1, "prc_balance": 1, "subscription_plan": 1,
+             "created_at": 1, "deleted_at": 1, "deleted_by": 1}
+        ).max_time_ms(45_000).limit(2000).to_list(length=2000)
+
+        # Filter out any already-restored users (uid currently in db.users)
+        existing_uids = set()
+        if snapshots:
+            existing = await db.users.find(
+                {"uid": {"$in": [s["uid"] for s in snapshots]}},
+                {"_id": 0, "uid": 1}
+            ).to_list(2000)
+            existing_uids = {u["uid"] for u in existing}
+
+        restorable = [s for s in snapshots if s.get("uid") not in existing_uids]
+
+        # Sub-counts: how many had subscription / kyc / non-zero balance
+        sub_count = sum(1 for s in restorable
+                        if (s.get("subscription_plan") or "").lower() in ("elite",))
+        kyc_count = sum(1 for s in restorable
+                        if (s.get("kyc_status") or "").lower() in ("verified", "approved"))
+        with_balance = sum(1 for s in restorable
+                           if float(s.get("prc_balance") or 0) > 0)
+
+        return {
+            "success": True,
+            "total_in_window": len(snapshots),
+            "already_restored": len(snapshots) - len(restorable),
+            "restorable": len(restorable),
+            "stats": {
+                "had_active_elite": sub_count,
+                "had_kyc_verified": kyc_count,
+                "had_prc_balance": with_balance,
+            },
+            "sample": restorable[:50],
+            "criteria": {
+                "hours": hours,
+                "min_prc_balance": min_prc_balance,
+                "only_subscribed": only_subscribed,
+                "only_kyc_verified": only_kyc_verified,
+            },
+        }
+    except Exception as e:
+        logging.error(f"[RESTORE-PREVIEW] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/restore-deleted/execute")
+async def restore_deleted_execute(request: Request):
+    """Restore matching deleted-user snapshots back into `users` collection.
+
+    Body: {pin, admin_id, hours?, min_prc_balance?, only_subscribed?,
+           only_kyc_verified?, max_users?}
+    """
+    try:
+        body = await request.json()
+        if not _verify_admin_pin(body.get("pin", "")):
+            raise HTTPException(status_code=401, detail="Invalid admin PIN")
+
+        admin_id = body.get("admin_id") or "admin"
+        hours = int(body.get("hours", 72))
+        min_prc_balance = float(body.get("min_prc_balance", 0))
+        only_subscribed = bool(body.get("only_subscribed", False))
+        only_kyc_verified = bool(body.get("only_kyc_verified", False))
+        max_users = int(body.get("max_users", 500))
+
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+
+        snap_match = {
+            "deleted_at": {"$gte": cutoff},
+            "reason": "inactive_cleanup",
+        }
+        if min_prc_balance > 0:
+            snap_match["prc_balance"] = {"$gte": min_prc_balance}
+        if only_subscribed:
+            snap_match["subscription_plan"] = {"$in": ["elite", "Elite", "ELITE"]}
+        if only_kyc_verified:
+            snap_match["kyc_status"] = {"$in": ["verified", "approved", "Verified", "VERIFIED"]}
+
+        snapshots = await db.deleted_users_audit.find(
+            snap_match
+        ).max_time_ms(45_000).limit(max_users * 2).to_list(length=max_users * 2)
+
+        existing_uids = set()
+        if snapshots:
+            existing = await db.users.find(
+                {"uid": {"$in": [s["uid"] for s in snapshots if s.get("uid")]}},
+                {"_id": 0, "uid": 1}
+            ).to_list(len(snapshots))
+            existing_uids = {u["uid"] for u in existing}
+
+        candidates = [s for s in snapshots if s.get("uid") and s.get("uid") not in existing_uids]
+        batch = candidates[:max_users]
+        remaining_after = max(0, len(candidates) - max_users)
+
+        restored = 0
+        errors = []
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        for snap in batch:
+            try:
+                user_doc = snap.get("snapshot") or {
+                    "uid": snap["uid"],
+                    "name": snap.get("name"),
+                    "mobile": snap.get("mobile"),
+                    "email": snap.get("email"),
+                    "kyc_status": snap.get("kyc_status"),
+                    "prc_balance": snap.get("prc_balance"),
+                    "subscription_plan": snap.get("subscription_plan"),
+                    "created_at": snap.get("created_at"),
+                }
+                # Add restoration audit fields
+                user_doc["restored_at"] = now_iso
+                user_doc["restored_by"] = admin_id
+                user_doc["restored_from_audit"] = True
+
+                # Ensure no _id collision
+                user_doc.pop("_id", None)
+
+                await db.users.insert_one(user_doc)
+                restored += 1
+            except Exception as e:
+                err = f"uid={snap.get('uid')}: {str(e)[:100]}"
+                errors.append(err)
+                logging.warning(f"[RESTORE] {err}")
+
+        # Audit
+        try:
+            await db.audit_logs.insert_one({
+                "action": "inactive_cleanup_restore",
+                "performed_by": admin_id,
+                "criteria": {
+                    "hours": hours,
+                    "min_prc_balance": min_prc_balance,
+                    "only_subscribed": only_subscribed,
+                    "only_kyc_verified": only_kyc_verified,
+                },
+                "restored": restored,
+                "errors": errors[:20],
+                "more_to_do": remaining_after > 0,
+                "timestamp": now_iso,
+            })
+        except Exception:
+            pass
+
+        return {
+            "success": True,
+            "restored": restored,
+            "processed_this_call": len(batch),
+            "more_to_do": remaining_after > 0,
+            "remaining": remaining_after,
+            "errors": errors[:20],
+            "error_count": len(errors),
+            "note": (
+                "User accounts restored from audit snapshots. Cascade data "
+                "(transactions, kyc docs, prc_ledger) is NOT recoverable from "
+                "this snapshot — only the user profile + PRC balance + role."
+            ),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[RESTORE-EXECUTE] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

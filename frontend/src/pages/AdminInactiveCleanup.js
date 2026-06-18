@@ -127,6 +127,83 @@ const AdminInactiveCleanup = ({ user }) => {
     }
   };
 
+  // ============ EMERGENCY RESTORE (Jun 9 incident recovery) ============
+  const [restoreHours, setRestoreHours] = useState(72);
+  const [restoreMinBalance, setRestoreMinBalance] = useState(0);
+  const [restoreOnlySubscribed, setRestoreOnlySubscribed] = useState(false);
+  const [restoreOnlyKyc, setRestoreOnlyKyc] = useState(false);
+  const [restorePreview, setRestorePreview] = useState(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+
+  const fetchRestorePreview = async () => {
+    try {
+      setRestoreLoading(true);
+      const params = new URLSearchParams({
+        hours: restoreHours,
+        min_prc_balance: restoreMinBalance,
+        only_subscribed: restoreOnlySubscribed,
+        only_kyc_verified: restoreOnlyKyc,
+      });
+      const r = await axios.get(
+        `${API}/admin/inactive-cleanup/restore-deleted/preview?${params}`,
+        { timeout: 60000 }
+      );
+      setRestorePreview(r.data);
+      toast.success(`Found ${r.data.restorable} restorable users`);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Preview failed');
+    } finally {
+      setRestoreLoading(false);
+    }
+  };
+
+  const executeRestore = async () => {
+    if (!restorePreview || restorePreview.restorable === 0) {
+      toast.info('Run Preview first');
+      return;
+    }
+    if (!window.confirm(
+      `Restore ${restorePreview.restorable} deleted users?\n\n` +
+      `⚠ Cascade data (transactions, kyc docs, prc_ledger) is NOT recoverable. ` +
+      `Only user profile + PRC balance will be restored.\n\nContinue?`
+    )) return;
+    const pin = window.prompt('Admin PIN required:');
+    if (!pin) return;
+
+    try {
+      setRestoring(true);
+      let totalRestored = 0;
+      let iter = 0;
+      while (iter < 30) {
+        iter++;
+        const r = await axios.post(`${API}/admin/inactive-cleanup/restore-deleted/execute`, {
+          pin,
+          admin_id: user?.uid,
+          hours: restoreHours,
+          min_prc_balance: restoreMinBalance,
+          only_subscribed: restoreOnlySubscribed,
+          only_kyc_verified: restoreOnlyKyc,
+          max_users: 250,
+        }, { timeout: 120000 });
+        const d = r.data || {};
+        totalRestored += d.restored || 0;
+        toast.info(
+          `Chunk ${iter}: restored ${d.restored} · ${d.remaining} remaining`,
+          { duration: 2500 }
+        );
+        if (!d.more_to_do) break;
+        await new Promise(res => setTimeout(res, 700));
+      }
+      toast.success(`✅ TOTAL Restored: ${totalRestored} users`, { duration: 15000 });
+      setRestorePreview(null);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Restore failed');
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   const fetchPreview = useCallback(async (override) => {
     try {
       setLoading(true);
@@ -272,6 +349,111 @@ const AdminInactiveCleanup = ({ user }) => {
       </div>
 
       <div className="p-4 space-y-4">
+        {/* 🚑 EMERGENCY RESTORE CARD (Jun 9 incident) */}
+        <Card className="p-4 border-emerald-300 bg-emerald-50/70" data-testid="restore-card">
+          <div className="flex items-center gap-2 mb-2">
+            <RefreshCw className="w-4 h-4 text-emerald-700" />
+            <h3 className="text-sm font-bold text-emerald-900">
+              🚑 Emergency Restore — Recover Deleted Users
+            </h3>
+          </div>
+          <p className="text-[11px] text-emerald-800 mb-3 leading-relaxed">
+            Restore users from <code>deleted_users_audit</code> snapshots back into
+            the system. Filter by recency / PRC balance / subscription / KYC.
+            <strong> Cascade data (transactions, kyc docs) is NOT recoverable</strong> —
+            only user account + PRC balance is restored.
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <label className="block text-[11px] font-medium text-emerald-900 mb-1">Hours back</label>
+              <Input type="number" min={1} max={2160} value={restoreHours}
+                     onChange={(e) => setRestoreHours(parseInt(e.target.value) || 72)}
+                     data-testid="restore-hours" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-emerald-900 mb-1">Min PRC balance</label>
+              <Input type="number" min={0} value={restoreMinBalance}
+                     onChange={(e) => setRestoreMinBalance(parseFloat(e.target.value) || 0)}
+                     data-testid="restore-min-balance" />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3 mb-3">
+            <label className="flex items-center gap-1.5 text-[11px] text-emerald-900">
+              <input type="checkbox" checked={restoreOnlySubscribed}
+                     onChange={(e) => setRestoreOnlySubscribed(e.target.checked)}
+                     data-testid="restore-only-subscribed" />
+              Only had Elite subscription
+            </label>
+            <label className="flex items-center gap-1.5 text-[11px] text-emerald-900">
+              <input type="checkbox" checked={restoreOnlyKyc}
+                     onChange={(e) => setRestoreOnlyKyc(e.target.checked)}
+                     data-testid="restore-only-kyc" />
+              Only had KYC verified
+            </label>
+          </div>
+
+          <div className="flex gap-2 mb-3">
+            <Button onClick={fetchRestorePreview} disabled={restoreLoading}
+                    className="flex-1 bg-slate-700 hover:bg-slate-800 text-white"
+                    data-testid="restore-preview-btn">
+              {restoreLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Preview'}
+            </Button>
+            <Button onClick={executeRestore}
+                    disabled={restoring || !restorePreview || restorePreview.restorable === 0}
+                    className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white"
+                    data-testid="restore-execute-btn">
+              {restoring ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Restore'}
+            </Button>
+          </div>
+
+          {restorePreview && (
+            <div className="rounded-lg bg-white border border-emerald-200 p-3" data-testid="restore-preview-result">
+              <div className="flex items-baseline justify-between mb-2">
+                <span className="text-xs font-semibold text-slate-700">Restorable</span>
+                <span className="text-2xl font-bold text-emerald-700">
+                  {restorePreview.restorable}
+                </span>
+              </div>
+              {restorePreview.already_restored > 0 && (
+                <p className="text-[11px] text-slate-500 mb-1">
+                  Already back in system: {restorePreview.already_restored}
+                </p>
+              )}
+              <div className="grid grid-cols-3 gap-2 mt-2 text-center">
+                <div className="bg-slate-50 rounded p-1.5">
+                  <p className="text-[10px] text-slate-500">Had Elite</p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {restorePreview.stats?.had_active_elite ?? 0}
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded p-1.5">
+                  <p className="text-[10px] text-slate-500">KYC verified</p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {restorePreview.stats?.had_kyc_verified ?? 0}
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded p-1.5">
+                  <p className="text-[10px] text-slate-500">Had PRC</p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {restorePreview.stats?.had_prc_balance ?? 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* 🚨 Execute lock notice */}
+        <Card className="p-3 border-rose-300 bg-rose-50">
+          <p className="text-[11px] text-rose-800">
+            <strong>🚨 Execute is LOCKED:</strong> The previous Rule 2 logic
+            wrongly deleted active users. Use Restore above first. Cleanup
+            execute remains disabled until rules are corrected.
+          </p>
+        </Card>
+
+
         {/* Warning banner */}
         <Card className="p-4 border-red-200 bg-red-50">
           <div className="flex gap-3">

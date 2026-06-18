@@ -5,18 +5,24 @@
 // arbitrary date range who are NOT actively subscribed, NOT mining, and
 // have NOT logged in for N days. Pending bank-redeems for these users
 // are deleted alongside. KYC-verified users always protected (RBI).
-// v43: June 9, 2026 — NEW FEATURE: 25k PRC Lock-In Vault.
-// • Users with prc_balance > ₹25,000 → excess gets locked for 365 days
-// • Existing pending bank-redeems cancelled + refunded BEFORE lock applies
-// • Available = max(0, prc_balance - prc_locked) — enforced in Bank Redeem
-//   submit + Sale Elite lookup/activate
-// • New LockedPRCCard mounted on user Dashboard (auto-hides when not locked)
-// • New AdminPRCLock page at /admin/prc-lock with execute button +
-//   per-user % unlock form
-// • Daily background task auto-unlocks at prc_unlock_at <= now
-const CACHE_NAME = 'paras-reward-v43';
-const RUNTIME_CACHE = 'paras-runtime-v43';
-const API_CACHE = 'paras-api-v43';
+// v44: June 9, 2026 — P0 INCIDENT: Active users were wrongly deleted by
+// the previous cleanup runs. Root cause: Rule 2 used `$or` between
+// last_login_at + last_activity_at (so active users with stale activity
+// field matched) + no active-subscription / active-mining / PRC-balance
+// guards. Fixes:
+// 1. Execute + Custom-Execute endpoints now return HTTP 423 (LOCKED).
+// 2. New /restore-deleted/{preview,execute} endpoints — read snapshots
+//    from deleted_users_audit and re-insert users into `users`.
+//    Filterable by recency, min PRC balance, had-subscription, had-KYC.
+// 3. AdminInactiveCleanup page now shows green "Emergency Restore" card
+//    at the top + locked notice on Execute.
+// 4. base_protection hardened: case-insensitive KYC verified, active mining
+//    excluded, active elite subscription excluded, prc_balance >= 100
+//    excluded. Rule 2 now requires BOTH login + activity to be stale.
+// 5. Protection scan restored to ALL candidates (was capped at 500 in v41).
+const CACHE_NAME = 'paras-reward-v44';
+const RUNTIME_CACHE = 'paras-runtime-v44';
+const API_CACHE = 'paras-api-v44';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
