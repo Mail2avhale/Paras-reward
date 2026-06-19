@@ -561,8 +561,8 @@
   padding: 0 4px;
 }
 
-/* Tighten stat row */
-.mall-stat-row { top: 58px; left: 12px; right: 12px; gap: 8px; }
+/* Tighten stat row — CENTER the balance pill */
+.mall-stat-row { top: 58px; left: 12px; right: 12px; gap: 8px; justify-content: center; }
 .mall-balance-pill { padding: 5px 12px; font-size: 11px; gap: 8px; }
 .mall-balance-pill .mall-balance-prc { font-weight: 800; }
 .mall-balance-pill .mall-balance-inr {
@@ -577,18 +577,26 @@
 .mall-tabs { top: 92px; }
 .mall-search-bar { top: 92px; left: 12px; right: 12px; padding: 8px 12px; }
 
-/* Chips closer to tabs */
-.mall-chips { top: 134px; padding: 0 12px; }
-.mall-chip { padding: 5px 10px; font-size: 10.5px; }
+/* Chips closer to tabs — WRAP to show ALL categories without scroll */
+.mall-chips {
+  top: 134px;
+  padding: 0 10px;
+  flex-wrap: wrap;
+  overflow-x: visible;
+  justify-content: center;
+  gap: 5px 4px;
+}
+.mall-chip { padding: 4px 8px; font-size: 10px; }
+.mall-chip svg { width: 11px !important; height: 11px !important; }
 
 /* Sort dropdown follows chips */
-.mall-sort-menu { top: 168px; right: 12px; }
+.mall-sort-menu { top: 200px; right: 12px; }
 
 /* Progress dots tighter */
-.mall-progress-dots { top: 172px; }
+.mall-progress-dots { top: 200px; }
 
 /* Hero starts higher so card fits without scrolling */
-.mall-hero { top: 188px; }
+.mall-hero { top: 216px; }
 .mall-image-wrap { padding: 8px 14px 0; }
 .mall-image-frame {
   max-width: 320px;
