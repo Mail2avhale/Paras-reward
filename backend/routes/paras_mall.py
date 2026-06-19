@@ -495,6 +495,28 @@ async def recent_bookings(limit: int = 20):
     return {"success": True, "feed": feed}
 
 
+@router.get("/stats/booking-counts")
+async def booking_counts_per_product():
+    """Return ALL-TIME booking counts per product (used for social-proof "X booked" badge).
+    Aggregates `mall_bookings` collection so the count is monotonic — never decreases.
+    """
+    pipeline = [
+        {"$group": {
+            "_id": "$product_id",
+            "count": {"$sum": 1},
+            "product_name": {"$first": "$product_name"},
+        }},
+    ]
+    rows = await db.mall_bookings.aggregate(pipeline).to_list(1000)
+    by_product_id = {r["_id"]: r["count"] for r in rows}
+    by_product_name = {r["product_name"]: r["count"] for r in rows if r.get("product_name")}
+    return {
+        "success": True,
+        "by_product_id": by_product_id,
+        "by_product_name": by_product_name,
+    }
+
+
 # ---------------- ADMIN ENDPOINTS ----------------
 @admin_router.post("/products")
 async def admin_create_product(body: CreateProductRequest):

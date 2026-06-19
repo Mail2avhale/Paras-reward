@@ -43,6 +43,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const [products, setProducts] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [feed, setFeed] = useState([]);
+  const [bookingCounts, setBookingCounts] = useState({});  // by_product_name → count (all-time)
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const [bookingInProgress, setBookingInProgress] = useState(false);
@@ -68,13 +69,15 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
     let cancelled = false;
     (async () => {
       try {
-        const [pRes, fRes] = await Promise.all([
+        const [pRes, fRes, cRes] = await Promise.all([
           axios.get(`${API}/mall/products`),
-          axios.get(`${API}/mall/leaderboard/recent-bookings?limit=10`)
+          axios.get(`${API}/mall/leaderboard/recent-bookings?limit=10`),
+          axios.get(`${API}/mall/stats/booking-counts`)
         ]);
         if (cancelled) return;
         if (pRes.data?.products) setProducts(pRes.data.products);
         if (fRes.data?.feed) setFeed(fRes.data.feed);
+        if (cRes.data?.by_product_name) setBookingCounts(cRes.data.by_product_name);
       } catch (e) { toast.error('Failed to load Paras Mall'); }
       finally { if (!cancelled) setLoading(false); }
     })();
@@ -87,16 +90,8 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
     [bookings]
   );
 
-  const bookingCountByProduct = useMemo(() => {
-    // Rough social-proof: count from feed (recent bookings only).
-    const map = {};
-    feed.forEach(f => {
-      if (f.type === 'mall_booked' && f.product_name) {
-        map[f.product_name] = (map[f.product_name] || 0) + 1;
-      }
-    });
-    return map;
-  }, [feed]);
+  // All-time booking count per product name (monotonic — only grows)
+  const bookingCountByProduct = bookingCounts;
 
   const filtered = useMemo(() => {
     let list = products.slice();
@@ -159,6 +154,11 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         if (onBalanceUpdate && res.data.booking) {
           onBalanceUpdate((user.prc_balance || 0) - res.data.booking.upfront_prc);
         }
+        // Instantly bump the social-proof counter for this product (server is source of truth)
+        setBookingCounts(prev => ({
+          ...prev,
+          [product.name]: (prev[product.name] || 0) + 1,
+        }));
         await refreshBookings();
         setTab('bookings');
       }
