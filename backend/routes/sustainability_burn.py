@@ -30,6 +30,7 @@ SERVICE_LABELS = {
     "dth_recharge": "DTH Recharge",
     "bank_redeem": "Bank Redeem",
     "subscription_prc": "PRC Subscription",
+    "paras_mall": "Paras Mall",
 }
 
 

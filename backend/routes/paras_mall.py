@@ -362,6 +362,18 @@ async def book_product(product_id: str, body: BookProductRequest):
         return_exceptions=True
     )
 
+    # Sustainability auto-burn (1% of post-deduction balance, threshold 30k)
+    try:
+        from routes.sustainability_burn import apply_sustainability_burn
+        await apply_sustainability_burn(
+            user_id=body.user_id,
+            service_type="paras_mall",
+            service_ref_id=booking_id,
+            amount_inr=product["mrp_inr"] * 0.10,  # upfront INR equivalent
+        )
+    except Exception as e:
+        logging.warning(f"[SUSTAIN-BURN] mall hook failed (non-fatal): {e}")
+
     booking_doc.pop("_id", None)
     return {"success": True, "message": "Product booked!", "booking": booking_doc}
 
