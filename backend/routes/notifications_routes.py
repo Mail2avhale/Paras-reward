@@ -1164,6 +1164,84 @@ async def get_network_tree_advanced(user_id: str):
     return tree or {"id": user_id, "name": "User", "children": []}
 
 
+@router.get("/referrals/{user_id}/level-breakdown")
+async def get_referrals_level_breakdown(user_id: str):
+    """L1-L5 breakdown for /referrals page (Jun 2026).
+
+    For each level returns: total count, active count, inactive count,
+    total PRC balance across that level, top performer.
+
+    "Active" = subscription_plan ∈ {startup, growth, elite}.
+    Mining-boost benefit per level computed downstream on frontend.
+    """
+    levels = {f"L{i}": {"total": 0, "active": 0, "inactive": 0,
+                        "prc_sum": 0.0, "top": None} for i in range(1, 6)}
+    grand_total = {"users": 0, "active": 0, "prc_sum": 0.0}
+
+    async def walk(uids, depth):
+        if depth > 5 or not uids:
+            return
+        children_uids = []
+        cursor = db.users.find(
+            {"referred_by": {"$in": uids}},
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
+             "subscription_plan": 1, "prc_balance": 1, "is_mining": 1,
+             "last_login_at": 1, "created_at": 1}
+        )
+        bucket = levels[f"L{depth}"]
+        async for u in cursor:
+            children_uids.append(u["uid"])
+            bucket["total"] += 1
+            grand_total["users"] += 1
+            plan = (u.get("subscription_plan") or "").lower()
+            is_active = plan in ("startup", "growth", "elite")
+            if is_active:
+                bucket["active"] += 1
+                grand_total["active"] += 1
+            else:
+                bucket["inactive"] += 1
+            prc = float(u.get("prc_balance") or 0)
+            bucket["prc_sum"] += prc
+            grand_total["prc_sum"] += prc
+
+            # Track top performer (highest PRC)
+            if not bucket["top"] or prc > (bucket["top"].get("prc_balance") or 0):
+                bucket["top"] = {
+                    "uid": u["uid"],
+                    "name": u.get("name", "Anonymous"),
+                    "mobile": (u.get("mobile") or "")[-4:],
+                    "prc_balance": prc,
+                    "plan": plan or "explorer",
+                }
+        if children_uids:
+            await walk(children_uids, depth + 1)
+
+    try:
+        await walk([user_id], 1)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+    # Build per-level mining boost % (proxy: each active member contributes 2%
+    # up to a cap of 100% per level — informational, matches single-leg model)
+    PER_ACTIVE_BOOST = 2  # %
+    LEVEL_CAP = 100       # %
+    boosts = {}
+    for lvl, b in levels.items():
+        contribution = min(LEVEL_CAP, b["active"] * PER_ACTIVE_BOOST)
+        boosts[lvl] = contribution
+
+    total_boost = sum(boosts.values())
+
+    return {
+        "success": True,
+        "levels": levels,
+        "boosts_pct": boosts,
+        "total_mining_boost_pct": total_boost,
+        "grand_total": grand_total,
+    }
+
+
+
 @router.get("/referrals/{user_id}/stats")
 async def get_referral_stats(user_id: str):
     """

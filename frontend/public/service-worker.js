@@ -42,9 +42,16 @@
 // (transactions, prc_ledger) take too long for 300 users/call. Reduced:
 // max_users default 300→100, BATCH 100→50, QUERY_TIMEOUT 60s→30s.
 // Frontend per-call timeout 120s→90s. Button text updated to reflect chunks.
-const CACHE_NAME = 'paras-reward-v48';
-const RUNTIME_CACHE = 'paras-runtime-v48';
-const API_CACHE = 'paras-api-v48';
+// v49: June 9, 2026 — NEW FEATURE: L1-L5 Level Breakdown on /referrals
+// page. Backend: new /api/notifications/referrals/{uid}/level-breakdown
+// walks the downline tree to depth 5, aggregates active/inactive counts +
+// top performer + PRC sum per level + mining-boost contribution (+2% per
+// active member, capped at 100%/level). Frontend: 5 color-coded cards
+// (amber→blue→purple→emerald→rose) with active/inactive stats + top
+// performer + total mining boost badge.
+const CACHE_NAME = 'paras-reward-v49';
+const RUNTIME_CACHE = 'paras-runtime-v49';
+const API_CACHE = 'paras-api-v49';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

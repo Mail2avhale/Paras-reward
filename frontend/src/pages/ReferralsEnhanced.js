@@ -18,6 +18,7 @@ const ReferralsEnhanced = ({ user }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [networkStats, setNetworkStats] = useState(null);
   const [directReferrals, setDirectReferrals] = useState([]);
+  const [levelBreakdown, setLevelBreakdown] = useState(null);
   
   // Referral code from user
   const referralCode = user?.referral_code || '';
@@ -32,13 +33,17 @@ const ReferralsEnhanced = ({ user }) => {
       // Fetch network stats, mining speed, and referrals in PARALLEL.
       // direct-list does heavy aggregation per referral — needs longer timeout
       // than the lighter stats endpoints.
-      const [statsRes, miningRes, referralsRes] = await Promise.all([
+      const [statsRes, miningRes, referralsRes, breakdownRes] = await Promise.all([
         axios.get(`${API}/api/growth/network-stats/${user.uid}`, { timeout: 8000 }).catch(() => null),
         axios.get(`${API}/api/growth/mining-speed/${user.uid}`, { timeout: 8000 }).catch(() => null),
         axios.get(`${API}/api/notifications/referrals/${user.uid}/direct-list`, { timeout: 20000 }).catch((err) => {
           console.error('[Invite] direct-list fetch failed:', err?.message);
           return null;
-        })
+        }),
+        axios.get(`${API}/api/notifications/referrals/${user.uid}/level-breakdown`, { timeout: 25000 }).catch((err) => {
+          console.error('[Invite] level-breakdown failed:', err?.message);
+          return null;
+        }),
       ]);
       
       if (statsRes?.data?.success) {
@@ -54,6 +59,10 @@ const ReferralsEnhanced = ({ user }) => {
         setDirectReferrals(referralsRes.data.referrals);
       } else if (referralsRes?.data?.data) {
         setDirectReferrals(referralsRes.data.data);
+      }
+
+      if (breakdownRes?.data?.success) {
+        setLevelBreakdown(breakdownRes.data);
       }
       
     } catch (error) {
@@ -213,6 +222,84 @@ const ReferralsEnhanced = ({ user }) => {
             <span className="text-gray-500 text-xs">Cap: {networkStats?.network_cap || 0}</span>
           </div>
         </div>
+
+        {/* L1-L5 Level Breakdown (Jun 2026) */}
+        {levelBreakdown && levelBreakdown.grand_total?.users > 0 && (
+          <div className="space-y-3" data-testid="level-breakdown-section">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-white font-semibold text-base">Network by Level</h3>
+              <div className="text-right">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Mining Boost</p>
+                <p className="text-emerald-400 font-bold tabular-nums" data-testid="total-mining-boost">
+                  +{levelBreakdown.total_mining_boost_pct}%
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {['L1', 'L2', 'L3', 'L4', 'L5'].map((lvl, idx) => {
+                const data = levelBreakdown.levels?.[lvl] || {};
+                const boost = levelBreakdown.boosts_pct?.[lvl] || 0;
+                const gradients = [
+                  'from-amber-500/20 to-orange-500/10 border-amber-500/40',
+                  'from-blue-500/20 to-cyan-500/10 border-blue-500/40',
+                  'from-purple-500/20 to-pink-500/10 border-purple-500/40',
+                  'from-emerald-500/20 to-teal-500/10 border-emerald-500/40',
+                  'from-rose-500/20 to-red-500/10 border-rose-500/40',
+                ];
+                const labels = ['Direct', '2nd', '3rd', '4th', '5th'];
+                return (
+                  <div
+                    key={lvl}
+                    data-testid={`referral-level-card-${lvl}`}
+                    className={`bg-gradient-to-br ${gradients[idx]} border rounded-2xl p-3.5`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-gray-400">
+                          {lvl} · {labels[idx]} downline
+                        </p>
+                        <p className="text-2xl font-bold text-white tabular-nums">
+                          {data.total || 0}
+                        </p>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold">
+                        +{boost}%
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                      <div className="bg-black/30 rounded-lg px-2 py-1.5">
+                        <p className="text-gray-500 text-[10px]">Active</p>
+                        <p className="text-emerald-300 font-bold tabular-nums">{data.active || 0}</p>
+                      </div>
+                      <div className="bg-black/30 rounded-lg px-2 py-1.5">
+                        <p className="text-gray-500 text-[10px]">Inactive</p>
+                        <p className="text-gray-400 font-bold tabular-nums">{data.inactive || 0}</p>
+                      </div>
+                    </div>
+                    {data.top?.name && (
+                      <div className="mt-2 pt-2 border-t border-white/10 text-[11px]">
+                        <p className="text-gray-400">
+                          🏆 Top: <span className="text-white font-medium">{data.top.name}</span>
+                          <span className="text-gray-500 ml-1">
+                            ({Math.round(data.top.prc_balance || 0).toLocaleString()} PRC)
+                          </span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-3 text-[11px] text-gray-400 leading-relaxed">
+              💡 Each <strong className="text-emerald-400">Active</strong> network member contributes
+              <span className="text-emerald-400 font-bold"> +2% </span>
+              to your daily mining boost (capped at +100% per level).
+              Help inactive members reactivate to maximize your earnings!
+            </div>
+          </div>
+        )}
+
+
 
         {/* Direct Referrals List */}
         {directReferrals.length > 0 && (
