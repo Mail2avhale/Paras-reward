@@ -765,3 +765,177 @@
   .mall-card { padding: 12px 14px 14px; }
   .mall-product-name { font-size: 22px; }
 }
+
+/* ============ SPINNY-INSPIRED PALETTE OVERLAY (June 2026) ============
+   Keeps the Netflix-swipe layout intact; only swaps colors.
+   Primary: deep purple (#5b2dc7). Secondary: emerald (#1f8a4c).
+   Background: warm cream + soft mint accents. Cards: white. */
+
+.mall-root { color: #1a0e2e; background: #faf6f2; }
+
+.mall-bg {
+  background:
+    radial-gradient(120% 100% at 12% 0%, rgba(91, 45, 199, 0.12), transparent 55%),
+    radial-gradient(120% 100% at 88% 30%, rgba(31, 138, 76, 0.10), transparent 50%),
+    radial-gradient(140% 100% at 50% 100%, rgba(244, 114, 182, 0.08), transparent 55%),
+    linear-gradient(180deg, #faf6f2 0%, #f3edff 35%, #ecfaf2 75%, #faf6f2 100%);
+}
+.mall-bg::after { opacity: 0.025; mix-blend-mode: multiply; }
+
+.mall-back-btn, .mall-icon-btn {
+  background: #fff;
+  border-color: rgba(91, 45, 199, 0.18);
+  color: #5b2dc7;
+  box-shadow: 0 2px 8px rgba(91, 45, 199, 0.08);
+}
+.mall-back-btn:active { background: rgba(91, 45, 199, 0.12); }
+.mall-icon-btn.active {
+  background: linear-gradient(135deg, #5b2dc7, #7c3aed);
+  border-color: transparent;
+  color: #fff;
+}
+
+.mall-title-main {
+  background: linear-gradient(135deg, #5b2dc7, #1f8a4c 70%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.mall-title-sub { color: #5b2dc7; opacity: 0.7; }
+
+.mall-balance-pill {
+  background: linear-gradient(135deg, #5b2dc7, #7c3aed);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(91, 45, 199, 0.32);
+}
+
+.mall-ticker {
+  background: #fff;
+  border-color: rgba(91, 45, 199, 0.12);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+.mall-ticker-track { color: #1a0e2e; }
+
+.mall-search-bar {
+  background: #fff;
+  border-color: rgba(91, 45, 199, 0.20);
+  color: #1a0e2e;
+  box-shadow: 0 4px 16px rgba(91, 45, 199, 0.10);
+}
+.mall-search-bar input { color: #1a0e2e; }
+.mall-search-bar input::placeholder { color: rgba(26, 14, 46, 0.4); }
+
+.mall-tabs {
+  background: #fff;
+  border-color: rgba(91, 45, 199, 0.14);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+.mall-tab { color: rgba(26, 14, 46, 0.6); }
+.mall-tab.active {
+  background: linear-gradient(135deg, #5b2dc7, #7c3aed);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(91, 45, 199, 0.36);
+}
+.mall-tab-badge { background: #1f8a4c; box-shadow: 0 2px 8px rgba(31, 138, 76, 0.45); }
+
+.mall-chip {
+  background: #fff;
+  border-color: rgba(91, 45, 199, 0.16);
+  color: rgba(26, 14, 46, 0.7);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+.mall-chip.active {
+  background: linear-gradient(135deg, #5b2dc7, #7c3aed);
+  border-color: transparent;
+  color: #fff;
+}
+
+.mall-sort-menu {
+  background: #fff;
+  border-color: rgba(91, 45, 199, 0.18);
+  box-shadow: 0 10px 32px rgba(91, 45, 199, 0.18);
+}
+.mall-sort-menu button { color: rgba(26, 14, 46, 0.75); }
+.mall-sort-menu button:hover { background: rgba(91, 45, 199, 0.08); }
+.mall-sort-menu button.active { color: #5b2dc7; background: rgba(91, 45, 199, 0.10); }
+
+.mall-dot { background: rgba(91, 45, 199, 0.20); }
+.mall-dot.active { background: linear-gradient(90deg, #5b2dc7, #1f8a4c); }
+
+.mall-image-frame {
+  background: #fff;
+  box-shadow: 0 24px 48px -16px rgba(91, 45, 199, 0.28), 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+.mall-image-frame::before { background: radial-gradient(80% 100% at 50% 0%, rgba(91, 45, 199, 0.06), transparent); }
+
+.mall-nav-arrow {
+  background: #fff;
+  border-color: rgba(91, 45, 199, 0.18);
+  color: #5b2dc7;
+  box-shadow: 0 4px 12px rgba(91, 45, 199, 0.16);
+}
+
+.mall-card { background: linear-gradient(180deg, transparent 0%, rgba(250, 246, 242, 0.88) 18%, #faf6f2 60%); }
+
+.mall-category-strip { color: #1f8a4c; }
+.mall-product-name { color: #1a0e2e; text-shadow: none; }
+
+.mall-price-tile {
+  background: #fff;
+  border-color: rgba(91, 45, 199, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.mall-price-tile.upfront {
+  background: linear-gradient(135deg, rgba(91, 45, 199, 0.08), rgba(31, 138, 76, 0.06));
+  border-color: rgba(91, 45, 199, 0.30);
+}
+.mall-price-tile-label { color: rgba(26, 14, 46, 0.55); }
+.mall-price-tile-value { color: #1a0e2e; }
+.mall-price-tile.upfront .mall-price-tile-value {
+  background: linear-gradient(135deg, #5b2dc7, #1f8a4c);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.mall-book-btn {
+  background: linear-gradient(135deg, #5b2dc7 0%, #7c3aed 50%, #1f8a4c 100%);
+  color: #fff;
+  box-shadow: 0 14px 32px rgba(91, 45, 199, 0.36), 0 4px 12px rgba(31, 138, 76, 0.20);
+}
+.mall-book-btn:disabled { background: rgba(26, 14, 46, 0.10); color: rgba(26, 14, 46, 0.4); box-shadow: none; }
+
+.mall-hint { color: rgba(26, 14, 46, 0.45); }
+.mall-hint .dot { background: currentColor; }
+
+.mall-trending-badge { background: linear-gradient(135deg, #5b2dc7, #f472b6); }
+.mall-social-badge {
+  background: #fff;
+  color: #1f8a4c;
+  border-color: rgba(31, 138, 76, 0.30);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.mall-loading { background: linear-gradient(180deg, #faf6f2, #f3edff); color: #5b2dc7; }
+
+/* Confirm sheet */
+.mall-confirm-backdrop { background: rgba(26, 14, 46, 0.45); }
+.mall-confirm-sheet {
+  background: #fff;
+  border-top-color: rgba(91, 45, 199, 0.10);
+  color: #1a0e2e;
+  box-shadow: 0 -20px 60px rgba(91, 45, 199, 0.20);
+}
+.mall-confirm-handle { background: rgba(91, 45, 199, 0.25); }
+.mall-confirm-title { color: #5b2dc7; }
+.mall-confirm-product { color: #1a0e2e; }
+.mall-confirm-label { color: rgba(26, 14, 46, 0.55); }
+.mall-confirm-value { color: #1a0e2e; }
+.mall-confirm-value.upfront {
+  background: linear-gradient(135deg, #5b2dc7, #1f8a4c);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.mall-confirm-note { color: rgba(26, 14, 46, 0.6); }
+.mall-confirm-cancel { background: #faf6f2; color: #1a0e2e; border-color: rgba(91, 45, 199, 0.14); }
+.mall-confirm-go {
+  background: linear-gradient(135deg, #5b2dc7 0%, #7c3aed 50%, #1f8a4c 100%);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(91, 45, 199, 0.36);
+}
