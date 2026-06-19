@@ -57,10 +57,13 @@ BASE_MINING_PRC = 1000  # Base daily PRC (when network < 250)
 BASE_MINING_THRESHOLD = 250  # Network size threshold: base=1000 if < 250, base=0 if >= 250
 MIN_PRC_PER_USER = 2.5  # Minimum PRC per user at 16384 network
 NETWORK_CAP_BASE = 800  # Tier 1: Base cap (single leg)
-NETWORK_CAP_DIRECT_MAX = 4000  # Tier 2: Max cap from direct referrals
-NETWORK_CAP_MAX = 6000  # Tier 3: Max cap from L1 indirect referrals
-CAP_PER_DIRECT = 16  # +16 cap per direct referral
-CAP_PER_L1_INDIRECT = 5  # +5 cap per L1 indirect referral
+NETWORK_CAP_DIRECT_MAX = 4000  # Tier 2: Max cap from direct (L1) referrals
+NETWORK_CAP_MAX = 8000  # Tier 6: Absolute max from L1-L5 cascade
+CAP_PER_DIRECT = 16  # +16 cap per L1 (direct) referral
+CAP_PER_L1_INDIRECT = 5  # +5 cap per L2 (L1 indirect) referral
+CAP_PER_L3 = 3  # +3 cap per L3 referral
+CAP_PER_L4 = 2  # +2 cap per L4 referral
+CAP_PER_L5 = 1  # +1 cap per L5 referral
 SESSION_DURATION_HOURS = 24  # Mining session duration
 
 
@@ -172,36 +175,49 @@ def calculate_prc_per_user(network_size: int) -> float:
     return round(max(MIN_PRC_PER_USER, prc_per_user), 6)
 
 
-def calculate_network_cap(direct_referrals: int, l1_indirect_referrals: int = 0) -> dict:
+def calculate_network_cap(direct_referrals: int, l1_indirect_referrals: int = 0,
+                          l3_count: int = 0, l4_count: int = 0, l5_count: int = 0) -> dict:
     """
-    3-Tier Network Cap Formula:
+    6-Tier Network Cap Formula (L1-L5 Cascade, June 2026):
     
-    Tier 1 (Base): 800 cap (everyone)
-    Tier 2 (Direct): +16 per direct referral → max 4000
-    Tier 3 (L1 Indirect): +5 per L1 indirect → max 6000
+    Tier 1 (Base):     800 (everyone)
+    Tier 2 (L1):       +16 per direct referral
+    Tier 3 (L2):       +5  per L2 (L1 indirect)
+    Tier 4 (L3):       +3  per L3 referral
+    Tier 5 (L4):       +2  per L4 referral
+    Tier 6 (L5):       +1  per L5 referral
     
-    Formula: min(6000, 800 + 16×D + 5×L1)
+    Formula: min(8000, 800 + 16*L1 + 5*L2 + 3*L3 + 2*L4 + 1*L5)
     
     Examples:
-    - 0 directs, 0 L1 → 800
-    - 10 directs, 0 L1 → 960
-    - 200 directs, 0 L1 → 4000 (Tier 2 capped)
-    - 200 directs, 400 L1 → 6000 (Tier 3 capped)
+    - 0 referrals → 800
+    - 10 L1, 0 L2-L5 → 960
+    - 200 L1, 400 L2 → 800 + 3200 + 2000 = 6000
+    - 200 L1, 400 L2, 500 L3, 600 L4, 700 L5 → 800+3200+2000+1500+1200+700 = 8000 (capped)
     """
     tier1 = NETWORK_CAP_BASE  # 800
-    tier2_bonus = CAP_PER_DIRECT * direct_referrals  # 16 × D
-    tier3_bonus = CAP_PER_L1_INDIRECT * l1_indirect_referrals  # 5 × L1
+    tier2_bonus = CAP_PER_DIRECT * direct_referrals  # 16 x L1
+    tier3_bonus = CAP_PER_L1_INDIRECT * l1_indirect_referrals  # 5 x L2
+    tier4_bonus = CAP_PER_L3 * l3_count  # 3 x L3
+    tier5_bonus = CAP_PER_L4 * l4_count  # 2 x L4
+    tier6_bonus = CAP_PER_L5 * l5_count  # 1 x L5
     
-    raw_cap = tier1 + tier2_bonus + tier3_bonus
+    raw_cap = tier1 + tier2_bonus + tier3_bonus + tier4_bonus + tier5_bonus + tier6_bonus
     final_cap = min(NETWORK_CAP_MAX, raw_cap)
     
     return {
         "cap": final_cap,
         "tier1_base": tier1,
-        "tier2_bonus": min(tier2_bonus, NETWORK_CAP_DIRECT_MAX - NETWORK_CAP_BASE),
-        "tier3_bonus": min(tier3_bonus, NETWORK_CAP_MAX - NETWORK_CAP_DIRECT_MAX),
+        "tier2_bonus": tier2_bonus,
+        "tier3_bonus": tier3_bonus,
+        "tier4_bonus": tier4_bonus,
+        "tier5_bonus": tier5_bonus,
+        "tier6_bonus": tier6_bonus,
         "direct_referrals": direct_referrals,
-        "l1_indirect_referrals": l1_indirect_referrals
+        "l1_indirect_referrals": l1_indirect_referrals,
+        "l3_count": l3_count,
+        "l4_count": l4_count,
+        "l5_count": l5_count,
     }
 
 
@@ -406,16 +422,22 @@ async def calculate_mining_rate(user_id: str) -> dict:
     if not user:
         return {"error": "User not found"}
     
-    # Get direct referrals count + L1 indirect count in parallel
+    # Get direct referrals count + L1-L5 downline counts in parallel
     # v2.0: Use subscription_position based network for mining
-    direct_referrals, l1_indirect_referrals, network_size = await asyncio.gather(
+    # June 2026: Cap now cascades L1-L5 (Tier 4-6 added)
+    from routes.growth_economy import get_downline_level_counts
+    direct_referrals, level_counts, network_size = await asyncio.gather(
         db.users.count_documents({"referred_by": user_id}),
-        get_l1_indirect_count(user_id),
+        get_downline_level_counts(user_id, max_depth=5),
         get_subscription_network_size(user_id)
     )
+    l2_count = level_counts.get("l2", 0)
+    l3_count = level_counts.get("l3", 0)
+    l4_count = level_counts.get("l4", 0)
+    l5_count = level_counts.get("l5", 0)
     
-    # Calculate 3-tier network cap
-    cap_info = calculate_network_cap(direct_referrals, l1_indirect_referrals)
+    # Calculate 6-tier network cap (L1-L5 cascade)
+    cap_info = calculate_network_cap(direct_referrals, l2_count, l3_count, l4_count, l5_count)
     network_cap = cap_info["cap"]
     
     # Limit network size to cap
@@ -447,10 +469,16 @@ async def calculate_mining_rate(user_id: str) -> dict:
         "raw_network_size": network_size,
         "network_cap": network_cap,
         "direct_referrals": direct_referrals,
-        "l1_indirect_referrals": l1_indirect_referrals,
+        "l1_indirect_referrals": l2_count,
+        "l3_count": l3_count,
+        "l4_count": l4_count,
+        "l5_count": l5_count,
         "cap_tier1_base": cap_info["tier1_base"],
         "cap_tier2_bonus": cap_info["tier2_bonus"],
         "cap_tier3_bonus": cap_info["tier3_bonus"],
+        "cap_tier4_bonus": cap_info["tier4_bonus"],
+        "cap_tier5_bonus": cap_info["tier5_bonus"],
+        "cap_tier6_bonus": cap_info["tier6_bonus"],
         "boost_multiplier": boost_multiplier,
         "subscription_type": "standard",
         "subscription_plan": subscription_plan,
@@ -547,9 +575,15 @@ async def get_mining_status(uid: str):
             "network_cap": rate_info["network_cap"],
             "direct_referrals": rate_info["direct_referrals"],
             "l1_indirect_referrals": rate_info.get("l1_indirect_referrals", 0),
+            "l3_count": rate_info.get("l3_count", 0),
+            "l4_count": rate_info.get("l4_count", 0),
+            "l5_count": rate_info.get("l5_count", 0),
             "cap_tier1_base": rate_info.get("cap_tier1_base", 800),
             "cap_tier2_bonus": rate_info.get("cap_tier2_bonus", 0),
             "cap_tier3_bonus": rate_info.get("cap_tier3_bonus", 0),
+            "cap_tier4_bonus": rate_info.get("cap_tier4_bonus", 0),
+            "cap_tier5_bonus": rate_info.get("cap_tier5_bonus", 0),
+            "cap_tier6_bonus": rate_info.get("cap_tier6_bonus", 0),
             "prc_per_user": rate_info["prc_per_user"],
             "subscription_type": rate_info["subscription_type"]
         }
@@ -794,7 +828,7 @@ async def get_rate_breakdown(uid: str):
         return {
             "formula": "PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14)",
             "daily_formula": f"Daily PRC = {rate_info['base_rate']} + (N × PRC_per_user) [Base=1000 if network<250, else 0]",
-            "network_cap_formula": "min(6000, 800 + 16×D + 5×L1)",
+            "network_cap_formula": "min(8000, 800 + 16*L1 + 5*L2 + 3*L3 + 2*L4 + 1*L5)",
             "base_rate": rate_info["base_rate"],
             "network_size": rate_info["network_size"],
             "raw_network_size": rate_info.get("raw_network_size", rate_info["network_size"]),
@@ -802,6 +836,9 @@ async def get_rate_breakdown(uid: str):
             "cap_tier1_base": rate_info.get("cap_tier1_base", 800),
             "cap_tier2_bonus": rate_info.get("cap_tier2_bonus", 0),
             "cap_tier3_bonus": rate_info.get("cap_tier3_bonus", 0),
+            "cap_tier4_bonus": rate_info.get("cap_tier4_bonus", 0),
+            "cap_tier5_bonus": rate_info.get("cap_tier5_bonus", 0),
+            "cap_tier6_bonus": rate_info.get("cap_tier6_bonus", 0),
             "prc_per_user": rate_info["prc_per_user"],
             "network_rate": rate_info["network_rate"],
             "boost_multiplier": rate_info["boost_multiplier"],
@@ -809,7 +846,10 @@ async def get_rate_breakdown(uid: str):
             "total_daily_rate": rate_info["total_daily_rate"],
             "final_rate": rate_info["per_second_rate"],
             "direct_referrals": rate_info["direct_referrals"],
-            "l1_indirect_referrals": rate_info.get("l1_indirect_referrals", 0)
+            "l1_indirect_referrals": rate_info.get("l1_indirect_referrals", 0),
+            "l3_count": rate_info.get("l3_count", 0),
+            "l4_count": rate_info.get("l4_count", 0),
+            "l5_count": rate_info.get("l5_count", 0)
         }
     except HTTPException:
         raise

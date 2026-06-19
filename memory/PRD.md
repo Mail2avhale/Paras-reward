@@ -9,6 +9,39 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🌐 Network Cap L1-L5 Cascade (19 Feb 2026)
+
+**Owner Request**:
+> "Users ne referral kelyavar network cap increase hote barobar ahe ka? L3=3, L4=2, L5=1 each, Max cap 8000"
+
+**Formula Change**:
+- Old: `min(6000, 800 + 16*L1 + 5*L2)` (only L1 + L2 counted toward cap)
+- New: `min(8000, 800 + 16*L1 + 5*L2 + 3*L3 + 2*L4 + 1*L5)` (full L1-L5 cascade)
+
+**Tier table**:
+| Tier | Level | Per user |
+|---|---|---|
+| 1 | Base (everyone) | 800 |
+| 2 | L1 (direct)  | +16 |
+| 3 | L2 (L1 indirect) | +5 |
+| 4 | L3 | +3 |
+| 5 | L4 | +2 |
+| 6 | L5 | +1 |
+| **MAX** | — | **8000** |
+
+**Files touched**:
+- `backend/routes/growth_economy.py` — `calculate_network_cap()` rewritten as 6-tier; new `get_downline_level_counts()` BFS helper (max_depth=5, handles mixed uid/referral_code parents); `get_growth_network_stats()` now returns `cap_tier4/5/6_bonus` + `l3/l4/l5_count`.
+- `backend/routes/mining.py` — Same constants/formula; `calculate_mining_rate()` calls shared BFS helper; `/api/mining/status/{uid}` and `/api/mining/rate-breakdown/{uid}` expose new tier fields.
+- `frontend/src/pages/ReferralsEnhanced.js` — New "Network Cap Formula" card (5 color-coded L1-L5 tiles + formula line) below the L1-L5 level breakdown.
+- `frontend/public/service-worker.js` → **v50**.
+
+**Tested**:
+- Unit test for `calculate_network_cap()` (cap math): ✅
+- End-to-end with seeded chain ROOT → 2×L1 → 2×L2 → L3 → L4 → L5: cap = 848 (800+32+10+3+2+1) — ✅
+- Live `/api/mining/rate-breakdown/{uid}` returns new `cap_tier4/5/6_bonus` + `l3/l4/l5_count` fields — ✅
+
+
+
 ### 🛡️ Cleanup Re-Enabled with Hardened Protections (9 Jun 2026 — Post-Recovery)
 
 **Owner Request after successful 1,456-user recovery**:

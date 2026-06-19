@@ -49,9 +49,15 @@
 // active member, capped at 100%/level). Frontend: 5 color-coded cards
 // (amber→blue→purple→emerald→rose) with active/inactive stats + top
 // performer + total mining boost badge.
-const CACHE_NAME = 'paras-reward-v49';
-const RUNTIME_CACHE = 'paras-runtime-v49';
-const API_CACHE = 'paras-api-v49';
+// v50: June 9, 2026 — FEATURE: Network Cap L1-L5 Cascade. Cap formula
+// extended from min(6000, 800+16×D+5×L1) to min(8000, 800+16*L1+5*L2+3*L3+
+// 2*L4+1*L5). Backend: calculate_network_cap() in growth_economy.py +
+// mining.py + new BFS helper get_downline_level_counts(). API returns new
+// cap_tier4/5/6_bonus + l3/l4/l5_count fields. Frontend: ReferralsEnhanced
+// shows "Network Cap Formula" card with L1-L5 per-tier contributions.
+const CACHE_NAME = 'paras-reward-v50';
+const RUNTIME_CACHE = 'paras-runtime-v50';
+const API_CACHE = 'paras-api-v50';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

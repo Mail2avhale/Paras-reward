@@ -296,6 +296,37 @@ const ReferralsEnhanced = ({ user }) => {
               to your daily mining boost (capped at +100% per level).
               Help inactive members reactivate to maximize your earnings!
             </div>
+
+            {/* Network Cap Tier Breakdown (Jun 2026) */}
+            <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 rounded-2xl p-4" data-testid="cap-tier-breakdown">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-white font-semibold text-sm">Network Cap Formula</h4>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 font-semibold tabular-nums">
+                  MAX 8000
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-400 mb-3">
+                Every referral across L1–L5 increases your network cap. More cap = more mining speed potential.
+              </p>
+              <div className="grid grid-cols-5 gap-1.5 text-center">
+                {[
+                  { lvl: 'L1', per: '+16', color: 'text-amber-300', bg: 'bg-amber-500/10 border-amber-500/30' },
+                  { lvl: 'L2', per: '+5',  color: 'text-blue-300',  bg: 'bg-blue-500/10 border-blue-500/30' },
+                  { lvl: 'L3', per: '+3',  color: 'text-purple-300', bg: 'bg-purple-500/10 border-purple-500/30' },
+                  { lvl: 'L4', per: '+2',  color: 'text-emerald-300', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+                  { lvl: 'L5', per: '+1',  color: 'text-rose-300',   bg: 'bg-rose-500/10 border-rose-500/30' },
+                ].map((t) => (
+                  <div key={t.lvl} className={`${t.bg} border rounded-lg py-2 px-1`} data-testid={`cap-tier-${t.lvl}`}>
+                    <p className="text-[9px] text-gray-400 uppercase tracking-wide">{t.lvl}</p>
+                    <p className={`${t.color} font-bold text-sm tabular-nums`}>{t.per}</p>
+                    <p className="text-[9px] text-gray-500">/ user</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 pt-3 border-t border-white/10 text-[10px] text-gray-500 leading-relaxed">
+                Cap = 800 + 16×L1 + 5×L2 + 3×L3 + 2×L4 + 1×L5 (capped at 8000)
+              </div>
+            </div>
           </div>
         )}
 

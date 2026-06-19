@@ -55,10 +55,13 @@ def set_db(database):
 DEFAULT_BASE_MINING = 1000  # Base daily PRC (user's own mining) — matches mining.py
 DEFAULT_BASE_MINING_THRESHOLD = 250  # Network size threshold: base=1000 if < 250, base=0 if >= 250
 DEFAULT_NETWORK_CAP_BASE = 800  # Tier 1: Base cap
-DEFAULT_NETWORK_CAP_DIRECT_MAX = 4000  # Tier 2: Max from directs
-DEFAULT_NETWORK_CAP_MAX = 6000  # Tier 3: Max from L1 indirects
-DEFAULT_CAP_PER_DIRECT = 16  # +16 cap per direct referral
-DEFAULT_CAP_PER_L1_INDIRECT = 5  # +5 cap per L1 indirect referral
+DEFAULT_NETWORK_CAP_DIRECT_MAX = 4000  # Tier 2: Max from directs (L1)
+DEFAULT_NETWORK_CAP_MAX = 8000  # Tier 6: Absolute max from L1-L5 cascade
+DEFAULT_CAP_PER_DIRECT = 16  # +16 cap per L1 (direct) referral
+DEFAULT_CAP_PER_L1_INDIRECT = 5  # +5 cap per L2 (L1 indirect) referral
+DEFAULT_CAP_PER_L3 = 3  # +3 cap per L3 referral
+DEFAULT_CAP_PER_L4 = 2  # +2 cap per L4 referral
+DEFAULT_CAP_PER_L5 = 1  # +1 cap per L5 referral
 DEFAULT_MIN_PRC_PER_USER = 2.5  # Minimum PRC per user in team (at 16384 users)
 DEFAULT_MAX_PRC_PER_USER = 7.142857  # Maximum PRC per user (at 2 users = 50/7)
 
@@ -251,30 +254,43 @@ def calculate_prc_per_user(network_size: int, min_prc: float = DEFAULT_MIN_PRC_P
     return round(max(min_prc, prc_per_user), 6)
 
 
-def calculate_network_cap(direct_referrals: int, l1_indirect_referrals: int = 0) -> dict:
+def calculate_network_cap(direct_referrals: int, l1_indirect_referrals: int = 0,
+                          l3_count: int = 0, l4_count: int = 0, l5_count: int = 0) -> dict:
     """
-    3-Tier Network Cap Formula:
+    6-Tier Network Cap Formula (L1-L5 Cascade, June 2026):
     
-    Tier 1 (Base): 800 cap (everyone)
-    Tier 2 (Direct): +16 per direct referral → max 4000
-    Tier 3 (L1 Indirect): +5 per L1 indirect → max 6000
+    Tier 1 (Base):     800 (everyone)
+    Tier 2 (L1):       +16 per direct referral
+    Tier 3 (L2):       +5  per L2 (L1 indirect)
+    Tier 4 (L3):       +3  per L3 referral
+    Tier 5 (L4):       +2  per L4 referral
+    Tier 6 (L5):       +1  per L5 referral
     
-    Formula: min(6000, 800 + 16×D + 5×L1)
+    Formula: min(8000, 800 + 16*L1 + 5*L2 + 3*L3 + 2*L4 + 1*L5)
     """
     tier1 = DEFAULT_NETWORK_CAP_BASE  # 800
-    tier2_bonus = DEFAULT_CAP_PER_DIRECT * direct_referrals  # 16 × D
-    tier3_bonus = DEFAULT_CAP_PER_L1_INDIRECT * l1_indirect_referrals  # 5 × L1
+    tier2_bonus = DEFAULT_CAP_PER_DIRECT * direct_referrals  # 16 x L1
+    tier3_bonus = DEFAULT_CAP_PER_L1_INDIRECT * l1_indirect_referrals  # 5 x L2
+    tier4_bonus = DEFAULT_CAP_PER_L3 * l3_count  # 3 x L3
+    tier5_bonus = DEFAULT_CAP_PER_L4 * l4_count  # 2 x L4
+    tier6_bonus = DEFAULT_CAP_PER_L5 * l5_count  # 1 x L5
     
-    raw_cap = tier1 + tier2_bonus + tier3_bonus
+    raw_cap = tier1 + tier2_bonus + tier3_bonus + tier4_bonus + tier5_bonus + tier6_bonus
     final_cap = min(DEFAULT_NETWORK_CAP_MAX, raw_cap)
     
     return {
         "cap": final_cap,
         "tier1_base": tier1,
-        "tier2_bonus": min(tier2_bonus, DEFAULT_NETWORK_CAP_DIRECT_MAX - DEFAULT_NETWORK_CAP_BASE),
-        "tier3_bonus": min(tier3_bonus, DEFAULT_NETWORK_CAP_MAX - DEFAULT_NETWORK_CAP_DIRECT_MAX),
+        "tier2_bonus": tier2_bonus,
+        "tier3_bonus": tier3_bonus,
+        "tier4_bonus": tier4_bonus,
+        "tier5_bonus": tier5_bonus,
+        "tier6_bonus": tier6_bonus,
         "direct_referrals": direct_referrals,
-        "l1_indirect_referrals": l1_indirect_referrals
+        "l1_indirect_referrals": l1_indirect_referrals,
+        "l3_count": l3_count,
+        "l4_count": l4_count,
+        "l5_count": l5_count,
     }
 
 
@@ -283,34 +299,43 @@ async def get_l1_indirect_count(user_id: str) -> int:
     Count L1 Indirect Referrals = users referred by user's direct referrals.
     Handles mixed referred_by (uid or referral_code).
     """
+    counts = await get_downline_level_counts(user_id, max_depth=2)
+    return counts.get("l2", 0)
+
+
+async def get_downline_level_counts(user_id: str, max_depth: int = 5) -> dict:
+    """
+    BFS walk the referral tree from user_id up to max_depth (default L1-L5).
+    Returns counts at each level: {"l1": int, "l2": int, "l3": int, "l4": int, "l5": int}
+    Handles mixed referred_by (uid or referral_code).
+    """
+    counts = {f"l{i}": 0 for i in range(1, max_depth + 1)}
     try:
-        # Get user's referral_code
+        # Seed with the user's own uid + referral_code
         user_doc = await db.users.find_one({"uid": user_id}, {"_id": 0, "referral_code": 1})
-        user_ref_code = user_doc.get("referral_code", "") if user_doc else ""
+        seed_values = [user_id]
+        if user_doc and user_doc.get("referral_code"):
+            seed_values.append(user_doc["referral_code"])
         
-        # Find direct referrals (referred_by = uid OR referral_code)
-        ref_or = [{"referred_by": user_id}]
-        if user_ref_code:
-            ref_or.append({"referred_by": user_ref_code})
-        
-        direct_users = await db.users.find(
-            {"$or": ref_or},
-            {"_id": 0, "uid": 1, "referral_code": 1}
-        ).to_list(10000)
-        
-        if not direct_users:
-            return 0
-        
-        # Build search values for L1 indirect (both uids and referral_codes of direct referrals)
-        search_values = [u["uid"] for u in direct_users]
-        search_values += [u["referral_code"] for u in direct_users if u.get("referral_code")]
-        search_values = list(set(search_values))
-        
-        l1_count = await db.users.count_documents({"referred_by": {"$in": search_values}})
-        return l1_count
+        current_parents = list(set(seed_values))
+        for depth in range(1, max_depth + 1):
+            if not current_parents:
+                break
+            children = await db.users.find(
+                {"referred_by": {"$in": current_parents}},
+                {"_id": 0, "uid": 1, "referral_code": 1}
+            ).to_list(50000)
+            counts[f"l{depth}"] = len(children)
+            if not children:
+                break
+            # Next parents = uids + referral_codes of these children
+            next_parents = [c["uid"] for c in children if c.get("uid")]
+            next_parents += [c["referral_code"] for c in children if c.get("referral_code")]
+            current_parents = list(set(next_parents))
+        return counts
     except Exception as e:
-        logging.error(f"Error counting L1 indirects for {user_id}: {e}")
-        return 0
+        logging.error(f"Error walking downline for {user_id}: {e}")
+        return counts
 
 
 async def calculate_mining_speed(user_id: str) -> dict:
@@ -333,9 +358,15 @@ async def calculate_mining_speed(user_id: str) -> dict:
         "network_cap": rate_data.get("network_cap", 0),
         "direct_referrals": rate_data.get("direct_referrals", 0),
         "l1_indirect_referrals": rate_data.get("l1_indirect_referrals", 0),
+        "l3_count": rate_data.get("l3_count", 0),
+        "l4_count": rate_data.get("l4_count", 0),
+        "l5_count": rate_data.get("l5_count", 0),
         "cap_tier1_base": rate_data.get("cap_tier1_base", 0),
         "cap_tier2_bonus": rate_data.get("cap_tier2_bonus", 0),
         "cap_tier3_bonus": rate_data.get("cap_tier3_bonus", 0),
+        "cap_tier4_bonus": rate_data.get("cap_tier4_bonus", 0),
+        "cap_tier5_bonus": rate_data.get("cap_tier5_bonus", 0),
+        "cap_tier6_bonus": rate_data.get("cap_tier6_bonus", 0),
         "subscription_multiplier": rate_data.get("boost_multiplier", 1.0),
         "per_hour_prc": round(rate_data.get("total_daily_rate", 0) / 24, 2),
     }
@@ -494,7 +525,7 @@ async def get_active_network_size(user_id: str) -> int:
 
 async def get_growth_network_stats(user_id: str) -> dict:
     """
-    Get Growth Network statistics with 3-Tier Cap breakdown
+    Get Growth Network statistics with 6-Tier Cap breakdown (L1-L5 cascade).
     """
     # Get user's referral_code for mixed referred_by lookup
     user_doc = await db.users.find_one({"uid": user_id}, {"_id": 0, "referral_code": 1})
@@ -504,24 +535,32 @@ async def get_growth_network_stats(user_id: str) -> dict:
     if user_ref_code:
         ref_or.append({"referred_by": user_ref_code})
     
-    # Parallel fetch
-    direct_referrals, l1_indirect_referrals, network_size, active_network_size, tree_network_size = await asyncio.gather(
+    # Parallel fetch (L1-L5 counts come from one BFS walk)
+    direct_referrals, level_counts, network_size, active_network_size, tree_network_size = await asyncio.gather(
         db.users.count_documents({"$or": ref_or}),
-        get_l1_indirect_count(user_id),
+        get_downline_level_counts(user_id, max_depth=5),
         get_network_size(user_id),
         get_active_network_size(user_id),
         get_tree_network_size(user_id)
     )
     
-    # Calculate 3-tier network cap
-    cap_info = calculate_network_cap(direct_referrals, l1_indirect_referrals)
+    l2_count = level_counts.get("l2", 0)
+    l3_count = level_counts.get("l3", 0)
+    l4_count = level_counts.get("l4", 0)
+    l5_count = level_counts.get("l5", 0)
+    
+    # Calculate 6-tier network cap (L1-L5 cascade)
+    cap_info = calculate_network_cap(direct_referrals, l2_count, l3_count, l4_count, l5_count)
     
     # Calculate redeem limit % based on ACTIVE network (tree_position + paid + mining active)
     redeem_limit_percent = calculate_growth_level(active_network_size)
     
     return {
         "direct_referrals": direct_referrals,
-        "l1_indirect_referrals": l1_indirect_referrals,
+        "l1_indirect_referrals": l2_count,
+        "l3_count": l3_count,
+        "l4_count": l4_count,
+        "l5_count": l5_count,
         "network_size": active_network_size,
         "referral_network_size": network_size,
         "active_network_size": active_network_size,
@@ -530,6 +569,9 @@ async def get_growth_network_stats(user_id: str) -> dict:
         "cap_tier1_base": cap_info["tier1_base"],
         "cap_tier2_bonus": cap_info["tier2_bonus"],
         "cap_tier3_bonus": cap_info["tier3_bonus"],
+        "cap_tier4_bonus": cap_info["tier4_bonus"],
+        "cap_tier5_bonus": cap_info["tier5_bonus"],
+        "cap_tier6_bonus": cap_info["tier6_bonus"],
         "redeem_limit_percent": redeem_limit_percent,
         "unlock_percent": redeem_limit_percent
     }
