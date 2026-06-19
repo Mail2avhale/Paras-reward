@@ -206,23 +206,17 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         </button>
       </div>
 
-      {/* PRC balance pill + live ticker */}
+      {/* PRC balance pill (with INR equivalent) */}
       <div className="mall-stat-row">
         <div className="mall-balance-pill" data-testid="mall-balance-pill">
           <Coins className="w-3 h-3" />
-          <span>{Math.floor(user?.prc_balance || 0).toLocaleString('en-IN')} PRC</span>
+          <span className="mall-balance-prc">
+            {Math.floor(user?.prc_balance || 0).toLocaleString('en-IN')} PRC
+          </span>
+          <span className="mall-balance-inr" data-testid="mall-balance-inr">
+            ≈ ₹{Math.floor((user?.prc_balance || 0) / 10).toLocaleString('en-IN')}
+          </span>
         </div>
-        {feed.length > 0 && (
-          <div className="mall-ticker" data-testid="mall-live-ticker">
-            <div className="mall-ticker-track">
-              {[...feed, ...feed].map((f, i) => (
-                <span className="mall-ticker-item" key={`${f.feed_id || i}-${i}`}>
-                  {f.message}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       <AnimatePresence>

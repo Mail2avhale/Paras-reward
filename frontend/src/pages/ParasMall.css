@@ -563,9 +563,15 @@
 
 /* Tighten stat row */
 .mall-stat-row { top: 58px; left: 12px; right: 12px; gap: 8px; }
-.mall-balance-pill { padding: 5px 10px; font-size: 11px; max-width: 50%; }
-.mall-ticker { height: 24px; }
-.mall-ticker-track { font-size: 10.5px; gap: 24px; }
+.mall-balance-pill { padding: 5px 12px; font-size: 11px; gap: 8px; }
+.mall-balance-pill .mall-balance-prc { font-weight: 800; }
+.mall-balance-pill .mall-balance-inr {
+  font-weight: 700;
+  font-size: 10.5px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255,255,255,0.45);
+  opacity: 0.95;
+}
 
 /* Tabs + search */
 .mall-tabs { top: 92px; }
