@@ -422,15 +422,15 @@ async def calculate_mining_rate(user_id: str) -> dict:
     if not user:
         return {"error": "User not found"}
     
-    # Get direct referrals count + L1-L5 downline counts in parallel
-    # v2.0: Use subscription_position based network for mining
-    # June 2026: Cap now cascades L1-L5 (Tier 4-6 added)
+    # Get L1-L5 downline counts (single BFS) + subscription network size in parallel
+    # June 2026: Cap now cascades L1-L5 (Tier 4-6 added). BFS helper handles
+    # mixed referred_by (uid or referral_code) for ALL levels including L1.
     from routes.growth_economy import get_downline_level_counts
-    direct_referrals, level_counts, network_size = await asyncio.gather(
-        db.users.count_documents({"referred_by": user_id}),
+    level_counts, network_size = await asyncio.gather(
         get_downline_level_counts(user_id, max_depth=5),
         get_subscription_network_size(user_id)
     )
+    direct_referrals = level_counts.get("l1", 0)
     l2_count = level_counts.get("l2", 0)
     l3_count = level_counts.get("l3", 0)
     l4_count = level_counts.get("l4", 0)

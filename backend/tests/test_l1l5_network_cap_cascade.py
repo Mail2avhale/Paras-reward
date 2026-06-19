@@ -472,14 +472,43 @@ class TestMixedFlavourReferral:
         )
 
     def test_mining_rate_breakdown_mixed_flavour_bug(self, mixed_flavour_chain):
-        """KNOWN BUG: mining endpoint uses plain count_documents and only
-        sees L1s linked via uid, not via referral_code."""
+        """FIX VERIFICATION: mining endpoint now reuses level_counts['l1'] from
+        the BFS helper, which handles both uid and referral_code linkage. Both
+        L1 children should now be counted."""
         r = requests.get(f"{API}/mining/rate-breakdown/{mixed_flavour_chain}", timeout=15)
         assert r.status_code == 200, r.text
         d = r.json()
-        # Document the inconsistency: mining sees only 1 L1, growth sees 2.
-        # We assert the buggy current behavior so this test catches a future fix.
-        assert d["direct_referrals"] == 1, (
-            f"Expected 1 (uid-only count - buggy). Got {d['direct_referrals']}. "
-            "If this is now 2, the bug in mining.calculate_mining_rate has been fixed."
+        # After fix: mining must count both uid-linked AND rc-linked L1 children.
+        assert d["direct_referrals"] == 2, (
+            f"Expected 2 (mixed uid+rc count after fix). Got {d['direct_referrals']}. "
+            "mining.calculate_mining_rate must use level_counts['l1'] from BFS helper."
+        )
+        # Cap math: 800 + 16*2 = 832 (no L2-L5 in mixed-flavour chain)
+        assert d["cap_tier2_bonus"] == 32, (
+            f"cap_tier2_bonus must be 16*2=32, got {d['cap_tier2_bonus']}"
+        )
+        assert d["network_cap"] == 832, (
+            f"network_cap must be 800 + 16*2 = 832, got {d['network_cap']}"
+        )
+
+    def test_mining_and_growth_direct_referrals_consistency(self, mixed_flavour_chain):
+        """CONSISTENCY: mining endpoint direct_referrals must equal
+        growth_economy endpoint direct_referrals for the same user — both
+        should use the BFS helper that handles mixed uid/referral_code seeds."""
+        mining_resp = requests.get(
+            f"{API}/mining/rate-breakdown/{mixed_flavour_chain}", timeout=15
+        )
+        growth_resp = requests.get(
+            f"{API}/growth/network-stats/{mixed_flavour_chain}", timeout=15
+        )
+        assert mining_resp.status_code == 200, mining_resp.text
+        assert growth_resp.status_code == 200, growth_resp.text
+        m = mining_resp.json()
+        g = growth_resp.json()["data"]
+        assert m["direct_referrals"] == g["direct_referrals"], (
+            f"mining.direct_referrals={m['direct_referrals']} != "
+            f"growth.direct_referrals={g['direct_referrals']} — endpoints out of sync"
+        )
+        assert m["direct_referrals"] == 2, (
+            f"Both endpoints should report 2 L1s; got mining={m['direct_referrals']}"
         )
