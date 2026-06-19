@@ -542,11 +542,15 @@
 /* ============ FITMENT + BRAND CHIPS PATCH (Feb 2026) ============ */
 /* Constrain the top chrome strictly to viewport width to fix search-icon clipping. */
 .mall-overlay-top {
-  padding: 10px 12px 0;
-  gap: 8px;
+  padding: 10px 14px 0;
+  gap: 6px;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
 }
-.mall-back-btn, .mall-icon-btn { width: 38px; height: 38px; }
+.mall-back-btn, .mall-icon-btn { width: 36px; height: 36px; flex-shrink: 0; }
+.mall-title-block { min-width: 0; }
 .mall-title-main { font-size: 15px; }
 .mall-title-sub {
   font-size: 8.5px;
