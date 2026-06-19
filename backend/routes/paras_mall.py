@@ -170,6 +170,8 @@ async def post_community_event(user_id: str, event_type: str, product_name: str,
         display_name = user_name.split()[0][:8].upper() if user_name else "USER"
         if event_type == "booked":
             msg = f"🎉 {display_name} just booked {product_name} via Paras Mall!"
+        elif event_type == "fulfilled":
+            msg = f"💎 {display_name}'s {product_name} is fully paid! Awaiting delivery."
         elif event_type == "delivered":
             msg = f"🚚 {display_name}'s {product_name} has been delivered! Congratulations!"
         else:
