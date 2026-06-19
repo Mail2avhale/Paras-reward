@@ -405,6 +405,19 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                     {current?.name}
                   </h2>
 
+                  {Array.isArray(current?.brands) && current.brands.length > 0 && (
+                    <div className="mall-brands-row" data-testid="mall-brands-row">
+                      <span className="mall-brands-label">Top Brands</span>
+                      <div className="mall-brands-list">
+                        {current.brands.slice(0, 5).map((b) => (
+                          <span key={b} className="mall-brand-chip" data-testid={`mall-brand-${b}`}>
+                            {b}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mall-price-row">
                     <div className="mall-price-tile">
                       <div className="mall-price-tile-label">MRP</div>
@@ -478,6 +491,13 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                 <Sparkles className="w-4 h-4 text-amber-300" /> Confirm Booking
               </div>
               <p className="mall-confirm-product">{pendingBook.name}</p>
+              {Array.isArray(pendingBook.brands) && pendingBook.brands.length > 0 && (
+                <div className="mall-confirm-brands">
+                  {pendingBook.brands.slice(0, 5).map((b) => (
+                    <span key={b} className="mall-brand-chip small">{b}</span>
+                  ))}
+                </div>
+              )}
               <div className="mall-confirm-prices">
                 <div>
                   <p className="mall-confirm-label">MRP</p>

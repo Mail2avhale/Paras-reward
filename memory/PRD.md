@@ -9,6 +9,17 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🛍️ PARAS MALL — Fitment & Brands Patch (Feb 2026)
+- Brand chips (Samsung/Oppo/Vivo/Xiaomi/Realme etc.) rendered under product name + on confirm sheet (max 5)
+- Top-chrome padding tightened (12px) — search icon no longer clipped on right edge
+- `.mall-root` enforced `width: 100vw; height: 100dvh; box-sizing: border-box` + universal box-sizing reset
+- Hero made `overflow-y: auto` so Book Now button + brand list always reachable on short viewports
+- Image frame max-width reduced (320px desktop / 240px ≤760h / 200px ≤640h) for proper fit
+- Service Worker bumped: **v58 → v59**
+- Community feed posts on mall_booked / mall_fulfilled / mall_delivered — confirmed working (43 posts present)
+
+
+
 ### 🌐 Network Cap L1-L5 Cascade (19 Feb 2026)
 
 **Owner Request**:
