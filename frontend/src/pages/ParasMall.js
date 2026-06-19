@@ -282,7 +282,6 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                 onClick={() => setCategory(c.id)}
                 data-testid={`mall-chip-${c.id}`}
               >
-                <Icon className="w-3 h-3" />
                 {c.label}
               </button>
             );
@@ -293,8 +292,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
             onClick={() => setSortOpen(s => !s)}
             data-testid="mall-sort-toggle"
           >
-            <ArrowUpDown className="w-3 h-3" />
-            {SORTS.find(s => s.id === sortBy)?.label}
+            {SORTS.find(s => s.id === sortBy)?.label} ⇅
           </button>
         </div>
       )}

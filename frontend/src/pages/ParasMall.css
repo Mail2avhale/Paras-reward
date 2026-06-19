@@ -577,32 +577,37 @@
 .mall-tabs { top: 92px; }
 .mall-search-bar { top: 92px; left: 12px; right: 12px; padding: 8px 12px; }
 
-/* Chips closer to tabs — WRAP to show ALL categories without scroll */
+/* Chips closer to tabs — WRAP, ICON-LESS, ULTRA-COMPACT */
 .mall-chips {
-  top: 134px;
-  padding: 0 10px;
+  top: 130px;
+  padding: 0 8px;
   flex-wrap: wrap;
   overflow-x: visible;
   justify-content: center;
-  gap: 4px 3px;
+  gap: 3px 3px;
 }
-.mall-chip { padding: 3px 7px; font-size: 9.5px; }
-.mall-chip svg { width: 10px !important; height: 10px !important; }
+.mall-chip {
+  padding: 3px 8px;
+  font-size: 9.5px;
+  letter-spacing: 0;
+  line-height: 1.3;
+  border-radius: 999px;
+}
 
 /* Sort dropdown follows chips */
-.mall-sort-menu { top: 230px; right: 12px; }
+.mall-sort-menu { top: 240px; right: 12px; }
 
 /* Progress dots tighter */
-.mall-progress-dots { top: 226px; }
+.mall-progress-dots { top: 236px; }
 
-/* Hero pushed down enough to clear 3-row chips wrap without overlap */
-.mall-hero { top: 240px; }
+/* Hero — minimal padding so card fits comfortably */
+.mall-hero { top: 250px; }
 .mall-image-wrap { padding: 4px 14px 0; }
 .mall-image-frame {
-  max-width: 280px;
+  max-width: 270px;
   width: 100%;
   border-radius: 22px;
-  padding: 12px;
+  padding: 10px;
 }
 
 /* Card more compact */
