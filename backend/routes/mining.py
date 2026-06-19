@@ -15,11 +15,14 @@ Reward Formula (Single Source of Truth):
 - Team Bonus: N x PRC_per_user(N)
 - PRC_per_user(N) = max(2.5, 5 x (21 - log2(N)) / 14)
 
-3-Tier Network Cap:
-- Tier 1 (Base/Single Leg): 800 cap (everyone starts here)
-- Tier 2 (Direct Referrals): +16 per direct referral, up to 4000
-- Tier 3 (L1 Indirect Referrals): +5 per L1 indirect, up to 6000
-- Formula: min(6000, 800 + 16xD + 5xL1)
+6-Tier Network Cap (L1-L5 Cascade, Jun 2026):
+- Tier 1 (Base):     800 (everyone)
+- Tier 2 (L1):       +16 per direct referral
+- Tier 3 (L2):       +5  per L2 (L1 indirect)
+- Tier 4 (L3):       +3  per L3 referral
+- Tier 5 (L4):       +2  per L4 referral
+- Tier 6 (L5):       +1  per L5 referral
+- Formula: min(8000, 800 + 16*L1 + 5*L2 + 3*L3 + 2*L4 + 1*L5)
 
 Subscription:
 - Explorer: Shows rate (demo), CANNOT collect
@@ -57,7 +60,6 @@ BASE_MINING_PRC = 1000  # Base daily PRC (when network < 250)
 BASE_MINING_THRESHOLD = 250  # Network size threshold: base=1000 if < 250, base=0 if >= 250
 MIN_PRC_PER_USER = 2.5  # Minimum PRC per user at 16384 network
 NETWORK_CAP_BASE = 800  # Tier 1: Base cap (single leg)
-NETWORK_CAP_DIRECT_MAX = 4000  # Tier 2: Max cap from direct (L1) referrals
 NETWORK_CAP_MAX = 8000  # Tier 6: Absolute max from L1-L5 cascade
 CAP_PER_DIRECT = 16  # +16 cap per L1 (direct) referral
 CAP_PER_L1_INDIRECT = 5  # +5 cap per L2 (L1 indirect) referral
@@ -319,86 +321,6 @@ async def check_subscription_expiry(user: dict) -> dict:
         logging.error(f"Error checking subscription expiry: {e}")
     
     return user
-
-
-async def get_network_size(user_id: str) -> int:
-    """
-    LOCKED FORMULA v1.0 (April 9, 2026)
-    ====================================
-    Get total ACTIVE network size for a user using Single Leg Tree.
-    
-    Single Leg: All users arranged by joining date.
-    User's network = all ACTIVE users who joined AFTER them.
-    Active user = Elite subscription + active mining session (not expired).
-    
-    Uses tree_position for efficient single-query lookup.
-    DO NOT CHANGE to BFS/referral network without admin confirmation.
-    """
-    try:
-        now = datetime.now(timezone.utc)
-        now_str = now.isoformat()
-        
-        # Get user's tree position
-        user = await db.users.find_one(
-            {"uid": user_id},
-            {"_id": 0, "tree_position": 1}
-        )
-        if not user or not user.get("tree_position"):
-            return 0
-        
-        my_position = user["tree_position"]
-        
-        # Count ACTIVE users below this user in single leg tree
-        # Handle both string and datetime formats for mining_session_end
-        active_filter = {
-            "tree_position": {"$gt": my_position},
-            "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro", "Elite", "VIP", "Startup", "Growth", "Pro"]},
-            "mining_active": True,
-            "$or": [
-                {"mining_session_end": {"$gt": now_str}},
-                {"mining_session_end": {"$gt": now}},
-                {"mining_session_end": {"$exists": False}},
-                {"mining_session_end": None}
-            ]
-        }
-        
-        total_count = await db.users.count_documents(active_filter)
-        return total_count
-    except Exception as e:
-        logging.error(f"Error getting network size: {e}")
-        return 0
-
-
-async def get_l1_indirect_count(user_id: str) -> int:
-    """
-    Count L1 Indirect Referrals = users referred by user's direct referrals.
-    Handles mixed referred_by (uid or referral_code).
-    """
-    try:
-        user_doc = await db.users.find_one({"uid": user_id}, {"_id": 0, "referral_code": 1})
-        user_ref_code = user_doc.get("referral_code", "") if user_doc else ""
-        
-        ref_or = [{"referred_by": user_id}]
-        if user_ref_code:
-            ref_or.append({"referred_by": user_ref_code})
-        
-        direct_users = await db.users.find(
-            {"$or": ref_or},
-            {"_id": 0, "uid": 1, "referral_code": 1}
-        ).to_list(10000)
-        
-        if not direct_users:
-            return 0
-        
-        search_values = [u["uid"] for u in direct_users]
-        search_values += [u["referral_code"] for u in direct_users if u.get("referral_code")]
-        search_values = list(set(search_values))
-        
-        l1_count = await db.users.count_documents({"referred_by": {"$in": search_values}})
-        return l1_count
-    except Exception as e:
-        logging.error(f"Error counting L1 indirects for {user_id}: {e}")
-        return 0
 
 
 async def calculate_mining_rate(user_id: str) -> dict:

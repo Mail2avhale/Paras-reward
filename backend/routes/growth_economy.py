@@ -55,7 +55,6 @@ def set_db(database):
 DEFAULT_BASE_MINING = 1000  # Base daily PRC (user's own mining) — matches mining.py
 DEFAULT_BASE_MINING_THRESHOLD = 250  # Network size threshold: base=1000 if < 250, base=0 if >= 250
 DEFAULT_NETWORK_CAP_BASE = 800  # Tier 1: Base cap
-DEFAULT_NETWORK_CAP_DIRECT_MAX = 4000  # Tier 2: Max from directs (L1)
 DEFAULT_NETWORK_CAP_MAX = 8000  # Tier 6: Absolute max from L1-L5 cascade
 DEFAULT_CAP_PER_DIRECT = 16  # +16 cap per L1 (direct) referral
 DEFAULT_CAP_PER_L1_INDIRECT = 5  # +5 cap per L2 (L1 indirect) referral
@@ -292,15 +291,6 @@ def calculate_network_cap(direct_referrals: int, l1_indirect_referrals: int = 0,
         "l4_count": l4_count,
         "l5_count": l5_count,
     }
-
-
-async def get_l1_indirect_count(user_id: str) -> int:
-    """
-    Count L1 Indirect Referrals = users referred by user's direct referrals.
-    Handles mixed referred_by (uid or referral_code).
-    """
-    counts = await get_downline_level_counts(user_id, max_depth=2)
-    return counts.get("l2", 0)
 
 
 async def get_downline_level_counts(user_id: str, max_depth: int = 5) -> dict:

@@ -1,0 +1,32 @@
+{
+  "summary": "Regression run of L1-L5 Network Cap Cascade after mining.py fix. All 10/10 pytest tests pass in /app/backend/tests/test_l1l5_network_cap_cascade.py. The mining.calculate_mining_rate now derives direct_referrals from level_counts['l1'] (BFS helper) — unifying the source-of-truth with growth_economy. Mixed-flavour test (1 L1 via uid + 1 L1 via referral_code) now correctly returns direct_referrals=2 and network_cap=832 (800 + 16*2). Consistency test confirms mining and growth endpoints return identical L1 counts. Sanity check on live API for Suresh (Elite, no referrals) returns expected network_cap=800, formula string matches locked formula, and l3/l4/l5 all 0.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_l1l5_network_cap_cascade.py",
+    "/app/test_reports/pytest/l1l5_results_iter234.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fix verified: /app/backend/routes/mining.py line ~355 now uses direct_referrals = level_counts.get('l1', 0) from the BFS helper (get_downline_level_counts) — single source-of-truth, handles mixed uid/referral_code parents correctly, and saves one DB query. Previous duplicate count_documents call has been removed cleanly.",
+    "Cleanup verified: dead helpers (get_network_size, get_l1_indirect_count) and NETWORK_CAP_DIRECT_MAX constant are no longer referenced; 8 stale referral test files deleted. Backend module loads clean with no import errors and live API returns the canonical formula string."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (10/10 tests passing)",
+    "frontend": "N/A — backend only testing as requested"
+  },
+  "test_credentials": "Used existing user UID fcd8c6f8-9596-4f56-8556-568847d5ab86 (Suresh, Elite, no referrals) for sanity baseline. All other test users seeded directly via MongoDB with TEST-L1L5- prefix and cleaned up in fixture teardown.",
+  "seed_data_creation": "Seed chains created by the test fixtures and cleaned up automatically post-run: (1) small chain ROOT->2xL1->2xL2->1xL3->1xL4->1xL5 (mixed uid/referral_code parents) — network_cap == 848; (2) max-cap chain 500+1000+1000+1000+1000 — clamped to 8000; (3) mixed-flavour chain with 1 L1-by-uid + 1 L1-by-referral_code — verified mining direct_referrals == 2 (fix confirmed). No residue confirmed in DB (7 real users intact).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Feature is fully verified end-to-end. mining.py and growth_economy.py now use the same BFS-based L1 count via get_downline_level_counts, eliminating the inconsistency reported in iteration_233. Canonical formula min(8000, 800 + 16*L1 + 5*L2 + 3*L3 + 2*L4 + 1*L5) verified across /api/mining/rate-breakdown, /api/mining/status, /api/growth/network-stats, and /api/notifications/referrals/{uid}/level-breakdown. Re-run pytest backend/tests/test_l1l5_network_cap_cascade.py -v anytime to revalidate.",
+  "rca of the issue": "Original RCA (from iteration_233): mining.py had a separate db.users.count_documents({'referred_by': user_id}) call that only matched uid, while growth_economy used $or [uid, referral_code]. Fix applied: mining.calculate_mining_rate now reads direct_referrals from level_counts['l1'] returned by the shared BFS helper. Verified by TestMixedFlavourReferral.test_mining_rate_breakdown_mixed_flavour_bug (PASSED with direct_referrals==2) and TestMixedFlavourReferral.test_mining_and_growth_direct_referrals_consistency (PASSED — both endpoints return identical L1 counts)."
+}
