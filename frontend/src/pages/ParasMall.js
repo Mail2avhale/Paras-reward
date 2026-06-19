@@ -1,67 +1,118 @@
 /**
- * Paras Mall — Premium Reward Shopping (v2)
- * Full-screen overlay with z-index 9999 — sits ABOVE app Header + bottom nav.
+ * Paras Mall — Premium Reward Shopping (v3 — Advanced)
+ * Full-screen overlay (z-index 9999) with category chips, live ticker,
+ * balance pill, sort, and social proof.
  */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight, Sparkles, Package, Coins, Search, X, ChevronUp } from 'lucide-react';
+import {
+  ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight, Sparkles, Package,
+  Coins, Search, X, ChevronUp, Flame, ArrowUpDown, TrendingUp, Users
+} from 'lucide-react';
 import { toast } from 'sonner';
 import './ParasMall.css';
 import ParasMallBookings from './ParasMallBookings';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
-
 const fmtInr = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
 const fmtPrc = (n) => `${Number(n).toLocaleString('en-IN')} PRC`;
+
+const CATEGORIES = [
+  { id: 'all', label: 'All', icon: Sparkles },
+  { id: 'electronics', label: 'Electronics', icon: TrendingUp },
+  { id: 'appliances', label: 'Appliances', icon: Flame },
+  { id: 'kitchen', label: 'Kitchen', icon: Package },
+  { id: 'furniture', label: 'Furniture', icon: Package },
+  { id: 'vouchers', label: 'Vouchers', icon: Coins },
+  { id: 'jewelry', label: 'Jewelry', icon: Sparkles },
+  { id: 'vehicles', label: 'Vehicles', icon: Package },
+  { id: 'home', label: 'Home', icon: Package },
+];
+
+const SORTS = [
+  { id: 'default', label: 'Default' },
+  { id: 'price_asc', label: 'Price ↑' },
+  { id: 'price_desc', label: 'Price ↓' },
+];
 
 const ParasMall = ({ user, onBalanceUpdate }) => {
   const navigate = useNavigate();
   const [tab, setTab] = useState('discover');
   const [products, setProducts] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const [bookingInProgress, setBookingInProgress] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  // Swipe-to-book confirm modal
+  const [category, setCategory] = useState('all');
+  const [sortBy, setSortBy] = useState('default');
+  const [sortOpen, setSortOpen] = useState(false);
   const [pendingBook, setPendingBook] = useState(null);
   const dragStartX = useRef(null);
   const dragStartY = useRef(null);
+
+  const refreshBookings = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const r = await axios.get(`${API}/mall/my-bookings/${user.uid}`);
+      setBookings(r.data?.bookings || []);
+    } catch (e) { /* silent */ }
+  }, [user?.uid]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await axios.get(`${API}/mall/products`);
-        if (!cancelled && res.data?.products) setProducts(res.data.products);
-      } catch (e) {
-        toast.error('Failed to load Paras Mall products');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+        const [pRes, fRes] = await Promise.all([
+          axios.get(`${API}/mall/products`),
+          axios.get(`${API}/mall/leaderboard/recent-bookings?limit=10`)
+        ]);
+        if (cancelled) return;
+        if (pRes.data?.products) setProducts(pRes.data.products);
+        if (fRes.data?.feed) setFeed(fRes.data.feed);
+      } catch (e) { toast.error('Failed to load Paras Mall'); }
+      finally { if (!cancelled) setLoading(false); }
     })();
+    refreshBookings();
     return () => { cancelled = true; };
-  }, []);
+  }, [refreshBookings]);
 
-  // Filtered list driven by search query
+  const activeBookings = useMemo(
+    () => bookings.filter(b => b.status === 'mining' || b.status === 'fulfilled').length,
+    [bookings]
+  );
+
+  const bookingCountByProduct = useMemo(() => {
+    // Rough social-proof: count from feed (recent bookings only).
+    const map = {};
+    feed.forEach(f => {
+      if (f.type === 'mall_booked' && f.product_name) {
+        map[f.product_name] = (map[f.product_name] || 0) + 1;
+      }
+    });
+    return map;
+  }, [feed]);
+
   const filtered = useMemo(() => {
-    if (!searchQuery.trim()) return products;
-    const q = searchQuery.trim().toLowerCase();
-    return products.filter(
-      (p) => p.name.toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q)
-    );
-  }, [products, searchQuery]);
+    let list = products.slice();
+    if (category !== 'all') list = list.filter(p => (p.category || '').toLowerCase() === category);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(p => p.name.toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q));
+    }
+    if (sortBy === 'price_asc') list.sort((a, b) => a.mrp_inr - b.mrp_inr);
+    else if (sortBy === 'price_desc') list.sort((a, b) => b.mrp_inr - a.mrp_inr);
+    return list;
+  }, [products, category, searchQuery, sortBy]);
 
-  // Reset active index when filter changes
-  useEffect(() => { setActiveIndex(0); }, [searchQuery]);
+  useEffect(() => { setActiveIndex(0); }, [searchQuery, category, sortBy]);
 
   const swipe = useCallback((dir) => {
-    setActiveIndex((i) => {
-      if (dir === 'next') return Math.min(filtered.length - 1, i + 1);
-      return Math.max(0, i - 1);
-    });
+    setActiveIndex(i => dir === 'next' ? Math.min(filtered.length - 1, i + 1) : Math.max(0, i - 1));
   }, [filtered.length]);
 
   const onTouchStart = (e) => {
@@ -69,20 +120,15 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
     dragStartY.current = e.touches[0].clientY;
   };
   const onTouchEnd = (e) => {
-    if (dragStartX.current == null || dragStartY.current == null) return;
+    if (dragStartX.current == null) return;
     const dx = e.changedTouches[0].clientX - dragStartX.current;
     const dy = e.changedTouches[0].clientY - dragStartY.current;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
-
-    // Vertical swipe wins if it's clearly vertical and large enough.
+    const absDx = Math.abs(dx); const absDy = Math.abs(dy);
     if (absDy > 80 && absDy > absDx * 1.4) {
       if (dy < 0) {
-        // Swipe UP → confirm book intent for current product
         const cur = filtered[activeIndex];
         if (cur && !bookingInProgress) setPendingBook(cur);
       }
-      // Swipe DOWN closes the pending confirm if any
       if (dy > 0 && pendingBook) setPendingBook(null);
     } else if (absDx > 50 && absDx > absDy * 1.2) {
       swipe(dx < 0 ? 'next' : 'prev');
@@ -96,11 +142,11 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
       if (tab !== 'discover') return;
       if (e.key === 'ArrowLeft') swipe('prev');
       if (e.key === 'ArrowRight') swipe('next');
-      if (e.key === 'Escape' && searchOpen) setSearchOpen(false);
+      if (e.key === 'Escape') { setSearchOpen(false); setPendingBook(null); setSortOpen(false); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [tab, swipe, searchOpen]);
+  }, [tab, swipe]);
 
   const bookProduct = async (product) => {
     if (!user?.uid) { toast.error('Please log in to book'); return; }
@@ -112,6 +158,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         if (onBalanceUpdate && res.data.booking) {
           onBalanceUpdate((user.prc_balance || 0) - res.data.booking.upfront_prc);
         }
+        await refreshBookings();
         setTab('bookings');
       }
     } catch (e) {
@@ -135,27 +182,47 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const current = filtered[activeIndex];
   const visibleDotsStart = Math.max(0, activeIndex - 3);
   const visibleDots = filtered.slice(visibleDotsStart, activeIndex + 4);
+  const socialCount = current ? bookingCountByProduct[current.name] || 0 : 0;
 
   return (
     <div className="mall-root" data-testid="paras-mall-root">
       <div className="mall-bg" />
 
-      {/* TOP CHROME — Back / Title / Search / Tabs */}
+      {/* TOP CHROME — Back / Title block / Search */}
       <div className="mall-overlay-top">
         <button className="mall-back-btn" onClick={() => navigate('/dashboard')} data-testid="mall-back-btn">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="mall-title-block">
           <div className="mall-title-main">🛍 PARAS MALL</div>
-          <div className="mall-title-sub">Smart Reward Shopping</div>
+          <div className="mall-title-sub">India&apos;s Smart Reward Shopping Destination</div>
         </div>
         <button
           className={`mall-icon-btn ${searchOpen ? 'active' : ''}`}
-          onClick={() => setSearchOpen((s) => !s)}
+          onClick={() => setSearchOpen(s => !s)}
           data-testid="mall-search-toggle"
         >
           {searchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
         </button>
+      </div>
+
+      {/* PRC balance pill + live ticker */}
+      <div className="mall-stat-row">
+        <div className="mall-balance-pill" data-testid="mall-balance-pill">
+          <Coins className="w-3 h-3" />
+          <span>{Math.floor(user?.prc_balance || 0).toLocaleString('en-IN')} PRC</span>
+        </div>
+        {feed.length > 0 && (
+          <div className="mall-ticker" data-testid="mall-live-ticker">
+            <div className="mall-ticker-track">
+              {[...feed, ...feed].map((f, i) => (
+                <span className="mall-ticker-item" key={`${f.feed_id || i}-${i}`}>
+                  {f.message}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <AnimatePresence>
@@ -185,7 +252,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         )}
       </AnimatePresence>
 
-      {/* Tabs — hide when search is open to avoid crowding */}
+      {/* Tabs */}
       {!searchOpen && (
         <div className="mall-tabs">
           <button
@@ -201,9 +268,66 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
             data-testid="mall-tab-bookings"
           >
             My Bookings
+            {activeBookings > 0 && (
+              <span className="mall-tab-badge" data-testid="mall-bookings-badge">{activeBookings}</span>
+            )}
           </button>
         </div>
       )}
+
+      {/* Category chips */}
+      {tab === 'discover' && !searchOpen && (
+        <div className="mall-chips" data-testid="mall-category-chips">
+          {CATEGORIES.map(c => {
+            const Icon = c.icon;
+            const isActive = category === c.id;
+            return (
+              <button
+                key={c.id}
+                className={`mall-chip ${isActive ? 'active' : ''}`}
+                onClick={() => setCategory(c.id)}
+                data-testid={`mall-chip-${c.id}`}
+              >
+                <Icon className="w-3 h-3" />
+                {c.label}
+              </button>
+            );
+          })}
+          {/* Sort button at end */}
+          <button
+            className={`mall-chip sort ${sortBy !== 'default' ? 'active' : ''}`}
+            onClick={() => setSortOpen(s => !s)}
+            data-testid="mall-sort-toggle"
+          >
+            <ArrowUpDown className="w-3 h-3" />
+            {SORTS.find(s => s.id === sortBy)?.label}
+          </button>
+        </div>
+      )}
+
+      {/* Sort dropdown */}
+      <AnimatePresence>
+        {sortOpen && (
+          <motion.div
+            className="mall-sort-menu"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            data-testid="mall-sort-menu"
+          >
+            {SORTS.map(s => (
+              <button
+                key={s.id}
+                onClick={() => { setSortBy(s.id); setSortOpen(false); }}
+                className={sortBy === s.id ? 'active' : ''}
+                data-testid={`mall-sort-${s.id}`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {tab === 'discover' && filtered.length > 0 && (
         <div className="mall-progress-dots">
@@ -230,7 +354,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                 <div>
                   <Package className="w-12 h-12 mx-auto mb-3 text-purple-400 opacity-60" />
                   <p className="text-white font-semibold mb-1">No products found</p>
-                  <p className="text-xs text-zinc-400">Try a different search</p>
+                  <p className="text-xs text-zinc-400">Try a different category or search</p>
                 </div>
               </div>
             ) : (
@@ -245,35 +369,28 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                     className="mall-image-wrap"
                   >
                     <div className="mall-image-frame">
-                      {current?.image_url ? (
-                        <img
-                          src={current.image_url}
-                          alt={current.name}
-                          className="mall-image"
-                          data-testid="mall-product-image"
-                        />
-                      ) : (
-                        <div className="mall-image-fallback">
-                          <Package className="w-20 h-20 text-purple-300" />
+                      {/* Trending badge on first 5 */}
+                      {activeIndex < 5 && category === 'all' && !searchQuery && (
+                        <div className="mall-trending-badge">
+                          <Flame className="w-3 h-3" /> Trending
                         </div>
+                      )}
+                      {socialCount > 0 && (
+                        <div className="mall-social-badge" data-testid="mall-social-badge">
+                          <Users className="w-3 h-3" /> {socialCount} booked
+                        </div>
+                      )}
+                      {current?.image_url ? (
+                        <img src={current.image_url} alt={current.name} className="mall-image" data-testid="mall-product-image" />
+                      ) : (
+                        <div className="mall-image-fallback"><Package className="w-20 h-20 text-purple-300" /></div>
                       )}
                     </div>
 
-                    {/* Side arrows */}
-                    <button
-                      onClick={() => swipe('prev')}
-                      disabled={activeIndex === 0}
-                      className="mall-nav-arrow left"
-                      data-testid="mall-prev-btn"
-                    >
+                    <button onClick={() => swipe('prev')} disabled={activeIndex === 0} className="mall-nav-arrow left" data-testid="mall-prev-btn">
                       <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={() => swipe('next')}
-                      disabled={activeIndex >= filtered.length - 1}
-                      className="mall-nav-arrow right"
-                      data-testid="mall-next-btn"
-                    >
+                    <button onClick={() => swipe('next')} disabled={activeIndex >= filtered.length - 1} className="mall-nav-arrow right" data-testid="mall-next-btn">
                       <ChevronRight className="w-5 h-5" />
                     </button>
                   </motion.div>
@@ -385,11 +502,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                 </button>
                 <button
                   className="mall-confirm-go"
-                  onClick={async () => {
-                    const p = pendingBook;
-                    setPendingBook(null);
-                    await bookProduct(p);
-                  }}
+                  onClick={async () => { const p = pendingBook; setPendingBook(null); await bookProduct(p); }}
                   disabled={bookingInProgress}
                   data-testid="mall-confirm-go"
                 >

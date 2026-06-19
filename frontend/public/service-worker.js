@@ -87,9 +87,13 @@
 // booking × downline boost), independent 24h sessions per booking with
 // lapse-on-no-collect, admin product CRUD + mark-delivered flow, community
 // auto-posts on booking/fulfillment/delivery. Bottom nav now has "Mall" tab.
-const CACHE_NAME = 'paras-reward-v56';
-const RUNTIME_CACHE = 'paras-runtime-v56';
-const API_CACHE = 'paras-api-v56';
+// v57: June 9, 2026 — Paras Mall v3 advanced: full tagline restored,
+// category filter chips (9 categories), live activity ticker (community
+// feed marquee), PRC balance pill in header, My Bookings badge count,
+// sort menu (default / price ↑↓), trending + social-proof badges.
+const CACHE_NAME = 'paras-reward-v57';
+const RUNTIME_CACHE = 'paras-runtime-v57';
+const API_CACHE = 'paras-api-v57';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
