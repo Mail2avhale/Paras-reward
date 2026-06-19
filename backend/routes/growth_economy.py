@@ -826,17 +826,12 @@ async def api_get_economy_settings():
 
 @router.get("/prc-rate")
 async def api_get_prc_rate():
-    """Get current dynamic PRC rate"""
-    try:
-        rate = await get_dynamic_prc_rate()
-        return {
-            "success": True,
-            "prc_rate": rate,
-            "description": f"{rate} PRC = ₹1"
-        }
-    except Exception as e:
-        logging.error(f"PRC rate error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    """Return the fixed 10 PRC = ₹1 conversion rate (June 2026 cleanup)."""
+    return {
+        "success": True,
+        "prc_rate": 10,
+        "description": "10 PRC = ₹1"
+    }
 
 
 # ==================== ADMIN ENDPOINTS ====================
@@ -909,70 +904,7 @@ async def api_update_economy_settings(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/admin/set-prc-rate")
-async def api_set_prc_rate(rate: float, expires_hours: int = None):
-    """
-    Admin: Set manual PRC rate override
-    
-    Args:
-    - rate: PRC per INR (e.g., 2.0 means 2 PRC = ₹1)
-    - expires_hours: Optional, how long override lasts (None = permanent)
-    """
-    try:
-        if rate <= 0:
-            raise HTTPException(status_code=400, detail="Rate must be positive")
-        
-        override_data = {
-            "key": "prc_rate_manual_override",
-            "enabled": True,
-            "rate": rate,
-            "set_at": datetime.now(timezone.utc).isoformat(),
-            "set_by": "admin"
-        }
-        
-        if expires_hours:
-            expires_at = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
-            override_data["expires_at"] = expires_at.isoformat()
-        else:
-            override_data["expires_at"] = None
-        
-        await db.app_settings.update_one(
-            {"key": "prc_rate_manual_override"},
-            {"$set": override_data},
-            upsert=True
-        )
-        
-        return {
-            "success": True,
-            "message": f"PRC rate set to {rate}",
-            "expires_at": override_data.get("expires_at")
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logging.error(f"Set PRC rate error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/admin/prc-rate-override")
-async def api_remove_prc_rate_override():
-    """Admin: Remove manual PRC rate override, return to dynamic calculation"""
-    try:
-        await db.app_settings.update_one(
-            {"key": "prc_rate_manual_override"},
-            {"$set": {"enabled": False}}
-        )
-        
-        rate = await get_dynamic_prc_rate()
-        
-        return {
-            "success": True,
-            "message": "PRC rate override removed, using dynamic rate",
-            "current_rate": rate
-        }
-    except Exception as e:
-        logging.error(f"Remove PRC rate override error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# Admin PRC rate override endpoints REMOVED (June 2026 - fixed 10 PRC = ₹1)
 
 
 # ==================== FORMULA LOCK VERIFICATION ====================

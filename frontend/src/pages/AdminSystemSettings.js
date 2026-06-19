@@ -15,12 +15,7 @@ const AdminSystemSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState({});
   
-  // PRC Rate Settings
-  const [prcRateSettings, setPrcRateSettings] = useState({
-    manual_override: false,
-    manual_rate: 50,
-    current_rate: 50
-  });
+  // PRC Rate is now FIXED at 10 PRC = ₹1 (June 2026 cleanup) — no settings.
   
   // Redeem Limit Settings
   const [redeemSettings, setRedeemSettings] = useState({
@@ -45,14 +40,11 @@ const AdminSystemSettings = () => {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      // Fetch all settings
-      const [prcRes, redeemRes, miningRes] = await Promise.all([
-        axios.get(`${API}/admin/settings/prc-rate`).catch(() => ({ data: {} })),
+      const [redeemRes, miningRes] = await Promise.all([
         axios.get(`${API}/admin/settings/redeem-limit`).catch(() => ({ data: {} })),
         axios.get(`${API}/admin/settings/mining-rates`).catch(() => ({ data: {} }))
       ]);
       
-      if (prcRes.data) setPrcRateSettings(prev => ({ ...prev, ...prcRes.data }));
       if (redeemRes.data) setRedeemSettings(prev => ({ ...prev, ...redeemRes.data }));
       if (miningRes.data?.rates) setMiningSettings(miningRes.data.rates);
       
@@ -60,18 +52,6 @@ const AdminSystemSettings = () => {
       console.error('Failed to fetch settings:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const savePrcRate = async () => {
-    setSaving(prev => ({ ...prev, prc: true }));
-    try {
-      await axios.post(`${API}/admin/settings/prc-rate`, prcRateSettings);
-      toast.success('PRC Rate settings saved!');
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to save');
-    } finally {
-      setSaving(prev => ({ ...prev, prc: false }));
     }
   };
 
@@ -133,49 +113,18 @@ const AdminSystemSettings = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
-          {/* PRC Rate Settings */}
+          {/* PRC Rate Info (FIXED 10:1) */}
           <div className="bg-white rounded-xl p-5 border border-slate-200">
             <div className="flex items-center gap-2 mb-4">
               <Coins className="w-5 h-5 text-amber-400" />
-              <h2 className="text-lg font-semibold text-slate-800">PRC Rate Control</h2>
+              <h2 className="text-lg font-semibold text-slate-800">PRC Rate</h2>
             </div>
-            
-            <div className="space-y-4">
-              <div className="bg-white rounded-lg p-3">
-                <p className="text-slate-500 text-sm">Current Dynamic Rate</p>
-                <p className="text-2xl font-bold text-amber-400">{prcRateSettings.current_rate || 50} PRC/₹</p>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <label className="text-slate-600">Manual Override</label>
-                <button
-                  onClick={() => setPrcRateSettings(prev => ({ ...prev, manual_override: !prev.manual_override }))}
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    prcRateSettings.manual_override ? 'bg-purple-600' : 'bg-slate-100'
-                  }`}
-                >
-                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                    prcRateSettings.manual_override ? 'translate-x-6' : 'translate-x-0.5'
-                  }`} />
-                </button>
-              </div>
-              
-              {prcRateSettings.manual_override && (
-                <div>
-                  <label className="text-slate-500 text-sm mb-1 block">Manual Rate (PRC per ₹1)</label>
-                  <Input
-                    type="number"
-                    value={prcRateSettings.manual_rate}
-                    onChange={(e) => setPrcRateSettings(prev => ({ ...prev, manual_rate: parseFloat(e.target.value) }))}
-                    className="bg-white border-slate-200 text-slate-800"
-                  />
-                </div>
-              )}
-              
-              <Button onClick={savePrcRate} disabled={saving.prc} className="w-full bg-amber-600 hover:bg-amber-700">
-                {saving.prc ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                Save PRC Rate
-              </Button>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-amber-900 font-bold text-2xl">10 PRC = ₹1</p>
+              <p className="text-amber-700 text-xs mt-1">
+                Fixed conversion (June 2026 cleanup). Dynamic-rate engine and admin
+                overrides have been removed.
+              </p>
             </div>
           </div>
 

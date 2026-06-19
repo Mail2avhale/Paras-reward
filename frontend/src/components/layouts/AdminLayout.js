@@ -67,7 +67,6 @@ const MENU_TO_PERMISSION = {
   'accounts-payable': 'accounts-payable',
 
   // Security & Economy
-  'prc-economy': 'prc-economy',
   'economy-settings': 'economy-settings',
   'data-backup': 'data-backup',
   'health-check': 'health-check',
@@ -226,7 +225,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
       icon: Shield,
       subItems: [
         { id: 'popup-messages', label: 'Popup Messages', icon: MessageSquare, path: '/admin/popup-messages', highlight: true },
-        { id: 'prc-economy', label: 'PRC Token Economy', icon: Coins, path: '/admin/prc-economy', highlight: true },
         { id: 'economy-settings', label: 'Economy Settings', icon: Cpu, path: '/admin/economy-settings' },
         { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/admin/data-backup' },
         { id: 'health-check', label: 'Pre-Deploy Health Check', icon: Activity, path: '/admin/health-check', highlight: true },
@@ -298,7 +296,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/accounts-payable': 'accounts-payable',
 
     // Security & Economy
-    '/admin/prc-economy': 'prc-economy',
     '/admin/economy-settings': 'economy-settings',
     '/admin/data-backup': 'data-backup',
     '/admin/health-check': 'health-check',

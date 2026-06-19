@@ -7,7 +7,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import PRCRateDisplay, { PRCRateBadge } from '../components/PRCRateDisplay';
+// PRCRateDisplay removed (June 2026) - fixed 10 PRC = ₹1, no dynamic rate.
 import CategoryLimitsDisplay from '../components/CategoryLimitsDisplay';
 import { RedeemTierBadge } from '../components/RedeemTierBadge';
 import {
@@ -514,18 +514,8 @@ const BankRedeemPage = ({ user: initialUser }) => {
               )}
             </Card>
 
-            {/* Fee Breakdown via PRCRateDisplay */}
-            {parseFloat(amount) > 0 && !amountError && (
-              <PRCRateDisplay 
-                amount={parseFloat(amount) || 0}
-                processingFee={config.transaction_fee || 10}
-                adminChargePercent={config.admin_fee_percent || 20}
-                burnRate={fees?.burn_rate_percent || 0}
-                showBreakdown={true}
-                serviceType="bank"
-                rateOverride={config.prc_rate}
-              />
-            )}
+            {/* Fee Breakdown card removed (June 2026) - rate now fixed 10 PRC = ₹1.
+                The page already shows "Rate: 1 INR = 10 PRC" and total PRC needed elsewhere. */}
 
             {/* Bank Details */}
             <Card className="bg-slate-800/50 border-slate-700 p-4 space-y-4">

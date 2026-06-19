@@ -3533,17 +3533,12 @@ async def add_journal_entry(
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== PRC LEDGER SYSTEM ====================
-# PRC Rate - DYNAMIC from economy system
+# PRC Rate - FIXED 10 PRC = ₹1 (June 2026 cleanup)
 def get_prc_ledger_rate():
-    """Get PRC to INR rate for ledger calculations - DYNAMIC"""
-    try:
-        from routes.prc_economy import get_dynamic_rate_sync
-        rate = get_dynamic_rate_sync()  # e.g., 10 means 10 PRC = ₹1
-        return 1 / rate  # Convert to INR per PRC (e.g., 1 PRC = ₹0.1)
-    except (ImportError, Exception):
-        return 0.01
+    """PRC to INR rate for ledger: 1 PRC = ₹0.10"""
+    return 0.10  # 1 / 10
 
-PRC_TO_INR_RATE = 0.01  # Default, actual calculated dynamically
+PRC_TO_INR_RATE = 0.10  # 10 PRC = ₹1
 
 @router.get("/prc-ledger")
 async def get_prc_ledger(page: int = 1, limit: int = 50, filter_type: str = "all"):

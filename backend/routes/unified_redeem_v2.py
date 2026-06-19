@@ -163,35 +163,9 @@ SERVICE_TYPES = {
 # Charging Logic — single source of truth in routes/growth_economy.py
 from routes.growth_economy import DEFAULT_PROCESSING_FEE_INR as PLATFORM_FEE, DEFAULT_ADMIN_CHARGE_PERCENT as ADMIN_CHARGE_PERCENT
 
-# Dynamic PRC Rate helper function
+# PRC Rate helper - FIXED 10 PRC = ₹1 (June 2026 cleanup)
 async def get_dynamic_prc_rate():
-    """
-    Get dynamic PRC rate - reads from DB single source of truth.
-    All workers share the same DB-cached rate.
-    """
-    try:
-        # Read from DB (shared across all workers)
-        saved_rate = await db.system_settings.find_one(
-            {"type": "prc_dynamic_rate"},
-            {"_id": 0, "final_rate": 1, "updated_at": 1}
-        )
-        if saved_rate and saved_rate.get("final_rate"):
-            updated_at = saved_rate.get("updated_at")
-            if updated_at:
-                if hasattr(updated_at, 'timestamp'):
-                    age = (datetime.now(timezone.utc) - updated_at.replace(tzinfo=timezone.utc if updated_at.tzinfo is None else updated_at.tzinfo)).total_seconds()
-                else:
-                    age = (datetime.now(timezone.utc) - datetime.fromisoformat(str(updated_at).replace('Z', '+00:00'))).total_seconds()
-                if age < 300:
-                    return int(saved_rate["final_rate"])
-        
-        # Recalculate if stale
-        from routes.prc_economy import calculate_dynamic_prc_rate
-        rate_data = await calculate_dynamic_prc_rate(db)
-        if rate_data and isinstance(rate_data, dict):
-            return int(rate_data.get("final_rate", 10))
-    except Exception as e:
-        logging.error(f"Error getting PRC rate: {e}")
+    """Return the fixed 10 PRC = ₹1 conversion rate."""
     return 10
 
 # Status Flow
@@ -944,22 +918,8 @@ async def create_redeem_request(request: RedeemRequestCreate):
         raise HTTPException(status_code=500, detail="Database not available")
     
     # ═══════════════════════════════════════════════════════════════
-    # STEP 1: EMERGENCY AUTO-PAUSE CHECK
+    # STEP 1: EMERGENCY AUTO-PAUSE CHECK (REMOVED June 2026 - fixed rate)
     # ═══════════════════════════════════════════════════════════════
-    try:
-        from routes.prc_economy import is_redeem_allowed
-        allowed, reason = await is_redeem_allowed(db)
-        if not allowed:
-            raise HTTPException(
-                status_code=503,
-                detail=f"🚨 {reason}"
-            )
-    except ImportError:
-        pass
-    except HTTPException:
-        raise
-    except Exception as e:
-        logging.error(f"[REDEEM] Emergency check error: {e}")
     
     # ═══════════════════════════════════════════════════════════════
     # STEP 1.5: HOLIDAY CHECK - Block redeem on holidays

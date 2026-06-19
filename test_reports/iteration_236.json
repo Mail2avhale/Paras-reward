@@ -1,0 +1,36 @@
+{
+  "summary": "Final regression for the FIXED PRC RATE cleanup (June 2026). All 31 new cleanup tests pass plus 33 prior regression tests (10 L1-L5 cascade + 23 referral cleanup). Verified: all rate helpers return fixed 10 (and 0.10 for ledger), GET /api/growth/prc-rate returns the fixed-rate payload, surviving endpoints (mining/rate-breakdown, notifications/level-breakdown, bank-redeem/denominations) still 200, all 14 deleted dynamic-rate endpoints are gone (404/401), all 5 deleted source files no longer exist, server.py contains no live imports/handlers/scheduler hooks for the removed engine, and backend supervisor log shows clean startup with no ImportError / ModuleNotFoundError.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_fixed_prc_rate_cleanup.py",
+    "/app/test_reports/pytest/test_fixed_prc_rate_cleanup.xml",
+    "/app/test_reports/pytest/test_regression_cascade_cleanup.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "bank_redeem.py line 335 comment still says 'PRC rate: Dynamic from database' — it's actually fixed now; harmless stale comment, worth updating for next agent.",
+    "server.py has multiple historical 'admin_prc_economy removed' markers (lines 2935, 12437, 36077). Comments only — fine, but if main agent wants extra tidiness these can be collapsed.",
+    "server.py is ~36k lines; far above the 700-line threshold. Not a regression-blocker but a long-standing maintainability concern (already flagged in earlier iterations)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_fixed_prc_rate_cleanup.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (31/31 new + 33/33 regression = 64/64)",
+    "frontend": "not tested (backend-only request)"
+  },
+  "test_credentials": "Used test UID fcd8c6f8-9596-4f56-8556-568847d5ab86 as supplied; no auth required for tested endpoints.",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The dynamic PRC-rate engine has been fully removed. Source of truth is utils.helpers.PRC_INR_RATE = 10 (and 0.10 in admin_accounting.get_prc_ledger_rate). If any future change needs to touch the rate, update only utils/helpers.py. Test file /app/backend/tests/test_fixed_prc_rate_cleanup.py covers: helper return values, /api/growth/prc-rate, deleted endpoints (14), deleted files (5), surviving endpoints, and supervisor log import-error scan. Backend bank-redeem rate is surfaced via /api/bank-redeem/denominations samples (each carries prc_rate field). The originally-requested POST /api/bank-redeem/calculate-fees does NOT exist in the codebase; bank-redeem uses GET /bank-redeem/denominations for fee preview — that's what we asserted against.",
+  "rca of the issue": "N/A — regression run only. All assertions passed on first complete run after fixing two test-file issues: (a) needed load_dotenv('/app/backend/.env') so direct route imports could resolve JWT_SECRET_KEY (test infra fix), and (b) server.py 'removed' references are comment-only — refined the assertion to ignore comment lines."
+}

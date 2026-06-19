@@ -387,7 +387,7 @@ const AdminContactSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpack
 const AdminSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettings"));
 // AdminPaymentSettings, AdminSystemSettings, AdminWebSettings, AdminSocialMediaSettings, AdminRedeemSettings removed - merged into AdminSettingsHub
 const AdminSettingsHub = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettingsHub"));
-const AdminPRCRateControl = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCRateControl"));
+// AdminPRCRateControl - REMOVED (June 2026, fixed 10 PRC = ₹1)
 const AdminSecurityDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSecurityDashboard"));
 // AdminVIPPlans and AdminVIPPaymentVerification removed - replaced by AdminSubscriptionManagement (new 4-tier system)
 const AdminSubscriptionManagement = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSubscriptionManagement"));
@@ -410,8 +410,7 @@ const AdminUserLedger = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunk
 // AdminRedeemSettings, AdminRedeemDashboard - REMOVED (no pending requests, feature deprecated March 2026)
 const AdminPendingRequests = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPendingRequests"));
 const AdminAccountingDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountingDashboard"));
-// PRCEmergencyControls replaced by AdminPRCEconomyDashboard
-const AdminPRCEconomyDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCEconomyDashboard"));
+// AdminPRCEconomyDashboard - REMOVED (June 2026, fixed 10 PRC = ₹1)
 // AdminUserControls removed - functionality merged into AdminUser360
 // AdvancedUserManagement removed - functionality merged into AdminUser360
 // AdminDeliveryPartners removed - feature deprecated
@@ -622,7 +621,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/liquidity" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminLiquidity user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/video-ads" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminVideoAds user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/settings-hub" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminSettingsHub user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/prc-rate-control" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPRCRateControl user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/prc-rate-control" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/settings" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=payment" replace /> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/security" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminSecurityDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/error-monitor" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminErrorMonitor user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
@@ -649,7 +648,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/accounts-receivable" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminAccountsReceivable user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/accounts-payable" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminAccountsPayable user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/financial-ratios" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminFinancialRatios user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/prc-economy" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPRCEconomyDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/prc-economy" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/user-controls" element={<Navigate to="/admin/user360" />} />
                 <Route path="/admin/user-360" element={<Navigate to="/admin/user360" />} />
                 <Route path="/admin/user360" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminUser360New user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />

@@ -10,17 +10,17 @@ import {
  * Target keywords: "prc to inr", "paras reward coin to rupee", "prc value today".
  */
 
-// Demo PRC rate (production uses dynamic rate from backend).
+// PRC to INR rate — FIXED at ₹0.10 per PRC (10 PRC = ₹1).
 const DEMO_PRC_RATE = 0.10;
 
 const FAQS = [
   {
     q: 'What is the current PRC to INR rate?',
-    a: "PRC (Paras Reward Coin) has a dynamic INR conversion rate that updates daily based on platform economy, total mined PRC supply, and active user demand. As of this calculator, the demo rate shown is ₹0.10 per PRC, but the actual rate inside the app may differ — always check the live rate before redeeming.",
+    a: "PRC (Paras Reward Coin) has a fixed INR conversion rate: 10 PRC = ₹1 (i.e., ₹0.10 per PRC). This rate is constant across the platform — no daily changes, no dynamic adjustments. What you see is what you get when you redeem.",
   },
   {
     q: 'Why does the PRC rate change?',
-    a: "Paras Reward uses a sustainability-anchored rate model. When more PRC is mined and circulated, the rate slowly adjusts to prevent inflation. When more users redeem PRC to INR, the rate stabilizes. This keeps the economy healthy and rewards long-term holders.",
+    a: "Paras Reward uses a fixed PRC-to-INR rate of 10 PRC = ₹1. No daily adjustments, no surprise dilution, no inflation — the rate stays constant so users always know exactly what their PRC is worth.",
   },
   {
     q: 'How do I convert my PRC into actual cash (INR)?',
@@ -116,7 +116,7 @@ const PrcToInrConverter = () => {
               ₹{result.inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
             </p>
             <p className="text-center text-sm text-slate-600 mt-2">
-              {prcAmount.toLocaleString('en-IN')} PRC × ₹{DEMO_PRC_RATE} (demo rate)
+              {prcAmount.toLocaleString('en-IN')} PRC × ₹{DEMO_PRC_RATE} (fixed rate)
             </p>
           </div>
 

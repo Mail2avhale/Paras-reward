@@ -242,14 +242,13 @@ const DashboardModern = ({ user, onLogout }) => {
         // console.log('Combined API failed, trying fallback');
       }
       
-      // Fallback to individual API calls
-      const [userResult, activityResult, rateResult] = await Promise.allSettled([
+      // Fallback to individual API calls (PRC rate is now fixed 10:1)
+      const [userResult, activityResult] = await Promise.allSettled([
         axios.get(`${API}/user/${user.uid}`),
-        axios.get(`${API}/user/${user.uid}/recent-activity?limit=10`),
-        axios.get(`${API}/prc-economy/current-rate`)
+        axios.get(`${API}/user/${user.uid}/recent-activity?limit=10`)
       ]);
       
-      const prcRate = rateResult.status === 'fulfilled' ? (rateResult.value.data?.rate?.final_rate || null) : null;
+      const prcRate = 10;  // Fixed: 10 PRC = ₹1
       
       // Process user data
       if (userResult.status === 'fulfilled') {

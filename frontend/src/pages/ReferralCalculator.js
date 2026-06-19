@@ -52,7 +52,7 @@ function calcDailyPrc(direct, l1) {
 const FAQS = [
   {
     q: 'How does the Paras Reward referral earnings calculator work?',
-    a: "It estimates your daily PRC mining rate based on your direct referrals and their referrals (L1 indirect). The formula combines a base rate of 1,000 PRC/day for small networks with a per-user bonus that scales with your team size. The PRC currency converts to INR at the current dynamic rate.",
+    a: "It estimates your daily PRC mining rate based on your direct referrals and their referrals (L1 indirect). The formula combines a base rate of 1,000 PRC/day for small networks with a per-user bonus that scales with your team size. PRC converts to INR at the fixed rate of 10 PRC = ₹1.",
   },
   {
     q: 'What is a "direct referral" vs "L1 indirect" on Paras Reward?',
@@ -64,7 +64,7 @@ const FAQS = [
   },
   {
     q: 'Is the calculator showing GUARANTEED earnings?',
-    a: "No. The calculator is an estimation tool only. Actual earnings vary based on (1) the dynamic PRC→INR conversion rate, (2) whether your referrals stay active, (3) your subscription tier, and (4) Paras Reward's network economy at any given time. It's a planning aid, not a contract.",
+    a: "No. The calculator is an estimation tool only. Actual earnings vary based on (1) whether your referrals stay active, (2) your subscription tier, and (3) Paras Reward's network economy at any given time. PRC→INR is fixed at 10 PRC = ₹1. It's a planning aid, not a contract.",
   },
   {
     q: 'Do I need to become an Elite subscriber to earn referral rewards?',

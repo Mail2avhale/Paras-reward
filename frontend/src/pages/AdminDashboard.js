@@ -608,9 +608,7 @@ const AdminDashboard = ({ user }) => {
               </div>
               PRC Economy
             </h3>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/prc-economy')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-100 rounded-xl">
-              Control <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
+            <span className="text-xs text-slate-500">10 PRC = ₹1</span>
           </div>
           
           <div className="grid grid-cols-4 gap-3">
@@ -636,7 +634,6 @@ const AdminDashboard = ({ user }) => {
           <QuickActionCard icon={BadgeCheck} label="KYC" badge={stats?.kyc?.pending} color="cyan" onClick={() => navigate('/admin/kyc')} />
           <QuickActionCard icon={Wallet} label="Wallets" color="teal" onClick={() => navigate('/admin/company-wallets')} />
           <QuickActionCard icon={Shield} label="Security" color="red" onClick={() => navigate('/admin/security')} />
-          <QuickActionCard icon={AlertTriangle} label="PRC Ctrl" color="orange" onClick={() => navigate('/admin/prc-economy')} />
           <QuickActionCard icon={Calendar} label="Holidays" color="pink" onClick={() => navigate('/admin/holidays')} />
           <QuickActionCard icon={Settings} label="Settings" color="gray" onClick={() => navigate('/admin/settings/system')} />
         </div>

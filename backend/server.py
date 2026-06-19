@@ -101,7 +101,6 @@ from routes.prc_audit import router as prc_audit_router, set_db as set_prc_audit
 from routes.holidays import router as holidays_router, set_db as set_holidays_db, seed_holidays
 from routes.notifications_routes import router as notifications_router, set_db as set_notifications_db, set_helpers as set_notifications_helpers
 from routes.manager_routes import router as manager_router, set_db as set_manager_db
-from routes.admin_prc_economy import router as admin_prc_economy_router, set_db as set_admin_prc_economy_db
 from routes.admin_prc_balance import router as admin_prc_balance_router, set_db as set_admin_prc_balance_db
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers, assign_subscription_position
 # DMT V1, V3 and Fund Transfer routes REMOVED - Eko API not working
@@ -2931,32 +2930,10 @@ _last_successful_ping = None
 _consecutive_failures = 0
 
 
-# ==================== EMERGENCY AUTO-PAUSE JOB ====================
-
-async def check_emergency_auto_pause_job():
-    """
-    Scheduled job to check for emergency conditions and auto-pause redeems.
-    Runs every 5 minutes.
-    
-    Triggers auto-pause if:
-    - Today's redeem requests > 200% of 30-day average
-    
-    Auto-resumes after 24 hours.
-    """
-    try:
-        from routes.prc_economy import check_and_auto_pause
-        
-        result = await check_and_auto_pause(db)
-        
-        if result.get("action") == "pause_activated":
-            logging.warning(f"[EMERGENCY JOB] 🚨 {result.get('message')}")
-        elif result.get("action") == "already_paused":
-            logging.info("[EMERGENCY JOB] ⏸️ Redeem pause still active")
-        # Don't log "no_action" to avoid spam
-        
-    except Exception as e:
-        logging.error(f"[EMERGENCY JOB] Error: {e}")
-
+# ==================== EMERGENCY AUTO-PAUSE JOB (REMOVED) ====================
+# The dynamic-rate emergency pause feature was removed in the June 2026
+# fixed-rate cleanup (10 PRC = ₹1). The check_emergency_auto_pause_job and
+# associated scheduler invocation are no longer needed.
 
 
 async def auto_expire_subscriptions():
@@ -12457,27 +12434,8 @@ async def get_current_rate_info():
         return {"success": False, "error": str(e)}
 
 
-@api_router.get("/prc-economy/current-rate")
-async def get_current_prc_economy_rate():
-    """
-    Get current PRC rate from Token Economy system.
-    Shows all 5 factors and the calculated final rate.
-    """
-    try:
-        from routes.prc_economy import calculate_dynamic_prc_rate
-        rate_data = await calculate_dynamic_prc_rate(db)
-        return {
-            "success": True,
-            "rate": rate_data,
-            "description": "Rate auto-calculated from Token Economy (5 factors)"
-        }
-    except Exception as e:
-        logging.error(f"Error getting economy rate: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "fallback_rate": 10
-        }
+# /prc-economy/current-rate endpoint REMOVED (June 2026 fixed-rate cleanup).
+# Rate is now a constant 10 PRC = ₹1 — clients should hardcode this.
 
 
 @api_router.get("/admin/payment-gateways-status")
@@ -36575,9 +36533,7 @@ api_router.include_router(manager_router)
 # set_ai_db(db)  # REMOVED - chatbot deprecated
 # api_router.include_router(ai_router)  # REMOVED - chatbot deprecated
 
-# Admin PRC Economy Router (Extracted from server.py monolith)
-set_admin_prc_economy_db(db)
-api_router.include_router(admin_prc_economy_router)
+# Admin PRC Economy Router REMOVED (June 2026 - fixed rate cleanup)
 
 # Admin PRC Balance Router (Extracted from server.py monolith)
 set_admin_prc_balance_db(db)
@@ -37525,16 +37481,7 @@ async def startup_db():
             replace_existing=True
         )
         
-        # Emergency Auto-Pause Check every 5 minutes
-        # Monitors redeem activity and auto-pauses if spike > 200%
-        scheduler.add_job(
-            check_emergency_auto_pause_job,
-            'interval',
-            minutes=5,
-            id='emergency_auto_pause_check',
-            name='Emergency redeem auto-pause monitor',
-            replace_existing=True
-        )
+        # Emergency Auto-Pause Check (REMOVED June 2026 - fixed rate cleanup)
         
         # Pool Wallet Daily Distribution at midnight
         async def pool_wallet_daily_distribute():

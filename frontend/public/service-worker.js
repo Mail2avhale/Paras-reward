@@ -65,9 +65,17 @@
 // (get_multi_level_referrals, get_base_rate, count_active_referrals_by_level)
 // and orphan frontend page NetworkTreeAdvanced.js. Single source of truth for
 // referrals: /referrals/{uid}/direct-list + /referrals/{uid}/level-breakdown.
-const CACHE_NAME = 'paras-reward-v51';
-const RUNTIME_CACHE = 'paras-runtime-v51';
-const API_CACHE = 'paras-api-v51';
+// v52: June 9, 2026 — PRC RATE CLEANUP. Dynamic-rate engine removed. Fixed
+// 10 PRC = ₹1 across the entire app. Deleted backend: prc_economy.py,
+// admin_prc_economy.py, all /prc-rate /admin/set-prc-rate /prc-economy/*
+// endpoints, scheduler emergency-auto-pause job, set_referral_helpers no-op,
+// register_rate_calculator. Deleted frontend: AdminPRCRateControl,
+// AdminPRCEconomyDashboard, PRCRateDisplay component. utils/helpers.py
+// get_prc_rate() now returns fixed 10. DB collections cleaned:
+// app_settings.prc_rate_manual_override, system_settings.prc_dynamic_rate.
+const CACHE_NAME = 'paras-reward-v52';
+const RUNTIME_CACHE = 'paras-runtime-v52';
+const API_CACHE = 'paras-api-v52';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

@@ -31,43 +31,7 @@ def set_helpers(helpers: dict):
 
 # ========== SPECIFIC SETTINGS ROUTES (Must be before generic /{key} route) ==========
 
-# ========== PRC RATE SETTINGS ==========
-
-@router.get("/settings/prc-rate")
-async def get_prc_rate_settings(admin: dict = Depends(get_current_admin)):
-    """Get PRC rate settings including manual override - ADMIN ONLY"""
-    override = await db.app_settings.find_one({"key": "prc_rate_manual_override"}, {"_id": 0})
-    current_rate = await db.app_settings.find_one({"key": "current_prc_rate"}, {"_id": 0})
-    
-    return {
-        "manual_override": override.get("enabled", False) if override else False,
-        "manual_rate": override.get("rate", 50) if override else 50,
-        "current_rate": current_rate.get("rate", 50) if current_rate else 50
-    }
-
-
-@router.post("/settings/prc-rate")
-async def update_prc_rate_settings(request: Request, admin: dict = Depends(get_current_admin)):
-    """Update PRC rate settings - ADMIN ONLY"""
-    data = await request.json()
-    now = datetime.now(timezone.utc).isoformat()
-    
-    await db.app_settings.update_one(
-        {"key": "prc_rate_manual_override"},
-        {
-            "$set": {
-                "key": "prc_rate_manual_override",
-                "enabled": data.get("manual_override", False),
-                "rate": data.get("manual_rate", 50),
-                "updated_at": now
-            }
-        },
-        upsert=True
-    )
-    
-    logging.info(f"[ADMIN] PRC Rate updated: override={data.get('manual_override')}, rate={data.get('manual_rate')}")
-    
-    return {"success": True, "message": "PRC rate settings updated"}
+# PRC Rate settings endpoints REMOVED (June 2026) — fixed 10 PRC = ₹1.
 
 
 # ========== REDEEM LIMIT SETTINGS ==========
