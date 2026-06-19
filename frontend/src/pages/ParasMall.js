@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight, Sparkles, Package, Coins, Search, X } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight, Sparkles, Package, Coins, Search, X, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import './ParasMall.css';
 import ParasMallBookings from './ParasMallBookings';
@@ -25,7 +25,10 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const [bookingInProgress, setBookingInProgress] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // Swipe-to-book confirm modal
+  const [pendingBook, setPendingBook] = useState(null);
   const dragStartX = useRef(null);
+  const dragStartY = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,12 +64,31 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
     });
   }, [filtered.length]);
 
-  const onTouchStart = (e) => { dragStartX.current = e.touches[0].clientX; };
+  const onTouchStart = (e) => {
+    dragStartX.current = e.touches[0].clientX;
+    dragStartY.current = e.touches[0].clientY;
+  };
   const onTouchEnd = (e) => {
-    if (dragStartX.current == null) return;
+    if (dragStartX.current == null || dragStartY.current == null) return;
     const dx = e.changedTouches[0].clientX - dragStartX.current;
-    if (Math.abs(dx) > 50) swipe(dx < 0 ? 'next' : 'prev');
+    const dy = e.changedTouches[0].clientY - dragStartY.current;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    // Vertical swipe wins if it's clearly vertical and large enough.
+    if (absDy > 80 && absDy > absDx * 1.4) {
+      if (dy < 0) {
+        // Swipe UP → confirm book intent for current product
+        const cur = filtered[activeIndex];
+        if (cur && !bookingInProgress) setPendingBook(cur);
+      }
+      // Swipe DOWN closes the pending confirm if any
+      if (dy > 0 && pendingBook) setPendingBook(null);
+    } else if (absDx > 50 && absDx > absDy * 1.2) {
+      swipe(dx < 0 ? 'next' : 'prev');
+    }
     dragStartX.current = null;
+    dragStartY.current = null;
   };
 
   useEffect(() => {
@@ -290,7 +312,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                   <div className="mall-hint">
                     <span>← Swipe</span>
                     <span className="dot" />
-                    <Coins className="w-3 h-3" /> 4 PRC/day base
+                    <ChevronUp className="w-3 h-3 text-amber-300" /> Swipe Up to Book
                     <span className="dot" />
                     <span>Swipe →</span>
                   </div>
@@ -310,6 +332,71 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
             style={{ display: 'block' }}
           >
             <ParasMallBookings user={user} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Swipe-Up Confirm Sheet */}
+      <AnimatePresence>
+        {pendingBook && (
+          <motion.div
+            className="mall-confirm-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPendingBook(null)}
+            data-testid="mall-confirm-backdrop"
+          >
+            <motion.div
+              className="mall-confirm-sheet"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 280 }}
+              onClick={(e) => e.stopPropagation()}
+              data-testid="mall-confirm-sheet"
+            >
+              <div className="mall-confirm-handle" />
+              <div className="mall-confirm-title">
+                <Sparkles className="w-4 h-4 text-amber-300" /> Confirm Booking
+              </div>
+              <p className="mall-confirm-product">{pendingBook.name}</p>
+              <div className="mall-confirm-prices">
+                <div>
+                  <p className="mall-confirm-label">MRP</p>
+                  <p className="mall-confirm-value">{fmtInr(pendingBook.mrp_inr)}</p>
+                </div>
+                <div>
+                  <p className="mall-confirm-label">Upfront (debited now)</p>
+                  <p className="mall-confirm-value upfront">{fmtPrc(pendingBook.upfront_prc)}</p>
+                </div>
+              </div>
+              <p className="mall-confirm-note">
+                Daily mining at 4 PRC + downline boost will gradually fill the rest. Delivery at 100%.
+              </p>
+              <div className="mall-confirm-actions">
+                <button
+                  className="mall-confirm-cancel"
+                  onClick={() => setPendingBook(null)}
+                  disabled={bookingInProgress}
+                  data-testid="mall-confirm-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="mall-confirm-go"
+                  onClick={async () => {
+                    const p = pendingBook;
+                    setPendingBook(null);
+                    await bookProduct(p);
+                  }}
+                  disabled={bookingInProgress}
+                  data-testid="mall-confirm-go"
+                >
+                  <ShoppingBag className="w-4 h-4" /> {bookingInProgress ? 'Booking…' : 'Confirm Book'}
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
