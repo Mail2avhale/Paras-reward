@@ -51,6 +51,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const [category, setCategory] = useState('all');
   const [sortBy, setSortBy] = useState('default');
   const [sortOpen, setSortOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [pendingBook, setPendingBook] = useState(null);
   const dragStartX = useRef(null);
   const dragStartY = useRef(null);
@@ -142,7 +143,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
       if (tab !== 'discover') return;
       if (e.key === 'ArrowLeft') swipe('prev');
       if (e.key === 'ArrowRight') swipe('next');
-      if (e.key === 'Escape') { setSearchOpen(false); setPendingBook(null); setSortOpen(false); }
+      if (e.key === 'Escape') { setSearchOpen(false); setPendingBook(null); setSortOpen(false); setFilterOpen(false); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -269,54 +270,86 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         </div>
       )}
 
-      {/* Category chips */}
+      {/* Filter bar — single "Filter" button + active category label */}
       {tab === 'discover' && !searchOpen && (
-        <div className="mall-chips" data-testid="mall-category-chips">
-          {CATEGORIES.map(c => {
-            const Icon = c.icon;
-            const isActive = category === c.id;
-            return (
-              <button
-                key={c.id}
-                className={`mall-chip ${isActive ? 'active' : ''}`}
-                onClick={() => setCategory(c.id)}
-                data-testid={`mall-chip-${c.id}`}
-              >
-                {c.label}
-              </button>
-            );
-          })}
-          {/* Sort button at end */}
+        <div className="mall-filter-bar" data-testid="mall-filter-bar">
           <button
-            className={`mall-chip sort ${sortBy !== 'default' ? 'active' : ''}`}
-            onClick={() => setSortOpen(s => !s)}
-            data-testid="mall-sort-toggle"
+            className={`mall-filter-btn ${category !== 'all' || sortBy !== 'default' ? 'active' : ''}`}
+            onClick={() => setFilterOpen(true)}
+            data-testid="mall-filter-open"
           >
-            {SORTS.find(s => s.id === sortBy)?.label} ⇅
+            <span className="mall-filter-label">
+              {CATEGORIES.find(c => c.id === category)?.label || 'All'}
+              {sortBy !== 'default' ? ` · ${SORTS.find(s => s.id === sortBy)?.label}` : ''}
+            </span>
+            <span className="mall-filter-chev">▾</span>
           </button>
+          <span className="mall-filter-count" data-testid="mall-filter-count">
+            {filtered.length} {filtered.length === 1 ? 'product' : 'products'}
+          </span>
         </div>
       )}
 
-      {/* Sort dropdown */}
+      {/* Filter Bottom Sheet — Category + Sort grid */}
       <AnimatePresence>
-        {sortOpen && (
+        {filterOpen && (
           <motion.div
-            className="mall-sort-menu"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            data-testid="mall-sort-menu"
+            className="mall-confirm-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setFilterOpen(false)}
+            data-testid="mall-filter-backdrop"
           >
-            {SORTS.map(s => (
+            <motion.div
+              className="mall-filter-sheet"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 280 }}
+              onClick={(e) => e.stopPropagation()}
+              data-testid="mall-filter-sheet"
+            >
+              <div className="mall-confirm-handle" />
+              <div className="mall-filter-section-title">Categories</div>
+              <div className="mall-filter-grid" data-testid="mall-filter-grid">
+                {CATEGORIES.map(c => {
+                  const Icon = c.icon;
+                  const isActive = category === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      className={`mall-filter-tile ${isActive ? 'active' : ''}`}
+                      onClick={() => { setCategory(c.id); setFilterOpen(false); }}
+                      data-testid={`mall-filter-tile-${c.id}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{c.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mall-filter-section-title">Sort By</div>
+              <div className="mall-filter-sort-row">
+                {SORTS.map(s => (
+                  <button
+                    key={s.id}
+                    className={`mall-filter-sort ${sortBy === s.id ? 'active' : ''}`}
+                    onClick={() => { setSortBy(s.id); }}
+                    data-testid={`mall-filter-sort-${s.id}`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
               <button
-                key={s.id}
-                onClick={() => { setSortBy(s.id); setSortOpen(false); }}
-                className={sortBy === s.id ? 'active' : ''}
-                data-testid={`mall-sort-${s.id}`}
+                className="mall-filter-apply"
+                onClick={() => setFilterOpen(false)}
+                data-testid="mall-filter-apply"
               >
-                {s.label}
+                Show {filtered.length} {filtered.length === 1 ? 'Product' : 'Products'}
               </button>
-            ))}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
