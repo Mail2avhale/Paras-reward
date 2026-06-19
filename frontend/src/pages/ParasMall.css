@@ -584,25 +584,25 @@
   flex-wrap: wrap;
   overflow-x: visible;
   justify-content: center;
-  gap: 5px 4px;
+  gap: 4px 3px;
 }
-.mall-chip { padding: 4px 8px; font-size: 10px; }
-.mall-chip svg { width: 11px !important; height: 11px !important; }
+.mall-chip { padding: 3px 7px; font-size: 9.5px; }
+.mall-chip svg { width: 10px !important; height: 10px !important; }
 
 /* Sort dropdown follows chips */
-.mall-sort-menu { top: 200px; right: 12px; }
+.mall-sort-menu { top: 230px; right: 12px; }
 
 /* Progress dots tighter */
-.mall-progress-dots { top: 200px; }
+.mall-progress-dots { top: 226px; }
 
-/* Hero starts higher so card fits without scrolling */
-.mall-hero { top: 216px; }
-.mall-image-wrap { padding: 8px 14px 0; }
+/* Hero pushed down enough to clear 3-row chips wrap without overlap */
+.mall-hero { top: 240px; }
+.mall-image-wrap { padding: 4px 14px 0; }
 .mall-image-frame {
-  max-width: 320px;
+  max-width: 280px;
   width: 100%;
   border-radius: 22px;
-  padding: 14px;
+  padding: 12px;
 }
 
 /* Card more compact */
