@@ -93,11 +93,13 @@ async def _find_deletion_candidates(days_no_sub: int = 7, days_inactive: int = 6
                     ]},
                 ]},
             ]},
-            # PRC balance significantly > 0 → protected (these were earning users)
+            # PRC balance > ₹5,000 → protected (these were earning users)
+            # Owner request 9 Jun 2026: raised from 100 → 5000 for safer
+            # second-pass cleanup after the recovery incident.
             {"$or": [
                 {"prc_balance": {"$exists": False}},
                 {"prc_balance": None},
-                {"prc_balance": {"$lt": 100}},
+                {"prc_balance": {"$lt": 5000}},
             ]},
             # uid must be a real user (not the system / synthetic placeholder)
             {"uid": {"$nin": ["system", None, ""]}},
@@ -401,16 +403,16 @@ async def dry_run_inactive_cleanup(
 # ============================================================================
 @router.post("/execute")
 async def execute_inactive_cleanup(request: Request):
-    """⚠️ EMERGENCY KILL-SWITCH ACTIVE (Jun 9, 2026) — Active users were
-    incorrectly deleted due to Rule 2 `$or` logic + missing active-subscription
-    guard. Endpoint disabled until rules are corrected AND restore is complete.
+    """Production-safe inactive cleanup (Jun 9, 2026 v2 — re-enabled after
+    incident fix). Hardened protection guarantees:
+      • KYC verified (case-insensitive) — always protected
+      • Active mining (is_mining=true) — always protected
+      • Active Elite subscription (not expired) — always protected
+      • prc_balance >= 5000 — always protected
+      • role=admin/staff/manager + is_protected=true — always protected
+      • Rule 2: BOTH last_login_at AND last_activity_at must be stale (AND)
     """
-    raise HTTPException(
-        status_code=423,
-        detail="🚨 Inactive cleanup is LOCKED due to a production incident. "
-               "Use /admin/inactive-cleanup/restore-deleted first to recover "
-               "active users that were wrongly deleted. Contact engineering before unlocking."
-    )
+    return await execute_inactive_cleanup_real(request)
 
 
 async def execute_inactive_cleanup_real(request: Request):

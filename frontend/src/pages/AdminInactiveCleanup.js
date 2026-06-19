@@ -458,12 +458,13 @@ const AdminInactiveCleanup = ({ user }) => {
           )}
         </Card>
 
-        {/* 🚨 Execute lock notice */}
-        <Card className="p-3 border-rose-300 bg-rose-50">
-          <p className="text-[11px] text-rose-800">
-            <strong>🚨 Execute is LOCKED:</strong> The previous Rule 2 logic
-            wrongly deleted active users. Use Restore above first. Cleanup
-            execute remains disabled until rules are corrected.
+        {/* ✅ Execute re-enabled with hardened protections (Jun 9, 2026 v2) */}
+        <Card className="p-3 border-emerald-300 bg-emerald-50">
+          <p className="text-[11px] text-emerald-800">
+            <strong>✅ Execute re-enabled with hardened protections:</strong> KYC verified,
+            active mining, active Elite subscription, and <strong>prc_balance ≥ ₹5,000</strong> users
+            are ALWAYS protected. Rule 2 now requires BOTH last_login_at AND last_activity_at to be stale.
+            Custom Purge remains locked.
           </p>
         </Card>
 

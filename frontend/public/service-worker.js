@@ -33,9 +33,13 @@
 // THEN filter out already-restored UIDs. Also expose `fetched_snapshots`,
 // `already_restored_in_batch`, `candidates_available` in response so admin
 // can diagnose. Per-chunk toast now shows `(N candidates)` count.
-const CACHE_NAME = 'paras-reward-v46';
-const RUNTIME_CACHE = 'paras-runtime-v46';
-const API_CACHE = 'paras-api-v46';
+// v47: June 9, 2026 — Execute re-enabled with hardened protections after
+// successful 1,456-user recovery. New PRC balance guard raised 100 → 5000
+// (was protecting ₹100+ earners, now protects ₹5,000+). Rule 2 stays AND
+// (not OR). KYC/sub/mining guards unchanged. Custom Purge still locked.
+const CACHE_NAME = 'paras-reward-v47';
+const RUNTIME_CACHE = 'paras-runtime-v47';
+const API_CACHE = 'paras-api-v47';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

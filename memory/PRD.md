@@ -9,6 +9,40 @@ Build and maintain a comprehensive digital reward platform (PRC ecosystem) with 
 - **3rd Party**: Razorpay (Payments), Eko (BBPS/Recharge)
 
 
+### 🛡️ Cleanup Re-Enabled with Hardened Protections (9 Jun 2026 — Post-Recovery)
+
+**Owner Request after successful 1,456-user recovery**:
+> "आता next carefully delete करायचे आहे त्यामुळे सर्व conditions carefully follow करायच्या"
+> Choices: 1b (Rule 2 only) · PRC protection **₹5,000** · No extra sample preview · Auto-loop · Direct full delete
+
+**Changes**:
+- Raised PRC balance protection threshold: **₹100 → ₹5,000** in `base_protection`. Users with `prc_balance ≥ ₹5,000` are now always protected (these are real earning users worth retaining).
+- Unlocked `/api/admin/inactive-cleanup/execute` (HTTP 423 removed) — calls `execute_inactive_cleanup_real()` directly.
+- Custom Purge (`/custom-execute`) remains LOCKED — only Rule 1 + Rule 2 (preset logic) are usable until owner explicitly unlocks Custom Purge.
+- Frontend banner: red "Execute is LOCKED" replaced with green "✅ Execute re-enabled with hardened protections".
+- SW → **v47** (cache bust).
+
+**Final 8-scenario regression test passed**:
+| Scenario | Expected | Result |
+|---|---|---|
+| Pure inactive Explorer (balance=10, no KYC) | DELETE | ✅ Deleted |
+| Balance = ₹5,000 | KEEP | ✅ Protected |
+| Active Elite subscription | KEEP | ✅ Protected |
+| Active mining | KEEP | ✅ Protected |
+| KYC "Verified" (case-insensitive) | KEEP | ✅ Protected |
+| Recent login (5 days) + stale activity | KEEP | ✅ Protected |
+| Stale login + recent activity (5 days) | KEEP | ✅ Protected |
+| is_protected=true | KEEP | ✅ Protected |
+
+**Production usage steps (after redeploy)**:
+1. Hard refresh `/admin/inactive-cleanup` (SW v47)
+2. Click **Delete Now** with default settings (both Rule 1 + Rule 2 checked) → PIN `153759`
+3. Auto-loops chunks of 250 with per-chunk progress toast
+4. Truly inactive Explorers (no sub, no mining, balance < ₹5,000, no KYC, both logins stale) get deleted
+5. **All Elite subscribers, KYC verified, active miners, balance ≥ ₹5,000 stay safe**
+
+
+
 ### 🔧 Restore Tool 0-Restored Bug FIXED v2 — Pagination Fix (9 Jun 2026)
 
 **Owner Report (after v45 deploy)**: Restore STILL returned 0 users even though Preview showed 1,456 restorable.
