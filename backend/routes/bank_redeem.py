@@ -332,7 +332,7 @@ def calculate_total_prc(amount_inr: int, burn_rate_percent: int = 1) -> dict:
     burn_inr = round(subtotal_inr * burn_rate_percent / 100, 2)
     total_inr = subtotal_inr + burn_inr
     
-    # PRC rate: Dynamic from database
+    # PRC rate: Fixed 10 PRC = ₹1 (June 2026)
     prc_rate = get_dynamic_prc_rate()
     
     return {
