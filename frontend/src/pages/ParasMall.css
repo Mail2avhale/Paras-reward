@@ -1,0 +1,283 @@
+/* Paras Mall — Netflix-style fullscreen product swiper */
+
+.mall-root {
+  position: fixed;
+  inset: 0;
+  background: #0a0a0f;
+  color: #fff;
+  z-index: 50;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.mall-hero {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 0;
+  user-select: none;
+}
+
+.mall-image-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(120% 80% at 50% 35%, rgba(255, 255, 255, 0.10), transparent 60%),
+              linear-gradient(180deg, #0a0a0f 0%, #16121f 50%, #050308 100%);
+}
+
+.mall-image {
+  width: min(80vw, 520px);
+  height: min(56vh, 560px);
+  object-fit: contain;
+  filter: drop-shadow(0 30px 60px rgba(255, 215, 0, 0.18))
+          drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+  transition: transform 250ms ease;
+}
+
+.mall-image-fallback {
+  width: min(70vw, 460px);
+  aspect-ratio: 1 / 1;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #2a2030 0%, #1a1428 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mall-overlay-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 18px 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.mall-overlay-top > * { pointer-events: auto; }
+
+.mall-back-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(20, 18, 25, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.mall-back-btn:active { background: rgba(255, 215, 0, 0.2); }
+
+.mall-page-title {
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+.mall-progress-dots {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 6;
+}
+.mall-dot {
+  width: 18px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 2px;
+  transition: background 200ms ease, width 200ms ease;
+}
+.mall-dot.active {
+  background: #ffd700;
+  width: 24px;
+}
+
+.mall-card {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  background: linear-gradient(180deg, transparent 0%, rgba(10, 10, 15, 0.85) 22%, #0a0a0f 60%);
+  padding: 100px 22px 28px;
+}
+
+.mall-tagline {
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #ffd700;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.mall-product-name {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin-bottom: 14px;
+}
+
+.mall-price-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.mall-price-tile {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.mall-price-tile.upfront {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 215, 0, 0.02));
+  border-color: rgba(255, 215, 0, 0.28);
+}
+.mall-price-tile-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 4px;
+}
+.mall-price-tile-value {
+  font-size: 19px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.mall-price-tile.upfront .mall-price-tile-value { color: #ffd700; }
+
+.mall-book-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+  color: #0a0a0f;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 16px 20px;
+  border-radius: 16px;
+  border: 0;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(255, 165, 0, 0.32);
+  transition: transform 120ms ease, box-shadow 200ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.mall-book-btn:active { transform: scale(0.97); }
+.mall-book-btn:disabled {
+  background: #2a2230;
+  color: rgba(255, 255, 255, 0.4);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.mall-hint {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mall-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28%;
+  pointer-events: none;
+  z-index: 4;
+}
+.mall-edge.left { left: 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0.35), transparent); }
+.mall-edge.right { right: 0; background: linear-gradient(-90deg, rgba(0, 0, 0, 0.35), transparent); }
+
+.mall-loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #0a0a0f;
+  color: #ffd700;
+  z-index: 60;
+}
+
+/* Header tagline strip */
+.mall-tagline-strip {
+  position: absolute;
+  top: 56px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: rgba(255, 215, 0, 0.65);
+  text-transform: uppercase;
+  font-weight: 600;
+  z-index: 8;
+}
+
+/* Tab pills (Discover / My Bookings) */
+.mall-tabs {
+  position: absolute;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  background: rgba(15, 12, 22, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 4px;
+  z-index: 9;
+}
+.mall-tab {
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+.mall-tab.active {
+  background: #ffd700;
+  color: #0a0a0f;
+}
+
+@media (max-height: 720px) {
+  .mall-image { height: 44vh; }
+  .mall-card { padding-top: 70px; }
+  .mall-product-name { font-size: 26px; }
+}

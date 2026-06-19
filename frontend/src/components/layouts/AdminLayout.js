@@ -10,7 +10,7 @@ import {
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
   AlertTriangle, Smartphone, Building, Crown, AlertOctagon, Database, Eye,
   ShieldAlert, CheckCircle, Building2, Zap, Receipt, Send, MessageSquare, Banknote,
-  Coins, Flame, Briefcase, KeyRound, Trash2
+  Coins, Flame, Briefcase, KeyRound, Trash2, ShoppingBag
 } from 'lucide-react';
 
 const LOGO_URL = "/paras-logo.png";
@@ -41,6 +41,7 @@ const MENU_TO_PERMISSION = {
   'contact-submissions': 'contact-submissions',
   'contact-settings': 'contact-settings',
   'popup-messages': 'popup-messages',
+  'paras-mall': 'paras-mall',
   'service-toggles': 'service-toggles',
   'policies': 'policies',
   'settings-hub': 'service-toggles',
@@ -225,6 +226,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       icon: Shield,
       subItems: [
         { id: 'popup-messages', label: 'Popup Messages', icon: MessageSquare, path: '/admin/popup-messages', highlight: true },
+        { id: 'paras-mall', label: '🛍 Paras Mall', icon: ShoppingBag, path: '/admin/mall', highlight: true },
         { id: 'economy-settings', label: 'Economy Settings', icon: Cpu, path: '/admin/economy-settings' },
         { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/admin/data-backup' },
         { id: 'health-check', label: 'Pre-Deploy Health Check', icon: Activity, path: '/admin/health-check', highlight: true },
@@ -266,6 +268,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/contact-submissions': 'contact-submissions',
     '/admin/contact-settings': 'contact-settings',
     '/admin/popup-messages': 'popup-messages',
+    '/admin/mall': 'paras-mall',
     '/admin/service-toggles': 'service-toggles',
     '/admin/policies': 'policies',
     '/admin/settings-hub': 'service-toggles',

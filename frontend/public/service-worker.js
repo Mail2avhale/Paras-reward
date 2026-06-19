@@ -81,9 +81,15 @@
 // (returns 429 if too early). /api/mining/status returns start_cooldown_seconds.
 // Frontend MiningWidget: shows "Start Session in Ns" countdown, disables button
 // during cooldown, helper text "Take a quick break!".
-const CACHE_NAME = 'paras-reward-v53';
-const RUNTIME_CACHE = 'paras-runtime-v53';
-const API_CACHE = 'paras-api-v53';
+// v54: June 9, 2026 — NEW FEATURE: 🛍 Paras Mall (Reward Shopping Destination).
+// 43 AI-generated product images (Nano Banana), Netflix-style swipe UX,
+// booking with PRC, single-leg booking-order mining tree (4 PRC/day per
+// booking × downline boost), independent 24h sessions per booking with
+// lapse-on-no-collect, admin product CRUD + mark-delivered flow, community
+// auto-posts on booking/fulfillment/delivery. Bottom nav now has "Mall" tab.
+const CACHE_NAME = 'paras-reward-v54';
+const RUNTIME_CACHE = 'paras-runtime-v54';
+const API_CACHE = 'paras-api-v54';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

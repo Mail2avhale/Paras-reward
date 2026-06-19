@@ -342,6 +342,8 @@ const Notifications = lazy(() => import("@/pages/Notifications"));
 // ParasRecurringDeposit - REMOVED (deprecated feature)
 // NetworkTreeAdvanced - REMOVED (orphaned page, no nav link, used deprecated /referrals/network-tree endpoint)
 const MyInvoices = lazy(() => import("@/pages/MyInvoices"));
+const ParasMall = lazy(() => import("@/pages/ParasMall"));
+const AdminParasMall = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminParasMall"));
 const MyReports = lazy(() => import("@/pages/MyReports"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
@@ -589,6 +591,27 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/rd" element={<Navigate to="/dashboard" replace />} />
             {/* /network-tree route REMOVED - orphan page, replaced by L1-L5 breakdown on /referrals */}
             <Route path="/network-tree" element={<Navigate to="/referrals" replace />} />
+
+            {/* Paras Mall - reward shopping */}
+            <Route
+              path="/mall"
+              element={user ? (
+                isAdminOrManager(user) ? <Navigate to="/admin/mall" replace /> :
+                <Suspense fallback={<LoadingFallback />}>
+                  <ParasMall user={user} onBalanceUpdate={onBalanceUpdate} />
+                </Suspense>
+              ) : <Navigate to="/login" />}
+            />
+            <Route
+              path="/admin/mall"
+              element={canAccessAdmin(user) ? (
+                <Suspense fallback={<LoadingFallback />}>
+                  <AdminLayout user={user} onLogout={handleLogout}>
+                    <AdminParasMall />
+                  </AdminLayout>
+                </Suspense>
+              ) : <Navigate to="/dashboard" />}
+            />
             <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Suspense fallback={<LoadingFallback />}><BankRedeemPage user={user} onLogout={handleLogout} onBalanceUpdate={onBalanceUpdate} /></Suspense>) : <Navigate to="/login" />} />
             <Route path="/prc-to-bank" element={<Navigate to="/dashboard" replace />} />
             {/* Redeem PRC routes - DEPRECATED April 2026, redirect to dashboard */}

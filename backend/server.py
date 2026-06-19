@@ -102,6 +102,7 @@ from routes.holidays import router as holidays_router, set_db as set_holidays_db
 from routes.notifications_routes import router as notifications_router, set_db as set_notifications_db, set_helpers as set_notifications_helpers
 from routes.manager_routes import router as manager_router, set_db as set_manager_db
 from routes.admin_prc_balance import router as admin_prc_balance_router, set_db as set_admin_prc_balance_db
+from routes.paras_mall import router as paras_mall_router, admin_router as paras_mall_admin_router, set_db as set_paras_mall_db
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers, assign_subscription_position
 # DMT V1, V3 and Fund Transfer routes REMOVED - Eko API not working
 from routes.gst_invoice import router as invoice_router, set_db as set_invoice_db
@@ -36533,11 +36534,14 @@ api_router.include_router(manager_router)
 # set_ai_db(db)  # REMOVED - chatbot deprecated
 # api_router.include_router(ai_router)  # REMOVED - chatbot deprecated
 
-# Admin PRC Economy Router REMOVED (June 2026 - fixed rate cleanup)
-
 # Admin PRC Balance Router (Extracted from server.py monolith)
 set_admin_prc_balance_db(db)
 api_router.include_router(admin_prc_balance_router)
+
+# Paras Mall (Reward Shopping)
+set_paras_mall_db(db)
+api_router.include_router(paras_mall_router)
+api_router.include_router(paras_mall_admin_router)
 # Admin Ledger View Router (Phase 2 - Double Entry Ledger)
 set_admin_ledger_view_db(db)
 api_router.include_router(admin_ledger_view_router)
@@ -36812,6 +36816,13 @@ api_router.include_router(growth_economy_router)
 # Auto-Burning - REMOVED (burning concept deprecated)
 
 app.include_router(api_router)
+
+# Static files (Paras Mall product images) — must be under /api to reach backend via ingress
+from fastapi.staticfiles import StaticFiles
+import os as _os_for_static
+_static_dir = _os_for_static.path.join(_os_for_static.path.dirname(__file__), "static")
+_os_for_static.makedirs(_static_dir, exist_ok=True)
+app.mount("/api/static", StaticFiles(directory=_static_dir), name="static")
 
 # Note: User lookup route is now defined BEFORE include_router (line ~43305)
 

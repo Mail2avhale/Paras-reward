@@ -1,0 +1,37 @@
+{
+  "summary": "Backend regression suite for PARAS MALL feature. Created /app/backend/tests/test_paras_mall.py with 28 comprehensive tests covering product listing, upfront math, book flow, insufficient/locked PRC, daily-rate cascade, fulfilled-doesn't-boost, collect, session lapse, fulfillment, admin delivery, admin CRUD, admin analytics, community feed + PRC statement side-effects, and admin auth gating. ALL 28 PASSED.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "post_community_event (fulfilled)", "issue": "For event_type='fulfilled', message falls back to generic 'NAME - fulfilled - PRODUCT' format instead of a polished message like 'booked'/'delivered'. The type='mall_fulfilled' is correct but the message text is awkward."},
+      {"endpoint": "GET /api/mall/products", "issue": "daily_rate_prc is always shown as BASE (4) at listing time, not reflecting current cascade. This is correct by design (rate depends on booking position post-booking), but UI consumers should be made aware."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_paras_mall.py",
+    "/app/test_reports/pytest/paras_mall_results.xml"
+  ],
+  "action_items": [
+    "Optional: improve community message for 'fulfilled' event_type in post_community_event() (currently uses generic fallback string).",
+    "Optional: consider returning current cascade daily_rate_prc per product in /api/mall/products (or document that listing rate is always base)."
+  ],
+  "critical_code_review_comments": [
+    "Admin endpoints in /app/backend/routes/paras_mall.py do NOT declare any auth dependency themselves; they rely entirely on the global AdminAuthMiddleware in server.py. This is implicit and could break if the middleware path matching changes. Consider adding an explicit verify_admin dependency for defense-in-depth.",
+    "compute_session_accumulated rounds to 6 decimals; collect endpoint stores paid_prc as float (e.g. 5.5556). PRC statement writes int(round(actual_credit)), but stored paid_prc remains fractional. Acceptable but creates a tiny drift between statement totals and booking paid_prc — consider rounding paid_prc to 4 dp consistently (already done in collect, OK).",
+    "post_community_event fallback message for unknown event_type is 'NAME - event_type - product' (e.g. 'SURESH - fulfilled - Smartphone') which is awkward; add an explicit branch for 'fulfilled'.",
+    "/api/mall/book/{product_id} debits PRC and inserts booking in two separate awaits (not atomic). On crash between the insert and the $inc, the user gets a free booking. Consider wrapping in a transaction or doing balance check + atomic $inc first, then insert booking.",
+    "No idempotency key on POST /api/mall/book — a double-clicking user can be debited twice for two bookings. Consider a short de-dup window or client-supplied idempotency key.",
+    "mall_counters is upserted with $inc on a missing doc — works in Mongo, but the `(counter or {}).get('value', 1)` fallback returns 1 only if counter is None, which can never happen after find_one_and_update with upsert+return_document=AFTER; the extra guards are dead code (minor)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_paras_mall.py (new)"
+  ],
+  "success_rate": {"backend": "100% (28/28)", "frontend": "N/A (not tested per request)"},
+  "test_credentials": "Test user UID fcd8c6f8-9596-4f56-8556-568847d5ab86 (Suresh) topped up to 500k PRC in setup; admin login via /api/auth/login with admin@test.com / PIN 153759 (returns JWT bearer token used for /api/admin/mall/* endpoints).",
+  "seed_data_creation": "Test bookings (TEST_ prefixed) and a TEST_DummyProduct are created and then fully cleaned up in teardown. User balance reset to 485000, locked=0 at end. Real product seed (43 items) is preserved untouched.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "PARAS MALL feature is fully covered by /app/backend/tests/test_paras_mall.py. Admin endpoints REQUIRE bearer JWT (admin@test.com/153759 via /api/auth/login). Direct DB writes via motor are used to set positions/backdate sessions for deterministic cascade and lapse tests. Cleanup deletes everything TEST_ prefixed + any bookings belonging to the test user.",
+  "rca_of_the_issue": "No bugs found. All 28 tests passed including upfront math edge cases (Smartphone=15000 PRC, Gas Stove=10000 PRC, Iron Press=10000 PRC), cascade boost (positions 1/2/3 yield rates 12/8/4 with 3 mining bookings; drops to 8 when bottom booking marked fulfilled), session lapse after 25h (laps_count incremented, session_start reset), insufficient balance (100 PRC → 400), locked PRC respected (20000 balance - 10000 locked = 10000 available < 15000 required → 400), collect twice in a row (second returns 400 'Nothing to collect yet'), fulfillment transitions status to 'fulfilled' and writes mall_fulfilled community feed, admin mark-delivered rejects non-fulfilled bookings (400) and accepts fulfilled (200) writing mall_delivered feed, admin product CRUD works including delete-blocked-when-active-bookings, and unauthenticated admin calls return 401."
+}
