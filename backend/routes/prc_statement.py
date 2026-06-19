@@ -39,12 +39,13 @@ TYPE_MAP = {
     "subscription_prc": "Subscription", "subscription_refund": "Subscription",
     "subscription_prc_admin_override": "Subscription",
     "gift_subscription": "Subscription",
+    "mall_booking": "Paras Mall", "paras_mall": "Paras Mall", "mall_book": "Paras Mall",
     "redeem": "Redeem", "retry_debit": "Redeem",
     "dmt_transfer": "Redeem",
     "core_team_bonus": "Core Team Bonus",
 }
 
-FILTER_CATEGORIES = ["All", "Reward", "Recharge", "Bill Pay", "Redeem", "Bank Redeem", "Voucher Redeem", "Subscription", "Refund", "Burn", "Admin", "Core Team Bonus"]
+FILTER_CATEGORIES = ["All", "Reward", "Recharge", "Bill Pay", "Redeem", "Bank Redeem", "Voucher Redeem", "Subscription", "Paras Mall", "Refund", "Burn", "Admin", "Core Team Bonus"]
 
 
 def classify_type(raw_type: str) -> str:
@@ -63,6 +64,7 @@ DEBIT_TYPES = {
     "auto_burn", "subscription", "subscription_payment", "subscription_prc",
     "subscription_prc_admin_override",
     "elite_activation", "test_debit",
+    "mall_booking", "paras_mall", "mall_book",
 }
 
 

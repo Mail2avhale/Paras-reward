@@ -221,20 +221,32 @@ async def post_community_event(user_id: str, event_type: str, product_name: str,
 
 
 async def write_prc_statement(user_id: str, amount: int, description: str, ref_id: str):
-    """Write DEBIT entry to prc_statement (best-effort)."""
+    """Write DEBIT entry to prc_ledger (the canonical PRC passbook source).
+    Best-effort: errors logged but do not block booking flow.
+    """
     try:
-        await db.prc_statement.insert_one({
+        # Snapshot balance for proper running-balance display
+        u = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1}) or {}
+        balance_after = float(u.get("prc_balance", 0) or 0)
+        balance_before = balance_after + amount  # we just debited `amount`
+        await db.prc_ledger.insert_one({
             "txn_id": str(uuid.uuid4()),
             "user_id": user_id,
             "type": "mall_booking",
-            "direction": "debit",
-            "amount": amount,
+            "entry_type": "debit",
+            "amount": -abs(amount),  # negative for debit per ledger convention
+            "balance_before": round(balance_before, 2),
+            "balance_after": round(balance_after, 2),
+            "reference": ref_id,
+            "service_type": "paras_mall",
+            "service_label": "Paras Mall",
+            "service_ref_id": ref_id,
             "description": description,
-            "ref_id": ref_id,
-            "created_at": now_utc().isoformat()
+            "timestamp": now_utc().isoformat(),
+            "created_at": now_utc().isoformat(),
         })
     except Exception as e:
-        logging.warning(f"[MALL] PRC statement write failed: {e}")
+        logging.warning(f"[MALL] PRC ledger write failed: {e}")
 
 
 # ---------------- USER ENDPOINTS ----------------
@@ -442,12 +454,10 @@ async def collect_booking(booking_id: str, body: CollectBookingRequest):
         update["remaining_prc"] = 0
     await db.mall_bookings.update_one({"booking_id": booking_id}, {"$set": update})
 
-    # PRC statement entry — debit (mining→product, never returns to balance)
-    await write_prc_statement(
-        body.user_id, int(round(actual_credit)),
-        f"Paras Mall Mining: {b['product_name']}",
-        booking_id
-    )
+    # NOTE: We intentionally do NOT write a PRC ledger entry for mining
+    # collects — mined PRC never entered the user's wallet, so showing a
+    # "debit" would be misleading. Only the upfront wallet-debit appears
+    # in the PRC Statement.
 
     if fulfilled:
         # Community post for fulfillment milestone (separate from delivery)
