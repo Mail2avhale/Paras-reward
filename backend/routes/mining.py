@@ -67,6 +67,7 @@ CAP_PER_L3 = 3  # +3 cap per L3 referral
 CAP_PER_L4 = 2  # +2 cap per L4 referral
 CAP_PER_L5 = 1  # +1 cap per L5 referral
 SESSION_DURATION_HOURS = 24  # Mining session duration
+COLLECT_TO_START_COOLDOWN_SECONDS = 60  # Forced wait between collect and next session (AdMob retention)
 
 
 # ==================== SUBSCRIPTION POSITION SYSTEM ====================
@@ -474,6 +475,18 @@ async def get_mining_status(uid: str):
         # Calculate remaining hours
         remaining_hours = time_remaining / 3600 if time_remaining > 0 else 0
         
+        # Compute start cooldown remaining (collect→start wait, AdMob retention)
+        cooldown_remaining = 0
+        next_avail_iso = user.get("next_session_available_at")
+        if next_avail_iso and not mining_active:
+            try:
+                next_avail_dt = datetime.fromisoformat(next_avail_iso.replace('Z', '+00:00')) if isinstance(next_avail_iso, str) else next_avail_iso
+                if next_avail_dt.tzinfo is None:
+                    next_avail_dt = next_avail_dt.replace(tzinfo=timezone.utc)
+                cooldown_remaining = max(0, int((next_avail_dt - datetime.now(timezone.utc)).total_seconds()))
+            except Exception:
+                cooldown_remaining = 0
+        
         return {
             "mining_active": mining_active,
             "session_active": mining_active,  # Alias for frontend compatibility
@@ -485,8 +498,10 @@ async def get_mining_status(uid: str):
             "base_rate": rate_info["base_rate"],
             "network_rate": rate_info["network_rate"],
             "boost_multiplier": rate_info["boost_multiplier"],
-            "can_start": not mining_active,  # All users can start (Explorer + Elite)
+            "can_start": (not mining_active) and (cooldown_remaining == 0),
             "can_collect": is_elite and mined_coins > 0,  # Only Elite can collect
+            "start_cooldown_seconds": cooldown_remaining,
+            "next_session_available_at": next_avail_iso if cooldown_remaining > 0 else None,
             "is_explorer": not is_elite,
             "session_start": session_start.isoformat() if isinstance(session_start, datetime) else session_start,
             "session_end": session_end.isoformat() if isinstance(session_end, datetime) else session_end,
@@ -559,6 +574,28 @@ async def start_mining(uid: str):
                 )
         
         now = datetime.now(timezone.utc)
+        
+        # Enforce 60-second cooldown between collect and next session (AdMob retention)
+        next_avail = user.get("next_session_available_at")
+        if next_avail:
+            try:
+                if isinstance(next_avail, str):
+                    next_avail_dt = datetime.fromisoformat(next_avail.replace('Z', '+00:00'))
+                else:
+                    next_avail_dt = next_avail
+                if next_avail_dt.tzinfo is None:
+                    next_avail_dt = next_avail_dt.replace(tzinfo=timezone.utc)
+                if now < next_avail_dt:
+                    remaining = int((next_avail_dt - now).total_seconds())
+                    raise HTTPException(
+                        status_code=429,
+                        detail=f"Please wait {remaining}s before starting the next session"
+                    )
+            except HTTPException:
+                raise
+            except Exception:
+                pass  # Bad data - allow start
+        
         session_end = now + timedelta(hours=SESSION_DURATION_HOURS)
         
         # Start session
@@ -569,7 +606,8 @@ async def start_mining(uid: str):
                     "mining_active": True,
                     "mining_start_time": now.isoformat(),
                     "mining_session_end": session_end.isoformat(),
-                    "last_mining_action": now.isoformat()
+                    "last_mining_action": now.isoformat(),
+                    "next_session_available_at": None
                 }
             }
         )
@@ -657,20 +695,21 @@ async def collect_mining(uid: str):
         current_balance = user.get("prc_balance", 0)
         new_balance = round(current_balance + mined_coins, 6)
         
-        # Auto-start new session after collect
-        new_session_start = now
-        new_session_end = now + timedelta(hours=SESSION_DURATION_HOURS)
+        # NOTE: Do NOT auto-start a new session. User must manually click "Start Session"
+        # after a 60-second cooldown (drives AdMob impression RPM by keeping user in app).
+        cooldown_until = now + timedelta(seconds=COLLECT_TO_START_COOLDOWN_SECONDS)
         
-        # Update user: credit PRC + start new session in one atomic operation
+        # Update user: credit PRC + stop mining + record collect time for cooldown
         await db.users.update_one(
             {"uid": uid},
             {
                 "$set": {
                     "prc_balance": new_balance,
-                    "mining_active": True,
-                    "mining_start_time": new_session_start.isoformat(),
-                    "mining_session_end": new_session_end.isoformat(),
+                    "mining_active": False,
+                    "mining_start_time": None,
+                    "mining_session_end": None,
                     "last_mining_collect": now.isoformat(),
+                    "next_session_available_at": cooldown_until.isoformat(),
                     "last_mining_action": now.isoformat()
                 },
                 "$inc": {
@@ -717,9 +756,9 @@ async def collect_mining(uid: str):
             "collected_amount": mined_coins,
             "new_balance": new_balance,
             "session_duration_seconds": elapsed_seconds,
-            "auto_started": True,
-            "new_session_start": new_session_start.isoformat(),
-            "new_session_end": new_session_end.isoformat()
+            "auto_started": False,
+            "cooldown_seconds": COLLECT_TO_START_COOLDOWN_SECONDS,
+            "next_session_available_at": cooldown_until.isoformat()
         }
     except HTTPException:
         raise

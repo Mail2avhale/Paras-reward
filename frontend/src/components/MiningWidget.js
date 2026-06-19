@@ -33,10 +33,13 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [sessionProgress, setSessionProgress] = useState(0);
   const [dataLoaded, setDataLoaded] = useState(false);
+  // Cooldown between Collect and next Start (AdMob retention)
+  const [startCooldown, setStartCooldown] = useState(0);
 
   const timerRef = useRef(null);
   const liveCounterRef = useRef(null);
   const progressRef = useRef(null);
+  const cooldownRef = useRef(null);
   const collectInProgressRef = useRef(false);
 
   const subscriptionPlan = user?.subscription_plan || 'explorer';
@@ -82,6 +85,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
         setSessionTimeRemaining(Math.max(0, Math.floor(remaining)));
         setSessionStartTime(sessionStart);
         setSessionProgress(Math.min(100, (elapsed / totalDuration) * 100));
+        setStartCooldown(0);
 
         const mined = d.mined_this_session || d.mined_coins || 0;
         if (isInitial || mined > sessionPRC) setSessionPRC(mined);
@@ -90,6 +94,9 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
         setSessionTimeRemaining(0);
         setSessionProgress(0);
         if (isInitial) setSessionPRC(0);
+        // Pull authoritative cooldown from server (re-syncs after refresh / device switch)
+        const cd = typeof d.start_cooldown_seconds === 'number' ? d.start_cooldown_seconds : 0;
+        setStartCooldown(cd);
       }
       setDataLoaded(true);
     } catch (err) {
@@ -153,9 +160,32 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
     };
   }, [isMining, miningRate, sessionStartTime]);
 
+  // Cooldown ticker — counts down 60s wait between Collect and Start
+  useEffect(() => {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    if (startCooldown > 0) {
+      cooldownRef.current = setInterval(() => {
+        setStartCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(cooldownRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, [startCooldown > 0]);
+
   const startSession = async () => {
     triggerHaptic('medium');
     if (isMining) { await fetchMiningStatus(true); return; }
+    if (startCooldown > 0) {
+      smartToast.info(`Please wait ${startCooldown}s before starting`);
+      return;
+    }
     setIsStarting(true);
     try {
       const res = await axios.post(`${API}/mining/start/${user.uid}`);
@@ -165,13 +195,20 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
         setSessionPRC(0);
         setSessionStartTime(Date.now());
         setSessionProgress(0);
+        setStartCooldown(0);
         triggerHaptic('success');
         smartToast.success('Session started! Earning PRC...');
         setTimeout(() => fetchMiningStatus(), 500);
       }
     } catch (error) {
+      const status = error.response?.status;
       const detail = error.response?.data?.detail || 'Failed to start session';
-      if (detail.includes('already active')) {
+      if (status === 429) {
+        // Server-enforced cooldown — extract remaining seconds from message
+        const match = /wait\s+(\d+)s/i.exec(detail);
+        if (match) setStartCooldown(parseInt(match[1], 10));
+        smartToast.error(detail);
+      } else if (detail.includes('already active')) {
         smartToast.info('Syncing active session...');
         await fetchMiningStatus(true);
       } else {
@@ -198,19 +235,13 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
         onBalanceUpdate(data.new_balance);
       }
 
-      if (data.auto_started && data.new_session_start) {
-        setSessionPRC(0);
-        setSessionTimeRemaining(24 * 60 * 60);
-        setSessionStartTime(new Date(data.new_session_start).getTime());
-        setSessionProgress(0);
-        setIsMining(true);
-        smartToast.info('New session auto-started!');
-      } else {
-        setSessionPRC(0);
-        setIsMining(false);
-        setSessionTimeRemaining(0);
-        setSessionProgress(0);
-      }
+      // Session does NOT auto-start. User must manually click "Start Session" after a 60s cooldown.
+      setSessionPRC(0);
+      setIsMining(false);
+      setSessionTimeRemaining(0);
+      setSessionProgress(0);
+      const cd = typeof data.cooldown_seconds === 'number' ? data.cooldown_seconds : 60;
+      setStartCooldown(cd);
 
       setTimeout(() => { collectInProgressRef.current = false; fetchMiningStatus(false); }, 3000);
     } catch (error) {
@@ -380,16 +411,18 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
 
         <Button
           onClick={startSession}
-          disabled={isStarting}
-          className="w-full font-semibold py-3 rounded-xl text-base active:scale-[0.98] transition-all"
+          disabled={isStarting || startCooldown > 0}
+          className="w-full font-semibold py-3 rounded-xl text-base active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           style={{
-            background: isElite 
+            background: startCooldown > 0
+              ? 'linear-gradient(135deg, #4b5563, #374151)'
+              : isElite 
               ? 'linear-gradient(135deg, #d4af37, #b8960c)' 
               : isGrowth 
               ? 'linear-gradient(135deg, #10b981, #059669)' 
               : 'linear-gradient(135deg, #3b82f6, #2563eb)',
-            color: isElite ? '#000' : '#fff',
-            boxShadow: `0 0 15px ${accentColor}30`,
+            color: startCooldown > 0 ? '#e5e7eb' : (isElite ? '#000' : '#fff'),
+            boxShadow: startCooldown > 0 ? 'none' : `0 0 15px ${accentColor}30`,
             border: `1px solid ${accentColor}50`
           }}
           data-testid="start-mining-btn"
@@ -399,12 +432,22 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
               <motion.div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
               Starting...
             </span>
+          ) : startCooldown > 0 ? (
+            <span className="flex items-center gap-2 justify-center" data-testid="start-cooldown-label">
+              <Clock className="w-4 h-4" /> Start Session in {startCooldown}s
+            </span>
           ) : (
             <span className="flex items-center gap-2 justify-center">
               <Play className="w-4 h-4" /> {t('startSession') || 'Start Session'}
             </span>
           )}
         </Button>
+
+        {startCooldown > 0 && (
+          <p className="text-[11px] text-zinc-500 mt-2" data-testid="cooldown-helper-text">
+            Take a quick break! New session will be available shortly.
+          </p>
+        )}
 
         {isFreeUser && (
           <p className="text-xs mt-2" style={{ color: `${accentColor}80` }}>Upgrade to Elite to collect earned PRC</p>

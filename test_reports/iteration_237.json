@@ -1,0 +1,33 @@
+{
+  "summary": "Added regression test suite for the new Collect→Start 60-second cooldown feature on /api/mining. All 11 tests passed: seed active session, collect returns auto_started=false + cooldown_seconds=60 + next_session_available_at populated, status shows mining_active=false + start_cooldown_seconds 50-60 + can_start=false, immediate start during cooldown returns HTTP 429 with expected detail, DB persistence verified (mining_active=false, mining_start_time/session_end=None, next_session_available_at set), backdating cooldown and calling start returns 200 + clears next_session_available_at + mining_active=true, post-start status shared (mining_active=true, can_start=false, start_cooldown_seconds=0). Edge cases: explorer→403, no-session elite→400. Regression: rate-breakdown returns 6-tier fields with cap_tier1_base=800; /api/growth/prc-rate still returns prc_rate=10. Test user Suresh reset to clean state on teardown (verified via direct mongo query).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mining_collect_cooldown.py",
+    "/app/test_reports/pytest/test_mining_collect_cooldown.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "mining.py is 906 lines — getting large; consider splitting status/start/collect/breakdown into separate sub-modules for maintainability (>700-line guideline).",
+    "start_mining() has a broad `except Exception: pass` around cooldown parsing (line ~596) that silently allows start on bad data. If `next_session_available_at` is ever stored as a non-ISO string due to a future regression, the cooldown silently breaks. Suggest logging the parse error rather than swallowing it.",
+    "collect_mining() does not invalidate notification/PRC-statement caches even though it writes a transaction; verify other PRC-balance-driven UIs (header balance, ticker) refresh promptly — only `user_data:{uid}` and `user:dashboard:{uid}` cache keys are cleared.",
+    "Cooldown is enforced in start_mining only via next_session_available_at; if a manual DB write sets it to a malformed value, the `except Exception: pass` will bypass the cooldown entirely. Consider a stricter parser with a sane default."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mining_collect_cooldown.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "n/a (backend-only run)"},
+  "test_credentials": "Suresh elite UID fcd8c6f8-9596-4f56-8556-568847d5ab86; explorer UID 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21 (Test User DMT).",
+  "seed_data_creation": "Each happy-path test seeds Suresh with a 2-hour-old active mining session via direct mongo write, and the module-level fixture resets him to clean state (mining_active=False, mining_start_time/session_end/next_session_available_at=None) both before and after the run. Confirmed clean state post-run via direct query.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Mining cooldown regression file lives at /app/backend/tests/test_mining_collect_cooldown.py and is idempotent — runs cleanly any number of times because it always reseeds and resets Suresh. If you need to add more cases, follow the existing pattern using _seed_active_session and _reset_user helpers. Note: cooldown is 60s; tests backdate next_session_available_at via direct mongo rather than waiting in real time.",
+  "rca of the issue": "N/A — this is a feature regression test for an already-implemented and main-agent-verified change."
+}

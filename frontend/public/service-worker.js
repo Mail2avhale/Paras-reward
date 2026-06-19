@@ -73,9 +73,17 @@
 // AdminPRCEconomyDashboard, PRCRateDisplay component. utils/helpers.py
 // get_prc_rate() now returns fixed 10. DB collections cleaned:
 // app_settings.prc_rate_manual_override, system_settings.prc_dynamic_rate.
-const CACHE_NAME = 'paras-reward-v52';
-const RUNTIME_CACHE = 'paras-runtime-v52';
-const API_CACHE = 'paras-api-v52';
+// v53: June 9, 2026 — Mining session no longer auto-starts after Collect Rewards.
+// User must manually click Start Session, and there is a 60-second cooldown
+// between Collect and the next Start (drives AdMob impression RPM by keeping
+// user in app). Backend: /api/mining/collect now clears mining_active and sets
+// next_session_available_at = now + 60s. /api/mining/start enforces the wait
+// (returns 429 if too early). /api/mining/status returns start_cooldown_seconds.
+// Frontend MiningWidget: shows "Start Session in Ns" countdown, disables button
+// during cooldown, helper text "Take a quick break!".
+const CACHE_NAME = 'paras-reward-v53';
+const RUNTIME_CACHE = 'paras-runtime-v53';
+const API_CACHE = 'paras-api-v53';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
