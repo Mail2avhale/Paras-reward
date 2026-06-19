@@ -296,8 +296,8 @@ async def _hard_delete_users(uids: list, admin_id: str) -> dict:
     now = datetime.now(timezone.utc).isoformat()
 
     # Per-batch + per-query timeouts. Atlas operations >120s get killed.
-    BATCH = 100              # was 500 — too heavy on un-indexed cascade collections
-    QUERY_TIMEOUT_MS = 60_000
+    BATCH = 50              # was 100 — smaller still on Atlas without user_id indexes
+    QUERY_TIMEOUT_MS = 30_000
 
     existing_collections = set(await db.list_collection_names())
 
@@ -436,7 +436,7 @@ async def execute_inactive_cleanup_real(request: Request):
         days_no_sub = int(body.get("days_no_sub", 7))
         days_inactive = int(body.get("days_inactive", 60))
         rules = body.get("rules", ["rule1", "rule2"])
-        max_users = int(body.get("max_users", 300))  # cap per HTTP call
+        max_users = int(body.get("max_users", 100))  # cap per HTTP call (reduced 300→100 for Atlas 60s proxy cap)
 
         cand = await _find_deletion_candidates(days_no_sub, days_inactive)
 

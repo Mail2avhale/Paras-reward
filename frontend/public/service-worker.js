@@ -37,9 +37,14 @@
 // successful 1,456-user recovery. New PRC balance guard raised 100 → 5000
 // (was protecting ₹100+ earners, now protects ₹5,000+). Rule 2 stays AND
 // (not OR). KYC/sub/mining guards unchanged. Custom Purge still locked.
-const CACHE_NAME = 'paras-reward-v47';
-const RUNTIME_CACHE = 'paras-runtime-v47';
-const API_CACHE = 'paras-api-v47';
+// v48: June 9, 2026 — User hit HTTP 503 on production Execute (Kubernetes
+// ingress proxy 60s cap). Backend cascade ops on un-indexed collections
+// (transactions, prc_ledger) take too long for 300 users/call. Reduced:
+// max_users default 300→100, BATCH 100→50, QUERY_TIMEOUT 60s→30s.
+// Frontend per-call timeout 120s→90s. Button text updated to reflect chunks.
+const CACHE_NAME = 'paras-reward-v48';
+const RUNTIME_CACHE = 'paras-runtime-v48';
+const API_CACHE = 'paras-api-v48';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

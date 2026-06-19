@@ -283,8 +283,8 @@ const AdminInactiveCleanup = ({ user }) => {
           admin_id: user?.uid,
           days_no_sub: daysNoSub,
           days_inactive: daysInactive,
-          max_users: 250,
-        }, { timeout: 120000 });  // 2 min per chunk
+          max_users: 100,
+        }, { timeout: 90000 });  // 90s per chunk (under proxy 60s default but with retry buffer)
 
         const d = res.data || {};
         totalDeleted += d.deleted_users || 0;
@@ -575,7 +575,7 @@ const AdminInactiveCleanup = ({ user }) => {
               {executing ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Deleting... (may take 1-2 min for 5000+ users)
+                  Deleting... (auto-loops 100/chunk)
                 </>
               ) : (
                 <>
