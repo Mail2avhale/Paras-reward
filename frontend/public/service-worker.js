@@ -87,9 +87,9 @@
 // booking × downline boost), independent 24h sessions per booking with
 // lapse-on-no-collect, admin product CRUD + mark-delivered flow, community
 // auto-posts on booking/fulfillment/delivery. Bottom nav now has "Mall" tab.
-const CACHE_NAME = 'paras-reward-v54';
-const RUNTIME_CACHE = 'paras-runtime-v54';
-const API_CACHE = 'paras-api-v54';
+const CACHE_NAME = 'paras-reward-v55';
+const RUNTIME_CACHE = 'paras-runtime-v55';
+const API_CACHE = 'paras-api-v55';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
