@@ -279,6 +279,10 @@ async def book_product(product_id: str, body: BookProductRequest):
         "mrp_inr": product["mrp_inr"],
         "total_prc": total_prc,
         "upfront_prc": upfront_prc,
+        # `total_prc_deducted` mirrors upfront_prc so this booking is counted
+        # by the centralized lifetime-redeemed scanner (`get_user_all_time_redeemed`).
+        # Only the wallet-debit portion counts; mined PRC never left the wallet.
+        "total_prc_deducted": upfront_prc,
         "paid_prc": upfront_prc,  # upfront credited immediately
         "remaining_prc": total_prc - upfront_prc,
         "position": position,
@@ -296,6 +300,13 @@ async def book_product(product_id: str, body: BookProductRequest):
         {"uid": body.user_id},
         {"$inc": {"prc_balance": -upfront_prc, "total_spent_prc": upfront_prc}}
     )
+
+    # Invalidate lifetime-redeemed cache so dashboards reflect this debit immediately
+    try:
+        from server import invalidate_lifetime_cache
+        invalidate_lifetime_cache(body.user_id)
+    except Exception:
+        pass
 
     # PRC statement entry + community post (best-effort, parallel)
     await asyncio.gather(

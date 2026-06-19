@@ -4903,10 +4903,14 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
         ("dmt_logs", "Bank Redeem", {}),
         ("orders", "Shopping", {}),
         ("unified_redemptions", "Redeem", {}),
+        # Paras Mall bookings: only upfront wallet debit counts (stored as
+        # `total_prc_deducted`). Mined PRC never left the wallet so excluded.
+        ("mall_bookings", "Paras Mall", {"status": {"$in": ["mining", "fulfilled", "delivered"]}}),
     ]
     SVC_REF_FIELDS = [
         "request_id", "redeem_id", "txn_id", "order_id", "payment_id",
         "reference_id", "reference", "eko_tid", "client_ref_id", "voucher_id",
+        "booking_id",  # Paras Mall bookings
     ]
     LEGACY_WALLET_DEBIT_TYPES = [
         "subscription_prc", "subscription",
