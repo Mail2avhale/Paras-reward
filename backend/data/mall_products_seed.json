@@ -1,0 +1,671 @@
+[
+  {
+    "product_id": "6f77e363-0f62-432d-b905-31b7d2e29ef1",
+    "name": "Smartphone",
+    "mrp_inr": 15000,
+    "category": "electronics",
+    "image_url": "/api/static/mall/smartphone.png",
+    "description": "Premium Smartphone \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:49:47.630291+00:00",
+    "brands": [
+      "Samsung",
+      "Oppo",
+      "Vivo",
+      "Xiaomi",
+      "Realme"
+    ]
+  },
+  {
+    "product_id": "b2e6bc19-5946-4486-bcec-e6ca73e7e253",
+    "name": "Laptop",
+    "mrp_inr": 50000,
+    "category": "electronics",
+    "image_url": "/api/static/mall/laptop.png",
+    "description": "Premium Laptop \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:49:57.358264+00:00",
+    "brands": [
+      "ASUS",
+      "Dell",
+      "HP",
+      "Lenovo",
+      "Acer"
+    ]
+  },
+  {
+    "product_id": "deddce3e-7bd5-462b-bd81-360b0930568d",
+    "name": "Refrigerator",
+    "mrp_inr": 25000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/refrigerator.png",
+    "description": "Premium Refrigerator \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:50:08.993680+00:00",
+    "brands": [
+      "Samsung",
+      "LG",
+      "Whirlpool",
+      "Haier",
+      "Godrej"
+    ]
+  },
+  {
+    "product_id": "9696f450-e65f-4fcb-8b1a-38a7e08171eb",
+    "name": "Washing Machine",
+    "mrp_inr": 22000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/washing_machine.png",
+    "description": "Premium Washing Machine \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:50:17.367155+00:00",
+    "brands": [
+      "Samsung",
+      "LG",
+      "IFB",
+      "Bosch",
+      "Whirlpool"
+    ]
+  },
+  {
+    "product_id": "b3a47df7-aeee-4bb2-b7af-9a3dc5a9b7eb",
+    "name": "Microwave Oven",
+    "mrp_inr": 12000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/microwave_oven.png",
+    "description": "Premium Microwave Oven \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:50:25.846145+00:00",
+    "brands": [
+      "Samsung",
+      "LG",
+      "IFB",
+      "Panasonic"
+    ]
+  },
+  {
+    "product_id": "c7352bf5-8b77-4fce-9944-a7e0bb3f54a2",
+    "name": "Air Cooler",
+    "mrp_inr": 10000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/air_cooler.png",
+    "description": "Premium Air Cooler \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:50:35.488496+00:00",
+    "brands": [
+      "Symphony",
+      "Bajaj",
+      "Crompton",
+      "Voltas"
+    ]
+  },
+  {
+    "product_id": "68f113ad-6346-46d1-b746-73454c0d3a76",
+    "name": "Inverter",
+    "mrp_inr": 18000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/inverter.png",
+    "description": "Premium Inverter \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:50:43.309469+00:00",
+    "brands": [
+      "Luminous",
+      "Microtek",
+      "APC",
+      "Sukam"
+    ]
+  },
+  {
+    "product_id": "639bd3e7-3807-41a8-ac80-a201847b952d",
+    "name": "Air Conditioner",
+    "mrp_inr": 40000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/air_conditioner.png",
+    "description": "Premium Air Conditioner \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:50:53.054003+00:00",
+    "brands": [
+      "Daikin",
+      "LG",
+      "Voltas",
+      "Samsung",
+      "Hitachi"
+    ]
+  },
+  {
+    "product_id": "840f4319-ec71-462b-9670-6aeae2ae7b67",
+    "name": "Furniture Set",
+    "mrp_inr": 50000,
+    "category": "furniture",
+    "image_url": "/api/static/mall/furniture_set.png",
+    "description": "Premium Furniture Set \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:51:01.164218+00:00",
+    "brands": [
+      "Godrej Interio",
+      "Urban Ladder",
+      "Pepperfry"
+    ]
+  },
+  {
+    "product_id": "cb2641cf-9051-45ae-9d88-41f98b00587a",
+    "name": "Flour Mill",
+    "mrp_inr": 18000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/flour_mill.png",
+    "description": "Premium Flour Mill \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:51:11.395753+00:00",
+    "brands": [
+      "Natraj",
+      "Milcent",
+      "Rajdhani"
+    ]
+  },
+  {
+    "product_id": "81d2218c-7c98-4818-a105-8fd9738e94f4",
+    "name": "Smart TV",
+    "mrp_inr": 35000,
+    "category": "electronics",
+    "image_url": "/api/static/mall/smart_tv.png",
+    "description": "Premium Smart TV \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:51:20.997735+00:00",
+    "brands": [
+      "Samsung",
+      "Sony",
+      "LG",
+      "Mi",
+      "OnePlus"
+    ]
+  },
+  {
+    "product_id": "cca6af71-f7c0-4e33-b9c1-3d95944a1616",
+    "name": "Water Purifier RO",
+    "mrp_inr": 15000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/water_purifier_ro.png",
+    "description": "Premium Water Purifier RO \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:51:31.034150+00:00",
+    "brands": [
+      "Kent",
+      "Aquaguard",
+      "Pureit",
+      "Livpure"
+    ]
+  },
+  {
+    "product_id": "feccb626-2567-4fa3-a508-fdf07c3c2b5f",
+    "name": "Mixer Grinder",
+    "mrp_inr": 5000,
+    "category": "kitchen",
+    "image_url": "/api/static/mall/mixer_grinder.png",
+    "description": "Premium Mixer Grinder \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:51:41.179286+00:00",
+    "brands": [
+      "Preethi",
+      "Philips",
+      "Bajaj",
+      "Sujata"
+    ]
+  },
+  {
+    "product_id": "3885f714-dfc6-42d9-8d7a-7c6ccc2273ed",
+    "name": "Gas Stove",
+    "mrp_inr": 6000,
+    "category": "kitchen",
+    "image_url": "/api/static/mall/placeholder.png",
+    "description": "Premium Gas Stove \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:51:41.986416+00:00",
+    "brands": [
+      "Prestige",
+      "Pigeon",
+      "Sunflame",
+      "Glen"
+    ]
+  },
+  {
+    "product_id": "c9ff7f24-3a05-47b3-86f7-8ed8bd8c57a8",
+    "name": "Kitchen Chimney",
+    "mrp_inr": 15000,
+    "category": "kitchen",
+    "image_url": "/api/static/mall/placeholder.png",
+    "description": "Premium Kitchen Chimney \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:51:42.692244+00:00",
+    "brands": [
+      "Faber",
+      "Elica",
+      "Hindware",
+      "Glen"
+    ]
+  },
+  {
+    "product_id": "845627fd-298a-431d-930f-149c1914dd40",
+    "name": "Vacuum Cleaner",
+    "mrp_inr": 12000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/placeholder.png",
+    "description": "Premium Vacuum Cleaner \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:51:43.406355+00:00",
+    "brands": [
+      "Eureka Forbes",
+      "Philips",
+      "Dyson",
+      "Karcher"
+    ]
+  },
+  {
+    "product_id": "90a3c4dd-2e70-4435-906d-c66e475d017d",
+    "name": "Ceiling Fan",
+    "mrp_inr": 3500,
+    "category": "appliances",
+    "image_url": "/api/static/mall/ceiling_fan.png",
+    "description": "Premium Ceiling Fan \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:51:50.846389+00:00",
+    "brands": [
+      "Crompton",
+      "Havells",
+      "Orient",
+      "Bajaj"
+    ]
+  },
+  {
+    "product_id": "cac12b8c-a51e-405c-a6bd-91205f7f1015",
+    "name": "Water Heater Geyser",
+    "mrp_inr": 8000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/water_heater_geyser.png",
+    "description": "Premium Water Heater Geyser \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:51:59.065607+00:00",
+    "brands": [
+      "Bajaj",
+      "Havells",
+      "Racold",
+      "AO Smith"
+    ]
+  },
+  {
+    "product_id": "e3e28247-502e-4af9-9230-ed69fa1ee4fa",
+    "name": "Dining Table Set",
+    "mrp_inr": 30000,
+    "category": "furniture",
+    "image_url": "/api/static/mall/dining_table_set.png",
+    "description": "Premium Dining Table Set \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:52:07.960411+00:00",
+    "brands": [
+      "Godrej Interio",
+      "HomeTown",
+      "Royaloak"
+    ]
+  },
+  {
+    "product_id": "eaff8a35-e2f9-412c-8cc6-40f82d479496",
+    "name": "Sofa Set",
+    "mrp_inr": 45000,
+    "category": "furniture",
+    "image_url": "/api/static/mall/sofa_set.png",
+    "description": "Premium Sofa Set \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:52:15.253926+00:00",
+    "brands": [
+      "Urban Ladder",
+      "Pepperfry",
+      "HomeTown"
+    ]
+  },
+  {
+    "product_id": "3c82be4e-e6c5-4a4a-82df-f8bb06927228",
+    "name": "Double Bed",
+    "mrp_inr": 35000,
+    "category": "furniture",
+    "image_url": "/api/static/mall/double_bed.png",
+    "description": "Premium Double Bed \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:52:23.875708+00:00",
+    "brands": [
+      "Godrej Interio",
+      "Urban Ladder",
+      "Wakefit"
+    ]
+  },
+  {
+    "product_id": "ffa54d1c-ed9d-4ce9-9362-293b103dbf15",
+    "name": "Wardrobe",
+    "mrp_inr": 25000,
+    "category": "furniture",
+    "image_url": "/api/static/mall/wardrobe.png",
+    "description": "Premium Wardrobe \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:52:32.419473+00:00",
+    "brands": [
+      "Godrej",
+      "Spacewood",
+      "HomeTown"
+    ]
+  },
+  {
+    "product_id": "3bcbea94-dd88-45ed-a438-a00c77fd62d2",
+    "name": "Electric Bike",
+    "mrp_inr": 120000,
+    "category": "vehicles",
+    "image_url": "/api/static/mall/electric_bike.png",
+    "description": "Premium Electric Bike \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:52:40.389747+00:00",
+    "brands": [
+      "Ola",
+      "Ather",
+      "TVS iQube",
+      "Bajaj Chetak"
+    ]
+  },
+  {
+    "product_id": "b6b55063-8a0b-4d16-9b3c-e9c090da6f1b",
+    "name": "Water Storage Tank",
+    "mrp_inr": 12000,
+    "category": "home",
+    "image_url": "/api/static/mall/water_storage_tank.png",
+    "description": "Premium Water Storage Tank \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:52:48.633751+00:00",
+    "brands": [
+      "Sintex",
+      "Plasto",
+      "Sheetal"
+    ]
+  },
+  {
+    "product_id": "33c692b8-2c8c-426e-b7d1-daf296f2427b",
+    "name": "Pressure Cooker Set",
+    "mrp_inr": 5000,
+    "category": "kitchen",
+    "image_url": "/api/static/mall/pressure_cooker_set.png",
+    "description": "Premium Pressure Cooker Set \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:52:57.741642+00:00",
+    "brands": [
+      "Prestige",
+      "Hawkins",
+      "Pigeon"
+    ]
+  },
+  {
+    "product_id": "06667778-2546-4797-b6c3-312a4b86d716",
+    "name": "Non-Stick Cookware Set",
+    "mrp_inr": 8000,
+    "category": "kitchen",
+    "image_url": "/api/static/mall/non-stick_cookware_set.png",
+    "description": "Premium Non-Stick Cookware Set \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:53:08.380195+00:00",
+    "brands": [
+      "Prestige",
+      "Hawkins",
+      "Cello"
+    ]
+  },
+  {
+    "product_id": "a091a897-caf1-438b-8281-abd240d4136f",
+    "name": "Kitchen Storage Cabinet",
+    "mrp_inr": 20000,
+    "category": "furniture",
+    "image_url": "/api/static/mall/kitchen_storage_cabinet.png",
+    "description": "Premium Kitchen Storage Cabinet \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:53:17.529820+00:00",
+    "brands": [
+      "Godrej",
+      "Nilkamal",
+      "Cello"
+    ]
+  },
+  {
+    "product_id": "9527b8f8-58ca-4198-80bf-7f9719f8ca09",
+    "name": "Home Study Set",
+    "mrp_inr": 15000,
+    "category": "furniture",
+    "image_url": "/api/static/mall/home_study_set.png",
+    "description": "Premium Home Study Set \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:53:27.460837+00:00",
+    "brands": [
+      "Godrej Interio",
+      "HomeTown"
+    ]
+  },
+  {
+    "product_id": "3cb9696d-34e1-4c4f-93ae-84facf483761",
+    "name": "Iron Press",
+    "mrp_inr": 2500,
+    "category": "appliances",
+    "image_url": "/api/static/mall/iron_press.png",
+    "description": "Premium Iron Press \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:53:37.549728+00:00",
+    "brands": [
+      "Philips",
+      "Bajaj",
+      "Havells",
+      "Usha"
+    ]
+  },
+  {
+    "product_id": "3583ba4b-4f6f-40ef-94d3-aa891662867b",
+    "name": "Sewing Machine",
+    "mrp_inr": 12000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/sewing_machine.png",
+    "description": "Premium Sewing Machine \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:53:47.641105+00:00",
+    "brands": [
+      "Usha",
+      "Singer",
+      "Brother"
+    ]
+  },
+  {
+    "product_id": "173fdf8a-ef6d-4aa7-b78b-847f6da171a8",
+    "name": "Air Fryer",
+    "mrp_inr": 8000,
+    "category": "kitchen",
+    "image_url": "/api/static/mall/air_fryer.png",
+    "description": "Premium Air Fryer \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:53:57.153791+00:00",
+    "brands": [
+      "Philips",
+      "Havells",
+      "Inalsa"
+    ]
+  },
+  {
+    "product_id": "35b79f8c-62bc-4973-8358-42409556edde",
+    "name": "Juicer Machine",
+    "mrp_inr": 6000,
+    "category": "kitchen",
+    "image_url": "/api/static/mall/juicer_machine.png",
+    "description": "Premium Juicer Machine \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:54:06.349451+00:00",
+    "brands": [
+      "Philips",
+      "Bajaj",
+      "Sujata",
+      "Usha"
+    ]
+  },
+  {
+    "product_id": "5895f180-0e38-48f9-b805-db7283b5a59e",
+    "name": "Coffee Maker",
+    "mrp_inr": 7000,
+    "category": "kitchen",
+    "image_url": "/api/static/mall/coffee_maker.png",
+    "description": "Premium Coffee Maker \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:54:13.795687+00:00",
+    "brands": [
+      "Philips",
+      "Morphy Richards",
+      "Bosch"
+    ]
+  },
+  {
+    "product_id": "ef615ae3-d0ae-416f-80e2-0e2ff456dcca",
+    "name": "Dishwasher",
+    "mrp_inr": 40000,
+    "category": "appliances",
+    "image_url": "/api/static/mall/dishwasher.png",
+    "description": "Premium Dishwasher \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:54:23.852311+00:00",
+    "brands": [
+      "Bosch",
+      "LG",
+      "IFB",
+      "Voltas Beko"
+    ]
+  },
+  {
+    "product_id": "250c3551-7964-4fb4-b601-249877d3ed2d",
+    "name": "Home Security CCTV Kit",
+    "mrp_inr": 20000,
+    "category": "electronics",
+    "image_url": "/api/static/mall/home_security_cctv_kit.png",
+    "description": "Premium Home Security CCTV Kit \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:54:33.389132+00:00",
+    "brands": [
+      "CP Plus",
+      "Hikvision",
+      "Godrej",
+      "Mi"
+    ]
+  },
+  {
+    "product_id": "e5dac556-066c-4eb3-8b13-d000824b844c",
+    "name": "Gold Coin",
+    "mrp_inr": 20000,
+    "category": "jewelry",
+    "image_url": "/api/static/mall/gold_coin.png",
+    "description": "Premium Gold Coin \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:54:40.728532+00:00",
+    "brands": [
+      "MMTC",
+      "Kalyan",
+      "Tanishq",
+      "Joyalukkas"
+    ]
+  },
+  {
+    "product_id": "1839d18a-0882-440b-9a80-3e0a910486d0",
+    "name": "Silver Coin",
+    "mrp_inr": 20000,
+    "category": "jewelry",
+    "image_url": "/api/static/mall/silver_coin.png",
+    "description": "Premium Silver Coin \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:54:50.335141+00:00",
+    "brands": [
+      "MMTC",
+      "Kalyan",
+      "Tanishq"
+    ]
+  },
+  {
+    "product_id": "2c739491-30a0-47c9-80de-8d490b64ddd2",
+    "name": "Kitchen Appliance Combo",
+    "mrp_inr": 35000,
+    "category": "kitchen",
+    "image_url": "/api/static/mall/kitchen_appliance_combo.png",
+    "description": "Premium Kitchen Appliance Combo \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:55:00.503440+00:00",
+    "brands": [
+      "Prestige",
+      "Philips",
+      "Bajaj"
+    ]
+  },
+  {
+    "product_id": "c2e20882-066b-42fa-bf86-62eeff802125",
+    "name": "Grocery Voucher",
+    "mrp_inr": 10000,
+    "category": "vouchers",
+    "image_url": "/api/static/mall/grocery_voucher.png",
+    "description": "Premium Grocery Voucher \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:55:08.801483+00:00",
+    "brands": [
+      "BigBasket",
+      "Reliance",
+      "DMart"
+    ]
+  },
+  {
+    "product_id": "67ffe7d0-7335-4f38-a173-532a4845f010",
+    "name": "Amazon Shopping Voucher",
+    "mrp_inr": 25000,
+    "category": "vouchers",
+    "image_url": "/api/static/mall/amazon_shopping_voucher.png",
+    "description": "Premium Amazon Shopping Voucher \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:55:19.155677+00:00",
+    "brands": [
+      "Amazon"
+    ]
+  },
+  {
+    "product_id": "6ee50ea4-06b4-4730-809e-5359d150996c",
+    "name": "Flipkart Shopping Voucher",
+    "mrp_inr": 25000,
+    "category": "vouchers",
+    "image_url": "/api/static/mall/flipkart_shopping_voucher.png",
+    "description": "Premium Flipkart Shopping Voucher \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:55:29.021760+00:00",
+    "brands": [
+      "Flipkart"
+    ]
+  },
+  {
+    "product_id": "4bd24b25-31f5-4a72-b576-8d869f779a60",
+    "name": "Home Solar Kit",
+    "mrp_inr": 150000,
+    "category": "home",
+    "image_url": "/api/static/mall/home_solar_kit.png",
+    "description": "Premium Home Solar Kit \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:55:38.788844+00:00",
+    "brands": [
+      "Luminous",
+      "Tata Power",
+      "Adani Solar",
+      "Loom Solar"
+    ]
+  },
+  {
+    "product_id": "b7bc675a-3b09-4f35-aca1-e73f55485f17",
+    "name": "EMI Support Voucher",
+    "mrp_inr": 25000,
+    "category": "vouchers",
+    "image_url": "/api/static/mall/emi_support_voucher.png",
+    "description": "Premium EMI Support Voucher \u2014 book with PRC and unlock via daily mining.",
+    "active": true,
+    "created_at": "2026-06-19T10:55:47.395180+00:00",
+    "brands": [
+      "Bajaj Finserv",
+      "HDFC",
+      "ICICI"
+    ]
+  }
+]

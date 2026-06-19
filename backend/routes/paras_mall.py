@@ -15,6 +15,7 @@ No cancellation, no refund. Delivery only at 100%.
 
 import logging
 import asyncio
+import os
 import uuid
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Depends
@@ -38,6 +39,36 @@ SECONDS_PER_DAY = 86400
 def set_db(database):
     global db
     db = database
+    # Auto-seed mall products from bundle if collection is empty
+    # Runs lazily on first event-loop tick so the routes are registered first.
+    try:
+        asyncio.create_task(_auto_seed_mall_products())
+    except RuntimeError:
+        # No running loop yet — schedule for later via FastAPI startup hook safety
+        pass
+
+
+async def _auto_seed_mall_products():
+    """If mall_products is empty (fresh production DB), seed from bundle JSON."""
+    try:
+        if db is None:
+            return
+        count = await db.mall_products.count_documents({})
+        if count > 0:
+            return  # Already has products, no-op
+        bundle_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "mall_products_seed.json")
+        if not os.path.exists(bundle_path):
+            logging.info(f"[mall auto-seed] Bundle not found at {bundle_path}, skipping")
+            return
+        import json as _json
+        with open(bundle_path) as f:
+            products = _json.load(f)
+        if not products:
+            return
+        await db.mall_products.insert_many(products)
+        logging.info(f"[mall auto-seed] Successfully seeded {len(products)} mall products from bundle on empty DB")
+    except Exception as e:
+        logging.warning(f"[mall auto-seed] Failed: {e}")
 
 
 # ---------------- MODELS ----------------
@@ -521,3 +552,41 @@ async def admin_analytics():
         "active_products": active_products,
         "status_breakdown": {row["_id"]: {"count": row["count"], "total_prc": row["total_prc"]} for row in status_breakdown},
     }
+
+
+@admin_router.post("/seed-from-bundle")
+async def admin_seed_from_bundle():
+    """Idempotent bulk import: reads /app/backend/data/mall_products_seed.json
+    and UPSERTS every product by `product_id`. Safe to re-run.
+
+    Used to migrate the 43 preview-seeded mall products into a fresh
+    production database after deploy. Returns counts.
+    """
+    import json as _json
+    bundle_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "mall_products_seed.json")
+    if not os.path.exists(bundle_path):
+        raise HTTPException(500, f"Bundle not found at {bundle_path}")
+    with open(bundle_path) as f:
+        products = _json.load(f)
+    inserted = 0
+    updated = 0
+    for p in products:
+        pid = p.get("product_id")
+        if not pid:
+            continue
+        existing = await db.mall_products.find_one({"product_id": pid})
+        if existing:
+            await db.mall_products.update_one({"product_id": pid}, {"$set": p})
+            updated += 1
+        else:
+            await db.mall_products.insert_one(p)
+            inserted += 1
+    total = await db.mall_products.count_documents({})
+    return {
+        "success": True,
+        "inserted": inserted,
+        "updated": updated,
+        "total_in_db": total,
+        "bundle_size": len(products),
+    }
+
