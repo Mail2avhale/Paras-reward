@@ -13,7 +13,6 @@ const PAGE_TITLES = {
   '/kyc': 'KYC Verification - PARAS REWARD',
   '/support': 'Support - PARAS REWARD',
   '/notifications': 'Notifications - PARAS REWARD',
-  '/network-tree': 'Network Tree - PARAS REWARD',
   '/network-feed': 'Network Feed - PARAS REWARD',
   '/messages': 'Messages - PARAS REWARD',
   '/my-invoices': 'My Invoices - PARAS REWARD',

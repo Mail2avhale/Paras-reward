@@ -55,9 +55,19 @@
 // mining.py + new BFS helper get_downline_level_counts(). API returns new
 // cap_tier4/5/6_bonus + l3/l4/l5_count fields. Frontend: ReferralsEnhanced
 // shows "Network Cap Formula" card with L1-L5 per-tier contributions.
-const CACHE_NAME = 'paras-reward-v50';
-const RUNTIME_CACHE = 'paras-runtime-v50';
-const API_CACHE = 'paras-api-v50';
+// v51: June 9, 2026 — Referral CLEANUP. Deleted 13 orphan backend endpoints
+// (/referrals/{uid}/tree, /referrals/network-tree/{uid}, /referrals/{uid}/stats,
+// /referrals/{uid}/earnings, /referral-earnings/{uid}, /referrals/{uid}/levels,
+// /referrals/{uid}/debug-referred-by, /referrals/{uid}/fraud-check,
+// /referrals/{uid}/bonus-breakdown, /referrals/{uid}/network-analytics,
+// /ai/referral-suggestions, /referrals/live-activity, /referrals/milestone-achievement,
+// /gift/eligible-referrals/{parent_uid}). Also removed orphan helpers
+// (get_multi_level_referrals, get_base_rate, count_active_referrals_by_level)
+// and orphan frontend page NetworkTreeAdvanced.js. Single source of truth for
+// referrals: /referrals/{uid}/direct-list + /referrals/{uid}/level-breakdown.
+const CACHE_NAME = 'paras-reward-v51';
+const RUNTIME_CACHE = 'paras-runtime-v51';
+const API_CACHE = 'paras-api-v51';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

@@ -45,7 +45,7 @@ from cache_manager import cache, admin_stats_key
 from db_indexes import create_performance_indexes, get_index_stats
 
 # Import routers
-from routes.referral import router as referral_router, set_db as set_referral_db, set_helpers as set_referral_helpers, set_cache as set_referral_cache
+from routes.referral import router as referral_router, set_db as set_referral_db, set_cache as set_referral_cache
 from routes.auth import router as auth_router, set_db as set_auth_db, set_helpers as set_auth_helpers, set_verify_token as set_auth_verify_token
 from routes.users import router as users_router, set_db as set_users_db, set_cache as set_users_cache, set_helpers as set_users_helpers
 from routes.wallet import router as wallet_router, set_db as set_wallet_db
@@ -5508,14 +5508,6 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
     }
 
 
-async def get_base_rate():
-    """
-    DEPRECATED: Mining feature removed
-    Returns 0 for backwards compatibility
-    """
-    return 0
-
-
 async def check_user_active_status(user_uid: str, user_data: dict = None) -> tuple:
     """
     DEPRECATED: Referral/Level bonus feature removed
@@ -5523,46 +5515,6 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
     """
     return False, "feature_removed"
 
-
-async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
-    """
-    DEPRECATED: Level bonus (L1, L2, L3) feature removed
-    Returns empty structure for backwards compatibility
-    """
-    return {
-        "level_1": [],
-        "level_2": [],
-        "level_3": [],
-        "level_4": [],
-        "level_5": [],
-        "deprecated": True,
-        "message": "Level bonus feature has been removed"
-    }
-
-async def count_active_referrals_by_level(user_id: str):
-    """
-    DEPRECATED: Level bonus feature removed
-    Returns zeros for backwards compatibility
-    """
-    return {
-        "level_1": 0,
-        "level_2": 0,
-        "level_3": 0,
-        "total_active": 0,
-        "deprecated": True
-    }
-
-
-async def count_active_referrals_by_level_with_weights(user_id: str):
-    """
-    DEPRECATED: Level bonus feature removed
-    Returns zeros for backwards compatibility
-    """
-    return {
-        "active_counts": {"level_1": 0, "level_2": 0, "level_3": 0},
-        "weighted_counts": {"level_1": 0, "level_2": 0, "level_3": 0},
-        "deprecated": True
-    }
 
 async def calculate_profile_completion(user: Dict) -> float:
     """Calculate profile completion percentage"""
@@ -34780,106 +34732,6 @@ async def update_withdrawal(
     await db.withdrawals.update_one({"withdrawal_id": withdrawal_id}, {"$set": update_data})
     return {"message": f"Withdrawal {action}"}
 
-# ========== REFERRAL LIVE ACTIVITY ==========
-
-@api_router.get("/referrals/live-activity")
-async def get_referral_live_activity(limit: int = 10):
-    """Get recent referral achievements and milestones for live activity feed"""
-    
-    milestones = [
-        {"count": 1, "badge": "🌱", "title": "First Steps", "color": "emerald"},
-        {"count": 5, "badge": "⭐", "title": "Rising Star", "color": "blue"},
-        {"count": 10, "badge": "🔥", "title": "On Fire", "color": "orange"},
-        {"count": 25, "badge": "💎", "title": "Diamond", "color": "purple"},
-        {"count": 50, "badge": "👑", "title": "Legend", "color": "amber"},
-        {"count": 100, "badge": "🏆", "title": "Champion", "color": "pink"},
-    ]
-    
-    activities = []
-    
-    try:
-        # Get recent users with referrals
-        users_with_referrals = await db.users.find(
-            {"referral_count": {"$gt": 0}},
-            {"_id": 0, "name": 1, "referral_count": 1, "created_at": 1}
-        ).sort("created_at", -1).limit(20).to_list(20)
-        
-        import secrets as _secrets
-        
-        for user in users_with_referrals:
-            ref_count = user.get("referral_count", 0)
-            name = user.get("name", "User")
-            # Anonymize name
-            display_name = name.split()[0][:3] + "***" if name else "User"
-            
-            # Find the highest achieved milestone
-            achieved_milestone = None
-            for m in reversed(milestones):
-                if ref_count >= m["count"]:
-                    achieved_milestone = m
-                    break
-            
-            if achieved_milestone:
-                activities.append({
-                    "id": f"milestone_{_secrets.randbelow(9000) + 1000}",
-                    "type": "milestone",
-                    "user_name": display_name,
-                    "milestone": achieved_milestone,
-                    "timestamp": user.get("created_at", datetime.now(timezone.utc).isoformat())
-                })
-        
-        # Also get recent referral joins
-        recent_referrals = await db.users.find(
-            {"referred_by": {"$ne": None}},
-            {"_id": 0, "name": 1, "created_at": 1}
-        ).sort("created_at", -1).limit(10).to_list(10)
-        
-        for ref_user in recent_referrals:
-            name = ref_user.get("name", "User")
-            display_name = name.split()[0][:3] + "***" if name else "User"
-            
-            activities.append({
-                "id": f"join_{_secrets.randbelow(9000) + 1000}",
-                "type": "referral_join",
-                "user_name": display_name,
-                "timestamp": ref_user.get("created_at", datetime.now(timezone.utc).isoformat())
-            })
-        
-        # Sort by timestamp and limit
-        activities.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
-        
-        return {"activities": activities[:limit]}
-        
-    except Exception as e:
-        print(f"Error fetching referral live activity: {e}")
-        return {"activities": []}
-
-
-# ==================== SOCIAL NETWORK SYSTEM ====================
-
-class FollowRequest(BaseModel):
-    target_uid: str
-
-class MessageRequest(BaseModel):
-    receiver_uid: str
-    text: str
-
-class ConversationMessage(BaseModel):
-    message_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    conversation_id: str
-    sender_uid: str
-    text: str
-    read: bool = False
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
-# ========== SOCIAL PROFILE (PUBLIC PROFILE + FOLLOW + PRIVACY) ==========
-# MOVED to routes/social_profile.py (Phase 1 refactor - April 2026)
-# Endpoints: /users/{uid}/public-profile, /users/{uid}/privacy-settings,
-# /users/{uid}/follow, /users/{uid}/unfollow, /users/{uid}/check-follow/{target_uid},
-# /users/{uid}/followers, /users/{uid}/following
-
-
-
 # ========== SOCIAL ACTIVITY FEED ==========
 # MOVED to routes/social_profile.py (Phase 1 refactor - April 2026)
 # Endpoints: /feed/global, /feed/network/{uid}
@@ -36382,7 +36234,6 @@ async def revert_payment_request_status(request: Request):
 # Include all API routes (must be after all route definitions)
 # Include referral router (refactored)
 set_referral_db(db)
-set_referral_helpers(get_multi_level_referrals, get_base_rate)
 set_referral_cache(cache)
 api_router.include_router(referral_router)
 

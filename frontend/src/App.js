@@ -340,8 +340,7 @@ const FollowersList = lazy(() => import("@/pages/FollowersList"));
 const Notifications = lazy(() => import("@/pages/Notifications"));
 // ParasLuxuryLife - REMOVED (deprecated feature)
 // ParasRecurringDeposit - REMOVED (deprecated feature)
-const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
-// RedeemPageV2, BBPSServices - REMOVED (Redeem PRC feature deprecated April 2026)
+// NetworkTreeAdvanced - REMOVED (orphaned page, no nav link, used deprecated /referrals/network-tree endpoint)
 const MyInvoices = lazy(() => import("@/pages/MyInvoices"));
 const MyReports = lazy(() => import("@/pages/MyReports"));
 
@@ -589,7 +588,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             {/* /recurring-deposit route REMOVED - deprecated feature */}
             <Route path="/recurring-deposit" element={<Navigate to="/dashboard" replace />} />
             <Route path="/rd" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
+            {/* /network-tree route REMOVED - orphan page, replaced by L1-L5 breakdown on /referrals */}
+            <Route path="/network-tree" element={<Navigate to="/referrals" replace />} />
             <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Suspense fallback={<LoadingFallback />}><BankRedeemPage user={user} onLogout={handleLogout} onBalanceUpdate={onBalanceUpdate} /></Suspense>) : <Navigate to="/login" />} />
             <Route path="/prc-to-bank" element={<Navigate to="/dashboard" replace />} />
             {/* Redeem PRC routes - DEPRECATED April 2026, redirect to dashboard */}

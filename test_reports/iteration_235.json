@@ -1,0 +1,39 @@
+{
+  "summary": "Regression + cleanup verification after AGGRESSIVE referral endpoint cleanup. (1) Re-ran /app/backend/tests/test_l1l5_network_cap_cascade.py — 10/10 PASS, L1-L5 cascade math + mining/growth consistency intact. (2) New test file /app/backend/tests/test_referral_cleanup_iter235.py — 23/23 PASS, covers 5 live endpoints (mining rate-breakdown, mining status, notifications direct-list, notifications level-breakdown, referral lookup valid+invalid) + 17 deleted endpoints all returning 404. (3) Source-tree audit: server.py has NO orphan helpers (get_multi_level_referrals, get_base_rate, count_active_referrals_by_level, count_active_referrals_by_level_with_weights, set_referral_helpers all absent). routes/notifications_routes.py has NO orphan imports. (4) Backend supervisor RUNNING, no import errors, no startup exceptions in /var/log/supervisor/backend.err.log.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_l1l5_network_cap_cascade.py",
+    "/app/backend/tests/test_referral_cleanup_iter235.py",
+    "/app/test_reports/pytest/l1l5_results_iter235.xml",
+    "/app/test_reports/pytest/cleanup_iter235.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Cleanup is surgical and complete: 17/17 deleted endpoints return real 404 (not 500, not 200), confirming no leftover route registrations or broken handlers.",
+    "Live endpoint contract intact: /api/notifications/referrals/{uid}/direct-list returns the canonical keys [referrals, referrer, total, page, total_pages] and /api/notifications/referrals/{uid}/level-breakdown returns success=true with L1-L5 buckets. Schema unchanged for consumers.",
+    "Sanity baseline for Suresh (no-referral user) still emits network_cap=800 and the locked formula string 'min(8000, 800 + 16*L1 + 5*L2 + 3*L3 + 2*L4 + 1*L5)' — L1-L5 cap feature unaffected by the cleanup.",
+    "/api/referral/lookup/{code} correctly returns 200 for SURESHRD and 404 for unknown code — only-remaining endpoint in the rewritten routes/referral.py works as designed.",
+    "Server.py and routes/notifications_routes.py have been cleaned of stale referral helpers and imports; no orphan symbols remain that could mislead future agents."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_referral_cleanup_iter235.py (new — 23 regression tests for live + deleted endpoints)"
+  ],
+  "success_rate": {
+    "backend": "100% (33/33 tests passing — 10 cascade regression + 23 cleanup verification)",
+    "frontend": "N/A — backend only testing as requested"
+  },
+  "test_credentials": "Suresh UID fcd8c6f8-9596-4f56-8556-568847d5ab86, referral_code='SURESHRD'. No additional credentials needed; all tests use public read endpoints.",
+  "seed_data_creation": "None for this iteration. Cascade tests reuse the auto-seeded chains from test_l1l5_network_cap_cascade.py fixtures which clean up after themselves. Live-endpoint and deleted-endpoint tests use existing real user Suresh.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Cleanup is verified end-to-end. Canonical referral endpoints surviving: GET /api/notifications/referrals/{uid}/direct-list, /api/notifications/referrals/{uid}/level-breakdown, /api/mining/rate-breakdown/{uid}, /api/mining/status/{uid}, /api/referral/lookup/{code}. Use /app/backend/tests/test_referral_cleanup_iter235.py as a future regression to catch any accidental re-introduction of the deleted endpoints. Combined with test_l1l5_network_cap_cascade.py, full coverage is in place for the referral + L1-L5 cap subsystem.",
+  "rca of the issue": "No issue found. Aggressive cleanup of 14 backend orphan endpoints + 3 orphan helpers + 1 frontend orphan page + 5 deprecated stubs was executed correctly and did not break: (a) the L1-L5 network cap formula (10/10 cascade tests pass), (b) the live referral endpoints (6/6 live-endpoint tests pass), or (c) FastAPI route registration (17/17 deleted endpoints return 404 cleanly). Backend starts without import errors. Cleanup ready for handoff."
+}
