@@ -37,8 +37,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
 
       # ── 3. JAVA 17 ─────────────────────────────────────────────────────────
       - name: Setup Java 17
@@ -56,7 +54,7 @@ jobs:
       # ── 5. REACT BUILD ─────────────────────────────────────────────────────
       - name: Install dependencies
         working-directory: frontend
-        run: yarn install --frozen-lockfile
+        run: yarn install --network-timeout 600000
 
       - name: Build React production bundle
         working-directory: frontend
