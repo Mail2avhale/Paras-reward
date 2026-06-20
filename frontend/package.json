@@ -5,6 +5,7 @@
   "dependencies": {
     "@capacitor-community/admob": "7",
     "@capacitor/android": "7",
+    "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "7",
     "@capacitor/core": "7",
     "@radix-ui/react-alert-dialog": "^1.1.11",
