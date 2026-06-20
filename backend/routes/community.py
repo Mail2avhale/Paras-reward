@@ -145,6 +145,7 @@ async def create_success_story_post(
             "dth_recharge": ("DTH Recharge", "📺"),
             "bank_redeem": ("Bank Redeem", "💰"),
             "subscription": ("Subscription", "👑"),
+            "paras_mall": ("Paras Mall", "🛍️"),
         }
         label, icon = service_labels.get(service_type, ("Transaction", "✅"))
 
@@ -193,7 +194,7 @@ async def create_success_story_post(
             db_total = 0.0
         lifetime_redeemed = max(db_total, float(amount_inr) if service_type != "subscription" else 0.0)
 
-        # Build title + content (celebratory for subscriptions)
+        # Build title + content (celebratory for subscriptions / mall)
         if service_type == "subscription":
             plan_label = (plan_name or "Premium").strip().title()
             title = f"{icon} {first_name} from {location} upgraded to {plan_label}!"
@@ -204,6 +205,17 @@ async def create_success_story_post(
                 "",
                 f"🚀 Welcome to the {plan_label} club!",
                 "✅ Now earning premium rewards via Paras Reward",
+            ]
+        elif service_type == "paras_mall":
+            product_label = (extra_title or "a smart product").strip()
+            title = f"{icon} {first_name} from {location} booked {product_label} via Paras Mall!"
+            body_lines = [
+                f"🛍️ Congratulations **{first_name}** from **{location}**!",
+                "",
+                f"Booked **{product_label}** (worth ₹{int(amount_inr):,}) via **Paras Mall**",
+                "",
+                "💎 Mining started — daily PRC rewards now active",
+                "✅ Smart reward shopping at Paras Reward",
             ]
         else:
             title = f"{icon} {first_name} from {location} completed {label}!"

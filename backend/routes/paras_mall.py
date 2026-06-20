@@ -351,7 +351,7 @@ async def book_product(product_id: str, body: BookProductRequest):
     except Exception:
         pass
 
-    # PRC statement entry + community post (best-effort, parallel)
+    # PRC statement entry + community feed ticker (best-effort, parallel)
     await asyncio.gather(
         write_prc_statement(
             body.user_id, upfront_prc,
@@ -361,6 +361,19 @@ async def book_product(product_id: str, body: BookProductRequest):
         post_community_event(body.user_id, "booked", product["name"], booking_id),
         return_exceptions=True
     )
+
+    # Community Forum success-story post (visible at /community)
+    try:
+        from routes.community import create_success_story_post
+        await create_success_story_post(
+            user_id=body.user_id,
+            service_type="paras_mall",
+            amount_inr=float(product["mrp_inr"]),
+            ref_id=booking_id,
+            extra_title=product["name"],
+        )
+    except Exception as e:
+        logging.warning(f"[MALL] community forum post failed (non-fatal): {e}")
 
     # Sustainability auto-burn (1% of post-deduction balance, threshold 30k)
     try:
