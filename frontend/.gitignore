@@ -21,3 +21,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Keystore base64 (only for one-time GitHub Secret copy — never commit)
+android/keystores/keystore.base64
+# Service account JSON (Play Store API)
+**/play-service-account*.json

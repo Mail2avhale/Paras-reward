@@ -1,0 +1,125 @@
+name: Build Android AAB
+
+# Triggers: every push to main + manual dispatch
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/build-android.yml'
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Play Store track to upload (none = build only)'
+        required: false
+        default: 'none'
+        type: choice
+        options:
+          - none
+          - internal
+          - alpha
+          - beta
+          - production
+
+jobs:
+  build:
+    name: Build signed AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. CHECKOUT ────────────────────────────────────────────────────────
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # ── 2. NODE + YARN ─────────────────────────────────────────────────────
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+
+      # ── 3. JAVA 17 ─────────────────────────────────────────────────────────
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # ── 4. ANDROID SDK ─────────────────────────────────────────────────────
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+
+      # ── 5. REACT BUILD ─────────────────────────────────────────────────────
+      - name: Install dependencies
+        working-directory: frontend
+        run: yarn install --frozen-lockfile
+
+      - name: Build React production bundle
+        working-directory: frontend
+        env:
+          REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL }}
+          CI: false
+        run: yarn build
+
+      # ── 6. CAPACITOR SYNC ──────────────────────────────────────────────────
+      - name: Sync Capacitor with Android
+        working-directory: frontend
+        run: npx cap sync android
+
+      # ── 7. DECODE KEYSTORE ─────────────────────────────────────────────────
+      - name: Restore keystore from secret
+        working-directory: frontend
+        run: |
+          mkdir -p android/keystores
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystores/paras-reward.keystore
+          ls -la android/keystores/
+
+      # ── 8. BUILD SIGNED AAB ────────────────────────────────────────────────
+      - name: Build signed AAB
+        working-directory: frontend/android
+        env:
+          PARAS_KEYSTORE_FILE: ${{ github.workspace }}/frontend/android/keystores/paras-reward.keystore
+          PARAS_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          PARAS_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          PARAS_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew bundleRelease --no-daemon
+
+      # ── 9. UPLOAD AAB ARTIFACT ─────────────────────────────────────────────
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paras-reward-release-aab
+          path: frontend/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 14
+
+      # ── 10. UPLOAD TO PLAY STORE (optional, runs only on manual dispatch) ──
+      - name: Upload to Play Console
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.track != 'none' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.parasreward.app
+          releaseFiles: frontend/android/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ github.event.inputs.track }}
+          status: completed
+          changesNotSentForReview: false
+
+      # ── 11. SUMMARY ────────────────────────────────────────────────────────
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## 🎉 Build Result" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f frontend/android/app/build/outputs/bundle/release/app-release.aab ]; then
+            size=$(du -h frontend/android/app/build/outputs/bundle/release/app-release.aab | cut -f1)
+            echo "✅ **AAB built successfully** — size: $size" >> $GITHUB_STEP_SUMMARY
+            echo "📦 Download from **Artifacts** section above" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ AAB build failed — check logs" >> $GITHUB_STEP_SUMMARY
+          fi
