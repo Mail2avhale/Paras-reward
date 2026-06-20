@@ -7,10 +7,10 @@ android {
         applicationId "com.parasreward.prc"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode bumped from 1 → 2 for the SDK 35 / signing-config rollout.
+        // versionCode bumped from 2 → 3 for new package com.parasreward.prc release.
         // Play Console requires a strictly higher versionCode for every update.
-        versionCode 2
-        versionName "1.0.1"
+        versionCode 3
+        versionName "1.0.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
