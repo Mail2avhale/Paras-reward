@@ -31,19 +31,19 @@ android {
     // If env vars are not set, the release config is skipped silently and
     // the build will fall back to debug signing — useful for CI smoke checks.
     // ─────────────────────────────────────────────────────────────────────
-    def keystoreFile     = System.getenv("PARAS_KEYSTORE_FILE")
-    def keystorePassword = System.getenv("PARAS_KEYSTORE_PASSWORD")
-    def keyAlias         = System.getenv("PARAS_KEY_ALIAS")
-    def keyPassword      = System.getenv("PARAS_KEY_PASSWORD")
-    def hasReleaseSigning = keystoreFile && keystorePassword && keyAlias && keyPassword
+    def envKeystoreFile     = System.getenv("PARAS_KEYSTORE_FILE")
+    def envKeystorePassword = System.getenv("PARAS_KEYSTORE_PASSWORD")
+    def envKeyAlias         = System.getenv("PARAS_KEY_ALIAS")
+    def envKeyPassword      = System.getenv("PARAS_KEY_PASSWORD")
+    def hasReleaseSigning = envKeystoreFile && envKeystorePassword && envKeyAlias && envKeyPassword
 
     if (hasReleaseSigning) {
         signingConfigs {
             release {
-                storeFile     file(keystoreFile)
-                storePassword keystorePassword
-                keyAlias      keyAlias
-                keyPassword   keyPassword
+                storeFile     file(envKeystoreFile)
+                storePassword envKeystorePassword
+                keyAlias      envKeyAlias
+                keyPassword   envKeyPassword
                 // Enables Play App Signing v2/v3/v4 — required for SDK 30+
                 enableV2Signing true
                 enableV3Signing true
