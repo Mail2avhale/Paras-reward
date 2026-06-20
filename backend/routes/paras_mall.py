@@ -534,10 +534,12 @@ async def booking_counts_per_product():
 # ---------------- ADMIN ENDPOINTS ----------------
 @admin_router.post("/upload-image")
 async def admin_upload_product_image(file: UploadFile = File(...)):
-    """Upload a product image file. Saves to /app/backend/static/mall/ and
-    returns the public URL that can be set on a product's `image_url` field.
-    Accepts: PNG, JPG, JPEG, WEBP — max 5 MB.
-    Filename auto-slugified from the upload name + timestamp suffix to avoid collisions.
+    """Upload + AUTO-NORMALIZE a product image.
+    - Validates type / size
+    - Center-crops to 1:1 square (preserves the most important visual area)
+    - Resizes to 1024×1024 max
+    - Re-encodes as JPEG (quality=88) for ~70% smaller files than originals
+    - Returns the public URL for use on `image_url`
     """
     if not file.filename:
         raise HTTPException(400, "Missing filename")
@@ -549,21 +551,57 @@ async def admin_upload_product_image(file: UploadFile = File(...)):
         raise HTTPException(400, "File too large (max 5 MB)")
     if len(blob) < 32:
         raise HTTPException(400, "File too small / empty")
-    # Slugify the base name
+
+    # ---------- AUTO-NORMALIZE (center-crop square + resize + re-encode) ----------
+    from PIL import Image, ImageOps
+    import io
+    try:
+        img = Image.open(io.BytesIO(blob))
+        # Honour EXIF rotation (phone camera uploads frequently rotate)
+        img = ImageOps.exif_transpose(img)
+        # Flatten alpha onto a white canvas so JPEG output is clean
+        if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+            bg = Image.new("RGB", img.size, (255, 255, 255))
+            bg.paste(img, mask=img.convert("RGBA").split()[-1])
+            img = bg
+        else:
+            img = img.convert("RGB")
+        # Center-crop to square
+        w, h = img.size
+        side = min(w, h)
+        left = (w - side) // 2
+        top = (h - side) // 2
+        img = img.crop((left, top, left + side, top + side))
+        # Resize to 1024×1024 max (preserves quality for product cards)
+        if img.size[0] > 1024:
+            img = img.resize((1024, 1024), Image.LANCZOS)
+        # Re-encode as JPEG
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=88, optimize=True, progressive=True)
+        out.seek(0)
+        normalized = out.read()
+        final_dim = img.size[0]
+    except Exception as e:
+        raise HTTPException(400, f"Invalid image: {e}")
+
+    # ---------- Save to disk ----------
     base = file.filename.rsplit(".", 1)[0]
     slug = re.sub(r"[^a-zA-Z0-9_-]+", "_", base).strip("_").lower() or "product"
     ts = int(datetime.now(timezone.utc).timestamp())
-    fname = f"{slug}_{ts}.{ext}"
+    fname = f"{slug}_{ts}.jpg"  # always .jpg after normalize
     target_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "mall")
     os.makedirs(target_dir, exist_ok=True)
     path = os.path.join(target_dir, fname)
     with open(path, "wb") as f:
-        f.write(blob)
+        f.write(normalized)
     return {
         "success": True,
         "image_url": f"/api/static/mall/{fname}",
         "filename": fname,
-        "size_bytes": len(blob),
+        "size_bytes": len(normalized),
+        "original_size_bytes": len(blob),
+        "compression_ratio": f"{(1 - len(normalized) / len(blob)) * 100:.0f}%",
+        "dimensions": f"{final_dim}x{final_dim}",
     }
 
 

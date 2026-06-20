@@ -256,7 +256,12 @@ const ProductForm = ({ initial, isCreate, onSave, onCancel }) => {
       });
       if (res.data?.image_url) {
         setForm(f => ({ ...f, image_url: res.data.image_url }));
-        toast.success('Image uploaded');
+        const ratio = res.data.compression_ratio;
+        toast.success(
+          ratio
+            ? `Image uploaded, cropped to 1:1 and compressed ${ratio}`
+            : 'Image uploaded'
+        );
       }
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Upload failed');
@@ -323,7 +328,7 @@ const ProductForm = ({ initial, isCreate, onSave, onCancel }) => {
                     <><Upload className="w-4 h-4 mr-2" /> {form.image_url ? 'Replace Image' : 'Upload Image'}</>
                   )}
                 </Button>
-                <div className="text-[10px] text-slate-400 mt-1">PNG / JPG / WEBP · max 5 MB</div>
+                <div className="text-[10px] text-slate-400 mt-1">PNG / JPG / WEBP · max 5 MB · auto-cropped to 1:1</div>
               </div>
             </div>
           </div>
