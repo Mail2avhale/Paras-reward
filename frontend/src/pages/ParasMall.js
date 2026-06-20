@@ -61,13 +61,19 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   // Pre-fill delivery form from user profile when modal opens
   useEffect(() => {
     if (pendingBook && user) {
-      setDelivery(d => ({
-        ...d,
-        name: d.name || user.name || [user.first_name, user.last_name].filter(Boolean).join(' ') || '',
-        mobile: d.mobile || user.mobile || user.phone || '',
-        city: d.city || user.city || '',
-        state: d.state || user.state || '',
-      }));
+      setDelivery(d => {
+        const profileAddrLine = [user.address_line1, user.address_line2]
+          .filter(Boolean).join(', ');
+        return {
+          name: d.name || user.name || [user.first_name, user.last_name].filter(Boolean).join(' ') || '',
+          mobile: d.mobile || user.mobile || user.phone || '',
+          address_line: d.address_line || profileAddrLine || '',
+          city: d.city || user.city || '',
+          state: d.state || user.state || '',
+          pin_code: d.pin_code || user.pincode || user.pin_code || '',
+          landmark: d.landmark || '',
+        };
+      });
     }
   }, [pendingBook, user]);
   const dragStartX = useRef(null);

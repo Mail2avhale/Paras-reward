@@ -372,6 +372,24 @@ async def book_product(product_id: str, body: BookProductRequest):
     }
     await db.mall_bookings.insert_one(booking_doc)
 
+    # Persist this delivery address to user profile (best-effort, idempotent)
+    # — so the user doesn't have to re-type next time.
+    try:
+        addr_update = {
+            "address_line1": d.address_line.strip(),
+            "city": (d.city or "").strip(),
+            "state": (d.state or "").strip(),
+            "pincode": d.pin_code.strip(),
+        }
+        # Only set fields that user hasn't already saved
+        existing_keys = ["address_line1", "city", "state", "pincode"]
+        existing = {k: user.get(k) for k in existing_keys}
+        to_set = {k: v for k, v in addr_update.items() if v and not existing.get(k)}
+        if to_set:
+            await db.users.update_one({"uid": body.user_id}, {"$set": to_set})
+    except Exception as _e:
+        logging.warning(f"[MALL] profile address save failed (non-fatal): {_e}")
+
     # Debit user's PRC balance
     await db.users.update_one(
         {"uid": body.user_id},
