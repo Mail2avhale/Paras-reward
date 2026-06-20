@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.parasreward.app"
+    namespace "com.parasreward.prc"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.parasreward.app"
+        applicationId "com.parasreward.prc"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // versionCode bumped from 1 → 2 for the SDK 35 / signing-config rollout.

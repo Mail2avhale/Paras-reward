@@ -9,7 +9,7 @@
 -keep class com.getcapacitor.** { *; }
 -keep interface com.getcapacitor.** { *; }
 -keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
--keep class com.parasreward.app.** { *; }
+-keep class com.parasreward.prc.** { *; }
 
 # Cordova plugin compatibility shim
 -keep class org.apache.cordova.** { *; }

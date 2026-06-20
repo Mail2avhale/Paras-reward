@@ -1,4 +1,4 @@
-package com.parasreward.app;
+package com.parasreward.prc;
 
 import com.getcapacitor.BridgeActivity;
 
