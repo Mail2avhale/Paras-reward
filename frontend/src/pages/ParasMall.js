@@ -54,6 +54,22 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [pendingBook, setPendingBook] = useState(null);
+  const [delivery, setDelivery] = useState({
+    name: '', mobile: '', address_line: '', city: '', state: '', pin_code: '', landmark: '',
+  });
+
+  // Pre-fill delivery form from user profile when modal opens
+  useEffect(() => {
+    if (pendingBook && user) {
+      setDelivery(d => ({
+        ...d,
+        name: d.name || user.name || [user.first_name, user.last_name].filter(Boolean).join(' ') || '',
+        mobile: d.mobile || user.mobile || user.phone || '',
+        city: d.city || user.city || '',
+        state: d.state || user.state || '',
+      }));
+    }
+  }, [pendingBook, user]);
   const dragStartX = useRef(null);
   const dragStartY = useRef(null);
 
@@ -144,11 +160,15 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
     return () => window.removeEventListener('keydown', handler);
   }, [tab, swipe]);
 
-  const bookProduct = async (product) => {
+  const bookProduct = async (product, delivery) => {
     if (!user?.uid) { toast.error('Please log in to book'); return; }
+    if (!delivery) { toast.error('Delivery details required'); return; }
     setBookingInProgress(true);
     try {
-      const res = await axios.post(`${API}/mall/book/${product.product_id}`, { user_id: user.uid });
+      const res = await axios.post(`${API}/mall/book/${product.product_id}`, {
+        user_id: user.uid,
+        delivery,
+      });
       if (res.data?.success) {
         toast.success(`Booked ${product.name}! Mining started.`);
         if (onBalanceUpdate && res.data.booking) {
@@ -456,7 +476,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
 
                   <button
                     className="mall-book-btn"
-                    onClick={() => bookProduct(current)}
+                    onClick={() => setPendingBook(current)}
                     disabled={bookingInProgress || !current}
                     data-testid="mall-book-btn"
                   >
@@ -536,6 +556,67 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
               <p className="mall-confirm-note">
                 Daily mining at 4 PRC + downline boost will gradually fill the rest. Delivery at 100%.
               </p>
+
+              {/* Delivery Address Form */}
+              <div className="mall-delivery-section" data-testid="mall-delivery-form">
+                <div className="mall-delivery-title">📍 Delivery Address</div>
+                <input
+                  className="mall-delivery-input"
+                  placeholder="Full Name"
+                  value={delivery.name}
+                  onChange={(e) => setDelivery({ ...delivery, name: e.target.value })}
+                  data-testid="mall-delivery-name"
+                />
+                <input
+                  className="mall-delivery-input"
+                  placeholder="Mobile (10 digits)"
+                  type="tel"
+                  maxLength={10}
+                  value={delivery.mobile}
+                  onChange={(e) => setDelivery({ ...delivery, mobile: e.target.value.replace(/\D/g, '') })}
+                  data-testid="mall-delivery-mobile"
+                />
+                <input
+                  className="mall-delivery-input"
+                  placeholder="House No, Street, Area"
+                  value={delivery.address_line}
+                  onChange={(e) => setDelivery({ ...delivery, address_line: e.target.value })}
+                  data-testid="mall-delivery-address"
+                />
+                <div className="mall-delivery-row">
+                  <input
+                    className="mall-delivery-input"
+                    placeholder="City"
+                    value={delivery.city}
+                    onChange={(e) => setDelivery({ ...delivery, city: e.target.value })}
+                    data-testid="mall-delivery-city"
+                  />
+                  <input
+                    className="mall-delivery-input"
+                    placeholder="State"
+                    value={delivery.state}
+                    onChange={(e) => setDelivery({ ...delivery, state: e.target.value })}
+                    data-testid="mall-delivery-state"
+                  />
+                </div>
+                <input
+                  className="mall-delivery-input"
+                  placeholder="PIN Code (6 digits)"
+                  type="tel"
+                  maxLength={6}
+                  value={delivery.pin_code}
+                  onChange={(e) => setDelivery({ ...delivery, pin_code: e.target.value.replace(/\D/g, '') })}
+                  data-testid="mall-delivery-pin"
+                />
+                <input
+                  className="mall-delivery-input"
+                  placeholder="Landmark (optional)"
+                  value={delivery.landmark}
+                  onChange={(e) => setDelivery({ ...delivery, landmark: e.target.value })}
+                  data-testid="mall-delivery-landmark"
+                />
+              </div>
+
               <div className="mall-confirm-actions">
                 <button
                   className="mall-confirm-cancel"
@@ -547,7 +628,19 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                 </button>
                 <button
                   className="mall-confirm-go"
-                  onClick={async () => { const p = pendingBook; setPendingBook(null); await bookProduct(p); }}
+                  onClick={async () => {
+                    // Inline validation
+                    if (!delivery.name.trim() || !delivery.mobile.trim() || !delivery.address_line.trim() || !delivery.pin_code.trim()) {
+                      toast.error('Name, mobile, address & PIN code are required');
+                      return;
+                    }
+                    if (delivery.mobile.length < 10) { toast.error('Mobile must be 10 digits'); return; }
+                    if (delivery.pin_code.length !== 6) { toast.error('PIN code must be 6 digits'); return; }
+                    const p = pendingBook;
+                    const d = { ...delivery };
+                    setPendingBook(null);
+                    await bookProduct(p, d);
+                  }}
                   disabled={bookingInProgress}
                   data-testid="mall-confirm-go"
                 >

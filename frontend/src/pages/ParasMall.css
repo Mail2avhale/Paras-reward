@@ -1188,7 +1188,42 @@
   border-top-color: rgba(91, 45, 199, 0.10);
   color: #1a0e2e;
   box-shadow: 0 -20px 60px rgba(91, 45, 199, 0.20);
+  max-height: 90vh;
+  overflow-y: auto;
 }
+
+/* ----------- DELIVERY ADDRESS FORM ----------- */
+.mall-delivery-section {
+  background: #faf6f2;
+  border-radius: 14px;
+  padding: 14px 12px;
+  margin: 12px 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mall-delivery-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5b2dc7;
+  margin-bottom: 2px;
+}
+.mall-delivery-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(91, 45, 199, 0.18);
+  background: #fff;
+  color: #1a0e2e;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 160ms;
+}
+.mall-delivery-input::placeholder { color: rgba(26, 14, 46, 0.42); }
+.mall-delivery-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15); }
+.mall-delivery-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .mall-confirm-handle { background: rgba(91, 45, 199, 0.25); }
 .mall-confirm-title { color: #5b2dc7; }
 .mall-confirm-product { color: #1a0e2e; }

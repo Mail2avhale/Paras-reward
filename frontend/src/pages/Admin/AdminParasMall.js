@@ -80,10 +80,21 @@ const AdminParasMall = () => {
     }
   };
 
-  const markDelivered = async (bookingId) => {
+  const markDelivered = async (booking) => {
+    // Show full delivery address for confirmation before marking delivered
+    const d = booking.delivery || {};
+    const fullAddr = [d.name, d.mobile, d.address_line, d.landmark, d.city, d.state, d.pin_code]
+      .filter(Boolean).join('\n');
+    if (!d.address_line) {
+      toast.error('No delivery address captured for this booking — cannot deliver.');
+      return;
+    }
+    if (!window.confirm(
+      `Mark as DELIVERED?\n\nShipping to:\n${fullAddr}\n\nProduct: ${booking.product_name}\nBooking: ${booking.booking_id.slice(0, 8)}...`
+    )) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API}/admin/mall/bookings/${bookingId}/mark-delivered`, {}, {
+      await axios.post(`${API}/admin/mall/bookings/${booking.booking_id}/mark-delivered`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success('Marked delivered + community post created');
@@ -199,7 +210,13 @@ const AdminParasMall = () => {
             <tbody>
               {bookings.map((b) => (
                 <tr key={b.booking_id} className="border-t border-slate-100" data-testid={`admin-mall-booking-${b.booking_id}`}>
-                  <td className="p-3 font-mono text-xs">{b.user_id.slice(0, 8)}…</td>
+                  <td className="p-3" data-testid={`admin-mall-booking-user-${b.booking_id}`}>
+                    <div className="font-semibold text-slate-800 text-xs">{b.user_name || 'Unknown'}</div>
+                    {b.user_mobile && (
+                      <div className="text-[10px] text-slate-500 font-mono">{b.user_mobile}</div>
+                    )}
+                    <div className="text-[9px] text-slate-400 font-mono">{b.user_id?.slice(0, 8)}…</div>
+                  </td>
                   <td className="p-3">{b.product_name}</td>
                   <td className="p-3 text-right tabular-nums">{Math.round(b.paid_prc)} / {b.total_prc}</td>
                   <td className="p-3 text-right tabular-nums">{b.progress_percent}%</td>
@@ -209,8 +226,13 @@ const AdminParasMall = () => {
                     </span>
                   </td>
                   <td className="p-3 text-right">
+                    {b.delivery?.address_line && (
+                      <div className="text-[10px] text-slate-500 mb-1 max-w-[180px] truncate" title={`${b.delivery.name}, ${b.delivery.address_line}, ${b.delivery.city || ''} ${b.delivery.pin_code}`}>
+                        📍 {b.delivery.pin_code} · {b.delivery.city || b.delivery.address_line.slice(0, 18)}
+                      </div>
+                    )}
                     {b.status === 'fulfilled' && (
-                      <Button size="sm" onClick={() => markDelivered(b.booking_id)} className="bg-blue-600 hover:bg-blue-700 text-white" data-testid={`admin-mall-deliver-${b.booking_id}`}>
+                      <Button size="sm" onClick={() => markDelivered(b)} className="bg-blue-600 hover:bg-blue-700 text-white" data-testid={`admin-mall-deliver-${b.booking_id}`}>
                         <Truck className="w-3 h-3 mr-1" /> Mark Delivered
                       </Button>
                     )}

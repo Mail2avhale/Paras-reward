@@ -73,8 +73,19 @@ async def _auto_seed_mall_products():
 
 
 # ---------------- MODELS ----------------
+class DeliveryAddress(BaseModel):
+    name: str
+    mobile: str
+    address_line: str
+    city: Optional[str] = ""
+    state: Optional[str] = ""
+    pin_code: str
+    landmark: Optional[str] = ""
+
+
 class BookProductRequest(BaseModel):
     user_id: str
+    delivery: Optional[DeliveryAddress] = None  # required for new bookings, optional for legacy
 
 
 class CollectBookingRequest(BaseModel):
@@ -302,6 +313,18 @@ async def book_product(product_id: str, body: BookProductRequest):
             f"Insufficient PRC. Need {upfront_prc:,} PRC upfront, have {available:,.0f} available."
         )
 
+    # Delivery address is mandatory for all new Mall bookings (physical product fulfillment)
+    if not body.delivery:
+        raise HTTPException(400, "Delivery address is required to book a product.")
+    d = body.delivery
+    if not d.name.strip() or not d.mobile.strip() or not d.address_line.strip() or not d.pin_code.strip():
+        raise HTTPException(400, "Name, mobile, address and PIN code are all required.")
+    if not d.pin_code.isdigit() or len(d.pin_code) != 6:
+        raise HTTPException(400, "PIN code must be exactly 6 digits.")
+    mobile_clean = "".join(c for c in d.mobile if c.isdigit())
+    if len(mobile_clean) < 10:
+        raise HTTPException(400, "Mobile must be at least 10 digits.")
+
     # Assign next position (global monotonic counter)
     counter = await db.mall_counters.find_one_and_update(
         {"_id": "booking_position"},
@@ -336,6 +359,16 @@ async def book_product(product_id: str, body: BookProductRequest):
         "created_at": now.isoformat(),
         "fulfilled_at": None,
         "delivered_at": None,
+        # Delivery details captured at booking time
+        "delivery": {
+            "name": d.name.strip(),
+            "mobile": mobile_clean,
+            "address_line": d.address_line.strip(),
+            "city": (d.city or "").strip(),
+            "state": (d.state or "").strip(),
+            "pin_code": d.pin_code.strip(),
+            "landmark": (d.landmark or "").strip(),
+        },
     }
     await db.mall_bookings.insert_one(booking_doc)
 
@@ -648,8 +681,24 @@ async def admin_list_bookings(status: Optional[str] = None, limit: int = 200):
     if status:
         q["status"] = status
     bookings = await db.mall_bookings.find(q, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    # Lookup user names + mobile in a single batch for the bookings page
+    user_ids = list({b.get("user_id") for b in bookings if b.get("user_id")})
+    users = await db.users.find(
+        {"uid": {"$in": user_ids}},
+        {"_id": 0, "uid": 1, "name": 1, "first_name": 1, "last_name": 1, "mobile": 1, "phone": 1}
+    ).to_list(len(user_ids) or 1)
+    user_map = {}
+    for u in users:
+        full = u.get("name") or " ".join(filter(None, [u.get("first_name"), u.get("last_name")])).strip()
+        user_map[u["uid"]] = {
+            "name": full or "Unknown",
+            "mobile": u.get("mobile") or u.get("phone") or "",
+        }
     for b in bookings:
         b["progress_percent"] = round((b.get("paid_prc", 0) / b.get("total_prc", 1)) * 100, 2)
+        u = user_map.get(b.get("user_id"), {})
+        b["user_name"] = u.get("name", "Unknown")
+        b["user_mobile"] = u.get("mobile", "")
     return {"success": True, "count": len(bookings), "bookings": bookings}
 
 
@@ -660,6 +709,8 @@ async def admin_mark_delivered(booking_id: str):
         raise HTTPException(404, "Booking not found")
     if b.get("status") != "fulfilled":
         raise HTTPException(400, f"Booking status is '{b.get('status')}', must be 'fulfilled' to deliver")
+    if not (b.get("delivery") or {}).get("address_line"):
+        raise HTTPException(400, "Cannot mark delivered — delivery address is missing on this booking.")
     await db.mall_bookings.update_one(
         {"booking_id": booking_id},
         {"$set": {"status": "delivered", "delivered_at": now_utc().isoformat()}}
