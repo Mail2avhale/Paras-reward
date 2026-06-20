@@ -38,12 +38,12 @@ jobs:
         with:
           node-version: '20'
 
-      # ── 3. JAVA 17 ─────────────────────────────────────────────────────────
-      - name: Setup Java 17
+      # ── 3. JAVA 21 ─────────────────────────────────────────────────────────
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       # ── 4. ANDROID SDK ─────────────────────────────────────────────────────
       - name: Setup Android SDK

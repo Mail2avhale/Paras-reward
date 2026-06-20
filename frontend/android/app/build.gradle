@@ -67,10 +67,10 @@ android {
             minifyEnabled false
         }
     }
-    // SDK 35 (Android 15) requires Java 17 toolchain
+    // SDK 35 (Android 15) — using Java 21 to match Capacitor's toolchain
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
 }
 
