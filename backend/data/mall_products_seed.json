@@ -667,5 +667,56 @@
       "HDFC",
       "ICICI"
     ]
+  },
+  {
+    "product_id": "7f7bbdd4-f0c6-44c3-809b-5a10774bba4f",
+    "name": "Farming Support Voucher",
+    "mrp_inr": 50000,
+    "category": "vouchers",
+    "description": "Comprehensive farming support voucher \u2014 seeds, fertilizers, agri-equipment and advisory services for Indian farmers.",
+    "brands": [
+      "Agri-Hub",
+      "Mahindra Krushi",
+      "BigBasket Farm",
+      "DeHaat",
+      "Kisan Network"
+    ],
+    "image_url": "/api/static/mall/placeholder.png",
+    "active": true,
+    "created_at": "2026-06-20T04:25:15.212544+00:00"
+  },
+  {
+    "product_id": "24a1fc0f-f816-481d-9c53-bb084a1d38a2",
+    "name": "Business Support Voucher",
+    "mrp_inr": 50000,
+    "category": "vouchers",
+    "description": "Business growth voucher \u2014 working capital advisory, GST setup, marketing credits and tools for entrepreneurs.",
+    "brands": [
+      "Razorpay",
+      "Zoho",
+      "Tally",
+      "Khatabook",
+      "Vyapar"
+    ],
+    "image_url": "/api/static/mall/placeholder.png",
+    "active": true,
+    "created_at": "2026-06-20T04:25:15.212544+00:00"
+  },
+  {
+    "product_id": "8076aaf8-748b-4e92-92d3-e602949fd525",
+    "name": "Family Insurance Voucher",
+    "mrp_inr": 40000,
+    "category": "vouchers",
+    "description": "Family health & life insurance voucher \u2014 comprehensive coverage from top insurers, no medical for instant approval.",
+    "brands": [
+      "LIC",
+      "HDFC Ergo",
+      "Star Health",
+      "ICICI Lombard",
+      "Bajaj Allianz"
+    ],
+    "image_url": "/api/static/mall/placeholder.png",
+    "active": true,
+    "created_at": "2026-06-20T04:25:15.212544+00:00"
   }
 ]
