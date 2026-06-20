@@ -267,6 +267,7 @@ async def create_success_story_post(
                 "beneficiary_user_id": user_id,
                 "user_total_redeemed_inr": float(lifetime_redeemed),
                 "plan_name": (plan_name or "").strip().title() if service_type == "subscription" else None,
+                "product_name": extra_title if service_type == "paras_mall" else None,
             },
             "like_count": 0,
             "reactions_count": {"celebrate": 0, "love": 0, "fire": 0},

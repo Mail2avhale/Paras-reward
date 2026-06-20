@@ -42,6 +42,12 @@ const SERVICE_THEME = {
     icon: '👑',
     label: 'Subscription',
   },
+  paras_mall: {
+    gradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
+    chip: 'bg-violet-100 text-violet-700 border-violet-200',
+    icon: '🛍️',
+    label: 'Product Booked',
+  },
 };
 
 const REACTIONS = [
@@ -61,15 +67,18 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
   const isSubscription = meta.service_type === 'subscription';
   const isSaleElite = meta.service_type === 'sale_elite_subscription';
   const isSaleEliteReceived = meta.service_type === 'sale_elite_received';
+  const isParasMall = meta.service_type === 'paras_mall';
   const planName = (meta.plan_name || '').trim();
   let chipLabel = theme.label;
   if (isSubscription && planName) chipLabel = `${theme.label} • ${planName}`;
   else if (isSaleElite) chipLabel = 'Sale Subscription';
   else if (isSaleEliteReceived) chipLabel = `Subscription • ${planName || 'Elite'}`;
+  else if (isParasMall && meta.product_name) chipLabel = `🛍️ ${meta.product_name}`;
   let completionLabel = 'Successfully Completed';
   if (isSubscription) completionLabel = 'Upgraded';
   else if (isSaleEliteReceived) completionLabel = `Purchased from ${meta.sender_masked_name || 'a seller'}`;
   else if (isSaleElite) completionLabel = `Sold to ${meta.beneficiary_masked_name || 'a buyer'}`;
+  else if (isParasMall) completionLabel = 'Product Booked';
   const isOwn = !!currentUserId && meta.beneficiary_user_id === currentUserId;
 
   const [reactions, setReactions] = useState(post.reactions_count || { celebrate: 0, love: 0, fire: 0 });
