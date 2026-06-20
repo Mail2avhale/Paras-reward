@@ -2,9 +2,9 @@
  * Admin — Paras Mall
  * Manage products + view bookings + mark delivered.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Package, Plus, Edit, Trash2, CheckCircle, Truck, RefreshCw, X, Save, Image as ImageIcon, Coins } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, CheckCircle, Truck, RefreshCw, X, Save, Upload, Image as ImageIcon, Coins } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -239,9 +239,36 @@ const AdminParasMall = () => {
 
 const ProductForm = ({ initial, isCreate, onSave, onCancel }) => {
   const [form, setForm] = useState(initial);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Image too large (max 5 MB)'); return; }
+    setUploading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await axios.post(`${API}/admin/mall/upload-image`, fd, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data?.image_url) {
+        setForm(f => ({ ...f, image_url: res.data.image_url }));
+        toast.success('Image uploaded');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full p-5" data-testid="admin-mall-form">
+      <div className="bg-white rounded-2xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto" data-testid="admin-mall-form">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold">{isCreate ? 'New Product' : 'Edit Product'}</h3>
           <button onClick={onCancel}><X className="w-5 h-5" /></button>
@@ -261,10 +288,46 @@ const ProductForm = ({ initial, isCreate, onSave, onCancel }) => {
               <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
             </div>
           </div>
+
+          {/* Product Image — direct upload + optional URL override */}
           <div>
-            <label className="text-xs uppercase tracking-wider text-slate-500">Image URL</label>
-            <Input value={form.image_url || ''} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="/api/static/mall/name.png" />
+            <label className="text-xs uppercase tracking-wider text-slate-500">Product Image</label>
+            <div className="mt-1 flex items-center gap-3">
+              <div className="w-20 h-20 rounded-lg border border-slate-200 bg-slate-50 grid place-items-center overflow-hidden flex-shrink-0">
+                {form.image_url ? (
+                  <img src={form.image_url} alt="" className="w-full h-full object-cover" data-testid="admin-mall-form-image-preview" />
+                ) : (
+                  <ImageIcon className="w-8 h-8 text-slate-300" />
+                )}
+              </div>
+              <div className="flex-1">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  data-testid="admin-mall-form-image-file"
+                />
+                <Button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  variant="outline"
+                  className="w-full"
+                  data-testid="admin-mall-form-upload-btn"
+                >
+                  {uploading ? (
+                    <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Uploading...</>
+                  ) : (
+                    <><Upload className="w-4 h-4 mr-2" /> {form.image_url ? 'Replace Image' : 'Upload Image'}</>
+                  )}
+                </Button>
+                <div className="text-[10px] text-slate-400 mt-1">PNG / JPG / WEBP · max 5 MB</div>
+              </div>
+            </div>
           </div>
+
           <div>
             <label className="text-xs uppercase tracking-wider text-slate-500">Description</label>
             <Input value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />

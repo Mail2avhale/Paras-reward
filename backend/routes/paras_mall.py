@@ -16,9 +16,10 @@ No cancellation, no refund. Delivery only at 100%.
 import logging
 import asyncio
 import os
+import re
 import uuid
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from pydantic import BaseModel
 from typing import Optional
 
@@ -531,6 +532,41 @@ async def booking_counts_per_product():
 
 
 # ---------------- ADMIN ENDPOINTS ----------------
+@admin_router.post("/upload-image")
+async def admin_upload_product_image(file: UploadFile = File(...)):
+    """Upload a product image file. Saves to /app/backend/static/mall/ and
+    returns the public URL that can be set on a product's `image_url` field.
+    Accepts: PNG, JPG, JPEG, WEBP — max 5 MB.
+    Filename auto-slugified from the upload name + timestamp suffix to avoid collisions.
+    """
+    if not file.filename:
+        raise HTTPException(400, "Missing filename")
+    ext = (file.filename.rsplit(".", 1)[-1] or "").lower()
+    if ext not in ("png", "jpg", "jpeg", "webp"):
+        raise HTTPException(400, f"Unsupported format: .{ext}. Use png/jpg/jpeg/webp")
+    blob = await file.read()
+    if len(blob) > 5 * 1024 * 1024:
+        raise HTTPException(400, "File too large (max 5 MB)")
+    if len(blob) < 32:
+        raise HTTPException(400, "File too small / empty")
+    # Slugify the base name
+    base = file.filename.rsplit(".", 1)[0]
+    slug = re.sub(r"[^a-zA-Z0-9_-]+", "_", base).strip("_").lower() or "product"
+    ts = int(datetime.now(timezone.utc).timestamp())
+    fname = f"{slug}_{ts}.{ext}"
+    target_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "mall")
+    os.makedirs(target_dir, exist_ok=True)
+    path = os.path.join(target_dir, fname)
+    with open(path, "wb") as f:
+        f.write(blob)
+    return {
+        "success": True,
+        "image_url": f"/api/static/mall/{fname}",
+        "filename": fname,
+        "size_bytes": len(blob),
+    }
+
+
 @admin_router.post("/products")
 async def admin_create_product(body: CreateProductRequest):
     product_id = str(uuid.uuid4())
