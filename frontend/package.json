@@ -5,9 +5,11 @@
   "dependencies": {
     "@capacitor-community/admob": "7",
     "@capacitor/android": "7",
-    "@capacitor/app": "^8.1.0",
+    "@capacitor/app": "7",
+    "@capacitor/browser": "7",
     "@capacitor/cli": "7",
     "@capacitor/core": "7",
+    "@capacitor/splash-screen": "7",
     "@radix-ui/react-alert-dialog": "^1.1.11",
     "@radix-ui/react-avatar": "^1.1.7",
     "@radix-ui/react-checkbox": "^1.2.3",

@@ -59,6 +59,16 @@
 -keep class com.google.android.play.core.** { *; }
 -dontwarn com.google.android.play.core.**
 
+# Google AdMob — keep all reflection-accessed Mobile Ads classes
+-keep class com.google.android.gms.ads.** { *; }
+-keep class com.google.android.gms.common.** { *; }
+-keep class com.google.android.gms.internal.ads.** { *; }
+-dontwarn com.google.android.gms.**
+-keep class com.getcapacitor.community.admob.** { *; }
+-dontwarn com.getcapacitor.community.admob.**
+
+
+
 # Keep stack traces readable in Play Console crash reports
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
