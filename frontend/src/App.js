@@ -508,7 +508,13 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
         <WebVitalsReporter user={user} />
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            <Route path="/" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RewardsHome />} />
+            <Route path="/" element={
+              user
+                ? <Navigate to={getRoleBasedRoute(user)} replace />
+                : IS_USER_BUILD
+                  ? <Navigate to="/login" replace />
+                  : <RewardsHome />
+            } />
             {/* home-old route removed - using RewardsHome */}
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/faq" element={<FAQ />} />
