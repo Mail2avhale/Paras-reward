@@ -471,21 +471,19 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                   >
                     <div className="mall-image-frame">
                       {/* Trending badge on first 5 */}
-                      {activeIndex < 5 && category === 'all' && !searchQuery && (
-                        <div className="mall-trending-badge">
-                          <Flame className="w-3 h-3" /> Trending
-                        </div>
-                      )}
-                      {socialCount > 0 && (
-                        <div className="mall-social-badge" data-testid="mall-social-badge">
-                          <Users className="w-3 h-3" /> {socialCount} booked
-                        </div>
-                      )}
-                      {/* New: admin-set badges (NEW / HOT / TRENDING / low stock) */}
+                      {/* New: admin-set badges (NEW / HOT / TRENDING / low stock) — top-left stack */}
                       <ProductBadges product={current} />
-                      {/* New: wishlist heart — top-right */}
-                      <div className="absolute top-3 right-3 z-20">
+                      {/* Top-right stack: wishlist heart + social-proof badge */}
+                      <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
                         <WishlistHeart productId={current?.product_id} />
+                        {socialCount > 0 && (
+                          <div
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase bg-white/95 text-emerald-700 shadow ring-1 ring-emerald-200"
+                            data-testid="mall-social-badge"
+                          >
+                            <Users className="w-3 h-3" /> {socialCount} booked
+                          </div>
+                        )}
                       </div>
                       {current?.image_url ? (
                         <img src={current.image_url} alt={current.name} className="mall-image" data-testid="mall-product-image" />
