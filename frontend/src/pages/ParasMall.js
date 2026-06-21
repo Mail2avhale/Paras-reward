@@ -7,11 +7,13 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
+import PullToRefresh from '@/components/PullToRefresh';
 import {
   ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight, Sparkles, Package,
   Coins, Search, X, ChevronUp, Flame, ArrowUpDown, TrendingUp, Users
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { hapticPrimary, hapticSuccess, hapticError } from '@/utils/nativeUx';
 import './ParasMall.css';
 import ParasMallBookings from './ParasMallBookings';
 
@@ -86,6 +88,23 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
       setBookings(r.data?.bookings || []);
     } catch (e) { /* silent */ }
   }, [user?.uid]);
+
+  // Combined loader so PullToRefresh can call one function
+  const loadAllMallData = useCallback(async () => {
+    try {
+      const [pRes, fRes, cRes] = await Promise.all([
+        axios.get(`${API}/mall/products`),
+        axios.get(`${API}/mall/leaderboard/recent-bookings?limit=10`),
+        axios.get(`${API}/mall/stats/booking-counts`),
+      ]);
+      if (pRes.data?.products) setProducts(pRes.data.products);
+      if (fRes.data?.feed) setFeed(fRes.data.feed);
+      if (cRes.data?.by_product_name) setBookingCounts(cRes.data.by_product_name);
+    } catch (e) {
+      toast.error('Failed to refresh Paras Mall');
+    }
+    await refreshBookings();
+  }, [refreshBookings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -176,6 +195,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         delivery,
       });
       if (res.data?.success) {
+        hapticSuccess();
         toast.success(`Booked ${product.name}! Mining started.`);
         if (onBalanceUpdate && res.data.booking) {
           onBalanceUpdate((user.prc_balance || 0) - res.data.booking.upfront_prc);
@@ -189,6 +209,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         setTab('bookings');
       }
     } catch (e) {
+      hapticError();
       toast.error(e.response?.data?.detail || 'Booking failed');
     } finally {
       setBookingInProgress(false);
@@ -212,6 +233,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const socialCount = current ? bookingCountByProduct[current.name] || 0 : 0;
 
   return (
+    <PullToRefresh onRefresh={loadAllMallData}>
     <div className="mall-root" data-testid="paras-mall-root">
       <div className="mall-bg" />
 
@@ -482,7 +504,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
 
                   <button
                     className="mall-book-btn"
-                    onClick={() => setPendingBook(current)}
+                    onClick={() => { hapticPrimary(); setPendingBook(current); }}
                     disabled={bookingInProgress || !current}
                     data-testid="mall-book-btn"
                   >
@@ -658,6 +680,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         )}
       </AnimatePresence>
     </div>
+    </PullToRefresh>
   );
 };
 

@@ -8,6 +8,15 @@ import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Mail, LogIn, Fingerprint, ArrowRight, KeyRound } from 'lucide-react';
 import { isBiometricSupported, biometricLogin, isBiometricEnabled } from '@/utils/biometricAuth';
+import {
+  checkNativeBiometric,
+  isNativeBiometricEnabled,
+  enableNativeBiometric,
+  nativeBiometricLogin,
+  formatBiometryType,
+  isCapacitor,
+} from '@/utils/nativeBiometric';
+import { hapticPrimary, hapticSuccess, hapticError } from '@/utils/nativeUx';
 import BiometricSetup from '@/components/BiometricSetup';
 import AnimatedFeedback from '@/components/AnimatedFeedback';
 import PinInput from '@/components/PinInput';
@@ -23,6 +32,10 @@ const LoginNew = ({ onLogin }) => {
   const [biometricLoading, setBiometricLoading] = useState(false);
   const [showBiometricOption, setShowBiometricOption] = useState(false);
   const [showBiometricSetupPrompt, setShowBiometricSetupPrompt] = useState(false);
+  // Native (Capacitor) biometric state — separate from WebAuthn (browser) flow.
+  const [nativeBioInfo, setNativeBioInfo] = useState({ ready: false, label: 'Fingerprint' });
+  const [nativeBioEnabled, setNativeBioEnabled] = useState(false);
+  const [showNativeBioSetup, setShowNativeBioSetup] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [animatedFeedback, setAnimatedFeedback] = useState(null);
   const [pinError, setPinError] = useState('');
@@ -210,6 +223,7 @@ const LoginNew = ({ onLogin }) => {
         type: 'success',
         duration: 2000
       });
+      hapticSuccess();
       
       // Save login ID if Remember Me is checked
       if (rememberMe) {
@@ -233,15 +247,24 @@ const LoginNew = ({ onLogin }) => {
       }
 
       // Check for biometric setup
-      if (isBiometricSupported() && !isBiometricEnabled()) {
-        setTimeout(() => {
-          setLoggedInUser(response.data);
-          setShowBiometricSetupPrompt(true);
-        }, 2000);
+      // Native (Capacitor) biometric — preferred on Android
+      if (isCapacitor() && nativeBioInfo.ready && !nativeBioEnabled) {
+        // Stash credentials so we can persist them after the user agrees
+        setLoggedInUser({ ...response.data, _pin: loginData.pin });
+        setTimeout(() => setShowNativeBioSetup(true), 1800);
+      } else if (isBiometricSupported() && !isBiometricEnabled()) {
+        // Web/WebAuthn — only when not running inside Capacitor
+        if (!isCapacitor()) {
+          setTimeout(() => {
+            setLoggedInUser(response.data);
+            setShowBiometricSetupPrompt(true);
+          }, 2000);
+        }
       }
 
     } catch (error) {
       console.error('Login error:', error);
+      hapticError();
       const errorMsg = error.response?.data?.detail || 'Login failed. Please try again.';
       const statusCode = error.response?.status;
       
@@ -322,6 +345,54 @@ const LoginNew = ({ onLogin }) => {
     }
   };
 
+  // ── Native (Capacitor) biometric login ───────────────────────────────────
+  const handleNativeBiometricLogin = async () => {
+    setBiometricLoading(true);
+    try {
+      const result = await nativeBiometricLogin();
+      if (!result.success) {
+        // Soft fail — user fallback to PIN.
+        if (result.reason && result.reason !== 'auth-failed' && result.reason !== 'not-enabled') {
+          toast.error('Biometric unlock failed. Please sign in with your PIN.');
+        }
+        return;
+      }
+      // Fill the form and submit using the existing flow
+      setLoginData((prev) => ({ ...prev, identifier: result.identifier, pin: result.pin }));
+      // Use a microtask so React updates the input state first
+      setTimeout(() => {
+        document.querySelector('form')?.dispatchEvent(
+          new Event('submit', { cancelable: true, bubbles: true })
+        );
+      }, 50);
+    } catch (e) {
+      toast.error('Biometric unlock failed.');
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
+  // ── Enrol the user in native biometric AFTER successful PIN login ────────
+  const handleEnableNativeBiometric = async () => {
+    if (!loggedInUser?._pin) {
+      setShowNativeBioSetup(false);
+      return;
+    }
+    setBiometricLoading(true);
+    const result = await enableNativeBiometric({
+      identifier: loginData.identifier,
+      pin: loggedInUser._pin,
+    });
+    setBiometricLoading(false);
+    setShowNativeBioSetup(false);
+    if (result.success) {
+      setNativeBioEnabled(true);
+      toast.success('🎉 Fingerprint login enabled. Next time, just tap your sensor!');
+    } else if (result.reason && !['auth-cancelled', 'not-available'].includes(result.reason)) {
+      toast.error('Could not enable biometric. You can try again from Profile → Security.');
+    }
+  };
+
   // Reset forgot pin modal
   const resetForgotPin = () => {
     setShowForgotPin(false);
@@ -330,6 +401,21 @@ const LoginNew = ({ onLogin }) => {
   useEffect(() => {
     if (isBiometricSupported() && isBiometricEnabled()) {
       setShowBiometricOption(true);
+    }
+    // Detect native biometric (Capacitor / Android) availability + enrolment
+    if (isCapacitor()) {
+      (async () => {
+        const avail = await checkNativeBiometric();
+        const enabled = await isNativeBiometricEnabled();
+        if (avail.isAvailable) {
+          setNativeBioInfo({ ready: true, label: formatBiometryType(avail.biometryType) });
+        }
+        setNativeBioEnabled(enabled);
+        // Auto-prompt biometric on app launch if already enrolled (fastest UX)
+        if (avail.isAvailable && enabled) {
+          setTimeout(() => handleNativeBiometricLogin(), 400);
+        }
+      })();
     }
   }, []);
 
@@ -508,6 +594,39 @@ const LoginNew = ({ onLogin }) => {
             </>
           )}
 
+          {/* Native Biometric Login (Capacitor / Android) — shown when enrolled */}
+          {nativeBioInfo.ready && nativeBioEnabled && (
+            <>
+              <Button
+                type="button"
+                data-testid="native-biometric-login-btn"
+                onClick={handleNativeBiometricLogin}
+                disabled={biometricLoading || loading}
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+              >
+                {biometricLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Authenticating...
+                  </div>
+                ) : (
+                  <>
+                    <Fingerprint className="h-6 w-6" />
+                    Sign in with {nativeBioInfo.label}
+                  </>
+                )}
+              </Button>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or use PIN</span>
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Login Button */}
           <Button
             data-testid="login-submit-btn"
@@ -563,6 +682,53 @@ const LoginNew = ({ onLogin }) => {
           onComplete={() => setShowBiometricSetupPrompt(false)}
           onSkip={() => setShowBiometricSetupPrompt(false)}
         />
+      )}
+
+      {/* Native Biometric Enrolment Prompt (Capacitor / Android only) */}
+      {showNativeBioSetup && (
+        <div
+          data-testid="native-bio-setup-modal"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        >
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="text-center mb-5">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mx-auto mb-4 ring-4 ring-emerald-100">
+                <Fingerprint className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Enable {nativeBioInfo.label} Login?
+              </h2>
+              <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+                Sign in instantly next time with your {nativeBioInfo.label.toLowerCase()}.
+                You can still use your PIN whenever you want.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <Button
+                type="button"
+                data-testid="enable-native-bio-btn"
+                onClick={handleEnableNativeBiometric}
+                disabled={biometricLoading}
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-6 rounded-xl text-base font-semibold"
+              >
+                {biometricLoading ? 'Setting up...' : `Enable ${nativeBioInfo.label}`}
+              </Button>
+              <Button
+                type="button"
+                data-testid="skip-native-bio-btn"
+                onClick={() => setShowNativeBioSetup(false)}
+                variant="outline"
+                className="w-full py-5 rounded-xl text-base"
+              >
+                Maybe Later
+              </Button>
+            </div>
+            <p className="text-[11px] text-center text-gray-400 mt-4 leading-relaxed">
+              Your PIN is encrypted and stored only on this device. You can disable
+              this anytime from Profile → Security.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Forgot PIN Modal - Redirect to verification page */}

@@ -20,6 +20,7 @@ import { DashboardSkeleton } from '@/components/skeletons';
 import MiningWidget from '@/components/MiningWidget';
 import RechargeCard from '@/components/RechargeCard';
 import RefundBlockerModal from '@/components/RefundBlockerModal';
+import PullToRefresh from '@/components/PullToRefresh';
 
 // Live Date & Time component for dashboard header
 const LiveDateTime = () => {
@@ -358,6 +359,7 @@ const DashboardModern = ({ user, onLogout }) => {
   }
 
   return (
+    <PullToRefresh onRefresh={fetchDashboardData}>
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
 
       {/* Refund Blocker Modal - blocks entire dashboard */}
@@ -1237,6 +1239,7 @@ const DashboardModern = ({ user, onLogout }) => {
       <div className="pb-24" />
       
     </div>
+    </PullToRefresh>
   );
 };
 

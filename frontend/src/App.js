@@ -17,6 +17,7 @@ import LiveTickerStrip from "@/components/LiveTickerStrip";
 import WebVitalsReporter from "@/components/WebVitalsReporter";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import AdminOnWebOnly from "@/components/AdminOnWebOnly";
+import { applyBrandedStatusBar } from "@/utils/nativeUx";
 
 // ============================================================
 // GLOBAL TOAST FILTER (May 10, 2026)
@@ -919,6 +920,8 @@ function App() {
   };
 
   useEffect(() => {
+    // Native: apply branded status bar colour on app boot (no-op on web)
+    applyBrandedStatusBar();
     // If user exists, validate role via API and refresh data from server
     // SECURITY: Validate role server-side before allowing admin access
     let timeoutFallback;
