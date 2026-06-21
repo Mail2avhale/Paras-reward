@@ -213,8 +213,11 @@ async def add_review(product_id: str, body: ReviewCreateBody, user: dict = Depen
             "text": (body.text or "").strip(),
             "created_at": _utcnow(),
         })
-    except Exception:
-        raise HTTPException(409, "You've already reviewed this product")
+    except Exception as e:
+        # pymongo's DuplicateKeyError carries 11000 in details
+        if "duplicate key" in str(e).lower() or "E11000" in str(e):
+            raise HTTPException(409, "You've already reviewed this product")
+        raise HTTPException(500, "Could not save review")
 
     # Refresh aggregated rating + review_count on the product doc for fast list reads
     agg = await db.mall_product_reviews.aggregate([
@@ -495,13 +498,15 @@ async def ai_generate_description(body: AIDescBody, user: dict = Depends(get_cur
         chat = (
             LlmChat(api_key=key, session_id=session_id, system_message="You are a concise e-commerce copywriter.")
             .with_model("gemini", "gemini-2.5-flash")
-            .with_max_tokens(220)
         )
         msg = UserMessage(text=prompt)
         text = await chat.send_message(msg)
         return {"success": True, "description": (text or "").strip()}
     except Exception as e:
-        raise HTTPException(502, f"AI generation failed: {e}")
+        # Don't leak library internals — just log
+        import logging
+        logging.exception("AI description failed")
+        raise HTTPException(502, "AI generation failed. Please try again.")
 
 
 # ── CSV Bulk Import ────────────────────────────────────────────────────────

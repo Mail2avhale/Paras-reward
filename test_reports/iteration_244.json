@@ -1,0 +1,28 @@
+{
+  "summary": "Re-verification PASSED for both bugs fixed by iteration_243. Backend: full test_mall_v2_combo_pack.py suite — 20/20 PASS (was 19/20). AI description endpoint POST /api/mall/v2/admin/ai-description now returns 200 with a ~60-word Gemini blurb (e.g. \"Elevate your everyday with the Smart Watch! Track your fitness goals effortlessly…\"). Reviews 409 dedup still works on duplicate POST and invalid product_id correctly returns 404 (not 409). Frontend /mall — paras-mall-root, saver-progress-bar, mall-wishlist-link, wishlist-heart-* and product-badges-* are ALL PRESENT on the active product card with ZERO pageerrors and NO 'Rendered more hooks than during the previous render' anywhere — the hooks-rule violation is gone. /mall/wishlist renders mall-wishlist-page; toggling heart on /mall adds the item to /mall/wishlist (visually confirmed Smartphone card with filled red heart) and the wishlist-remove-{pid} testid removes it. /admin/mall/analytics renders the page testid + KPIs (39 bookings, 10,11,000 PRC, 18 buyers) + Top Products + By Category bars; analytics-range-7d/30d/90d switch correctly; analytics-csv-btn triggers GET /api/mall/v2/admin/sales-export?days=7. /api/app/version-info → 1.0.7 / code 8. Both originally-broken flows are now production-ready.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mall_v2_combo_pack.py",
+    "/app/test_reports/pytest/mall_v2_iter244.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "mall_v2.py reviews try/except still catches duplicate-key by string-matching 'duplicate key' / 'E11000' in str(e) rather than catching pymongo.errors.DuplicateKeyError directly. Functionally equivalent today but more fragile across pymongo versions. Recommend `except DuplicateKeyError:` for explicitness (the iteration_243 review note still applies).",
+    "mall_v2.py AI description endpoint logs/returns a generic 502 message on Exception, which is good — but still re-raises HTTPException 500 from review insert (line ~220) on non-duplicate insert failures; consider distinguishing transient DB errors with 503.",
+    "mall_v2.py creates its own AsyncIOMotorClient at import time rather than reusing server.py's shared db (carried-over flag from iter_243).",
+    "ParasMall.js fix is correct — track-view useEffect is now declared before `if (loading) return …`, restoring stable hook order. Recommend a small unit test or eslint-plugin-react-hooks/exhaustive-deps to guard against regressions."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (20/20)", "frontend": "100% on retested flows"},
+  "test_credentials": "Admin: admin@test.com / 153759. User: 9970100782 / 997010.",
+  "seed_data_creation": "test_mall_v2_combo_pack.py auto-inserts/cleans a TEST_BK_<uuid> mall_booking and its created reviews for the primary user (no manual seeding needed).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Both iteration_243 bugs are fully resolved and verified. Backend regression: `pytest -v /app/backend/tests/test_mall_v2_combo_pack.py` → 20/20 in ~4.5s. Frontend regression: login user 9970100782/997010 → /mall → expect paras-mall-root + saver-progress-bar + mall-wishlist-link + wishlist-heart-* + product-badges-* all true and zero pageerrors. Wishlist page uses wishlist-item-{pid} / wishlist-remove-{pid} (NOT wishlist-heart-*) — important selector note for future tests. Admin analytics page is fully wired (KPIs, ranges, CSV).",
+  "rca_of_the_issue": "Bug 1 (AI desc 502) RCA: emergentintegrations.llm.chat.LlmChat dropped/renamed .with_max_tokens() in current installed version. Fix in mall_v2.py lines ~497-510 removes the chained `.with_max_tokens(220)` call and converts the 502 message to generic. Verified by curl + pytest. Bug 2 (hooks error) RCA: track-view useEffect was placed after `if (loading) return (...)` in ParasMall.js, so on the first render (loading=true) only N-1 hooks ran, and on the second render (loading=false) all N hooks ran → React threw 'Rendered more hooks than the previous render', and downstream Mall 2.0 widgets failed to mount. Fix: moved the useEffect above the early-return guard and used `filtered[activeIndex]?.product_id` (computed before the guard) as its dep. Verified via Playwright pageerror listener returning 0 errors and all testids present."
+}

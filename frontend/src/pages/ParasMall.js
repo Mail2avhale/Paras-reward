@@ -223,6 +223,16 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
     }
   };
 
+  // Mall 2.0: auto-track recently-viewed when card changes (MUST be before any early return)
+  const trackedProductId = filtered[activeIndex]?.product_id;
+  useEffect(() => {
+    if (!trackedProductId) return;
+    const t = setTimeout(() => {
+      axios.post(`${API}/mall/v2/track-view/${trackedProductId}`).catch(() => {});
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [trackedProductId]);
+
   if (loading) {
     return (
       <div className="mall-loading" data-testid="mall-loading">
@@ -238,15 +248,6 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const visibleDotsStart = Math.max(0, activeIndex - 3);
   const visibleDots = filtered.slice(visibleDotsStart, activeIndex + 4);
   const socialCount = current ? bookingCountByProduct[current.name] || 0 : 0;
-
-  // Mall 2.0: auto-track recently-viewed when card changes
-  useEffect(() => {
-    if (!current?.product_id) return;
-    const t = setTimeout(() => {
-      axios.post(`${API}/mall/v2/track-view/${current.product_id}`).catch(() => {});
-    }, 1200);
-    return () => clearTimeout(t);
-  }, [current?.product_id]);
 
   return (
     <PullToRefresh onRefresh={loadAllMallData}>
