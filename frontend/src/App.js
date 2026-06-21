@@ -16,6 +16,7 @@ import BottomNav from "@/components/BottomNav";
 import LiveTickerStrip from "@/components/LiveTickerStrip";
 import WebVitalsReporter from "@/components/WebVitalsReporter";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
+import AdminOnWebOnly from "@/components/AdminOnWebOnly";
 
 // ============================================================
 // GLOBAL TOAST FILTER (May 10, 2026)
@@ -604,16 +605,6 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 </Suspense>
               ) : <Navigate to="/login" />}
             />
-            <Route
-              path="/admin/mall"
-              element={canAccessAdmin(user) ? (
-                <Suspense fallback={<LoadingFallback />}>
-                  <AdminLayout user={user} onLogout={handleLogout}>
-                    <AdminParasMall />
-                  </AdminLayout>
-                </Suspense>
-              ) : <Navigate to="/dashboard" />}
-            />
             <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Suspense fallback={<LoadingFallback />}><BankRedeemPage user={user} onLogout={handleLogout} onBalanceUpdate={onBalanceUpdate} /></Suspense>) : <Navigate to="/login" />} />
             <Route path="/prc-to-bank" element={<Navigate to="/dashboard" replace />} />
             {/* Redeem PRC routes - DEPRECATED April 2026, redirect to dashboard */}
@@ -629,6 +620,16 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             {/* ========== ADMIN ROUTES - Excluded from User Build (Play Store AAB) ========== */}
             {!IS_USER_BUILD && AdminLayout && (
               <>
+                <Route
+                  path="/admin/mall"
+                  element={canAccessAdmin(user) ? (
+                    <Suspense fallback={<LoadingFallback />}>
+                      <AdminLayout user={user} onLogout={handleLogout}>
+                        <AdminParasMall />
+                      </AdminLayout>
+                    </Suspense>
+                  ) : <Navigate to="/dashboard" />}
+                />
                 <Route path="/admin" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminDashboard user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/dashboard" element={canAccessAdmin(user) ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/users" element={<Navigate to="/admin/user-360" replace />} />
@@ -735,9 +736,9 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
               </>
             )}
             
-            {/* Redirect admin routes to dashboard in User Build */}
+            {/* In USER build (Android AAB): catch all /admin/* and open in external browser */}
             {IS_USER_BUILD && (
-              <Route path="/admin/*" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/admin/*" element={<AdminOnWebOnly />} />
             )}
             
             {/* Redeem PRC routes - DEPRECATED April 2026 */}

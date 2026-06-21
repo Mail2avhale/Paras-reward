@@ -19,8 +19,8 @@ def set_db(database):
 
 
 # ── Defaults — bump these whenever you push a new Play Store build ──────────
-LATEST_VERSION_NAME = "1.0.2"
-LATEST_VERSION_CODE = 3
+LATEST_VERSION_NAME = "1.0.3"
+LATEST_VERSION_CODE = 4
 MINIMUM_SUPPORTED_VERSION_CODE = 1  # below this → force-update
 PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.parasreward.prc"
 

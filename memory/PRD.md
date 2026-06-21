@@ -4,9 +4,9 @@
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
 ## Architecture
-- **Frontend**: React (CRA) + Tailwind + shadcn/ui — PARAS MALL UI, Admin panel, UpdateBanner
-- **Backend**: FastAPI (Python) + MongoDB — `/api/mall/*`, `/api/community/*`, `/api/prc_statement/*`, `/api/admin/mall/upload-image`, `/api/app/version-info`
-- **Native App**: Capacitor + AdMob + Android signed AAB
+- **Frontend**: React (CRA) + Tailwind + shadcn/ui — split into User & Admin builds via `REACT_APP_BUILD_TYPE`
+- **Backend**: FastAPI (Python) + MongoDB
+- **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
 ## Implemented (Feb 2026)
@@ -18,44 +18,76 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - ✅ 3 new Voucher products in Mall
 - ✅ App Update Banner + `/api/app/version-info` endpoint
 - ✅ Capacitor + AdMob plugin setup
-- ✅ Keystore generation (paras-reward.keystore)
-- ✅ GitHub Actions workflow created
-- ✅ **AAB build successful via CI/CD (21MB, 5m 46s)** — Feb 2026
-  - Fixed: yarn.lock cache, gradle-wrapper.jar auto-download, Java 21, Groovy var conflict, minSdk 23 (AdMob)
+- ✅ Keystore generation
+- ✅ GitHub Actions workflow created — AAB build successful (5m 46s)
+- ✅ Fixed: yarn.lock cache, gradle-wrapper.jar auto-download, Java 21, Groovy var conflict, minSdk 23
+- ✅ Package name changed `com.parasreward.app` → `com.parasreward.prc`
+- ✅ **Phase 0 (Android Bundle Optimization) — Feb 2026**:
+  - Verified all 94 admin routes wrapped in `{!IS_USER_BUILD && ...}`
+  - Fixed leaked `/admin/mall` route (was outside the wrapper)
+  - Created `AdminOnWebOnly` component → admin URLs open in external browser via `@capacitor/browser`
+  - Workflow now uses `yarn build:user` → JS bundle 16MB → 10MB (-37%)
+  - Expected AAB: 21MB → ~14MB
+  - versionCode 3 → 4, versionName 1.0.2 → 1.0.3
+  - service-worker v76 → v77
 
 ## P0 — Immediate
-- 🔄 User uploading AAB to Google Play Console (manual step)
+- 🔄 User to push code, run workflow, download new AAB v1.0.3 (versionCode 4), upload to Play Console
 
-## P1 — Upcoming
-- HRMS Reporting — Email integration (Resend/SendGrid)
-- Invoice "Download as PDF" in InvoiceModal.js
-- "Share Receipt via WhatsApp" button on Recharge History
-- Optional: `PLAY_SERVICE_ACCOUNT_JSON` secret for direct Play Console upload
+## P1 — Phase 1 (Speed + Biometric Foundation)
+- 🔐 Biometric (Fingerprint/Face) login via `@capacitor-community/biometric-auth`
+- 🎨 Native status bar color sync
+- 💥 Haptic feedback on key actions
+- 🌅 Splash screen optimize (1500→800ms + better image)
+- 📲 Pull-to-refresh on Dashboard/Wallet/Mall
+- 🌐 Offline cache (wallet history, PRC ledger)
+- 🚀 React lazy + preload critical routes
 
-## P2 — Backlog
-- Audit Trail `/admin/audit/kyc-force-approvals`
-- Beneficiary "Sponsored by [Name]" badge
-- Top Sponsors Leaderboard (Elite Ambassadors)
-- Floating Earnings Calculator widget on homepage hero
-- Eko Refund OTP fix (BLOCKED on vendor)
+## P1 — Phase 2 (Engagement)
+- 🔔 FCM Push Notifications (recharge success, OTP, offers)
+- 📅 Local Notifications (daily streak reminder)
+- 🎬 AdMob Banner ads (Mall, Dashboard bottom)
+- 🎬 AdMob Interstitial + Rewarded Video
+
+## P1 — Other ongoing
+- HRMS Email integration (Resend/SendGrid)
+- Invoice "Download as PDF" + WhatsApp share
+
+## P2 — Phase 3 (Native Features)
+- 📷 QR Scanner (UPI, referral, voucher)
+- 📤 Native Share (WhatsApp invoice/receipt)
+- 🔗 Deep linking (`parasreward://wallet`)
+- 📱 App shortcuts
+- 💬 In-app review prompt
+- 🆔 App badge with notification count
+
+## P2 — Phase 4 (Enterprise/Security)
+- 📊 Firebase Analytics + 🐛 Crashlytics
+- 🔒 Root/Emulator detection + 🛡️ SSL Pinning
+- 📵 App lock on minimize (30s auto)
+- 🌙 Native dark mode sync
+- 🌍 Multi-language (Marathi/Hindi/English)
+- 🔄 OTA Live Updates
 
 ## P3 — Future
 - MongoDB → PostgreSQL migration
+- Eko Refund OTP fix (BLOCKED on vendor)
+- Audit Trail `/admin/audit/kyc-force-approvals`
+- Sponsor badges + Top Sponsors Leaderboard
+- Earnings Calculator hero widget
 
 ## Key Files
 - `/app/.github/workflows/build-android.yml`
 - `/app/frontend/android/app/build.gradle`
 - `/app/frontend/android/variables.gradle`
-- `/app/backend/routes/paras_mall.py`
-- `/app/frontend/src/pages/ParasMall.js`
-- `/app/frontend/src/components/UpdateBanner.js`
+- `/app/frontend/capacitor.config.json`
+- `/app/frontend/src/App.js` (IS_USER_BUILD wrapper at line 629)
+- `/app/frontend/src/components/AdminOnWebOnly.js` (admin → browser redirect)
+- `/app/backend/routes/app_version.py`
+- `/app/frontend/public/service-worker.js`
 
 ## 3rd Party Integrations
-- Razorpay (Payments) — User API Key
-- Eko India BBPS — User API Key (Refund OTP issue pending vendor)
-- Gemini Nano Banana (Image Gen) — Emergent LLM Key
-- Google AdMob — Publisher ID `ca-app-pub-3556805218952480~1933993140`
-- GitHub Actions — CI/CD (5 secrets configured)
+- Razorpay, Eko BBPS, Gemini Nano Banana, Google AdMob, GitHub Actions
 
 ## Test Credentials
 See `/app/memory/test_credentials.md`
@@ -63,4 +95,6 @@ See `/app/memory/test_credentials.md`
 ## Critical Notes
 - User is non-technical, Marathi speaker — spoon-feed step-by-step
 - Frontend changes require bumping `/app/frontend/public/service-worker.js` version
-- All Android build files use Java 21, minSdk 23, compileSdk 35
+- All Android build: Java 21, minSdk 23, compileSdk 35
+- Package: `com.parasreward.prc`
+- Build commands: `yarn build` (full web) vs `yarn build:user` (user-only Android)

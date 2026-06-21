@@ -56,12 +56,13 @@ jobs:
         working-directory: frontend
         run: yarn install --network-timeout 600000
 
-      - name: Build React production bundle
+      - name: Build React production bundle (USER-only — Admin pages excluded)
         working-directory: frontend
         env:
           REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL }}
+          REACT_APP_BUILD_TYPE: user
           CI: false
-        run: yarn build
+        run: yarn build:user
 
       # ── 6. CAPACITOR SYNC ──────────────────────────────────────────────────
       - name: Sync Capacitor with Android
