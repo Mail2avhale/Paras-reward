@@ -347,7 +347,9 @@ const Notifications = lazy(() => import("@/pages/Notifications"));
 // NetworkTreeAdvanced - REMOVED (orphaned page, no nav link, used deprecated /referrals/network-tree endpoint)
 const MyInvoices = lazy(() => import("@/pages/MyInvoices"));
 const ParasMall = lazy(() => import("@/pages/ParasMall"));
+const MallWishlist = lazy(() => import("@/pages/MallWishlist"));
 const AdminParasMall = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminParasMall"));
+const AdminMallAnalytics = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminMallAnalytics"));
 const MyReports = lazy(() => import("@/pages/MyReports"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
@@ -613,6 +615,14 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 </Suspense>
               ) : <Navigate to="/login" />}
             />
+            <Route
+              path="/mall/wishlist"
+              element={user ? (
+                <Suspense fallback={<LoadingFallback />}>
+                  <MallWishlist />
+                </Suspense>
+              ) : <Navigate to="/login" />}
+            />
             <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Suspense fallback={<LoadingFallback />}><BankRedeemPage user={user} onLogout={handleLogout} onBalanceUpdate={onBalanceUpdate} /></Suspense>) : <Navigate to="/login" />} />
             <Route path="/prc-to-bank" element={<Navigate to="/dashboard" replace />} />
             {/* Redeem PRC routes - DEPRECATED April 2026, redirect to dashboard */}
@@ -634,6 +644,16 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                     <Suspense fallback={<LoadingFallback />}>
                       <AdminLayout user={user} onLogout={handleLogout}>
                         <AdminParasMall />
+                      </AdminLayout>
+                    </Suspense>
+                  ) : <Navigate to="/dashboard" />}
+                />
+                <Route
+                  path="/admin/mall/analytics"
+                  element={canAccessAdmin(user) ? (
+                    <Suspense fallback={<LoadingFallback />}>
+                      <AdminLayout user={user} onLogout={handleLogout}>
+                        <AdminMallAnalytics />
                       </AdminLayout>
                     </Suspense>
                   ) : <Navigate to="/dashboard" />}

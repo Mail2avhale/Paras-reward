@@ -113,9 +113,18 @@ const AdminParasMall = () => {
           </h1>
           <p className="text-sm text-slate-500 mt-1">Manage shop catalog, view bookings, and process deliveries.</p>
         </div>
-        <Button variant="outline" onClick={fetchAll} disabled={loading} data-testid="admin-mall-refresh">
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => window.location.assign('/admin/mall/analytics')}
+            data-testid="admin-mall-analytics-link"
+          >
+            📈 Analytics
+          </Button>
+          <Button variant="outline" onClick={fetchAll} disabled={loading} data-testid="admin-mall-refresh">
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Analytics tiles */}

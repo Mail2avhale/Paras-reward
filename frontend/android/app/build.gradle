@@ -7,10 +7,12 @@ android {
         applicationId "com.parasreward.prc"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode 6 → 7 for Phase 2.1 — native app skips marketing
-        // landing page and goes straight to /login (industry-standard app UX).
-        versionCode 7
-        versionName "1.0.6"
+        // versionCode 7 → 8 for PARAS MALL 2.0 — Wishlist, Reviews,
+        // Product Badges (NEW/HOT/TRENDING/low-stock), PRC Saver Progress,
+        // Recently-viewed tracking, Admin Mall Analytics, AI Description,
+        // CSV Bulk Import, Booking Status Timeline, Sales CSV Export.
+        versionCode 8
+        versionName "1.0.7"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

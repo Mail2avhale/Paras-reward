@@ -10,11 +10,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import PullToRefresh from '@/components/PullToRefresh';
 import {
   ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight, Sparkles, Package,
-  Coins, Search, X, ChevronUp, Flame, ArrowUpDown, TrendingUp, Users
+  Coins, Search, X, ChevronUp, Flame, ArrowUpDown, TrendingUp, Users, Heart
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { hapticPrimary, hapticSuccess, hapticError } from '@/utils/nativeUx';
 import { useAdMob } from '@/hooks/useAdMob';
+import WishlistHeart from '@/components/mall/WishlistHeart';
+import SaverProgressBar from '@/components/mall/SaverProgressBar';
+import ProductBadges from '@/components/mall/ProductBadges';
 import './ParasMall.css';
 import ParasMallBookings from './ParasMallBookings';
 
@@ -236,6 +239,15 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const visibleDots = filtered.slice(visibleDotsStart, activeIndex + 4);
   const socialCount = current ? bookingCountByProduct[current.name] || 0 : 0;
 
+  // Mall 2.0: auto-track recently-viewed when card changes
+  useEffect(() => {
+    if (!current?.product_id) return;
+    const t = setTimeout(() => {
+      axios.post(`${API}/mall/v2/track-view/${current.product_id}`).catch(() => {});
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [current?.product_id]);
+
   return (
     <PullToRefresh onRefresh={loadAllMallData}>
     <div className="mall-root" data-testid="paras-mall-root">
@@ -257,6 +269,14 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         >
           {searchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
         </button>
+        <button
+          className="mall-icon-btn"
+          onClick={() => navigate('/mall/wishlist')}
+          data-testid="mall-wishlist-link"
+          aria-label="Wishlist"
+        >
+          <Heart className="w-5 h-5" />
+        </button>
       </div>
 
       {/* PRC balance pill (with INR equivalent) */}
@@ -271,6 +291,9 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
           </span>
         </div>
       </div>
+
+      {/* Mall 2.0: PRC Saver Progress (next-target motivator) */}
+      <SaverProgressBar refreshKey={user?.prc_balance || 0} />
 
       <AnimatePresence>
         {searchOpen && (
@@ -457,6 +480,12 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                           <Users className="w-3 h-3" /> {socialCount} booked
                         </div>
                       )}
+                      {/* New: admin-set badges (NEW / HOT / TRENDING / low stock) */}
+                      <ProductBadges product={current} />
+                      {/* New: wishlist heart — top-right */}
+                      <div className="absolute top-3 right-3 z-20">
+                        <WishlistHeart productId={current?.product_id} />
+                      </div>
                       {current?.image_url ? (
                         <img src={current.image_url} alt={current.name} className="mall-image" data-testid="mall-product-image" />
                       ) : (

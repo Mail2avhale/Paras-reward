@@ -1,0 +1,55 @@
+{
+  "summary": "PARAS MALL 2.0 Combo Pack (AAB v1.0.7 / code 8) backend + frontend e2e. Backend 19/20 PASS — wishlist toggle+list, recently-viewed + view_count bump, saver-progress shape, 6+ default categories (idempotent), reviews (initial summary, 403 without booking, 200 on booked product, 409 duplicate, avg_rating + review_count refreshed on product doc), booking timeline (5-step funnel: Booked→Confirmed→Packed→Shipped→Delivered) + admin PATCH /status with label='Shipped' reflected in timeline, admin analytics (totals + daily + top_products + by_category + top_viewed) with 403 for non-admin, badges PATCH persisting is_new/is_trending/stock_count, CSV bulk-import (2 rows created, both visible in /mall/products), sales-export CSV (text/csv content-type, header 'booking_id,user_id,product_id,product_name…' + 39 data rows). /api/app/version-info → latest_version_name=1.0.7, latest_version_code=8. ONLY FAILURE: AI description endpoint returns 502 → root cause confirmed via curl localhost:8001 → response body `{\"detail\":\"AI generation failed: 'LlmChat' object has no attribute 'with_max_tokens'\"}`. Frontend: admin login + /admin/mall has admin-mall-analytics-link, /admin/mall/analytics renders admin-mall-analytics-page + analytics-range-7d/30d/90d + analytics-csv-btn + KPIs (39 bookings, 10,11,000 PRC, 18 unique buyers) + Top Products + By Category bars + Most Viewed (Smartphone 4 views). /mall/wishlist renders mall-wishlist-page. CRITICAL FRONTEND BUG: /mall page does NOT render paras-mall-root, saver-progress-bar, product-badges-*, or wishlist-heart-* — count=0/False on each. A React error 'Rendered more hooks than during the previous render.' was thrown on the /mall page, which indicates the new Mall 2.0 hooks (likely WishlistHeart / SaverProgressBar / ProductBadges) are conditionally called and breaking the render path.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/mall/v2/admin/ai-description",
+        "issue": "Always returns 502 with detail: \"AI generation failed: 'LlmChat' object has no attribute 'with_max_tokens'\". Root cause: mall_v2.py line ~498 chains `.with_max_tokens(220)` on the LlmChat builder, but the installed emergentintegrations.llm.chat.LlmChat class does not expose `with_max_tokens`. Confirmed by direct localhost:8001 curl returning the exception message.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ParasMall (/mall)",
+        "issue": "React error 'Rendered more hooks than during the previous render.' is raised on /mall, and the Mall 2.0 widgets do not render: data-testid paras-mall-root, saver-progress-bar, product-badges-*, wishlist-heart-* all absent (count=0). The page is essentially unusable for the Combo Pack features — likely one of the newly wired hooks (WishlistHeart/SaverProgressBar/ProductBadges) is called conditionally (e.g. after an early-return for loading state) which violates Rules of Hooks.",
+        "selector": "[data-testid=paras-mall-root], [data-testid=saver-progress-bar], [data-testid^=product-badges-], [data-testid^=wishlist-heart-]",
+        "priority": "CRITICAL"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mall_v2_combo_pack.py",
+    "/app/test_reports/pytest/mall_v2_combo_results.xml"
+  ],
+  "action_items": [
+    "FIX backend /app/backend/routes/mall_v2.py ai_generate_description: remove `.with_max_tokens(220)` chain (or replace with the correct method exposed by current emergentintegrations.LlmChat — e.g. token cap may be a constructor arg or `.with_params(...)`). Verify with: curl http://localhost:8001/api/mall/v2/admin/ai-description -H 'Authorization: Bearer <admin>' -d '{\"product_name\":\"X\"}'.",
+    "FIX frontend /app/frontend/src/pages/ParasMall.js (and/or its child hooks WishlistHeart/SaverProgressBar/ProductBadges): React error 'Rendered more hooks than during the previous render.' on /mall. Audit any conditional hook calls (useState/useEffect placed after a guard `if(loading) return …` or inside loops without stable order). Without this fix, none of the Mall 2.0 user-facing widgets appear and the heart/badge/progress flows are unusable from the UI.",
+    "Optional: Seed a real mall_booking for the primary test user (UID 76b75808-47fa-48dd-ad7c-8074678e3607) in the preview DB — currently 0/39 bookings belong to that UID; the test had to insert a TEST_BK_* booking via Mongo to exercise the timeline + review flows. iteration_242 context note ('user already has bookings') is incorrect for this env."
+  ],
+  "critical_code_review_comments": [
+    "mall_v2.py creates its own AsyncIOMotorClient via dotenv_values at import time (same pattern as ads_rewarded.py flagged in iteration_242) instead of reusing server.py's shared `db`. Should accept a `set_db()` initializer for testability & to avoid extra connection pools.",
+    "mall_v2.py POST /reviews/{pid}: relies on a generic `except Exception` after insert_one to map duplicate-key into 409. This will also map any unrelated insert error to 409 ('already reviewed') which is misleading. Recommend catching `pymongo.errors.DuplicateKeyError` specifically.",
+    "mall_v2.py GET /admin/analytics: `daily` returns Mongo documents whose `_id` is a date-string — that's fine (string not ObjectId). top_products + by_category also expose `_id` (product_id / category). Consider renaming `_id` → `product_id`/`category` for cleaner frontend consumption and to avoid confusion with MongoDB ObjectId conventions.",
+    "mall_v2.py POST /admin/ai-description: catches `except Exception as e` and returns 502 with the raw exception message. This leaks library internals to the client (today it leaked the missing-attribute error). Should log the trace server-side and return a generic 502 message.",
+    "mall_v2.py POST /admin/products/bulk-import: no duplicate-name check. Two CSV rows with the same name will create two products. Acceptable for an admin tool but worth documenting.",
+    "ParasMall.js: React 'Rendered more hooks than the previous render' is a hard error — strongly indicates a hook call after an early return or inside a conditional. Should be fixed before shipping v1.0.7."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mall_v2_combo_pack.py (new)"
+  ],
+  "success_rate": {
+    "backend": "95% (19/20 — only AI description fails due to LlmChat.with_max_tokens bug)",
+    "frontend": "60% (admin analytics + wishlist page OK; /mall page completely broken by hooks-rule violation)"
+  },
+  "test_credentials": "Admin: admin@test.com / 153759. User: 9970100782 / 997010 (UID 76b75808-47fa-48dd-ad7c-8074678e3607).",
+  "seed_data_creation": "Test inserts a single TEST_BK_<uuid> mall_booking for the primary user to enable booking-timeline + review tests (the live env has 0 bookings for that UID; all 39 belong to demo-17). The fixture deletes the booking AND any mall_product_reviews created by the user during the run on teardown. CSV bulk-import test creates 2 products named TEST_BULK_A_<hex>/TEST_BULK_B_<hex> — left in DB intentionally (no cleanup) since they need to be visible to verify, but easily filterable by name prefix.",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Backend test file /app/backend/tests/test_mall_v2_combo_pack.py is the regression for Mall 2.0 Combo Pack — invoke with `pytest -v /app/backend/tests/test_mall_v2_combo_pack.py`. The AI description test is currently the only failure — once main agent fixes mall_v2.py line ~498 (.with_max_tokens), all 20 should pass. For frontend, after the ParasMall.js hooks-rule fix, re-run a playwright check on /mall to confirm paras-mall-root + saver-progress-bar + product-badges-* + wishlist-heart-* render. The /mall/wishlist + /admin/mall/analytics pages already work cleanly.",
+  "rca_of_the_issue": "Bug 1 (AI desc 502): emergentintegrations.llm.chat.LlmChat no longer exposes `.with_max_tokens()` in the installed version — call removed/renamed upstream. The .with_max_tokens(220) line raises AttributeError, caught by the generic except and surfaced as 502 with the message. Mitigation: drop the chain call (Gemini default token cap is sufficient for a 60-word marketing blurb) or use the correct setter from the current library API. Bug 2 (Mall hooks error): a React component on /mall (likely WishlistHeart, SaverProgressBar, or ProductBadges or how ParasMall.js conditionally renders them) calls hooks in different orders between renders. Need to ensure every useState/useEffect/useMemo is at the top level of the component, before any early return."
+}

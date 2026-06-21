@@ -36553,6 +36553,10 @@ api_router.include_router(app_version_router)
 # Rewarded video ad PRC crediting (Phase 2)
 from routes.ads_rewarded import router as ads_rewarded_router
 api_router.include_router(ads_rewarded_router)
+
+# PARAS MALL 2.0 — wishlist, reviews, recently-viewed, categories, analytics, AI desc, CSV import
+from routes.mall_v2 import router as mall_v2_router
+api_router.include_router(mall_v2_router)
 # Admin Ledger View Router (Phase 2 - Double Entry Ledger)
 set_admin_ledger_view_db(db)
 api_router.include_router(admin_ledger_view_router)
