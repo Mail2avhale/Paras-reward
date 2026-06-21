@@ -18,6 +18,7 @@ import WebVitalsReporter from "@/components/WebVitalsReporter";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import AdminOnWebOnly from "@/components/AdminOnWebOnly";
 import { applyBrandedStatusBar } from "@/utils/nativeUx";
+import { cancelSessionExpiryWarning } from "@/utils/sessionNotifications";
 
 // ============================================================
 // GLOBAL TOAST FILTER (May 10, 2026)
@@ -999,6 +1000,8 @@ function App() {
 
   const handleLogout = async (showMessage = true, reason = null) => {
     const storedUser = JSON.parse(getStoredUserRaw() || "{}");
+    // Native: cancel any scheduled session-expiry warning notification
+    cancelSessionExpiryWarning();
     
     // Clear session on server
     if (storedUser?.uid) {

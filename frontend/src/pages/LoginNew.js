@@ -17,6 +17,7 @@ import {
   isCapacitor,
 } from '@/utils/nativeBiometric';
 import { hapticPrimary, hapticSuccess, hapticError } from '@/utils/nativeUx';
+import { scheduleSessionExpiryWarning, ensureSessionChannel } from '@/utils/sessionNotifications';
 import BiometricSetup from '@/components/BiometricSetup';
 import AnimatedFeedback from '@/components/AnimatedFeedback';
 import PinInput from '@/components/PinInput';
@@ -235,6 +236,13 @@ const LoginNew = ({ onLogin }) => {
       }
       
       onLogin(response.data);
+
+      // Native: schedule a local notification 5 min before the JWT expires.
+      // Uses response.data.expires_in (seconds), provided by /auth/login.
+      const expIn = response.data?.expires_in;
+      if (expIn) {
+        scheduleSessionExpiryWarning(expIn);
+      }
       
       if (response.data.role === 'admin' || response.data.role === 'sub_admin') {
         setTimeout(() => navigate('/admin'), 1500);
@@ -402,6 +410,8 @@ const LoginNew = ({ onLogin }) => {
     if (isBiometricSupported() && isBiometricEnabled()) {
       setShowBiometricOption(true);
     }
+    // Native: prepare notification channel for session warnings (no-op on web)
+    ensureSessionChannel();
     // Detect native biometric (Capacitor / Android) availability + enrolment
     if (isCapacitor()) {
       (async () => {

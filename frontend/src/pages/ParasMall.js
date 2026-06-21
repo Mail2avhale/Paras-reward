@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { hapticPrimary, hapticSuccess, hapticError } from '@/utils/nativeUx';
+import { useAdMob } from '@/hooks/useAdMob';
 import './ParasMall.css';
 import ParasMallBookings from './ParasMallBookings';
 
@@ -40,6 +41,7 @@ const SORTS = [
 ];
 
 const ParasMall = ({ user, onBalanceUpdate }) => {
+  const { showAppOpen } = useAdMob();
   const navigate = useNavigate();
   const [tab, setTab] = useState('discover');
   const [products, setProducts] = useState([]);
@@ -197,6 +199,8 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
       if (res.data?.success) {
         hapticSuccess();
         toast.success(`Booked ${product.name}! Mining started.`);
+        // Native: show interstitial ad ~1.5s after success (non-blocking)
+        setTimeout(() => { showAppOpen?.(); }, 1500);
         if (onBalanceUpdate && res.data.booking) {
           onBalanceUpdate((user.prc_balance || 0) - res.data.booking.upfront_prc);
         }

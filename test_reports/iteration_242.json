@@ -1,0 +1,26 @@
+{
+  "summary": "Phase 2 (trimmed) AAB v1.0.5 (versionCode 6) — Rewarded Ad backend + frontend web-regression. Backend 9/9 PASS: version-info=1.0.5/code 6, quota baseline, start mints uuid view_token with ad_unit_id 'ca-app-pub-3556805218952480/7314369451' (remaining=10), credit returns success+credited=0.5+remaining_today=9, prc_ledger entry written with type='ad_reward'/category='rewarded_ad', users.prc_balance incremented by exactly 0.5, replay credit → HTTP 409, random-uuid credit → HTTP 404, daily-limit at 10 → /start returns allowed:false reason='Daily limit reached' remaining:0, and all 3 endpoints reject unauthenticated calls with 401/403. Frontend 9/9 PASS: PIN login 9970100782/997010 → /dashboard, dashboard renders ptr-indicator (1) + REWARD POINTS, rewarded-ad-widget MUST-NOT-render verified (count=0 on dashboard AND mall — isNative=false short-circuit working), /mall renders paras-mall-root + BOOK NOW, admin@test.com/153759 logs into /admin (redirects to /admin/kyc) and /admin/mall renders with 46 products. Zero pageerror events across all flows.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": { "ui_bugs": [], "integration_issues": [], "design_issues": [] },
+  "test_report_links": [
+    "/app/backend/tests/test_ads_rewarded_phase2.py",
+    "/app/test_reports/pytest/phase2_ads_rewarded_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ads_rewarded.py creates its own AsyncIOMotorClient via dotenv_values('/app/backend/.env') at module-import time instead of reusing the shared `db` handle exposed by server.py. Today it works because both point to the same MONGO_URL/DB_NAME, but it leaks an extra Mongo connection pool per process and bypasses any test-time DB override. Recommendation: accept `db` via a `set_db()` initializer (like routes/app_version.py already does) or `Depends` injection.",
+    "ads_rewarded.py /credit endpoint: the response field `remaining_today = max(0, DAILY_MAX - int(daily.get('used', 0)))` — `daily` is the post-increment doc from find_one_and_update with return_document=True (the default in motor is BEFORE, but here it's explicitly set). Verified empirically that after the 1st credit remaining_today=9 ✅, but the developer should double-check that `return_document=True` is actually `ReturnDocument.AFTER` in their motor version (motor==3.x maps True→AFTER; on older motor 2.x True is unreliable). Today's test confirms AFTER semantics.",
+    "ads_rewarded.py: if upd.matched_count==0 the rollback decrements the daily counter but does NOT delete the prc_ledger entry — however the ledger entry is only inserted AFTER the balance update succeeds, so this is fine. Trace order: counter↑ → balance update → ledger insert → token mark. Good.",
+    "Pre-existing 403 console noise from /api/popup is still observed (same as iteration_240/241). Not a Phase 2 regression."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_ads_rewarded_phase2.py (new)"
+  ],
+  "success_rate": { "backend": "100% (9/9)", "frontend": "100% (9/9)" },
+  "test_credentials": "Admin: admin@test.com/153759. Primary user: 9970100782/997010 (UID 76b75808-47fa-48dd-ad7c-8074678e3607).",
+  "seed_data_creation": "test_daily_limit_blocks_11th_start upserts db.ad_rewards_daily.{uid:76b75808...,day:YYYYMMDD,used:10}. Module-scoped fixture cleans up ad_rewards_daily, ad_view_tokens, and prc_ledger ad_reward entries for the user after the run and restores prc_balance to its pre-test snapshot.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase 2 (rewarded ads + version 1.0.5) backend + web-regression verified GREEN. Native rewarded-ad playback is NOT exercisable in preview by design (useAdMob.isNative=false → showRewarded returns {shown:false,reason:'web'} and RewardedAdWidget returns null). On AAB-shell side, only manual device QA can verify the full AdMob render+reward callback. The API surface is fully proven server-side: token mint → credit → ledger → balance → replay-block → invalid-token-block → daily-cap. Local notifications (sessionNotifications.js) are also web-no-op and were not exercisable in preview. Interstitial-after-mall-booking (ParasMall.js setTimeout(showAppOpen,1500)) is a no-op on web; the booking success toast path was confirmed unchanged in iteration_241 — no new errors on /mall this run.",
+  "rca_of_the_issue": "N/A — no regressions. Phase 2 endpoints behave correctly: idempotent quota collection (unique on uid+day), TTL-cleaned view_tokens, atomic counter+balance updates, and proper 409/404 status codes. Native widget is correctly hidden on web."
+}

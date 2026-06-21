@@ -21,6 +21,7 @@ import MiningWidget from '@/components/MiningWidget';
 import RechargeCard from '@/components/RechargeCard';
 import RefundBlockerModal from '@/components/RefundBlockerModal';
 import PullToRefresh from '@/components/PullToRefresh';
+import RewardedAdWidget from '@/components/RewardedAdWidget';
 
 // Live Date & Time component for dashboard header
 const LiveDateTime = () => {
@@ -1199,6 +1200,11 @@ const DashboardModern = ({ user, onLogout }) => {
 
       {/* AI Smart Tip */}
       <div className="px-5 mb-4">
+      </div>
+
+      {/* Rewarded ad widget — native-only (hidden on web) */}
+      <div className="px-5 mb-5">
+        <RewardedAdWidget onBalanceUpdate={fetchDashboardData} />
       </div>
 
       {/* Quick Actions removed - rewards integrated into dashboard */}

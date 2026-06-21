@@ -36549,6 +36549,10 @@ set_app_version_db(db)
 api_router.include_router(paras_mall_router)
 api_router.include_router(paras_mall_admin_router)
 api_router.include_router(app_version_router)
+
+# Rewarded video ad PRC crediting (Phase 2)
+from routes.ads_rewarded import router as ads_rewarded_router
+api_router.include_router(ads_rewarded_router)
 # Admin Ledger View Router (Phase 2 - Double Entry Ledger)
 set_admin_ledger_view_db(db)
 api_router.include_router(admin_ledger_view_router)
