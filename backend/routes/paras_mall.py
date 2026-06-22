@@ -2,11 +2,15 @@
 PARAS MALL — Reward Shopping Destination
 ==========================================
 Users book products using PRC. Each booking enters a single-leg booking-order
-tree. Daily mining accrues at 4 × (1 + bookings_below) PRC/day per booking.
-Each booking runs its OWN 24-hour session that resets on collect (or laps
-to 0 if user doesn't collect in time). When cumulative collected PRC reaches
-the product's full price (MRP × 10), mining stops and the booking is queued
-for delivery.
+tree. Daily mining accrues using the SAME network-rate curve as main mining:
+
+    N = active bookings positioned AFTER this one (status="mining")
+    PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
+    daily_rate      = max(50, N × PRC_per_user(N))   ← 50 PRC/day floor
+
+Mining continues until cumulative collected PRC reaches the product's full
+price (MRP × 10) — at which point status auto-flips to 'fulfilled' and the
+booking is queued for delivery.
 
 Conversion rate: FIXED 10 PRC = ₹1.
 Upfront cost: max(10% MRP, ₹1000) — paid immediately in PRC at booking.
@@ -15,6 +19,7 @@ No cancellation, no refund. Delivery only at 100%.
 
 import logging
 import asyncio
+import math
 import os
 import re
 import uuid
@@ -30,7 +35,8 @@ db = None  # injected by server
 
 # ---------------- CONSTANTS ----------------
 PRC_INR_RATE = 10  # 10 PRC = ₹1 (fixed, June 2026)
-BASE_DAILY_RATE_PRC = 4  # Per booking, per day, base
+BASE_DAILY_RATE_PRC = 4  # Legacy — kept for back-compat; new formula uses MIN_DAILY_RATE
+MIN_DAILY_RATE_PRC = 50  # Floor: ≥ 50 PRC/day per booking (Feb 2026 formula)
 UPFRONT_PERCENT = 0.10  # 10% of MRP
 UPFRONT_MIN_INR = 1000  # Or ₹1000 minimum, whichever is higher
 SESSION_DURATION_HOURS = 24  # Each booking session
@@ -146,18 +152,27 @@ def compute_total_prc(mrp_inr: int) -> int:
     return mrp_inr * PRC_INR_RATE
 
 
-async def get_daily_rate_for_booking(booking_position: int) -> int:
-    """Single-leg booking-order tree: rate = 4 × (1 + bookings_below).
+async def get_daily_rate_for_booking(booking_position: int) -> float:
+    """PARAS MALL Network Rate Formula (Feb 2026)
+    ============================================
+    Same shape as Main Mining: daily_rate = N × PRC_per_user(N)
+    where:
+      N = active bookings positioned AFTER this booking (status="mining")
+      PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
+      daily_rate = max(MIN_DAILY_RATE_PRC, N × PRC_per_user(N))
 
-    `bookings_below` = count of bookings with position > this booking's position
-    that are still ACTIVE (mining). Fulfilled/lapsed bookings do NOT contribute
-    so that retired positions don't keep boosting older bookings forever.
+    Floor of 50 PRC/day so a booking with N=0 still earns something
+    (otherwise newest bookings would stall until someone books below).
     """
-    bookings_below = await db.mall_bookings.count_documents({
+    N = await db.mall_bookings.count_documents({
         "position": {"$gt": booking_position},
-        "status": "mining"
+        "status": "mining",
     })
-    return BASE_DAILY_RATE_PRC * (1 + bookings_below)
+    if N <= 0:
+        return float(MIN_DAILY_RATE_PRC)
+    prc_per_user = max(2.5, 5.0 * (21.0 - math.log2(N)) / 14.0)
+    raw_daily = N * prc_per_user
+    return float(max(MIN_DAILY_RATE_PRC, raw_daily))
 
 
 async def compute_session_accumulated(booking: dict) -> tuple[float, int]:
