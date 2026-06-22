@@ -466,6 +466,7 @@ const MobileRechargeCashbackCalculator = lazy(() => import("@/pages/MobileRechar
 const HowToEarnMoneyOnlineIndia = lazy(() => import("@/pages/HowToEarnMoneyOnlineIndia"));
 const TermsConditions = lazy(() => import("@/pages/TermsConditions"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const DeleteAccount = lazy(() => import("@/pages/DeleteAccount"));
 const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
 const RewardsHome = lazy(() => import("@/pages/RewardsHome"));
 const PRCStatement = lazy(() => import("@/pages/PRCStatement"));
@@ -537,6 +538,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/terms" element={<TermsConditions />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/delete-account" element={<Suspense fallback={<LoadingFallback />}><DeleteAccount /></Suspense>} />
+            <Route path="/delete.html" element={<Navigate to="/delete-account" replace />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/refund" element={<RefundPolicy />} />
             <Route path="/rewards-home" element={<RewardsHome />} />

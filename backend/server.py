@@ -36557,6 +36557,10 @@ api_router.include_router(ads_rewarded_router)
 # PARAS MALL 2.0 — wishlist, reviews, recently-viewed, categories, analytics, AI desc, CSV import
 from routes.mall_v2 import router as mall_v2_router
 api_router.include_router(mall_v2_router)
+
+# Account deletion request (Play Store compliance)
+from routes.account_deletion import router as account_deletion_router
+api_router.include_router(account_deletion_router)
 # Admin Ledger View Router (Phase 2 - Double Entry Ledger)
 set_admin_ledger_view_db(db)
 api_router.include_router(admin_ledger_view_router)
