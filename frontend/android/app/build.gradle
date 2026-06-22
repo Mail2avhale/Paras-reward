@@ -7,11 +7,11 @@ android {
         applicationId "com.parasreward.prc"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode 8 → 9 for Phase 3 (selected) — WhatsApp referral
-        // share, in-app review prompt after subscription / mall booking,
-        // launcher icon badge synced with unread notifications.
-        versionCode 9
-        versionName "1.0.8"
+        // versionCode 9 → 10 — Admin Mall Booking Status Sub-Tabs (Feb 22, 2026)
+        // Note: admin code is tree-shaken from user AAB; bump is to keep
+        // Play Store version monotonic for the next release upload.
+        versionCode 10
+        versionName "1.0.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
