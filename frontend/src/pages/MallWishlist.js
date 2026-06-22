@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, Heart, ShoppingBag, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { resolveAssetUrl } from "@/utils/resolveAssetUrl";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const fmtPrc = (n) => `${Number(n || 0).toLocaleString("en-IN")} PRC`;
@@ -110,7 +111,7 @@ export default function MallWishlist() {
                 >
                   <div className="aspect-square bg-slate-800 flex items-center justify-center">
                     {p.image_url ? (
-                      <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                      <img src={resolveAssetUrl(p.image_url)} alt={p.name} className="w-full h-full object-cover" />
                     ) : (
                       <ShoppingBag className="w-10 h-10 text-slate-500" />
                     )}

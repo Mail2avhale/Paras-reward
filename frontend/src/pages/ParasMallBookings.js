@@ -7,6 +7,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Coins, Clock, Package, CheckCircle, Truck, AlertCircle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -77,7 +78,7 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
     >
       <div className="flex items-center gap-3 mb-3">
         {booking.product_image_url ? (
-          <img src={booking.product_image_url} className="w-14 h-14 rounded-xl object-cover bg-zinc-800" alt="" />
+          <img src={resolveAssetUrl(booking.product_image_url)} className="w-14 h-14 rounded-xl object-cover bg-zinc-800" alt="" />
         ) : (
           <div className="w-14 h-14 rounded-xl bg-zinc-800 grid place-items-center">
             <Package className="w-6 h-6 text-amber-400" />

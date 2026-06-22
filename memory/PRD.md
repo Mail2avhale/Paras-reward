@@ -10,6 +10,10 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
 ## Implemented (Feb 2026)
+- ✅ **Android Image Fix + Play Store Compliance (Feb 22, 2026, v1.1.0)** — Two CRITICAL native-app fixes:
+  1. **Mall images now load on Android**: Created `/utils/resolveAssetUrl.js` helper that prepends `REACT_APP_BACKEND_URL` to any relative `/api/...` path. Applied in `ParasMall.js`, `ParasMallBookings.js`, `MallWishlist.js`, `AdminParasMall.js`. Root cause: Capacitor WebView serves from `https://localhost`, so `<img src="/api/static/mall/x.jpg">` was resolving to `https://localhost/...` (404) instead of the real backend. Side benefit: removing broken image retries also makes the app feel significantly faster.
+  2. **Watch & Earn PRC card removed** from `DashboardModern.js`: Google Play Console rejects AdMob rewarded-video flows that grant in-app currency directly (incentivised behaviour). Component file kept on disk for future reuse if policy changes.
+  - `versionCode 10 → 11`, `versionName 1.0.9 → 1.1.0`, SW v89 → v90.
 - ✅ PARAS MALL UI: Filter sheet, search icon, CSS centering
 - ✅ Admin E2E Delivery Flow + User address prefill
 - ✅ PRC "Used" Ledger integration + 1% Sustainability Burn

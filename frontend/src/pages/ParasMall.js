@@ -20,6 +20,7 @@ import SaverProgressBar from '@/components/mall/SaverProgressBar';
 import ProductBadges from '@/components/mall/ProductBadges';
 import './ParasMall.css';
 import ParasMallBookings from './ParasMallBookings';
+import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 const fmtInr = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
@@ -491,7 +492,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                         )}
                       </div>
                       {current?.image_url ? (
-                        <img src={current.image_url} alt={current.name} className="mall-image" data-testid="mall-product-image" />
+                        <img src={resolveAssetUrl(current.image_url)} alt={current.name} className="mall-image" data-testid="mall-product-image" />
                       ) : (
                         <div className="mall-image-fallback"><Package className="w-20 h-20 text-purple-300" /></div>
                       )}

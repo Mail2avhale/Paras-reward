@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Switch } from '../../components/ui/switch';
+import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -194,7 +195,7 @@ const AdminParasMall = () => {
             {products.map((p) => (
               <div key={p.product_id} className="bg-white border border-slate-200 rounded-xl p-3 flex gap-3" data-testid={`admin-mall-product-${p.product_id}`}>
                 {p.image_url ? (
-                  <img src={p.image_url} className="w-20 h-20 object-cover rounded-lg bg-slate-100" alt="" />
+                  <img src={resolveAssetUrl(p.image_url)} className="w-20 h-20 object-cover rounded-lg bg-slate-100" alt="" />
                 ) : (
                   <div className="w-20 h-20 rounded-lg bg-slate-100 grid place-items-center">
                     <ImageIcon className="w-6 h-6 text-slate-400" />
@@ -396,7 +397,7 @@ const ProductForm = ({ initial, isCreate, onSave, onCancel }) => {
             <div className="mt-1 flex items-center gap-3">
               <div className="w-20 h-20 rounded-lg border border-slate-200 bg-slate-50 grid place-items-center overflow-hidden flex-shrink-0">
                 {form.image_url ? (
-                  <img src={form.image_url} alt="" className="w-full h-full object-cover" data-testid="admin-mall-form-image-preview" />
+                  <img src={resolveAssetUrl(form.image_url)} alt="" className="w-full h-full object-cover" data-testid="admin-mall-form-image-preview" />
                 ) : (
                   <ImageIcon className="w-8 h-8 text-slate-300" />
                 )}

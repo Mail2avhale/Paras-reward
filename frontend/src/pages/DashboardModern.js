@@ -21,7 +21,6 @@ import MiningWidget from '@/components/MiningWidget';
 import RechargeCard from '@/components/RechargeCard';
 import RefundBlockerModal from '@/components/RefundBlockerModal';
 import PullToRefresh from '@/components/PullToRefresh';
-import RewardedAdWidget from '@/components/RewardedAdWidget';
 
 // Live Date & Time component for dashboard header
 const LiveDateTime = () => {
@@ -1202,10 +1201,9 @@ const DashboardModern = ({ user, onLogout }) => {
       <div className="px-5 mb-4">
       </div>
 
-      {/* Rewarded ad widget — native-only (hidden on web) */}
-      <div className="px-5 mb-5">
-        <RewardedAdWidget onBalanceUpdate={fetchDashboardData} />
-      </div>
+      {/* Rewarded ad widget removed — Google Play Store policy compliance
+          (incentivised ads not allowed for AdMob rewarded video without
+          full SDK init flow). Restore from git history if reintroduced. */}
 
       {/* Quick Actions removed - rewards integrated into dashboard */}
 
