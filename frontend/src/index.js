@@ -185,6 +185,21 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           // console.log('Service worker controller changed');
         });
+
+        // Auto-reload page when the freshly-activated SW broadcasts SW_UPDATED.
+        // This is the fix for "stale cache after deploy" — users who already
+        // have the site open get the new HTML + chunks without needing to
+        // manually clear browsing data.
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event?.data?.type === 'SW_UPDATED') {
+            // Throttle: only auto-reload once per 10 minutes to avoid loops
+            const lastReload = parseInt(sessionStorage.getItem('sw_auto_reload_ts') || '0', 10);
+            if (Date.now() - lastReload < 10 * 60 * 1000) return;
+            sessionStorage.setItem('sw_auto_reload_ts', String(Date.now()));
+            // Small delay so any pending requests settle, then hard reload
+            setTimeout(() => window.location.reload(), 600);
+          }
+        });
         
         // Check for updates every 5 minutes (for mobile users who keep app open)
         setInterval(() => {

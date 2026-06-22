@@ -91,7 +91,7 @@
 // category filter chips (9 categories), live activity ticker (community
 // feed marquee), PRC balance pill in header, My Bookings badge count,
 // sort menu (default / price ↑↓), trending + social-proof badges.
-const CACHE_NAME = 'paras-reward-v91';
+const CACHE_NAME = 'paras-reward-v92';
 const RUNTIME_CACHE = 'paras-runtime-v75';
 const API_CACHE = 'paras-api-v75';
 
@@ -147,6 +147,17 @@ self.addEventListener('activate', (event) => {
         })
       );
     }).then(() => self.clients.claim())
+      .then(() => {
+        // Tell all open clients that a fresh SW just took over so they
+        // can soft-reload and pick up the new HTML / chunks. Without this,
+        // users on an already-open tab keep seeing the stale page until
+        // they manually refresh.
+        return self.clients.matchAll({ type: 'window' }).then((clients) => {
+          clients.forEach((client) => {
+            client.postMessage({ type: 'SW_UPDATED', cache: CACHE_NAME });
+          });
+        });
+      })
   );
 });
 
@@ -211,6 +222,35 @@ self.addEventListener('fetch', (event) => {
               status: 503,
               headers: { 'Content-Type': 'application/json' }
             });
+          });
+        })
+    );
+    return;
+  }
+
+  // Handle navigation / HTML requests — NETWORK FIRST so users always get
+  // the freshest index.html after a deployment. The HTML is tiny; the
+  // perf hit is negligible compared to the cost of serving stale HTML
+  // that references chunks which no longer exist on the server.
+  const isNavigation = request.mode === 'navigate' ||
+    (request.method === 'GET' && request.destination === 'document');
+  if (isNavigation) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache the fresh HTML for offline fallback only
+          if (response && response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Offline → try cache, then offline.html
+          return caches.match(request).then((cached) => {
+            return cached || caches.match('/offline.html');
           });
         })
     );
