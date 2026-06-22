@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const SUPPORT_EMAIL = "support@parasreward.com";
+const SUPPORT_EMAIL = "info@parasreward.com";
 
 const Warning = ({ icon: Icon, title, body }) => (
   <li className="flex gap-3 items-start">
