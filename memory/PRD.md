@@ -10,6 +10,13 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
 ## Implemented (Feb 2026)
+- ✅ **App Update Flow + Website Download (Feb 22, 2026)** — Three customer-asked features wired up:
+  1. **In-app "Update Available" banner**: existing `UpdateBanner.js` (Capacitor-native, polls `/api/app/version-info`) was already wired in `App.js`. Backend `LATEST_VERSION_NAME=1.1.0`, `LATEST_VERSION_CODE=11` defaults bumped + DB record updated via `/api/app/admin/version-update`. Soft banner (top of screen) auto-shows on app launch for users on older versionCode; force-update modal kicks in if installed < minimum_supported_version_code.
+  2. **Homepage Google Play download badge** (`AppDownloadBadge.js`): SVG-based "GET IT ON Google Play" pill button. Three variants — default (hero CTA), compact (footer), icon-only. Hidden inside Capacitor native app via `Capacitor.isNativePlatform()`. Wired into `RewardsHome.js` hero (next to "Start Earning Rewards") and footer.
+  3. **Smart App Install Banner** (`SmartAppBanner.js`): Floating bottom-sticky banner that auto-shows for Android-mobile UA visitors browsing the website (NOT inside Capacitor). 7-day dismissal memory in localStorage. Wired globally in `App.js`. Drives Play Store install conversions from organic web traffic.
+- ⚠️ **Fingerprint after package-rename** — documented: WebAuthn / Capacitor Preferences data is sandboxed per package id. `com.parasreward.app → com.parasreward.prc` change invalidates stored biometric credentials one-time. Users must PIN-login + re-enable fingerprint from Profile after the first install of the new package. Future updates (v1.1.0 → v1.1.x with same package) will retain fingerprint.
+
+## Implemented (Feb 2026 — earlier)
 - ✅ **Android Image Fix + Play Store Compliance (Feb 22, 2026, v1.1.0)** — Two CRITICAL native-app fixes:
   1. **Mall images now load on Android**: Created `/utils/resolveAssetUrl.js` helper that prepends `REACT_APP_BACKEND_URL` to any relative `/api/...` path. Applied in `ParasMall.js`, `ParasMallBookings.js`, `MallWishlist.js`, `AdminParasMall.js`. Root cause: Capacitor WebView serves from `https://localhost`, so `<img src="/api/static/mall/x.jpg">` was resolving to `https://localhost/...` (404) instead of the real backend. Side benefit: removing broken image retries also makes the app feel significantly faster.
   2. **Watch & Earn PRC card removed** from `DashboardModern.js`: Google Play Console rejects AdMob rewarded-video flows that grant in-app currency directly (incentivised behaviour). Component file kept on disk for future reuse if policy changes.

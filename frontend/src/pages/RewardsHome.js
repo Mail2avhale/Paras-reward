@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 import SEO, { SEOConfigs } from '@/components/SEO';
+import AppDownloadBadge from '@/components/AppDownloadBadge';
 
 import { API } from "../lib/api";
 const LOGO_URL = "/paras-logo.png";
@@ -101,11 +102,12 @@ const RewardsHome = () => {
               <span className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 px-3 py-1 rounded-full"><Shield className="h-4 w-4 text-blue-300" /> Secure</span>
               <span className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 px-3 py-1 rounded-full"><Eye className="h-4 w-4 text-purple-300" /> Transparent</span>
             </motion.p>
-            <motion.div variants={fadeUp} custom={4}>
+            <motion.div variants={fadeUp} custom={4} className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
               <Button data-testid="hero-cta-btn" size="lg" onClick={() => navigate('/register')}
                 className="rounded-full px-10 py-6 bg-white text-blue-700 hover:bg-blue-50 font-bold shadow-xl shadow-black/10 text-base">
                 Start Earning Rewards <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
+              <AppDownloadBadge className="!py-3.5" />
             </motion.div>
           </motion.div>
         </div>
@@ -714,7 +716,8 @@ const RewardsHome = () => {
               <div className="flex items-center gap-2 mb-4">
                 <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-auto object-contain" />
               </div>
-              <p className="text-gray-400 text-sm leading-relaxed">A digital platform focused on building a simple and scalable reward-based ecosystem for users across India.</p>
+              <p className="text-gray-400 text-sm leading-relaxed mb-4">A digital platform focused on building a simple and scalable reward-based ecosystem for users across India.</p>
+              <AppDownloadBadge variant="compact" data-testid="footer-app-download" />
             </div>
             <div>
               <h4 className="font-semibold mb-4 text-white">Company</h4>

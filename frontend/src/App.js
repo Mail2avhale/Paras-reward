@@ -11,6 +11,7 @@ import { PageTitleUpdater } from "@/hooks/usePageTitle";
 // ToastContainer removed - using Sonner toast only
 import OfflineIndicator from "@/components/OfflineIndicator";
 import UpdateBanner from "@/components/UpdateBanner";
+import SmartAppBanner from "@/components/SmartAppBanner";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import LiveTickerStrip from "@/components/LiveTickerStrip";
@@ -505,6 +506,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
     <>
       <OfflineIndicator />
       <UpdateBanner />
+      <SmartAppBanner />
       {/* HoliCelebration removed as per user request */}
       {user?.is_impersonation && <ImpersonationBanner user={user} onExit={() => { handleLogout(false); window.close(); }} />}
       <BrowserRouter>
