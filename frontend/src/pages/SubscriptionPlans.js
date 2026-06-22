@@ -307,6 +307,11 @@ const SubscriptionPlans = ({ user }) => {
               setCurrentStep(5);
               // Refresh user data
               fetchData();
+              // Phase 3: prompt Play Store review after subscription success
+              setTimeout(async () => {
+                const { maybePromptReview } = await import('@/utils/inAppReview');
+                maybePromptReview('subscription');
+              }, 5500);
             } else {
               toast.error(verifyRes.data.message || 'Payment verification failed. Please contact support.');
               setRazorpayLoading(false);

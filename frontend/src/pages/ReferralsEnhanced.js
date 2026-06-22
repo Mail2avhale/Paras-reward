@@ -89,19 +89,13 @@ const ReferralsEnhanced = ({ user }) => {
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Join Paras Reward',
-          text: 'Join Paras Reward and start growing!',
-          url: referralLink
-        });
-      } catch (err) {
-        // User cancelled
-      }
-    } else {
-      handleCopy();
-    }
+    // WhatsApp-targeted referral share (Phase 3)
+    const { shareReferralOnWhatsApp } = await import('@/utils/nativeShare');
+    await shareReferralOnWhatsApp({
+      link: referralLink,
+      code: referralCode,
+      name: user?.name,
+    });
   };
 
   // Calculate progress using single leg network
@@ -172,11 +166,11 @@ const ReferralsEnhanced = ({ user }) => {
               </Button>
               <Button
                 onClick={handleShare}
-                className="flex-1 bg-white text-orange-600 hover:bg-white/90"
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
                 data-testid="share-button"
               >
                 <Share2 className="w-4 h-4 mr-2" />
-                Share
+                Share on WhatsApp
               </Button>
             </div>
           </div>

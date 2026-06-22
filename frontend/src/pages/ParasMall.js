@@ -204,6 +204,11 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         toast.success(`Booked ${product.name}! Mining started.`);
         // Native: show interstitial ad ~1.5s after success (non-blocking)
         setTimeout(() => { showAppOpen?.(); }, 1500);
+        // Phase 3: maybe prompt Play Store review after a successful booking
+        setTimeout(async () => {
+          const { maybePromptReview } = await import('@/utils/inAppReview');
+          maybePromptReview('mall_booking');
+        }, 4000);
         if (onBalanceUpdate && res.data.booking) {
           onBalanceUpdate((user.prc_balance || 0) - res.data.booking.upfront_prc);
         }

@@ -11,6 +11,8 @@ apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
     implementation project(':aparajita-capacitor-biometric-auth')
     implementation project(':capacitor-community-admob')
+    implementation project(':capacitor-community-in-app-review')
+    implementation project(':capacitor-firebase-app')
     implementation project(':capacitor-app')
     implementation project(':capacitor-browser')
     implementation project(':capacitor-haptics')
@@ -18,6 +20,8 @@ dependencies {
     implementation project(':capacitor-preferences')
     implementation project(':capacitor-splash-screen')
     implementation project(':capacitor-status-bar')
+    implementation project(':capawesome-capacitor-app-shortcuts')
+    implementation project(':capawesome-capacitor-badge')
 
 }
 

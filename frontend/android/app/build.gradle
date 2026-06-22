@@ -7,12 +7,11 @@ android {
         applicationId "com.parasreward.prc"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode 7 → 8 for PARAS MALL 2.0 — Wishlist, Reviews,
-        // Product Badges (NEW/HOT/TRENDING/low-stock), PRC Saver Progress,
-        // Recently-viewed tracking, Admin Mall Analytics, AI Description,
-        // CSV Bulk Import, Booking Status Timeline, Sales CSV Export.
-        versionCode 8
-        versionName "1.0.7"
+        // versionCode 8 → 9 for Phase 3 (selected) — WhatsApp referral
+        // share, in-app review prompt after subscription / mall booking,
+        // launcher icon badge synced with unread notifications.
+        versionCode 9
+        versionName "1.0.8"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

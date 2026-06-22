@@ -19,6 +19,7 @@ import ImpersonationBanner from "@/components/ImpersonationBanner";
 import AdminOnWebOnly from "@/components/AdminOnWebOnly";
 import { applyBrandedStatusBar } from "@/utils/nativeUx";
 import { cancelSessionExpiryWarning } from "@/utils/sessionNotifications";
+import { syncAppBadgeFromBackend, clearAppBadge } from "@/utils/appBadge";
 
 // ============================================================
 // GLOBAL TOAST FILTER (May 10, 2026)
@@ -952,6 +953,12 @@ function App() {
   useEffect(() => {
     // Native: apply branded status bar colour on app boot (no-op on web)
     applyBrandedStatusBar();
+    // Native: sync the app launcher icon badge with backend unread count
+    if (user?.uid) {
+      syncAppBadgeFromBackend(user.uid);
+      const t = setInterval(() => syncAppBadgeFromBackend(user.uid), 60_000);
+      return () => clearInterval(t);
+    }
     // If user exists, validate role via API and refresh data from server
     // SECURITY: Validate role server-side before allowing admin access
     let timeoutFallback;
@@ -1031,6 +1038,8 @@ function App() {
     const storedUser = JSON.parse(getStoredUserRaw() || "{}");
     // Native: cancel any scheduled session-expiry warning notification
     cancelSessionExpiryWarning();
+    // Native: clear the launcher icon badge on logout
+    clearAppBadge();
     
     // Clear session on server
     if (storedUser?.uid) {
