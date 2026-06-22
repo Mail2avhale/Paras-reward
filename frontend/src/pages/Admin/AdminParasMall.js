@@ -20,12 +20,24 @@ const STATUS_COLORS = {
 
 const AdminParasMall = () => {
   const [tab, setTab] = useState('products');
+  // Booking sub-tab: 'pending_delivery' (default) | 'delivered' | 'all'
+  const [bookingsTab, setBookingsTab] = useState('pending_delivery');
   const [products, setProducts] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+
+  // Derived booking lists
+  const pendingDeliveryBookings = bookings.filter((b) => b.status === 'fulfilled');
+  const deliveredBookings = bookings.filter((b) => b.status === 'delivered');
+  const visibleBookings =
+    bookingsTab === 'pending_delivery'
+      ? pendingDeliveryBookings
+      : bookingsTab === 'delivered'
+      ? deliveredBookings
+      : bookings;
 
   const fetchAll = async () => {
     setLoading(true);
@@ -153,12 +165,21 @@ const AdminParasMall = () => {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+            className={`px-4 py-2 rounded-full text-sm font-semibold transition flex items-center gap-2 ${
               tab === t ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200'
             }`}
             data-testid={`admin-mall-tab-${t}`}
           >
             {t === 'products' ? `Products (${products.length})` : `Bookings (${bookings.length})`}
+            {t === 'bookings' && pendingDeliveryBookings.length > 0 && (
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-900 font-bold animate-pulse"
+                title="Pending Delivery"
+                data-testid="admin-mall-tab-bookings-pending-badge"
+              >
+                {pendingDeliveryBookings.length} 📦
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -204,7 +225,44 @@ const AdminParasMall = () => {
       )}
 
       {tab === 'bookings' && (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+        <div>
+          {/* Booking sub-tabs */}
+          <div className="flex gap-2 mb-3 flex-wrap" data-testid="admin-mall-bookings-subtabs">
+            {[
+              { id: 'pending_delivery', label: 'Pending Delivery', count: pendingDeliveryBookings.length, color: 'bg-amber-500' },
+              { id: 'delivered', label: 'Delivered', count: deliveredBookings.length, color: 'bg-blue-600' },
+              { id: 'all', label: 'All Bookings', count: bookings.length, color: 'bg-slate-700' },
+            ].map((st) => (
+              <button
+                key={st.id}
+                onClick={() => setBookingsTab(st.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-2 ${
+                  bookingsTab === st.id
+                    ? `${st.color} text-white shadow`
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                }`}
+                data-testid={`admin-mall-bookings-subtab-${st.id}`}
+              >
+                {st.label}
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                    bookingsTab === st.id ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700'
+                  }`}
+                  data-testid={`admin-mall-bookings-subtab-${st.id}-count`}
+                >
+                  {st.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {bookingsTab === 'pending_delivery' && (
+            <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3" data-testid="admin-mall-bookings-pending-hint">
+              📦 These bookings have collected full PRC and are awaiting your physical dispatch. Click <b>Mark Delivered</b> once shipped.
+            </div>
+          )}
+
+          <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
               <tr>
@@ -217,7 +275,7 @@ const AdminParasMall = () => {
               </tr>
             </thead>
             <tbody>
-              {bookings.map((b) => (
+              {visibleBookings.map((b) => (
                 <tr key={b.booking_id} className="border-t border-slate-100" data-testid={`admin-mall-booking-${b.booking_id}`}>
                   <td className="p-3" data-testid={`admin-mall-booking-user-${b.booking_id}`}>
                     <div className="font-semibold text-slate-800 text-xs">{b.user_name || 'Unknown'}</div>
@@ -248,11 +306,18 @@ const AdminParasMall = () => {
                   </td>
                 </tr>
               ))}
-              {bookings.length === 0 && (
-                <tr><td colSpan="6" className="p-6 text-center text-slate-400">No bookings yet</td></tr>
+              {visibleBookings.length === 0 && (
+                <tr><td colSpan="6" className="p-6 text-center text-slate-400" data-testid="admin-mall-bookings-empty">
+                  {bookingsTab === 'pending_delivery'
+                    ? 'No bookings pending delivery. Great job! 🎉'
+                    : bookingsTab === 'delivered'
+                    ? 'No deliveries marked yet.'
+                    : 'No bookings yet'}
+                </td></tr>
               )}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
