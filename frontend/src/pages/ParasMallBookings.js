@@ -64,6 +64,9 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
   };
 
   const progress = booking.progress_percent || 0;
+  // Session progress: 24h cycle (86400 sec). 0% at session start, 100% at reset.
+  const sessionElapsed = Math.max(0, 86400 - (liveRemaining || 0));
+  const sessionProgress = Math.min(100, (sessionElapsed / 86400) * 100);
 
   return (
     <motion.div
@@ -92,31 +95,98 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="h-2 bg-zinc-900 rounded-full overflow-hidden mb-1">
+      {/* Overall product progress (paid_prc / total_prc) */}
+      <div className="flex justify-between text-[10px] text-zinc-500 mb-1">
+        <span className="uppercase tracking-wider">Overall Progress</span>
+        <span className="font-mono tabular-nums">{progress.toFixed(1)}%</span>
+      </div>
+      <div className="h-2 bg-zinc-900 rounded-full overflow-hidden mb-3">
         <div
           className="h-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all duration-700"
           style={{ width: `${Math.min(100, progress)}%` }}
         />
       </div>
-      <p className="text-[10px] text-zinc-500 tabular-nums mb-3 text-right">{progress.toFixed(1)}%</p>
 
       {booking.status === 'mining' && (
         <>
-          <div className="grid grid-cols-3 gap-2 mb-3 text-center">
-            <div className="bg-zinc-900/70 rounded-lg py-2 border border-white/5">
-              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">Rate / Day</p>
-              <p className="text-sm font-bold text-amber-400 tabular-nums">{booking.daily_rate_prc} PRC</p>
+          {/* Time Remaining — digit boxes (Dashboard-style) */}
+          <p className="text-zinc-400 text-xs text-center mb-2">Resets In</p>
+          <div className="flex items-center justify-center gap-0.5 mb-3">
+            {formatTime(liveRemaining).split('').map((char, i) => (
+              <div
+                key={i}
+                className={char === ':' ? 'w-3 text-center' : 'w-7 h-9 rounded-md flex items-center justify-center'}
+                style={char !== ':' ? { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' } : {}}
+              >
+                <span
+                  className={`font-mono font-bold ${char === ':' ? 'text-base text-amber-400' : 'text-lg text-zinc-100'}`}
+                >{char}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Session Earnings — digit boxes */}
+          <div
+            className="rounded-xl p-3 mb-3"
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <p className="text-zinc-500 text-xs text-center mb-2">Session Earnings</p>
+            <div className="flex items-center justify-center gap-1 flex-wrap">
+              <Coins className="w-4 h-4 mr-1 text-amber-400" />
+              {liveAccumulated.toFixed(2).split('').map((char, i) => (
+                <motion.div
+                  key={`${i}-${char}`}
+                  className={char === '.' ? 'w-2 flex items-end justify-center pb-0.5' : 'w-6 h-8 rounded-md flex items-center justify-center'}
+                  style={char !== '.' ? { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(245,158,11,0.3)' } : {}}
+                  initial={{ y: -3, opacity: 0.6 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <span className="font-mono font-bold text-base text-amber-400">{char}</span>
+                </motion.div>
+              ))}
+              <span className="font-semibold text-sm ml-1 text-amber-400">PRC</span>
             </div>
-            <div className="bg-zinc-900/70 rounded-lg py-2 border border-white/5">
-              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">Session</p>
-              <p className="text-sm font-bold text-white tabular-nums" data-testid={`mall-session-prc-${booking.booking_id}`}>
-                {liveAccumulated.toFixed(4)}
-              </p>
+
+            {/* PRC/SEC + PRC/HOUR — twin pills */}
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <div
+                className="rounded-lg px-3 py-1.5 text-center flex-1"
+                style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}
+              >
+                <p className="text-emerald-400 text-xs font-bold font-mono leading-tight">
+                  +{((booking.per_second_prc || 0)).toFixed(4)}
+                </p>
+                <p className="text-emerald-300/60 text-[9px] font-semibold tracking-wider mt-0.5">PRC/SEC</p>
+              </div>
+              <div
+                className="rounded-lg px-3 py-1.5 text-center flex-1"
+                style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.33)' }}
+              >
+                <p className="text-amber-300 text-xs font-bold font-mono leading-tight">
+                  {Number(booking.daily_rate_prc || 0).toLocaleString('en-IN')}
+                </p>
+                <p className="text-amber-300/70 text-[9px] font-semibold tracking-wider mt-0.5">PRC/DAY</p>
+              </div>
             </div>
-            <div className="bg-zinc-900/70 rounded-lg py-2 border border-white/5">
-              <p className="text-[9px] text-zinc-500 uppercase tracking-wider mb-1">Resets In</p>
-              <p className="text-sm font-bold text-zinc-300 tabular-nums">{formatTime(liveRemaining)}</p>
+
+            {/* Session Progress bar */}
+            <div className="mt-3">
+              <div className="flex justify-between text-[11px] text-zinc-500 mb-1">
+                <span>Session Progress</span>
+                <span className="font-mono text-amber-400">{sessionProgress.toFixed(1)}%</span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <motion.div
+                  className="h-full rounded-full"
+                  animate={{ width: `${sessionProgress}%` }}
+                  transition={{ duration: 0.5 }}
+                  style={{
+                    background: 'linear-gradient(90deg, #f59e0b, #f59e0bcc)',
+                    boxShadow: '0 0 8px rgba(245,158,11,0.4)',
+                  }}
+                />
+              </div>
             </div>
           </div>
 
