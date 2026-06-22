@@ -95,16 +95,92 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
         </div>
       </div>
 
-      {/* Overall product progress (paid_prc / total_prc) */}
-      <div className="flex justify-between text-[10px] text-zinc-500 mb-1">
-        <span className="uppercase tracking-wider">Overall Progress</span>
-        <span className="font-mono tabular-nums">{progress.toFixed(1)}%</span>
-      </div>
-      <div className="h-2 bg-zinc-900 rounded-full overflow-hidden mb-3">
+      {/* PRODUCT PROGRESS — enhanced visual with numbers + gradient + estimated days */}
+      <div
+        className="rounded-xl p-3 mb-3 relative overflow-hidden"
+        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
+            Product Progress
+          </span>
+          <span
+            className="font-mono text-lg font-bold tabular-nums"
+            style={{
+              color: progress < 30 ? '#f87171' : progress < 70 ? '#fbbf24' : '#34d399',
+            }}
+            data-testid={`mall-progress-percent-${booking.booking_id}`}
+          >
+            {progress.toFixed(1)}%
+          </span>
+        </div>
+
+        {/* Numbers row */}
+        <div className="flex items-baseline justify-center gap-1.5 mb-2 font-mono tabular-nums">
+          <span className="text-amber-400 text-base font-bold">
+            {formatPrc(Math.floor(booking.paid_prc || 0))}
+          </span>
+          <span className="text-zinc-500 text-sm">/</span>
+          <span className="text-zinc-400 text-sm">
+            {formatPrc(booking.total_prc)} PRC
+          </span>
+        </div>
+
+        {/* Gradient progress bar */}
         <div
-          className="h-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all duration-700"
-          style={{ width: `${Math.min(100, progress)}%` }}
-        />
+          className="h-2.5 rounded-full overflow-hidden relative"
+          style={{ background: 'rgba(255,255,255,0.06)' }}
+        >
+          <motion.div
+            className="h-full rounded-full relative"
+            animate={{ width: `${Math.min(100, progress)}%` }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            style={{
+              background:
+                progress < 30
+                  ? 'linear-gradient(90deg, #ef4444, #f87171)'
+                  : progress < 70
+                  ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                  : 'linear-gradient(90deg, #10b981, #34d399)',
+              boxShadow: `0 0 10px ${
+                progress < 30 ? 'rgba(239,68,68,0.4)' : progress < 70 ? 'rgba(245,158,11,0.4)' : 'rgba(16,185,129,0.4)'
+              }`,
+            }}
+          >
+            {booking.status === 'mining' && progress < 100 && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                  animation: 'shimmerSlide 2s linear infinite',
+                }}
+              />
+            )}
+          </motion.div>
+        </div>
+
+        {/* Stats row: collected + remaining */}
+        <div className="flex justify-between items-center mt-2 text-[10px] font-mono tabular-nums">
+          <span className="text-emerald-400 inline-flex items-center gap-1">
+            <span className="text-emerald-500">✓</span>
+            Collected: <strong>{formatPrc(Math.floor(booking.paid_prc || 0))}</strong>
+          </span>
+          <span className="text-zinc-400 inline-flex items-center gap-1">
+            Remaining: <strong>{formatPrc(Math.max(0, Math.floor((booking.total_prc || 0) - (booking.paid_prc || 0))))}</strong>
+          </span>
+        </div>
+
+        {/* Estimated days to fulfill (only when mining) */}
+        {booking.status === 'mining' && booking.daily_rate_prc > 0 && progress < 100 && (
+          <p className="text-[10px] text-zinc-500 text-center mt-1.5">
+            ⏱ At current rate (~
+            {Number(booking.daily_rate_prc).toLocaleString('en-IN')} PRC/day),
+            <strong className="text-amber-400 ml-1">
+              {Math.ceil(((booking.total_prc || 0) - (booking.paid_prc || 0)) / (booking.daily_rate_prc || 1))} days
+            </strong>{' '}
+            to fulfill
+          </p>
+        )}
       </div>
 
       {booking.status === 'mining' && (

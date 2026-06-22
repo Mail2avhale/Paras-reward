@@ -1246,3 +1246,9 @@
   box-shadow: none;
   cursor: not-allowed;
 }
+
+/* Mall booking — progress bar shimmer (Feb 2026) */
+@keyframes shimmerSlide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}

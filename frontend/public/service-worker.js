@@ -91,7 +91,7 @@
 // category filter chips (9 categories), live activity ticker (community
 // feed marquee), PRC balance pill in header, My Bookings badge count,
 // sort menu (default / price ↑↓), trending + social-proof badges.
-const CACHE_NAME = 'paras-reward-v87';
+const CACHE_NAME = 'paras-reward-v88';
 const RUNTIME_CACHE = 'paras-runtime-v75';
 const API_CACHE = 'paras-api-v75';
 
