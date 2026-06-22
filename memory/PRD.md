@@ -22,6 +22,7 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - ✅ GitHub Actions workflow created — AAB build successful (5m 46s)
 - ✅ Fixed: yarn.lock cache, gradle-wrapper.jar auto-download, Java 21, Groovy var conflict, minSdk 23
 - ✅ Package name changed `com.parasreward.app` → `com.parasreward.prc`
+- ✅ **Admin Mall Booking Status Sub-Tabs (Feb 22, 2026)** — `AdminParasMall.js` now has 3 sub-tabs under Bookings: **Pending Delivery** (default, amber, status==='fulfilled' & not delivered), **Delivered** (blue, status==='delivered'), **All Bookings** (slate). Includes per-tab count badges, contextual hint banner on Pending tab, distinct empty-state copy, and a pulsing amber count badge on the parent "Bookings" pill when pending count > 0. Verified live via Playwright on /admin/mall. SW bumped v88 → v89.
 - ✅ **Phase 0 (Android Bundle Optimization) — Feb 2026**:
   - Verified all 94 admin routes wrapped in `{!IS_USER_BUILD && ...}`
   - Fixed leaked `/admin/mall` route (was outside the wrapper)
