@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import smartToast from '@/utils/smartToast';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
+import RewardedAdPrompt from '@/components/RewardedAdPrompt';
 
 import { API } from "../lib/api";
 
@@ -35,6 +36,9 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
   const [dataLoaded, setDataLoaded] = useState(false);
   // Cooldown between Collect and next Start (AdMob retention)
   const [startCooldown, setStartCooldown] = useState(0);
+  // Rewarded-ad opt-in modal state — opened from Collect, closes once
+  // user either watches the ad or chooses "Skip — collect without bonus".
+  const [adPromptOpen, setAdPromptOpen] = useState(false);
 
   const timerRef = useRef(null);
   const liveCounterRef = useRef(null);
@@ -219,7 +223,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
     }
   };
 
-  const collectRewards = async () => {
+  const performCollect = async () => {
     if (sessionPRC < 0.01) { smartToast.error('Not enough PRC to collect'); return; }
     triggerHaptic('medium');
     collectInProgressRef.current = true;
@@ -250,6 +254,14 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
     } finally {
       setIsCollecting(false);
     }
+  };
+
+  // Opens the Google-AdMob-compliant opt-in modal. User can watch ad for
+  // a +5..10 bonus PRC or skip. Either path runs performCollect afterwards
+  // so the user always receives their mined PRC.
+  const collectRewards = () => {
+    if (sessionPRC < 0.01) { smartToast.error('Not enough PRC to collect'); return; }
+    setAdPromptOpen(true);
   };
 
   const formatTime = (seconds) => {
@@ -453,6 +465,16 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
           <p className="text-xs mt-2" style={{ color: `${accentColor}80` }}>Upgrade to Elite to collect earned PRC</p>
         )}
       </div>
+
+      {/* Rewarded-ad opt-in (Google AdMob compliant): opens on Collect. */}
+      <RewardedAdPrompt
+        open={adPromptOpen}
+        placement="main_mining_collect"
+        title="Earn Bonus PRC"
+        onClose={() => setAdPromptOpen(false)}
+        onSkip={performCollect}
+        onComplete={performCollect}
+      />
     </div>
   );
 };

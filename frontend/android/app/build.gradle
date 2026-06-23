@@ -11,6 +11,8 @@ android {
         // 1. Product Mining: 60s cooldown + manual Start Session (matches main mining UX)
         // 2. Native debug symbols (SYMBOL_TABLE) bundled in AAB
         // 3. Service worker network-first HTML + auto-reload on update
+        // 4. Rewarded-ad opt-in on every Collect (Main + Mall): +5..10 bonus PRC
+        //    per ad, daily cap 10/user, AdMob rewarded video format
         versionCode 12
         versionName "1.1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

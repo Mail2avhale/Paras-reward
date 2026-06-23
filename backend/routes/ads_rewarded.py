@@ -15,6 +15,7 @@ after 10 minutes via a TTL index.
 """
 import os
 import uuid
+import random
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -28,8 +29,13 @@ router = APIRouter(prefix="/ads/rewarded", tags=["ads"])
 
 # Ad units (kept server-side too in case the client gets out of sync)
 AD_UNIT_REWARDED = "ca-app-pub-3556805218952480/7314369451"
+AD_UNIT_REWARDED_INTERSTITIAL = "ca-app-pub-3556805218952480/2377737544"
 DAILY_MAX = 10
-REWARD_PER_AD = 0.5  # PRC
+# Bonus PRC per ad — random 5..10 (inclusive) for variety. The expected
+# average is 7.5 PRC × 10 ads/day = 75 PRC/day per user cap.
+REWARD_MIN_PRC = 5
+REWARD_MAX_PRC = 10
+ALLOWED_PLACEMENTS = {"main_mining_collect", "mall_collect", "other"}
 
 # DB handle — lazy
 _env = dotenv_values("/app/backend/.env")
@@ -59,17 +65,25 @@ async def get_quota(user: dict = Depends(get_current_user)):
     return {
         "used": used,
         "max": DAILY_MAX,
-        "reward_per_ad": REWARD_PER_AD,
+        "reward_min_prc": REWARD_MIN_PRC,
+        "reward_max_prc": REWARD_MAX_PRC,
         "remaining": max(0, DAILY_MAX - used),
     }
 
 
+class StartBody(BaseModel):
+    placement: str | None = "other"  # main_mining_collect | mall_collect | other
+
+
 @router.post("/start")
-async def start_ad(user: dict = Depends(get_current_user)):
+async def start_ad(body: StartBody | None = None, user: dict = Depends(get_current_user)):
     """Mint a one-time view token. Quota is also re-checked at /credit."""
     await _ensure_indexes()
     uid = user["uid"]
     day = _today_key()
+    placement = (body.placement if body else None) or "other"
+    if placement not in ALLOWED_PLACEMENTS:
+        placement = "other"
     doc = await db.ad_rewards_daily.find_one({"uid": uid, "day": day}, {"_id": 0})
     used = int(doc.get("used", 0)) if doc else 0
     if used >= DAILY_MAX:
@@ -77,11 +91,17 @@ async def start_ad(user: dict = Depends(get_current_user)):
 
     view_token = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
+    # Pre-roll the bonus amount on START so the prompt can display an
+    # exact preview ("Earn +N bonus PRC"). Stored on the token so the
+    # /credit call cannot inflate the reward client-side.
+    bonus = random.randint(REWARD_MIN_PRC, REWARD_MAX_PRC)
     await db.ad_view_tokens.insert_one({
         "view_token": view_token,
         "uid": uid,
         "ad_type": "rewarded",
         "ad_unit_id": AD_UNIT_REWARDED,
+        "placement": placement,
+        "preroll_bonus": bonus,
         "created_at": now,
         "expires_at": now + timedelta(minutes=10),
         "credited": False,
@@ -90,6 +110,7 @@ async def start_ad(user: dict = Depends(get_current_user)):
         "allowed": True,
         "view_token": view_token,
         "ad_unit_id": AD_UNIT_REWARDED,
+        "bonus_prc": bonus,
         "remaining": DAILY_MAX - used,
     }
 
@@ -114,11 +135,14 @@ async def credit_reward(body: CreditBody, user: dict = Depends(get_current_user)
     if token_doc.get("credited"):
         raise HTTPException(status_code=409, detail="Already credited")
 
+    # Use the bonus pre-rolled on /start (cannot be tampered client-side)
+    bonus_prc = int(token_doc.get("preroll_bonus") or REWARD_MIN_PRC)
+
     # Atomically bump the daily counter (still bounded by DAILY_MAX)
     daily = await db.ad_rewards_daily.find_one_and_update(
         {"uid": uid, "day": day, "used": {"$lt": DAILY_MAX}},
         {
-            "$inc": {"used": 1, "credited_prc": REWARD_PER_AD},
+            "$inc": {"used": 1, "credited_prc": bonus_prc},
             "$setOnInsert": {"created_at": datetime.now(timezone.utc)},
         },
         upsert=True,
@@ -130,28 +154,30 @@ async def credit_reward(body: CreditBody, user: dict = Depends(get_current_user)
     # Credit PRC to user balance
     upd = await db.users.update_one(
         {"uid": uid},
-        {"$inc": {"prc_balance": REWARD_PER_AD}},
+        {"$inc": {"prc_balance": bonus_prc}},
     )
     if upd.matched_count == 0:
         # roll back counter
         await db.ad_rewards_daily.update_one(
             {"uid": uid, "day": day},
-            {"$inc": {"used": -1, "credited_prc": -REWARD_PER_AD}},
+            {"$inc": {"used": -1, "credited_prc": -bonus_prc}},
         )
         raise HTTPException(status_code=404, detail="User not found")
 
     # Append ledger entry for audit trail
     now = datetime.now(timezone.utc)
+    placement = token_doc.get("placement", "other")
     await db.prc_ledger.insert_one({
         "uid": uid,
         "type": "ad_reward",
-        "amount": REWARD_PER_AD,
+        "amount": bonus_prc,
         "category": "rewarded_ad",
-        "description": f"Rewarded ad view ({body.view_token[:8]})",
+        "description": f"Ad bonus +{bonus_prc} PRC ({placement})",
         "created_at": now.isoformat(),
         "metadata": {
             "ad_unit_id": AD_UNIT_REWARDED,
             "view_token": body.view_token,
+            "placement": placement,
         },
     })
 
@@ -163,6 +189,8 @@ async def credit_reward(body: CreditBody, user: dict = Depends(get_current_user)
 
     return {
         "success": True,
-        "credited": REWARD_PER_AD,
+        "credited": bonus_prc,
+        "bonus_prc": bonus_prc,
+        "placement": placement,
         "remaining_today": max(0, DAILY_MAX - int(daily.get("used", 0))),
     }

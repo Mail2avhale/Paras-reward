@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { Coins, Clock, Package, CheckCircle, Truck, AlertCircle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
+import RewardedAdPrompt from '@/components/RewardedAdPrompt';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -36,6 +37,7 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
   const [liveRemaining, setLiveRemaining] = useState(booking.session_remaining_seconds || 0);
   const [liveCooldown, setLiveCooldown] = useState(booking.cooldown_remaining_seconds || 0);
   const [starting, setStarting] = useState(false);
+  const [adPromptOpen, setAdPromptOpen] = useState(false);
   const tickRef = useRef(null);
   const cooldownRef = useRef(null);
 
@@ -74,7 +76,7 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
     return () => clearInterval(cooldownRef.current);
   }, [sessionActive, booking.status, liveCooldown, onRefresh]);
 
-  const collect = async () => {
+  const performCollect = async () => {
     try {
       const res = await axios.post(`${API}/mall/collect/${booking.booking_id}`, { user_id: booking.user_id });
       if (res.data?.success) {
@@ -88,6 +90,13 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Collect failed');
     }
+  };
+
+  // Opens the ad opt-in modal. User can watch ad for +5-10 bonus PRC or
+  // skip and just receive their mined PRC. Either way performCollect runs.
+  const collect = () => {
+    if (liveAccumulated < 0.01) return;
+    setAdPromptOpen(true);
   };
 
   const startSession = async () => {
@@ -377,6 +386,16 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
           📦 Delivered on {booking.delivered_at ? new Date(booking.delivered_at).toLocaleDateString() : '—'}
         </p>
       )}
+
+      {/* Rewarded-ad opt-in: shown when user clicks Collect on this card. */}
+      <RewardedAdPrompt
+        open={adPromptOpen}
+        placement="mall_collect"
+        title="Earn Bonus PRC"
+        onClose={() => setAdPromptOpen(false)}
+        onSkip={performCollect}
+        onComplete={performCollect}
+      />
     </motion.div>
   );
 };
