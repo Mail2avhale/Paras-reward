@@ -7,15 +7,14 @@ android {
         applicationId "com.parasreward.prc"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode 12 → 13 — Feb 23, 2026:
-        // 1. Product Mining: 60s cooldown + manual Start Session
+        // versionCode 11 → 12 — Feb 23, 2026 release:
+        // 1. Product Mining: 60s cooldown + manual Start Session (matches main mining UX)
         // 2. Native debug symbols (SYMBOL_TABLE) bundled in AAB
         // 3. Service worker network-first HTML + auto-reload on update
         // 4. Rewarded-ad opt-in on every Collect (Main + Mall): +5..10 bonus PRC
-        // 5. AdMob Mediation adapters added (Meta, Unity, AppLovin, Mintegral)
-        //    → +30..50% revenue once activated in AdMob Console
-        versionCode 13
-        versionName "1.1.2"
+        //    per ad, daily cap 10/user, AdMob rewarded video format
+        versionCode 12
+        versionName "1.1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
@@ -103,27 +102,6 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
-
-    // ── AdMob Mediation Adapters (Feb 2026) ──────────────────────────────
-    // These pull in third-party ad-network SDKs so AdMob's mediation can
-    // bid them in waterfall. Versions match Google's "Latest verified
-    // adapter" list as of 2026-02. Each adapter also requires app-id /
-    // placement setup in the AdMob Console → Mediation → Mediation groups.
-    //
-    // Revenue impact (Indian eCPM, average):
-    //   - AdMob alone:                    ₹0.80–₹1.20
-    //   - + Meta Audience Network:        +25–35%
-    //   - + Unity Ads:                    +15–20%
-    //   - + AppLovin:                     +20–30%
-    //   - + Mintegral:                    +10–15%
-    //
-    // If a network is removed from the AdMob mediation group, leaving its
-    // adapter here is harmless — it just won't get filled.
-
-    implementation 'com.google.ads.mediation:facebook:6.18.0.0'      // Meta Audience Network
-    implementation 'com.google.ads.mediation:unity:4.12.5.0'          // Unity Ads
-    implementation 'com.google.ads.mediation:applovin:13.0.1.0'       // AppLovin
-    implementation 'com.google.ads.mediation:mintegral:16.8.61.0'     // Mintegral
 }
 
 apply from: 'capacitor.build.gradle'
