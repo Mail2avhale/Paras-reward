@@ -15,6 +15,14 @@ android {
         versionCode 11
         versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
+        // Console can symbolicate native crashes (AdMob, Capacitor plugins).
+        // This eliminates the "missing debug symbols" warning during upload.
+        // 'SYMBOL_TABLE' = only function names (small size hit ~2-3 MB)
+        // 'FULL'         = function names + line numbers (larger AAB)
+        ndk {
+            debugSymbolLevel 'SYMBOL_TABLE'
+        }
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
