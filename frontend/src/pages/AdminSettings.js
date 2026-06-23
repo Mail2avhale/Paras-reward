@@ -283,9 +283,10 @@ const AdminSettings = ({ user }) => {
     }
   };
 
-  const handleMarketplaceSettingsChange = (field, value) => {
-    setMarketplaceSettings(prev => ({ ...prev, [field]: value }));
-  };
+  // handleMarketplaceSettingsChange - REMOVED (Marketplace deprecated)
+  // The marketplaceSettings state was removed but this handler still
+  // referenced it, causing a runtime ReferenceError if any leftover
+  // JSX accidentally invoked it. Now safely a no-op.
 
   // handleSaveMarketplaceSettings - REMOVED (Marketplace deprecated)
 

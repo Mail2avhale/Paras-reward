@@ -127,14 +127,17 @@ async def analyze_collection(db, mapping, dry_run=True):
     # Build query to find documents with legacy fields but missing standard field
     or_conditions = []
     for field in legacy_fields:
-        or_conditions.append({field: {"$exists": True, "$ne": None, "$ne": 0}})
+        # Use $nin to combine multiple "not equal" checks — using two $ne
+        # keys in the same dict caused the second to silently override
+        # the first (the {"$ne": 0} survived, the {"$ne": None} was lost).
+        or_conditions.append({field: {"$exists": True, "$nin": [None, 0]}})
     
     # Find documents that have legacy fields
     query = {"$or": or_conditions}
     
     total_docs = await collection.count_documents({})
     docs_with_legacy = await collection.count_documents(query)
-    docs_with_standard = await collection.count_documents({STANDARD_FIELD: {"$exists": True, "$ne": None, "$ne": 0}})
+    docs_with_standard = await collection.count_documents({STANDARD_FIELD: {"$exists": True, "$nin": [None, 0]}})
     
     print(f"Total documents: {total_docs}")
     print(f"Documents with legacy fields: {docs_with_legacy}")

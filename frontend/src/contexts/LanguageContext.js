@@ -748,39 +748,10 @@ const translations = {
     bn: 'সেবা',
     pa: 'ਸੇਵਾਵਾਂ'
   },
-  billPayments: {
-    en: 'Bill Payments',
-    hi: 'बिल भुगतान',
-    mr: 'बिल पेमेंट',
-    gu: 'બિલ ચૂકવણી',
-    ta: 'பில் கட்டணங்கள்',
-    te: 'బిల్ చెల్లింపులు',
-    kn: 'ಬಿಲ್ ಪಾವತಿಗಳು',
-    bn: 'বিল পেমেন্ট',
-    pa: 'ਬਿੱਲ ਭੁਗਤਾਨ'
-  },
-  giftVouchers: {
-    en: 'Gift Vouchers',
-    hi: 'गिफ्ट वाउचर',
-    mr: 'गिफ्ट व्हाउचर',
-    gu: 'ગિફ્ટ વાઉચર',
-    ta: 'பரிசு வவுச்சர்கள்',
-    te: 'గిఫ్ట్ వోచర్లు',
-    kn: 'ಗಿಫ್ಟ್ ವೋಚರ್‌ಗಳು',
-    bn: 'গিফট ভাউচার',
-    pa: 'ਗਿਫਟ ਵਾਊਚਰ'
-  },
-  upgradeNow: {
-    en: 'Upgrade Now!',
-    hi: 'अभी अपग्रेड करें!',
-    mr: 'आता अपग्रेड करा!',
-    gu: 'હમણાં અપગ્રેડ કરો!',
-    ta: 'இப்போது மேம்படுத்தவும்!',
-    te: 'ఇప్పుడే అప్‌గ్రేడ్ చేయండి!',
-    kn: 'ಈಗ ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ!',
-    bn: 'এখনই আপগ্রেড করুন!',
-    pa: 'ਹੁਣੇ ਅੱਪਗ੍ਰੇਡ ਕਰੋ!'
-  },
+  // NOTE: Removed duplicate definitions of billPayments / giftVouchers /
+  // upgradeNow that previously lived here. They redefined keys already
+  // declared higher in the file, causing the linter to fail and silently
+  // overriding earlier translations.
   unlockRedeemServices: {
     en: 'Unlock Redeem Services',
     hi: 'रिडीम सेवाएं अनलॉक करें',
@@ -1068,17 +1039,10 @@ const translations = {
   },
 
   // ==================== INVITE FRIENDS (formerly Tap Game section removed) ====================
-  inviteFriends: {
-    en: 'Tap to Earn PRC',
-    hi: 'PRC कमाने के लिए टैप करें',
-    mr: 'PRC मिळवण्यासाठी टॅप करा',
-    gu: 'PRC કમાવવા માટે ટેપ કરો',
-    ta: 'PRC சம்பாதிக்க தட்டவும்',
-    te: 'PRC సంపాదించడానికి ట్యాప్ చేయండి',
-    kn: 'PRC ಗಳಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ',
-    bn: 'PRC আয় করতে ট্যাপ করুন',
-    pa: 'PRC ਕਮਾਉਣ ਲਈ ਟੈਪ ਕਰੋ'
-  },
+  // The dead `inviteFriends` entry here (which contained "Tap to Earn PRC"
+  // translations from the removed Tap Game feature) was overriding the
+  // correct definition earlier in the file. Removed to silence lint and
+  // restore proper "Invite Friends" UI labels.
   dailyTaps: {
     en: 'Daily Taps',
     hi: 'दैनिक टैप',
@@ -1814,17 +1778,7 @@ const translations = {
     bn: 'তাদের কার্যকলাপ দেখতে ব্যবহারকারীদের অনুসরণ করুন',
     pa: 'ਉਹਨਾਂ ਦੀ ਗਤੀਵਿਧੀ ਦੇਖਣ ਲਈ ਉਪਭੋਗਤਾਵਾਂ ਨੂੰ ਫਾਲੋ ਕਰੋ'
   },
-  loadMore: {
-    en: 'Load More',
-    hi: 'और लोड करें',
-    mr: 'अजून लोड करा',
-    gu: 'વધુ લોડ કરો',
-    ta: 'மேலும் ஏற்றுக',
-    te: 'మరింత లోడ్ చేయండి',
-    kn: 'ಹೆಚ್ಚು ಲೋಡ್ ಮಾಡಿ',
-    bn: 'আরও লোড করুন',
-    pa: 'ਹੋਰ ਲੋਡ ਕਰੋ'
-  },
+  // (duplicate `loadMore` entry removed — see definition earlier in file)
   showingActivities: {
     en: 'Showing {count} activities',
     hi: '{count} गतिविधियां दिखा रहे हैं',
@@ -2829,17 +2783,7 @@ const translations = {
     bn: '/ঘন্টা',
     pa: '/ਘੰਟਾ'
   },
-  totalEarned: {
-    en: 'Total Earned',
-    hi: 'कुल कमाया',
-    mr: 'एकूण मिळवले',
-    gu: 'કુલ કમાણી',
-    ta: 'மொத்த வருவாய்',
-    te: 'మొత్తం సంపాదన',
-    kn: 'ಒಟ್ಟು ಗಳಿಕೆ',
-    bn: 'মোট আয়',
-    pa: 'ਕੁੱਲ ਕਮਾਈ'
-  },
+  // (duplicate `totalEarned` entry removed — see definition earlier in file)
   collectRewards: {
     en: 'Collect Rewards',
     hi: 'पुरस्कार इकट्ठा करें',
@@ -2873,17 +2817,7 @@ const translations = {
     bn: 'প্রক্রিয়াকরণ',
     pa: 'ਪ੍ਰੋਸੈਸਿੰਗ'
   },
-  yourStats: {
-    en: 'Your Stats',
-    hi: 'आपके आँकड़े',
-    mr: 'तुमची आकडेवारी',
-    gu: 'તમારા આંકડા',
-    ta: 'உங்கள் புள்ளிவிவரம்',
-    te: 'మీ గణాంకాలు',
-    kn: 'ನಿಮ್ಮ ಅಂಕಿಅಂಶಗಳು',
-    bn: 'আপনার পরিসংখ্যান',
-    pa: 'ਤੁਹਾਡੇ ਅੰਕੜੇ'
-  },
+  // (duplicate `yourStats` entry removed — see definition earlier in file)
   freeUserWarning: {
     en: 'Free User: PRC valid for 2 days',
     hi: 'फ्री यूजर: PRC 2 दिनों के लिए वैध',

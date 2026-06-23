@@ -380,7 +380,7 @@ class TransactionCreate(BaseModel):
     related_id: Optional[str] = None
     related_type: Optional[str] = None
 
-class WithdrawalRequest(BaseModel):
+class EnhancedWithdrawalRequest(BaseModel):
     """Enhanced withdrawal request model"""
     amount: float
     wallet_type: str  # cashback, profit

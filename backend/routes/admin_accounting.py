@@ -1212,17 +1212,23 @@ async def get_active_video_ads(
     try:
         now = datetime.now(timezone.utc).isoformat()
         
+        # NOTE: Previously this used two `$or` keys in the same dict, which
+        # silently dropped the start_date filter (Python keeps only the
+        # second key). Combine both into an `$and` so each window check
+        # is actually enforced.
         query = {
             "is_active": True,
             "placement": placement,
             "target_roles": {"$in": [user_role, "all"]},
-            "$or": [
-                {"start_date": None},
-                {"start_date": {"$lte": now}}
-            ],
-            "$or": [
-                {"end_date": None},
-                {"end_date": {"$gte": now}}
+            "$and": [
+                {"$or": [
+                    {"start_date": None},
+                    {"start_date": {"$lte": now}}
+                ]},
+                {"$or": [
+                    {"end_date": None},
+                    {"end_date": {"$gte": now}}
+                ]}
             ]
         }
         
