@@ -255,10 +255,12 @@ const ReferralCalculator = () => {
         <p className="text-base text-slate-700 leading-relaxed mb-4">
           Paras Reward uses a transparent <strong>single-leg network mining
           algorithm</strong>. Your daily PRC mining rate is calculated using
-          two components: a guaranteed base rate of <strong>1,000 PRC per
+          two components: a <strong>base mining rate of 1,000 PRC per
           day</strong> when your network is below 250 users, and a network
-          bonus that scales with your team size. This means even brand-new
-          members earn something every day while they grow their network.
+          bonus that scales with your team size. PRC is a promotional reward
+          point — not money — and rates are subject to change. This means
+          even brand-new members earn some PRC every day while they grow
+          their network.
         </p>
         <p className="text-base text-slate-700 leading-relaxed mb-4">
           The <strong>per-user bonus</strong> follows a decreasing curve
