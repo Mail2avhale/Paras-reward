@@ -30,25 +30,49 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
   const meta = STATUS_META[booking.status] || STATUS_META.mining;
   const Icon = meta.icon;
 
-  // Live counter tick
+  // Live counter tick — only when session is active
+  const sessionActive = !!booking.session_active;
   const [liveAccumulated, setLiveAccumulated] = useState(booking.session_accumulated_prc || 0);
   const [liveRemaining, setLiveRemaining] = useState(booking.session_remaining_seconds || 0);
+  const [liveCooldown, setLiveCooldown] = useState(booking.cooldown_remaining_seconds || 0);
+  const [starting, setStarting] = useState(false);
   const tickRef = useRef(null);
+  const cooldownRef = useRef(null);
 
   useEffect(() => {
     setLiveAccumulated(booking.session_accumulated_prc || 0);
     setLiveRemaining(booking.session_remaining_seconds || 0);
-  }, [booking.session_accumulated_prc, booking.session_remaining_seconds]);
+    setLiveCooldown(booking.cooldown_remaining_seconds || 0);
+  }, [booking.session_accumulated_prc, booking.session_remaining_seconds, booking.cooldown_remaining_seconds]);
 
+  // Active-session mining tick: accumulate PRC every second
   useEffect(() => {
-    if (booking.status !== 'mining') return;
+    if (booking.status !== 'mining' || !sessionActive) return;
     const perSec = booking.per_second_prc || 0;
     tickRef.current = setInterval(() => {
       setLiveAccumulated((prev) => prev + perSec);
       setLiveRemaining((r) => Math.max(0, r - 1));
     }, 1000);
     return () => clearInterval(tickRef.current);
-  }, [booking.status, booking.per_second_prc]);
+  }, [booking.status, booking.per_second_prc, sessionActive]);
+
+  // Cooldown tick — counts down to zero, then auto-refresh so server can
+  // expose can_start_session=true. Mirrors the main mining 60s cooldown.
+  useEffect(() => {
+    if (sessionActive || booking.status !== 'mining' || liveCooldown <= 0) return;
+    cooldownRef.current = setInterval(() => {
+      setLiveCooldown((c) => {
+        if (c <= 1) {
+          clearInterval(cooldownRef.current);
+          // Pull fresh booking state from server so Start Session enables
+          onRefresh?.();
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(cooldownRef.current);
+  }, [sessionActive, booking.status, liveCooldown, onRefresh]);
 
   const collect = async () => {
     try {
@@ -56,6 +80,8 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
       if (res.data?.success) {
         toast.success(`Collected ${formatPrc(res.data.collected_prc)} PRC`);
         if (res.data.fulfilled) toast.success(`🎉 ${booking.product_name} fulfilled! Awaiting delivery.`);
+        // Reflect cooldown state immediately so UI swaps to "Start Session" pending
+        setLiveCooldown(res.data.cooldown_seconds || 0);
         onCollect?.();
         onRefresh?.();
       }
@@ -64,10 +90,26 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
     }
   };
 
+  const startSession = async () => {
+    if (starting) return;
+    setStarting(true);
+    try {
+      const res = await axios.post(`${API}/mall/start-session/${booking.booking_id}`, { user_id: booking.user_id });
+      if (res.data?.success) {
+        toast.success('New mining session started');
+        onRefresh?.();
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Could not start session');
+    } finally {
+      setStarting(false);
+    }
+  };
+
   const progress = booking.progress_percent || 0;
   // Session progress: 24h cycle (86400 sec). 0% at session start, 100% at reset.
   const sessionElapsed = Math.max(0, 86400 - (liveRemaining || 0));
-  const sessionProgress = Math.min(100, (sessionElapsed / 86400) * 100);
+  const sessionProgress = sessionActive ? Math.min(100, (sessionElapsed / 86400) * 100) : 0;
 
   return (
     <motion.div
@@ -269,17 +311,56 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
 
           <button
             onClick={collect}
-            disabled={liveAccumulated < 0.01}
-            className="w-full bg-gradient-to-r from-amber-500 to-amber-600 disabled:from-zinc-700 disabled:to-zinc-800 text-black disabled:text-zinc-500 font-bold py-3 rounded-xl text-sm uppercase tracking-wider transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            disabled={!sessionActive || liveAccumulated < 0.01}
+            className={`w-full ${
+              sessionActive
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 disabled:from-zinc-700 disabled:to-zinc-800 text-black disabled:text-zinc-500'
+                : 'hidden'
+            } font-bold py-3 rounded-xl text-sm uppercase tracking-wider transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2`}
             data-testid={`mall-collect-btn-${booking.booking_id}`}
           >
             <Coins className="w-4 h-4" />
             Collect {liveAccumulated > 0 ? liveAccumulated.toFixed(2) : '0.00'} PRC
           </button>
 
-          {liveRemaining <= 60 && liveRemaining > 0 && (
+          {/* Cooldown timer — shown after Collect, before Start Session unlocks */}
+          {!sessionActive && liveCooldown > 0 && (
+            <div
+              className="w-full bg-zinc-900/80 border border-amber-500/20 rounded-xl py-3 px-4 flex items-center justify-center gap-3"
+              data-testid={`mall-cooldown-${booking.booking_id}`}
+            >
+              <div className="w-9 h-9 rounded-full border-2 border-amber-500/40 grid place-items-center text-amber-300 font-bold tabular-nums text-sm">
+                {liveCooldown}
+              </div>
+              <div className="text-left">
+                <p className="text-[11px] uppercase tracking-wider text-zinc-400">Cooldown</p>
+                <p className="text-xs text-amber-300/90 font-medium">Next session in {liveCooldown}s</p>
+              </div>
+            </div>
+          )}
+
+          {/* Start Session — manual restart after cooldown */}
+          {!sessionActive && liveCooldown === 0 && (
+            <button
+              onClick={startSession}
+              disabled={starting}
+              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 disabled:opacity-60 text-white font-bold py-3 rounded-xl text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 hover:from-emerald-400 hover:to-emerald-500 shadow-lg shadow-emerald-500/20"
+              data-testid={`mall-start-session-btn-${booking.booking_id}`}
+            >
+              {starting ? (
+                <>Starting…</>
+              ) : (
+                <>
+                  <Coins className="w-4 h-4" />
+                  Start New Mining Session
+                </>
+              )}
+            </button>
+          )}
+
+          {sessionActive && liveRemaining <= 60 && liveRemaining > 0 && (
             <p className="flex items-center justify-center gap-1 text-[11px] text-amber-300 mt-2">
-              <AlertCircle className="w-3 h-3" /> Session resets soon — collect now!
+              <AlertCircle className="w-3 h-3" /> Session ending soon — collect now!
             </p>
           )}
         </>

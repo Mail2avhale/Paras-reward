@@ -7,13 +7,12 @@ android {
         applicationId "com.parasreward.prc"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode 10 → 11 — Critical fixes for Android AAB (Feb 22, 2026):
-        // 1. Mall product images now use absolute URLs (was broken in WebView)
-        // 2. Watch & Earn Rewarded Ad card removed (Play Store policy compliance)
-        // Note: admin code is tree-shaken from user AAB; bump is to keep
-        // Play Store version monotonic for the next release upload.
-        versionCode 11
-        versionName "1.1.0"
+        // versionCode 11 → 12 — Feb 23, 2026 release:
+        // 1. Product Mining: 60s cooldown + manual Start Session (matches main mining UX)
+        // 2. Native debug symbols (SYMBOL_TABLE) bundled in AAB
+        // 3. Service worker network-first HTML + auto-reload on update
+        versionCode 12
+        versionName "1.1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

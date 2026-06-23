@@ -41,6 +41,10 @@ UPFRONT_PERCENT = 0.10  # 10% of MRP
 UPFRONT_MIN_INR = 1000  # Or ₹1000 minimum, whichever is higher
 SESSION_DURATION_HOURS = 24  # Each booking session
 SECONDS_PER_DAY = 86400
+COLLECT_TO_START_COOLDOWN_SECONDS = 60  # Mirror of main mining: after a user
+# collects their accumulated PRC for a product booking, they must wait 60
+# seconds before manually starting a fresh mining session. This drives in-app
+# retention + AdMob impressions (consistent with the main mining flow).
 
 
 def set_db(database):
@@ -196,26 +200,10 @@ async def compute_session_accumulated(booking: dict) -> tuple[float, int]:
 
 
 async def maybe_lapse_or_renew_session(booking: dict) -> dict:
-    """If session > 24h old, lapse current session and start a new one."""
-    if booking.get("status") != "mining":
-        return booking
-    session_start = parse_iso(booking.get("session_start"))
-    if not session_start:
-        return booking
-    elapsed = (now_utc() - session_start).total_seconds()
-    if elapsed >= SECONDS_PER_DAY:
-        # Lapse: reset session_start to now, current session PRC discarded
-        new_start = now_utc()
-        await db.mall_bookings.update_one(
-            {"booking_id": booking["booking_id"]},
-            {"$set": {
-                "session_start": new_start.isoformat(),
-                "last_lapsed_at": now_utc().isoformat()
-            },
-                "$inc": {"laps_count": 1}}
-        )
-        booking["session_start"] = new_start.isoformat()
-        booking["laps_count"] = booking.get("laps_count", 0) + 1
+    """No-op (legacy). With manual Start Session flow, sessions never auto-renew.
+    Accumulated PRC is naturally capped at 24h in compute_session_accumulated().
+    Kept for compatibility with existing call-sites.
+    """
     return booking
 
 
@@ -465,25 +453,41 @@ async def my_bookings(user_id: str):
         {"user_id": user_id}, {"_id": 0}
     ).sort("created_at", -1).to_list(200)
 
+    now = now_utc()
     enriched = []
     for b in bookings:
         if b.get("status") == "mining":
             b = await maybe_lapse_or_renew_session(b)
+            session_start = parse_iso(b.get("session_start"))
+            session_active = bool(session_start)
             accumulated, elapsed = await compute_session_accumulated(b)
             rate_per_day = await get_daily_rate_for_booking(b["position"])
+            # Cooldown countdown — only when session is paused after a collect
+            next_avail = parse_iso(b.get("next_session_available_at"))
+            cooldown_remaining = 0
+            can_start_session = True
+            if not session_active and next_avail:
+                cooldown_remaining = max(0, int((next_avail - now).total_seconds()))
+                can_start_session = cooldown_remaining == 0
+            b["session_active"] = session_active
             b["session_accumulated_prc"] = accumulated
             b["session_elapsed_seconds"] = elapsed
-            b["session_remaining_seconds"] = max(0, SECONDS_PER_DAY - elapsed)
+            b["session_remaining_seconds"] = max(0, SECONDS_PER_DAY - elapsed) if session_active else 0
             b["daily_rate_prc"] = rate_per_day
-            b["per_second_prc"] = round(rate_per_day / SECONDS_PER_DAY, 6)
+            b["per_second_prc"] = round(rate_per_day / SECONDS_PER_DAY, 6) if session_active else 0
             b["per_hour_prc"] = round(rate_per_day / 24, 4)
+            b["cooldown_remaining_seconds"] = cooldown_remaining
+            b["can_start_session"] = can_start_session and not session_active
         else:
+            b["session_active"] = False
             b["session_accumulated_prc"] = 0
             b["session_elapsed_seconds"] = 0
             b["session_remaining_seconds"] = 0
             b["daily_rate_prc"] = 0
             b["per_second_prc"] = 0
             b["per_hour_prc"] = 0
+            b["cooldown_remaining_seconds"] = 0
+            b["can_start_session"] = False
         b["progress_percent"] = round((b.get("paid_prc", 0) / b.get("total_prc", 1)) * 100, 2)
         enriched.append(b)
     return {"success": True, "count": len(enriched), "bookings": enriched}
@@ -496,14 +500,24 @@ async def get_booking(booking_id: str):
         raise HTTPException(404, "Booking not found")
     if b.get("status") == "mining":
         b = await maybe_lapse_or_renew_session(b)
+        session_start = parse_iso(b.get("session_start"))
+        session_active = bool(session_start)
         accumulated, elapsed = await compute_session_accumulated(b)
         rate_per_day = await get_daily_rate_for_booking(b["position"])
+        now = now_utc()
+        next_avail = parse_iso(b.get("next_session_available_at"))
+        cooldown_remaining = 0
+        if not session_active and next_avail:
+            cooldown_remaining = max(0, int((next_avail - now).total_seconds()))
+        b["session_active"] = session_active
         b["session_accumulated_prc"] = accumulated
         b["session_elapsed_seconds"] = elapsed
-        b["session_remaining_seconds"] = max(0, SECONDS_PER_DAY - elapsed)
+        b["session_remaining_seconds"] = max(0, SECONDS_PER_DAY - elapsed) if session_active else 0
         b["daily_rate_prc"] = rate_per_day
-        b["per_second_prc"] = round(rate_per_day / SECONDS_PER_DAY, 6)
+        b["per_second_prc"] = round(rate_per_day / SECONDS_PER_DAY, 6) if session_active else 0
         b["per_hour_prc"] = round(rate_per_day / 24, 4)
+        b["cooldown_remaining_seconds"] = cooldown_remaining
+        b["can_start_session"] = cooldown_remaining == 0 and not session_active
     b["progress_percent"] = round((b.get("paid_prc", 0) / b.get("total_prc", 1)) * 100, 2)
     return b
 
@@ -536,14 +550,20 @@ async def collect_booking(booking_id: str, body: CollectBookingRequest):
     update = {
         "paid_prc": round(new_paid, 4),
         "remaining_prc": round(max(0.0, total_prc - new_paid), 4),
-        "session_start": now_utc().isoformat(),  # new 24h cycle
+        # CHANGED: Do NOT auto-start a new 24h cycle. Match main mining flow —
+        # user must manually click "Start Session" after a 60-second cooldown.
+        "session_start": None,
+        "session_active": False,
         "last_collected_at": now_utc().isoformat(),
+        "next_session_available_at": (now_utc() + timedelta(seconds=COLLECT_TO_START_COOLDOWN_SECONDS)).isoformat(),
     }
     if fulfilled:
         update["status"] = "fulfilled"
         update["fulfilled_at"] = now_utc().isoformat()
         update["paid_prc"] = total_prc  # exact match
         update["remaining_prc"] = 0
+        # Once fulfilled, no further sessions needed
+        update.pop("next_session_available_at", None)
     await db.mall_bookings.update_one({"booking_id": booking_id}, {"$set": update})
 
     # NOTE: We intentionally do NOT write a PRC ledger entry for mining
@@ -562,6 +582,64 @@ async def collect_booking(booking_id: str, body: CollectBookingRequest):
         "remaining_prc": update["remaining_prc"],
         "fulfilled": fulfilled,
         "progress_percent": round((update["paid_prc"] / total_prc) * 100, 2),
+        "cooldown_seconds": 0 if fulfilled else COLLECT_TO_START_COOLDOWN_SECONDS,
+        "next_session_available_at": None if fulfilled else update.get("next_session_available_at"),
+        "session_active": False,
+    }
+
+
+class StartSessionRequest(BaseModel):
+    user_id: str
+
+
+@router.post("/start-session/{booking_id}")
+async def start_booking_session(booking_id: str, body: StartSessionRequest):
+    """Manually start a new mining session for a product booking.
+
+    Called after the 60-second cooldown finishes. Mirrors the main mining
+    "Start Session" flow.
+    """
+    b = await db.mall_bookings.find_one({"booking_id": booking_id})
+    if not b:
+        raise HTTPException(404, "Booking not found")
+    if b.get("user_id") != body.user_id:
+        raise HTTPException(403, "Not your booking")
+    if b.get("status") != "mining":
+        raise HTTPException(400, "Booking is not in mining state")
+    if b.get("session_start"):
+        # Session already running — idempotent: return current state
+        return {
+            "success": True,
+            "already_active": True,
+            "session_start": b["session_start"],
+        }
+
+    # Enforce cooldown
+    next_avail = parse_iso(b.get("next_session_available_at"))
+    now = now_utc()
+    if next_avail and now < next_avail:
+        remaining = int((next_avail - now).total_seconds())
+        raise HTTPException(
+            400,
+            f"Please wait {remaining}s before starting a new session"
+        )
+
+    await db.mall_bookings.update_one(
+        {"booking_id": booking_id},
+        {
+            "$set": {
+                "session_start": now.isoformat(),
+                "session_active": True,
+                "next_session_available_at": None,
+                "last_session_started_at": now.isoformat(),
+            }
+        }
+    )
+    return {
+        "success": True,
+        "already_active": False,
+        "session_start": now.isoformat(),
+        "session_duration_seconds": SECONDS_PER_DAY,
     }
 
 
