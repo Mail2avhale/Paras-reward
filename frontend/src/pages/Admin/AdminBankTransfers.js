@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { API } from "../../lib/api";
+import { BenefitCapCleanupButton } from './BenefitCapCleanupButton';
 
 // Copy to clipboard helper
 const copyToClipboard = (text, label) => {
@@ -450,6 +451,7 @@ const AdminBankTransfers = () => {
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
+            <BenefitCapCleanupButton />
           </div>
         </div>
 

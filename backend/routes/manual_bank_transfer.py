@@ -2032,3 +2032,181 @@ async def admin_block_bank_redeem(body: AdminUnblockRequest):
 
     quota = await compute_lifetime_redeem_quota(body.user_id)
     return {"success": True, "quota": quota}
+
+
+
+# ==================== ADMIN: Benefit-Cap Bulk Cleanup (Feb 2026) ==============
+
+class BenefitCapCleanupRequest(BaseModel):
+    admin_id: str
+    dry_run: bool = True  # safety: default to preview-only
+
+
+async def _find_over_cap_users() -> list:
+    """Return a list of users whose lifetime benefits exceed the cap,
+    along with their pending bank-transfer requests and locked PRC.
+    Used by both the preview (dry-run) and execute endpoints.
+    """
+    # Build a candidate set from all 3 source collections in parallel.
+    # We aggregate user_ids first, then call compute_lifetime_redeem_quota
+    # for each so the same combined-benefits rules apply.
+    benefit_status_filter = {"$in": [
+        "approved", "paid", "completed", "success",
+        "delivered", "SUCCESS", "COMPLETED", "PAID",
+    ]}
+    candidate_uids = set()
+    for coll, status_field in (
+        (db.bank_transfer_requests, "status"),
+        (db.bank_withdrawal_requests, "status"),
+        (db.bill_payment_requests, "status"),
+    ):
+        async for doc in coll.find(
+            {status_field: benefit_status_filter},
+            {"_id": 0, "user_id": 1},
+        ):
+            uid = doc.get("user_id")
+            if uid:
+                candidate_uids.add(uid)
+
+    affected = []
+    for uid in candidate_uids:
+        q = await compute_lifetime_redeem_quota(uid)
+        if not q["is_blocked"]:
+            continue
+        # Skip users already explicitly admin-blocked — they were handled
+        # in a previous run and don't need re-processing.
+        user = await db.users.find_one(
+            {"uid": uid},
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "bank_redeem_blocked": 1},
+        ) or {}
+        if user.get("bank_redeem_blocked"):
+            continue
+
+        pending = await db.bank_transfer_requests.find(
+            {"user_id": uid, "status": "pending"},
+            {"_id": 0, "request_id": 1, "withdrawal_amount": 1, "total_prc": 1},
+        ).to_list(500)
+        pending_prc = sum(float(p.get("total_prc", 0) or 0) for p in pending)
+        affected.append({
+            "user_id": uid,
+            "name": user.get("name") or "—",
+            "mobile": user.get("mobile") or "—",
+            "lifetime_redeemed_inr": q["lifetime_redeemed_inr"],
+            "breakdown": q["breakdown"],
+            "pending_count": len(pending),
+            "pending_prc_to_refund": round(pending_prc, 2),
+            "pending_request_ids": [p["request_id"] for p in pending],
+        })
+
+    affected.sort(key=lambda x: -x["lifetime_redeemed_inr"])
+    return affected
+
+
+@router.get("/admin/benefit-cap-cleanup/preview")
+async def admin_benefit_cap_cleanup_preview():
+    """Dry-run — find every user who has crossed the ₹2,500 benefits cap
+    and is not yet marked as blocked, plus their pending requests / PRC
+    that would be refunded. No writes happen here.
+    """
+    affected = await _find_over_cap_users()
+    return {
+        "success": True,
+        "dry_run": True,
+        "cap_inr": LIFETIME_BANK_REDEEM_CAP_INR,
+        "users_to_block": len(affected),
+        "total_pending_to_cancel": sum(u["pending_count"] for u in affected),
+        "total_prc_to_refund": round(sum(u["pending_prc_to_refund"] for u in affected), 2),
+        "affected_users": affected[:200],  # cap response to keep payload sane
+        "truncated": len(affected) > 200,
+    }
+
+
+@router.post("/admin/benefit-cap-cleanup/execute")
+async def admin_benefit_cap_cleanup_execute(body: BenefitCapCleanupRequest):
+    """Actually run the cleanup. Steps per user:
+      1. Cancel all PENDING bank_transfer_requests → status=cancelled
+      2. Refund locked PRC back to user.prc_balance + ledger entry
+      3. Set users.bank_redeem_blocked = True + reason
+      4. Append audit_log row
+
+    Idempotent — re-running is a no-op for users already processed.
+    """
+    if body.dry_run:
+        # Fall back to preview if dry_run flag is set on the execute endpoint
+        return await admin_benefit_cap_cleanup_preview()
+
+    if not body.admin_id:
+        raise HTTPException(status_code=400, detail="admin_id required for audit trail")
+
+    affected = await _find_over_cap_users()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    users_blocked = 0
+    pending_cancelled = 0
+    prc_refunded = 0.0
+
+    for u in affected:
+        uid = u["user_id"]
+        for req_id in u["pending_request_ids"]:
+            req = await db.bank_transfer_requests.find_one(
+                {"request_id": req_id, "status": "pending"},
+                {"_id": 0, "request_id": 1, "total_prc": 1},
+            )
+            if not req:
+                continue
+            prc_amt = float(req.get("total_prc", 0) or 0)
+            await db.bank_transfer_requests.update_one(
+                {"request_id": req_id},
+                {"$set": {
+                    "status": "cancelled",
+                    "cancelled_at": now_iso,
+                    "cancel_reason": "Lifetime ₹2,500 benefits cap reached — auto-cancelled by admin cleanup.",
+                }},
+            )
+            if prc_amt > 0:
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$inc": {"prc_balance": prc_amt}},
+                )
+                await db.prc_ledger.insert_one({
+                    "uid": uid,
+                    "type": "bank_redeem_refund_cleanup",
+                    "amount": prc_amt,
+                    "category": "benefit_cap_cleanup",
+                    "description": f"Refund of pending bank-redeem #{req_id[:8]} (₹2,500 benefits cap reached)",
+                    "created_at": now_iso,
+                    "metadata": {"request_id": req_id, "trigger": "admin_benefit_cap_cleanup", "admin_id": body.admin_id},
+                })
+                prc_refunded += prc_amt
+            pending_cancelled += 1
+
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "bank_redeem_blocked": True,
+                "bank_redeem_blocked_at": now_iso,
+                "bank_redeem_blocked_by": body.admin_id,
+                "bank_redeem_blocked_reason": (
+                    f"Lifetime ₹{LIFETIME_BANK_REDEEM_CAP_INR:,} benefits cap reached "
+                    f"(₹{u['lifetime_redeemed_inr']:,} used across recharges, bills and bank redeems)."
+                ),
+            }},
+        )
+        await db.audit_log.insert_one({
+            "type": "bank_redeem_block_cleanup",
+            "user_id": uid,
+            "admin_id": body.admin_id,
+            "lifetime_redeemed_inr": u["lifetime_redeemed_inr"],
+            "pending_cancelled": u["pending_count"],
+            "prc_refunded": u["pending_prc_to_refund"],
+            "created_at": now_iso,
+        })
+        users_blocked += 1
+
+    return {
+        "success": True,
+        "dry_run": False,
+        "users_blocked": users_blocked,
+        "pending_cancelled": pending_cancelled,
+        "prc_refunded": round(prc_refunded, 2),
+    }
