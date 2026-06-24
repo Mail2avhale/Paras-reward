@@ -2043,56 +2043,101 @@ class BenefitCapCleanupRequest(BaseModel):
 
 
 async def _find_over_cap_users() -> list:
-    """Return a list of users whose lifetime benefits exceed the cap,
-    along with their pending bank-transfer requests and locked PRC.
-    Used by both the preview (dry-run) and execute endpoints.
+    """Return a list of users whose lifetime benefits exceed the cap.
+
+    PERFORMANCE: Earlier version iterated every doc + called
+    compute_lifetime_redeem_quota per user → O(users × 9 collection scans)
+    which timed out on production-scale data (1000s of users). This
+    rewrite uses ONE MongoDB aggregation pipeline per collection to sum
+    amounts server-side, then merges three result dicts in Python.
+    Final cost: 3 aggregations + N user lookups (N ≤ over-cap users).
     """
-    # Build a candidate set from all 3 source collections in parallel.
-    # We aggregate user_ids first, then call compute_lifetime_redeem_quota
-    # for each so the same combined-benefits rules apply.
-    benefit_status_filter = {"$in": [
+    BENEFIT_OK_STATUSES = [
         "approved", "paid", "completed", "success",
         "delivered", "SUCCESS", "COMPLETED", "PAID",
-    ]}
-    candidate_uids = set()
-    for coll, status_field in (
-        (db.bank_transfer_requests, "status"),
-        (db.bank_withdrawal_requests, "status"),
-        (db.bill_payment_requests, "status"),
-    ):
-        async for doc in coll.find(
-            {status_field: benefit_status_filter},
-            {"_id": 0, "user_id": 1},
-        ):
-            uid = doc.get("user_id")
+    ]
+
+    async def _sum_amounts(coll, fields):
+        """Aggregate sum(first-non-null amount field) per user_id."""
+        # Build nested $ifNull cascade: ifNull(f1, ifNull(f2, ifNull(f3, ifNull(f4, 0))))
+        expr = 0
+        for fname in reversed(fields):
+            expr = {"$ifNull": [f"${fname}", expr]}
+        amount_expr = {"$toDouble": expr}
+        pipeline = [
+            {"$match": {"status": {"$in": BENEFIT_OK_STATUSES}}},
+            {"$group": {
+                "_id": "$user_id",
+                "total": {"$sum": amount_expr},
+            }},
+            {"$match": {"total": {"$gt": 0}}},
+        ]
+        out = {}
+        async for d in coll.aggregate(pipeline, allowDiskUse=True):
+            uid = d.get("_id")
             if uid:
-                candidate_uids.add(uid)
+                out[uid] = float(d.get("total", 0) or 0)
+        return out
+
+    bt_sums = await _sum_amounts(
+        db.bank_transfer_requests,
+        ["withdrawal_amount", "amount_inr", "amount", "inr_amount"],
+    )
+    bw_sums = await _sum_amounts(
+        db.bank_withdrawal_requests,
+        ["amount_inr", "amount", "withdrawal_amount", "amount_requested"],
+    )
+    bp_sums = await _sum_amounts(
+        db.bill_payment_requests,
+        ["amount", "amount_inr", "inr_amount", "recharge_amount"],
+    )
+
+    combined = {}
+    for src, key in ((bt_sums, "bt"), (bw_sums, "bw"), (bp_sums, "bp")):
+        for uid, amt in src.items():
+            c = combined.setdefault(uid, {"bt": 0, "bw": 0, "bp": 0})
+            c[key] = amt
+
+    over_cap_uids = [
+        uid for uid, parts in combined.items()
+        if (parts["bt"] + parts["bw"] + parts["bp"]) >= LIFETIME_BANK_REDEEM_CAP_INR
+    ]
+
+    if not over_cap_uids:
+        return []
+
+    # Fetch user docs in one batch query — skip already-blocked users
+    users_cursor = db.users.find(
+        {"uid": {"$in": over_cap_uids}},
+        {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "bank_redeem_blocked": 1},
+    )
+    user_map = {u["uid"]: u async for u in users_cursor}
 
     affected = []
-    for uid in candidate_uids:
-        q = await compute_lifetime_redeem_quota(uid)
-        if not q["is_blocked"]:
+    for uid in over_cap_uids:
+        u = user_map.get(uid)
+        if not u or u.get("bank_redeem_blocked"):
             continue
-        # Skip users already explicitly admin-blocked — they were handled
-        # in a previous run and don't need re-processing.
-        user = await db.users.find_one(
-            {"uid": uid},
-            {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "bank_redeem_blocked": 1},
-        ) or {}
-        if user.get("bank_redeem_blocked"):
-            continue
+        parts = combined[uid]
+        bank_total = int(parts["bt"] + parts["bw"])
+        bills_total = int(parts["bp"])
 
         pending = await db.bank_transfer_requests.find(
             {"user_id": uid, "status": "pending"},
-            {"_id": 0, "request_id": 1, "withdrawal_amount": 1, "total_prc": 1},
+            {"_id": 0, "request_id": 1, "total_prc": 1},
         ).to_list(500)
         pending_prc = sum(float(p.get("total_prc", 0) or 0) for p in pending)
+
         affected.append({
             "user_id": uid,
-            "name": user.get("name") or "—",
-            "mobile": user.get("mobile") or "—",
-            "lifetime_redeemed_inr": q["lifetime_redeemed_inr"],
-            "breakdown": q["breakdown"],
+            "name": u.get("name") or "—",
+            "mobile": u.get("mobile") or "—",
+            "lifetime_redeemed_inr": bank_total + bills_total,
+            "breakdown": {
+                "bank_redeems_inr": bank_total,
+                "recharges_and_bills_inr": bills_total,
+                "subscription_inr_excluded": True,
+            },
             "pending_count": len(pending),
             "pending_prc_to_refund": round(pending_prc, 2),
             "pending_request_ids": [p["request_id"] for p in pending],
@@ -2100,6 +2145,7 @@ async def _find_over_cap_users() -> list:
 
     affected.sort(key=lambda x: -x["lifetime_redeemed_inr"])
     return affected
+
 
 
 @router.get("/admin/benefit-cap-cleanup/preview")
