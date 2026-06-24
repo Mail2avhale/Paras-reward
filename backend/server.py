@@ -36551,7 +36551,8 @@ api_router.include_router(paras_mall_admin_router)
 api_router.include_router(app_version_router)
 
 # Rewarded video ad PRC crediting (Phase 2)
-from routes.ads_rewarded import router as ads_rewarded_router
+from routes.ads_rewarded import router as ads_rewarded_router, set_db as set_ads_rewarded_db
+set_ads_rewarded_db(db)
 api_router.include_router(ads_rewarded_router)
 
 # PARAS MALL 2.0 — wishlist, reviews, recently-viewed, categories, analytics, AI desc, CSV import

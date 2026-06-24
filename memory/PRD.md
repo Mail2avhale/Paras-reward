@@ -9,6 +9,17 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 — THIRD FIX: Collect Rewards no-action)
+- 🔴 **COLLECT REWARDS BUTTON DOES NOTHING — TRUE ROOT CAUSE FIXED** (`routes/ads_rewarded.py`): User reported clicking "Collect Rewards" on dashboard did nothing — no modal, no toast, no API hit. Deep probe revealed:
+  - Clicking `Collect Rewards` runs `setAdPromptOpen(true)` and renders `RewardedAdPrompt`, which then calls `POST /api/ads/rewarded/start` to fetch the bonus preview + view_token.
+  - On production with a VALID auth token, `/api/ads/rewarded/start` (and `/quota`) **hung for 30+ seconds** and eventually 504'd, but the catch handler that would have fallen back to `performCollect()` was waiting on a request that never resolved → modal sat invisibly waiting and the user saw "nothing happened".
+  - **Root cause**: `routes/ads_rewarded.py` created its OWN `AsyncIOMotorClient` at module-import time. That client's connection pool got bound to whatever event loop happened to be active during import, but FastAPI request handlers in production ran on a DIFFERENT loop, so every `await` on this client hung forever. Other endpoints worked because they use the canonical `db=None; def set_db(database):...` pattern wired from `server.py`.
+  - **Fix shipped**: Switched `ads_rewarded.py` to the canonical `set_db()` pattern, removed the standalone `AsyncIOMotorClient` + `dotenv_values` import, and made `_ensure_indexes()` one-shot per process instead of per-request. Wired in `server.py` via `set_ads_rewarded_db(db)` before `include_router(...)`. App version bumped to `3.0.3-collect-fix-jun2026`.
+  - **Verified on preview**: `/api/ads/rewarded/quota` 263 ms (was 30 s hang), `/api/ads/rewarded/start` 93 ms (was 30 s hang). 401 "User not found" is correct because the preview DB doesn't have this production user.
+  - **Also confirmed working on production** (via direct curl with real user token): `/api/mining/collect/{uid}` returns 200 in 1.9 s and credits PRC correctly — the mining/collect pipeline itself was never broken; the user was just stuck on the rewarded-ad gate.
+  - **Note for future cleanup**: `routes/account_deletion.py` follows the same buggy pattern. Has not been reported as hanging but should be migrated to `set_db()` proactively to prevent a similar production-only hang.
+
+
 ## Implemented (Jun 24, 2026 - SECOND FIX, after user reported issue still occurring)
 - 🔴 **STUCK LOADING SCREEN — TRUE ROOT CAUSE FIXED** (`src/App.js`): The previous cache-fix (3.0.1) helped landing page but the user reported `/dashboard` and `/paras-mall` were STILL stuck on a light-purple "Loading…" screen after refresh. Root cause turned out to be NOT a cache issue at all — it was a logic bug in the App component's auth useEffect:
   ```js

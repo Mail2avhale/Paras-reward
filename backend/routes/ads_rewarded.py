@@ -19,8 +19,6 @@ import random
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from motor.motor_asyncio import AsyncIOMotorClient
-from dotenv import dotenv_values
 
 # Shared auth dep
 from server import get_current_user
@@ -37,10 +35,23 @@ REWARD_MIN_PRC = 5
 REWARD_MAX_PRC = 10
 ALLOWED_PLACEMENTS = {"main_mining_collect", "mall_collect", "other"}
 
-# DB handle — lazy
-_env = dotenv_values("/app/backend/.env")
-_client = AsyncIOMotorClient(_env["MONGO_URL"])
-db = _client[_env["DB_NAME"]]
+# ── DB handle (Jun 2026 fix) ─────────────────────────────────────────
+# We used to create our OWN AsyncIOMotorClient at module-import time:
+#     _client = AsyncIOMotorClient(_env["MONGO_URL"])
+#     db = _client[_env["DB_NAME"]]
+# That bound the connection pool to whatever event loop was active during
+# import. In production (under uvicorn workers) the request handlers ran
+# on a DIFFERENT loop, so every await on this client HUNG FOREVER —
+# turning "Collect Rewards" into a no-op (the UI modal waits on /start,
+# /start never returns).
+# We now use the canonical set_db() pattern like every other route.
+db = None
+_indexes_created = False
+
+
+def set_db(database):
+    global db
+    db = database
 
 
 def _today_key() -> str:
@@ -48,11 +59,18 @@ def _today_key() -> str:
 
 
 async def _ensure_indexes():
+    """One-shot per-process index creation. The previous implementation
+    ran on every request which added a needless round-trip and, with the
+    stale client above, was a primary reason the endpoint hung."""
+    global _indexes_created
+    if _indexes_created:
+        return
     try:
         await db.ad_view_tokens.create_index("expires_at", expireAfterSeconds=0)
         await db.ad_rewards_daily.create_index([("uid", 1), ("day", 1)], unique=True)
     except Exception:
         pass
+    _indexes_created = True
 
 
 @router.get("/quota")
