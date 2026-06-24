@@ -144,7 +144,26 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // Clear old caches first
     clearOldCaches();
-    
+
+    // ── SERVICE WORKER REGISTRATION DISABLED (Feb 2026) ────────────────
+    // The stale-cache-after-deploy bug recurred for users on older SW
+    // versions even after every fix. We now ship a kill-switch SW that
+    // self-unregisters, and we stop registering a new one entirely.
+    // To stop the kill-switch from being re-installed on every page load,
+    // we skip the call to navigator.serviceWorker.register().
+    //
+    // The site continues to work as a normal SPA via browser HTTP cache
+    // and Cloudflare CDN. If we ever want PWA/offline support back, ship
+    // a fresh, properly-designed SW and re-enable registration.
+    (async () => {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      } catch (e) { /* ignore */ }
+    })();
+    return;
+
+    // eslint-disable-next-line no-unreachable
     navigator.serviceWorker
       .register('/service-worker.js')
       .then((registration) => {
