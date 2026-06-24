@@ -80,6 +80,13 @@ const BankRedeemPage = ({ user: initialUser }) => {
   // Redeem limit info
   const [redeemLimit, setRedeemLimit] = useState(null);
 
+  // ── Lifetime quota state (Feb 2026 cap of ₹2,500) ────────────────────
+  // Hydrated from /api/bank-transfer/lifetime-quota/{uid}. While loading
+  // this is null; once loaded it has shape:
+  //   { lifetime_redeemed_inr, lifetime_cap_inr, remaining_quota_inr,
+  //     is_blocked, allowed_amounts: [], enabled_amounts: [], block_reason }
+  const [lifetimeQuota, setLifetimeQuota] = useState(null);
+
   // Load user and config
   useEffect(() => {
     const loadData = async () => {
@@ -113,15 +120,17 @@ const BankRedeemPage = ({ user: initialUser }) => {
           }
         };
         
-        const [userRes, configRes, limitRes, burnRes] = await Promise.all([
+        const [userRes, configRes, limitRes, burnRes, quotaRes] = await Promise.all([
           axios.get(`${API}/users/${userData.uid}`),
           axios.get(`${API}/bank-transfer/config?user_id=${userData.uid}`),
           fetchRedeemLimit(),
-          axios.get(`${API}/redemption/calculate-charges?amount_inr=100&user_id=${userData.uid}`).catch(() => ({ data: null }))
+          axios.get(`${API}/redemption/calculate-charges?amount_inr=100&user_id=${userData.uid}`).catch(() => ({ data: null })),
+          axios.get(`${API}/bank-transfer/lifetime-quota/${userData.uid}`).catch(() => ({ data: null })),
         ]);
-        
+
         setUser(userRes.data);
         setConfig(configRes.data);
+        if (quotaRes.data) setLifetimeQuota(quotaRes.data);
         
         // Set burn rate from backend
         if (burnRes.data?.burn_rate_percent !== undefined) {
@@ -178,8 +187,14 @@ const BankRedeemPage = ({ user: initialUser }) => {
   const amountError = (() => {
     if (!amount || isNaN(amount)) return '';
     const amt = parseInt(amount);
-    if (amt < config.min_withdrawal) return `Minimum ₹${config.min_withdrawal.toLocaleString()} amount required`;
-    if (amt > config.max_withdrawal) return `Maximum ₹${config.max_withdrawal.toLocaleString()} allowed`;
+    const allowed = lifetimeQuota?.allowed_amounts || [100, 200, 400, 800, 1000];
+    if (!allowed.includes(amt)) {
+      return `Please choose one of: ₹${allowed.join(', ₹')}`;
+    }
+    const enabled = lifetimeQuota?.enabled_amounts;
+    if (enabled && !enabled.includes(amt)) {
+      return `Only ₹${lifetimeQuota.remaining_quota_inr} of your ₹${lifetimeQuota.lifetime_cap_inr} lifetime cap remains. Pick a smaller amount.`;
+    }
     return '';
   })();
 
@@ -189,9 +204,10 @@ const BankRedeemPage = ({ user: initialUser }) => {
       setFees(null);
       return;
     }
-    
+
     const amt = parseInt(amount);
-    if (amt < config.min_withdrawal || amt > config.max_withdrawal) {
+    const allowed = lifetimeQuota?.allowed_amounts || [100, 200, 400, 800, 1000];
+    if (!allowed.includes(amt)) {
       setFees(null);
       return;
     }
@@ -463,54 +479,93 @@ const BankRedeemPage = ({ user: initialUser }) => {
               </Card>
             )}
 
-            {/* Amount Input */}
+            {/* Amount Selection — Feb 2026: 5 fixed amounts + ₹2,500 lifetime cap */}
             <Card className="bg-slate-800/50 border-slate-700 p-4">
-              <Label className="text-slate-300 mb-2 block">Withdrawal Amount (INR)</Label>
-              <div className="relative">
-                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <Input
-                  data-testid="amount-input"
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder={`Min ₹${Number(config.min_withdrawal).toLocaleString('en-IN')}`}
-                  className="pl-10 bg-slate-900 border-slate-600 text-white"
-                  min={config.min_withdrawal}
-                  max={config.max_withdrawal}
-                  required
-                />
-              </div>
-              {amountError && (
-                <p data-testid="amount-error" className="text-red-400 text-sm mt-2 flex items-center gap-1.5">
-                  <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  {amountError}
-                </p>
-              )}
-              <p className="text-slate-500 text-xs mt-2">
-                Rate: 1 INR = {config.prc_rate} PRC | Fee: ₹{config.transaction_fee} + {config.admin_fee_percent}%
-              </p>
-              {config.progressive && config.progressive.total_approved_count > 0 && (
-                <div
-                  className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-200/90"
-                  data-testid="progressive-min-notice"
-                >
-                  <p className="font-semibold text-amber-300">
-                    Your minimum withdrawal: ₹{Number(config.progressive.minimum).toLocaleString('en-IN')}
-                  </p>
-                  <p className="mt-1 text-amber-200/70">
-                    {config.progressive.basis === 'legacy_total'
-                      ? `Calculated from your lifetime redeem total of ₹${Number(config.progressive.total_approved_amount).toLocaleString('en-IN')} × 1.5.`
-                      : `1.5× of your last approved redeem of ₹${Number(config.progressive.last_approved_amount || 0).toLocaleString('en-IN')}.`}
-                  </p>
-                  <p className="mt-1 text-amber-200/60">
-                    Next minimum after this redeem will be approx ₹{Number(Math.ceil((parseFloat(amount) || config.progressive.minimum) * 1.5)).toLocaleString('en-IN')}.
+              {/* Lifetime cap progress meter */}
+              {lifetimeQuota && (
+                <div className="mb-4" data-testid="bank-redeem-quota-meter">
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <span className="text-slate-300 text-sm font-medium">Lifetime Bank Redeem Limit</span>
+                    <span className="text-slate-400 text-xs tabular-nums">
+                      ₹{Number(lifetimeQuota.lifetime_redeemed_inr).toLocaleString('en-IN')} / ₹{Number(lifetimeQuota.lifetime_cap_inr).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-slate-900 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${
+                        lifetimeQuota.is_blocked
+                          ? 'bg-red-500'
+                          : lifetimeQuota.remaining_quota_inr <= 500
+                          ? 'bg-amber-500'
+                          : 'bg-emerald-500'
+                      }`}
+                      style={{
+                        width: `${Math.min(100, (lifetimeQuota.lifetime_redeemed_inr / lifetimeQuota.lifetime_cap_inr) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-slate-500 text-xs mt-1.5">
+                    {lifetimeQuota.is_blocked
+                      ? '🚫 You have reached the lifetime cap. Bank redeem is disabled.'
+                      : `Remaining: ₹${Number(lifetimeQuota.remaining_quota_inr).toLocaleString('en-IN')} (charges are extra, not counted in cap)`}
                   </p>
                 </div>
               )}
-              {config.progressive && config.progressive.total_approved_count === 0 && (
-                <p className="text-slate-500 text-xs mt-2" data-testid="progressive-min-first">
-                  First-time redeem: minimum is ₹{Number(config.progressive.minimum).toLocaleString('en-IN')}. Each future redeem raises your floor 1.5×.
-                </p>
+
+              <Label className="text-slate-300 mb-2 block">Select Withdrawal Amount</Label>
+
+              {lifetimeQuota?.is_blocked ? (
+                <div
+                  className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-center"
+                  data-testid="bank-redeem-blocked-banner"
+                >
+                  <XCircle className="w-7 h-7 text-red-400 mx-auto mb-2" />
+                  <p className="text-red-200 font-semibold mb-1">Bank Redeem Disabled</p>
+                  <p className="text-red-200/80 text-sm">
+                    {lifetimeQuota.block_reason}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2" data-testid="bank-redeem-amount-chips">
+                    {(lifetimeQuota?.allowed_amounts || [100, 200, 400, 800, 1000]).map((amt) => {
+                      const isEnabled = lifetimeQuota
+                        ? lifetimeQuota.enabled_amounts.includes(amt)
+                        : true;
+                      const isSelected = parseInt(amount) === amt;
+                      return (
+                        <button
+                          key={amt}
+                          type="button"
+                          disabled={!isEnabled}
+                          onClick={() => setAmount(String(amt))}
+                          data-testid={`bank-redeem-amount-${amt}`}
+                          className={`py-2.5 rounded-lg border text-sm font-semibold tabular-nums transition-all ${
+                            isSelected
+                              ? 'bg-emerald-500 border-emerald-500 text-black shadow-lg shadow-emerald-500/30'
+                              : isEnabled
+                              ? 'bg-slate-900 border-slate-600 text-slate-200 hover:border-emerald-500/50'
+                              : 'bg-slate-900/40 border-slate-700 text-slate-600 cursor-not-allowed line-through'
+                          }`}
+                          title={
+                            isEnabled ? `Redeem ₹${amt}` : `Exceeds remaining ₹${lifetimeQuota?.remaining_quota_inr || 0} quota`
+                          }
+                        >
+                          ₹{amt.toLocaleString('en-IN')}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {amountError && (
+                    <p data-testid="amount-error" className="text-red-400 text-sm mt-2 flex items-center gap-1.5">
+                      <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      {amountError}
+                    </p>
+                  )}
+                  <p className="text-slate-500 text-xs mt-3">
+                    Rate: 1 INR = {config.prc_rate} PRC &middot; Fee: ₹{config.transaction_fee} + {config.admin_fee_percent}% (extra, not in ₹2,500 cap)
+                  </p>
+                </>
               )}
             </Card>
 

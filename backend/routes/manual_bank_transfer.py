@@ -105,8 +105,20 @@ TRANSACTION_FEE = 10  # ₹10 flat fee
 ADMIN_FEE_PERCENT = 20  # 20% admin fee
 MIN_WITHDRAWAL_BASE = 100  # ₹100 base minimum (May 2026 — was ₹1,000 flat)
 MIN_WITHDRAWAL = MIN_WITHDRAWAL_BASE  # legacy alias used elsewhere in code
-MAX_WITHDRAWAL = 10000  # ₹10,000 maximum
+MAX_WITHDRAWAL = 10000  # ₹10,000 maximum (per-request hard cap)
 PROGRESSIVE_MULTIPLIER = 1.5  # Each approved redeem raises next min by 1.5×
+
+# ── Bank Redeem Lifetime Cap (Feb 2026) ───────────────────────────────────
+# Users may only redeem amounts from a fixed allow-list, and their LIFETIME
+# total (sum of approved/paid amounts, excluding fees) is hard-capped at
+# ₹2,500. Once a user crosses the cap their bank-redeem option is
+# permanently disabled (admin can override via /admin/bank-redeem/unblock).
+ALLOWED_REDEEM_AMOUNTS = [100, 200, 400, 800, 1000]
+LIFETIME_BANK_REDEEM_CAP_INR = 2500
+# Statuses that count towards the lifetime quota. Pending / failed /
+# rejected do NOT count — the user only "spends" quota when money actually
+# leaves the company account.
+QUOTA_COUNTING_STATUSES = ["approved", "paid", "completed"]
 
 
 async def compute_progressive_min_withdrawal(user_id: str) -> dict:
@@ -182,6 +194,65 @@ async def compute_progressive_min_withdrawal(user_id: str) -> dict:
         "total_approved_amount": total_amount,
         "last_approved_amount": last_amount,
     }
+
+
+async def compute_lifetime_redeem_quota(user_id: str) -> dict:
+    """Compute a user's bank-redeem lifetime quota status.
+
+    Returns a dictionary the frontend can render directly:
+
+      {
+        "lifetime_redeemed_inr": int,     # sum of approved/paid principal (no fees)
+        "lifetime_cap_inr": int,          # 2500
+        "remaining_quota_inr": int,       # cap - redeemed (≥0)
+        "is_blocked": bool,               # True if user.bank_redeem_blocked or cap reached
+        "allowed_amounts": [100,200,...], # canonical allow-list
+        "enabled_amounts": [...],         # subset that fits in remaining_quota
+        "block_reason": str | None,
+      }
+    """
+    user = await db.users.find_one(
+        {"uid": user_id},
+        {"_id": 0, "bank_redeem_blocked": 1, "bank_redeem_blocked_reason": 1}
+    ) or {}
+
+    admin_blocked = bool(user.get("bank_redeem_blocked"))
+    cursor = db.bank_transfer_requests.find(
+        {"user_id": user_id, "status": {"$in": QUOTA_COUNTING_STATUSES}},
+        {"_id": 0, "withdrawal_amount": 1}
+    )
+    docs = await cursor.to_list(20000)
+    lifetime_redeemed = sum(int(d.get("withdrawal_amount") or 0) for d in docs)
+    remaining = max(0, LIFETIME_BANK_REDEEM_CAP_INR - lifetime_redeemed)
+
+    cap_reached = lifetime_redeemed >= LIFETIME_BANK_REDEEM_CAP_INR
+    is_blocked = admin_blocked or cap_reached
+
+    if admin_blocked:
+        block_reason = user.get("bank_redeem_blocked_reason") or "Bank redeem option disabled by admin."
+    elif cap_reached:
+        block_reason = (
+            f"Lifetime bank-redeem cap of ₹{LIFETIME_BANK_REDEEM_CAP_INR:,} reached. "
+            "Contact support if you have queries."
+        )
+    else:
+        block_reason = None
+
+    enabled_amounts = (
+        [] if is_blocked
+        else [a for a in ALLOWED_REDEEM_AMOUNTS if a <= remaining]
+    )
+
+    return {
+        "lifetime_redeemed_inr": lifetime_redeemed,
+        "lifetime_cap_inr": LIFETIME_BANK_REDEEM_CAP_INR,
+        "remaining_quota_inr": remaining,
+        "is_blocked": is_blocked,
+        "allowed_amounts": ALLOWED_REDEEM_AMOUNTS,
+        "enabled_amounts": enabled_amounts,
+        "block_reason": block_reason,
+    }
+
 
 # Eko API for IFSC verification
 EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
@@ -375,7 +446,25 @@ async def get_config(user_id: Optional[str] = Query(None)):
         # Override min/max so legacy UI fields display the user-specific floor/ceiling.
         payload["min_withdrawal"] = prog["minimum"]
         payload["max_withdrawal"] = prog["maximum"]
+
+        # Lifetime quota (Feb 2026 — supersedes progressive system for the
+        # public bank-redeem flow; progressive kept for admin direct-redeem).
+        quota = await compute_lifetime_redeem_quota(user_id)
+        payload["lifetime_quota"] = quota
+        payload["allowed_amounts"] = quota["allowed_amounts"]
+    else:
+        payload["allowed_amounts"] = ALLOWED_REDEEM_AMOUNTS
     return payload
+
+
+@router.get("/lifetime-quota/{user_id}")
+async def get_lifetime_quota(user_id: str):
+    """Return the user's bank-redeem lifetime quota state.
+
+    Frontend uses this to enable/disable the 5 amount chips and to render
+    the "Limit reached" page when the cap is hit or admin has blocked.
+    """
+    return await compute_lifetime_redeem_quota(user_id)
 
 @router.get("/calculate-fees")
 async def calculate_fees_api(amount: int = Query(..., ge=MIN_WITHDRAWAL_BASE, le=MAX_WITHDRAWAL)):
@@ -444,28 +533,42 @@ async def create_redeem_request(request: RedeemRequest):
     try:
         amount = request.amount
         bank = request.bank_details
-        
-        # 1. Validate amount limits (per-user dynamic min/max from progressive)
+
+        # 1. NEW (Feb 2026) — Validate amount against the fixed allow-list
+        # and the per-user lifetime cap. This supersedes the progressive
+        # minimum check for the public bank-redeem flow.
+        if amount not in ALLOWED_REDEEM_AMOUNTS:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Invalid amount. Choose one of ₹"
+                    + ", ₹".join(f"{a:,}" for a in ALLOWED_REDEEM_AMOUNTS) + "."
+                ),
+            )
+
+        quota = await compute_lifetime_redeem_quota(user_id)
+        if quota["is_blocked"]:
+            raise HTTPException(
+                status_code=403,
+                detail=quota["block_reason"] or "Bank redeem option is disabled for your account.",
+            )
+        if amount > quota["remaining_quota_inr"]:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"This amount would exceed your lifetime cap of "
+                    f"₹{LIFETIME_BANK_REDEEM_CAP_INR:,}. You have "
+                    f"₹{quota['remaining_quota_inr']:,} remaining — please pick a smaller amount."
+                ),
+            )
+
+        # 1b. Legacy progressive ceiling kept ONLY as an upper bound sanity
+        # guard (per-request cap). The lower-bound minimum is no longer
+        # enforced for the public flow because amounts are now fixed.
         progressive = await compute_progressive_min_withdrawal(user_id)
-        user_min = progressive["minimum"]
-        user_max = progressive["maximum"]
+        user_max = max(progressive["maximum"], MAX_WITHDRAWAL)
         if amount > user_max:
             raise HTTPException(status_code=400, detail=f"Maximum withdrawal is ₹{user_max:,}")
-        if amount < user_min:
-            # Build helpful error message
-            if progressive["basis"] == "legacy_total":
-                msg = (
-                    f"Minimum withdrawal for your account is ₹{user_min:,} (based on your lifetime "
-                    f"redeem total of ₹{progressive['total_approved_amount']:,} × 1.5)."
-                )
-            elif progressive["basis"] == "stored":
-                msg = (
-                    f"Minimum withdrawal for your account is ₹{user_min:,} (1.5× of your last "
-                    f"approved redeem amount)."
-                )
-            else:
-                msg = f"Minimum withdrawal is ₹{user_min:,}."
-            raise HTTPException(status_code=400, detail=msg)
         
         # 2. Get user
         user = await db.users.find_one({"uid": user_id})
@@ -1801,3 +1904,74 @@ async def get_admin_stats():
     except Exception as e:
         logging.error(f"Error getting stats: {e}")
         raise HTTPException(status_code=500, detail="Server error")
+
+
+
+# ==================== ADMIN: Bank-Redeem Quota Override (Feb 2026) ============
+
+class AdminUnblockRequest(BaseModel):
+    user_id: str
+    admin_id: str
+    reason: Optional[str] = None  # audit trail
+
+
+@router.post("/admin/bank-redeem/unblock")
+async def admin_unblock_bank_redeem(body: AdminUnblockRequest):
+    """Admin override — re-enable bank-redeem for a user previously
+    blocked (either by lifetime-cap auto-block or by an earlier admin
+    action). Does NOT reset lifetime_redeemed_inr — only the user-level
+    `bank_redeem_blocked` flag is flipped. If the user is already at the
+    cap, they will be re-blocked on next attempt by the runtime check.
+    """
+    user = await db.users.find_one({"uid": body.user_id}, {"_id": 0, "uid": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await db.users.update_one(
+        {"uid": body.user_id},
+        {"$set": {
+            "bank_redeem_blocked": False,
+            "bank_redeem_unblocked_at": datetime.now(timezone.utc).isoformat(),
+            "bank_redeem_unblocked_by": body.admin_id,
+        }, "$unset": {"bank_redeem_blocked_reason": ""}},
+    )
+
+    await db.audit_log.insert_one({
+        "type": "bank_redeem_unblock",
+        "user_id": body.user_id,
+        "admin_id": body.admin_id,
+        "reason": body.reason,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    quota = await compute_lifetime_redeem_quota(body.user_id)
+    return {"success": True, "quota": quota}
+
+
+@router.post("/admin/bank-redeem/block")
+async def admin_block_bank_redeem(body: AdminUnblockRequest):
+    """Admin override — force-block bank-redeem for a user (e.g., fraud)."""
+    user = await db.users.find_one({"uid": body.user_id}, {"_id": 0, "uid": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await db.users.update_one(
+        {"uid": body.user_id},
+        {"$set": {
+            "bank_redeem_blocked": True,
+            "bank_redeem_blocked_at": datetime.now(timezone.utc).isoformat(),
+            "bank_redeem_blocked_by": body.admin_id,
+            "bank_redeem_blocked_reason": body.reason or "Disabled by admin.",
+        }},
+    )
+
+    await db.audit_log.insert_one({
+        "type": "bank_redeem_block",
+        "user_id": body.user_id,
+        "admin_id": body.admin_id,
+        "reason": body.reason,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    quota = await compute_lifetime_redeem_quota(body.user_id)
+    return {"success": True, "quota": quota}
