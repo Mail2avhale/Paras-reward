@@ -9,6 +9,26 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 - SECOND FIX, after user reported issue still occurring)
+- 🔴 **STUCK LOADING SCREEN — TRUE ROOT CAUSE FIXED** (`src/App.js`): The previous cache-fix (3.0.1) helped landing page but the user reported `/dashboard` and `/paras-mall` were STILL stuck on a light-purple "Loading…" screen after refresh. Root cause turned out to be NOT a cache issue at all — it was a logic bug in the App component's auth useEffect:
+  ```js
+  // BEFORE (buggy)
+  useEffect(() => {
+    applyBrandedStatusBar();
+    if (user?.uid) {
+      syncAppBadgeFromBackend(user.uid);
+      const t = setInterval(...);
+      return () => clearInterval(t);   // ← EARLY RETURN!
+    }
+    // initializeUser() + setLoading(false) NEVER runs for logged-in users
+    ...
+  }, [user?.uid]);
+  ```
+  The `return () => clearInterval(t)` cleanup function was inside the `if (user?.uid)` block, which caused the effect to exit early for every logged-in user. `initializeUser()` and `setLoading(false)` were never called — so `loading` stayed `true` and the App stayed on the `<div … min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50>…Loading…</div>` screen FOREVER.
+  - Fix: Restructured the effect so badge interval and initializeUser run together; cleanup tears down both. App version bumped to `3.0.2-loading-fix-jun2026`.
+  - Verified on preview: admin dashboard refresh 3× → all PASS, root_len=82337 consistent, no stuck Loading.
+
+
 ## Implemented (Jun 24, 2026)
 - ✅ **PRODUCTION STALE-CACHE / STUCK SPINNER FIX (P0)** — Root cause: after every deploy, users on stale cached `index.html` requested old webpack chunk hashes (e.g. `main.OLDHASH.js`). Emergent's static host returns `index.html` (HTML 200, not 404) for missing `/static/*` paths → browser parses HTML as JS → `ChunkLoadError: Unexpected token '<'`. Previous recovery `window.location.reload()` re-used the browser HTTP cache → same poisoned HTML → infinite spinner once 30s throttle hit. Fixes shipped:
   1. **Cache-busted recovery navigation** (`src/index.js`): `reloadOnce()` now calls `window.location.replace(url + '?_cb=<ts>')` instead of `reload()`. The unique query string forces browser + Cloudflare to fetch fresh HTML.

@@ -996,16 +996,27 @@ function App() {
   useEffect(() => {
     // Native: apply branded status bar colour on app boot (no-op on web)
     applyBrandedStatusBar();
+
     // Native: sync the app launcher icon badge with backend unread count
+    let badgeInterval = null;
     if (user?.uid) {
       syncAppBadgeFromBackend(user.uid);
-      const t = setInterval(() => syncAppBadgeFromBackend(user.uid), 60_000);
-      return () => clearInterval(t);
+      badgeInterval = setInterval(() => syncAppBadgeFromBackend(user.uid), 60_000);
     }
-    // If user exists, validate role via API and refresh data from server
-    // SECURITY: Validate role server-side before allowing admin access
+
+    // If user exists, validate role via API and refresh data from server.
+    // SECURITY: Validate role server-side before allowing admin access.
+    //
+    // ── BUG FIX (Jun 24, 2026) ─────────────────────────────────────
+    // Previously this block contained an `if (user?.uid) { ... return () => clearInterval(t); }`
+    // EARLY RETURN before the initializeUser() call below. That meant
+    // every logged-in user who refreshed the dashboard hit the early
+    // return, `initializeUser()` was never called, and `setLoading(false)`
+    // never fired — so the App stayed on the light-purple "Loading…"
+    // screen forever. We now do badge-interval + initializeUser in the
+    // same effect, and the cleanup function tears down BOTH.
     let timeoutFallback;
-    
+
     const initializeUser = async () => {
       if (user?.uid) {
         // First validate role via /auth/me API
@@ -1043,8 +1054,9 @@ function App() {
     initializeUser().finally(() => {
       clearTimeout(timeoutFallback);
     });
-    
+
     return () => {
+      if (badgeInterval) clearInterval(badgeInterval);
       if (timeoutFallback) clearTimeout(timeoutFallback);
     };
   }, []); // Run once on mount
