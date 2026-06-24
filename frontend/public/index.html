@@ -246,17 +246,18 @@
     <script>
       (function () {
         var SELF_HEAL_KEY = "paras_self_heal_ts";
-        var WATCHDOG_MS = 12000;
-        var THROTTLE_MS = 60000;
-        function selfHeal(reason) {
+        var WATCHDOG_MS = 5000; // was 12000 — be aggressive on slow networks
+        var THROTTLE_MS = 20000; // was 60000 — allow re-heal sooner
+        function selfHeal(reason, ignoreThrottle) {
           try {
-            var last = parseInt(sessionStorage.getItem(SELF_HEAL_KEY) || "0", 10);
-            if (Date.now() - last < THROTTLE_MS) return;
+            if (!ignoreThrottle) {
+              var last = parseInt(sessionStorage.getItem(SELF_HEAL_KEY) || "0", 10);
+              if (Date.now() - last < THROTTLE_MS) return;
+            }
             sessionStorage.setItem(SELF_HEAL_KEY, String(Date.now()));
           } catch (e) { /* private mode: ignore */ }
           console.warn("[self-heal] triggered:", reason);
           var done = function () {
-            // Bust HTML cache via query and hard-reload
             var u = new URL(window.location.href);
             u.searchParams.set("_h", Date.now().toString(36));
             window.location.replace(u.toString());
@@ -275,22 +276,29 @@
             Promise.all([swPromise, cachePromise]).then(done, done);
           } catch (e) { done(); }
         }
-        // Catch any chunk that 404s or fails to evaluate
         window.addEventListener("error", function (ev) {
           var t = ev && ev.target;
           if (t && (t.tagName === "SCRIPT" || t.tagName === "LINK")) {
             var src = t.src || t.href || "";
             if (src && src.indexOf("/static/") !== -1) {
-              selfHeal("chunk-load-fail: " + src);
+              selfHeal("chunk-load-fail: " + src, true);
             }
           }
         }, true);
-        // Watchdog: if React hasn't rendered, force heal
+        // Watchdog — short fuse so users never sit on a stuck spinner.
         setTimeout(function () {
-          var stillBooting = document.querySelector(".initial-loader") !== null
-            || document.getElementById("root").childElementCount <= 1;
-          if (stillBooting) selfHeal("watchdog-12s");
+          var loaderStill = document.querySelector(".initial-loader") !== null;
+          var rootEmpty = document.getElementById("root").childElementCount <= 1;
+          if (loaderStill || rootEmpty) selfHeal("watchdog-5s loader=" + loaderStill + " emptyRoot=" + rootEmpty);
         }, WATCHDOG_MS);
+        // Secondary watchdog — if user is still on a "Loading" page after
+        // 15s (slow network, but new assets fully fetched should have
+        // booted React by now), force-heal ignoring throttle.
+        setTimeout(function () {
+          if (document.querySelector(".initial-loader") !== null) {
+            selfHeal("watchdog-15s-stuck", true);
+          }
+        }, 15000);
       })();
     </script>
 
