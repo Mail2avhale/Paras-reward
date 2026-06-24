@@ -272,7 +272,47 @@ const isAdminOrManager = (user) => {
 };
 
 // Loading component - optimized with skeleton
-const LoadingFallback = () => (
+const LoadingFallback = () => {
+  // ── Suspense watchdog (Jun 2026) ────────────────────────────────────
+  // When a lazy chunk fetch returns HTML (because Emergent's static
+  // host falls back to index.html for unknown /static/* paths), the
+  // Suspense boundary stays in "Loading" forever. If we're still on
+  // this fallback after 12 seconds we treat it as a poisoned cache
+  // and trigger a cache-busted reload so the browser pulls fresh HTML.
+  useEffect(() => {
+    const SUSPENSE_HEAL_KEY = 'paras_suspense_heal_ts';
+    const t = setTimeout(() => {
+      try {
+        const last = parseInt(sessionStorage.getItem(SUSPENSE_HEAL_KEY) || '0', 10);
+        if (Date.now() - last < 20000) return; // already healed recently
+        sessionStorage.setItem(SUSPENSE_HEAL_KEY, String(Date.now()));
+      } catch (_) { /* private mode: continue */ }
+
+      (async () => {
+        try {
+          if ('caches' in window) {
+            const names = await caches.keys();
+            await Promise.all(names.map((n) => caches.delete(n)));
+          }
+          if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map((r) => r.unregister()));
+          }
+        } catch (_) { /* best effort */ }
+
+        try {
+          const u = new URL(window.location.href);
+          u.searchParams.set('_sb', Date.now().toString(36));
+          window.location.replace(u.toString());
+        } catch (_) {
+          window.location.reload();
+        }
+      })();
+    }, 12000);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
   <div className="min-h-screen bg-gray-950 flex items-center justify-center">
     <div className="flex flex-col items-center gap-5">
       <div className="relative" style={{ width: 100, height: 100 }}>
@@ -291,7 +331,8 @@ const LoadingFallback = () => (
       `}</style>
     </div>
   </div>
-);
+  );
+};
 
 // Lazy load all pages for better performance
 // Home.js and HomeFintech.js removed - using RewardsHome as main landing page

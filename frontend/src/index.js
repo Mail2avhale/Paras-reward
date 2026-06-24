@@ -32,11 +32,11 @@ import './i18n/config'; // Initialize i18n
     );
   };
 
-  const reloadOnce = async () => {
+  const reloadOnce = async (reason) => {
     const last = parseInt(sessionStorage.getItem(CHUNK_RELOAD_KEY) || '0', 10);
     const now = Date.now();
-    // Prevent infinite reload loop — only reload once per 30s window
-    if (now - last < 30000) return;
+    // Prevent infinite reload loop — only reload once per 20s window
+    if (now - last < 20000) return;
     sessionStorage.setItem(CHUNK_RELOAD_KEY, String(now));
 
     try {
@@ -49,7 +49,23 @@ import './i18n/config'; // Initialize i18n
         await Promise.all(regs.map((r) => r.unregister()));
       }
     } catch (_) { /* best effort */ }
-    window.location.reload();
+
+    // CRITICAL FIX (Jun 2026): A plain window.location.reload() uses the
+    // browser HTTP cache, which on stale-cache scenarios returns the SAME
+    // poisoned index.html → same broken chunk hashes → infinite spinner.
+    // We MUST navigate to a unique URL so the browser bypasses HTTP cache
+    // and any intermediary (Cloudflare) cache, picking up the fresh HTML.
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.set('_cb', Date.now().toString(36));
+      // Also nudge the fetcher to revalidate before navigating.
+      try {
+        await fetch(u.toString(), { cache: 'reload', credentials: 'same-origin' });
+      } catch (_) { /* network failures are fine — replace() below still tries */ }
+      window.location.replace(u.toString());
+    } catch (_) {
+      window.location.reload();
+    }
   };
 
   window.addEventListener('error', (event) => {
@@ -115,31 +131,13 @@ async function forceUpdateServiceWorker() {
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
-  // ── One-time forced refresh after a known-bad release ─────────────────
-  // The dashboard build prior to May 5, 2026 was cached aggressively by
-  // the old service worker, so users kept seeing the Quick Recharge card
-  // even after the admin disabled it (the new useEffect that fetches the
-  // toggle was missing from the cached bundle). On the FIRST page load
-  // after this version ships, unregister all service workers, wipe every
-  // cache, and hard-reload once so the browser pulls the fresh JS.
-  // We gate this on a localStorage marker so we never loop or punish
-  // users who already have the new code.
-  const FORCE_REFRESH_MARKER = 'paras_force_refresh_v10';
-  if (!localStorage.getItem(FORCE_REFRESH_MARKER)) {
-    localStorage.setItem(FORCE_REFRESH_MARKER, String(Date.now()));
-    (async () => {
-      try {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((r) => r.unregister()));
-        if ('caches' in window) {
-          const names = await caches.keys();
-          await Promise.all(names.map((n) => caches.delete(n)));
-        }
-      } catch (_) { /* best effort */ }
-      // Hard reload — bypass HTTP cache too
-      window.location.reload();
-    })();
-  }
+  // ── FORCE_REFRESH_MARKER_v10 REMOVED (Jun 2026) ──────────────────────
+  // The previous "force reload once on fresh visit" block caused an
+  // unnecessary extra page load right after a user cleared browsing
+  // data. On slow mobile networks that second load looked like a
+  // permanent spinner because the browser was racing the watchdog.
+  // The chunk-error recovery + kill-switch SW handle stale caches
+  // properly now, so this hack is no longer needed.
 
   window.addEventListener('load', () => {
     // Clear old caches first

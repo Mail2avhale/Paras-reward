@@ -1,0 +1,36 @@
+# Cache headers (Cloudflare Pages / Netlify-style)
+# ──────────────────────────────────────────────────
+# The "stuck spinner after refresh" bug is caused by browsers/CDNs
+# caching index.html for too long after a deploy. The new HTML
+# references new chunk hashes (e.g. main.abc123.js) but the user's
+# cached HTML still points at old hashes that 404 on the new build.
+# Solution: NEVER cache index.html; always cache hashed assets
+# (which by definition are immutable per content).
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+/
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+# Hashed static assets are content-addressed → safe to cache forever
+/static/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/static/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/static/media/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Service worker should always revalidate
+/service-worker.js
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+  Service-Worker-Allowed: /
+
+/manifest.json
+  Cache-Control: public, max-age=3600

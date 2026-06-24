@@ -9,7 +9,7 @@
     <meta http-equiv="Expires" content="0" />
     
     <!-- App Version for cache busting -->
-    <meta name="app-version" content="3.0.0-bulkpe-white" />
+    <meta name="app-version" content="3.0.1-cache-fix-jun2026" />
     
     <!-- Preconnect to external domains for faster loading -->
     <link rel="preconnect" href="https://customer-assets.emergentagent.com" crossorigin />
@@ -90,8 +90,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="PARAS REWARD" />
     
-    <!-- Performance: Allow caching of static assets -->
-    <meta http-equiv="Cache-Control" content="public, max-age=31536000" />
+    <!-- (Cache-Control max-age=31536000 meta removed Jun 2026 — it directly
+         contradicted the no-cache meta at the top of <head> and confused
+         some browsers into caching the HTML for a year, which is the root
+         cause of "stuck spinner after refresh".) -->
     
     <!-- Google & Bing Site Verification (Replace with actual codes when available) -->
     
@@ -258,9 +260,19 @@
           } catch (e) { /* private mode: ignore */ }
           console.warn("[self-heal] triggered:", reason);
           var done = function () {
+            // Try forcing network revalidation via fetch with cache:reload,
+            // then navigate. If the fetch throws, fall back to a simple
+            // navigation. The query string flips on every heal so even an
+            // aggressive intermediary cache picks up a new URL.
             var u = new URL(window.location.href);
             u.searchParams.set("_h", Date.now().toString(36));
-            window.location.replace(u.toString());
+            try {
+              fetch(u.toString(), { cache: "reload", credentials: "same-origin" })
+                .catch(function () {})
+                .finally(function () { window.location.replace(u.toString()); });
+            } catch (e) {
+              window.location.replace(u.toString());
+            }
           };
           try {
             var swPromise = ("serviceWorker" in navigator)
@@ -299,6 +311,22 @@
             selfHeal("watchdog-15s-stuck", true);
           }
         }, 15000);
+        // Tertiary watchdog (Jun 2026) — catches the stuck React Suspense
+        // case where the inline loader is gone (React booted) but a lazy
+        // chunk fetch hangs because Emergent's static host returned
+        // index.html for a missing /static/js/*.js path. Look for the
+        // Suspense "Loading..." paragraph used in App.js LoadingFallback.
+        setTimeout(function () {
+          try {
+            var root = document.getElementById("root");
+            if (!root) return;
+            var txt = (root.innerText || "").trim();
+            // If after 20s we ONLY see "Loading…" in #root, it's stuck.
+            if (txt === "Loading..." || txt === "Loading…" || /^Loading\.{2,3}$/.test(txt)) {
+              selfHeal("watchdog-20s-suspense-stuck", true);
+            }
+          } catch (e) { /* ignore */ }
+        }, 20000);
       })();
     </script>
 

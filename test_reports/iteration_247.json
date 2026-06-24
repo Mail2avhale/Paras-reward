@@ -1,0 +1,42 @@
+{
+  "summary": "Frontend smoke test of stale-cache fix on paras reward preview. All 6 scenarios pass on the preview env: first load renders landing hero, hard-reload renders cleanly, /how-it-works and /faq lazy chunks load, /login page mounts with input fields and accepts keystrokes, no ChunkLoadError/Unexpected-token-< in console, and localStorage.paras_force_refresh_v10 is no longer set on first visit. Original infinite-spinner bug only manifests on real Cloudflare-cached prod traffic and cannot be reproduced on preview — verification scope was regression-only as instructed.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "test1_first_load_hero_visible": "PASS — root contains 'Earn Rewards with Daily Activity', length=5761, not stuck on Loading",
+    "test2_no_force_refresh_v10_marker": "PASS — localStorage.paras_force_refresh_v10 === null after first visit (FORCE_REFRESH_MARKER_v10 block removed as expected)",
+    "test3_hard_reload_no_stuck_spinner": "PASS — F5 reload still shows hero, length=5761, no infinite spinner",
+    "test4_how_it_works_lazy_route": "PASS — /how-it-works mounts, shows 'How PARAS REWARD Works' content, no stuck Loading… fallback",
+    "test5_faq_lazy_route": "PASS — /faq mounts, shows 'Frequently Asked Questions', no stuck Loading… fallback",
+    "test6_login_page_inputs_work": "PASS — /login renders 'Welcome Back', renders the email/mobile/UID input, accepts '9421331342' keystroke. Login is a two-step flow (ID first → PIN on next screen); did not proceed to authenticate because preview db likely doesn't contain the production user 9421331342 (test_credentials.md lists a different UID for that mobile, plan='prc - payment method deprecated'). Per request, marked as N/A for actual authentication.",
+    "console_chunk_errors": "0 ChunkLoadError / Unexpected token '<' / 'Loading chunk … failed' messages observed across all 5 navigations",
+    "console_page_errors": "0 uncaught JS exceptions",
+    "non_chunk_console_errors": "Several 403 'Failed to load resource' from background asset/api fetches (likely public stats endpoints requiring no-cache headers behind auth); not related to the cache-fix and present pre-fix as well."
+  },
+  "verified_fixes": [
+    "/app/frontend/src/index.js — reloadOnce() now uses window.location.replace with `_cb=` query string instead of plain reload(); FORCE_REFRESH_MARKER_v10 block removed (test2 confirms key not set).",
+    "/app/frontend/src/App.js — LoadingFallback wraps content in functional component with 12s useEffect watchdog that triggers cache-busted reload if Suspense stays mounted (code reviewed; watchdog did not fire on preview because lazy chunks load <1s).",
+    "/app/frontend/public/index.html — Conflicting `Cache-Control: public, max-age=31536000` meta tag removed (verified: only no-cache/no-store/must-revalidate meta remains). Bumped version to 3.0.1-cache-fix-jun2026 (verified in meta name='app-version'). Three-tier watchdog now includes 20s Suspense-stuck detector reading #root.innerText === 'Loading...' (code verified).",
+    "/app/frontend/public/_headers — Present at expected path with no-cache rules for index.html and immutable long-cache for /static/* (file existence not asserted at runtime but confirmed via task description)."
+  ],
+  "critical_code_review_comments": [
+    "index.js still has lots of dead service-worker code (preserved behind early `return`) — fine for now but could be deleted in a follow-up cleanup.",
+    "index.html has THREE watchdogs at 5s/15s/20s plus index.js reloadOnce throttle (20s) plus App.js Suspense watchdog (12s) — these can fight each other on genuinely slow networks. Throttles guard against loops, but worth tracking real-world behaviour.",
+    "Aggressive 5s watchdog (WATCHDOG_MS=5000) is fine for desktops but may fire spuriously on 2G/very-slow-mobile users who haven't finished JS download in 5s. Recommend instrumenting `[self-heal] triggered: watchdog-5s …` warnings via WebVitalsReporter to see how often it fires in prod."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "updated_files": [],
+  "success_rate": { "backend": "skipped", "frontend": "100% (6/6 scenarios)" },
+  "test_credentials": "Used /app/memory/test_credentials.md — preview env likely does not contain prod user 9421331342, so login was verified only at the page-mounts-and-accepts-input level per task instructions.",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Cache/recovery fix tested on preview. Bug is only reproducible against real Cloudflare-cached prod traffic — preview confirms the fix does not regress normal load/refresh/lazy-route behaviour. If retesting, focus on real prod behaviour after the next deploy: clear browsing data → load www.parasreward.com → refresh → confirm no infinite spinner.",
+  "rca of the issue": "Original bug: stale cached index.html referenced hashed /static/js/*.chunk.js paths that no longer exist on server after a deploy. Emergent's static host falls back to index.html (HTML, not 404) for missing paths → browser parses HTML as JS → ChunkLoadError/'Unexpected token <'. Prior recovery used window.location.reload() which still hit the same HTTP cache and the same poisoned HTML → infinite spinner once 30s throttle was hit. Fix replaces reload() with window.location.replace(url+'?_cb='+ts) so the URL is unique and bypasses HTTP/CDN cache, plus removes the conflicting `Cache-Control: max-age=31536000` meta tag, adds a 20s Suspense-stuck watchdog, and removes the FORCE_REFRESH_MARKER_v10 unconditional reload that compounded the bad UX after clearing browsing data."
+}
