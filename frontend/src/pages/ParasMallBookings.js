@@ -9,6 +9,7 @@ import { Coins, Clock, Package, CheckCircle, Truck, AlertCircle, Sparkles } from
 import { toast } from 'sonner';
 import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
 import RewardedAdPrompt from '@/components/RewardedAdPrompt';
+import ForcedAdInterstitial from '@/components/ForcedAdInterstitial';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -38,6 +39,10 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
   const [liveCooldown, setLiveCooldown] = useState(booking.cooldown_remaining_seconds || 0);
   const [starting, setStarting] = useState(false);
   const [adPromptOpen, setAdPromptOpen] = useState(false);
+  // Forced ad interstitial — opens automatically AFTER product PRC is
+  // collected. Mirrors the dashboard Mining Widget flow so the AdMob
+  // rewarded video plays directly per Google policy.
+  const [forcedAdOpen, setForcedAdOpen] = useState(false);
   const tickRef = useRef(null);
   const cooldownRef = useRef(null);
 
@@ -86,17 +91,22 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
         setLiveCooldown(res.data.cooldown_seconds || 0);
         onCollect?.();
         onRefresh?.();
+        // ── Direct rewarded ad (Jun 24, 2026) ─────────────────────
+        // Primary product PRC has just been credited. Now show the
+        // direct AdMob rewarded video for a bonus, matching the
+        // dashboard Mining Widget flow.
+        setForcedAdOpen(true);
       }
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Collect failed');
     }
   };
 
-  // Opens the ad opt-in modal. User can watch ad for +5-10 bonus PRC or
-  // skip and just receive their mined PRC. Either way performCollect runs.
+  // Direct-collect (no intermediate opt-in modal — the ad screen runs
+  // AUTOMATICALLY right after the primary collect succeeds).
   const collect = () => {
     if (liveAccumulated < 0.01) return;
-    setAdPromptOpen(true);
+    performCollect();
   };
 
   const startSession = async () => {
@@ -387,7 +397,7 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
         </p>
       )}
 
-      {/* Rewarded-ad opt-in: shown when user clicks Collect on this card. */}
+      {/* Rewarded-ad opt-in: legacy — kept mounted but no longer triggered. */}
       <RewardedAdPrompt
         open={adPromptOpen}
         placement="mall_collect"
@@ -395,6 +405,12 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
         onClose={() => setAdPromptOpen(false)}
         onSkip={performCollect}
         onComplete={performCollect}
+      />
+      {/* Direct rewarded ad — auto-plays after a successful product collect. */}
+      <ForcedAdInterstitial
+        open={forcedAdOpen}
+        placement="mall_collect"
+        onClose={() => setForcedAdOpen(false)}
       />
     </motion.div>
   );

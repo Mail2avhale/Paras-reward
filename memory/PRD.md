@@ -9,6 +9,18 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 — SEVENTH FIX: Same direct-ad flow on Paras Mall product collects)
+- 🎯 **MALL PRODUCT COLLECT — DIRECT REWARDED AD** (`pages/ParasMallBookings.js`)
+  - User feedback: "जेव्हा प्रॉडक्ट मध्ये reward points collect करणार तसेच same होणार."
+  - Mall product mining now mirrors the dashboard MiningWidget flow exactly:
+    1. User clicks the Collect button on a Mall booking card → `collect()` calls `performCollect()` directly (no opt-in modal).
+    2. `performCollect()` POSTs `/mall/collect/{booking_id}` → primary PRC credited.
+    3. On success it sets `setForcedAdOpen(true)` → `<ForcedAdInterstitial placement="mall_collect">` mounts via Portal at `document.body` and immediately auto-plays the AdMob rewarded video (no Watch/Skip buttons — AdMob's built-in close is the skip path).
+    4. Reward credited via `/api/ads/rewarded/credit`, toast `+N bonus PRC credited!`. Failures/skips silently dismiss; the primary product PRC is already in.
+  - The legacy `<RewardedAdPrompt placement="mall_collect">` is kept mounted (no triggers) so any in-flight code referencing it doesn't break — can be deleted in a future cleanup pass.
+  - App version → `3.0.7-mall-direct-ad-jun2026`. Lint clean, preview verified.
+
+
 ## Implemented (Jun 24, 2026 — SIXTH FIX: Direct rewarded ad after Collect — AdMob policy compliant)
 - 🎯 **DIRECT REWARDED AD AFTER COLLECT** (`components/ForcedAdInterstitial.js` — rewritten)
   - User feedback (with screenshot of the v3.0.5 "Earn Bonus PRC / Bonus unavailable" intermediate screen): "त्यापेक्षा असे केले तर collect reward केल्यावर **Direct rewarded ad** दिसणार google admob policy नुसार"
