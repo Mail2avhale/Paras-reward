@@ -33,10 +33,10 @@ jobs:
         uses: actions/checkout@v4
 
       # ── 2. NODE + YARN ─────────────────────────────────────────────────────
-      - name: Setup Node 20
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       # ── 3. JAVA 21 ─────────────────────────────────────────────────────────
       - name: Setup Java 21
@@ -60,9 +60,20 @@ jobs:
         working-directory: frontend
         env:
           REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL }}
+          REACT_APP_ADSENSE_INTERSTITIAL_SLOT: ${{ secrets.REACT_APP_ADSENSE_INTERSTITIAL_SLOT }}
           REACT_APP_BUILD_TYPE: user
           CI: false
         run: yarn build:user
+
+      - name: Verify React build output exists
+        working-directory: frontend
+        run: |
+          if [ ! -f build/index.html ]; then
+            echo "::error::React build/index.html missing — yarn build:user failed silently."
+            ls -la build/ 2>/dev/null || echo "build/ directory missing entirely"
+            exit 1
+          fi
+          echo "✓ React build artifacts present: $(du -sh build | cut -f1)"
 
       # ── 6. CAPACITOR SYNC ──────────────────────────────────────────────────
       - name: Sync Capacitor with Android
@@ -99,7 +110,23 @@ jobs:
           PARAS_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
-          ./gradlew bundleRelease --no-daemon
+          # Verbose output (--stacktrace --info) so any failure surfaces the
+          # actual Gradle/Capacitor error message in the workflow logs.
+          ./gradlew bundleRelease --no-daemon --stacktrace --info 2>&1 | tee gradle-build.log
+          # Fail loudly if AAB wasn't produced
+          if [ ! -f app/build/outputs/bundle/release/app-release.aab ]; then
+            echo "::error::AAB file was not produced. See gradle-build.log artifact for details."
+            exit 1
+          fi
+
+      # If the build fails, upload the verbose gradle log so we can debug.
+      - name: Upload gradle build log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: frontend/android/gradle-build.log
+          retention-days: 7
 
       # ── 9. UPLOAD AAB ARTIFACT ─────────────────────────────────────────────
       - name: Upload AAB artifact
