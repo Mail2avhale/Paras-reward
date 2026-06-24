@@ -199,17 +199,20 @@ async def compute_progressive_min_withdrawal(user_id: str) -> dict:
 async def compute_lifetime_redeem_quota(user_id: str) -> dict:
     """Compute a user's bank-redeem lifetime quota status.
 
-    Returns a dictionary the frontend can render directly:
+    Feb 2026 update: the ₹2,500 lifetime cap now covers ALL PRC-funded
+    user benefits, not just bank-redeem requests. The total spent across
+    the following categories counts towards the cap:
 
-      {
-        "lifetime_redeemed_inr": int,     # sum of approved/paid principal (no fees)
-        "lifetime_cap_inr": int,          # 2500
-        "remaining_quota_inr": int,       # cap - redeemed (≥0)
-        "is_blocked": bool,               # True if user.bank_redeem_blocked or cap reached
-        "allowed_amounts": [100,200,...], # canonical allow-list
-        "enabled_amounts": [...],         # subset that fits in remaining_quota
-        "block_reason": str | None,
-      }
+      • Recharges (mobile / DTH)        → bill_payment_requests
+      • Utility bills (BBPS)            → bill_payment_requests
+      • Bank withdrawals (legacy)       → bank_withdrawal_requests
+      • Bank redeems (new flow)         → bank_transfer_requests
+
+    EXPLICITLY EXCLUDED:
+      • Subscription payments — these are platform service fees, not
+        user-receivable benefits.
+
+    Returns 8 fields the frontend renders directly.
     """
     user = await db.users.find_one(
         {"uid": user_id},
@@ -217,22 +220,69 @@ async def compute_lifetime_redeem_quota(user_id: str) -> dict:
     ) or {}
 
     admin_blocked = bool(user.get("bank_redeem_blocked"))
-    cursor = db.bank_transfer_requests.find(
-        {"user_id": user_id, "status": {"$in": QUOTA_COUNTING_STATUSES}},
-        {"_id": 0, "withdrawal_amount": 1}
-    )
-    docs = await cursor.to_list(20000)
-    lifetime_redeemed = sum(int(d.get("withdrawal_amount") or 0) for d in docs)
-    remaining = max(0, LIFETIME_BANK_REDEEM_CAP_INR - lifetime_redeemed)
 
-    cap_reached = lifetime_redeemed >= LIFETIME_BANK_REDEEM_CAP_INR
+    # Status values that indicate the money actually left the company
+    # (or PRC was actually consumed). Pending / failed / rejected do NOT
+    # count — user gets a chance to retry without burning quota.
+    BENEFIT_OK_STATUSES = [
+        "approved", "paid", "completed", "success",
+        "delivered", "SUCCESS", "COMPLETED", "PAID",
+    ]
+
+    # ── 1. Bank Transfer Requests (new flow) ────────────────────────────
+    bank_transfer_amount = 0
+    cursor = db.bank_transfer_requests.find(
+        {"user_id": user_id, "status": {"$in": BENEFIT_OK_STATUSES}},
+        {"_id": 0, "withdrawal_amount": 1, "amount_inr": 1, "amount": 1}
+    )
+    for d in await cursor.to_list(20000):
+        bank_transfer_amount += int(
+            d.get("withdrawal_amount") or d.get("amount_inr") or d.get("amount") or 0
+        )
+
+    # ── 2. Bank Withdrawal Requests (legacy bank_redeem flow) ──────────
+    bank_withdrawal_amount = 0
+    cursor = db.bank_withdrawal_requests.find(
+        {"user_id": user_id, "status": {"$in": BENEFIT_OK_STATUSES}},
+        {"_id": 0, "amount_inr": 1, "amount": 1, "withdrawal_amount": 1,
+         "amount_requested": 1, "inr_amount": 1}
+    )
+    for d in await cursor.to_list(20000):
+        bank_withdrawal_amount += int(
+            d.get("amount_inr") or d.get("amount") or d.get("withdrawal_amount")
+            or d.get("amount_requested") or d.get("inr_amount") or 0
+        )
+
+    # ── 3. Bill Payments (recharges + utility BBPS) ────────────────────
+    # Excludes subscription — subscription_payments live in a separate
+    # collection and never reach bill_payment_requests.
+    bill_payment_amount = 0
+    cursor = db.bill_payment_requests.find(
+        {
+            "user_id": user_id,
+            "status": {"$in": BENEFIT_OK_STATUSES},
+            "category": {"$ne": "subscription"},  # belt-and-braces; usually unset
+        },
+        {"_id": 0, "amount": 1, "amount_inr": 1, "inr_amount": 1, "recharge_amount": 1}
+    )
+    for d in await cursor.to_list(20000):
+        bill_payment_amount += int(
+            d.get("amount") or d.get("amount_inr") or d.get("inr_amount")
+            or d.get("recharge_amount") or 0
+        )
+
+    total_benefits_inr = bank_transfer_amount + bank_withdrawal_amount + bill_payment_amount
+    remaining = max(0, LIFETIME_BANK_REDEEM_CAP_INR - total_benefits_inr)
+
+    cap_reached = total_benefits_inr >= LIFETIME_BANK_REDEEM_CAP_INR
     is_blocked = admin_blocked or cap_reached
 
     if admin_blocked:
         block_reason = user.get("bank_redeem_blocked_reason") or "Bank redeem option disabled by admin."
     elif cap_reached:
         block_reason = (
-            f"Lifetime bank-redeem cap of ₹{LIFETIME_BANK_REDEEM_CAP_INR:,} reached. "
+            f"Lifetime benefits cap of ₹{LIFETIME_BANK_REDEEM_CAP_INR:,} reached "
+            f"(₹{total_benefits_inr:,} used across recharges, bills and bank redeems). "
             "Contact support if you have queries."
         )
     else:
@@ -244,13 +294,20 @@ async def compute_lifetime_redeem_quota(user_id: str) -> dict:
     )
 
     return {
-        "lifetime_redeemed_inr": lifetime_redeemed,
+        # Legacy key kept so existing frontend continues to render
+        "lifetime_redeemed_inr": total_benefits_inr,
         "lifetime_cap_inr": LIFETIME_BANK_REDEEM_CAP_INR,
         "remaining_quota_inr": remaining,
         "is_blocked": is_blocked,
         "allowed_amounts": ALLOWED_REDEEM_AMOUNTS,
         "enabled_amounts": enabled_amounts,
         "block_reason": block_reason,
+        # Per-category breakdown for transparency / support escalations
+        "breakdown": {
+            "bank_redeems_inr": bank_transfer_amount + bank_withdrawal_amount,
+            "recharges_and_bills_inr": bill_payment_amount,
+            "subscription_inr_excluded": True,
+        },
     }
 
 

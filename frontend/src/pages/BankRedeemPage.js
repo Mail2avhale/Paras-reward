@@ -481,11 +481,11 @@ const BankRedeemPage = ({ user: initialUser }) => {
 
             {/* Amount Selection — Feb 2026: 5 fixed amounts + ₹2,500 lifetime cap */}
             <Card className="bg-slate-800/50 border-slate-700 p-4">
-              {/* Lifetime cap progress meter */}
+              {/* Lifetime cap progress meter — covers bank redeems + recharges + bills */}
               {lifetimeQuota && (
                 <div className="mb-4" data-testid="bank-redeem-quota-meter">
                   <div className="flex items-baseline justify-between mb-1.5">
-                    <span className="text-slate-300 text-sm font-medium">Lifetime Bank Redeem Limit</span>
+                    <span className="text-slate-300 text-sm font-medium">Lifetime Benefit Limit</span>
                     <span className="text-slate-400 text-xs tabular-nums">
                       ₹{Number(lifetimeQuota.lifetime_redeemed_inr).toLocaleString('en-IN')} / ₹{Number(lifetimeQuota.lifetime_cap_inr).toLocaleString('en-IN')}
                     </span>
@@ -507,7 +507,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
                   <p className="text-slate-500 text-xs mt-1.5">
                     {lifetimeQuota.is_blocked
                       ? '🚫 You have reached the lifetime cap. Bank redeem is disabled.'
-                      : `Remaining: ₹${Number(lifetimeQuota.remaining_quota_inr).toLocaleString('en-IN')} (charges are extra, not counted in cap)`}
+                      : `Remaining: ₹${Number(lifetimeQuota.remaining_quota_inr).toLocaleString('en-IN')} • Includes recharges, bill payments & redeems (subscription excluded, charges extra)`}
                   </p>
                 </div>
               )}
