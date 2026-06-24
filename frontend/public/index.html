@@ -221,6 +221,79 @@
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+
+    <!--
+      Stale-cache self-heal (Feb 2026)
+      ────────────────────────────────────────────────────────────────
+      Why: After each deploy, users on an older service-worker version
+      were stuck on "Loading…" until they manually cleared browsing data,
+      because their cached index.html / JS chunks referenced hashed files
+      that no longer exist on the server. The newer SW (v94+) avoids this
+      via network-first HTML, but users still on v93 or older need a
+      JS-level escape hatch — that is what this script provides.
+
+      Behaviour:
+        1. Sets a 12-second watchdog. If React hasn't replaced the
+           `.initial-loader` by then OR any chunk script errors out,
+           assume the cache is poisoned.
+        2. On detection, unregister every Service Worker, delete every
+           cache, and hard-reload with a cache-buster query string.
+        3. The reload is throttled to once per 60 seconds via
+           sessionStorage so the user never falls into an infinite loop.
+        4. After ONE successful self-heal the new SW (v97+) is in
+           charge, this script becomes a no-op for that user forever.
+    -->
+    <script>
+      (function () {
+        var SELF_HEAL_KEY = "paras_self_heal_ts";
+        var WATCHDOG_MS = 12000;
+        var THROTTLE_MS = 60000;
+        function selfHeal(reason) {
+          try {
+            var last = parseInt(sessionStorage.getItem(SELF_HEAL_KEY) || "0", 10);
+            if (Date.now() - last < THROTTLE_MS) return;
+            sessionStorage.setItem(SELF_HEAL_KEY, String(Date.now()));
+          } catch (e) { /* private mode: ignore */ }
+          console.warn("[self-heal] triggered:", reason);
+          var done = function () {
+            // Bust HTML cache via query and hard-reload
+            var u = new URL(window.location.href);
+            u.searchParams.set("_h", Date.now().toString(36));
+            window.location.replace(u.toString());
+          };
+          try {
+            var swPromise = ("serviceWorker" in navigator)
+              ? navigator.serviceWorker.getRegistrations().then(function (rs) {
+                  return Promise.all(rs.map(function (r) { return r.unregister(); }));
+                }).catch(function () {})
+              : Promise.resolve();
+            var cachePromise = (window.caches)
+              ? caches.keys().then(function (ks) {
+                  return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+                }).catch(function () {})
+              : Promise.resolve();
+            Promise.all([swPromise, cachePromise]).then(done, done);
+          } catch (e) { done(); }
+        }
+        // Catch any chunk that 404s or fails to evaluate
+        window.addEventListener("error", function (ev) {
+          var t = ev && ev.target;
+          if (t && (t.tagName === "SCRIPT" || t.tagName === "LINK")) {
+            var src = t.src || t.href || "";
+            if (src && src.indexOf("/static/") !== -1) {
+              selfHeal("chunk-load-fail: " + src);
+            }
+          }
+        }, true);
+        // Watchdog: if React hasn't rendered, force heal
+        setTimeout(function () {
+          var stillBooting = document.querySelector(".initial-loader") !== null
+            || document.getElementById("root").childElementCount <= 1;
+          if (stillBooting) selfHeal("watchdog-12s");
+        }, WATCHDOG_MS);
+      })();
+    </script>
+
     <div id="root">
       <!-- Initial loader shown while React loads -->
       <div class="initial-loader">
