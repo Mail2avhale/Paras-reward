@@ -52,7 +52,6 @@ const AdSenseSlot = () => {
   useEffect(() => {
     try {
       // Push to AdSense queue so the slot fills.
-      // eslint-disable-next-line no-undef
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch (_) {
       /* ignored — AdSense will load when script is ready */
@@ -140,7 +139,6 @@ const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect'
     })();
 
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, placement]);
 
   // Countdown timer for web Skip path
@@ -163,7 +161,6 @@ const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect'
       onClose?.();
     }, MAX_VIEW_SECONDS * 1000);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const creditBonus = async () => {
