@@ -259,9 +259,17 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
   // Opens the Google-AdMob-compliant opt-in modal. User can watch ad for
   // a +5..10 bonus PRC or skip. Either path runs performCollect afterwards
   // so the user always receives their mined PRC.
+  //
+  // ── BUG FIX (Jun 24, 2026) ─────────────────────────────────────
+  // In production the RewardedAdPrompt modal silently failed to render
+  // for some users (verified by forcing `adPromptOpen=true` via React
+  // fiber: the modal still did not mount). Until that's root-caused we
+  // collect PRC directly so users are never blocked from their rewards.
+  // The AdMob bonus opt-in can be re-enabled once the rendering issue
+  // is fully diagnosed.
   const collectRewards = () => {
     if (sessionPRC < 0.01) { smartToast.error('Not enough PRC to collect'); return; }
-    setAdPromptOpen(true);
+    performCollect();
   };
 
   const formatTime = (seconds) => {
