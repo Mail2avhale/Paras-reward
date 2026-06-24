@@ -9,6 +9,19 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026)
+- ✅ **PRODUCTION STALE-CACHE / STUCK SPINNER FIX (P0)** — Root cause: after every deploy, users on stale cached `index.html` requested old webpack chunk hashes (e.g. `main.OLDHASH.js`). Emergent's static host returns `index.html` (HTML 200, not 404) for missing `/static/*` paths → browser parses HTML as JS → `ChunkLoadError: Unexpected token '<'`. Previous recovery `window.location.reload()` re-used the browser HTTP cache → same poisoned HTML → infinite spinner once 30s throttle hit. Fixes shipped:
+  1. **Cache-busted recovery navigation** (`src/index.js`): `reloadOnce()` now calls `window.location.replace(url + '?_cb=<ts>')` instead of `reload()`. The unique query string forces browser + Cloudflare to fetch fresh HTML.
+  2. **Removed FORCE_REFRESH_MARKER_v10** unconditional reload — it was causing an unnecessary double-load on every first visit after a browsing-data-clear, which compounded the bad UX users reported.
+  3. **Suspense watchdog** (`src/App.js` LoadingFallback): If the lazy-route fallback stays mounted >12 s, trigger a cache-busted reload. Throttled to 1× per 20 s via sessionStorage.
+  4. **Tertiary index.html watchdog** (20 s): Reads `#root.innerText`; if it equals `Loading...` we treat the Suspense as stuck and force-heal with a cache-busted URL.
+  5. **Removed conflicting meta tag**: `<meta http-equiv="Cache-Control" content="public, max-age=31536000">` was contradicting the no-cache meta at the top of `<head>` and confusing browsers into caching HTML for a year.
+  6. **`/app/frontend/public/_headers`** (new): Netlify/Cloudflare-Pages style cache rules — `no-cache, no-store, must-revalidate` for `/index.html` and `/`, plus `public, max-age=31536000, immutable` for `/static/js`, `/static/css`, `/static/media`.
+  7. App-version meta bumped to `3.0.1-cache-fix-jun2026`.
+  - Verified on preview by testing agent (`iteration_247.json`) — 6/6 scenarios PASS, 0 ChunkLoadError / 0 stuck-spinner regressions.
+  - **Action for user**: push to GitHub via the "Save to Github" button and redeploy on the Emergent dashboard.
+
+
 ## Implemented (Feb 2026)
 - ✅ **App Update Flow + Website Download (Feb 22, 2026)** — Three customer-asked features wired up:
   1. **In-app "Update Available" banner**: existing `UpdateBanner.js` (Capacitor-native, polls `/api/app/version-info`) was already wired in `App.js`. Backend `LATEST_VERSION_NAME=1.1.0`, `LATEST_VERSION_CODE=11` defaults bumped + DB record updated via `/api/app/admin/version-update`. Soft banner (top of screen) auto-shows on app launch for users on older versionCode; force-update modal kicks in if installed < minimum_supported_version_code.
