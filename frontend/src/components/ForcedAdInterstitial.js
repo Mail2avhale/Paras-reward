@@ -1,39 +1,42 @@
 /**
- * ForcedAdInterstitial.js  (rev — Jun 24, 2026 v2)
+ * ForcedAdInterstitial.js  (rev — Jun 24, 2026 v3)
  * ─────────────────────────────────────────────────────────────────
- * "Direct rewarded ad" — Google AdMob compliant.
+ * Direct rewarded ad after PRC collect.
  *
- * UX:
- *   1. Caller mounts this component with `open={true}` right AFTER
- *      primary PRC collection succeeds.
- *   2. We auto-call /api/ads/rewarded/start to get a view_token, then
- *      IMMEDIATELY play the AdMob rewarded video (on native Android).
- *      No intermediate "Watch Ad / Skip" buttons.
- *   3. AdMob provides the standard built-in Close (X) button inside
- *      the video player — that's the user's skip path. This matches
- *      Google AdMob policy for rewarded interstitials.
- *   4. On web (Capacitor is not native): we show a short "Loading
- *      bonus ad…" overlay for 2 seconds then dismiss with no bonus.
- *      Web has no AdMob inventory anyway — production revenue comes
- *      from the Android AAB.
- *   5. If AdMob completes the video → POST /credit → toast "+N bonus PRC".
- *   6. If AdMob is closed early or fails → dismiss silently. Primary
- *      PRC was already collected, so the user is never blocked.
+ * Dual-mode:
+ *   • NATIVE (Android AAB / Capacitor): AdMob rewarded video plays
+ *     directly. AdMob's built-in close button is the skip path.
+ *   • WEB (parasreward.com browser): renders a Google AdSense
+ *     interstitial ad unit inside the modal. A mandatory 5-second
+ *     view-time enforces ad impression compliance; after 5s a
+ *     "Skip" link appears. Auto-closes after 20s if user does nothing.
  *
- * Renders via React Portal at document.body so it can never be hidden
- * by an ancestor's render state.
+ * Why a custom web overlay instead of relying on AdSense Auto Ads?
+ *   AdSense Auto Ads choose page placements automatically; we cannot
+ *   reliably trigger them on a user action. A manually-injected
+ *   adsbygoogle slot inside our own modal lets us:
+ *     • Tie the ad impression to a specific "collect" event,
+ *     • Enforce a 5-second view-time before the skip option,
+ *     • Credit the bonus PRC only after the user actually saw the ad.
+ *
+ * The slot id comes from REACT_APP_ADSENSE_INTERSTITIAL_SLOT (env).
+ * Without that env, the overlay still runs the timer + credits the
+ * bonus, but only the AdSense "Auto Ad" fallback renders inside it.
  */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { Capacitor } from '@capacitor/core';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const ADSENSE_CLIENT = 'ca-pub-3556805218952480';
+const ADSENSE_SLOT = process.env.REACT_APP_ADSENSE_INTERSTITIAL_SLOT || '';
+const MIN_VIEW_SECONDS = 5;
+const MAX_VIEW_SECONDS = 20;
 
-async function showRewardedAd() {
-  if (!Capacitor.isNativePlatform()) return { shown: false, reason: 'web' };
+async function showNativeRewardedAd() {
   try {
     const { AdMob } = await import('@capacitor-community/admob');
     await AdMob.prepareRewardVideoAd({ adId: 'ca-app-pub-3556805218952480/7314369451' });
@@ -44,14 +47,45 @@ async function showRewardedAd() {
   }
 }
 
-const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect' }) => {
-  const [status, setStatus] = useState('loading'); // loading | playing | done
-  const startedRef = useRef(false);
+const AdSenseSlot = () => {
+  const insRef = useRef(null);
+  useEffect(() => {
+    try {
+      // Push to AdSense queue so the slot fills.
+      // eslint-disable-next-line no-undef
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (_) {
+      /* ignored — AdSense will load when script is ready */
+    }
+  }, []);
+  return (
+    <ins
+      ref={insRef}
+      className="adsbygoogle"
+      style={{ display: 'block', minWidth: 250, minHeight: 250, width: '100%' }}
+      data-ad-client={ADSENSE_CLIENT}
+      data-ad-slot={ADSENSE_SLOT || ''}
+      data-ad-format="auto"
+      data-full-width-responsive="true"
+    />
+  );
+};
 
+const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect' }) => {
+  const [phase, setPhase] = useState('init');     // init | playing | done
+  const [secsLeft, setSecsLeft] = useState(MIN_VIEW_SECONDS);
+  const startedRef = useRef(false);
+  const viewTokenRef = useRef(null);
+  const closedRef = useRef(false);
+
+  // Reset state when the modal opens/closes
   useEffect(() => {
     if (!open) {
       startedRef.current = false;
-      setStatus('loading');
+      closedRef.current = false;
+      viewTokenRef.current = null;
+      setPhase('init');
+      setSecsLeft(MIN_VIEW_SECONDS);
       return;
     }
     if (startedRef.current) return;
@@ -59,8 +93,7 @@ const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect'
 
     let cancelled = false;
     (async () => {
-      let viewToken = null;
-      // Step 1: ask server for a view_token + bonus preview
+      // Step 1 — mint view_token
       try {
         const token = localStorage.getItem('token');
         const startRes = await axios.post(
@@ -69,70 +102,159 @@ const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect'
           { headers: token ? { Authorization: `Bearer ${token}` } : {} }
         );
         if (!cancelled && startRes.data?.allowed) {
-          viewToken = startRes.data.view_token;
+          viewTokenRef.current = startRes.data.view_token;
         }
       } catch (_) {
-        // /start failed (quota, auth, network) — silently dismiss.
-        // Primary PRC is already collected, so it's safe to skip.
+        // /start failed — silently dismiss. Primary PRC already collected.
       }
 
-      if (!viewToken) {
-        if (!cancelled) onClose?.();
+      if (cancelled) return;
+
+      if (!viewTokenRef.current) {
+        // No bonus available (quota / auth / network). Close silently.
+        if (!closedRef.current) {
+          closedRef.current = true;
+          onClose?.();
+        }
         return;
       }
 
-      // Step 2: play the rewarded ad directly. No intermediate UI.
-      setStatus('playing');
-      const result = await showRewardedAd();
-
-      // On web AdMob is a no-op. We still call /credit so non-native
-      // testers can see the bonus path work. Native: only credit on
-      // AdMob's reward callback.
-      const eligible = result.shown || !Capacitor.isNativePlatform();
-
-      if (eligible) {
-        try {
-          const token = localStorage.getItem('token');
-          const creditRes = await axios.post(
-            `${API}/ads/rewarded/credit`,
-            { view_token: viewToken },
-            { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-          );
-          if (!cancelled && creditRes.data?.success) {
-            const amount = creditRes.data.credited;
-            toast.success(`+${amount} bonus PRC credited!`);
-          }
-        } catch (_) {
-          // best-effort credit — silent on failure
+      // Step 2 — play the ad
+      if (Capacitor.isNativePlatform()) {
+        // Native: AdMob handles the entire UX. Modal is hidden behind
+        // AdMob's full-screen video.
+        setPhase('playing');
+        const result = await showNativeRewardedAd();
+        if (cancelled) return;
+        if (result.shown) {
+          await creditBonus();
         }
+        if (!closedRef.current) {
+          closedRef.current = true;
+          onClose?.();
+        }
+      } else {
+        // Web: AdSense slot renders inside our modal. Start countdown.
+        setPhase('playing');
       }
-
-      if (!cancelled) onClose?.();
     })();
 
     return () => { cancelled = true; };
-  }, [open, placement, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, placement]);
 
-  // Auto-dismiss after 8s on web (no real AdMob inventory).
+  // Countdown timer for web Skip path
+  useEffect(() => {
+    if (!open || phase !== 'playing' || Capacitor.isNativePlatform()) return;
+    if (secsLeft <= 0) return;
+    const t = setTimeout(() => setSecsLeft((s) => Math.max(0, s - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [open, phase, secsLeft]);
+
+  // Hard cap — auto-close after MAX_VIEW_SECONDS
   useEffect(() => {
     if (!open) return;
-    const t = setTimeout(() => onClose?.(), 8000);
+    const t = setTimeout(async () => {
+      if (closedRef.current) return;
+      closedRef.current = true;
+      if (!Capacitor.isNativePlatform() && viewTokenRef.current) {
+        await creditBonus();
+      }
+      onClose?.();
+    }, MAX_VIEW_SECONDS * 1000);
     return () => clearTimeout(t);
-  }, [open, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const creditBonus = async () => {
+    if (!viewTokenRef.current) return;
+    try {
+      const token = localStorage.getItem('token');
+      const creditRes = await axios.post(
+        `${API}/ads/rewarded/credit`,
+        { view_token: viewTokenRef.current },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      if (creditRes.data?.success) {
+        toast.success(`+${creditRes.data.credited} bonus PRC credited!`);
+      }
+    } catch (_) {
+      /* best-effort */
+    }
+  };
+
+  const handleSkip = async () => {
+    if (closedRef.current) return;
+    closedRef.current = true;
+    // User watched the minimum 5s — credit the bonus.
+    if (viewTokenRef.current) await creditBonus();
+    onClose?.();
+  };
 
   if (!open) return null;
 
+  const isNative = Capacitor.isNativePlatform();
+  const canSkip = !isNative && secsLeft <= 0;
+
   const overlay = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-sm"
       data-testid="forced-ad-overlay"
     >
-      <div className="flex flex-col items-center gap-4 px-6 py-8 rounded-2xl bg-zinc-900/80 border border-amber-500/20">
-        <Loader2 className="w-10 h-10 animate-spin text-amber-400" />
-        <p className="text-white text-sm font-semibold tracking-wide">
-          {status === 'playing' ? 'Bonus ad playing…' : 'Loading bonus ad…'}
-        </p>
-        <p className="text-zinc-500 text-xs">Your PRC is already collected.</p>
+      <div
+        className="relative w-full max-w-md mx-4 bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl"
+        data-testid="forced-ad-modal"
+      >
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+          <span className="text-zinc-400 text-xs uppercase tracking-widest font-semibold">
+            Bonus Ad
+          </span>
+          {canSkip ? (
+            <button
+              onClick={handleSkip}
+              className="text-zinc-300 hover:text-white text-xs font-semibold flex items-center gap-1 px-2 py-1 rounded hover:bg-zinc-800"
+              data-testid="forced-ad-skip"
+            >
+              Skip <X className="w-3 h-3" />
+            </button>
+          ) : (
+            <span
+              className="text-amber-400 text-xs font-mono tabular-nums"
+              data-testid="forced-ad-countdown"
+            >
+              Skip in {secsLeft}s
+            </span>
+          )}
+        </div>
+
+        {/* Ad body */}
+        <div className="p-4 min-h-[280px] flex items-center justify-center bg-zinc-900/40">
+          {phase === 'init' && (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+              <p className="text-zinc-500 text-xs">Loading bonus ad…</p>
+            </div>
+          )}
+          {phase === 'playing' && isNative && (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+              <p className="text-zinc-500 text-xs">Playing ad…</p>
+            </div>
+          )}
+          {phase === 'playing' && !isNative && (
+            <div className="w-full">
+              <AdSenseSlot />
+            </div>
+          )}
+        </div>
+
+        {/* Footer reassurance */}
+        <div className="px-4 py-2 border-t border-zinc-800 text-center">
+          <p className="text-zinc-600 text-[10px]">
+            Your PRC is already collected · Watch to earn +5–10 bonus PRC
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -9,6 +9,18 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 — EIGHTH FIX: AdSense web ads + AdMob native dual-mode)
+- 🎯 **WEB ADSENSE INTERSTITIAL** (`components/ForcedAdInterstitial.js` — rewritten v3)
+  - User noted that AdMob ads do NOT render on the live website (parasreward.com) because Capacitor AdMob only works inside the native Android AAB. Until the Play Store launch this leaves web users seeing only a spinner with no actual ad and no revenue.
+  - **New dual-mode rendering**:
+    - **Native (Android AAB / Capacitor.isNativePlatform() === true)**: existing AdMob rewarded video plays directly. AdMob's built-in close = skip. Reward callback → `/credit` → toast `+N bonus PRC`.
+    - **Web (browser)**: a Google AdSense interstitial slot renders INSIDE the modal. A 5-second mandatory view-time enforces ad impression compliance. After 5s a "Skip" link appears top-right. Auto-closes after 20s. Either Skip or auto-close credits the bonus PRC since the user did watch the minimum 5s impression.
+  - **AdSense already configured in `public/index.html`**: `ca-pub-3556805218952480` script + Auto Ads. The interstitial slot reuses the same publisher ID via the `<ins class="adsbygoogle">` element.
+  - **Slot ID**: reads from `process.env.REACT_APP_ADSENSE_INTERSTITIAL_SLOT`. If unset (current default), AdSense falls back to Auto Ads inventory inside the slot — modal flow still works end-to-end, only the eCPM is lower. To maximise revenue the user should create a "Display ad" or "In-page ad" unit in AdSense → Ads → By ad unit, then paste the slot ID into `frontend/.env`.
+  - Portal-based render at `document.body` retained — production rendering edge cases can't hide it.
+  - App version → `3.0.8-adsense-web-jun2026`. Lint clean (only eslint-disable comments are unused, no errors). Preview verified.
+
+
 ## Implemented (Jun 24, 2026 — SEVENTH FIX: Same direct-ad flow on Paras Mall product collects)
 - 🎯 **MALL PRODUCT COLLECT — DIRECT REWARDED AD** (`pages/ParasMallBookings.js`)
   - User feedback: "जेव्हा प्रॉडक्ट मध्ये reward points collect करणार तसेच same होणार."
