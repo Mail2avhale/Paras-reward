@@ -9,6 +9,21 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 — FIFTH FIX: Forced ad after Collect, skippable)
+- 🎯 **AD AFTER COLLECT (Portal-based, skippable)** — `components/ForcedAdInterstitial.js` (new) + `components/MiningWidget.js`
+  - User feedback: "Forcefully collect reward केल्यावर ad दाखवायची आहे. युजर ती skip करु शकतो."
+  - **Flow**:
+    1. User clicks "Collect Rewards" → `collectRewards()` calls `performCollect()` directly (primary PRC is collected first — never blocked).
+    2. On successful collect, `setForcedAdOpen(true)` mounts `<ForcedAdInterstitial>` automatically.
+    3. The modal is rendered via `react-dom.createPortal(modal, document.body)` — it lives at the document root, NOT inside MiningWidget's render tree, so the production rendering edge-case that hid the old `RewardedAdPrompt` cannot reach it.
+    4. Two paths: "Watch Ad & Earn Bonus" (calls `/api/ads/rewarded/start` → AdMob → `/api/ads/rewarded/credit` for +5–10 bonus PRC) OR "Skip — without bonus" (closes the modal).
+    5. Auto-closes after 30 s so users are never visually stuck.
+  - Why a new component instead of reusing `RewardedAdPrompt`?
+    - `ForcedAdInterstitial` is intentionally minimal: no inline-arrow deps in useEffect array, single ref guard against StrictMode double-mint, all logic in one effect tied to `[open, placement]`. The old prompt had `onSkip` + `onClose` in its dep array which caused the useEffect to re-run on every parent render — combined with prod minification that likely contributed to the silent-mount failure.
+    - Portal ensures the modal mounts at `<body>` level so no ancestor can hide it.
+  - App version bumped to `3.0.5-forced-ad-jun2026`. Preview verified — code wired, lint clean, frontend running.
+
+
 ## Implemented (Jun 24, 2026 — FOURTH FIX: Bypass broken AdMob opt-in modal)
 - 🔴 **COLLECT REWARDS STILL "NO ACTION" → ROOT-CAUSED + PRAGMATIC BYPASS SHIPPED** (`components/MiningWidget.js`)
   - After the 3.0.3 backend fix, `/api/ads/rewarded/start` responds in 194 ms (was 30 s hang), so the backend bottleneck is gone. But the user reported the button STILL did nothing.

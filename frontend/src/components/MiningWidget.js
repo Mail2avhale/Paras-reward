@@ -7,6 +7,7 @@ import smartToast from '@/utils/smartToast';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import RewardedAdPrompt from '@/components/RewardedAdPrompt';
+import ForcedAdInterstitial from '@/components/ForcedAdInterstitial';
 
 import { API } from "../lib/api";
 
@@ -39,6 +40,11 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
   // Rewarded-ad opt-in modal state — opened from Collect, closes once
   // user either watches the ad or chooses "Skip — collect without bonus".
   const [adPromptOpen, setAdPromptOpen] = useState(false);
+  // Forced ad interstitial state — opened automatically AFTER a successful
+  // collect. Renders via React Portal at document.body, so it can never
+  // be hidden by an ancestor's render state. User can Skip without losing
+  // their already-collected PRC.
+  const [forcedAdOpen, setForcedAdOpen] = useState(false);
 
   const timerRef = useRef(null);
   const liveCounterRef = useRef(null);
@@ -248,6 +254,12 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
       setStartCooldown(cd);
 
       setTimeout(() => { collectInProgressRef.current = false; fetchMiningStatus(false); }, 3000);
+
+      // ── Forced ad interstitial (Jun 24, 2026) ────────────────────
+      // Primary PRC has just been credited. Now offer a skippable ad
+      // for +5..10 BONUS PRC. Rendered via React Portal so production
+      // rendering edge-cases can't hide it like the old modal did.
+      setForcedAdOpen(true);
     } catch (error) {
       collectInProgressRef.current = false;
       smartToast.error(error.response?.data?.detail || 'Failed to collect rewards');
@@ -482,6 +494,12 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
         onClose={() => setAdPromptOpen(false)}
         onSkip={performCollect}
         onComplete={performCollect}
+      />
+      {/* Forced ad interstitial (Portal-based) — shows AFTER collect succeeds. */}
+      <ForcedAdInterstitial
+        open={forcedAdOpen}
+        placement="main_mining_collect"
+        onClose={() => setForcedAdOpen(false)}
       />
     </div>
   );
