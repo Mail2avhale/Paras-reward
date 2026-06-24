@@ -9,6 +9,21 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 — SIXTH FIX: Direct rewarded ad after Collect — AdMob policy compliant)
+- 🎯 **DIRECT REWARDED AD AFTER COLLECT** (`components/ForcedAdInterstitial.js` — rewritten)
+  - User feedback (with screenshot of the v3.0.5 "Earn Bonus PRC / Bonus unavailable" intermediate screen): "त्यापेक्षा असे केले तर collect reward केल्यावर **Direct rewarded ad** दिसणार google admob policy नुसार"
+  - **New flow** (matches Google AdMob policy for rewarded interstitials):
+    1. Primary `performCollect()` succeeds → `setForcedAdOpen(true)`.
+    2. `ForcedAdInterstitial` mounts and IMMEDIATELY calls `/api/ads/rewarded/start` to mint a view_token (no UI prompt).
+    3. As soon as the token returns, AdMob `showRewardVideoAd()` plays directly. AdMob's BUILT-IN Close (X) inside the video player IS the skip path — exactly what Google's rewarded-interstitial policy requires.
+    4. On reward completion → POST `/credit` → toast "+N bonus PRC credited!"
+    5. If `/start` fails (quota/auth/network) OR AdMob fails → silent dismiss. Primary PRC was already collected, so the user is NEVER blocked.
+    6. On web (where Capacitor is not native and AdMob is a no-op): the overlay auto-dismisses in 8 s and the view-token credit still works for testers.
+  - **No more intermediate Watch/Skip buttons** — the only visible UI during the ad sequence is a clean loading overlay: spinner + "Loading bonus ad…" / "Bonus ad playing…" + tiny "Your PRC is already collected." reassurance.
+  - Portal-based render at `document.body` is retained for the same reason as v3.0.5 (production rendering-tree edge cases can't hide it).
+  - App version → `3.0.6-direct-rewarded-ad-jun2026`. Lint clean, preview verified.
+
+
 ## Implemented (Jun 24, 2026 — FIFTH FIX: Forced ad after Collect, skippable)
 - 🎯 **AD AFTER COLLECT (Portal-based, skippable)** — `components/ForcedAdInterstitial.js` (new) + `components/MiningWidget.js`
   - User feedback: "Forcefully collect reward केल्यावर ad दाखवायची आहे. युजर ती skip करु शकतो."

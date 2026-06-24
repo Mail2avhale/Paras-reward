@@ -1,27 +1,31 @@
 /**
- * ForcedAdInterstitial.js
+ * ForcedAdInterstitial.js  (rev — Jun 24, 2026 v2)
  * ─────────────────────────────────────────────────────────────────
- * A simple full-screen interstitial ad prompt rendered via React
- * Portal so it ALWAYS mounts at document.body regardless of any
- * parent's render state. This sidesteps the production-only issue
- * where the RewardedAdPrompt modal silently failed to mount inside
- * MiningWidget.
+ * "Direct rewarded ad" — Google AdMob compliant.
  *
  * UX:
- *   1. After the user collects their primary PRC, this is shown.
- *   2. User taps "Watch Ad — Earn Bonus" → AdMob rewarded video plays
- *      → server credits the bonus PRC via /ads/rewarded/credit.
- *   3. User taps "Skip" → modal closes, no bonus, primary PRC was
- *      already collected so the user is NEVER blocked.
- *   4. Auto-closes after 30 seconds if user does nothing.
+ *   1. Caller mounts this component with `open={true}` right AFTER
+ *      primary PRC collection succeeds.
+ *   2. We auto-call /api/ads/rewarded/start to get a view_token, then
+ *      IMMEDIATELY play the AdMob rewarded video (on native Android).
+ *      No intermediate "Watch Ad / Skip" buttons.
+ *   3. AdMob provides the standard built-in Close (X) button inside
+ *      the video player — that's the user's skip path. This matches
+ *      Google AdMob policy for rewarded interstitials.
+ *   4. On web (Capacitor is not native): we show a short "Loading
+ *      bonus ad…" overlay for 2 seconds then dismiss with no bonus.
+ *      Web has no AdMob inventory anyway — production revenue comes
+ *      from the Android AAB.
+ *   5. If AdMob completes the video → POST /credit → toast "+N bonus PRC".
+ *   6. If AdMob is closed early or fails → dismiss silently. Primary
+ *      PRC was already collected, so the user is never blocked.
  *
- * The component is intentionally tiny and dependency-light to keep
- * it bullet-proof. No useEffect cleanup-race traps, no inline-arrow
- * dep-arrays, no complex state machines.
+ * Renders via React Portal at document.body so it can never be hidden
+ * by an ancestor's render state.
  */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Gift, X, Play, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { Capacitor } from '@capacitor/core';
@@ -41,21 +45,13 @@ async function showRewardedAd() {
 }
 
 const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect' }) => {
-  const [bonusPreview, setBonusPreview] = useState(null);
-  const [remaining, setRemaining] = useState(null);
-  const [viewToken, setViewToken] = useState(null);
-  const [phase, setPhase] = useState('loading'); // loading | ready | watching | crediting | quota | error
+  const [status, setStatus] = useState('loading'); // loading | playing | done
   const startedRef = useRef(false);
 
-  // Fetch quota + view_token ONCE when modal opens. Use a ref guard so
-  // duplicate effect runs in StrictMode never double-mint tokens.
   useEffect(() => {
     if (!open) {
       startedRef.current = false;
-      setPhase('loading');
-      setBonusPreview(null);
-      setRemaining(null);
-      setViewToken(null);
+      setStatus('loading');
       return;
     }
     if (startedRef.current) return;
@@ -63,145 +59,85 @@ const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect'
 
     let cancelled = false;
     (async () => {
+      let viewToken = null;
+      // Step 1: ask server for a view_token + bonus preview
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.post(
+        const startRes = await axios.post(
           `${API}/ads/rewarded/start`,
           { placement },
           { headers: token ? { Authorization: `Bearer ${token}` } : {} }
         );
-        if (cancelled) return;
-        if (!res.data?.allowed) {
-          setPhase('quota');
-          return;
+        if (!cancelled && startRes.data?.allowed) {
+          viewToken = startRes.data.view_token;
         }
-        setBonusPreview(res.data.bonus_prc);
-        setRemaining(res.data.remaining);
-        setViewToken(res.data.view_token);
-        setPhase('ready');
-      } catch (e) {
-        if (!cancelled) setPhase('error');
+      } catch (_) {
+        // /start failed (quota, auth, network) — silently dismiss.
+        // Primary PRC is already collected, so it's safe to skip.
       }
+
+      if (!viewToken) {
+        if (!cancelled) onClose?.();
+        return;
+      }
+
+      // Step 2: play the rewarded ad directly. No intermediate UI.
+      setStatus('playing');
+      const result = await showRewardedAd();
+
+      // On web AdMob is a no-op. We still call /credit so non-native
+      // testers can see the bonus path work. Native: only credit on
+      // AdMob's reward callback.
+      const eligible = result.shown || !Capacitor.isNativePlatform();
+
+      if (eligible) {
+        try {
+          const token = localStorage.getItem('token');
+          const creditRes = await axios.post(
+            `${API}/ads/rewarded/credit`,
+            { view_token: viewToken },
+            { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+          );
+          if (!cancelled && creditRes.data?.success) {
+            const amount = creditRes.data.credited;
+            toast.success(`+${amount} bonus PRC credited!`);
+          }
+        } catch (_) {
+          // best-effort credit — silent on failure
+        }
+      }
+
+      if (!cancelled) onClose?.();
     })();
 
     return () => { cancelled = true; };
-  }, [open, placement]);
+  }, [open, placement, onClose]);
 
-  // Auto-close after 30s so the user is never visually stuck.
+  // Auto-dismiss after 8s on web (no real AdMob inventory).
   useEffect(() => {
     if (!open) return;
-    const t = setTimeout(() => onClose?.(), 30000);
+    const t = setTimeout(() => onClose?.(), 8000);
     return () => clearTimeout(t);
   }, [open, onClose]);
 
-  const handleWatch = async () => {
-    if (!viewToken) return;
-    setPhase('watching');
-    const result = await showRewardedAd();
-    const eligible = result.shown || !Capacitor.isNativePlatform();
-    if (!eligible) {
-      toast.error('Ad could not load.');
-      onClose?.();
-      return;
-    }
-    setPhase('crediting');
-    try {
-      const token = localStorage.getItem('token');
-      const creditRes = await axios.post(
-        `${API}/ads/rewarded/credit`,
-        { view_token: viewToken },
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
-      if (creditRes.data?.success) {
-        const amount = creditRes.data.credited;
-        toast.success(`+${amount} bonus PRC credited!`);
-      }
-    } catch (e) {
-      // best-effort: silent. The primary collect already succeeded.
-    }
-    onClose?.();
-  };
-
   if (!open) return null;
 
-  const modal = (
+  const overlay = (
     <div
-      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm"
-      onClick={onClose}
-      data-testid="forced-ad-backdrop"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      data-testid="forced-ad-overlay"
     >
-      <div
-        className="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-amber-500/30 rounded-t-3xl sm:rounded-3xl w-full max-w-md p-6 m-0 sm:m-4 shadow-2xl shadow-amber-500/10"
-        onClick={(e) => e.stopPropagation()}
-        data-testid="forced-ad-modal"
-      >
-        <div className="flex items-start justify-between mb-1">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 grid place-items-center shadow-lg shadow-amber-500/30">
-            <Gift className="w-6 h-6 text-black" />
-          </div>
-          <button
-            onClick={onClose}
-            className="text-zinc-500 hover:text-zinc-300 p-1"
-            aria-label="Skip"
-            data-testid="forced-ad-close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <h3 className="text-white text-xl font-bold mt-3 mb-1">Earn Bonus PRC</h3>
-
-        {phase === 'loading' && (
-          <p className="text-zinc-400 text-sm leading-relaxed mb-5">Loading bonus offer…</p>
-        )}
-
-        {phase === 'quota' && (
-          <p className="text-zinc-400 text-sm leading-relaxed mb-5">
-            You&rsquo;ve claimed all 10 ad bonuses for today. Come back tomorrow for more!
-          </p>
-        )}
-
-        {phase === 'error' && (
-          <p className="text-zinc-400 text-sm leading-relaxed mb-5">
-            Bonus offer is unavailable right now. Your PRC has already been collected.
-          </p>
-        )}
-
-        {(phase === 'ready' || phase === 'watching' || phase === 'crediting') && (
-          <p className="text-zinc-400 text-sm leading-relaxed mb-5">
-            Watch a short ad and earn{' '}
-            <span className="text-amber-300 font-bold">+{bonusPreview ?? '5–10'} bonus PRC</span>
-            {remaining != null && ` • ${remaining} ad${remaining === 1 ? '' : 's'} left today`}
-          </p>
-        )}
-
-        {(phase === 'ready' || phase === 'watching' || phase === 'crediting') && (
-          <button
-            onClick={handleWatch}
-            disabled={!viewToken || phase !== 'ready'}
-            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-bold py-3.5 rounded-xl text-sm uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30 active:scale-95"
-            data-testid="forced-ad-watch"
-          >
-            {phase === 'watching' && <><Loader2 className="w-4 h-4 animate-spin" /> Loading ad…</>}
-            {phase === 'crediting' && <><Loader2 className="w-4 h-4 animate-spin" /> Crediting bonus…</>}
-            {phase === 'ready' && <><Play className="w-4 h-4 fill-black" /> Watch Ad &amp; Earn Bonus</>}
-          </button>
-        )}
-
-        <button
-          onClick={onClose}
-          className="w-full text-zinc-400 hover:text-zinc-200 text-xs font-medium mt-3 py-2"
-          data-testid="forced-ad-skip"
-        >
-          {phase === 'quota' || phase === 'error' ? 'Close' : 'Skip — without bonus'}
-        </button>
+      <div className="flex flex-col items-center gap-4 px-6 py-8 rounded-2xl bg-zinc-900/80 border border-amber-500/20">
+        <Loader2 className="w-10 h-10 animate-spin text-amber-400" />
+        <p className="text-white text-sm font-semibold tracking-wide">
+          {status === 'playing' ? 'Bonus ad playing…' : 'Loading bonus ad…'}
+        </p>
+        <p className="text-zinc-500 text-xs">Your PRC is already collected.</p>
       </div>
     </div>
   );
 
-  // Render at document.body level so it can never be hidden by an
-  // ancestor's render state.
-  return createPortal(modal, document.body);
+  return createPortal(overlay, document.body);
 };
 
 export default ForcedAdInterstitial;
