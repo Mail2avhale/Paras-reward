@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Coins, Clock, Package, CheckCircle, Truck, AlertCircle, Sparkles } from 'lucide-react';
+import { Coins, Clock, Package, CheckCircle, Truck, AlertCircle, Sparkles, XCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
 import RewardedAdPrompt from '@/components/RewardedAdPrompt';
@@ -26,6 +26,7 @@ const STATUS_META = {
   mining: { label: 'Mining', color: 'text-amber-400', icon: Sparkles, bg: 'bg-amber-500/10 border-amber-500/30' },
   fulfilled: { label: 'Fulfilled — Awaiting Delivery', color: 'text-emerald-300', icon: CheckCircle, bg: 'bg-emerald-500/10 border-emerald-500/30' },
   delivered: { label: 'Delivered', color: 'text-blue-300', icon: Truck, bg: 'bg-blue-500/10 border-blue-500/30' },
+  cancelled: { label: 'Cancelled', color: 'text-rose-300', icon: XCircle, bg: 'bg-rose-500/10 border-rose-500/30' },
 };
 
 const BookingCard = ({ booking, onCollect, onRefresh }) => {
@@ -43,6 +44,9 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
   // collected. Mirrors the dashboard Mining Widget flow so the AdMob
   // rewarded video plays directly per Google policy.
   const [forcedAdOpen, setForcedAdOpen] = useState(false);
+  // User-initiated cancellation modal state
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const tickRef = useRef(null);
   const cooldownRef = useRef(null);
 
@@ -107,6 +111,34 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
   const collect = () => {
     if (liveAccumulated < 0.01) return;
     performCollect();
+  };
+
+  // User-initiated booking cancellation. Refunds upfront PRC, burns the
+  // mined-PRC portion accumulated against this product. Only allowed
+  // while the booking is still in 'mining' status.
+  const confirmCancel = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      const res = await axios.post(
+        `${API}/mall/cancel-booking/${booking.booking_id}`,
+        { user_id: booking.user_id }
+      );
+      if (res.data?.success) {
+        const refunded = res.data.refunded_prc || 0;
+        const burned = res.data.burned_prc || 0;
+        toast.success(
+          `Booking cancelled. ${formatPrc(refunded)} PRC refunded.` +
+          (burned > 0 ? ` ${formatPrc(burned)} mined PRC burned.` : '')
+        );
+        setCancelOpen(false);
+        onRefresh?.();
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Cancel failed. Please try again.');
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const startSession = async () => {
@@ -395,6 +427,94 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
         <p className="text-center text-blue-300 text-xs mt-1">
           📦 Delivered on {booking.delivered_at ? new Date(booking.delivered_at).toLocaleDateString() : '—'}
         </p>
+      )}
+
+      {booking.status === 'cancelled' && (
+        <p className="text-center text-rose-300 text-xs mt-1">
+          ✕ Cancelled — {formatPrc(booking.refunded_prc || booking.upfront_prc)} PRC refunded to wallet
+        </p>
+      )}
+
+      {/* Cancel button — only visible while booking is still mining. */}
+      {booking.status === 'mining' && (
+        <button
+          onClick={() => setCancelOpen(true)}
+          className="w-full mt-3 text-rose-300 hover:text-rose-200 text-[11px] font-medium py-2 underline-offset-2 hover:underline transition-colors"
+          data-testid={`mall-cancel-booking-btn-${booking.booking_id}`}
+        >
+          Cancel this booking
+        </button>
+      )}
+
+      {/* Cancel confirmation modal */}
+      {cancelOpen && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => !cancelling && setCancelOpen(false)}
+          data-testid="mall-cancel-modal-backdrop"
+        >
+          <div
+            className="bg-zinc-950 border border-rose-500/30 rounded-2xl w-full max-w-sm p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            data-testid={`mall-cancel-modal-${booking.booking_id}`}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/15 grid place-items-center">
+                <XCircle className="w-5 h-5 text-rose-400" />
+              </div>
+              <button
+                onClick={() => !cancelling && setCancelOpen(false)}
+                className="text-zinc-500 hover:text-zinc-300 p-1"
+                aria-label="Close"
+                data-testid="mall-cancel-modal-close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <h3 className="text-white text-base font-bold mb-1">Cancel this booking?</h3>
+            <p className="text-zinc-400 text-xs leading-relaxed mb-4">
+              <span className="font-semibold text-white">{booking.product_name}</span>
+            </p>
+
+            <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 mb-4 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-emerald-300">You&rsquo;ll get back</span>
+                <span className="font-mono font-bold text-emerald-300">
+                  +{formatPrc(booking.upfront_prc)} PRC
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-rose-300">Will be burned</span>
+                <span className="font-mono font-bold text-rose-300">
+                  −{formatPrc(Math.max(0, (booking.paid_prc || booking.upfront_prc) - booking.upfront_prc))} PRC
+                </span>
+              </div>
+              <p className="text-[10px] text-zinc-500 pt-1 border-t border-zinc-800">
+                Only the upfront PRC you paid at booking time is refunded. PRC mined toward
+                this product is permanently burned.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCancelOpen(false)}
+                disabled={cancelling}
+                className="flex-1 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-200 text-xs font-semibold py-2.5 rounded-xl"
+                data-testid="mall-cancel-modal-keep"
+              >
+                Keep Booking
+              </button>
+              <button
+                onClick={confirmCancel}
+                disabled={cancelling}
+                className="flex-1 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-semibold py-2.5 rounded-xl"
+                data-testid="mall-cancel-modal-confirm"
+              >
+                {cancelling ? 'Cancelling…' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Rewarded-ad opt-in: legacy — kept mounted but no longer triggered. */}

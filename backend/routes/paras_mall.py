@@ -446,6 +446,127 @@ async def book_product(product_id: str, body: BookProductRequest):
     return {"success": True, "message": "Product booked!", "booking": booking_doc}
 
 
+# ────────────────────────────────────────────────────────────────────────
+# USER-INITIATED BOOKING CANCELLATION
+# ────────────────────────────────────────────────────────────────────────
+# A user can cancel a product booking themselves while it is still in the
+# "mining" stage (i.e. the product has NOT been fulfilled yet — meaning
+# the full target PRC has not been reached). On cancel:
+#
+#   • The upfront PRC the user paid at booking time is REFUNDED to their
+#     wallet (`prc_balance += upfront_prc`).
+#   • All mined PRC they accumulated against this product (the portion
+#     above `upfront_prc`) is BURNED — it was never actually in the
+#     wallet, it lived only on the booking doc. Marking the booking
+#     "cancelled" effectively burns it.
+#   • A CREDIT entry is written to `prc_ledger` so the refund appears on
+#     the user's PRC statement.
+#   • `total_prc_deducted` is zeroed so the lifetime-redeemed scanner no
+#     longer counts this booking toward the 2,500 INR benefits cap.
+#
+# Cancellation is NOT allowed once the booking reaches "fulfilled" or
+# "delivered" — at that point the product is being shipped / has been
+# received and the order is non-reversible.
+
+class CancelBookingRequest(BaseModel):
+    user_id: str
+
+
+@router.post("/cancel-booking/{booking_id}")
+async def cancel_booking(booking_id: str, body: CancelBookingRequest):
+    """User-initiated cancellation of a Paras Mall booking.
+    Refunds upfront PRC, burns accumulated mined PRC, writes a CREDIT
+    entry to prc_ledger, and marks the booking as 'cancelled'.
+    """
+    booking = await db.mall_bookings.find_one({"booking_id": booking_id})
+    if not booking:
+        raise HTTPException(404, "Booking not found")
+
+    # Ownership check — only the booking owner can cancel
+    if booking.get("user_id") != body.user_id:
+        raise HTTPException(403, "You can only cancel your own bookings")
+
+    status = booking.get("status", "mining")
+    if status != "mining":
+        # Fulfilled/delivered/cancelled bookings are non-reversible
+        raise HTTPException(
+            400,
+            f"Cannot cancel a booking that is already {status}. Only 'mining' bookings can be cancelled."
+        )
+
+    upfront_prc = int(booking.get("upfront_prc", 0))
+    paid_prc = float(booking.get("paid_prc", upfront_prc))
+    burned_prc = max(0.0, paid_prc - upfront_prc)  # mined PRC that gets burned
+
+    user = await db.users.find_one({"uid": body.user_id})
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    now = now_utc()
+
+    # 1. Refund the upfront PRC to wallet, and zero out total_spent_prc contribution
+    await db.users.update_one(
+        {"uid": body.user_id},
+        {"$inc": {"prc_balance": upfront_prc, "total_spent_prc": -upfront_prc}}
+    )
+
+    # 2. Mark booking cancelled — and zero `total_prc_deducted` so the
+    #    lifetime-redeemed scanner stops counting this booking toward
+    #    the 2,500 INR benefits cap.
+    await db.mall_bookings.update_one(
+        {"booking_id": booking_id},
+        {"$set": {
+            "status": "cancelled",
+            "cancelled_at": now.isoformat(),
+            "refunded_prc": upfront_prc,
+            "burned_prc": round(burned_prc, 2),
+            "total_prc_deducted": 0,
+        }}
+    )
+
+    # 3. Write CREDIT entry to prc_ledger so the refund shows on PRC statement.
+    try:
+        fresh_user = await db.users.find_one({"uid": body.user_id}, {"_id": 0, "prc_balance": 1}) or {}
+        balance_after = float(fresh_user.get("prc_balance", 0) or 0)
+        balance_before = balance_after - upfront_prc
+        await db.prc_ledger.insert_one({
+            "txn_id": str(uuid.uuid4()),
+            "user_id": body.user_id,
+            "type": "mall_cancel_refund",
+            "entry_type": "credit",
+            "amount": upfront_prc,  # positive — this is a refund credit
+            "balance_before": round(balance_before, 2),
+            "balance_after": round(balance_after, 2),
+            "reference": booking_id,
+            "service_type": "paras_mall",
+            "service_label": "Paras Mall",
+            "service_ref_id": booking_id,
+            "description": (
+                f"Paras Mall Booking Cancelled: {booking.get('product_name', 'product')} "
+                f"(upfront refund; {int(round(burned_prc))} mined PRC burned)"
+            ),
+            "timestamp": now.isoformat(),
+            "created_at": now.isoformat(),
+        })
+    except Exception as e:
+        logging.warning(f"[MALL CANCEL] PRC ledger write failed: {e}")
+
+    # 4. Invalidate lifetime-redeemed cache so dashboards reflect this credit immediately
+    try:
+        from server import invalidate_lifetime_cache
+        invalidate_lifetime_cache(body.user_id)
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "message": "Booking cancelled. Upfront PRC refunded to your wallet.",
+        "refunded_prc": upfront_prc,
+        "burned_prc": round(burned_prc, 2),
+        "booking_id": booking_id,
+    }
+
+
 @router.get("/my-bookings/{user_id}")
 async def my_bookings(user_id: str):
     """Return user's bookings with live session info per booking."""

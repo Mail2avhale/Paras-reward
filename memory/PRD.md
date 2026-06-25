@@ -9,6 +9,24 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 — NINTH FEATURE: User-initiated Mall booking cancellation)
+- 🎯 **CANCEL PARAS MALL BOOKING** — user-initiated, upfront-only refund, mined PRC burned
+  - User feedback: "काही युजर्स ची डिमांड आहे की आम्हाला प्रोडक्ट booking cancel करायचे आहे. युजर ला स्वतः प्रोडक्ट cancel करण्याची सुविधा उपलब्ध करुन दे. त्याला फक्त त्याने भरलेले upfront PRC वापस करायचे आहे. बाकीचे त्या प्रोडक्ट साठी जमा केलेले PRC burn होतील. Upfront PRC return करून PRC statement मध्ये entry नोंद दाखवायची."
+  - **Backend** (`routes/paras_mall.py`):
+    - New endpoint: `POST /api/mall/cancel-booking/{booking_id}` with body `{ user_id }`.
+    - Ownership check (only the booking's owner can cancel).
+    - Status guard: only `mining` bookings can be cancelled; `fulfilled` / `delivered` / `cancelled` are blocked with a clear 400.
+    - On success: refunds `upfront_prc` to `prc_balance`, decrements `total_spent_prc` symmetrically, marks booking `status="cancelled"` + records `cancelled_at`, `refunded_prc`, `burned_prc`, and **zeros `total_prc_deducted`** so the 2,500 INR lifetime cap no longer counts this booking.
+    - **PRC ledger CREDIT entry** written (type `mall_cancel_refund`) — appears on user's PRC statement with description: `Paras Mall Booking Cancelled: <product name> (upfront refund; <N> mined PRC burned)`.
+    - Invalidates lifetime-redeemed cache.
+  - **Frontend** (`pages/ParasMallBookings.js`):
+    - "Cancel this booking" link on every booking card while `status === 'mining'`.
+    - Confirmation modal explaining refund amount vs burn amount upfront before user confirms.
+    - New `cancelled` status in `STATUS_META` (rose-red + XCircle icon) so cancelled bookings render properly in the list with the refund note.
+    - Toast shows refunded amount + burned amount on success.
+  - App version → `3.2.0-mall-cancel-booking-jun2026`. Backend + frontend lint clean. Endpoint smoke-tested (404/403/clean backend logs).
+
+
 ## Implemented (Jun 24, 2026 — EIGHTH FIX: AdSense web ads + AdMob native dual-mode)
 - 🎯 **WEB ADSENSE INTERSTITIAL** (`components/ForcedAdInterstitial.js` — rewritten v3)
   - User noted that AdMob ads do NOT render on the live website (parasreward.com) because Capacitor AdMob only works inside the native Android AAB. Until the Play Store launch this leaves web users seeing only a spinner with no actual ad and no revenue.
