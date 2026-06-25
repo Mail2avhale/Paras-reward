@@ -9,6 +9,18 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 — TENTH FIX: Ad-reward PRC ledger entries now visible on PRC Statement)
+- 🔴 **AD BONUS PRC NOT SHOWING IN PRC STATEMENT** — `routes/ads_rewarded.py` `/credit` endpoint
+  - User report: "User ला Je ad reward PRC मिळतात त्याची entry PRC statement मध्ये होत नाही. फक्त PRC add होतात."
+  - **Root cause**: The `/credit` endpoint was writing to `prc_ledger` with a non-canonical schema:
+    - `uid` field instead of the canonical `user_id` → the PRC Statement page queries `{"user_id": uid}` and so silently filtered out every single ad-reward row. The PRC arrived in the wallet (because `users.prc_balance` was updated), but the statement showed no trace of it.
+    - Also missing `entry_type`, `txn_id`, `balance_before`/`balance_after`, `service_type`, `service_label`, `timestamp` → no running-balance column, no grouping in admin reports.
+  - **Fix**: Rewrote the ledger insert to mirror the canonical pattern used by `mall_booking` / `mall_cancel_refund` / `manual_bank_transfer`. Now writes `user_id`, `entry_type: "credit"`, `balance_before/after` (computed from a fresh read after the wallet credit), `service_type: "rewarded_ad"`, `service_label` derived from placement (`Main Mining` / `Paras Mall` / `Rewarded Ad`), description `Ad Bonus PRC (<label>) — +<N> PRC`, plus `txn_id` and `reference`/`service_ref_id` set to the view_token for full audit traceability.
+  - **One-shot migration script** `backend/scripts/backfill_ad_reward_ledger.py` — idempotent, rewrites historical entries with `uid` → `user_id` + adds the missing canonical fields. Run once on production after deploy: `cd /app/backend && python -m scripts.backfill_ad_reward_ledger`. Preview DB had 3 broken historical entries; all fixed.
+  - **Full E2E test on preview** passed: `/start` → `/credit` flow added +8 PRC to balance AND wrote a properly-formed ledger row that the PRC Statement query can find. Before: 99,150 PRC. After: 99,158 PRC. Statement row: `entry_type=credit, balance_before=99,150, balance_after=99,158, description="Ad Bonus PRC (Main Mining) — +8 PRC"`.
+  - App version → `3.2.1-ad-reward-ledger-fix-jun2026`.
+
+
 ## Implemented (Jun 24, 2026 — NINTH FEATURE: User-initiated Mall booking cancellation)
 - 🎯 **CANCEL PARAS MALL BOOKING** — user-initiated, upfront-only refund, mined PRC burned
   - User feedback: "काही युजर्स ची डिमांड आहे की आम्हाला प्रोडक्ट booking cancel करायचे आहे. युजर ला स्वतः प्रोडक्ट cancel करण्याची सुविधा उपलब्ध करुन दे. त्याला फक्त त्याने भरलेले upfront PRC वापस करायचे आहे. बाकीचे त्या प्रोडक्ट साठी जमा केलेले PRC burn होतील. Upfront PRC return करून PRC statement मध्ये entry नोंद दाखवायची."

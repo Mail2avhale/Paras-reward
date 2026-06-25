@@ -182,15 +182,42 @@ async def credit_reward(body: CreditBody, user: dict = Depends(get_current_user)
         )
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Append ledger entry for audit trail
+    # ── PRC Statement entry (Jun 24, 2026 fix) ────────────────────────
+    # Previous ledger insert used a non-canonical schema:
+    #   • `uid` instead of `user_id` → user-facing PRC statement page
+    #     (which queries by `user_id`) silently filtered these entries out,
+    #     so users saw the PRC arrive in their balance but no statement row.
+    #   • Missing `entry_type`, `balance_before/after`, `txn_id`, `reference`,
+    #     `service_type`, `service_label`, `timestamp` → no running-balance
+    #     column, no service grouping in admin reports.
+    # Now we mirror the canonical pattern used by mall_booking /
+    # mall_cancel_refund / manual_bank_transfer ledger writes.
     now = datetime.now(timezone.utc)
     placement = token_doc.get("placement", "other")
+    placement_label = {
+        "main_mining_collect": "Main Mining",
+        "mall_collect": "Paras Mall",
+        "other": "Rewarded Ad",
+    }.get(placement, "Rewarded Ad")
+
+    fresh_user = await db.users.find_one({"uid": uid}, {"_id": 0, "prc_balance": 1}) or {}
+    balance_after = float(fresh_user.get("prc_balance", 0) or 0)
+    balance_before = balance_after - bonus_prc
+
     await db.prc_ledger.insert_one({
-        "uid": uid,
+        "txn_id": str(uuid.uuid4()),
+        "user_id": uid,
         "type": "ad_reward",
-        "amount": bonus_prc,
-        "category": "rewarded_ad",
-        "description": f"Ad bonus +{bonus_prc} PRC ({placement})",
+        "entry_type": "credit",
+        "amount": bonus_prc,  # positive for credit
+        "balance_before": round(balance_before, 2),
+        "balance_after": round(balance_after, 2),
+        "reference": body.view_token,
+        "service_type": "rewarded_ad",
+        "service_label": placement_label,
+        "service_ref_id": body.view_token,
+        "description": f"Ad Bonus PRC ({placement_label}) — +{bonus_prc} PRC",
+        "timestamp": now.isoformat(),
         "created_at": now.isoformat(),
         "metadata": {
             "ad_unit_id": AD_UNIT_REWARDED,
