@@ -638,7 +638,17 @@ async def start_mining(uid: str):
 
 @router.post("/collect/{uid}")
 async def collect_mining(uid: str):
-    """Collect mined PRC from current session - Elite only"""
+    """Collect mined PRC from current session.
+
+    Elite-tier users: mined PRC is credited to wallet.
+    Explorer-tier users: mined PRC is BURNED immediately (not credited).
+        Their session still ends and cooldown starts, and they can still
+        earn the +5-10 ad bonus afterwards which IS credited normally
+        via /api/ads/rewarded/credit. This lets free users participate
+        in the rewarded-ad funnel while monetised PRC remains an Elite
+        benefit. Burns are recorded in prc_ledger as DEBIT entries so
+        users see exactly what happened on their PRC Statement.
+    """
     try:
         user = await db.users.find_one({"uid": uid}, {"_id": 0})
         if not user:
@@ -647,14 +657,13 @@ async def collect_mining(uid: str):
         # Check subscription expiry
         user = await check_subscription_expiry(user)
         
-        # Only Elite users can collect
-        subscription_plan = user.get("subscription_plan", "explorer")
-        is_elite = subscription_plan.lower() in ["elite", "vip", "startup", "growth", "pro"]
-        if not is_elite:
-            raise HTTPException(
-                status_code=403,
-                detail="Elite subscription required to collect PRC. Upgrade to collect!"
-            )
+        # Plan / tier detection — Explorer if BOTH plan and membership are
+        # explorer (or missing). This dual-field check matches the rest of
+        # the codebase's tier signaling.
+        subscription_plan = (user.get("subscription_plan") or "explorer").lower()
+        membership_type = (user.get("membership_type") or "explorer").lower()
+        ELITE_PLANS = {"elite", "vip", "startup", "growth", "pro"}
+        is_elite = (subscription_plan in ELITE_PLANS) or (membership_type in ELITE_PLANS)
         
         session_start = user.get("mining_start_time")
         session_end = user.get("mining_session_end")
@@ -691,54 +700,95 @@ async def collect_mining(uid: str):
                 detail="No coins to collect"
             )
         
-        # Credit PRC to user
+        # Credit PRC to wallet — but ONLY for Elite users.
+        # For Explorer users, the wallet is left untouched (the mined PRC
+        # is burned). We still end the session and start the cooldown so
+        # the ad-bonus funnel proceeds identically for both tiers.
         current_balance = user.get("prc_balance", 0)
-        new_balance = round(current_balance + mined_coins, 6)
+        if is_elite:
+            new_balance = round(current_balance + mined_coins, 6)
+        else:
+            new_balance = current_balance  # burn — wallet unchanged
         
         # NOTE: Do NOT auto-start a new session. User must manually click "Start Session"
         # after a 60-second cooldown (drives AdMob impression RPM by keeping user in app).
         cooldown_until = now + timedelta(seconds=COLLECT_TO_START_COOLDOWN_SECONDS)
         
-        # Update user: credit PRC + stop mining + record collect time for cooldown
+        # Update user: credit PRC (Elite only) + stop mining + record collect time for cooldown.
+        # `total_mined_*` counters are still bumped for Explorer so analytics see the
+        # mined volume even though the PRC was burned at collect time.
+        user_set = {
+            "mining_active": False,
+            "mining_start_time": None,
+            "mining_session_end": None,
+            "last_mining_collect": now.isoformat(),
+            "next_session_available_at": cooldown_until.isoformat(),
+            "last_mining_action": now.isoformat(),
+        }
+        if is_elite:
+            user_set["prc_balance"] = new_balance
+
         await db.users.update_one(
             {"uid": uid},
             {
-                "$set": {
-                    "prc_balance": new_balance,
-                    "mining_active": False,
-                    "mining_start_time": None,
-                    "mining_session_end": None,
-                    "last_mining_collect": now.isoformat(),
-                    "next_session_available_at": cooldown_until.isoformat(),
-                    "last_mining_action": now.isoformat()
-                },
+                "$set": user_set,
                 "$inc": {
                     "total_mined_prc": mined_coins,
-                    "total_mined": mined_coins
-                }
-            }
+                    "total_mined": mined_coins,
+                },
+            },
         )
         
-        # Record transaction
+        # Record transaction (legacy `transactions` collection — kept for
+        # backward compatibility; PRC Statement is sourced from prc_ledger).
         await db.transactions.insert_one({
             "transaction_id": str(uuid.uuid4()),
             "user_id": uid,
-            "type": "credit",
+            "type": "credit" if is_elite else "burn",
             "amount": mined_coins,
-            "transaction_type": "mining",
-            "description": "Mining session collection",
+            "transaction_type": "mining" if is_elite else "mining_burn",
+            "description": "Mining session collection" if is_elite else "Explorer plan — session PRC burned",
             "balance_after": new_balance,
             "timestamp": now.isoformat()
         })
-        
-        # Pool Wallet: Credit % of mining collect to core team pool
+
+        # ── PRC LEDGER entry ─────────────────────────────────────────
+        # Elite: CREDIT entry (mining_collect).
+        # Explorer: DEBIT entry (mining_session_burn). The wallet itself
+        # didn't move, so balance_before == balance_after — this makes
+        # the row read clearly as "you mined this, but it was burned".
+        try:
+            await db.prc_ledger.insert_one({
+                "txn_id": str(uuid.uuid4()),
+                "user_id": uid,
+                "type": "mining_collect" if is_elite else "mining_session_burn",
+                "entry_type": "credit" if is_elite else "debit",
+                "amount": mined_coins if is_elite else -mined_coins,
+                "balance_before": round(current_balance, 2),
+                "balance_after": round(new_balance, 2),
+                "reference": now.isoformat(),
+                "service_type": "main_mining",
+                "service_label": "Main Mining",
+                "service_ref_id": now.isoformat(),
+                "description": (
+                    f"Main Mining session collected — +{mined_coins:.4f} PRC"
+                    if is_elite
+                    else f"Explorer plan — session PRC burned ({mined_coins:.4f} PRC)"
+                ),
+                "timestamp": now.isoformat(),
+                "created_at": now.isoformat(),
+            })
+        except Exception as _ledger_err:
+            logging.error(f"[MINING] PRC ledger write failed: {_ledger_err}")
+
+        # Pool wallet + employee pool credits are tied to mined volume,
+        # not to whether the user kept their PRC. They run for both tiers.
         try:
             from routes.pool_wallet import credit_pool_wallet
             await credit_pool_wallet(uid, mined_coins, user.get("name", ""))
         except Exception as pool_err:
             logging.error(f"[MINING] Pool wallet credit error: {pool_err}")
         
-        # Employee Pool: Credit % of mining collect to employee pool
         try:
             from routes.employee_management import credit_employee_pool
             await credit_employee_pool(mined_coins, uid, user.get("name", ""))
@@ -752,9 +802,15 @@ async def collect_mining(uid: str):
         
         return {
             "success": True,
-            "message": f"Collected {mined_coins:.4f} PRC",
+            "message": (
+                f"Collected {mined_coins:.4f} PRC"
+                if is_elite
+                else "Session ended. Watch ad below for bonus PRC."
+            ),
             "collected_amount": mined_coins,
             "new_balance": new_balance,
+            "burned": (not is_elite),
+            "tier": "elite" if is_elite else "explorer",
             "session_duration_seconds": elapsed_seconds,
             "auto_started": False,
             "cooldown_seconds": COLLECT_TO_START_COOLDOWN_SECONDS,

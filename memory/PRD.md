@@ -9,6 +9,23 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 — ELEVENTH FEATURE: Explorer users can Collect — but mined PRC burns; ad bonus is real)
+- 🎯 **EXPLORER-TIER COLLECT FLOW** — `routes/mining.py` `/collect/{uid}` endpoint
+  - User feedback: "Explorer युजर्स PRC COLLECT करू शकतील पण जेवढे PRC त्या SESSION मध्ये त्यांनी जमा केले आहे ते लगेच BURN होतील आणि त्यांना मिळालेला AD BONUS BURN होणार नाही. PRC STATEMENT मध्ये सर्व दिसले पाहिजे."
+  - **Old behaviour**: explorer users hit 403 "Elite subscription required" on `/mining/collect` — they couldn't even enter the rewarded-ad funnel.
+  - **New behaviour**:
+    1. Tier detection: `is_elite = (subscription_plan in ELITE_PLANS) OR (membership_type in ELITE_PLANS)` where `ELITE_PLANS = {elite, vip, startup, growth, pro}`. Both fields checked, default = explorer.
+    2. Mined PRC calculation runs identically for both tiers.
+    3. **Elite**: wallet credited as before; ledger entry `type=mining_collect, entry_type=credit, amount=+N, description="Main Mining session collected — +N PRC"`.
+    4. **Explorer**: wallet is **NOT** touched (balance_before = balance_after); ledger entry `type=mining_session_burn, entry_type=debit, amount=-N, description="Explorer plan — session PRC burned (N PRC)"`. Pool wallet + employee pool credits still run because they're tied to mined volume, not user retention.
+    5. Session ends + 60s cooldown starts identically for both tiers → the existing `<ForcedAdInterstitial>` opens automatically on collect-success → ad bonus PRC (+5..10) is credited normally to **both** explorer and elite via `/api/ads/rewarded/credit` (the v3.2.1 canonical-ledger fix already makes this entry appear in PRC Statement).
+    6. Response now includes `tier` (`elite` | `explorer`) and `burned` (boolean) so the frontend can render an appropriate toast. Explorer message: `"Session ended. Watch ad below for bonus PRC."` Elite message: `"Collected N PRC"` (unchanged).
+  - **Scope (per user choice)**: Burn rule applies to **dashboard main mining only**. Paras Mall product collect (`/mall/collect`) is unchanged — Explorer users get full mined PRC there.
+  - **No backfill** (per user choice) — past explorer collects (back when the endpoint 403'd them) didn't happen, so nothing to migrate. Going forward only.
+  - **E2E test on preview passed**: Explorer user with active session → POST /collect → response `burned=true, tier=explorer`, wallet unchanged 99,158 → 99,158, ledger DEBIT entry for `-41.68 PRC` written. Then POST /ads/rewarded/start → /credit → +9 bonus PRC actually credited 99,158 → 99,167, ledger CREDIT entry. Both visible in `prc_ledger.find({user_id: ...})` query that drives the PRC Statement page.
+  - App version → `3.3.0-explorer-burn-jun2026`. Lint clean.
+
+
 ## Implemented (Jun 24, 2026 — TENTH FIX: Ad-reward PRC ledger entries now visible on PRC Statement)
 - 🔴 **AD BONUS PRC NOT SHOWING IN PRC STATEMENT** — `routes/ads_rewarded.py` `/credit` endpoint
   - User report: "User ला Je ad reward PRC मिळतात त्याची entry PRC statement मध्ये होत नाही. फक्त PRC add होतात."
