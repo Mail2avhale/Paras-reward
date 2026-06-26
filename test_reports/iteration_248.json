@@ -1,0 +1,42 @@
+{
+  "summary": "Backend regression for v3.0.2 / v3.0.6 / v3.2.0 / v3.2.1 / v3.3.0 — all four flows verified end-to-end against preview API + Mongo. 7/7 pytest assertions PASS. Explorer burn writes a DEBIT ledger row with balance_before==balance_after and wallet stays untouched; ad reward credit writes a canonical CREDIT row keyed by user_id (not uid) and the wallet does receive the 5–10 PRC bonus; elite collect still credits as before; mall cancel refunds upfront, marks status=cancelled, burns the mined-PRC delta, writes the Paras Mall ledger entry; ownership & status guards return 403 and 400 respectively; a single db.prc_ledger.find({user_id: <uid>}) surfaces all four ledger types (mining_session_burn, ad_reward, mining_collect, mall_cancel_refund) — proving the PRC Statement page will render them.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/mining/collect/{uid}", "issue": "Endpoint is unauthenticated and trusts the uid in the path. Anyone who knows a uid can repeatedly trigger collect-on-explorer (no wallet impact) or even drain an Elite mining session into someone else's wallet record. Not in scope of this regression but flagging — should be tightened to require Bearer auth and assert token.uid == path.uid."},
+      {"endpoint": "/api/mall/cancel-booking/{booking_id}", "issue": "Ownership is checked against body.user_id (client-supplied) rather than a JWT subject. Combined with the path booking_id this is fine because of the explicit booking.user_id == body.user_id check, but the endpoint is still unauthenticated — anyone can probe booking_ids. Same as above: should bind to get_current_user."},
+      {"endpoint": "/api/mining/collect/{uid}", "issue": "Description in ledger row formats burned amount with 4 decimals ('Explorer plan — session PRC burned (0.6975 PRC)') but the success message uses the same 4-dp format. Consider rounding to 2dp for UI consistency with mall_cancel_refund which uses int(round())."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_results": {
+    "test_explorer_collect_burns_and_writes_ledger_debit": "PASS — burned=true, tier=explorer, collected_amount>0, new_balance==pre_balance, DB prc_balance UNCHANGED, prc_ledger row type=mining_session_burn, entry_type=debit, amount<0, balance_before==balance_after, service_label='Main Mining', description starts with 'Explorer plan — session PRC burned'.",
+    "test_ad_reward_credits_user_for_explorer": "PASS — POST /api/ads/rewarded/start returned allowed=true with bonus_prc in [5,10]; POST /credit credited exactly that amount; DB prc_balance up by `bonus`; ledger row uses user_id (not uid), type=ad_reward, entry_type=credit, service_label='Main Mining', description matches 'Ad Bonus PRC (Main Mining) — +N PRC'. The earlier uid-vs-user_id bug is fixed.",
+    "test_elite_collect_credits_wallet": "PASS — burned=false, tier=elite, new_balance=pre_balance+collected_amount, DB prc_balance increased, prc_ledger row type=mining_collect, entry_type=credit, amount>0, balance_after=balance_before+amount.",
+    "test_mall_cancel_refunds_upfront_and_burns_mined": "PASS — refunded_prc=15000, burned_prc=5000, DB prc_balance up by 15000, mall_bookings.status=cancelled with refunded_prc/burned_prc/total_prc_deducted=0, prc_ledger row type=mall_cancel_refund, entry_type=credit, amount=+15000, balance_after=balance_before+15000, service_label='Paras Mall', description contains 'upfront refund' and '5000 mined PRC burned'.",
+    "test_cancel_ownership_guard_403": "PASS — 403 'You can only cancel your own bookings'.",
+    "test_cancel_status_guard_400": "PASS — 400 'Cannot cancel a booking that is already fulfilled. Only mining bookings can be cancelled.'",
+    "test_prc_statement_query_surfaces_all_four_entries": "PASS — single Mongo query db.prc_ledger.find({user_id: <uid>}).sort({created_at:-1}) returns rows of all four types: mining_session_burn, ad_reward, mining_collect, mall_cancel_refund."
+  },
+  "critical_code_review_comments": [
+    "/api/mining/collect/{uid} and /api/mall/cancel-booking/{booking_id} are unauthenticated — they trust client-supplied user_id. Should depend on get_current_user and assert subject==target. Not a v3.3.0 regression, but adjacent.",
+    "ads_rewarded.credit_reward writes the ledger AFTER doing the prc_balance update but does NOT compute balance_before from the pre-update snapshot — it derives it as (post - bonus). This is correct here because $inc is the only mutation between the read and the write, but it's fragile — if any other concurrent mutation happens between the inc and the re-fetch, balance_before will be wrong. Consider returning the new balance from a find_one_and_update and computing before = after - bonus from that same doc.",
+    "mining.collect_mining writes 'transactions' (legacy) AND prc_ledger; the legacy 'transactions' row uses type='burn' for explorer which doesn't match the canonical entry_type vocab ('credit'/'debit') used by prc_ledger. Low risk but worth aligning if anything downstream still reads `transactions`."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_explorer_burn_and_mall_cancel_v330.py",
+    "/app/test_reports/pytest/explorer_burn_v330_results.xml"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_explorer_burn_and_mall_cancel_v330.py (new pytest regression suite)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "skipped per task scope"},
+  "test_credentials": "Used /app/memory/test_credentials.md — 9970100782 / PIN 997010 / uid 76b75808-47fa-48dd-ad7c-8074678e3607.",
+  "seed_data_creation": "Seeded ONE temp mall booking per test invocation (booking_id prefixed TEST_BK_*) — deleted in fixture teardown. Test user temporarily toggled subscription_plan/membership_type to 'explorer' and back to 'elite'. Final prc_balance is 100,000 (top-up from mall fixture remains; not reverted as the spec allows subscription_plan to be left as elite and did not require balance restore). Mining session left inactive.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Re-runnable at any time — the test self-heals the user fixture (flips plan to explorer, runs, flips back). Safe against the preview test user. If the daily ad-reward quota (10/day) is exhausted, test_ad_reward_credits_user_for_explorer will pytest.skip rather than fail. The two security flags (unauthenticated collect/cancel) are pre-existing — not v3.3.0 regressions — but main agent may want to file as separate bugs.",
+  "rca of the issue": "No bugs found — v3.0.2 / v3.0.6 / v3.2.0 / v3.2.1 / v3.3.0 backends behave exactly as specified in the request."
+}

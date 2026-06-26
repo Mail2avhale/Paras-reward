@@ -31,10 +31,28 @@ Subscription:
 
 import math
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from datetime import datetime, timezone, timedelta
 import asyncio
 import uuid
+
+# Lazy auth-dependency wrapper. `server.get_current_user` is defined
+# AFTER this module is imported (server.py imports us at line 107 but
+# defines the dep at line 249), so we can't do `from server import ...`
+# at module top — that would crash with a circular-import error.
+# Instead we declare a wrapper with the SAME signature (HTTPBearer +
+# HTTPAuthorizationCredentials) and resolve the real dependency at
+# call time.
+_security = HTTPBearer(auto_error=False)
+
+
+async def _require_authenticated_user(
+    credentials: HTTPAuthorizationCredentials = Depends(_security),
+) -> dict:
+    from server import get_current_user as _real_dep
+    return await _real_dep(credentials)
+
 
 router = APIRouter(prefix="/mining", tags=["Mining"])
 
@@ -637,8 +655,14 @@ async def start_mining(uid: str):
 
 
 @router.post("/collect/{uid}")
-async def collect_mining(uid: str):
+async def collect_mining(uid: str, current_user: dict = Depends(_require_authenticated_user)):
     """Collect mined PRC from current session.
+
+    SECURITY (Jun 24, 2026): bound to `get_current_user`. The path `uid`
+    MUST match the authenticated user — otherwise we 403. This prevents
+    an attacker who knows another user's uid from collecting on their
+    behalf (which, given the explorer-burn flow, could be used to grief
+    a user by forcing premature session end + burn).
 
     Elite-tier users: mined PRC is credited to wallet.
     Explorer-tier users: mined PRC is BURNED immediately (not credited).
@@ -649,6 +673,11 @@ async def collect_mining(uid: str):
         benefit. Burns are recorded in prc_ledger as DEBIT entries so
         users see exactly what happened on their PRC Statement.
     """
+    if current_user.get("uid") != uid:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only collect on your own account."
+        )
     try:
         user = await db.users.find_one({"uid": uid}, {"_id": 0})
         if not user:

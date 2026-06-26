@@ -25,8 +25,24 @@ import re
 import uuid
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional
+
+# Lazy auth-dependency wrapper (same pattern as routes/mining.py).
+# server.get_current_user is defined AFTER this module is imported,
+# so a top-level `from server import ...` would crash with a circular
+# import. We declare a wrapper with the same signature and resolve
+# the real dep at call time.
+_security = HTTPBearer(auto_error=False)
+
+
+async def _require_authenticated_user(
+    credentials: HTTPAuthorizationCredentials = Depends(_security),
+) -> dict:
+    from server import get_current_user as _real_dep
+    return await _real_dep(credentials)
+
 
 router = APIRouter(prefix="/mall", tags=["Paras Mall"])
 admin_router = APIRouter(prefix="/admin/mall", tags=["Paras Mall Admin"])
@@ -473,11 +489,25 @@ class CancelBookingRequest(BaseModel):
 
 
 @router.post("/cancel-booking/{booking_id}")
-async def cancel_booking(booking_id: str, body: CancelBookingRequest):
+async def cancel_booking(
+    booking_id: str,
+    body: CancelBookingRequest,
+    current_user: dict = Depends(_require_authenticated_user),
+):
     """User-initiated cancellation of a Paras Mall booking.
     Refunds upfront PRC, burns accumulated mined PRC, writes a CREDIT
     entry to prc_ledger, and marks the booking as 'cancelled'.
+
+    SECURITY (Jun 24, 2026): bound to `get_current_user`. The body's
+    `user_id` MUST match the authenticated user — otherwise we 403.
+    We then also verify the booking belongs to this user. Belt + braces.
     """
+    if current_user.get("uid") != body.user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only cancel bookings on your own account."
+        )
+
     booking = await db.mall_bookings.find_one({"booking_id": booking_id})
     if not booking:
         raise HTTPException(404, "Booking not found")

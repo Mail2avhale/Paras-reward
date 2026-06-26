@@ -9,6 +9,23 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 — TWELFTH FIX: Auth hardening on sensitive endpoints)
+- 🔒 **AUTH BINDING ON `/mining/collect` AND `/mall/cancel-booking`** — `routes/mining.py`, `routes/paras_mall.py`
+  - Testing agent flagged these endpoints as unauthenticated: anyone who knew a target user's uid could call collect-on-their-behalf (forcing explorer burn / ending session prematurely) or cancel-on-their-behalf. Critical before Play Store launch.
+  - **Fix**: bound both endpoints to a new `_require_authenticated_user` lazy-import wrapper. The wrapper declares the same `HTTPBearer + HTTPAuthorizationCredentials` signature as `server.get_current_user` so FastAPI can resolve sub-deps at routing time, but resolves the REAL `server.get_current_user` at call time. This sidesteps the circular-import error that would otherwise occur (server.py imports both files at lines 105/107 — BEFORE `get_current_user` is defined at line 249).
+  - **Authorization checks added**:
+    - `/mining/collect/{uid}`: returns 403 if `current_user["uid"] != uid`.
+    - `/mall/cancel-booking/{booking_id}`: returns 403 if `current_user["uid"] != body.user_id`. Existing booking-ownership check inside the function still runs (belt + braces).
+  - **No frontend change needed** — `axios.interceptors.request.use` in `App.js` already attaches `Authorization: Bearer <token>` to every API call.
+  - **E2E verification on preview** (5/5 PASS):
+    1. `/mining/collect` no auth → 401 "Not authenticated"
+    2. `/mining/collect` auth + wrong uid → 403 "You can only collect on your own account."
+    3. `/mining/collect` auth + own uid → 200 with `burned=true, tier=explorer` (normal flow)
+    4. `/mall/cancel-booking` no auth → 401 "Not authenticated"
+    5. `/mall/cancel-booking` auth + wrong user_id → 403 "You can only cancel bookings on your own account."
+  - App version → `3.3.1-auth-hardening-jun2026`. Lint clean, backend boots cleanly (no more circular import).
+
+
 ## Implemented (Jun 24, 2026 — ELEVENTH FEATURE: Explorer users can Collect — but mined PRC burns; ad bonus is real)
 - 🎯 **EXPLORER-TIER COLLECT FLOW** — `routes/mining.py` `/collect/{uid}` endpoint
   - User feedback: "Explorer युजर्स PRC COLLECT करू शकतील पण जेवढे PRC त्या SESSION मध्ये त्यांनी जमा केले आहे ते लगेच BURN होतील आणि त्यांना मिळालेला AD BONUS BURN होणार नाही. PRC STATEMENT मध्ये सर्व दिसले पाहिजे."
