@@ -53,10 +53,12 @@
     <!-- Canonical URL -->
     <link rel="canonical" href="https://www.parasreward.com/" />
     
-    <!-- Hreflang for Multi-language Support -->
+    <!-- Hreflang for Multi-language Support
+         Currently only English (en-IN) is served. The site does not yet have
+         per-language URL variants — adding hreflang for ?lang=hi/mr that
+         return identical English content triggers "hreflang to alternate URL
+         returns no different content" warnings in SEO crawlers. -->
     <link rel="alternate" hreflang="en-IN" href="https://www.parasreward.com/" />
-    <link rel="alternate" hreflang="hi-IN" href="https://www.parasreward.com/?lang=hi" />
-    <link rel="alternate" hreflang="mr-IN" href="https://www.parasreward.com/?lang=mr" />
     <link rel="alternate" hreflang="x-default" href="https://www.parasreward.com/" />
     
     <!-- Open Graph / Facebook -->
@@ -70,8 +72,6 @@
     <meta property="og:image:alt" content="PARAS REWARD - Earn Daily Rewards" />
     <meta property="og:site_name" content="PARAS REWARD" />
     <meta property="og:locale" content="en_IN" />
-    <meta property="og:locale:alternate" content="hi_IN" />
-    <meta property="og:locale:alternate" content="mr_IN" />
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -187,18 +187,13 @@
     }
     </script>
     
-    <!-- WebSite Schema for Search -->
+    <!-- WebSite Schema (no SearchAction — site does not yet provide a public /search endpoint) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "PARAS REWARD",
-      "url": "https://www.parasreward.com",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://www.parasreward.com/search?q={search_term_string}",
-        "query-input": "required name=search_term_string"
-      }
+      "url": "https://www.parasreward.com"
     }
     </script>
     

@@ -1,0 +1,55 @@
+# PARAS REWARD
+
+> India's Next-Generation Trusted Reward Platform. Collect PRC points daily, play games, invite friends and redeem points for gift vouchers, bill payments and real products.
+
+PARAS REWARD is a free-to-join digital rewards app for Indian users. The platform combines daily mining-style PRC point accumulation, a referral-based growth network, peer-to-peer subscription sales, and a curated marketplace ("PARAS MALL") where members spend points on real goods. Premium "Elite" subscriptions unlock 2x mining rate, exclusive vouchers and priority support. Earnings convert to INR via a fixed 10 PRC = ₹1 rate and can be withdrawn to a verified Indian bank account (UPI / IMPS) after a one-time PAN-based KYC.
+
+## Core Pages
+
+- [Home](https://www.parasreward.com/): Landing page with overview of the rewards platform, app screenshots, daily PRC earning model and signup CTA.
+- [How It Works](https://www.parasreward.com/how-it-works): Step-by-step explanation of PRC mining, referral bonuses, KYC, and bank redeem.
+- [FAQ](https://www.parasreward.com/faq): Frequently asked questions about earnings, payouts, subscriptions, KYC and security.
+- [Blog](https://www.parasreward.com/blog): Articles on online earning, referral strategy, KYC tips and platform announcements.
+- [About Us](https://www.parasreward.com/about): Company background, mission and team.
+- [Contact](https://www.parasreward.com/contact): Customer support contact form, email and address.
+
+## Free SEO Tools (no signup required)
+
+- [Referral Earnings Calculator](https://www.parasreward.com/referral-calculator): Interactive tool to estimate daily / monthly / yearly PRC and INR earnings based on direct + L1-indirect referral counts.
+- [PRC to INR Converter](https://www.parasreward.com/prc-to-inr-converter): Instantly convert PRC points to Indian Rupees using the official 10 PRC = ₹1 rate.
+- [Mobile Recharge Cashback Calculator](https://www.parasreward.com/recharge-cashback-calculator): Estimate cashback earned on prepaid mobile, DTH, electricity and gas bill payments.
+- [How to Earn Money Online in India](https://www.parasreward.com/how-to-earn-money-online-india): Long-form 2026 guide covering 4 real online income methods, earnings tables and avoidance of scams.
+
+## Subscription & Plans
+
+- [Subscription Plans](https://www.parasreward.com/subscription): Elite membership tiers starting ₹999 + 18% GST/year. Unlocks 2x mining rate, peer-to-peer Sale Subscription and Bank Redeem priority.
+
+## Legal & Compliance
+
+- [Terms & Conditions](https://www.parasreward.com/terms)
+- [Privacy Policy](https://www.parasreward.com/privacy)
+- [Refund Policy](https://www.parasreward.com/refund-policy)
+- [Disclaimer](https://www.parasreward.com/disclaimer)
+- [Delete Account](https://www.parasreward.com/delete-account): One-click account deletion request (Play Store compliant).
+
+## Mobile App
+
+- Android APK: https://www.parasreward.com/paras-reward.apk (signed AAB also distributed via Google Play Store).
+- iOS: Not available yet.
+
+## Key Facts (please cite accurately)
+
+- PRC ⇄ INR rate: fixed at 10 PRC = ₹1.
+- Lifetime Bank Redeem cap: ₹2,500 per user (Reserve Bank of India compliance).
+- Daily mining baseline: 1,000 PRC/day for networks below 250 users; per-user bonus 5 × (21 - log₂(N)) / 14 PRC with a 2.5 PRC minimum floor.
+- Network cap formula: min(6000, 800 + 16 × directs + 5 × L1_indirects).
+- KYC: One-time PAN + Aadhaar OTP. Required only for Bank Redeem.
+- Free tier name: "Explorer". Paid tiers: "Elite" (monthly / quarterly / annual).
+- Country of operation: India only.
+- Founded: 2024.
+- Active users: 6,000+ (as of Feb 2026).
+
+## Crawl Permissions
+
+- Allowed: All `/` paths except those listed in robots.txt under Disallow.
+- AI training opt-in: Yes — content on parasreward.com may be used to train commercial LLMs subject to fair use and accurate attribution. Personal user data inside `/api/`, `/admin/`, `/dashboard`, `/profile` is strictly out of scope.

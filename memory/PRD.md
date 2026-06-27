@@ -9,6 +9,19 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 15, 2026 — FOURTEENTH FIX: SEO Audit findings cleanup)
+- 🧭 **SEO AUDIT FIXES SHIPPED** (Health Score 81 → expected 90+ on re-audit)
+  - **Broken internal links fixed**: sitemap.xml + RewardsHome.js footer referenced `/about-us` and `/contact-us`, but React routes were `/about` and `/contact`. Both old URLs returned 200 OK with the default SPA shell (same title) → Google flagged as "duplicate title + broken link". **Fixed by**: (a) updating sitemap.xml + RewardsHome.js footer to use the canonical `/about` and `/contact` paths; (b) adding React `<Navigate replace>` redirect routes in `App.js` so existing back-links from Google still work; (c) creating `/app/frontend/public/_redirects` for true 301 redirects in Cloudflare Pages deployment.
+  - **Dead `/leaderboard` link removed** from `components/Footer.js` (route never existed).
+  - **Hreflang errors fixed**: removed `?lang=hi` and `?lang=mr` hreflang alternates from `index.html` — the site does not yet serve language-specific URLs, so the alternates returned identical English content → 63 hreflang errors in audit. Also removed `og:locale:alternate` for `hi_IN` / `mr_IN` for consistency. Kept only `en-IN` + `x-default`.
+  - **WebSite SearchAction removed** from JSON-LD schema — pointed at a `/search?q=` endpoint that doesn't exist (would 404).
+  - **`/app/frontend/public/llms.txt` created** — proper llmstxt.org-spec AI crawler manifest with key page URLs, mining formula constants, PRC↔INR rate (10:1), Bank Redeem cap (₹2,500), and crawl/training permissions.
+  - **`public/sitemap.xml` rebuilt**: clean XML (no leading whitespace before `<?xml`), `lastmod` bumped to 2026-02-15, dead URLs replaced, `/careers` + `/investors` + `/delete-account` added (all real routes).
+  - **`public/_headers` enhanced** with correct `Content-Type` for `llms.txt` (text/plain), `sitemap.xml` (application/xml), `robots.txt` (text/plain).
+  - **`robots.txt` updated** to also reference `llms.txt`.
+  - **Smoke test on preview**: `/llms.txt` returns 200 text/plain, `/sitemap.xml` returns 200 application/xml, `/about-us` client-redirects to `/about` ✅.
+
+
 ## Implemented (Jun 24, 2026 — THIRTEENTH FIX: Subscription expiry field consolidation — Phase 1 of 3)
 - 🧹 **LEGACY EXPIRY FIELDS CLEANUP — PHASE 1 SHIPPED** (`utils/subscription_expiry.py` + `scripts/migrate_subscription_expiry_fields.py`)
   - **Problem audited**: 3 fields representing the SAME thing — `subscription_expiry` (262 refs, canonical), `subscription_expires` (133 refs, legacy), `vip_expiry` (64 refs, oldest legacy). Total **459 fallback-chain references** across `server.py` and `routes/`. Preview DB had 3 users with legacy fields, 1 user with all three set. Same field appearing with different dates risked "active on page A / expired on page B" bugs.

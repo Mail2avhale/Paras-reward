@@ -26,6 +26,9 @@ Disallow: /marketplace
 # Sitemap location
 Sitemap: https://www.parasreward.com/sitemap.xml
 
+# AI / LLM crawler manifest (https://llmstxt.org spec)
+# LLMs: https://www.parasreward.com/llms.txt
+
 # Crawl delay for polite crawling
 Crawl-delay: 10
 

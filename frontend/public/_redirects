@@ -1,0 +1,22 @@
+# Cloudflare Pages / Netlify-style redirects for canonical URLs
+# 301 redirects so search engines drop the old (broken) URL from the index
+# and credit link equity to the canonical path.
+#
+# Why? An earlier sitemap referenced /about-us & /contact-us, but the
+# React routes were /about & /contact, so the old URLs returned the
+# 200 SPA shell with a duplicate title — Google flagged this as
+# "duplicate title" + "broken internal link" in the SEO audit (Feb 2026).
+
+/about-us           /about              301
+/contact-us         /contact            301
+/terms-conditions   /terms              301
+/refund             /refund-policy      301
+/calculator         /referral-calculator       301
+/earnings-calculator /referral-calculator      301
+/prc-to-inr         /prc-to-inr-converter      301
+/cashback-calculator /recharge-cashback-calculator 301
+/earn-money-online  /how-to-earn-money-online-india 301
+/delete.html        /delete-account     301
+
+# SPA fallback — must be last
+/*                  /index.html         200

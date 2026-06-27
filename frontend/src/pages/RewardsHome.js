@@ -722,11 +722,11 @@ const RewardsHome = () => {
             <div>
               <h4 className="font-semibold mb-4 text-white">Company</h4>
               <ul className="space-y-2.5 text-gray-400 text-sm">
-                <li><Link to="/about-us" className="hover:text-white transition-colors">About Us</Link></li>
+                <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
                 <li><Link to="/how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
                 <li><Link to="/careers" className="hover:text-white transition-colors">Careers</Link></li>
                 <li><Link to="/investors" className="hover:text-white transition-colors">Investors</Link></li>
-                <li><Link to="/contact-us" className="hover:text-white transition-colors">Contact</Link></li>
+                <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
               </ul>
             </div>
             <div data-testid="footer-free-tools">

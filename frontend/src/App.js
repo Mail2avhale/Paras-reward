@@ -578,9 +578,12 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             
             {/* Static Pages */}
             <Route path="/about" element={<AboutUs />} />
+            <Route path="/about-us" element={<Navigate to="/about" replace />} />
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/terms" element={<TermsConditions />} />
+            <Route path="/terms-conditions" element={<Navigate to="/terms" replace />} />
             <Route path="/contact" element={<ContactUs />} />
+            <Route path="/contact-us" element={<Navigate to="/contact" replace />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/delete-account" element={<Suspense fallback={<LoadingFallback />}><DeleteAccount /></Suspense>} />
             <Route path="/delete.html" element={<Navigate to="/delete-account" replace />} />
