@@ -149,6 +149,8 @@ const TopBar = ({ user, onLogout }) => {
             {/* Menu Icon - Opens Sidebar */}
             <button
               onClick={() => setSidebarOpen(true)}
+              data-testid="topbar-menu-btn"
+              aria-label="Open menu"
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <Menu className="h-6 w-6 text-gray-700" />

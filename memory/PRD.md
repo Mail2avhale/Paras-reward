@@ -9,6 +9,23 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 15, 2026 — FIFTEENTH FIX: Pi Network-style User Menu redesign)
+- 🎨 **USER SIDEBAR REDESIGNED → PI NETWORK GRID STYLE** (`components/Sidebar.js`)
+  - **Inspiration**: User shared a screen recording of Pi Network's app menu. Wanted same Pi-style: light off-white background, 4-icon grid per row, category section headers, line icons, "Follow us on" social footer.
+  - **Layout**: 5 sections × 4 tiles per row = 20 navigation tiles in total:
+    - **Earn**: Dashboard · Subscription · Referrals · Network Feed
+    - **Rewards**: Paras Mall · Wishlist · PRC Statement · Usage History
+    - **Wallet**: Bank Redeem · My Invoices · KYC · My Reports
+    - **Social**: Community · Messages · Notifications · Followers
+    - **Account**: My Profile · Support · Terms · Privacy
+  - **Header chip**: greeting ("Good morning/afternoon/evening, {full name}") + UID + PRC balance pill showing both PRC and INR conversion (10 PRC = ₹1).
+  - **Active page indicator**: subtle blue ring around the active tile's icon + blue dot below the label (Pi-style).
+  - **Footer**: "FOLLOW US ON" — wires up to `/api/admin/social-media-settings` to render Facebook / Twitter / Instagram / YouTube / LinkedIn / Telegram / WhatsApp icons. Falls back to "Social links coming soon" if no URLs configured. Includes copyright + version line.
+  - **Bug fixed during build**: the existing `useEffect` "close on route change" hook included `isOpen` in its dep array → it ran every time the drawer opened, immediately closing it. Refactored to use a `useRef` to track the previous pathname so we only close on actual navigation.
+  - **`TopBar.js`**: added `data-testid="topbar-menu-btn"` + `aria-label="Open menu"` on the hamburger trigger for testability.
+  - **Verified live on preview** (logged in as `9970100782`): drawer opens correctly on `/dashboard` AND `/referrals`. Active tile correctly highlights based on `location.pathname`. PRC balance displays `1,00,045.84 PRC ≈ ₹10,004.58`. No lint errors.
+
+
 ## Implemented (Feb 15, 2026 — FOURTEENTH FIX: SEO Audit findings cleanup)
 - 🧭 **SEO AUDIT FIXES SHIPPED** (Health Score 81 → expected 90+ on re-audit)
   - **Broken internal links fixed**: sitemap.xml + RewardsHome.js footer referenced `/about-us` and `/contact-us`, but React routes were `/about` and `/contact`. Both old URLs returned 200 OK with the default SPA shell (same title) → Google flagged as "duplicate title + broken link". **Fixed by**: (a) updating sitemap.xml + RewardsHome.js footer to use the canonical `/about` and `/contact` paths; (b) adding React `<Navigate replace>` redirect routes in `App.js` so existing back-links from Google still work; (c) creating `/app/frontend/public/_redirects` for true 301 redirects in Cloudflare Pages deployment.
