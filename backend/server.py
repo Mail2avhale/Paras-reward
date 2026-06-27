@@ -28413,6 +28413,28 @@ async def get_social_media_settings():
     except Exception as e:
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
+
+@api_router.get("/public/social-media")
+async def get_public_social_media():
+    """
+    PUBLIC read-only mirror of /admin/social-media-settings.
+
+    The admin route is gated by the AdminAuthMiddleware (admin role required),
+    but the user-facing Sidebar / Footer needs to render these links for
+    EVERY logged-in (or even logged-out) visitor. This endpoint exposes the
+    same payload without authentication. Writes still go through the
+    admin-only POST /admin/social-media-settings route.
+    """
+    try:
+        settings = await db.settings.find_one({"type": "social_media"})
+        keys = ("facebook", "twitter", "instagram", "linkedin", "youtube", "telegram", "whatsapp")
+        if not settings:
+            return {k: "" for k in keys}
+        return {k: (settings.get(k) or "") for k in keys}
+    except Exception:
+        # Never break the UI — return an empty mapping on any error
+        return {"facebook": "", "twitter": "", "instagram": "", "linkedin": "", "youtube": "", "telegram": "", "whatsapp": ""}
+
 class SocialMediaSettings(BaseModel):
     facebook: Optional[str] = ""
     twitter: Optional[str] = ""

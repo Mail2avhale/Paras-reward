@@ -9,6 +9,18 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 15, 2026 — SIXTEENTH FIX: Notifications visibility + sort order)
+- 🛎️ **P0 BUG SQUASHED**: 79% of notifications were silently invisible to users.
+  - **RCA #1 — schema split**: `routes/notifications.py::create_notification()` (the main helper used by ~10 services: KYC, subscription approvals, bank redeem, milestones, etc.) wrote `user_id` ONLY. But the user-facing reader `GET /api/notifications/{uid}` in `routes/notifications_routes.py` queries `user_uid` ONLY. Result on preview DB: 65 of 82 notifications (79%) were completely unreachable to the frontend. Confirmed on production too via user report.
+  - **RCA #2 — BSON type mismatch on sort**: 75 docs stored `created_at` as BSON `date` (Python datetime), 7 as BSON `string` (ISO). MongoDB sorts BSON types independently → all date-objects came BEFORE all strings regardless of actual timestamp. So a Feb 2026 datetime-stored notification would appear AHEAD of a May 2026 string-stored one with descending sort. Newer notifications looked "missing" because they sank under older ones.
+- **Fix shipped**:
+  - 🔧 **Writer normalized**: `create_notification()` now writes BOTH `user_id` + `user_uid` (mirror), `read` + `is_read` (mirror), and `created_at` as ISO string.
+  - 🔧 **Reader defensive**: `GET /notifications/{uid}`, `/unread-count`, `/read-all`, `/clear-all` now use `$or: [{user_uid: uid}, {user_id: uid}]` + `$or: [{read: false}, {is_read: false}]` to tolerate legacy schema.
+  - 🔧 **Backfill migration** `scripts/backfill_notification_user_uid.py` (idempotent, safe to re-run on prod). 4 stages: (a) copy user_id→user_uid, (b) copy user_uid→user_id, (c) mirror read↔is_read, (d) normalize all BSON-date created_at → ISO string. On preview: backfilled 65 unreachable docs + normalized 75 BSON-date docs → 100% reachable, chronologically sorted.
+  - **Verified live**: `9970100782` test account now shows all 7 unread notifications on `/notifications` page in correct newest-first order (May 3 → Apr 29 → Apr 19).
+- 🌐 **Bonus**: Created public read-only endpoint `GET /api/public/social-media` so the new Pi-style Sidebar's "Follow us on" footer can render icons for regular users. The admin-only `/admin/social-media-settings` route is gated by `AdminAuthMiddleware` (403 for non-admin), which was causing the sidebar to fall back to "Social links coming soon" even when URLs were configured. Updated `Sidebar.js` to call the new public endpoint.
+
+
 ## Implemented (Feb 15, 2026 — FIFTEENTH FIX: Pi Network-style User Menu redesign)
 - 🎨 **USER SIDEBAR REDESIGNED → PI NETWORK GRID STYLE** (`components/Sidebar.js`)
   - **Inspiration**: User shared a screen recording of Pi Network's app menu. Wanted same Pi-style: light off-white background, 4-icon grid per row, category section headers, line icons, "Follow us on" social footer.

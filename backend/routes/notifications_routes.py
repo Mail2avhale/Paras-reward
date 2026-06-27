@@ -41,21 +41,35 @@ def set_helpers(helpers: dict):
 
 @router.get("/{uid}")
 async def get_notifications(uid: str, page: int = 1, limit: int = 20, unread_only: bool = False):
-    """Get user's notifications"""
+    """Get user's notifications.
+
+    FIX (Feb 2026): Some services historically wrote only `user_id` and others
+    wrote only `user_uid`. Query the union so we never silently drop docs.
+    """
     skip = (page - 1) * limit
-    
-    query = {"user_uid": uid}
+
+    owner_clause = {"$or": [{"user_uid": uid}, {"user_id": uid}]}
     if unread_only:
-        query["read"] = False
-    
+        # `read` was the canonical flag; some older docs use `is_read`.
+        query = {
+            "$and": [
+                owner_clause,
+                {"$or": [{"read": False}, {"is_read": False}]},
+            ]
+        }
+    else:
+        query = owner_clause
+
     notifications = await db.notifications.find(
         query,
         {"_id": 0}
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
-    
+
     total = await db.notifications.count_documents(query)
-    unread_count = await db.notifications.count_documents({"user_uid": uid, "read": False})
-    
+    unread_count = await db.notifications.count_documents({
+        "$and": [owner_clause, {"$or": [{"read": False}, {"is_read": False}]}]
+    })
+
     return {
         "notifications": notifications,
         "total": total,
@@ -67,8 +81,11 @@ async def get_notifications(uid: str, page: int = 1, limit: int = 20, unread_onl
 
 @router.get("/{uid}/unread-count")
 async def get_notification_unread_count(uid: str):
-    """Get unread notification count"""
-    count = await db.notifications.count_documents({"user_uid": uid, "read": False})
+    """Get unread notification count (tolerates legacy user_id-only docs)."""
+    owner_clause = {"$or": [{"user_uid": uid}, {"user_id": uid}]}
+    count = await db.notifications.count_documents({
+        "$and": [owner_clause, {"$or": [{"read": False}, {"is_read": False}]}]
+    })
     return {"unread_count": count}
 
 
@@ -88,12 +105,21 @@ async def mark_notification_read(notification_id: str):
 
 @router.put("/{uid}/read-all")
 async def mark_all_notifications_read(uid: str):
-    """Mark all notifications as read for a user"""
+    """Mark all notifications as read for a user (handles both schemas)."""
     result = await db.notifications.update_many(
-        {"user_uid": uid, "read": False},
-        {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+        {
+            "$and": [
+                {"$or": [{"user_uid": uid}, {"user_id": uid}]},
+                {"$or": [{"read": False}, {"is_read": False}]},
+            ]
+        },
+        {"$set": {
+            "read": True,
+            "is_read": True,
+            "read_at": datetime.now(timezone.utc).isoformat(),
+        }}
     )
-    
+
     return {"success": True, "marked_count": result.modified_count}
 
 
@@ -110,8 +136,10 @@ async def delete_notification(notification_id: str):
 
 @router.delete("/{uid}/clear-all")
 async def clear_all_notifications(uid: str):
-    """Clear all notifications for a user"""
-    result = await db.notifications.delete_many({"user_uid": uid})
+    """Clear all notifications for a user (handles both schemas)."""
+    result = await db.notifications.delete_many(
+        {"$or": [{"user_uid": uid}, {"user_id": uid}]}
+    )
     return {"success": True, "deleted_count": result.deleted_count}
 
 

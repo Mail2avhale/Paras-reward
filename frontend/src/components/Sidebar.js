@@ -110,7 +110,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await axios.get(`${API}/admin/social-media-settings`);
+        const res = await axios.get(`${API}/public/social-media`);
         if (!cancelled) setSocialMedia(res.data || {});
       } catch (_err) { /* silent — footer just hides icons */ }
     })();

@@ -96,6 +96,7 @@ async def create_notification(
         notification = {
             "notification_id": str(uuid.uuid4()),
             "user_id": user_id,
+            "user_uid": user_id,  # FIX (Feb 2026): reader queries `user_uid`. Always write both so notifications surface in the user-facing list.
             "type": notification_type,
             "title": title or type_info["title"],
             "message": message,
@@ -103,7 +104,8 @@ async def create_notification(
             "color": type_info["color"],
             "data": data or {},
             "read": False,
-            "created_at": datetime.now(timezone.utc)
+            "is_read": False,  # mirror flag for legacy readers
+            "created_at": datetime.now(timezone.utc).isoformat()  # ISO string — keeps BSON-sort stable across writers
         }
         
         result = await db.notifications.insert_one(notification)
