@@ -9,6 +9,21 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 24, 2026 — THIRTEENTH FIX: Subscription expiry field consolidation — Phase 1 of 3)
+- 🧹 **LEGACY EXPIRY FIELDS CLEANUP — PHASE 1 SHIPPED** (`utils/subscription_expiry.py` + `scripts/migrate_subscription_expiry_fields.py`)
+  - **Problem audited**: 3 fields representing the SAME thing — `subscription_expiry` (262 refs, canonical), `subscription_expires` (133 refs, legacy), `vip_expiry` (64 refs, oldest legacy). Total **459 fallback-chain references** across `server.py` and `routes/`. Preview DB had 3 users with legacy fields, 1 user with all three set. Same field appearing with different dates risked "active on page A / expired on page B" bugs.
+  - **Phase 1 delivered today (canonical foundation)**:
+    1. **`utils/subscription_expiry.py`** — Single-source-of-truth helpers `get_user_expiry(user) -> datetime` and `is_subscription_active(user) -> bool`. Tolerates legacy fields as a read-only fallback for not-yet-migrated rows so production stays safe during the rolling migration.
+    2. **`scripts/migrate_subscription_expiry_fields.py`** — Idempotent one-shot migration. For each user with any legacy field: parses all 3 candidates as UTC-aware datetimes, picks the LATEST (never downgrades an active user), writes to `subscription_expiry`, `$unset`s the legacy two. Writes a row per user into `subscription_expiry_migration_audit` collection for rollback.
+    3. **Preview DB migrated**: 3 users touched, 2 picked latest of multiple dates, 1 cleared (no valid date anywhere). After-state: `subscription_expires` 0 docs, `vip_expiry` 0 docs, `subscription_expiry` 4 docs, audit collection has 3 rollback rows.
+  - **Phase 2 (later, ~2 days)**: code-wide `find/replace` of the 459 fallback-chain references to use `get_user_expiry()` instead of raw `user.get(...)`. Should be done incrementally, one route file at a time, with tests between batches.
+  - **Phase 3 (later, ~1 day)**: Pydantic write-block on `subscription_expires` and `vip_expiry` so accidental new writes fail at validation time. Run migration script once more on production after every release until 100% rows are clean.
+  - **Production deploy steps for user**:
+    1. `git push` → Emergent dashboard redeploy.
+    2. Backend Console: `cd /app/backend && python -m scripts.migrate_subscription_expiry_fields` (idempotent — safe to re-run any time).
+    3. App version → still `3.3.1-auth-hardening-jun2026` (this change is backend-internal only, no frontend impact).
+
+
 ## Implemented (Jun 24, 2026 — TWELFTH FIX: Auth hardening on sensitive endpoints)
 - 🔒 **AUTH BINDING ON `/mining/collect` AND `/mall/cancel-booking`** — `routes/mining.py`, `routes/paras_mall.py`
   - Testing agent flagged these endpoints as unauthenticated: anyone who knew a target user's uid could call collect-on-their-behalf (forcing explorer burn / ending session prematurely) or cancel-on-their-behalf. Critical before Play Store launch.
