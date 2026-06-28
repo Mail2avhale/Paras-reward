@@ -28457,68 +28457,59 @@ async def backfill_notifications_endpoint():
           independently, so newer string-typed docs would appear AFTER
           older date-typed docs.
 
-    This endpoint mirrors `scripts/backfill_notification_user_uid.py`.
-    Idempotent — safe to invoke multiple times. Gated by AdminAuthMiddleware.
+    Implementation note (Feb 2026): Rewritten to use BULK aggregation-pipeline
+    updates (`update_many` with `$set`) instead of per-doc loops. The earlier
+    per-doc version was timing out on Cloudflare for production-sized
+    collections (~thousands of notifications). Bulk version completes in
+    a couple of seconds regardless of size. Idempotent — safe to re-run.
     """
-    from datetime import timezone as _tz
-
     before_total = await db.notifications.count_documents({})
     before_unreachable = await db.notifications.count_documents({
         "user_id": {"$exists": True},
         "user_uid": {"$exists": False},
     })
 
-    # Stage 1: copy user_id -> user_uid
-    s1 = 0
-    cursor = db.notifications.find(
+    # Stage 1: copy user_id -> user_uid for every doc that's missing it.
+    # Aggregation-pipeline-style update so Mongo does the rename server-side.
+    s1_res = await db.notifications.update_many(
         {"user_id": {"$exists": True}, "user_uid": {"$exists": False}},
-        {"_id": 1, "user_id": 1},
+        [{"$set": {"user_uid": "$user_id"}}],
     )
-    async for d in cursor:
-        await db.notifications.update_one(
-            {"_id": d["_id"]},
-            {"$set": {"user_uid": d["user_id"]}},
-        )
-        s1 += 1
 
-    # Stage 2: copy user_uid -> user_id
-    s2 = 0
-    cursor = db.notifications.find(
+    # Stage 2: copy user_uid -> user_id (reverse direction).
+    s2_res = await db.notifications.update_many(
         {"user_uid": {"$exists": True}, "user_id": {"$exists": False}},
-        {"_id": 1, "user_uid": 1},
+        [{"$set": {"user_id": "$user_uid"}}],
     )
-    async for d in cursor:
-        await db.notifications.update_one(
-            {"_id": d["_id"]},
-            {"$set": {"user_id": d["user_uid"]}},
-        )
-        s2 += 1
 
-    # Stage 3: mirror read flags (aggregation-style update, MongoDB >= 4.2)
-    r3a = await db.notifications.update_many(
+    # Stage 3: mirror read <-> is_read flags so unread filters never miss.
+    s3a = await db.notifications.update_many(
         {"read": {"$exists": True}, "is_read": {"$exists": False}},
         [{"$set": {"is_read": "$read"}}],
     )
-    r3b = await db.notifications.update_many(
+    s3b = await db.notifications.update_many(
         {"is_read": {"$exists": True}, "read": {"$exists": False}},
         [{"$set": {"read": "$is_read"}}],
     )
 
-    # Stage 4: normalize BSON-date -> ISO string for stable sort order
-    s4 = 0
-    cursor = db.notifications.find(
+    # Stage 4: normalize BSON-date created_at -> ISO string. Sort stability
+    # requires a SINGLE BSON type across the whole collection (Mongo sorts
+    # each type independently). Use aggregation pipeline `$dateToString`
+    # for a server-side bulk conversion.
+    s4_res = await db.notifications.update_many(
         {"created_at": {"$type": "date"}},
-        {"_id": 1, "created_at": 1},
+        [{
+            "$set": {
+                "created_at": {
+                    "$dateToString": {
+                        "format": "%Y-%m-%dT%H:%M:%S.%LZ",
+                        "date": "$created_at",
+                        "timezone": "UTC",
+                    }
+                }
+            }
+        }],
     )
-    async for d in cursor:
-        ts = d["created_at"]
-        if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=_tz.utc)
-        await db.notifications.update_one(
-            {"_id": d["_id"]},
-            {"$set": {"created_at": ts.isoformat()}},
-        )
-        s4 += 1
 
     after_unreachable = await db.notifications.count_documents({
         "user_id": {"$exists": True},
@@ -28539,11 +28530,11 @@ async def backfill_notifications_endpoint():
             "remaining_bson_date": after_bson_date,
         },
         "fixed": {
-            "user_id_to_user_uid": s1,
-            "user_uid_to_user_id": s2,
-            "read_to_is_read": r3a.modified_count,
-            "is_read_to_read": r3b.modified_count,
-            "bson_date_to_iso_string": s4,
+            "user_id_to_user_uid": s1_res.modified_count,
+            "user_uid_to_user_id": s2_res.modified_count,
+            "read_to_is_read": s3a.modified_count,
+            "is_read_to_read": s3b.modified_count,
+            "bson_date_to_iso_string": s4_res.modified_count,
         },
     }
 
