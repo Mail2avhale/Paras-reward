@@ -5,7 +5,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Facebook, Twitter, Instagram, Linkedin, Youtube, Send, MessageCircle, Save, ArrowLeft, Users, CheckCircle, XCircle, AlertCircle, Upload, Image, ShoppingCart, IndianRupee, Coins, Truck, Receipt, CreditCard, Percent } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Youtube, Send, MessageCircle, Save, ArrowLeft, Users, CheckCircle, XCircle, AlertCircle, Upload, Image, ShoppingCart, IndianRupee, Coins, Truck, Receipt, CreditCard, Percent, Wrench, BellRing } from 'lucide-react';
 
 import { API } from "../lib/api";
 
@@ -58,6 +58,10 @@ const AdminSettings = ({ user }) => {
   const [manualPaymentEnabled, setManualPaymentEnabled] = useState(true);
   const [prcPaymentEnabled, setPrcPaymentEnabled] = useState(true);
   const [togglingRazorpay, setTogglingRazorpay] = useState(false);
+
+  // One-time notification backfill (repairs hidden + sort-broken notifications)
+  const [runningBackfill, setRunningBackfill] = useState(false);
+  const [backfillResult, setBackfillResult] = useState(null);
   const [togglingManual, setTogglingManual] = useState(false);
   const [togglingPrc, setTogglingPrc] = useState(false);
 
@@ -225,6 +229,32 @@ const AdminSettings = ({ user }) => {
       toast.error('Failed to save settings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // One-click migration: repairs legacy notifications so users can see them
+  // (fixes user_id-only docs that the user-facing reader was missing, plus
+  // normalizes BSON-date created_at to ISO string for stable newest-first sort).
+  // Idempotent — safe to re-run.
+  const handleRunBackfill = async () => {
+    if (!window.confirm('Run notification backfill now? This is safe to re-run any time.')) return;
+    setRunningBackfill(true);
+    setBackfillResult(null);
+    try {
+      const res = await axios.post(`${API}/admin/backfill-notifications`);
+      setBackfillResult(res.data);
+      const f = res.data?.fixed || {};
+      const repaired = (f.user_id_to_user_uid || 0) + (f.bson_date_to_iso_string || 0);
+      if (repaired > 0) {
+        toast.success(`Backfill complete · ${repaired} notifications repaired`);
+      } else {
+        toast.success('Backfill complete · nothing left to repair');
+      }
+    } catch (error) {
+      console.error('Backfill error:', error);
+      toast.error(error.response?.data?.detail || 'Backfill failed');
+    } finally {
+      setRunningBackfill(false);
     }
   };
   
@@ -476,6 +506,40 @@ const AdminSettings = ({ user }) => {
               {loading ? 'Saving...' : 'Save Settings'}
             </Button>
           </div>
+        </Card>
+
+        {/* One-time Maintenance: Notification Backfill */}
+        <Card className="p-6 shadow-xl mt-6 bg-white border-slate-200" data-testid="notification-backfill-card">
+          <div className="flex items-start gap-3 mb-4">
+            <Wrench className="h-7 w-7 text-amber-600 shrink-0 mt-1" />
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                Notification Backfill
+              </h2>
+              <p className="text-slate-500 mt-2 text-sm">
+                One-time repair for legacy notifications. Recovers historical
+                docs that were silently hidden from users and re-normalizes
+                timestamps so the newest item always appears first. Safe to
+                re-run any time (idempotent).
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleRunBackfill}
+            disabled={runningBackfill}
+            data-testid="run-backfill-btn"
+            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
+          >
+            <BellRing className="h-5 w-5 mr-2" />
+            {runningBackfill ? 'Repairing…' : 'Run Notification Backfill'}
+          </Button>
+
+          {backfillResult && (
+            <div className="mt-5 p-4 rounded-lg bg-slate-50 border border-slate-200 text-sm font-mono whitespace-pre-wrap" data-testid="backfill-result">
+              {JSON.stringify(backfillResult, null, 2)}
+            </div>
+          )}
         </Card>
 
         {/* Registration Control */}

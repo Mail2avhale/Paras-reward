@@ -9,6 +9,15 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 15, 2026 — SEVENTEENTH FIX: Admin one-click Notification Backfill UI)
+- 🔧 Added a one-click **"Run Notification Backfill"** button inside `/admin/settings` page (`pages/AdminSettings.js`) — placed right after the Social Media Links card.
+- **Why**: The migration script `scripts/backfill_notification_user_uid.py` could only be run from a shell with DB access. On production, the admin user wanted to repair legacy notifications without SSH-ing into the pod or running curl with a JWT.
+- **How it works**:
+  - **Backend** (`server.py`): `POST /api/admin/backfill-notifications` runs the 4-stage migration (user_id↔user_uid sync, read↔is_read mirror, BSON-date → ISO string normalization). Idempotent. Gated by `AdminAuthMiddleware` (admin role required).
+  - **Frontend** (`pages/AdminSettings.js`): New "Notification Backfill" card with Wrench icon, descriptive text, amber/orange CTA button. Auto-attaches the admin's JWT via the existing axios interceptor. Displays the JSON result (`before` / `after` / `fixed` counts) in a code block + toast message.
+- **Verified live on preview**: admin login → button → confirm → response JSON rendered. Counts are all zero on preview because backfill already ran via CLI; on production the first click will repair all hidden + sort-broken notifications in one shot.
+
+
 ## Implemented (Feb 15, 2026 — SIXTEENTH FIX: Notifications visibility + sort order)
 - 🛎️ **P0 BUG SQUASHED**: 79% of notifications were silently invisible to users.
   - **RCA #1 — schema split**: `routes/notifications.py::create_notification()` (the main helper used by ~10 services: KYC, subscription approvals, bank redeem, milestones, etc.) wrote `user_id` ONLY. But the user-facing reader `GET /api/notifications/{uid}` in `routes/notifications_routes.py` queries `user_uid` ONLY. Result on preview DB: 65 of 82 notifications (79%) were completely unreachable to the frontend. Confirmed on production too via user report.
