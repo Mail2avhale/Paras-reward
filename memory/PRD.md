@@ -9,6 +9,28 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 28, 2026 — App Open Ad Native Plugin)
+- 🐛 **BUG SQUASHED**: App Open Ad never displayed on the Android app (AdMob console showed zero impressions for unit `ca-app-pub-3556805218952480/2186165856`).
+- **RCA**: `@capacitor-community/admob` v7.x **does NOT support App Open ad format** (only Banner/Interstitial/Rewarded — see [GitHub issue #260](https://github.com/capacitor-community/admob/issues/260)). The previous `useAdMob.js#showAppOpen` called `AdMob.prepareInterstitial({ adId: <appOpenId> })`, which AdMob rejected because the unit's format is App Open, not Interstitial.
+- **Fix**:
+  - **Native plugin** `android/app/src/main/java/com/parasreward/prc/AppOpenAdPlugin.java` — wraps Google Mobile Ads SDK's `AppOpenAd` class directly (play-services-ads 24.7+ already transitively pulled in via the community AdMob plugin).
+  - **Lifecycle observer**: `ProcessLifecycleOwner.onStart` → auto-shows the cached ad on every foreground/resume (cold-start tick is skipped because the ad isn't loaded yet). 4-hour expiry per Google policy with auto-reload.
+  - **MainActivity.java**: `registerPlugin(AppOpenAdPlugin.class)` before `super.onCreate`.
+  - **JS hook** `frontend/src/hooks/useAdMob.js`: switched `showAppOpen` to call the new `registerPlugin('AppOpenAd')` bridge; `initOnce` calls `AppOpenAd.initialize({ adUnitId, autoShowOnResume: true })`.
+  - **App.js**: calls `useAdMob()` at the root so init fires on app boot (was previously only initialized inside `ParasMall`).
+  - **ParasMall.js**: removed the misuse of `showAppOpen()` as an after-booking interstitial (App Open ads MUST NOT be triggered after in-app actions per Google policy; doing so risks AdMob suspension).
+- **Version bump**: `versionCode 12 → 13`, `versionName 1.1.1 → 1.1.2`.
+- **Verification**: Web smoke screenshot passes (App Open is no-op on web). Native verification will happen after the user runs GitHub Actions to build the new AAB and installs it.
+
+
+## Implemented (Feb 28, 2026 — MobileAppGate + app-ads.txt + Admin Feature Flag)
+- 🚧 **MobileAppGate component** (`frontend/src/components/MobileAppGate.js`): full-screen blocker shown ONLY to Android browsers (detects `window.Capacitor.isNativePlatform()` + UA), forcing them to install the Play Store app. iOS, desktop, and native APK users bypass it automatically.
+- 📝 **`frontend/public/app-ads.txt`**: AdMob compliance file (required by Google for app monetization disclosure).
+- 🎛️ **Admin Feature Flag** `mobile_app_gate_enabled`: stored in `settings` collection (`type=feature_flags`), exposed via `GET /api/admin/feature-flags/public` (public read) and `POST /api/admin/feature-flags` (admin write). Toggle is in `pages/AdminSettings.js`.
+- **Result**: Admin can flip the gate on/off without redeploying. Web Android users see "Install the App" wall; native users see normal UX.
+
+
+
 ## Implemented (Feb 15, 2026 — EIGHTEENTH FIX: Subscription Legacy Fields Phase 2)
 - 🧹 **MASSIVE TECH-DEBT CLEANUP**: Eliminated 76% of legacy `subscription_expires` / `vip_expiry` references across the production backend.
 - **Scope**: Audit count: 206 references at start, **49 remaining** at end (all intentional — test files validating fallback behavior, migration scripts, the canonical helper itself, and 2 `DEPRECATED` Pydantic schema fields kept for mobile-app API backward-compat).
