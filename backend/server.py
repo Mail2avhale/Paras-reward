@@ -28554,15 +28554,18 @@ async def migrate_subscription_expiry_fields_endpoint():
       • Write an audit row per user to `subscription_expiry_migration_audit`
         so we can roll back if needed.
 
-    Implementation note: Uses `bulk_write` in batches of 500 operations to
-    avoid per-doc network round-trips (which previously caused Cloudflare
-    504s on production-sized collections). Idempotent — safe to re-run.
-    Gated by AdminAuthMiddleware.
+    Implementation notes (Feb 2026):
+    - Uses `_id`-based pagination (NOT a long-held cursor) so each batch is
+      independent and we never hold MongoDB locks for >2 seconds.
+    - Batches of 200 users per round-trip → bounded memory + Cloudflare safe.
+    - Logs the real MongoDB error to backend logs if bulk_write fails so the
+      sanitized "Database is busy" message doesn't hide the root cause.
+    - Idempotent — safe to re-run.
     """
     from pymongo import UpdateOne, InsertOne
+    from bson import ObjectId
 
     def _parse_dt(v):
-        """Coerce any datetime / ISO string to timezone-aware UTC datetime."""
         if not v:
             return None
         if isinstance(v, datetime):
@@ -28575,103 +28578,107 @@ async def migrate_subscription_expiry_fields_endpoint():
                 return None
         return None
 
-    before_total = await db.users.count_documents({
+    legacy_query = {
         "$or": [
             {"subscription_expires": {"$exists": True}},
             {"vip_expiry": {"$exists": True}},
         ]
-    })
+    }
+    before_total = await db.users.count_documents(legacy_query)
 
-    cursor = db.users.find(
-        {
-            "$or": [
-                {"subscription_expires": {"$exists": True}},
-                {"vip_expiry": {"$exists": True}},
-            ]
-        },
-        {
-            "_id": 0, "uid": 1, "subscription_expiry": 1,
-            "subscription_expires": 1, "vip_expiry": 1, "subscription_plan": 1,
-        },
-    )
-
-    user_ops = []
-    audit_ops = []
     touched = 0
     chose_latest = 0
     cleared_only = 0
     now_iso = datetime.now(timezone.utc).isoformat()
-    BATCH = 500
+    BATCH = 200
+    last_id = None
+    iterations = 0
+    MAX_ITER = 1000  # hard stop — won't process more than 200,000 users in one call
 
-    async for u in cursor:
-        uid = u.get("uid")
-        if not uid:
-            continue
+    while iterations < MAX_ITER:
+        iterations += 1
+        page_query = dict(legacy_query)
+        if last_id is not None:
+            page_query["_id"] = {"$gt": last_id}
 
-        dates = {
-            "subscription_expiry": _parse_dt(u.get("subscription_expiry")),
-            "subscription_expires": _parse_dt(u.get("subscription_expires")),
-            "vip_expiry": _parse_dt(u.get("vip_expiry")),
-        }
-        valid = {k: v for k, v in dates.items() if v}
-        canonical = max(valid.values()) if valid else None
+        # Pull ONE batch with a fresh short-lived cursor sorted by _id.
+        batch = await db.users.find(
+            page_query,
+            {
+                "_id": 1, "uid": 1, "subscription_expiry": 1,
+                "subscription_expires": 1, "vip_expiry": 1, "subscription_plan": 1,
+            },
+        ).sort("_id", 1).limit(BATCH).to_list(BATCH)
 
-        audit_ops.append(InsertOne({
-            "uid": uid,
-            "subscription_plan": u.get("subscription_plan"),
-            "before": {k: (v.isoformat() if v else None) for k, v in dates.items()},
-            "chosen": canonical.isoformat() if canonical else None,
-            "migrated_at": now_iso,
-        }))
+        if not batch:
+            break
 
-        set_ops = {}
-        if canonical:
-            set_ops["subscription_expiry"] = canonical.isoformat()
-            chose_latest += 1
-        else:
-            cleared_only += 1
+        user_ops = []
+        audit_ops = []
+        for u in batch:
+            last_id = u["_id"]
+            uid = u.get("uid")
+            if not uid:
+                continue
 
-        update = {"$unset": {"subscription_expires": "", "vip_expiry": ""}}
-        if set_ops:
-            update["$set"] = set_ops
+            dates = {
+                "subscription_expiry": _parse_dt(u.get("subscription_expiry")),
+                "subscription_expires": _parse_dt(u.get("subscription_expires")),
+                "vip_expiry": _parse_dt(u.get("vip_expiry")),
+            }
+            valid = {k: v for k, v in dates.items() if v}
+            canonical = max(valid.values()) if valid else None
 
-        user_ops.append(UpdateOne({"uid": uid}, update))
-        touched += 1
+            audit_ops.append(InsertOne({
+                "uid": uid,
+                "subscription_plan": u.get("subscription_plan"),
+                "before": {k: (v.isoformat() if v else None) for k, v in dates.items()},
+                "chosen": canonical.isoformat() if canonical else None,
+                "migrated_at": now_iso,
+            }))
 
-        # Flush in batches to keep memory bounded and avoid huge writes
-        if len(user_ops) >= BATCH:
-            await db.users.bulk_write(user_ops, ordered=False)
-            user_ops = []
-        if len(audit_ops) >= BATCH:
-            await db.subscription_expiry_migration_audit.bulk_write(audit_ops, ordered=False)
-            audit_ops = []
+            set_ops = {}
+            if canonical:
+                set_ops["subscription_expiry"] = canonical.isoformat()
+                chose_latest += 1
+            else:
+                cleared_only += 1
 
-    # Tail flush
-    if user_ops:
-        await db.users.bulk_write(user_ops, ordered=False)
-    if audit_ops:
-        await db.subscription_expiry_migration_audit.bulk_write(audit_ops, ordered=False)
+            update = {"$unset": {"subscription_expires": "", "vip_expiry": ""}}
+            if set_ops:
+                update["$set"] = set_ops
 
-    after_remaining = await db.users.count_documents({
-        "$or": [
-            {"subscription_expires": {"$exists": True}},
-            {"vip_expiry": {"$exists": True}},
-        ]
-    })
+            user_ops.append(UpdateOne({"uid": uid}, update))
+            touched += 1
+
+        # Flush this page. Log MongoDB errors so the sanitizer can't swallow them.
+        try:
+            if user_ops:
+                await db.users.bulk_write(user_ops, ordered=False)
+            if audit_ops:
+                await db.subscription_expiry_migration_audit.bulk_write(audit_ops, ordered=False)
+        except Exception as bulk_exc:
+            logging.exception(
+                "[expiry-migration] bulk_write failed on page %s (last_id=%s, touched_so_far=%s): %s",
+                iterations, last_id, touched, bulk_exc,
+            )
+            raise
+
+        # Yield to the event loop so other requests aren't starved
+        await asyncio.sleep(0)
+
+    after_remaining = await db.users.count_documents(legacy_query)
 
     return {
         "ok": True,
-        "before": {
-            "users_with_legacy_fields": before_total,
-        },
-        "after": {
-            "users_with_legacy_fields": after_remaining,
-        },
+        "before": {"users_with_legacy_fields": before_total},
+        "after": {"users_with_legacy_fields": after_remaining},
         "fixed": {
             "users_touched": touched,
             "users_with_chosen_latest": chose_latest,
             "users_cleared_only_no_valid_date": cleared_only,
             "audit_rows_written": touched,
+            "batches_processed": iterations,
         },
     }
 
