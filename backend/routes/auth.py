@@ -179,6 +179,12 @@ async def simple_register(request: Request):
     
     referrer = None
     if referral_code:
+        # Case-insensitive lookup: referral codes are stored UPPERCASE in DB
+        # (auth.py:216 generates with string.ascii_uppercase), but URL share
+        # links from WhatsApp/Telegram/SMS often lowercase the path. Without
+        # this, a perfectly valid referral fails to attribute silently
+        # (or throws 400, blocking the join).
+        referral_code = referral_code.upper()
         referrer = await db.users.find_one({"referral_code": referral_code})
         if not referrer:
             raise HTTPException(status_code=400, detail="Invalid referral code")

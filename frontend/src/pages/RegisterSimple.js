@@ -15,8 +15,56 @@ import { API, BACKEND_URL } from "../lib/api";
 const RegisterSimple = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const refCode = searchParams.get('ref') || '';
-  
+
+  // Referral attribution with cross-navigation persistence.
+  //
+  // Sources, in priority order:
+  //   1. ?ref= URL param (always wins, fresh from share link)
+  //   2. localStorage paras_ref_code (set when URL param was last seen, 30d TTL)
+  //
+  // Why localStorage fallback exists:
+  //   - User opens link → bounces to /login → comes back to /register
+  //     without the query string → without persistence, refCode is lost
+  //   - User reloads the page after closing the keyboard on mobile
+  //   - WhatsApp / Telegram / SMS sometimes strip query params on long URLs
+  //
+  // Always normalize to UPPERCASE because referral_code in DB is generated
+  // uppercase (auth.py uses string.ascii_uppercase), and a lowercased URL
+  // (e.g., from a normalized WhatsApp link) would otherwise fail to attribute.
+  const REF_STORAGE_KEY = 'paras_ref_code';
+  const REF_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+  const readPersistedRef = () => {
+    try {
+      const raw = localStorage.getItem(REF_STORAGE_KEY);
+      if (!raw) return '';
+      const parsed = JSON.parse(raw);
+      if (!parsed?.code || !parsed?.ts) return '';
+      if (Date.now() - parsed.ts > REF_TTL_MS) {
+        localStorage.removeItem(REF_STORAGE_KEY);
+        return '';
+      }
+      return String(parsed.code).toUpperCase();
+    } catch {
+      return '';
+    }
+  };
+
+  const persistRef = (code) => {
+    if (!code) return;
+    try {
+      localStorage.setItem(REF_STORAGE_KEY, JSON.stringify({ code: code.toUpperCase(), ts: Date.now() }));
+    } catch { /* localStorage unavailable (private mode) — silent */ }
+  };
+
+  const urlRefCode = (searchParams.get('ref') || '').toUpperCase();
+  const refCode = urlRefCode || readPersistedRef();
+
+  // Persist on first detection so navigation away + back keeps the attribution.
+  useEffect(() => {
+    if (urlRefCode) persistRef(urlRefCode);
+  }, [urlRefCode]);
+
   const [formData, setFormData] = useState({
     full_name: '',
     mobile: '',
@@ -136,6 +184,12 @@ const RegisterSimple = () => {
 
     setLoading(true);
 
+    // Always normalize to uppercase before submit — backend DB stores codes
+    // uppercase; this guards against any edge case where the form value
+    // stayed lowercase (e.g., autofill, direct state mutation, or a future
+    // refactor that bypasses the onChange handler).
+    const refCodeNormalized = (formData.referral_code || '').trim().toUpperCase();
+
     try {
       const response = await axios.post(`${API}/auth/register/simple`, {
         full_name: formData.full_name.trim(),
@@ -143,13 +197,17 @@ const RegisterSimple = () => {
         email: formData.email,
         password: formData.pin, // Backend still uses 'password' field
         role: formData.role,
-        referral_code: formData.referral_code || ''
+        referral_code: refCodeNormalized
       });
 
-      if (formData.referral_code && response.data.referred_by) {
+      if (refCodeNormalized && response.data.referred_by) {
         toast.success(`Registration successful! Referred by ${response.data.referred_by}`, {
           icon: <Gift className="h-5 w-5" />
         });
+        // Attribution succeeded — clear the persisted code so the next
+        // device user (e.g., parent → child on same browser) doesn't
+        // accidentally inherit the previous user's referrer.
+        try { localStorage.removeItem(REF_STORAGE_KEY); } catch { /* noop */ }
       } else {
         toast.success('Registration successful! Please login to continue.');
       }
