@@ -12,6 +12,7 @@ import { PageTitleUpdater } from "@/hooks/usePageTitle";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import UpdateBanner from "@/components/UpdateBanner";
 import SmartAppBanner from "@/components/SmartAppBanner";
+import MobileAppGate from "@/components/MobileAppGate";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import LiveTickerStrip from "@/components/LiveTickerStrip";
@@ -544,7 +545,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
   };
 
   return (
-    <>
+    <MobileAppGate>
       <OfflineIndicator />
       <UpdateBanner />
       <SmartAppBanner />
@@ -854,7 +855,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
         }}
       />
       {/* Duplicate ToastContainer removed - Sonner handles all toasts */}
-    </>
+    </MobileAppGate>
   );
 }
 
