@@ -28443,145 +28443,122 @@ async def update_social_media_settings(settings: SocialMediaSettings):
 
 
 @api_router.post("/admin/backfill-notifications")
-async def backfill_notifications_endpoint():
+async def backfill_notifications_endpoint(stage: Optional[str] = None, max_iter: int = 5000):
     """
     One-time admin migration to repair the notifications collection.
 
-    Two latent bugs caused most user notifications to silently disappear
-    from the user dashboard:
-      (1) `routes/notifications.py::create_notification()` historically wrote
-          only `user_id`, but `GET /api/notifications/{uid}` filters on
-          `user_uid` → ~79% of docs were unreachable.
-      (2) Different writers stored `created_at` as Python `datetime`
-          (BSON `date`) vs ISO string. MongoDB sorts each BSON type
-          independently, so newer string-typed docs would appear AFTER
-          older date-typed docs.
+    Optional query params:
+      • stage: run only ONE of "1", "2", "3a", "3b", "4". Default: all.
+      • max_iter: hard cap on batches per stage (each batch is 200 docs).
 
-    Implementation (Feb 2026, v3): `_id`-paginated chunks so each batch
-    is a short, focused write — no long-held cursor, no MongoDB lock
-    contention with concurrent traffic. The earlier single-`update_many`
-    version timed out on production-sized collections (~thousands of docs).
-    Idempotent — safe to re-run.
+    Implementation (Feb 2026, v4):
+      • `_id`-paginated chunks (200 per batch).
+      • NO upfront `count_documents()` — those are slow on million-row
+        collections and have been causing 10-second MongoDB busy timeouts
+        on production before the migration even starts.
+      • Each stage is independently try/except wrapped so a Stage 4 failure
+        doesn't lose the Stage 1/2/3 progress.
+      • Returns the raw exception class+message in the response (the
+        normal sanitizer would have masked it).
     """
     from pymongo import UpdateOne
-    from bson import ObjectId
 
-    before_total = await db.notifications.count_documents({})
-    before_unreachable = await db.notifications.count_documents({
-        "user_id": {"$exists": True},
-        "user_uid": {"$exists": False},
-    })
-    before_bson_date = await db.notifications.count_documents({
-        "created_at": {"$type": "date"},
-    })
-
-    fixed_user_id_to_uid = 0
-    fixed_uid_to_user_id = 0
-    fixed_read_to_isread = 0
-    fixed_isread_to_read = 0
-    fixed_bson_to_iso = 0
+    fixed = {
+        "user_id_to_user_uid": 0,
+        "user_uid_to_user_id": 0,
+        "read_to_is_read": 0,
+        "is_read_to_read": 0,
+        "bson_date_to_iso_string": 0,
+    }
+    errors = {}
     BATCH = 200
 
-    async def _paginate_and_apply(match_filter, op_builder):
-        """Stream docs matching `match_filter`, build UpdateOne via op_builder,
-        and flush every BATCH rows via bulk_write."""
+    async def _paginate_and_apply(stage_name, match_filter, op_builder):
         nonlocal_count = 0
         last_id = None
         iterations = 0
-        MAX_ITER = 5000  # hard cap at 1,000,000 docs per pass
-        while iterations < MAX_ITER:
-            iterations += 1
-            q = dict(match_filter)
-            if last_id is not None:
-                q["_id"] = {"$gt": last_id}
-            batch = await db.notifications.find(
-                q,
-                {"_id": 1, "user_id": 1, "user_uid": 1, "read": 1, "is_read": 1, "created_at": 1},
-            ).sort("_id", 1).limit(BATCH).to_list(BATCH)
-            if not batch:
-                break
-            ops = []
-            for d in batch:
-                last_id = d["_id"]
-                op = op_builder(d)
-                if op is not None:
-                    ops.append(op)
-            if ops:
-                try:
+        try:
+            while iterations < max_iter:
+                iterations += 1
+                q = dict(match_filter)
+                if last_id is not None:
+                    q["_id"] = {"$gt": last_id}
+                batch = await db.notifications.find(
+                    q,
+                    {"_id": 1, "user_id": 1, "user_uid": 1, "read": 1, "is_read": 1, "created_at": 1},
+                ).sort("_id", 1).limit(BATCH).to_list(BATCH)
+                if not batch:
+                    break
+                ops = []
+                for d in batch:
+                    last_id = d["_id"]
+                    op = op_builder(d)
+                    if op is not None:
+                        ops.append(op)
+                if ops:
                     await db.notifications.bulk_write(ops, ordered=False)
-                except Exception as e:
-                    logging.exception(
-                        "[backfill-notifications] bulk_write failed at iter=%s last_id=%s: %s",
-                        iterations, last_id, e,
-                    )
-                    raise
-                nonlocal_count += len(ops)
-            await asyncio.sleep(0)  # yield to event loop
-        return nonlocal_count
+                    nonlocal_count += len(ops)
+                await asyncio.sleep(0)
+        except Exception as e:
+            errors[stage_name] = f"{type(e).__name__}: {str(e)[:300]}"
+            logging.exception("[backfill-notifications] stage=%s last_id=%s iter=%s failed",
+                              stage_name, last_id, iterations)
+        return nonlocal_count, iterations
 
-    # Stage 1: user_id present, user_uid missing → copy
-    fixed_user_id_to_uid = await _paginate_and_apply(
-        {"user_id": {"$exists": True}, "user_uid": {"$exists": False}},
-        lambda d: UpdateOne({"_id": d["_id"]}, {"$set": {"user_uid": d["user_id"]}}),
-    )
+    stages_to_run = [stage] if stage else ["1", "2", "3a", "3b", "4"]
 
-    # Stage 2: user_uid present, user_id missing → copy reverse
-    fixed_uid_to_user_id = await _paginate_and_apply(
-        {"user_uid": {"$exists": True}, "user_id": {"$exists": False}},
-        lambda d: UpdateOne({"_id": d["_id"]}, {"$set": {"user_id": d["user_uid"]}}),
-    )
+    if "1" in stages_to_run:
+        cnt, it = await _paginate_and_apply(
+            "1",
+            {"user_id": {"$exists": True}, "user_uid": {"$exists": False}},
+            lambda d: UpdateOne({"_id": d["_id"]}, {"$set": {"user_uid": d["user_id"]}}),
+        )
+        fixed["user_id_to_user_uid"] = cnt
 
-    # Stage 3a: `read` present, `is_read` missing → mirror
-    fixed_read_to_isread = await _paginate_and_apply(
-        {"read": {"$exists": True}, "is_read": {"$exists": False}},
-        lambda d: UpdateOne({"_id": d["_id"]}, {"$set": {"is_read": d.get("read", False)}}),
-    )
+    if "2" in stages_to_run:
+        cnt, _ = await _paginate_and_apply(
+            "2",
+            {"user_uid": {"$exists": True}, "user_id": {"$exists": False}},
+            lambda d: UpdateOne({"_id": d["_id"]}, {"$set": {"user_id": d["user_uid"]}}),
+        )
+        fixed["user_uid_to_user_id"] = cnt
 
-    # Stage 3b: reverse mirror
-    fixed_isread_to_read = await _paginate_and_apply(
-        {"is_read": {"$exists": True}, "read": {"$exists": False}},
-        lambda d: UpdateOne({"_id": d["_id"]}, {"$set": {"read": d.get("is_read", False)}}),
-    )
+    if "3a" in stages_to_run:
+        cnt, _ = await _paginate_and_apply(
+            "3a",
+            {"read": {"$exists": True}, "is_read": {"$exists": False}},
+            lambda d: UpdateOne({"_id": d["_id"]}, {"$set": {"is_read": d.get("read", False)}}),
+        )
+        fixed["read_to_is_read"] = cnt
 
-    # Stage 4: normalize BSON-date created_at → ISO string
-    def _date_to_iso_op(d):
-        ts = d.get("created_at")
-        if not isinstance(ts, datetime):
-            return None
-        if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=timezone.utc)
-        return UpdateOne({"_id": d["_id"]}, {"$set": {"created_at": ts.isoformat()}})
-    fixed_bson_to_iso = await _paginate_and_apply(
-        {"created_at": {"$type": "date"}},
-        _date_to_iso_op,
-    )
+    if "3b" in stages_to_run:
+        cnt, _ = await _paginate_and_apply(
+            "3b",
+            {"is_read": {"$exists": True}, "read": {"$exists": False}},
+            lambda d: UpdateOne({"_id": d["_id"]}, {"$set": {"read": d.get("is_read", False)}}),
+        )
+        fixed["is_read_to_read"] = cnt
 
-    after_unreachable = await db.notifications.count_documents({
-        "user_id": {"$exists": True},
-        "user_uid": {"$exists": False},
-    })
-    after_bson_date = await db.notifications.count_documents({
-        "created_at": {"$type": "date"},
-    })
+    if "4" in stages_to_run:
+        def _date_to_iso_op(d):
+            ts = d.get("created_at")
+            if not isinstance(ts, datetime):
+                return None
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            return UpdateOne({"_id": d["_id"]}, {"$set": {"created_at": ts.isoformat()}})
+        cnt, _ = await _paginate_and_apply(
+            "4",
+            {"created_at": {"$type": "date"}},
+            _date_to_iso_op,
+        )
+        fixed["bson_date_to_iso_string"] = cnt
 
     return {
-        "ok": True,
-        "before": {
-            "total": before_total,
-            "unreachable": before_unreachable,
-            "bson_date": before_bson_date,
-        },
-        "after": {
-            "remaining_unreachable": after_unreachable,
-            "remaining_bson_date": after_bson_date,
-        },
-        "fixed": {
-            "user_id_to_user_uid": fixed_user_id_to_uid,
-            "user_uid_to_user_id": fixed_uid_to_user_id,
-            "read_to_is_read": fixed_read_to_isread,
-            "is_read_to_read": fixed_isread_to_read,
-            "bson_date_to_iso_string": fixed_bson_to_iso,
-        },
+        "ok": not errors,
+        "stages_run": stages_to_run,
+        "fixed": fixed,
+        "errors": errors,
     }
 
 
