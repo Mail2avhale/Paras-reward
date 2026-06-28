@@ -62,6 +62,10 @@ const AdminSettings = ({ user }) => {
   // One-time notification backfill (repairs hidden + sort-broken notifications)
   const [runningBackfill, setRunningBackfill] = useState(false);
   const [backfillResult, setBackfillResult] = useState(null);
+
+  // One-time subscription-expiry fields migration (consolidates legacy fields)
+  const [runningExpiryMigration, setRunningExpiryMigration] = useState(false);
+  const [expiryMigrationResult, setExpiryMigrationResult] = useState(null);
   const [togglingManual, setTogglingManual] = useState(false);
   const [togglingPrc, setTogglingPrc] = useState(false);
 
@@ -255,6 +259,29 @@ const AdminSettings = ({ user }) => {
       toast.error(error.response?.data?.detail || 'Backfill failed');
     } finally {
       setRunningBackfill(false);
+    }
+  };
+
+  // One-click migration: consolidates legacy subscription_expires + vip_expiry
+  // fields into the single canonical subscription_expiry. Idempotent.
+  const handleRunExpiryMigration = async () => {
+    if (!window.confirm('Run subscription expiry field migration now? This consolidates legacy fields and is safe to re-run.')) return;
+    setRunningExpiryMigration(true);
+    setExpiryMigrationResult(null);
+    try {
+      const res = await axios.post(`${API}/admin/migrate-subscription-expiry-fields`);
+      setExpiryMigrationResult(res.data);
+      const touched = res.data?.fixed?.users_touched || 0;
+      if (touched > 0) {
+        toast.success(`Expiry migration complete · ${touched} users normalized`);
+      } else {
+        toast.success('Expiry migration complete · nothing left to migrate');
+      }
+    } catch (error) {
+      console.error('Expiry migration error:', error);
+      toast.error(error.response?.data?.detail || 'Migration failed');
+    } finally {
+      setRunningExpiryMigration(false);
     }
   };
   
@@ -538,6 +565,41 @@ const AdminSettings = ({ user }) => {
           {backfillResult && (
             <div className="mt-5 p-4 rounded-lg bg-slate-50 border border-slate-200 text-sm font-mono whitespace-pre-wrap" data-testid="backfill-result">
               {JSON.stringify(backfillResult, null, 2)}
+            </div>
+          )}
+        </Card>
+
+        {/* One-time Maintenance: Subscription Expiry Field Migration */}
+        <Card className="p-6 shadow-xl mt-6 bg-white border-slate-200" data-testid="expiry-migration-card">
+          <div className="flex items-start gap-3 mb-4">
+            <Wrench className="h-7 w-7 text-indigo-600 shrink-0 mt-1" />
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                Subscription Expiry Field Migration
+              </h2>
+              <p className="text-slate-500 mt-2 text-sm">
+                Consolidates the legacy <code className="text-xs bg-slate-100 px-1 rounded">subscription_expires</code>
+                {' '}and <code className="text-xs bg-slate-100 px-1 rounded">vip_expiry</code> fields into the single
+                canonical <code className="text-xs bg-slate-100 px-1 rounded">subscription_expiry</code>. Picks the
+                LATEST of the three dates per user so no active subscription is ever silently downgraded. Writes an
+                audit row per user. Safe to re-run any time (idempotent).
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleRunExpiryMigration}
+            disabled={runningExpiryMigration}
+            data-testid="run-expiry-migration-btn"
+            className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold"
+          >
+            <Wrench className="h-5 w-5 mr-2" />
+            {runningExpiryMigration ? 'Migrating…' : 'Run Subscription Expiry Migration'}
+          </Button>
+
+          {expiryMigrationResult && (
+            <div className="mt-5 p-4 rounded-lg bg-slate-50 border border-slate-200 text-sm font-mono whitespace-pre-wrap" data-testid="expiry-migration-result">
+              {JSON.stringify(expiryMigrationResult, null, 2)}
             </div>
           )}
         </Card>

@@ -28538,6 +28538,143 @@ async def backfill_notifications_endpoint():
         },
     }
 
+
+@api_router.post("/admin/migrate-subscription-expiry-fields")
+async def migrate_subscription_expiry_fields_endpoint():
+    """
+    One-time admin migration to consolidate 3 legacy subscription expiry
+    fields (`subscription_expiry`, `subscription_expires`, `vip_expiry`)
+    into the single canonical `subscription_expiry`.
+
+    Strategy:
+      • For each user that has ANY of the legacy fields, pick the LATEST
+        of the three datetimes (never silently downgrade an active user).
+      • Write that latest value back to `subscription_expiry` and `$unset`
+        the legacy `subscription_expires` + `vip_expiry` keys.
+      • Write an audit row per user to `subscription_expiry_migration_audit`
+        so we can roll back if needed.
+
+    Implementation note: Uses `bulk_write` in batches of 500 operations to
+    avoid per-doc network round-trips (which previously caused Cloudflare
+    504s on production-sized collections). Idempotent — safe to re-run.
+    Gated by AdminAuthMiddleware.
+    """
+    from pymongo import UpdateOne, InsertOne
+
+    def _parse_dt(v):
+        """Coerce any datetime / ISO string to timezone-aware UTC datetime."""
+        if not v:
+            return None
+        if isinstance(v, datetime):
+            return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+        if isinstance(v, str):
+            try:
+                dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
+                return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+            except Exception:
+                return None
+        return None
+
+    before_total = await db.users.count_documents({
+        "$or": [
+            {"subscription_expires": {"$exists": True}},
+            {"vip_expiry": {"$exists": True}},
+        ]
+    })
+
+    cursor = db.users.find(
+        {
+            "$or": [
+                {"subscription_expires": {"$exists": True}},
+                {"vip_expiry": {"$exists": True}},
+            ]
+        },
+        {
+            "_id": 0, "uid": 1, "subscription_expiry": 1,
+            "subscription_expires": 1, "vip_expiry": 1, "subscription_plan": 1,
+        },
+    )
+
+    user_ops = []
+    audit_ops = []
+    touched = 0
+    chose_latest = 0
+    cleared_only = 0
+    now_iso = datetime.now(timezone.utc).isoformat()
+    BATCH = 500
+
+    async for u in cursor:
+        uid = u.get("uid")
+        if not uid:
+            continue
+
+        dates = {
+            "subscription_expiry": _parse_dt(u.get("subscription_expiry")),
+            "subscription_expires": _parse_dt(u.get("subscription_expires")),
+            "vip_expiry": _parse_dt(u.get("vip_expiry")),
+        }
+        valid = {k: v for k, v in dates.items() if v}
+        canonical = max(valid.values()) if valid else None
+
+        audit_ops.append(InsertOne({
+            "uid": uid,
+            "subscription_plan": u.get("subscription_plan"),
+            "before": {k: (v.isoformat() if v else None) for k, v in dates.items()},
+            "chosen": canonical.isoformat() if canonical else None,
+            "migrated_at": now_iso,
+        }))
+
+        set_ops = {}
+        if canonical:
+            set_ops["subscription_expiry"] = canonical.isoformat()
+            chose_latest += 1
+        else:
+            cleared_only += 1
+
+        update = {"$unset": {"subscription_expires": "", "vip_expiry": ""}}
+        if set_ops:
+            update["$set"] = set_ops
+
+        user_ops.append(UpdateOne({"uid": uid}, update))
+        touched += 1
+
+        # Flush in batches to keep memory bounded and avoid huge writes
+        if len(user_ops) >= BATCH:
+            await db.users.bulk_write(user_ops, ordered=False)
+            user_ops = []
+        if len(audit_ops) >= BATCH:
+            await db.subscription_expiry_migration_audit.bulk_write(audit_ops, ordered=False)
+            audit_ops = []
+
+    # Tail flush
+    if user_ops:
+        await db.users.bulk_write(user_ops, ordered=False)
+    if audit_ops:
+        await db.subscription_expiry_migration_audit.bulk_write(audit_ops, ordered=False)
+
+    after_remaining = await db.users.count_documents({
+        "$or": [
+            {"subscription_expires": {"$exists": True}},
+            {"vip_expiry": {"$exists": True}},
+        ]
+    })
+
+    return {
+        "ok": True,
+        "before": {
+            "users_with_legacy_fields": before_total,
+        },
+        "after": {
+            "users_with_legacy_fields": after_remaining,
+        },
+        "fixed": {
+            "users_touched": touched,
+            "users_with_chosen_latest": chose_latest,
+            "users_cleared_only_no_valid_date": cleared_only,
+            "audit_rows_written": touched,
+        },
+    }
+
 # ========== SCRATCH CARD GAME REMOVED ==========
 # Scratch card feature has been removed from the platform
 
