@@ -28476,6 +28476,112 @@ async def update_social_media_settings(settings: SocialMediaSettings):
 
 # ========== END ADMIN SETTINGS ENDPOINTS ==========
 
+
+@api_router.post("/admin/backfill-notifications")
+async def backfill_notifications_endpoint():
+    """
+    One-time admin migration to repair the notifications collection.
+
+    Two latent bugs caused most user notifications to silently disappear
+    from the user dashboard:
+      (1) `routes/notifications.py::create_notification()` historically wrote
+          only `user_id`, but `GET /api/notifications/{uid}` filters on
+          `user_uid` → ~79% of docs were unreachable.
+      (2) Different writers stored `created_at` as Python `datetime`
+          (BSON `date`) vs ISO string. MongoDB sorts each BSON type
+          independently, so newer string-typed docs would appear AFTER
+          older date-typed docs.
+
+    This endpoint mirrors `scripts/backfill_notification_user_uid.py`.
+    Idempotent — safe to invoke multiple times. Gated by AdminAuthMiddleware.
+    """
+    from datetime import timezone as _tz
+
+    before_total = await db.notifications.count_documents({})
+    before_unreachable = await db.notifications.count_documents({
+        "user_id": {"$exists": True},
+        "user_uid": {"$exists": False},
+    })
+
+    # Stage 1: copy user_id -> user_uid
+    s1 = 0
+    cursor = db.notifications.find(
+        {"user_id": {"$exists": True}, "user_uid": {"$exists": False}},
+        {"_id": 1, "user_id": 1},
+    )
+    async for d in cursor:
+        await db.notifications.update_one(
+            {"_id": d["_id"]},
+            {"$set": {"user_uid": d["user_id"]}},
+        )
+        s1 += 1
+
+    # Stage 2: copy user_uid -> user_id
+    s2 = 0
+    cursor = db.notifications.find(
+        {"user_uid": {"$exists": True}, "user_id": {"$exists": False}},
+        {"_id": 1, "user_uid": 1},
+    )
+    async for d in cursor:
+        await db.notifications.update_one(
+            {"_id": d["_id"]},
+            {"$set": {"user_id": d["user_uid"]}},
+        )
+        s2 += 1
+
+    # Stage 3: mirror read flags (aggregation-style update, MongoDB >= 4.2)
+    r3a = await db.notifications.update_many(
+        {"read": {"$exists": True}, "is_read": {"$exists": False}},
+        [{"$set": {"is_read": "$read"}}],
+    )
+    r3b = await db.notifications.update_many(
+        {"is_read": {"$exists": True}, "read": {"$exists": False}},
+        [{"$set": {"read": "$is_read"}}],
+    )
+
+    # Stage 4: normalize BSON-date -> ISO string for stable sort order
+    s4 = 0
+    cursor = db.notifications.find(
+        {"created_at": {"$type": "date"}},
+        {"_id": 1, "created_at": 1},
+    )
+    async for d in cursor:
+        ts = d["created_at"]
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=_tz.utc)
+        await db.notifications.update_one(
+            {"_id": d["_id"]},
+            {"$set": {"created_at": ts.isoformat()}},
+        )
+        s4 += 1
+
+    after_unreachable = await db.notifications.count_documents({
+        "user_id": {"$exists": True},
+        "user_uid": {"$exists": False},
+    })
+    after_bson_date = await db.notifications.count_documents({
+        "created_at": {"$type": "date"},
+    })
+
+    return {
+        "ok": True,
+        "before": {
+            "total": before_total,
+            "unreachable": before_unreachable,
+        },
+        "after": {
+            "remaining_unreachable": after_unreachable,
+            "remaining_bson_date": after_bson_date,
+        },
+        "fixed": {
+            "user_id_to_user_uid": s1,
+            "user_uid_to_user_id": s2,
+            "read_to_is_read": r3a.modified_count,
+            "is_read_to_read": r3b.modified_count,
+            "bson_date_to_iso_string": s4,
+        },
+    }
+
 # ========== SCRATCH CARD GAME REMOVED ==========
 # Scratch card feature has been removed from the platform
 
