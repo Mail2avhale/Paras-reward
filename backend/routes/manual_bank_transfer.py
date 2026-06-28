@@ -25,6 +25,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, validator
 import os
+# Canonical helper — read user expiry through this only.
+from utils.subscription_expiry import get_user_expiry
 
 # 30 s in-process cache for /admin/requests — list endpoint expensive due to
 # per-user redeem-limit enrichment.
@@ -647,15 +649,9 @@ async def create_redeem_request(request: RedeemRequest):
             )
         
         # CHECK B: Subscription must not be expired
-        sub_expiry = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
-        if sub_expiry:
+        expiry_dt = get_user_expiry(user)
+        if expiry_dt:
             try:
-                if isinstance(sub_expiry, str):
-                    expiry_dt = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
-                else:
-                    expiry_dt = sub_expiry
-                if expiry_dt.tzinfo is None:
-                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
                 if expiry_dt < now:
                     days_expired = (now - expiry_dt).days
                     raise HTTPException(
@@ -1025,7 +1021,7 @@ async def get_all_requests(
                 return
             req_user = await db.users.find_one(
                 {"uid": req_user_id},
-                {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expires": 1, "vip_expiry": 1, "created_at": 1}
+                {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "created_at": 1}
             )
             if not req_user:
                 req["subscription_active"] = False
@@ -1041,19 +1037,9 @@ async def get_all_requests(
             plan = (req_user.get("subscription_plan") or "explorer").lower()
             is_active = plan not in ["explorer", "free", ""]
             if is_active:
-                expiry = req_user.get("subscription_expiry") or req_user.get("subscription_expires") or req_user.get("vip_expiry")
-                if expiry:
-                    try:
-                        if isinstance(expiry, str):
-                            exp_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
-                        else:
-                            exp_dt = expiry
-                        if exp_dt.tzinfo is None:
-                            exp_dt = exp_dt.replace(tzinfo=timezone.utc)
-                        if exp_dt < datetime.now(timezone.utc):
-                            is_active = False
-                    except Exception:
-                        pass
+                exp_dt = get_user_expiry(req_user)
+                if exp_dt and exp_dt < datetime.now(timezone.utc):
+                    is_active = False
             req["subscription_active"] = is_active
             req["subscription_plan"] = plan
 

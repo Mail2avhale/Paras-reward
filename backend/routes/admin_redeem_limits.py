@@ -23,6 +23,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from utils.subscription_expiry import get_user_expiry, is_subscription_active
+
 router = APIRouter()
 user_bank_router = APIRouter()  # NOT under /admin — for self-service profile saves
 
@@ -58,19 +60,7 @@ def _is_active_elite(user: dict) -> bool:
         return False
     if user.get("subscription_expired", False):
         return False
-    expiry = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
-    if not expiry:
-        return False
-    try:
-        if isinstance(expiry, datetime):
-            exp_dt = expiry if expiry.tzinfo else expiry.replace(tzinfo=timezone.utc)
-        else:
-            exp_dt = datetime.fromisoformat(str(expiry).replace("Z", "+00:00"))
-            if exp_dt.tzinfo is None:
-                exp_dt = exp_dt.replace(tzinfo=timezone.utc)
-        return exp_dt > datetime.now(timezone.utc)
-    except Exception:
-        return False
+    return is_subscription_active(user)
 
 
 async def _row_for_user(user: dict) -> dict:
@@ -159,7 +149,7 @@ async def list_redeem_limit_users(
     projection = {
         "_id": 0, "uid": 1, "name": 1, "mobile": 1, "phone": 1,
         "prc_balance": 1, "subscription_plan": 1, "subscription_expiry": 1,
-        "subscription_expires": 1, "vip_expiry": 1, "subscription_expired": 1,
+        "subscription_expired": 1,
         "bank_account_holder_name": 1, "bank_account_number": 1,
         "bank_ifsc_code": 1, "bank_name": 1, "upi_id": 1,
         "phonepe_gpay_number": 1,
@@ -286,7 +276,7 @@ async def export_redeem_limits_excel(
     projection = {
         "_id": 0, "uid": 1, "name": 1, "mobile": 1, "phone": 1,
         "prc_balance": 1, "subscription_plan": 1, "subscription_expiry": 1,
-        "subscription_expires": 1, "vip_expiry": 1, "subscription_expired": 1,
+        "subscription_expired": 1,
         "bank_account_holder_name": 1, "bank_account_number": 1,
         "bank_ifsc_code": 1, "bank_name": 1, "upi_id": 1,
         "phonepe_gpay_number": 1,

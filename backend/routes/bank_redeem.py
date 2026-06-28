@@ -12,6 +12,8 @@ from datetime import datetime, timezone, timedelta
 import uuid
 import logging
 
+from utils.subscription_expiry import get_user_expiry
+
 from routes.idempotency import (
     check_and_claim_idempotency_key,
     store_idempotency_response,
@@ -631,19 +633,10 @@ async def create_withdrawal_request(user_id: str, request: Request):
         )
     
     # Check if subscription is expired
-    expiry = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
-    if expiry:
+    expiry_dt = get_user_expiry(user)
+    if expiry_dt:
         try:
-            if isinstance(expiry, str):
-                expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
-            else:
-                expiry_dt = expiry
-            
-            if expiry_dt.tzinfo is None:
-                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-            
             now = datetime.now(timezone.utc)
-            
             if expiry_dt < now:
                 days_expired = (now - expiry_dt).days
                 raise HTTPException(

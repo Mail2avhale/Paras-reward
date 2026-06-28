@@ -9,6 +9,33 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 15, 2026 — EIGHTEENTH FIX: Subscription Legacy Fields Phase 2)
+- 🧹 **MASSIVE TECH-DEBT CLEANUP**: Eliminated 76% of legacy `subscription_expires` / `vip_expiry` references across the production backend.
+- **Scope**: Audit count: 206 references at start, **49 remaining** at end (all intentional — test files validating fallback behavior, migration scripts, the canonical helper itself, and 2 `DEPRECATED` Pydantic schema fields kept for mobile-app API backward-compat).
+- **Files refactored (13)**:
+  - `server.py` — **90 → 2** (only DEPRECATED Pydantic fields remain)
+  - `routes/razorpay_payments.py` — **38 → 0** (full clean)
+  - `routes/admin_subscription.py` — **9 → 0** (pilot file)
+  - `routes/mining.py` — **4 → 0**
+  - `routes/admin_misc.py` — **4 → 0**
+  - `routes/manual_bank_transfer.py` — **3 → 0**
+  - `routes/admin_redeem_limits.py` — **3 → 0** (also adopted `is_subscription_active()`)
+  - `routes/pool_wallet.py` — **2 → 0**
+  - `routes/gift_subscription.py` — **2 → 0** (adopted `is_subscription_active()`)
+  - `routes/bbps_services.py` — **1 → 0**
+  - `routes/bank_redeem.py` — **1 → 0**
+  - `routes/auth.py` — **1 → 0** (login expiry-downgrade flow)
+  - `utils/helpers.py` — **1 → 0**
+- **Pattern changes**:
+  - **Reads**: Inline `user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")` chains → single `get_user_expiry(user)` helper call (returns timezone-aware datetime, falls back to legacy fields for un-migrated rows). ~60+ sites.
+  - **Writes**: Removed legacy `"subscription_expires": <datetime>` and `"vip_expiry": <iso_str>` from `$set` dictionaries. Canonical write is now `subscription_expiry: <iso_str>` only. ~25+ sites.
+  - **Projections**: Stripped `"subscription_expires": 1, "vip_expiry": 1` from MongoDB `find()` projections. ~10 sites.
+  - **Queries**: Replaced `{"subscription_expires": {"$gt": now}}` filters with `{"subscription_expiry": {"$gt": now}}` to match canonical schema. ~5 sites.
+  - **`$unset`/reset writes**: Removed `subscription_expires: None, vip_expiry: None` siblings.
+- **Smoke test (preview)**: Login (`9970100782`) → user dashboard shows correct plan/expiry. Admin login → `/admin/subscription/{uid}/details` returns full current plan (132 days remaining), upcoming plans, history — all driven by `get_user_expiry()`. Notifications regression unchanged (7/7).
+- **Unblocked**: Razorpay Auto-renew Subscriptions can now be safely implemented next without dragging legacy field debt into new code.
+
+
 ## Implemented (Feb 15, 2026 — SEVENTEENTH FIX: Admin one-click Notification Backfill UI)
 - 🔧 Added a one-click **"Run Notification Backfill"** button inside `/admin/settings` page (`pages/AdminSettings.js`) — placed right after the Social Media Links card.
 - **Why**: The migration script `scripts/backfill_notification_user_uid.py` could only be run from a shell with DB access. On production, the admin user wanted to repair legacy notifications without SSH-ing into the pod or running curl with a JWT.

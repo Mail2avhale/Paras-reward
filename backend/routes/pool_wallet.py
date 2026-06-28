@@ -13,6 +13,8 @@ import math
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
+
+from utils.subscription_expiry import get_user_expiry
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from pymongo import ReturnDocument
@@ -223,24 +225,13 @@ async def _distribute_pool_to_core_team_inner(triggered_by: str = "auto"):
             uid = m.get("uid")
             user = await db.users.find_one(
                 {"uid": uid, "subscription_plan": {"$in": ["elite", "vip", "startup", "growth", "pro"]}},
-                {"_id": 0, "uid": 1, "name": 1, "subscription_expired": 1, "subscription_expiry": 1, "subscription_expires": 1, "subscription_status": 1}
+                {"_id": 0, "uid": 1, "name": 1, "subscription_expired": 1, "subscription_expiry": 1, "subscription_status": 1}
             )
             if not user:
                 continue
 
             # Check real subscription validity using expiry date
-            expiry = user.get("subscription_expiry") or user.get("subscription_expires")
-            expiry_dt = None
-            if expiry:
-                try:
-                    if isinstance(expiry, str):
-                        expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00').replace(' ', 'T'))
-                    else:
-                        expiry_dt = expiry
-                    if expiry_dt.tzinfo is None:
-                        expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-                except Exception:
-                    expiry_dt = None
+            expiry_dt = get_user_expiry(user)
 
             is_really_active = (
                 expiry_dt is not None and expiry_dt > now

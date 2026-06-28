@@ -43,6 +43,8 @@ from fraud_detection import FraudDetector, get_client_ip
 # Import cache manager and database indexes
 from cache_manager import cache, admin_stats_key
 from db_indexes import create_performance_indexes, get_index_stats
+# Canonical subscription expiry helper — read user expiry through this only.
+from utils.subscription_expiry import get_user_expiry
 
 # Import routers
 from routes.referral import router as referral_router, set_db as set_referral_db, set_cache as set_referral_cache
@@ -2479,7 +2481,7 @@ async def auto_sync_razorpay_payments():
                         old_plan = user.get("subscription_plan")
                         
                         # Check BOTH field names
-                        existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                        existing_expiry = get_user_expiry(user)
                         if existing_expiry:
                             if isinstance(existing_expiry, str):
                                 try:
@@ -2510,7 +2512,6 @@ async def auto_sync_razorpay_payments():
                                 "$set": {
                                     "subscription_plan": plan_name,
                                     "subscription_start": now,
-                                    "subscription_expires": expiry_date,
                                     "subscription_expiry": expiry_date.isoformat(),
                                     "membership_type": "vip",
                                     "subscription_status": "active",
@@ -2737,7 +2738,7 @@ async def auto_sync_captured_from_razorpay():
                 remaining_days = 0
                 user_name = user.get("name", "Unknown")
                 
-                expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                expiry = get_user_expiry(user)
                 if expiry:
                     try:
                         if isinstance(expiry, str):
@@ -2781,9 +2782,7 @@ async def auto_sync_captured_from_razorpay():
                             "subscription_type": plan_type,
                             "subscription_status": "active",
                             "subscription_start": now.isoformat(),
-                            "subscription_expires": new_expiry,
                             "subscription_expiry": new_expiry.isoformat(),
-                            "vip_expiry": new_expiry.isoformat(),
                             "membership_type": "vip",
                             "last_payment_id": payment_id,
                             "last_payment_amount": amount,
@@ -2957,8 +2956,8 @@ async def auto_expire_subscriptions():
                 "subscription_plan": {"$nin": ["explorer", "free", "", None]},
                 "subscription_expired": {"$ne": True}
             },
-            {"_id": 0, "uid": 1, "subscription_plan": 1, "subscription_expiry": 1, 
-             "subscription_expires": 1, "vip_expiry": 1, "subscription_status": 1}
+            {"_id": 0, "uid": 1, "subscription_plan": 1, "subscription_expiry": 1,
+             "subscription_status": 1}
         ).to_list(500)
         
         if not paid_users:
@@ -2971,7 +2970,7 @@ async def auto_expire_subscriptions():
                 continue
             
             # Check ALL expiry fields
-            expiry_val = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
+            expiry_val = get_user_expiry(user)
             
             if expiry_val:
                 # CASE 1: Has expiry date - check if expired
@@ -3099,12 +3098,12 @@ async def auto_expire_subscriptions():
                         pass
                 
                 # Check user state: is it safe to activate?
-                u = await db.users.find_one({"uid": uid}, {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expires": 1, "subscription_expired": 1})
+                u = await db.users.find_one({"uid": uid}, {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expired": 1})
                 if not u:
                     continue
                 
                 u_plan = u.get("subscription_plan")
-                u_exp_val = u.get("subscription_expiry") or u.get("subscription_expires")
+                u_exp_val = u.get("subscription_expiry")
                 u_exp_dt = None
                 if u_exp_val:
                     try:
@@ -5772,24 +5771,15 @@ async def check_vip_service_access(uid: str, service_name: str = "service") -> D
             "is_expired": False
         }
     
-    # Check ALL expiry fields (vip_expiry, subscription_expiry, subscription_expires)
-    expiry_str = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
-    
-    if not expiry_str:
+    # Canonical expiry (helper falls back to legacy fields for un-migrated rows)
+    expiry_dt = get_user_expiry(user)
+
+    if not expiry_dt:
         # No expiry date - allow (legacy users)
         return {"allowed": True, "reason": ""}
-    
+
     try:
-        if isinstance(expiry_str, str):
-            expiry_dt = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
-        else:
-            expiry_dt = expiry_str
-        
-        if expiry_dt.tzinfo is None:
-            expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-        
         now = datetime.now(timezone.utc)
-        
         if expiry_dt < now:
             # Subscription expired - block service
             days_expired = (now - expiry_dt).days
@@ -6591,10 +6581,9 @@ async def login(
     # Check subscription expiry and add renewal message
     subscription_expiry_message = None
     if is_paid_subscriber(user):
-        expiry_str = user.get("subscription_expiry") or user.get("subscription_expires")
-        if expiry_str:
+        expiry_date = get_user_expiry(user)
+        if expiry_date:
             try:
-                expiry_date = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
                 now = datetime.now(timezone.utc)
                 if expiry_date < now:
                     days_expired = (now - expiry_date).days
@@ -8397,7 +8386,7 @@ async def get_user_dashboard_combined(uid: str, request: Request):
     
     # CHECK SUBSCRIPTION EXPIRY in dashboard too
     if subscription_plan and subscription_plan.lower() not in ["explorer", "free", ""]:
-        expiry_val = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
+        expiry_val = get_user_expiry(user)
         should_downgrade = False
         
         if expiry_val:
@@ -8824,7 +8813,7 @@ async def get_user_data(uid: str, request: Request):
     
     # CHECK SUBSCRIPTION EXPIRY: If user has active paid plan, verify it hasn't expired
     if subscription_plan and subscription_plan.lower() not in ["explorer", "free", ""]:
-        expiry_val = user.get("subscription_expiry") or user.get("subscription_expires")
+        expiry_val = get_user_expiry(user)
         if expiry_val:
             try:
                 if isinstance(expiry_val, str):
@@ -9396,7 +9385,7 @@ async def get_user_subscription_history(uid: str, request: Request):
         except jwt.InvalidTokenError:
             pass
     
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "subscription_plan": 1, "subscription_start": 1, "subscription_expiry": 1, "subscription_expires": 1})
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "subscription_plan": 1, "subscription_start": 1, "subscription_expiry": 1})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -9511,17 +9500,11 @@ async def get_user_subscription_history(uid: str, request: Request):
     duration_map = {"monthly": 28, "quarterly": 84, "half_yearly": 168, "yearly": 365}
     
     sub_plan = user.get("subscription_plan", "explorer")
-    sub_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
-    
+
     # Determine if user currently has an active subscription
-    current_expiry_dt = None
-    if sub_plan and sub_plan != "explorer" and sub_expiry:
-        try:
-            current_expiry_dt = datetime.fromisoformat(str(sub_expiry).replace('Z', '+00:00'))
-            if current_expiry_dt.tzinfo is None:
-                current_expiry_dt = current_expiry_dt.replace(tzinfo=timezone.utc)
-        except Exception:
-            pass
+    current_expiry_dt = get_user_expiry(user)
+    if not (sub_plan and sub_plan != "explorer"):
+        current_expiry_dt = None
     
     successful = [h for h in history if h.get("status") in ("completed", "approved", "paid")]
     
@@ -9574,7 +9557,7 @@ async def get_user_subscription_history(uid: str, request: Request):
             "plan_name": sub_plan.title(),
             "status": "ongoing" if current_expiry_dt > now else "expired",
             "start_date": str(sub_start) if sub_start else None,
-            "expiry_date": str(sub_expiry),
+            "expiry_date": current_expiry_dt.isoformat() if current_expiry_dt else None,
             "days_remaining": max(0, (current_expiry_dt - now).days) if current_expiry_dt > now else 0,
             "amount": 0,
             "payment_method": "Admin Activated",
@@ -9671,7 +9654,7 @@ async def get_admin_razorpay_subscriptions(
     if user_ids:
         users_list = await db.users.find(
             {"uid": {"$in": user_ids}}, 
-            {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1, "subscription_plan": 1, "subscription_expires": 1, "subscription_expiry": 1}
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1, "subscription_plan": 1, "subscription_expiry": 1}
         ).to_list(len(user_ids))
         users_map = {u["uid"]: u for u in users_list}
     
@@ -9682,7 +9665,7 @@ async def get_admin_razorpay_subscriptions(
         
         # Get user's current subscription status
         current_plan = user.get("subscription_plan") if user else None
-        current_expiry = user.get("subscription_expires") or user.get("subscription_expiry") if user else None
+        current_expiry = get_user_expiry(user) if user else None
         
         # Extract UTR/RRN from acquirer_data
         acquirer_data = order.get("acquirer_data", {})
@@ -9818,7 +9801,7 @@ async def cleanup_fraudulent_razorpay_subscriptions(request: Request):
                     },
                     "$unset": {
                         "subscription_start": "",
-                        "subscription_expires": "",
+                        "subscription_expiry": "",
                         "last_payment_id": "",
                         "last_payment_date": ""
                     }
@@ -10011,7 +9994,7 @@ async def manual_sync_razorpay_payments():
                         remaining_days = 0
                         
                         if user:
-                            expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+                            expiry = get_user_expiry(user)
                             if expiry:
                                 try:
                                     exp_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
@@ -10034,7 +10017,6 @@ async def manual_sync_razorpay_payments():
                                     "subscription_type": plan_type,
                                     "subscription_status": "active",
                                     "subscription_start": now.isoformat(),
-                                    "subscription_expires": new_expiry.isoformat(),
                                     "subscription_expiry": new_expiry.isoformat(),
                                     "razorpay_subscription_id": order_id,
                                     "membership_type": plan_name,
@@ -10276,7 +10258,7 @@ async def manual_activate_subscription(request: Request):
         
         # Check for existing subscription - add remaining days
         remaining_days = 0
-        expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+        expiry = get_user_expiry(user)
         if expiry:
             try:
                 if isinstance(expiry, str):
@@ -10320,9 +10302,7 @@ async def manual_activate_subscription(request: Request):
                     "subscription_type": plan_type,
                     "subscription_status": "active",
                     "subscription_start": now.isoformat(),
-                    "subscription_expires": new_expiry,
                     "subscription_expiry": new_expiry.isoformat(),
-                    "vip_expiry": new_expiry.isoformat(),
                     "membership_type": "vip",
                     "last_payment_id": payment_id,
                     "last_payment_amount": amount,
@@ -10528,7 +10508,7 @@ async def bulk_sync_captured_payments(request: Request):
                     user_email = user.get("email", "Unknown")
                     
                     # Check for existing active subscription
-                    expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                    expiry = get_user_expiry(user)
                     if expiry:
                         try:
                             if isinstance(expiry, str):
@@ -10569,9 +10549,7 @@ async def bulk_sync_captured_payments(request: Request):
                             "subscription_type": plan_type,
                             "subscription_status": "active",
                             "subscription_start": now.isoformat(),
-                            "subscription_expires": new_expiry,
                             "subscription_expiry": new_expiry.isoformat(),
-                            "vip_expiry": new_expiry.isoformat(),
                             "membership_type": "vip",
                             "last_payment_id": payment_id,
                             "last_payment_amount": amount,
@@ -10751,7 +10729,7 @@ async def sync_single_razorpay_order(request: Request):
         if user:
             user_name = user.get("name", "Unknown")
             user_email = user.get("email", "Unknown")
-            expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+            expiry = get_user_expiry(user)
             if expiry:
                 try:
                     if isinstance(expiry, str):
@@ -10777,9 +10755,7 @@ async def sync_single_razorpay_order(request: Request):
                     "subscription_type": plan_type,
                     "subscription_status": "active",
                     "subscription_start": now.isoformat(),
-                    "subscription_expires": new_expiry,
                     "subscription_expiry": new_expiry.isoformat(),
-                    "vip_expiry": new_expiry.isoformat(),
                     "membership_type": "vip",
                     "last_payment_id": payment_id,
                     "last_payment_amount": amount,
@@ -10986,7 +10962,7 @@ async def restore_users_from_vip_payments(request: Request):
                             "subscription_plan": plan,
                             "membership_type": "vip",
                             "subscription_status": "active",
-                            "subscription_expires": expiry_date,
+                            "subscription_expiry": expiry_date.isoformat() if hasattr(expiry_date, "isoformat") else expiry_date,
                             "restored_from": "vip_payments",
                             "restored_at": datetime.now(timezone.utc).isoformat()
                         },
@@ -12621,7 +12597,7 @@ async def user_activate_upcoming(uid: str):
     User-facing: Manually activate an upcoming plan.
     Only works when current plan is expired/explorer AND upcoming plan exists.
     """
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expires": 1, "subscription_expired": 1})
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1, "subscription_expired": 1})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -12630,7 +12606,7 @@ async def user_activate_upcoming(uid: str):
 
     # Check if current plan is still active (non-expired paid plan)
     if plan not in ["explorer", "free", "", None] and not is_expired:
-        expiry_val = user.get("subscription_expiry") or user.get("subscription_expires")
+        expiry_val = get_user_expiry(user)
         if expiry_val:
             from routes.admin_subscription import parse_expiry
             expiry_dt = parse_expiry(expiry_val)
@@ -12887,7 +12863,7 @@ async def subscription_pay_with_prc(request: Request):
         now = datetime.now(timezone.utc)
         
         # Check if user has active subscription
-        current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        current_expiry = get_user_expiry(user)
         has_active_plan = False
         expiry_dt = None
         is_expired_flag = user.get("subscription_expired", False)
@@ -13002,7 +12978,6 @@ async def subscription_pay_with_prc(request: Request):
                         "$set": {
                             "subscription_plan": "elite",
                             "subscription_expiry": new_expiry,
-                            "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
                             "subscription_start": now.isoformat(),
                             "membership_type": "vip",
                             "subscription_status": "active",
@@ -13275,7 +13250,7 @@ async def _sender_is_active_elite(user: dict) -> bool:
     if user.get("subscription_expired", False):
         return False
     now = datetime.now(timezone.utc)
-    expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+    expiry = get_user_expiry(user)
     if not expiry:
         return False
     try:
@@ -13530,7 +13505,7 @@ async def sale_elite_lookup_beneficiary(request: SaleEliteLookupRequest):
     beneficiary_plan = (beneficiary.get("subscription_plan") or "explorer").lower()
     beneficiary_has_active_elite = False
     current_expiry_display = None
-    expiry = beneficiary.get("subscription_expiry") or beneficiary.get("subscription_expires")
+    expiry = get_user_expiry(beneficiary)
     if expiry and not beneficiary.get("subscription_expired", False):
         try:
             if isinstance(expiry, str):
@@ -13787,7 +13762,7 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
         duration_days = 28
 
         # ===== Beneficiary: activate OR queue =====
-        benef_current_expiry = beneficiary.get("subscription_expiry") or beneficiary.get("subscription_expires")
+        benef_current_expiry = get_user_expiry(beneficiary)
         benef_plan = (beneficiary.get("subscription_plan") or "explorer").lower()
         benef_expired_flag = beneficiary.get("subscription_expired", False)
 
@@ -13838,7 +13813,6 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
                         "$set": {
                             "subscription_plan": "elite",
                             "subscription_expiry": new_expiry,
-                            "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
                             "subscription_start": now.isoformat(),
                             "membership_type": "vip",
                             "subscription_status": "active",
@@ -14382,7 +14356,7 @@ async def admin_force_activate_elite_prc(request: Request):
         # 6) Cooldown / duration / active-plan handling (mirrors normal flow)
         duration_days = 28
         now = datetime.now(timezone.utc)
-        current_expiry = target_user.get("subscription_expiry") or target_user.get("subscription_expires")
+        current_expiry = get_user_expiry(target_user)
         has_active_plan = False
         expiry_dt = None
         is_expired_flag = target_user.get("subscription_expired", False)
@@ -14441,7 +14415,6 @@ async def admin_force_activate_elite_prc(request: Request):
                     {"$set": {
                         "subscription_plan": "elite",
                         "subscription_expiry": new_expiry,
-                        "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
                         "subscription_start": now.isoformat(),
                         "membership_type": "vip",
                         "subscription_status": "active",
@@ -14714,7 +14687,7 @@ async def admin_force_activate_preview(identifier: str):
             cooldown_reason = f"Cooldown: must wait {wait_days:.0f} more days"
 
         # Active plan?
-        current_expiry = target_user.get("subscription_expiry") or target_user.get("subscription_expires")
+        current_expiry = get_user_expiry(target_user)
         is_expired_flag = target_user.get("subscription_expired", False)
         has_active_plan = False
         if current_expiry and not is_expired_flag:
@@ -15349,7 +15322,7 @@ async def check_subscription_fraud(user_id: str, days: int = 10):
         
         # Check if current subscription is still active
         if user:
-            current_expiry = user.get("subscription_expiry") or user.get("vip_expiry")
+            current_expiry = get_user_expiry(user)
             if current_expiry:
                 try:
                     if isinstance(current_expiry, str):
@@ -15564,7 +15537,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
         # EXTEND LOGIC: Add new days to existing subscription if not expired
         start_date = now
         if user:
-            current_expiry = user.get("subscription_expiry") or user.get("vip_expiry")
+            current_expiry = get_user_expiry(user)
             if current_expiry:
                 try:
                     # Parse current expiry date
@@ -15599,7 +15572,6 @@ async def approve_vip_payment(payment_id: str, request: Request):
                             "membership_type": "vip",  # Legacy compatibility
                             "subscription_plan": subscription_plan,
                             "subscription_expiry": new_expiry,
-                            "vip_expiry": new_expiry,  # Legacy compatibility
                             "vip_activated_at": now.isoformat(),
                             "last_subscription_renewed": now.isoformat(),
                             "previous_subscription_plan": previous_plan,  # Track previous plan
@@ -15806,7 +15778,11 @@ async def migrate_vip_users_to_subscription(request: Request):
         for user in legacy_vip_users:
             # Migrate to startup plan (most common VIP equivalent)
             # Preserve existing expiry if set
-            expiry = user.get("vip_expiry") or user.get("membership_expiry") or user.get("subscription_expiry")
+            existing_dt = get_user_expiry(user) or (user.get("membership_expiry") if isinstance(user.get("membership_expiry"), str) else None)
+            if existing_dt and hasattr(existing_dt, "isoformat"):
+                expiry = existing_dt.isoformat()
+            else:
+                expiry = existing_dt
             if not expiry:
                 # Set 28 days from now if no expiry (1 month = 28 days)
                 expiry = (now + timedelta(days=28)).isoformat()
@@ -16464,8 +16440,7 @@ async def delete_vip_payment(payment_id: str, request: Request):
                 {
                     "$set": {
                         "subscription_plan": "explorer",
-                        "subscription_expiry": None,
-                        "vip_expiry": None
+                        "subscription_expiry": None
                     }
                 }
             )
@@ -19328,7 +19303,7 @@ async def fix_double_subscriptions_preview():
                 continue
             
             # Calculate actual days
-            expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+            expiry = get_user_expiry(user)
             payment_date = datetime.fromtimestamp(payment.get("created_at", 0), tz=timezone.utc)
             
             if expiry:
@@ -19444,12 +19419,12 @@ async def find_today_double_subscriptions():
         users_paid_today = await db.users.find({
             "last_payment_date": {"$gte": today.isoformat()}
         }, {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1, "subscription_plan": 1, 
-            "subscription_expires": 1, "subscription_expiry": 1, "last_payment_id": 1, 
+            "subscription_expiry": 1, "last_payment_id": 1, 
             "last_payment_date": 1, "previous_remaining_days_added": 1}).to_list(100)
         
         suspicious_users = []
         for u in users_paid_today:
-            expiry = u.get("subscription_expires") or u.get("subscription_expiry")
+            expiry = u.get("subscription_expiry")
             if expiry:
                 try:
                     if isinstance(expiry, str):
@@ -19537,7 +19512,7 @@ async def fix_user_subscription_days(request: Request):
         now = datetime.now(timezone.utc)
         
         # Get current expiry
-        current_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+        current_expiry = get_user_expiry(user)
         if not current_expiry:
             raise HTTPException(status_code=400, detail="User has no active subscription")
         
@@ -19558,9 +19533,7 @@ async def fix_user_subscription_days(request: Request):
             {"uid": user_id},
             {
                 "$set": {
-                    "subscription_expires": new_expiry,
                     "subscription_expiry": new_expiry.isoformat(),
-                    "vip_expiry": new_expiry.isoformat(),
                     "double_subscription_fixed": True,
                     "days_removed": days_to_remove,
                     "fixed_at": now.isoformat(),
@@ -19642,9 +19615,7 @@ async def fix_double_subscriptions_execute(request: Request):
                     {"uid": user_id},
                     {
                         "$set": {
-                            "subscription_expires": correct_expiry,
                             "subscription_expiry": correct_expiry.isoformat(),
-                            "vip_expiry": correct_expiry.isoformat(),
                             "double_subscription_fixed": True,
                             "fixed_at": datetime.now(timezone.utc).isoformat(),
                             "fixed_by": admin_id,
@@ -21304,7 +21275,6 @@ async def admin_delete_all_user_subscriptions(uid: str):
             "membership_type": "free",
             "subscription_expiry": None,
             "subscription_days": 0,
-            "vip_expiry": None,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
@@ -22279,7 +22249,7 @@ async def get_user_360_view(query: str, request: Request):
         })
     
     # 5. Subscription expiry in far future (manipulation)
-    expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+    expiry = get_user_expiry(user)
     if expiry:
         try:
             if isinstance(expiry, str):
@@ -22763,7 +22733,7 @@ async def admin_update_subscription(request: Request):
     timestamp = datetime.now(timezone.utc).isoformat()
     old_data = {
         "plan": user.get("subscription_plan"),
-        "expiry": user.get("subscription_expiry") or user.get("subscription_expires"),
+        "expiry": user.get("subscription_expiry"),
         "membership_type": user.get("membership_type")
     }
     
@@ -22793,7 +22763,6 @@ async def admin_update_subscription(request: Request):
             new_expiry_date = datetime.fromisoformat(new_expiry.replace('Z', '+00:00'))
         
         update_fields["subscription_expiry"] = new_expiry_date.isoformat()
-        update_fields["subscription_expires"] = new_expiry_date
         action_description = f"Expiry changed from {old_data['expiry']} to {new_expiry_date.isoformat()}"
     
     elif action == "cancel":
@@ -22806,7 +22775,7 @@ async def admin_update_subscription(request: Request):
     
     elif action == "extend":
         days_to_add = data.get("days", 28)
-        current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        current_expiry = get_user_expiry(user)
         
         if current_expiry:
             if isinstance(current_expiry, str):
@@ -22817,7 +22786,6 @@ async def admin_update_subscription(request: Request):
         
         new_expiry_date = base_date + timedelta(days=days_to_add)
         update_fields["subscription_expiry"] = new_expiry_date.isoformat()
-        update_fields["subscription_expires"] = new_expiry_date
         action_description = f"Extended by {days_to_add} days (new expiry: {new_expiry_date.date()})"
     
     else:
@@ -22941,7 +22909,7 @@ async def run_bulk_fix_background(job_id: str, batch_size: int = 50):
             users = await db.users.find(
                 {},
                 {"uid": 1, "name": 1, "email": 1, "mobile": 1, "kyc_status": 1, "subscription_plan": 1, 
-                 "subscription_expires": 1, "subscription_expiry": 1, "vip_expiry": 1,
+                 "subscription_expiry": 1,
                  "prc_balance": 1, "membership_type": 1, "mining_start_time": 1, "referral_code": 1}
             ).skip(skip).limit(batch_size).to_list(batch_size)
             
@@ -22974,7 +22942,7 @@ async def run_bulk_fix_background(job_id: str, batch_size: int = 50):
                     
                     # 2. Expired subscription
                     subscription_plan = user.get("subscription_plan", "explorer")
-                    subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                    subscription_expiry = get_user_expiry(user)
                     membership_type = user.get("membership_type", "free")
                     
                     if subscription_expiry and subscription_plan not in ["explorer", "free", "", None]:
@@ -23228,8 +23196,8 @@ async def admin_bulk_diagnose_all_users(
         # Get all users with more fields
         users = await db.users.find(
             {},
-            {"uid": 1, "name": 1, "email": 1, "mobile": 1, "kyc_status": 1, "subscription_plan": 1, 
-             "subscription_expires": 1, "subscription_expiry": 1, "vip_expiry": 1,
+            {"uid": 1, "name": 1, "email": 1, "mobile": 1, "kyc_status": 1, "subscription_plan": 1,
+             "subscription_expiry": 1,
              "prc_balance": 1, "membership_type": 1, "mining_start_time": 1, "referral_code": 1}
         ).limit(limit).to_list(limit)
         
@@ -23275,7 +23243,7 @@ async def admin_bulk_diagnose_all_users(
                 
                 # ========== 2. SUBSCRIPTION ISSUES ==========
                 subscription_plan = user.get("subscription_plan", "explorer")
-                subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                subscription_expiry = get_user_expiry(user)
                 membership_type = user.get("membership_type", "free")
                 
                 # Expired subscription
@@ -23660,7 +23628,7 @@ async def admin_diagnose_user(uid: str, auto_fix: bool = True):
     
     # ========== 2. SUBSCRIPTION ISSUES ==========
     subscription_plan = user.get("subscription_plan", "explorer")
-    subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+    subscription_expiry = get_user_expiry(user)
     membership_type = user.get("membership_type", "free")
     
     # Expired subscription not reset
@@ -24024,8 +23992,7 @@ async def admin_fix_user_issue(uid: str, request: Request):
             {"$set": {
                 "membership_type": "free",
                 "subscription_plan": "explorer",
-                "subscription_expiry": None,
-                "vip_expiry": None
+                "subscription_expiry": None
             }}
         )
         result_message = "Subscription reset to free/explorer"
@@ -24041,8 +24008,7 @@ async def admin_fix_user_issue(uid: str, request: Request):
                 {"$set": {
                     "membership_type": latest_payment.get("plan", "vip"),
                     "subscription_plan": latest_payment.get("plan", "vip"),
-                    "subscription_expiry": latest_payment.get("expiry"),
-                    "vip_expiry": latest_payment.get("expiry")
+                    "subscription_expiry": latest_payment.get("expiry")
                 }}
             )
             result_message = f"Subscription synced to {latest_payment.get('plan')}"
@@ -24093,7 +24059,7 @@ async def admin_fix_user_issue(uid: str, request: Request):
     
     elif fix_action == "clear_expired_flag":
         # Clear wrong subscription_expired flag when expiry is still in future
-        current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        current_expiry = get_user_expiry(user)
         now = datetime.now(timezone.utc)
         expiry_dt = None
         if current_expiry:
@@ -24123,7 +24089,7 @@ async def admin_fix_user_issue(uid: str, request: Request):
     elif fix_action == "extend_subscription":
         # Extend subscription expiry by N days (for duplicate payment compensation)
         days = data.get("days", 28)
-        current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        current_expiry = get_user_expiry(user)
         if current_expiry:
             try:
                 if isinstance(current_expiry, str):
@@ -24188,7 +24154,7 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
         fixed_issues.append("Orphaned KYC status reset")
     
     # ========== 2. Fix expired subscription ==========
-    subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+    subscription_expiry = get_user_expiry(user)
     subscription_plan = user.get("subscription_plan", "explorer")
     
     if subscription_expiry:
@@ -24246,7 +24212,7 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
                         "subscription_plan": plan,
                         "membership_type": "vip",
                         "subscription_status": "active",
-                        "subscription_expires": expiry_date
+                        "subscription_expiry": expiry_date.isoformat()
                     }
                 }
             )
@@ -24285,7 +24251,6 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
                         "$set": {
                             "subscription_plan": plan,
                             "subscription_start": paid_at,
-                            "subscription_expires": expiry_date,
                             "subscription_expiry": expiry_date.isoformat(),
                             "membership_type": "vip",
                             "subscription_status": "active"
@@ -28985,8 +28950,6 @@ async def migrate_subscription_positions():
             "$or": [
                 {"subscription_expiry": {"$gt": now_str}},
                 {"subscription_expiry": {"$gt": now}},
-                {"subscription_expires": {"$gt": now_str}},
-                {"subscription_expires": {"$gt": now}}
             ]
         }
         
@@ -29038,11 +29001,11 @@ async def find_double_activations(request: Request):
         do_fix = bool(data.get("fix", False))
         target_uid = data.get("uid")
 
-        # Find Elite users with subscription_start, subscription_expires set
+        # Find Elite users with subscription_start, subscription_expiry set
         query = {
             "subscription_plan": "elite",
             "subscription_start": {"$exists": True, "$ne": None},
-            "subscription_expires": {"$exists": True, "$ne": None},
+            "subscription_expiry": {"$exists": True, "$ne": None},
         }
         if target_uid:
             query["uid"] = target_uid
@@ -29051,7 +29014,7 @@ async def find_double_activations(request: Request):
             query,
             {
                 "_id": 0, "uid": 1, "name": 1, "mobile": 1,
-                "subscription_start": 1, "subscription_expires": 1,
+                "subscription_start": 1,
                 "subscription_expiry": 1, "subscription_type": 1,
                 "previous_remaining_days_added": 1,
                 "last_payment_id": 1, "activated_via": 1,
@@ -29065,7 +29028,7 @@ async def find_double_activations(request: Request):
         for u in users:
             uid = u["uid"]
             start = u.get("subscription_start")
-            expires = u.get("subscription_expires") or u.get("subscription_expiry")
+            expires = u.get("subscription_expiry")
             sub_type = u.get("subscription_type") or "monthly"
 
             # Parse dates
@@ -29120,9 +29083,7 @@ async def find_double_activations(request: Request):
                     await db.users.update_one(
                         {"uid": uid},
                         {"$set": {
-                            "subscription_expires": expected_expiry,
                             "subscription_expiry": expected_expiry.isoformat(),
-                            "vip_expiry": expected_expiry.isoformat(),
                             "double_activation_fixed_at": datetime.now(timezone.utc).isoformat(),
                             "double_activation_old_expires": expires_dt.isoformat(),
                         }}
@@ -31438,7 +31399,7 @@ async def audit_subscription_expiry(days: int = 30, dry_run: bool = True):
                 continue
             
             # Get actual expiry
-            actual_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+            actual_expiry = get_user_expiry(user)
             if not actual_expiry:
                 continue
             
@@ -31566,7 +31527,7 @@ async def fix_subscription_expiry(days: int = 30, dry_run: bool = True):
                 continue
             
             # Get actual expiry
-            actual_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+            actual_expiry = get_user_expiry(user)
             if not actual_expiry:
                 continue
             
@@ -31610,9 +31571,7 @@ async def fix_subscription_expiry(days: int = 30, dry_run: bool = True):
                             {"uid": uid},
                             {
                                 "$set": {
-                                    "subscription_expires": correct_expiry,
                                     "subscription_expiry": correct_expiry.isoformat(),
-                                    "vip_expiry": correct_expiry.isoformat(),
                                     "expiry_corrected_at": now.isoformat(),
                                     "expiry_correction_reason": "Double activation bug fix"
                                 }
@@ -34475,17 +34434,17 @@ async def get_users_at_risk_of_burn():
                 "at_risk_prc": at_risk_prc
             })
     
-    # VIP users expired (in grace period) - FIX: Use to_list()
+    # Expired VIP users in grace period - now keyed on canonical subscription_expiry
     expired_vips_at_risk = []
     expired_vips_list = await db.users.find({
         "membership_type": "vip",
-        "vip_expiry": {"$exists": True}
+        "subscription_expiry": {"$exists": True, "$ne": None}
     }).limit(50).to_list(length=50)
-    
+
     for user in expired_vips_list:
         try:
-            expiry = datetime.fromisoformat(user.get("vip_expiry", "").replace('Z', '+00:00'))
-            if expiry < now and expiry > grace_period_end:
+            expiry = get_user_expiry(user)
+            if expiry and expiry < now and expiry > grace_period_end:
                 days_expired = (now - expiry).days
                 expired_vips_at_risk.append({
                     "uid": user.get("uid"),
@@ -34495,7 +34454,7 @@ async def get_users_at_risk_of_burn():
                     "days_expired": days_expired,
                     "days_until_burn": 5 - days_expired
                 })
-        except:
+        except Exception:
             pass
     
     return {
@@ -36783,7 +36742,7 @@ async def admin_user_lookup(identifier: str):
             "mobile": user.get("mobile"),
             "email": user.get("email"),
             "subscription_plan": user.get("subscription_plan", "explorer"),
-            "subscription_expiry": user.get("subscription_expiry") or user.get("subscription_expires"),
+            "subscription_expiry": user.get("subscription_expiry"),
             "prc_balance": round(float(user.get("prc_balance", 0) or 0), 2),
             "total_mined": round(float(user.get("total_mined", 0) or 0), 2),
             "created_at": user.get("created_at"),

@@ -72,26 +72,13 @@ def is_subscription_active(user: dict) -> bool:
     if user.get('subscription_status') == 'active':
         return True
     
-    # Rule 3: Check expiry dates
-    has_expiry = False
-    for field in ['subscription_expiry', 'subscription_expires', 'vip_expiry', 'subscription_end_date']:
-        expiry = user.get(field)
-        if not expiry:
-            continue
-        has_expiry = True
-        if isinstance(expiry, str):
-            try:
-                expiry_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
-            except Exception:
-                continue
-        else:
-            expiry_date = expiry
-        
-        if expiry_date.tzinfo is None:
-            expiry_date = expiry_date.replace(tzinfo=timezone.utc)
-        
-        if now < expiry_date:
-            return True
+    # Rule 3: Check expiry date (uses the canonical helper which falls back to
+    # legacy fields for un-migrated rows).
+    from utils.subscription_expiry import get_user_expiry  # local import — avoid circular at module load
+    expiry_date = get_user_expiry(user)
+    has_expiry = expiry_date is not None
+    if expiry_date and now < expiry_date:
+        return True
     
     # Rule 4: Paid plan + no expiry → assume active (missing data ≠ expired)
     if not has_expiry and plan in ['elite', 'vip', 'startup', 'growth', 'pro', 'premium']:

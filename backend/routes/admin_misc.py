@@ -12,6 +12,8 @@ import asyncio
 
 # Import WalletService for ledger-based PRC operations (Phase 4 Architecture)
 from app.services import WalletService
+# Canonical helper — read user expiry through this only.
+from utils.subscription_expiry import get_user_expiry
 
 # Create router
 router = APIRouter(prefix="/admin", tags=["Admin Misc"])
@@ -275,7 +277,7 @@ async def run_expire_subscriptions_manual(request: Request):
                 "subscription_expired": {"$ne": True}
             },
             {"_id": 0, "uid": 1, "subscription_plan": 1, "subscription_expiry": 1,
-             "subscription_expires": 1, "vip_expiry": 1, "name": 1, "subscription_status": 1}
+             "name": 1, "subscription_status": 1}
         ).to_list(1000)
         
         expired_users = []
@@ -284,7 +286,7 @@ async def run_expire_subscriptions_manual(request: Request):
             if not uid:
                 continue
             
-            expiry_val = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
+            expiry_val = user.get("subscription_expiry")
             should_downgrade = False
             reason = ""
             
@@ -1152,22 +1154,8 @@ async def admin_activate_prc_subscription(request: Request):
         # Calculate duration and check for upcoming plan
         duration_days = 28
         now = datetime.now(timezone.utc)
-        current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
-        has_active_plan = False
-        expiry_dt = None
-
-        if current_expiry:
-            try:
-                if isinstance(current_expiry, str):
-                    expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
-                else:
-                    expiry_dt = current_expiry
-                if expiry_dt.tzinfo is None:
-                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-                if expiry_dt > now:
-                    has_active_plan = True
-            except:
-                pass
+        expiry_dt = get_user_expiry(user)
+        has_active_plan = bool(expiry_dt and expiry_dt > now)
 
         is_upcoming = has_active_plan
         import uuid as _uuid
@@ -1195,7 +1183,6 @@ async def admin_activate_prc_subscription(request: Request):
                     {"$set": {
                         "subscription_plan": "elite",
                         "subscription_expiry": new_expiry,
-                        "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
                         "subscription_start": now.isoformat(),
                         "membership_type": "vip",
                         "subscription_status": "active",

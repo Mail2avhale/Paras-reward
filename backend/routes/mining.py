@@ -157,8 +157,6 @@ async def get_subscription_network_size(user_id: str) -> int:
             "$or": [
                 {"subscription_expiry": {"$gt": now_str}},
                 {"subscription_expiry": {"$gt": now}},
-                {"subscription_expires": {"$gt": now_str}},
-                {"subscription_expires": {"$gt": now}}
             ]
         }
         
@@ -300,7 +298,7 @@ async def check_subscription_expiry(user: dict) -> dict:
             logging.error(f"[SUBSCRIPTION-SYNC] Error checking payments for {uid}: {e}")
         return user  # Still explorer
     
-    expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+    expiry = user.get("subscription_expiry")
     if not expiry:
         return user  # No expiry set, keep current plan
     
@@ -923,10 +921,7 @@ async def admin_mining_rates_diagnostic(limit: int = 30, plan: str = "elite"):
         users = await db.users.find(
             {
                 "subscription_plan": {"$in": [plan.lower(), plan.upper(), plan.title()]},
-                "$or": [
-                    {"subscription_expiry": {"$gt": now}},
-                    {"subscription_expires": {"$gt": now}},
-                ],
+                "subscription_expiry": {"$gt": now},
             },
             {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "subscription_position": 1}
         ).limit(limit).to_list(length=limit)

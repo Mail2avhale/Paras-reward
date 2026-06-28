@@ -10,6 +10,8 @@ import logging
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Request
 
+from utils.subscription_expiry import get_user_expiry
+
 router = APIRouter(prefix="/admin/subscription", tags=["Admin Subscription"])
 
 
@@ -60,7 +62,7 @@ async def get_subscription_details(uid: str, request: Request):
     # --- Current Plan ---
     current_plan = None
     plan_name = user.get("subscription_plan")
-    expiry_dt = parse_expiry(user.get("subscription_expiry") or user.get("subscription_expires"))
+    expiry_dt = get_user_expiry(user)
     start_dt = parse_expiry(user.get("subscription_start"))
 
     if plan_name and plan_name not in ["explorer", "free", None] and expiry_dt and expiry_dt > now:
@@ -158,7 +160,7 @@ async def edit_subscription(uid: str, request: Request):
         raise HTTPException(status_code=404, detail="User not found")
 
     now = datetime.now(timezone.utc)
-    current_expiry = parse_expiry(user.get("subscription_expiry") or user.get("subscription_expires"))
+    current_expiry = get_user_expiry(user)
 
     if action == "extend_days":
         days = int(data.get("days", 0))
@@ -170,7 +172,6 @@ async def edit_subscription(uid: str, request: Request):
 
         await db.users.update_one({"uid": uid}, {"$set": {
             "subscription_expiry": new_expiry.isoformat(),
-            "subscription_expires": new_expiry,
             "subscription_status": "active",
             "subscription_plan": user.get("subscription_plan") or "elite",
         }})
@@ -209,7 +210,6 @@ async def edit_subscription(uid: str, request: Request):
         status = "active" if new_expiry > now else "expired"
         update_fields = {
             "subscription_expiry": new_expiry.isoformat(),
-            "subscription_expires": new_expiry,
             "subscription_status": status,
         }
         if status == "active" and not user.get("subscription_plan"):
@@ -309,7 +309,7 @@ async def cancel_subscription(uid: str, request: Request):
 
     elif target == "current":
         # Cancel current plan
-        current_expiry = parse_expiry(user.get("subscription_expiry") or user.get("subscription_expires"))
+        current_expiry = get_user_expiry(user)
 
         # Find latest payment for this subscription
         latest_payment = await db.subscription_payments.find_one(
@@ -333,7 +333,6 @@ async def cancel_subscription(uid: str, request: Request):
             "subscription_plan": "explorer",
             "subscription_status": "cancelled",
             "subscription_expiry": now.isoformat(),
-            "subscription_expires": now,
         }})
 
         # Update payment record
@@ -405,7 +404,7 @@ async def check_and_activate_upcoming(uid: str):
         return None
 
     now = datetime.now(timezone.utc)
-    current_expiry = parse_expiry(user.get("subscription_expiry") or user.get("subscription_expires"))
+    current_expiry = get_user_expiry(user)
     plan = user.get("subscription_plan", "explorer")
 
     # Only proceed if current plan is expired or user is on explorer
@@ -434,7 +433,6 @@ async def check_and_activate_upcoming(uid: str):
         "subscription_status": "active",
         "subscription_start": start.isoformat(),
         "subscription_expiry": end.isoformat(),
-        "subscription_expires": end,
         "subscription_payment_type": upcoming.get("payment_method", "prc"),
         "membership_type": "vip",
         "subscription_expired": False,
@@ -517,7 +515,7 @@ async def get_user_subscription_info(uid: str):
     # Current plan
     current_plan = None
     plan_name = user.get("subscription_plan")
-    expiry_dt = parse_expiry(user.get("subscription_expiry") or user.get("subscription_expires"))
+    expiry_dt = get_user_expiry(user)
     start_dt = parse_expiry(user.get("subscription_start"))
 
     if plan_name and plan_name not in ["explorer", "free", None] and expiry_dt and expiry_dt > now:

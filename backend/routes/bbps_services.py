@@ -23,6 +23,8 @@ Error Handling follows Eko Developer Documentation:
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, validator
 from typing import Optional, Dict
+
+from utils.subscription_expiry import get_user_expiry
 import httpx  # ASYNC HTTP - replaces blocking 'requests' library
 import base64
 import hashlib
@@ -80,19 +82,10 @@ async def check_subscription_for_redeem(user_id: str, service_name: str = "bill 
         }
     
     # Check if subscription is expired
-    expiry = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
-    if expiry:
+    expiry_dt = get_user_expiry(user)
+    if expiry_dt:
         try:
-            if isinstance(expiry, str):
-                expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
-            else:
-                expiry_dt = expiry
-            
-            if expiry_dt.tzinfo is None:
-                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-            
             now = datetime.now(timezone.utc)
-            
             if expiry_dt < now:
                 days_expired = (now - expiry_dt).days
                 return {

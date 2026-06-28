@@ -30,6 +30,8 @@ import asyncio
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 
+from utils.subscription_expiry import get_user_expiry
+
 # Thread pool for CPU-bound operations (bcrypt)
 _password_executor = ThreadPoolExecutor(max_workers=4)
 
@@ -929,13 +931,9 @@ async def login(request: Request):
     is_paid = is_paid_subscriber_func(user) if is_paid_subscriber_func else False
     current_plan = user.get("subscription_plan", "explorer").lower()
     if current_plan not in ["explorer", "free", "", "none"]:
-        # Check ALL expiry fields
-        expiry_str = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
-        if expiry_str:
+        expiry_date = get_user_expiry(user)
+        if expiry_date:
             try:
-                expiry_date = datetime.fromisoformat(str(expiry_str).replace('Z', '+00:00'))
-                if expiry_date.tzinfo is None:
-                    expiry_date = expiry_date.replace(tzinfo=timezone.utc)
                 now = datetime.now(timezone.utc)
                 if expiry_date < now:
                     days_expired = (now - expiry_date).days

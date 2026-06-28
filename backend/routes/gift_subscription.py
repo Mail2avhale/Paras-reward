@@ -19,6 +19,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 import logging
 
+from utils.subscription_expiry import is_subscription_active
+
 router = APIRouter(prefix="/gift", tags=["Gift Subscription"])
 
 # Database connection (imported from server.py context)
@@ -90,24 +92,7 @@ async def send_gift_subscription(request: GiftSubscriptionRequest):
         )
     
     # Step 3: Check child is not already subscribed
-    child_subscribed = False
-    for field in ['subscription_expiry', 'subscription_expires', 'vip_expiry']:
-        expiry = child.get(field)
-        if expiry:
-            try:
-                if isinstance(expiry, str):
-                    expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
-                else:
-                    expiry_dt = expiry
-                
-                if expiry_dt.tzinfo is None:
-                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-                
-                if expiry_dt > now:
-                    child_subscribed = True
-                    break
-            except:
-                continue
+    child_subscribed = is_subscription_active(child, now=now)
     
     child_plan = (child.get('subscription_plan') or 'explorer').lower()
     if child_subscribed and child_plan not in ['explorer', 'free', '', None]:
@@ -146,7 +131,6 @@ async def send_gift_subscription(request: GiftSubscriptionRequest):
             "$set": {
                 "subscription_plan": GIFT_PLAN,
                 "subscription_expiry": new_expiry.isoformat(),
-                "subscription_expires": new_expiry.isoformat(),
                 "gift_subscription": True,
                 "gift_from": request.parent_uid,
                 "gift_from_name": parent.get("name", "Unknown"),
