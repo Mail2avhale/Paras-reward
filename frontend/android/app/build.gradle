@@ -100,6 +100,11 @@ dependencies {
     // App Open ad on every app foreground/resume). Not transitive — must be
     // declared explicitly.
     implementation "androidx.lifecycle:lifecycle-process:$androidxLifecycleVersion"
+    // Required by custom AppOpenAdPlugin to use com.google.android.gms.ads.appopen.AppOpenAd.
+    // @capacitor-community/admob declares play-services-ads as `implementation` (not `api`),
+    // so the Google Mobile Ads SDK classes are NOT visible to the :app module unless we
+    // declare the dependency here too. Same major.minor as the community plugin (24.7+).
+    implementation "com.google.android.gms:play-services-ads:24.7.0"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
