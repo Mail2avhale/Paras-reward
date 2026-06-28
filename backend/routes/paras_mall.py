@@ -4,9 +4,14 @@ PARAS MALL — Reward Shopping Destination
 Users book products using PRC. Each booking enters a single-leg booking-order
 tree. Daily mining accrues using the SAME network-rate curve as main mining:
 
-    N = active bookings positioned AFTER this one (status="mining")
+    N_raw    = active bookings positioned AFTER this one (status="mining")
+    N        = min(N_raw, booking_owner's user_network_cap)   ← Anti-inflation cap
     PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
     daily_rate      = max(50, N × PRC_per_user(N))   ← 50 PRC/day floor
+
+Feb 2026: Added user_network_cap (same 6-tier referral cap as main mining,
+range 800-8000) to N. Bookings can no longer mint PRC beyond the booking
+owner's referral capacity. Unified UX with main mining.
 
 Mining continues until cumulative collected PRC reaches the product's full
 price (MRP × 10) — at which point status auto-flips to 'fulfilled' and the
@@ -172,22 +177,56 @@ def compute_total_prc(mrp_inr: int) -> int:
     return mrp_inr * PRC_INR_RATE
 
 
-async def get_daily_rate_for_booking(booking_position: int) -> float:
-    """PARAS MALL Network Rate Formula (Feb 2026)
-    ============================================
+async def get_user_network_cap(user_id: str) -> int:
+    """Compute user's 6-tier network cap (800-8000) — IDENTICAL to main mining.
+
+    Mirrors `routes/mining.calculate_network_cap()` so product mining and main
+    mining use the SAME inflation control: a user's referral effort gates how
+    big their effective mining network can be on either side.
+
+    Range: 800 (no referrals) → 8000 (max via L1-L5 cascade).
+    Falls back to 800 on any error so booking rates never break.
+    """
+    try:
+        from routes.mining import calculate_network_cap
+        from routes.growth_economy import get_downline_level_counts
+        level_counts = await get_downline_level_counts(user_id, max_depth=5)
+        cap_info = calculate_network_cap(
+            direct_referrals=level_counts.get("l1", 0),
+            l1_indirect_referrals=level_counts.get("l2", 0),
+            l3_count=level_counts.get("l3", 0),
+            l4_count=level_counts.get("l4", 0),
+            l5_count=level_counts.get("l5", 0),
+        )
+        return int(cap_info["cap"])
+    except Exception as e:
+        logging.warning(f"[mall] failed to compute network cap for {user_id}: {e}")
+        return 800  # Tier 1 default — safe baseline matching main mining
+
+
+async def get_daily_rate_for_booking(booking_position: int, user_cap: Optional[int] = None) -> float:
+    """PARAS MALL Network Rate Formula (Feb 2026 — Capped)
+    ====================================================
     Same shape as Main Mining: daily_rate = N × PRC_per_user(N)
     where:
-      N = active bookings positioned AFTER this booking (status="mining")
+      N_raw = active bookings positioned AFTER this booking (status="mining")
+      N     = min(N_raw, user_cap)         ← Anti-inflation: caps at booking owner's
+                                             6-tier referral cap (800-8000, same as
+                                             main mining)
       PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
-      daily_rate = max(MIN_DAILY_RATE_PRC, N × PRC_per_user(N))
+      daily_rate      = max(MIN_DAILY_RATE_PRC, N × PRC_per_user(N))
 
     Floor of 50 PRC/day so a booking with N=0 still earns something
     (otherwise newest bookings would stall until someone books below).
+
+    `user_cap=None` skips the cap (used only for legacy/admin reporting paths).
+    All production endpoints MUST pass user_cap.
     """
-    N = await db.mall_bookings.count_documents({
+    N_raw = await db.mall_bookings.count_documents({
         "position": {"$gt": booking_position},
         "status": "mining",
     })
+    N = min(N_raw, user_cap) if user_cap is not None else N_raw
     if N <= 0:
         return float(MIN_DAILY_RATE_PRC)
     prc_per_user = max(2.5, 5.0 * (21.0 - math.log2(N)) / 14.0)
@@ -195,11 +234,15 @@ async def get_daily_rate_for_booking(booking_position: int) -> float:
     return float(max(MIN_DAILY_RATE_PRC, raw_daily))
 
 
-async def compute_session_accumulated(booking: dict) -> tuple[float, int]:
+async def compute_session_accumulated(booking: dict, user_cap: Optional[int] = None) -> tuple[float, int]:
     """Return (accumulated_prc_this_session, seconds_elapsed).
 
     If session has expired (>24h), session_prc lapses to 0 and a new session
     auto-starts. The expired PRC is NOT credited toward the product.
+
+    `user_cap` is the booking owner's network cap (Feb 2026 anti-inflation).
+    Callers should compute it once per request and pass through to avoid
+    repeated BFS downline queries.
     """
     if booking.get("status") != "mining":
         return (0.0, 0)
@@ -210,7 +253,7 @@ async def compute_session_accumulated(booking: dict) -> tuple[float, int]:
     elapsed = (now - session_start).total_seconds()
     if elapsed < 0:
         return (0.0, 0)
-    rate_per_day = await get_daily_rate_for_booking(booking["position"])
+    rate_per_day = await get_daily_rate_for_booking(booking["position"], user_cap)
     accumulated = (rate_per_day / SECONDS_PER_DAY) * min(elapsed, SECONDS_PER_DAY)
     return (round(accumulated, 6), int(elapsed))
 
@@ -604,6 +647,10 @@ async def my_bookings(user_id: str):
         {"user_id": user_id}, {"_id": 0}
     ).sort("created_at", -1).to_list(200)
 
+    # Compute user's 6-tier network cap ONCE for this request (avoids N×BFS).
+    # Same cap as main mining → unified anti-inflation across both flows.
+    user_cap = await get_user_network_cap(user_id)
+
     now = now_utc()
     enriched = []
     for b in bookings:
@@ -611,8 +658,8 @@ async def my_bookings(user_id: str):
             b = await maybe_lapse_or_renew_session(b)
             session_start = parse_iso(b.get("session_start"))
             session_active = bool(session_start)
-            accumulated, elapsed = await compute_session_accumulated(b)
-            rate_per_day = await get_daily_rate_for_booking(b["position"])
+            accumulated, elapsed = await compute_session_accumulated(b, user_cap=user_cap)
+            rate_per_day = await get_daily_rate_for_booking(b["position"], user_cap=user_cap)
             # Cooldown countdown — only when session is paused after a collect
             next_avail = parse_iso(b.get("next_session_available_at"))
             cooldown_remaining = 0
@@ -629,6 +676,9 @@ async def my_bookings(user_id: str):
             b["per_hour_prc"] = round(rate_per_day / 24, 4)
             b["cooldown_remaining_seconds"] = cooldown_remaining
             b["can_start_session"] = can_start_session and not session_active
+            # Anti-inflation transparency: show booking owner's network cap.
+            # Frontend can render "Build referrals to raise this cap" CTA.
+            b["user_network_cap"] = user_cap
         else:
             b["session_active"] = False
             b["session_accumulated_prc"] = 0
@@ -651,10 +701,12 @@ async def get_booking(booking_id: str):
         raise HTTPException(404, "Booking not found")
     if b.get("status") == "mining":
         b = await maybe_lapse_or_renew_session(b)
+        # Anti-inflation cap (mirrors main mining's 6-tier referral cap)
+        user_cap = await get_user_network_cap(b["user_id"])
         session_start = parse_iso(b.get("session_start"))
         session_active = bool(session_start)
-        accumulated, elapsed = await compute_session_accumulated(b)
-        rate_per_day = await get_daily_rate_for_booking(b["position"])
+        accumulated, elapsed = await compute_session_accumulated(b, user_cap=user_cap)
+        rate_per_day = await get_daily_rate_for_booking(b["position"], user_cap=user_cap)
         now = now_utc()
         next_avail = parse_iso(b.get("next_session_available_at"))
         cooldown_remaining = 0
@@ -669,6 +721,7 @@ async def get_booking(booking_id: str):
         b["per_hour_prc"] = round(rate_per_day / 24, 4)
         b["cooldown_remaining_seconds"] = cooldown_remaining
         b["can_start_session"] = cooldown_remaining == 0 and not session_active
+        b["user_network_cap"] = user_cap  # Feb 2026 anti-inflation cap
     b["progress_percent"] = round((b.get("paid_prc", 0) / b.get("total_prc", 1)) * 100, 2)
     return b
 
@@ -686,7 +739,9 @@ async def collect_booking(booking_id: str, body: CollectBookingRequest):
 
     # Lapse-check first; if just lapsed, accumulated will be ~0 and we tell user
     b = await maybe_lapse_or_renew_session(b)
-    accumulated, elapsed = await compute_session_accumulated(b)
+    # Anti-inflation cap (mirrors main mining's 6-tier referral cap)
+    user_cap = await get_user_network_cap(body.user_id)
+    accumulated, elapsed = await compute_session_accumulated(b, user_cap=user_cap)
     if accumulated < 0.0001:
         raise HTTPException(400, "Nothing to collect yet")
 

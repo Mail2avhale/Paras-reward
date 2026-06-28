@@ -9,6 +9,26 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 28, 2026 — Product Mining Anti-Inflation Cap)
+- 🛡 **Inflation Control**: Product mining now uses the SAME 6-tier network cap as main mining (range 800-8000 based on L1-L5 referrals). This makes it mathematically impossible for a booking to mint PRC beyond the booking owner's referral capacity, while keeping UX unified.
+- **Formula change** in `routes/paras_mall.py#get_daily_rate_for_booking()`:
+  ```
+  N_raw = active bookings positioned AFTER this booking
+  user_cap = calculate_network_cap(L1, L2, L3, L4, L5)  ← same as main mining
+  N = min(N_raw, user_cap)
+  PRC_per_user(N) = max(2.5, 5 × (21 − log₂(N)) / 14)
+  daily_rate = max(50, N × PRC_per_user(N))
+  ```
+- **Helper added** `get_user_network_cap(user_id)`: thin wrapper around `routes.mining.calculate_network_cap` + `routes.growth_economy.get_downline_level_counts`. Returns 800 on any error (safe default = tier 1 baseline). Computed once per request and passed down to avoid N×BFS queries.
+- **Endpoints updated** to compute + pass cap through:
+  - `GET /api/mall/my-bookings/{user_id}` — single cap lookup per request, applied to all bookings
+  - `GET /api/mall/booking/{booking_id}` — cap lookup uses booking's `user_id`
+  - `POST /api/mall/collect/{booking_id}` — cap lookup uses request body's `user_id`
+- **Frontend transparency**: `user_network_cap` field added to booking response (only when status="mining"). Frontend can render "Build referrals → raise this cap" CTA.
+- **Verified** with unit math + live curl: cap=800 brakes N=50,000 from 125,000 PRC/day uncapped → 3,244 PRC/day capped. Max user (cap=8000) capped at 22,954 PRC/day.
+
+
+
 ## Implemented (Feb 28, 2026 — App Open Ad Branded Splash Overlay)
 - 💎 **UX Polish**: On every cold start, the Capacitor splash screen (`#0a1e50` branded background + "PARAS REWARD" logo) now stays visible while we wait up to 4 seconds for the App Open ad to load. Result: user always sees branded splash → ad → app (zero blank-screen moments).
 - **Implementation**:
