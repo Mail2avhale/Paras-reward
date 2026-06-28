@@ -67,6 +67,58 @@ COLLECT_TO_START_COOLDOWN_SECONDS = 60  # Mirror of main mining: after a user
 # seconds before manually starting a fresh mining session. This drives in-app
 # retention + AdMob impressions (consistent with the main mining flow).
 
+# Tax & fee constants (Feb 2026)
+# Cascading: GST is computed on MRP, processing fee is computed on (MRP + GST).
+# Final multiplier = (1 + GST) × (1 + PROCESSING) = 1.18 × 1.10 = 1.298.
+GST_PERCENT = 0.18         # 18% GST on MRP
+PROCESSING_PERCENT = 0.10  # 10% Processing fee on (MRP + GST)
+FINAL_PRICE_MULTIPLIER = (1 + GST_PERCENT) * (1 + PROCESSING_PERCENT)  # 1.298
+
+
+def compute_pricing_breakdown(mrp_inr: float) -> dict:
+    """Cascading pricing breakdown for a Mall product (Feb 2026).
+
+    Layers, in order:
+      1. MRP (base product price)
+      2. + 18% GST → applied on MRP
+      3. + 10% Processing fee → applied on (MRP + GST)
+
+    Returns a dict with every line item so the UI can render the full
+    breakdown to the user (regulatory transparency for tax + fee disclosure).
+
+    Upfront cost cascades the same fees on top of the base upfront amount,
+    so the user pays the proportional tax+fee at booking time too.
+    """
+    mrp = float(mrp_inr)
+    gst_inr = round(mrp * GST_PERCENT, 2)
+    after_gst_inr = round(mrp + gst_inr, 2)
+    processing_inr = round(after_gst_inr * PROCESSING_PERCENT, 2)
+    total_inr = round(after_gst_inr + processing_inr, 2)
+
+    # Upfront base = max(10% MRP, ₹1000), then cascade the same fees.
+    upfront_base_inr = max(mrp * UPFRONT_PERCENT, float(UPFRONT_MIN_INR))
+    upfront_gst_inr = round(upfront_base_inr * GST_PERCENT, 2)
+    upfront_after_gst_inr = round(upfront_base_inr + upfront_gst_inr, 2)
+    upfront_processing_inr = round(upfront_after_gst_inr * PROCESSING_PERCENT, 2)
+    upfront_total_inr = round(upfront_after_gst_inr + upfront_processing_inr, 2)
+
+    return {
+        # Total product price breakdown
+        "mrp_inr": round(mrp, 2),
+        "gst_percent": GST_PERCENT * 100,
+        "gst_inr": gst_inr,
+        "processing_percent": PROCESSING_PERCENT * 100,
+        "processing_inr": processing_inr,
+        "total_inr": total_inr,
+        "total_prc": round(total_inr * PRC_INR_RATE),
+        # Upfront breakdown
+        "upfront_base_inr": round(upfront_base_inr, 2),
+        "upfront_gst_inr": upfront_gst_inr,
+        "upfront_processing_inr": upfront_processing_inr,
+        "upfront_inr": upfront_total_inr,
+        "upfront_prc": round(upfront_total_inr * PRC_INR_RATE),
+    }
+
 
 def set_db(database):
     global db
@@ -167,14 +219,20 @@ def parse_iso(s):
 
 
 def compute_upfront_prc(mrp_inr: int) -> int:
-    """Upfront = max(10% of MRP, ₹1000) — returned in PRC."""
-    upfront_inr = max(int(round(mrp_inr * UPFRONT_PERCENT)), UPFRONT_MIN_INR)
-    return upfront_inr * PRC_INR_RATE
+    """Upfront in PRC = (10% MRP, floor ₹1000) + 18% GST + 10% Processing fee.
+
+    Feb 2026: switched from raw 10% MRP to cascading-fee variant.
+    See `compute_pricing_breakdown` for the full layered math.
+    """
+    return compute_pricing_breakdown(mrp_inr)["upfront_prc"]
 
 
 def compute_total_prc(mrp_inr: int) -> int:
-    """Total product cost in PRC."""
-    return mrp_inr * PRC_INR_RATE
+    """Total product cost in PRC = MRP + 18% GST + 10% Processing fee (cascading).
+
+    Feb 2026: switched from raw `MRP × 10` to fully tax+fee-loaded total.
+    """
+    return compute_pricing_breakdown(mrp_inr)["total_prc"]
 
 
 async def get_user_network_cap(user_id: str) -> int:
@@ -334,8 +392,10 @@ async def list_products(category: Optional[str] = None, only_active: bool = True
         query["category"] = category
     products = await db.mall_products.find(query, {"_id": 0}).sort("created_at", 1).to_list(500)
     for p in products:
-        p["total_prc"] = compute_total_prc(p["mrp_inr"])
-        p["upfront_prc"] = compute_upfront_prc(p["mrp_inr"])
+        # Full pricing breakdown (MRP + GST + Processing). Frontend renders
+        # each line item; legacy total_prc / upfront_prc kept for back-compat.
+        breakdown = compute_pricing_breakdown(p["mrp_inr"])
+        p.update(breakdown)
         p["daily_rate_prc"] = BASE_DAILY_RATE_PRC  # base, downline boost calculated post-booking
     return {"success": True, "count": len(products), "products": products}
 
@@ -345,8 +405,8 @@ async def get_product(product_id: str):
     p = await db.mall_products.find_one({"product_id": product_id}, {"_id": 0})
     if not p:
         raise HTTPException(404, "Product not found")
-    p["total_prc"] = compute_total_prc(p["mrp_inr"])
-    p["upfront_prc"] = compute_upfront_prc(p["mrp_inr"])
+    breakdown = compute_pricing_breakdown(p["mrp_inr"])
+    p.update(breakdown)
     p["daily_rate_prc"] = BASE_DAILY_RATE_PRC
     return p
 
@@ -364,6 +424,10 @@ async def book_product(product_id: str, body: BookProductRequest):
 
     upfront_prc = compute_upfront_prc(product["mrp_inr"])
     total_prc = compute_total_prc(product["mrp_inr"])
+    # Full breakdown snapshot — stored on the booking so we have an
+    # immutable audit trail of GST/processing-fee rates at booking time
+    # (in case rates change later, historical bookings keep their context).
+    pricing_breakdown = compute_pricing_breakdown(product["mrp_inr"])
 
     # Check available PRC balance (respect locked PRC vault)
     balance = float(user.get("prc_balance", 0))
@@ -408,6 +472,8 @@ async def book_product(product_id: str, body: BookProductRequest):
         "mrp_inr": product["mrp_inr"],
         "total_prc": total_prc,
         "upfront_prc": upfront_prc,
+        # Immutable pricing snapshot (Feb 2026 tax+fee era)
+        "pricing_breakdown": pricing_breakdown,
         # `total_prc_deducted` mirrors upfront_prc so this booking is counted
         # by the centralized lifetime-redeemed scanner (`get_user_all_time_redeemed`).
         # Only the wallet-debit portion counts; mined PRC never left the wallet.
@@ -1089,3 +1155,48 @@ async def admin_seed_from_bundle():
         "bundle_size": len(products),
     }
 
+
+
+@admin_router.post("/reprice-active-bookings")
+async def admin_reprice_active_bookings():
+    """Recompute total_prc/remaining_prc for ALL active bookings using the
+    current cascading pricing formula (MRP + 18% GST + 10% Processing fee).
+
+    Why: Feb 2026 introduced tax+fee layers on top of raw MRP. The user
+    explicitly opted to apply the new pricing to existing in-flight bookings
+    too (no grandfathering). This endpoint walks all status="mining" bookings
+    and rewrites their `total_prc` + `remaining_prc` + `pricing_breakdown`
+    snapshot. The upfront_prc / paid_prc / collected wallet history is left
+    untouched (those are immutable financial events).
+
+    Idempotent: running this twice is a no-op for already-repriced bookings.
+    """
+    cursor = db.mall_bookings.find({"status": "mining"}, {"_id": 0})
+    updated = 0
+    unchanged = 0
+    async for b in cursor:
+        breakdown = compute_pricing_breakdown(b["mrp_inr"])
+        new_total = breakdown["total_prc"]
+        if new_total == b.get("total_prc"):
+            unchanged += 1
+            continue
+        paid = float(b.get("paid_prc", 0) or 0)
+        remaining = round(max(0.0, new_total - paid), 4)
+        await db.mall_bookings.update_one(
+            {"booking_id": b["booking_id"]},
+            {"$set": {
+                "total_prc": new_total,
+                "remaining_prc": remaining,
+                "pricing_breakdown": breakdown,
+                "repriced_at": now_utc().isoformat(),
+            }},
+        )
+        updated += 1
+        await asyncio.sleep(0)  # yield to event loop (avoid DB lock)
+
+    return {
+        "success": True,
+        "updated": updated,
+        "unchanged": unchanged,
+        "message": f"Repriced {updated} active bookings. {unchanged} already up to date.",
+    }

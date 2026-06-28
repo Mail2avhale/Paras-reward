@@ -300,6 +300,33 @@ const AdminSettings = ({ user }) => {
     }
   };
 
+  // One-click Mall reprice: re-applies the current GST+Processing fee
+  // formula to every active mining booking. Idempotent (already-priced
+  // bookings are skipped).
+  const [runningRepriceBookings, setRunningRepriceBookings] = useState(false);
+  const [repriceBookingsResult, setRepriceBookingsResult] = useState(null);
+  const handleRunRepriceBookings = async () => {
+    if (!window.confirm('Reprice ALL active Mall bookings with current GST + Processing fees? Idempotent; safe to re-run.')) return;
+    setRunningRepriceBookings(true);
+    setRepriceBookingsResult(null);
+    try {
+      const res = await axios.post(`${API}/admin/mall/reprice-active-bookings`);
+      setRepriceBookingsResult(res.data);
+      const updated = res.data?.updated || 0;
+      const unchanged = res.data?.unchanged || 0;
+      if (updated > 0) {
+        toast.success(`Mall reprice complete · ${updated} bookings updated, ${unchanged} already correct`);
+      } else {
+        toast.success('Mall reprice complete · all bookings already up to date');
+      }
+    } catch (error) {
+      console.error('Reprice error:', error);
+      toast.error(error.response?.data?.detail || 'Reprice failed');
+    } finally {
+      setRunningRepriceBookings(false);
+    }
+  };
+
   // Toggle the Android-mobile-web install gate without redeploying.
   const handleToggleMobileAppGate = async (next) => {
     setTogglingMobileAppGate(true);
@@ -632,6 +659,44 @@ const AdminSettings = ({ user }) => {
           {expiryMigrationResult && (
             <div className="mt-5 p-4 rounded-lg bg-slate-50 border border-slate-200 text-sm font-mono whitespace-pre-wrap" data-testid="expiry-migration-result">
               {JSON.stringify(expiryMigrationResult, null, 2)}
+            </div>
+          )}
+        </Card>
+
+        {/* Mall reprice migration — 18% GST + 10% Processing fee */}
+        <Card className="p-6 shadow-xl mt-6 bg-white border-slate-200" data-testid="mall-reprice-card">
+          <div className="flex items-start gap-3 mb-4">
+            <Wrench className="h-7 w-7 text-amber-600 shrink-0 mt-1" />
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                Reprice Active Mall Bookings
+              </h2>
+              <p className="text-slate-500 mt-2 text-sm">
+                Re-applies the current pricing formula (MRP + 18% GST + 10%
+                Processing fee, cascading) to every booking still in{' '}
+                <code className="text-xs bg-slate-100 px-1 rounded">status=&quot;mining&quot;</code>.
+                Updates <code className="text-xs bg-slate-100 px-1 rounded">total_prc</code>,{' '}
+                <code className="text-xs bg-slate-100 px-1 rounded">remaining_prc</code>, and a{' '}
+                <code className="text-xs bg-slate-100 px-1 rounded">pricing_breakdown</code> snapshot.
+                Upfront and paid amounts are NEVER touched (those are financial
+                events). Safe to re-run any time (idempotent).
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleRunRepriceBookings}
+            disabled={runningRepriceBookings}
+            data-testid="run-reprice-bookings-btn"
+            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold"
+          >
+            <Wrench className="h-5 w-5 mr-2" />
+            {runningRepriceBookings ? 'Repricing…' : 'Reprice All Active Bookings'}
+          </Button>
+
+          {repriceBookingsResult && (
+            <div className="mt-5 p-4 rounded-lg bg-slate-50 border border-slate-200 text-sm font-mono whitespace-pre-wrap" data-testid="reprice-bookings-result">
+              {JSON.stringify(repriceBookingsResult, null, 2)}
             </div>
           )}
         </Card>

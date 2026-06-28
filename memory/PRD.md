@@ -9,6 +9,49 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 28, 2026 — Mall Pricing: MRP + 18% GST + 10% Processing Fee)
+- 🧾 **Pricing change**: Mall products now follow cascading tax+fee math: `Total = MRP × 1.18 × 1.10 = MRP × 1.298`. GST computed on MRP, Processing fee computed on (MRP + GST).
+- **Backend (`routes/paras_mall.py`)**:
+  - Constants: `GST_PERCENT = 0.18`, `PROCESSING_PERCENT = 0.10`, `FINAL_PRICE_MULTIPLIER = 1.298`
+  - Helper `compute_pricing_breakdown(mrp_inr)` returns full layered breakdown (MRP, GST, Processing, Total in both ₹ and PRC, plus matching upfront breakdown).
+  - `compute_total_prc` and `compute_upfront_prc` now delegate to the breakdown helper (back-compat preserved for callers).
+  - Product list/detail endpoints (`GET /api/mall/products`, `GET /api/mall/products/{id}`) return the full breakdown for frontend rendering.
+  - `POST /api/mall/book/{id}` snapshots an immutable `pricing_breakdown` onto each new booking — historical audit trail in case rates ever change.
+  - **NEW** `POST /api/admin/mall/reprice-active-bookings`: idempotent migration that walks every `status="mining"` booking and updates `total_prc` + `remaining_prc` + `pricing_breakdown` to the current formula. `upfront_prc` / `paid_prc` are NEVER touched (immutable financial events).
+- **Frontend**:
+  - `pages/ParasMall.js` — Booking Confirmation modal now shows the full breakdown: MRP, +GST (18%), +Processing (10%), Total Product Value, then You Pay Now (Upfront) with its own sub-breakdown line.
+  - `pages/ParasMall.css` — new `.mall-pricing-row` styles with subtle dividers.
+  - `pages/AdminSettings.js` — added a "Reprice All Active Bookings" admin card with one-click button (data-testid `run-reprice-bookings-btn`).
+- **Live verification**:
+  - Smartphone ₹15,000 → ₹19,470 total (194,700 PRC) ✓
+  - Laptop ₹50,000 → ₹64,900 total (649,000 PRC) ✓
+  - 37 active bookings repriced successfully in production-like migration test ✓
+  - New `pricing_breakdown` snapshot persisted onto each booking ✓
+
+
+## Implemented (Feb 28, 2026 — Referral Attribution Bug Fix)
+- 🐛 **BUG SQUASHED**: New users joining via referral links were NOT showing up under the referrer's downline. Backend DB scan showed 0 users with `referred_by` set across 27 signups.
+- **Root causes (2 stacked bugs)**:
+  1. **Backend case sensitivity**: `routes/auth.py#simple_register` did `db.users.find_one({"referral_code": referral_code})` without `.upper()`. Codes are stored UPPERCASE (auth.py:216 uses `string.ascii_uppercase`). WhatsApp/Telegram/SMS often lowercase URL paths during share preview generation → `?ref=ljua1czp` → backend rejects with 400 "Invalid referral code".
+  2. **Frontend navigation loss**: `RegisterSimple.js` only read `?ref=` from URL on initial mount, no persistence. User flow `link → /register → click "Login" → back → /register (no ref)` lost the attribution entirely.
+- **Fixes**:
+  - **Backend** `routes/auth.py`: `referral_code.upper()` applied before DB lookup (case-insensitive). Validates against the UPPERCASE-stored codes.
+  - **Frontend** `pages/RegisterSimple.js`:
+    - URL refCode always normalized to UPPERCASE
+    - Persisted to `localStorage.paras_ref_code` with **30-day TTL** + timestamp (JSON)
+    - Falls back to localStorage when URL doesn't have the ref param (navigation-proof)
+    - On successful attribution, localStorage is cleared (prevents wrong referrer for next signup on shared devices)
+    - Submit handler applies forced `.toUpperCase().trim()` as a safety belt
+- **Live tested**:
+  - `?ref=ljua1czp` (lowercase URL) → form auto-fills `LJUA1CZP` ✓
+  - "Referred by: User Profile Test 999" green banner shows ✓
+  - `localStorage` snapshot: `{"code":"LJUA1CZP","ts":<epoch>}` ✓
+  - `/register` (no ref param) after persistence → field auto-fills from localStorage ✓
+  - End-to-end: lowercase code → user registered → DB shows correct `referred_by` UID + referrer's `referral_count` incremented ✓
+- **Known gap (P1, separate task)**: MobileAppGate forces Android browser users to Play Store. URL params don't survive the install flow → native app first launch loses referral attribution. Fix requires **Google Play Install Referrer API** integration. User has confirmed this is on the to-do list.
+
+
+
 ## Implemented (Feb 28, 2026 — Product Mining Anti-Inflation Cap)
 - 🛡 **Inflation Control**: Product mining now uses the SAME 6-tier network cap as main mining (range 800-8000 based on L1-L5 referrals). This makes it mathematically impossible for a booking to mint PRC beyond the booking owner's referral capacity, while keeping UX unified.
 - **Formula change** in `routes/paras_mall.py#get_daily_rate_for_booking()`:

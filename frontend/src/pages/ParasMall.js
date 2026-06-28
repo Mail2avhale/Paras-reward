@@ -609,18 +609,34 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                   ))}
                 </div>
               )}
-              <div className="mall-confirm-prices">
-                <div>
-                  <p className="mall-confirm-label">MRP</p>
-                  <p className="mall-confirm-value">{fmtInr(pendingBook.mrp_inr)}</p>
+              <div className="mall-confirm-prices" data-testid="mall-confirm-pricing-breakdown">
+                <div className="mall-pricing-row">
+                  <span>MRP</span>
+                  <span>{fmtInr(pendingBook.mrp_inr)}</span>
                 </div>
-                <div>
-                  <p className="mall-confirm-label">Upfront (debited now)</p>
-                  <p className="mall-confirm-value upfront">{fmtPrc(pendingBook.upfront_prc)}</p>
+                <div className="mall-pricing-row">
+                  <span>GST ({pendingBook.gst_percent || 18}%)</span>
+                  <span>+ {fmtInr(pendingBook.gst_inr)}</span>
+                </div>
+                <div className="mall-pricing-row">
+                  <span>Processing Fee ({pendingBook.processing_percent || 10}%)</span>
+                  <span>+ {fmtInr(pendingBook.processing_inr)}</span>
+                </div>
+                <div className="mall-pricing-row total">
+                  <span>Total Product Value</span>
+                  <span>{fmtInr(pendingBook.total_inr)}</span>
+                </div>
+                <div className="mall-pricing-divider" />
+                <div className="mall-pricing-row upfront-row">
+                  <span>You pay now (Upfront)</span>
+                  <span className="upfront">{fmtPrc(pendingBook.upfront_prc)}</span>
+                </div>
+                <div className="mall-pricing-hint">
+                  ≈ {fmtInr(pendingBook.upfront_inr)} (Base {fmtInr(pendingBook.upfront_base_inr)} + GST {fmtInr(pendingBook.upfront_gst_inr)} + Fee {fmtInr(pendingBook.upfront_processing_inr)})
                 </div>
               </div>
               <p className="mall-confirm-note">
-                Daily mining at 4 PRC + downline boost will gradually fill the rest. Delivery at 100%.
+                Daily mining (50 PRC floor + downline boost) gradually fills the remaining {fmtPrc((pendingBook.total_prc || 0) - (pendingBook.upfront_prc || 0))}. Delivery at 100%.
               </p>
 
               {/* Delivery Address Form */}
