@@ -18,6 +18,37 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+              Android App Links (Feb 2026)
+
+              autoVerify="true" tells Android to fetch
+              https://parasreward.com/.well-known/assetlinks.json and
+              https://bugzappers.emergent.host/.well-known/assetlinks.json
+              on first install. If the SHA256 fingerprint in those files
+              matches the signing key used for this app, links to those
+              domains will open the app directly instead of a browser
+              chooser dialog.
+
+              Path filter `pathPrefix="/"` makes EVERY page on those domains
+              a candidate app link. We rely on the React Router inside the
+              WebView (single-page-app) to resolve the actual route,
+              including ?ref=ABC123 referral params, which then flow into
+              localStorage via RegisterSimple's existing capture logic.
+
+              To verify after install:
+                adb shell pm get-app-links com.parasreward.prc
+                adb shell pm verify-app-links --re-verify com.parasreward.prc
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="parasreward.com" />
+                <data android:host="bugzappers.emergent.host" />
+                <data android:pathPrefix="/" />
+            </intent-filter>
         </activity>
 
         <provider

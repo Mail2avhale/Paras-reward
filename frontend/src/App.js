@@ -21,6 +21,7 @@ import ImpersonationBanner from "@/components/ImpersonationBanner";
 import AdminOnWebOnly from "@/components/AdminOnWebOnly";
 import { applyBrandedStatusBar } from "@/utils/nativeUx";
 import { useAdMob } from "@/hooks/useAdMob";
+import { captureInstallReferrer } from "@/utils/installReferrer";
 import { cancelSessionExpiryWarning } from "@/utils/sessionNotifications";
 import { syncAppBadgeFromBackend, clearAppBadge } from "@/utils/appBadge";
 
@@ -864,6 +865,11 @@ function App() {
   // Initialize AdMob + App Open Ad at app boot (no-op on web; lifecycle observer
   // attached natively shows the App Open ad on every foreground after cold start).
   useAdMob();
+
+  // Capture Play Store install referrer once per app launch (native-only).
+  // If MobileAppGate forwarded a ref code to Play Store via &referrer=ref%3DXYZ,
+  // this writes it to localStorage so the in-app register screen picks it up.
+  useEffect(() => { captureInstallReferrer(); }, []);
 
   // Initialize user from storage (sessionStorage if impersonation tab, else localStorage)
   const [user, setUser] = useState(() => {

@@ -9,6 +9,35 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 28, 2026 — Install Referrer + Android App Links)
+- 🔗 **Native referral attribution** (closes the MobileAppGate gap): a user who clicks `https://parasreward.com/register?ref=ABC123` on Android browser is forced to Play Store via MobileAppGate; the URL params previously vanished during the install round-trip, breaking attribution. NOW Play Store records the referrer and our app reads it on first launch.
+- **Native plugin** `android/app/.../InstallReferrerPlugin.java`:
+  - Wraps Google's `com.android.installreferrer:installreferrer:2.2` library.
+  - Single Capacitor plugin `InstallReferrer` exposing `getInstallReferrer()` + `markConsumed()`.
+  - Caches the Play Store response in SharedPreferences so we never double-fetch (Play's API is one-shot per install).
+  - Returns `{ referrer, clickTime, installTime, consumed, fetched, cached }`.
+- **JS bridge** `frontend/src/utils/installReferrer.js`:
+  - `captureInstallReferrer()` called from `App.js` `useEffect` on every native boot. Parses `ref=XYZ` from the referrer query string and writes to `localStorage.paras_ref_code` (same key RegisterSimple already reads).
+  - `markInstallReferrerConsumed()` called from RegisterSimple after a successful referral attribution — prevents replay on subsequent launches.
+- **MobileAppGate update** `components/MobileAppGate.js`:
+  - `buildPlayStoreUrl()` reads the active `?ref=` (URL param OR localStorage fallback) and URL-encodes it as `&referrer=ref%3DABC` on the Play Store install link. Play Store passes that string back to our app on first launch.
+- 🌐 **Android App Links** (deep linking):
+  - `AndroidManifest.xml`: added `<intent-filter android:autoVerify="true">` for `https://parasreward.com/*` and `https://bugzappers.emergent.host/*`. Browser link clicks now open the app directly (no chooser dialog).
+  - `frontend/public/.well-known/assetlinks.json`: 2-fingerprint template (upload key + Play App Signing key). Already serves at the deployment URL (verified with curl, HTTP 200).
+  - 📝 `/app/memory/APP_LINKS_SETUP.md`: step-by-step doc for the user to extract the SHA-256 fingerprints (keytool for upload key, Play Console for Play App Signing key) and paste into assetlinks.json before next AAB ships.
+- **Version bump**: `versionCode 13 → 14`, `versionName 1.1.2 → 1.1.3`.
+- **End-to-end attribution flow now**:
+  1. User A shares `parasreward.com/register?ref=LJUA1CZP`
+  2. User B (Android browser) clicks → MobileAppGate intercepts
+  3. Install link with `&referrer=ref%3DLJUA1CZP` opens Play Store
+  4. User B installs → opens app
+  5. `captureInstallReferrer()` fires → reads `ref=LJUA1CZP` from Play Store → writes to localStorage
+  6. User B taps "Register" → form pre-fills `LJUA1CZP` → backend stores `referred_by=user_A.uid`
+  7. `markInstallReferrerConsumed()` fires → won't re-apply on next launch
+  → User A sees User B in their downline ✓
+
+
+
 ## Implemented (Feb 28, 2026 — Mall Pricing: MRP + 18% GST + 10% Processing Fee)
 - 🧾 **Pricing change**: Mall products now follow cascading tax+fee math: `Total = MRP × 1.18 × 1.10 = MRP × 1.298`. GST computed on MRP, Processing fee computed on (MRP + GST).
 - **Backend (`routes/paras_mall.py`)**:

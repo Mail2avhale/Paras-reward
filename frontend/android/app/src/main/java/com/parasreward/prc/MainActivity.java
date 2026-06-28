@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         // Register custom Capacitor plugins BEFORE super.onCreate so they
         // are available on first JS bridge ready event.
         registerPlugin(AppOpenAdPlugin.class);
+        registerPlugin(InstallReferrerPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

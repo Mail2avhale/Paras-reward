@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { markInstallReferrerConsumed } from '@/utils/installReferrer';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -208,6 +209,9 @@ const RegisterSimple = () => {
         // device user (e.g., parent → child on same browser) doesn't
         // accidentally inherit the previous user's referrer.
         try { localStorage.removeItem(REF_STORAGE_KEY); } catch { /* noop */ }
+        // Also mark the Play Store Install Referrer as consumed (native
+        // SharedPreferences flag) so the next cold start doesn't re-apply.
+        markInstallReferrerConsumed();
       } else {
         toast.success('Registration successful! Please login to continue.');
       }

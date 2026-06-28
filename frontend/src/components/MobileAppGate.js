@@ -19,9 +19,48 @@ import { API } from '@/lib/api';
  * Desktop, iOS, tablets, and the native app pass straight through.
  */
 
-const PLAY_STORE_URL =
+const PLAY_STORE_URL_BASE =
   'https://play.google.com/store/apps/details?id=com.parasreward.prc';
 const LOGO_URL = '/paras-logo.png';
+
+/**
+ * Build a Play Store URL that smuggles the active referral code through
+ * Google Play's Install Referrer pipeline. When the user clicks this link,
+ * installs the app, and opens it for the first time, our native
+ * InstallReferrerPlugin receives the `ref=XYZ` value and persists it to
+ * localStorage — closing the attribution gap that MobileAppGate would
+ * otherwise create (browser URL params are lost during Play Store install).
+ *
+ * Reads the same `?ref=` URL param the rest of the app uses, with a
+ * localStorage fallback (same key as RegisterSimple).
+ *
+ * URL format:
+ *   https://play.google.com/store/apps/details?id=com.parasreward.prc
+ *     &referrer=ref%3DABC123     ← URL-encoded "ref=ABC123"
+ */
+function buildPlayStoreUrl() {
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    let ref = (sp.get('ref') || '').toUpperCase();
+    if (!ref) {
+      // localStorage fallback (set by RegisterSimple on URL detection)
+      const raw = localStorage.getItem('paras_ref_code');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed?.code) ref = String(parsed.code).toUpperCase();
+        } catch { /* legacy plain string format — accept as-is */
+          ref = String(raw).toUpperCase();
+        }
+      }
+    }
+    if (!ref) return PLAY_STORE_URL_BASE;
+    const referrer = encodeURIComponent(`ref=${ref}`);
+    return `${PLAY_STORE_URL_BASE}&referrer=${referrer}`;
+  } catch {
+    return PLAY_STORE_URL_BASE;
+  }
+}
 
 function detectAndroidWebBrowser() {
   if (typeof window === 'undefined') return false;
@@ -56,8 +95,11 @@ function detectAndroidWebBrowser() {
 
 const MobileAppGate = ({ children }) => {
   const [showGate, setShowGate] = useState(false);
+  const [playStoreUrl, setPlayStoreUrl] = useState(PLAY_STORE_URL_BASE);
 
   useEffect(() => {
+    // Build the Play Store URL with referral attribution baked in.
+    setPlayStoreUrl(buildPlayStoreUrl());
     // Step 1: cheap client-side check first
     if (!detectAndroidWebBrowser()) {
       setShowGate(false);
@@ -109,7 +151,7 @@ const MobileAppGate = ({ children }) => {
 
       {/* Primary CTA */}
       <a
-        href={PLAY_STORE_URL}
+        href={playStoreUrl}
         data-testid="mobile-app-gate-install-btn"
         className="mt-8 w-full max-w-xs rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-500 px-6 py-4 text-center font-bold text-slate-900 shadow-xl active:scale-95 transition-transform"
       >
@@ -119,7 +161,7 @@ const MobileAppGate = ({ children }) => {
       {/* "I have the app" — opens via Android intent so existing
           install launches; falls back to Play Store. */}
       <a
-        href={`intent://parasreward.com/#Intent;scheme=https;package=com.parasreward.prc;S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`}
+        href={`intent://parasreward.com/#Intent;scheme=https;package=com.parasreward.prc;S.browser_fallback_url=${encodeURIComponent(playStoreUrl)};end`}
         data-testid="mobile-app-gate-open-btn"
         className="mt-3 w-full max-w-xs rounded-2xl border border-white/30 px-6 py-3 text-center font-semibold text-white/90 active:bg-white/10 transition-colors"
       >
