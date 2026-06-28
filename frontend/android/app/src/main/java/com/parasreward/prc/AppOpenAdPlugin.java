@@ -1,6 +1,8 @@
 package com.parasreward.prc;
 
 import android.app.Activity;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -130,6 +132,55 @@ public class AppOpenAdPlugin extends Plugin {
             ret.put("cached", isAdAvailable());
             call.resolve(ret);
         });
+    }
+
+    /**
+     * Cold-start helper called from JS at app boot.
+     *
+     * Polls until either:
+     *   - an App Open ad is loaded → shows it immediately, returns shown=true
+     *   - the timeout expires      → returns shown=false, reason="timeout"
+     *
+     * While this is in flight, the Capacitor splash screen (configured with
+     * launchAutoHide=false) stays on top, giving the user a branded "Paras
+     * Reward" impression instead of a blank screen. JS hides the splash
+     * after this resolves.
+     */
+    @PluginMethod
+    public void showOnColdStart(PluginCall call) {
+        final int timeoutMs = call.getInt("timeoutMs", 4000);
+        final long startTime = System.currentTimeMillis();
+        final Handler handler = new Handler(Looper.getMainLooper());
+
+        // Kick off a load if we haven't already (idempotent).
+        loadAd();
+
+        final Runnable[] poller = new Runnable[1];
+        poller[0] = new Runnable() {
+            @Override
+            public void run() {
+                long elapsed = System.currentTimeMillis() - startTime;
+                if (isAdAvailable()) {
+                    boolean shown = showAdIfAvailable();
+                    // Suppress the next auto-show on first foreground tick
+                    // since we just showed an ad — avoid double-firing.
+                    skipNextForeground = true;
+                    JSObject ret = new JSObject();
+                    ret.put("shown", shown);
+                    ret.put("waitedMs", elapsed);
+                    call.resolve(ret);
+                } else if (elapsed >= timeoutMs) {
+                    JSObject ret = new JSObject();
+                    ret.put("shown", false);
+                    ret.put("reason", "timeout");
+                    ret.put("waitedMs", elapsed);
+                    call.resolve(ret);
+                } else {
+                    handler.postDelayed(poller[0], 200);
+                }
+            }
+        };
+        handler.post(poller[0]);
     }
 
     private boolean isAdAvailable() {

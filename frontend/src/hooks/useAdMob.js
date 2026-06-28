@@ -27,6 +27,15 @@ export const AD_UNITS = {
 
 let initialized = false;
 
+async function hideSplashSafe() {
+  try {
+    const { SplashScreen } = await import('@capacitor/splash-screen');
+    await SplashScreen.hide({ fadeOutDuration: 200 });
+  } catch (e) {
+    console.warn('[SplashScreen] hide failed (non-fatal):', e);
+  }
+}
+
 async function initOnce() {
   if (!IS_NATIVE || initialized) return;
   try {
@@ -50,6 +59,21 @@ async function initOnce() {
     });
   } catch (e) {
     console.warn('[AppOpenAd] init failed (non-fatal):', e);
+  }
+
+  // Cold-start App Open ad with branded splash overlay.
+  //
+  // The native Capacitor splash screen is configured with launchAutoHide=false
+  // and stays on top. We give the ad up to 4 seconds to load. If it loads,
+  // we show it on top of the splash → user sees "Paras Reward" splash → ad
+  // → app. If it times out, we just dismiss the splash and load the app.
+  // Either way, we ALWAYS hide the splash so the user never gets stuck.
+  try {
+    await AppOpenAdPlugin.showOnColdStart({ timeoutMs: 4000 });
+  } catch (e) {
+    console.warn('[AppOpenAd] cold-start failed (non-fatal):', e);
+  } finally {
+    await hideSplashSafe();
   }
 }
 

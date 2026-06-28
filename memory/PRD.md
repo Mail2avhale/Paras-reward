@@ -9,6 +9,17 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 28, 2026 — App Open Ad Branded Splash Overlay)
+- 💎 **UX Polish**: On every cold start, the Capacitor splash screen (`#0a1e50` branded background + "PARAS REWARD" logo) now stays visible while we wait up to 4 seconds for the App Open ad to load. Result: user always sees branded splash → ad → app (zero blank-screen moments).
+- **Implementation**:
+  - `capacitor.config.json`: `launchShowDuration: 800 → 5000`, `launchAutoHide: true → false` (we hide manually).
+  - `AppOpenAdPlugin.java`: new `showOnColdStart({ timeoutMs })` method polls every 200 ms for ad availability; on hit → shows immediately + suppresses the next foreground-lifecycle auto-show to avoid double-firing; on timeout → resolves with `shown=false`.
+  - `useAdMob.js`: after `initialize`, awaits `showOnColdStart({ timeoutMs: 4000 })`, then unconditionally calls `SplashScreen.hide({ fadeOutDuration: 200 })` in `finally`.
+- **Safety nets**:
+  - Native `launchShowDuration: 5000` is a fallback so the splash auto-hides even if our JS path silently fails (slow network, plugin error).
+  - `SplashScreen.hide()` is wrapped in try/catch (no-op on web, idempotent on native).
+
+
 ## Implemented (Feb 28, 2026 — App Open Ad Native Plugin)
 - 🐛 **BUG SQUASHED**: App Open Ad never displayed on the Android app (AdMob console showed zero impressions for unit `ca-app-pub-3556805218952480/2186165856`).
 - **RCA**: `@capacitor-community/admob` v7.x **does NOT support App Open ad format** (only Banner/Interstitial/Rewarded — see [GitHub issue #260](https://github.com/capacitor-community/admob/issues/260)). The previous `useAdMob.js#showAppOpen` called `AdMob.prepareInterstitial({ adId: <appOpenId> })`, which AdMob rejected because the unit's format is App Open, not Interstitial.
