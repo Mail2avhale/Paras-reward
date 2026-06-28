@@ -21,6 +21,11 @@ on:
           - beta
           - production
 
+permissions:
+  # Required so the SHA-256 auto-patch step can commit the updated
+  # assetlinks.json back to the repo (Android App Links setup).
+  contents: write
+
 jobs:
   build:
     name: Build signed AAB
@@ -87,6 +92,88 @@ jobs:
           mkdir -p android/keystores
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystores/paras-reward.keystore
           ls -la android/keystores/
+
+      # ── 7b. AUTO-PATCH ASSETLINKS.JSON WITH SHA-256 ────────────────────────
+      # Extracts the SHA-256 cert fingerprint from the upload keystore and
+      # writes it into frontend/public/.well-known/assetlinks.json so Android
+      # App Links autoVerify works for parasreward.com / bugzappers.emergent.host.
+      # The Play App Signing SHA-256 (different fingerprint, only visible in
+      # Play Console after first AAB upload) is injected from the optional
+      # PLAY_APP_SIGNING_SHA256 secret if you've set it.
+      # If both fingerprints end up identical (e.g., Google opted to reuse
+      # your upload key as the App Signing key) the duplicate is collapsed.
+      # Idempotent — commits back to main ONLY if assetlinks.json actually
+      # changed; otherwise no-op.
+      - name: Auto-patch assetlinks.json with upload key SHA-256
+        id: patch_assetlinks
+        working-directory: frontend
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          PLAY_APP_SIGNING_SHA256: ${{ secrets.PLAY_APP_SIGNING_SHA256 }}
+          ASSETLINKS_PATH: public/.well-known/assetlinks.json
+        run: |
+          set -e
+          # 1) Extract upload key SHA-256 (colon-separated UPPERCASE hex)
+          UPLOAD_SHA=$(keytool -list -v \
+            -keystore android/keystores/paras-reward.keystore \
+            -alias "$KEY_ALIAS" \
+            -storepass "$KEYSTORE_PASSWORD" \
+            2>/dev/null | awk '/SHA256:/ {print $2; exit}')
+          if [ -z "$UPLOAD_SHA" ]; then
+            echo "::error::Could not extract SHA-256 from keystore. Check KEY_ALIAS / KEYSTORE_PASSWORD secrets."
+            exit 1
+          fi
+          echo "✓ Upload key SHA-256: $UPLOAD_SHA"
+
+          PLAY_SHA="${PLAY_APP_SIGNING_SHA256:-}"
+          if [ -n "$PLAY_SHA" ]; then
+            echo "✓ Play App Signing SHA-256 (from secret): $PLAY_SHA"
+          else
+            echo "ℹ Play App Signing SHA-256 secret not set — assetlinks.json will only contain the upload key fingerprint."
+            echo "  (Add PLAY_APP_SIGNING_SHA256 secret in GitHub after first AAB upload — value comes from Play Console → Setup → App integrity)"
+          fi
+
+          # 2) Export for the python step
+          export UPLOAD_SHA
+          export PLAY_SHA
+
+          # 3) Rewrite assetlinks.json (use python — handles JSON cleanly).
+          # Single-quoted heredoc tag disables shell expansion inside.
+          python3 << 'PYEOF'
+          import json, os
+          path = os.environ['ASSETLINKS_PATH']
+          upload_sha = os.environ['UPLOAD_SHA']
+          play_sha = os.environ.get('PLAY_SHA') or ''
+          with open(path) as f:
+              data = json.load(f)
+          fps = [upload_sha]
+          if play_sha and play_sha != upload_sha:
+              fps.append(play_sha)
+          data[0]['target']['sha256_cert_fingerprints'] = fps
+          with open(path, 'w') as f:
+              json.dump(data, f, indent=2)
+              f.write('\n')
+          PYEOF
+          echo "=== Updated assetlinks.json ==="
+          cat "$ASSETLINKS_PATH"
+
+          # 4) Export change indicator for the commit step.
+          if git diff --quiet --exit-code -- "$ASSETLINKS_PATH"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ assetlinks.json unchanged — no commit needed."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit updated assetlinks.json
+        if: steps.patch_assetlinks.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/public/.well-known/assetlinks.json
+          git commit -m "chore(android): auto-update assetlinks.json with signing SHA-256 [skip ci]"
+          git push origin HEAD:main
 
       # ── 8. BUILD SIGNED AAB ────────────────────────────────────────────────
       - name: Regenerate Gradle wrapper jar (in case missing in repo)

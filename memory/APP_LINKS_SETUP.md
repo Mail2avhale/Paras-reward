@@ -1,70 +1,86 @@
-# Android App Links Setup — Final SHA256 Step
+# Android App Links — Auto-Setup ✅
 
-## ⚠️ One-time Required Action
+## TL;DR — तुम्हाला काही करायचं नाही
 
-The `frontend/public/.well-known/assetlinks.json` file currently contains
-**placeholder SHA256 fingerprints**. App Links will NOT verify until you
-replace these with the real fingerprints from your signing keys.
+`assetlinks.json` मध्ये SHA-256 fingerprints **GitHub Actions automatically populate करेल** प्रत्येक AAB build च्या वेळी. खाली description फक्त माहितीसाठी आहे.
 
-## Step 1: Get the Upload Key SHA256 (from your keystore)
+---
 
-Run **locally** (where you have the keystore file):
+## How it Works
+
+प्रत्येक `.github/workflows/build-android.yml` run मध्ये (push to main किंवा manual dispatch):
+
+1. **Step 7b: Auto-patch assetlinks.json**
+   - GitHub-stored keystore (KEYSTORE_BASE64 secret) decode होतो
+   - `keytool -list -v` ने upload key SHA-256 extract होतो
+   - `frontend/public/.well-known/assetlinks.json` मध्ये automatic inject होतो
+   - Git commit back होतो main branch वर (commit message: `chore(android): auto-update assetlinks.json [skip ci]`)
+
+2. **Result:** Next frontend deploy मध्ये updated `assetlinks.json` live होतो — App Links autoVerify automatic काम करायला सुरू होतो.
+
+---
+
+## Required GitHub Secrets (आधीच set आहेत)
+
+| Secret | Purpose | Status |
+|---|---|---|
+| `KEYSTORE_BASE64` | Encoded keystore | ✅ Set |
+| `KEYSTORE_PASSWORD` | Keystore password | ✅ Set |
+| `KEY_ALIAS` | Key alias name | ✅ Set |
+| `KEY_PASSWORD` | Key password | ✅ Set |
+
+---
+
+## Optional: Play App Signing SHA-256 (for first-time enrolled apps)
+
+जर तुम्ही Google Play App Signing वर enrolled असाल (most apps are), तर Google
+अपलोड केलेलं AAB त्यांच्या स्वतःच्या key ने re-sign करतात. ती key चा SHA-256
+**Play Console वर एकदाच दिसतो**.
+
+**हे करायचं — फक्त एकदा (अनिवार्य नाही, पण recommended):**
+
+1. https://play.google.com/console उघडा
+2. **PARAS REWARD** app निवडा
+3. Left sidebar: **Setup → App integrity** (किंवा "App signing")
+4. **"App signing key certificate"** section मध्ये **SHA-256** copy करा (colon-separated hex)
+5. GitHub repo च्या **Settings → Secrets and variables → Actions** मध्ये जा
+6. **"New repository secret"** दाबा
+7. Name: `PLAY_APP_SIGNING_SHA256`
+8. Value: copy केलेला SHA-256 (just paste it as-is — colons included, no quotes)
+9. Save
+
+पुढच्या AAB build पासून workflow automatically हे fingerprint पण assetlinks.json
+मध्ये include करेल. (Without it, App Links फक्त upload key signed builds वर
+verify होतील — Play Store मधून install केलेले apps fail होतील.)
+
+---
+
+## Verification (after deploy)
+
+Android device वर app install केल्यानंतर:
 
 ```bash
-keytool -list -v \
-  -keystore /path/to/paras-reward.keystore \
-  -alias <your-alias> \
-  -storepass <your-password>
+adb shell pm get-app-links com.parasreward.prc
 ```
 
-In the output, look for the line starting with `SHA256:` like:
+Output मध्ये `parasreward.com` आणि `bugzappers.emergent.host` साठी **`verified`**
+status दिसला पाहिजे. जर `none` किंवा `verification_failed` दिसलं तर:
+
+```bash
+adb shell pm verify-app-links --re-verify com.parasreward.prc
 ```
-SHA256: AA:BB:CC:DD:EE:FF:11:22:33:44:55:66:77:88:99:00:AA:BB:CC:DD:EE:FF:11:22:33:44:55:66:77:88:99:00
-```
 
-Copy this entire colon-separated hex string.
-
-## Step 2: Get the Play App Signing SHA256 (from Play Console)
-
-Google re-signs every AAB with their own key (called "Play App Signing"),
-so the *production* fingerprint is different from your upload key:
-
-1. Open https://play.google.com/console
-2. Select **PARAS REWARD** app
-3. Left sidebar: **Setup → App integrity** (or "App signing")
-4. Look for **"App signing key certificate"** section
-5. Copy the **SHA-256 certificate fingerprint** (colon-separated hex)
-
-## Step 3: Paste BOTH into assetlinks.json
-
-Edit `frontend/public/.well-known/assetlinks.json` and replace:
-- `REPLACE_WITH_PLAY_APP_SIGNING_SHA256_FROM_PLAY_CONSOLE` → the Step 2 value
-- `REPLACE_WITH_UPLOAD_KEY_SHA256_FROM_KEYSTORE` → the Step 1 value
-
-Both fingerprints MUST be present because:
-- During development (sideload), the app is signed with the **upload key**
-- On Play Store installs, the app is signed by Google with the **Play App Signing key**
-- Including both fingerprints means App Links verify in both scenarios.
-
-## Step 4: Deploy and Verify
-
-1. Deploy frontend so `https://parasreward.com/.well-known/assetlinks.json` returns the new file (verify with `curl`).
-2. Build a new AAB (versionCode bump already in place: 13 → 14).
-3. After install, run:
-   ```bash
-   adb shell pm get-app-links com.parasreward.prc
-   ```
-   Status `verified` means App Links work — links to your domain will open
-   the app directly instead of the browser chooser.
+---
 
 ## Troubleshooting
 
-- **Fingerprint format**: Use the colon-separated UPPERCASE hex, exactly as
-  shown by keytool / Play Console. JSON strings, no quotes around colons.
-- **Multiple lines**: If keytool wraps the fingerprint across lines, join
-  them into one continuous string.
-- **Cached verification**: After updating assetlinks.json on a deployed
-  device, force re-verification:
-  ```bash
-  adb shell pm verify-app-links --re-verify com.parasreward.prc
-  ```
+**Q: Workflow fail झाला step 7b ला**
+→ Logs बघा: keytool को alias किंवा password mismatch असेल. GitHub secrets check करा.
+
+**Q: assetlinks.json commit नाही झाला (no push)**
+→ workflow logs मध्ये `ℹ assetlinks.json unchanged — no commit needed.` दिसेल —
+म्हणजे SHA already correct होता. Normal.
+
+**Q: App Links work नाही करत device वर**
+→ Most likely `PLAY_APP_SIGNING_SHA256` secret set केला नाही, आणि app Play
+Store वरून install केलेला आहे. Step वरील "Optional" section follow करा.

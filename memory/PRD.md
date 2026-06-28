@@ -9,6 +9,20 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 28, 2026 — assetlinks.json Auto-Patch in CI)
+- 🤖 **Zero-touch SHA-256 setup**: User reported they couldn't run keytool locally, so GitHub Actions now auto-extracts the upload key SHA-256 and patches `frontend/public/.well-known/assetlinks.json` on every AAB build.
+- **New workflow step** in `.github/workflows/build-android.yml` (step 7b, after keystore decode, before AAB build):
+  1. Runs `keytool -list -v` against the GitHub-stored keystore (already used for signing)
+  2. Extracts SHA-256 with `awk '/SHA256:/ {print $2; exit}'`
+  3. Reads optional `PLAY_APP_SIGNING_SHA256` secret (user adds this once from Play Console after first AAB upload)
+  4. Patches `assetlinks.json` with the resulting fingerprint array (de-dups identicals)
+  5. Commits back to `main` with `[skip ci]` so it doesn't loop, only when content actually changed
+- **Permissions**: workflow `permissions.contents: write` added so the auto-commit step can push.
+- **Doc** `/app/memory/APP_LINKS_SETUP.md` rewritten with the new auto-flow — user only needs to add ONE optional secret (`PLAY_APP_SIGNING_SHA256` from Play Console) for Play Store-installed apps to verify; the upload key is fully automatic.
+- **Dry-run tested** locally: both single-fingerprint (no Play SHA secret) and two-fingerprint paths produce valid JSON.
+
+
+
 ## Implemented (Feb 28, 2026 — Install Referrer + Android App Links)
 - 🔗 **Native referral attribution** (closes the MobileAppGate gap): a user who clicks `https://parasreward.com/register?ref=ABC123` on Android browser is forced to Play Store via MobileAppGate; the URL params previously vanished during the install round-trip, breaking attribution. NOW Play Store records the referrer and our app reads it on first launch.
 - **Native plugin** `android/app/.../InstallReferrerPlugin.java`:
