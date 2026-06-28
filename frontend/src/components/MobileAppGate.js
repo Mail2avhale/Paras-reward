@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { API } from '@/lib/api';
 
 /*
  * MobileAppGate
@@ -56,7 +58,24 @@ const MobileAppGate = ({ children }) => {
   const [showGate, setShowGate] = useState(false);
 
   useEffect(() => {
-    setShowGate(detectAndroidWebBrowser());
+    // Step 1: cheap client-side check first
+    if (!detectAndroidWebBrowser()) {
+      setShowGate(false);
+      return;
+    }
+    // Step 2: confirm the admin hasn't turned the gate off
+    let cancelled = false;
+    (async () => {
+      let enabled = true;  // gate is opt-OUT by default
+      try {
+        const res = await axios.get(`${API}/public/feature-flags`, { timeout: 4000 });
+        if (typeof res.data?.mobile_app_gate_enabled === 'boolean') {
+          enabled = res.data.mobile_app_gate_enabled;
+        }
+      } catch (_) { /* network failure → fall back to default (show gate) */ }
+      if (!cancelled) setShowGate(enabled);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   if (!showGate) return children;

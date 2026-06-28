@@ -28400,6 +28400,39 @@ async def get_public_social_media():
         # Never break the UI — return an empty mapping on any error
         return {"facebook": "", "twitter": "", "instagram": "", "linkedin": "", "youtube": "", "telegram": "", "whatsapp": ""}
 
+
+@api_router.get("/public/feature-flags")
+async def get_public_feature_flags():
+    """
+    PUBLIC read-only feature flags consumed by the React frontend.
+
+    `mobile_app_gate_enabled`:
+        When True, Android mobile-web visitors see a full-screen install
+        gate forcing them onto the Play Store app. When False, they see
+        the regular web UI. Default: True (gate is opt-OUT for safety).
+    """
+    try:
+        doc = await db.settings.find_one({"type": "feature_flags"})
+        mobile_app_gate = True
+        if doc and "mobile_app_gate_enabled" in doc:
+            mobile_app_gate = bool(doc.get("mobile_app_gate_enabled"))
+        return {"mobile_app_gate_enabled": mobile_app_gate}
+    except Exception:
+        return {"mobile_app_gate_enabled": True}
+
+
+@api_router.post("/admin/feature-flags")
+async def set_admin_feature_flags(payload: dict):
+    """Admin-only writer for feature flags (gated by AdminAuthMiddleware)."""
+    allowed = {"mobile_app_gate_enabled"}
+    updates = {k: bool(v) for k, v in payload.items() if k in allowed}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid feature flags supplied")
+    updates["type"] = "feature_flags"
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.settings.update_one({"type": "feature_flags"}, {"$set": updates}, upsert=True)
+    return {"ok": True, "updated": {k: v for k, v in updates.items() if k != "type" and k != "updated_at"}}
+
 class SocialMediaSettings(BaseModel):
     facebook: Optional[str] = ""
     twitter: Optional[str] = ""

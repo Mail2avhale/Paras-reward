@@ -20,6 +20,7 @@ import WebVitalsReporter from "@/components/WebVitalsReporter";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import AdminOnWebOnly from "@/components/AdminOnWebOnly";
 import { applyBrandedStatusBar } from "@/utils/nativeUx";
+import { useAdMob } from "@/hooks/useAdMob";
 import { cancelSessionExpiryWarning } from "@/utils/sessionNotifications";
 import { syncAppBadgeFromBackend, clearAppBadge } from "@/utils/appBadge";
 
@@ -860,6 +861,10 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
 }
 
 function App() {
+  // Initialize AdMob + App Open Ad at app boot (no-op on web; lifecycle observer
+  // attached natively shows the App Open ad on every foreground after cold start).
+  useAdMob();
+
   // Initialize user from storage (sessionStorage if impersonation tab, else localStorage)
   const [user, setUser] = useState(() => {
     const storedUser = getStoredUserRaw();

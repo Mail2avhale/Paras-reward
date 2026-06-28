@@ -5,7 +5,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Facebook, Twitter, Instagram, Linkedin, Youtube, Send, MessageCircle, Save, ArrowLeft, Users, CheckCircle, XCircle, AlertCircle, Upload, Image, ShoppingCart, IndianRupee, Coins, Truck, Receipt, CreditCard, Percent, Wrench, BellRing } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Youtube, Send, MessageCircle, Save, ArrowLeft, Users, CheckCircle, XCircle, AlertCircle, Upload, Image, ShoppingCart, IndianRupee, Coins, Truck, Receipt, CreditCard, Percent, Wrench, BellRing, Smartphone } from 'lucide-react';
 
 import { API } from "../lib/api";
 
@@ -66,6 +66,21 @@ const AdminSettings = ({ user }) => {
   // One-time subscription-expiry fields migration (consolidates legacy fields)
   const [runningExpiryMigration, setRunningExpiryMigration] = useState(false);
   const [expiryMigrationResult, setExpiryMigrationResult] = useState(null);
+
+  // Mobile App Gate toggle — forces Android browser users to install the app
+  const [mobileAppGateEnabled, setMobileAppGateEnabled] = useState(true);
+  const [togglingMobileAppGate, setTogglingMobileAppGate] = useState(false);
+
+  // Load current feature flag state once
+  useEffect(() => {
+    axios.get(`${API}/public/feature-flags`)
+      .then((r) => {
+        if (typeof r.data?.mobile_app_gate_enabled === 'boolean') {
+          setMobileAppGateEnabled(r.data.mobile_app_gate_enabled);
+        }
+      })
+      .catch(() => { /* keep default true */ });
+  }, []);
   const [togglingManual, setTogglingManual] = useState(false);
   const [togglingPrc, setTogglingPrc] = useState(false);
 
@@ -282,6 +297,23 @@ const AdminSettings = ({ user }) => {
       toast.error(error.response?.data?.detail || 'Migration failed');
     } finally {
       setRunningExpiryMigration(false);
+    }
+  };
+
+  // Toggle the Android-mobile-web install gate without redeploying.
+  const handleToggleMobileAppGate = async (next) => {
+    setTogglingMobileAppGate(true);
+    try {
+      await axios.post(`${API}/admin/feature-flags`, { mobile_app_gate_enabled: next });
+      setMobileAppGateEnabled(next);
+      toast.success(next
+        ? 'Mobile App Gate ENABLED — Android web users will be forced to Play Store'
+        : 'Mobile App Gate DISABLED — Android web users can use the website');
+    } catch (error) {
+      console.error('Toggle error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update flag');
+    } finally {
+      setTogglingMobileAppGate(false);
     }
   };
   
@@ -602,6 +634,47 @@ const AdminSettings = ({ user }) => {
               {JSON.stringify(expiryMigrationResult, null, 2)}
             </div>
           )}
+        </Card>
+
+        {/* Mobile App Gate toggle */}
+        <Card className="p-6 shadow-xl mt-6 bg-white border-slate-200" data-testid="mobile-app-gate-card">
+          <div className="flex items-start gap-3 mb-4">
+            <Smartphone className="h-7 w-7 text-emerald-600 shrink-0 mt-1" />
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                Force Android Users to App
+              </h2>
+              <p className="text-slate-500 mt-2 text-sm">
+                When ENABLED, every Android mobile-web visitor sees a full-screen
+                install gate that pushes them to the Play Store. Desktop, iOS,
+                and the native Capacitor app are NEVER gated. Toggling is
+                instant — no redeploy needed.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-200">
+            <div>
+              <p className="font-semibold text-slate-900">
+                Currently: <span className={mobileAppGateEnabled ? 'text-emerald-600' : 'text-slate-500'}>
+                  {mobileAppGateEnabled ? 'ENABLED' : 'DISABLED'}
+                </span>
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Play Store URL: <code className="bg-slate-100 px-1 rounded">play.google.com/store/apps/details?id=com.parasreward.prc</code>
+              </p>
+            </div>
+            <Button
+              onClick={() => handleToggleMobileAppGate(!mobileAppGateEnabled)}
+              disabled={togglingMobileAppGate}
+              data-testid="toggle-mobile-app-gate-btn"
+              className={mobileAppGateEnabled
+                ? 'bg-rose-500 hover:bg-rose-600 text-white font-semibold'
+                : 'bg-emerald-500 hover:bg-emerald-600 text-white font-semibold'}
+            >
+              {togglingMobileAppGate ? 'Saving…' : (mobileAppGateEnabled ? 'Turn OFF' : 'Turn ON')}
+            </Button>
+          </div>
         </Card>
 
         {/* Registration Control */}

@@ -1,5 +1,8 @@
 /**
- * AdMob hook — wraps @capacitor-community/admob for clean callsites.
+ * AdMob hook — wraps @capacitor-community/admob (Banner/Interstitial/Reward)
+ * + custom AppOpenAd Capacitor plugin (App Open format, not in the community
+ * plugin as of v7.x).
+ *
  * No-op on web (only triggers on native Android).
  *
  * Ad units (from AdMob console — Paras Reward):
@@ -9,9 +12,12 @@
  *   - Rewarded Interstitial:ca-app-pub-3556805218952480/2377737544
  */
 import { useEffect, useCallback } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 
 const IS_NATIVE = Capacitor.isNativePlatform();
+
+// Custom native Capacitor plugin (see android/app/.../AppOpenAdPlugin.java)
+const AppOpenAdPlugin = registerPlugin('AppOpenAd');
 
 export const AD_UNITS = {
   appOpen: 'ca-app-pub-3556805218952480/2186165856',
@@ -34,6 +40,17 @@ async function initOnce() {
   } catch (e) {
     console.warn('[AdMob] init failed (non-fatal):', e);
   }
+
+  // Initialize custom App Open plugin — pre-loads first ad and auto-shows
+  // on every foreground/resume after cold start.
+  try {
+    await AppOpenAdPlugin.initialize({
+      adUnitId: AD_UNITS.appOpen,
+      autoShowOnResume: true,
+    });
+  } catch (e) {
+    console.warn('[AppOpenAd] init failed (non-fatal):', e);
+  }
 }
 
 export function useAdMob() {
@@ -42,10 +59,8 @@ export function useAdMob() {
   const showAppOpen = useCallback(async () => {
     if (!IS_NATIVE) return { shown: false, reason: 'web' };
     try {
-      const { AdMob } = await import('@capacitor-community/admob');
-      await AdMob.prepareInterstitial({ adId: AD_UNITS.appOpen });
-      await AdMob.showInterstitial();
-      return { shown: true };
+      const res = await AppOpenAdPlugin.show();
+      return { shown: !!res?.shown };
     } catch (e) {
       return { shown: false, reason: e?.message || 'error' };
     }

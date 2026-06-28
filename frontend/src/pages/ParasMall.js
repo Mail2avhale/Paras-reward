@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { hapticPrimary, hapticSuccess, hapticError } from '@/utils/nativeUx';
-import { useAdMob } from '@/hooks/useAdMob';
+// useAdMob is initialized at the App root (App.js). Mall does not show
+// ad triggers itself — App Open ads auto-show on foreground per Google policy.
 import WishlistHeart from '@/components/mall/WishlistHeart';
 import SaverProgressBar from '@/components/mall/SaverProgressBar';
 import ProductBadges from '@/components/mall/ProductBadges';
@@ -45,7 +46,6 @@ const SORTS = [
 ];
 
 const ParasMall = ({ user, onBalanceUpdate }) => {
-  const { showAppOpen } = useAdMob();
   const navigate = useNavigate();
   const [tab, setTab] = useState('discover');
   const [products, setProducts] = useState([]);
@@ -203,8 +203,8 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
       if (res.data?.success) {
         hapticSuccess();
         toast.success(`Booked ${product.name}! Mining started.`);
-        // Native: show interstitial ad ~1.5s after success (non-blocking)
-        setTimeout(() => { showAppOpen?.(); }, 1500);
+        // App Open ads now auto-show on app foreground (per Google policy);
+        // they MUST NOT be triggered as interstitials after in-app actions.
         // Phase 3: maybe prompt Play Store review after a successful booking
         setTimeout(async () => {
           const { maybePromptReview } = await import('@/utils/inAppReview');

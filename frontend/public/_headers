@@ -47,6 +47,17 @@
   Cache-Control: public, max-age=3600
   X-Robots-Tag: noindex, follow
 
+# AdMob app-ads.txt — must be served as text/plain (IAB spec)
+/app-ads.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600
+  X-Robots-Tag: noindex, follow
+
+# Google AdSense ads.txt
+/ads.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600
+
 # robots.txt
 /robots.txt
   Content-Type: text/plain; charset=utf-8

@@ -7,14 +7,13 @@ android {
         applicationId "com.parasreward.prc"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode 11 → 12 — Feb 23, 2026 release:
-        // 1. Product Mining: 60s cooldown + manual Start Session (matches main mining UX)
-        // 2. Native debug symbols (SYMBOL_TABLE) bundled in AAB
-        // 3. Service worker network-first HTML + auto-reload on update
-        // 4. Rewarded-ad opt-in on every Collect (Main + Mall): +5..10 bonus PRC
-        //    per ad, daily cap 10/user, AdMob rewarded video format
-        versionCode 12
-        versionName "1.1.1"
+        // versionCode 12 → 13 — Feb 28, 2026 release:
+        // 1. Native App Open Ad Capacitor plugin (AppOpenAdPlugin.java)
+        //    Auto-shows on every foreground/resume (was broken in 1.1.1 —
+        //    community AdMob plugin does not support App Open format)
+        // 2. App Open ad unit: ca-app-pub-3556805218952480/2186165856
+        versionCode 13
+        versionName "1.1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
