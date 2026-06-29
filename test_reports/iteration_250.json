@@ -1,0 +1,56 @@
+{
+  "summary": "Self-Claim Referral feature E2E tested on PRODUCTION (https://www.parasreward.com). Backend endpoints (/api/referral/lookup/{code} and /api/referral/apply/{uid}) are DEPLOYED and FULLY WORKING with correct edge-case handling. Frontend UI flow (CTA -> modal -> live lookup -> submit -> persistence) is WORKING. One minor UX bug: CTA does not auto-hide immediately after a successful claim because refreshUserData() is invoked without the required uid argument.",
+  "deployment_status": "LATEST CODE IS DEPLOYED ON PRODUCTION (lookup endpoint exists, apply endpoint exists, all guards working). NOT a deployment issue.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/login response", "issue": "Login response does NOT include referred_by_name, referred_via, referred_at fields (only referred_by). These are written to DB correctly on /referral/apply but never returned to frontend. Frontend cannot show 'You were referred by X' on profile without an extra round-trip."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ReferralsEnhanced.js handleSubmitClaim (line 155)", "issue": "`refreshUserData()` called with no argument. App.js defines `refreshUserData = async (uid) => fetch(/api/user/${uid})`. With uid=undefined, the fetch hits /api/user/undefined which returns 401 'Authentication required'. Net effect: user state in App.js is NOT updated after a successful self-claim, so `canClaimReferrer = !user.referred_by` remains true and the purple 'Did someone refer you?' CTA stays visible until the next full page reload. Backend data IS persisted correctly (verified via re-login + one-shot guard firing on retry).", "selector": "[data-testid=\"enter-referral-cta\"]", "priority": "MEDIUM", "fix_hint": "Change line ~155 of /app/frontend/src/pages/ReferralsEnhanced.js from `refreshUserData()` to `refreshUserData(user.uid)`."}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "production_backend_verification": {
+    "GET /api/referral/lookup/{code} (uppercase real code)": "200 valid:true, referrer_name returned",
+    "GET /api/referral/lookup/{code} (lowercase real code)": "200 valid:true (case-insensitive works)",
+    "GET /api/referral/lookup/BOGUSXYZ": "404 'Invalid referral code'",
+    "POST /api/referral/apply/{nonexistent_uid}": "404 'User not found'",
+    "POST /api/referral/apply/{admin_uid} window-expired (134 days old)": "400 'Referral claim window closed. ... account is 134 days old'",
+    "POST /api/referral/apply/{fresh_uid} invalid code": "404 'Invalid referral code'",
+    "POST /api/referral/apply/{fresh_uid} self-refer (own code)": "400 'You cannot refer yourself'",
+    "POST /api/referral/apply/{fresh_uid} valid code (lowercase)": "200 success, referrer attached, persistence verified",
+    "POST /api/referral/apply/{fresh_uid} re-claim attempt": "400 'You already have a referrer attached. This action is one-shot.'"
+  },
+  "frontend_ui_verification": {
+    "CTA visible on /referrals for user with referred_by=null": true,
+    "Modal opens with correct title 'Enter Referral Code'": true,
+    "Live debounced lookup of invalid code shows 'No user found with that code.'": true,
+    "Live debounced lookup of valid code shows green 'Referred by Suwarna Santosh Avhale'": true,
+    "Submit (Attach Referrer) persists referred_by in DB": true,
+    "Modal closes after successful submit": true,
+    "CTA hides immediately after submit": false,
+    "Toast displays success message": "Did not capture (sonner auto-dismissed before DOM query). Not blocking."
+  },
+  "test_report_links": [],
+  "action_items": [
+    "FIX (1-line): /app/frontend/src/pages/ReferralsEnhanced.js line ~155 — change `refreshUserData()` to `refreshUserData(user.uid)` so the user prop refreshes and the CTA auto-hides after a successful claim. (Backend already persists correctly; this is purely UI staleness.)",
+    "OPTIONAL: include referred_by_name / referred_via / referred_at in /api/auth/login and /api/user/{uid} response payloads so frontend can later display 'Referred by X' attribution badge without an extra call."
+  ],
+  "critical_code_review_comments": [
+    "Referral apply window check (referral.py L116-117) silently swallows ValueError on malformed timestamps and falls through to allow the claim. Comment says 'let the user claim anyway' — acceptable but worth a logging.warning so abuse via timestamp tampering is visible in logs.",
+    "Cycle-check depth in referral.py L129 hardcoded to 20. If genuine network depth ever exceeds 20 levels the loop exits silently without rejecting — at that point it would let a true circular chain slip through. Consider bumping to a configurable constant or asserting on the network depth limit.",
+    "Login response (auth.py) excludes referred_by_name/referred_via/referred_at. These fields ARE written by /referral/apply but not echoed back, forcing extra round-trips on the client."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "85% (1 minor staleness bug)"},
+  "test_credentials": "Fresh test users created on production: 9876553065 / PIN 135790 (uid c9796d3f-...) and 9876553133 / PIN 246810 (uid 13311c25-...). Both already have referred_by set to Suwarna's uid; cannot be re-used for happy-path testing.",
+  "seed_data_creation": "Two TEST_ prefixed accounts registered on production via /api/auth/register/simple to validate end-to-end self-claim flow. Both have been attached to referrer 68HCMUIS (Suwarna Santosh Avhale) and now consume one-shot. To retest, create a fresh user with a new mobile/email.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Production endpoints are deployed and working. The ONE remaining issue is a 1-line frontend fix: pass user.uid to refreshUserData(). After that fix, retest only the 'CTA auto-hides after submit' assertion. Both seed accounts above already consumed their one-shot claim — create a new fresh user via POST /api/auth/register/simple with full_name/mobile/email/password (PIN must be 6 digits, not all same).",
+  "rca_of_the_issue": "USER REPORT 'Self-Claim Referral NOT working on production' is INCORRECT in absolute terms. Backend works perfectly. The user-observable symptom is likely: after successfully claiming a referrer, the purple CTA card stays visible until manual page reload, giving the impression that nothing happened. Root cause is in /app/frontend/src/pages/ReferralsEnhanced.js handleSubmitClaim — `refreshUserData()` is invoked without the uid argument App.js expects, so the in-memory user object is never refreshed (the fetch goes to /api/user/undefined and returns 401). Backend has already persisted referred_by; the user just doesn't see the UI flip. Fix: pass `user.uid`. Reproduction: 1) Register a fresh user without referral_code, 2) Login, 3) Go to /referrals, 4) Click CTA, type valid code, submit, 5) Modal closes but CTA still visible. Reload page -> CTA gone. Mitigation: 1-line fix in ReferralsEnhanced.js."
+}
