@@ -530,13 +530,16 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                   )}
 
                   <div className="mall-price-row">
-                    <div className="mall-price-tile">
+                    <div className="mall-price-tile" data-testid="mall-mrp-tile">
                       <div className="mall-price-tile-label">MRP</div>
                       <div className="mall-price-tile-value">{fmtInr(current?.mrp_inr)}</div>
                     </div>
-                    <div className="mall-price-tile upfront">
-                      <div className="mall-price-tile-label">Upfront</div>
-                      <div className="mall-price-tile-value">{fmtPrc(current?.upfront_prc)}</div>
+                    <div className="mall-price-tile total" data-testid="mall-total-tile">
+                      <div className="mall-price-tile-label">MRP + GST + Charges</div>
+                      <div className="mall-price-tile-value">{fmtInr(current?.total_inr)}</div>
+                      <div className="mall-price-tile-sub">
+                        +{fmtInr(current?.gst_inr)} GST · +{fmtInr(current?.processing_inr)} Fee
+                      </div>
                     </div>
                   </div>
 

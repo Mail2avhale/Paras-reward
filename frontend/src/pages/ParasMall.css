@@ -337,6 +337,27 @@
   background: linear-gradient(135deg, rgba(255, 178, 60, 0.18), rgba(255, 109, 184, 0.10));
   border-color: rgba(255, 178, 60, 0.4);
 }
+/* Feb 2026: "MRP + GST + Charges" tile — emphasizes the final price the user
+   actually pays for the product (mining target). Sub-line breaks down the
+   added tax + fee so the math is transparent at a glance. */
+.mall-price-tile.total {
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.18), rgba(255, 109, 184, 0.10));
+  border-color: rgba(124, 92, 255, 0.4);
+}
+.mall-price-tile.total .mall-price-tile-value {
+  background: linear-gradient(135deg, #c2a5ff, #ff8ecf);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.mall-price-tile-sub {
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 5px;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
 .mall-price-tile-label {
   font-size: 10px;
   letter-spacing: 0.18em;
@@ -1198,6 +1219,16 @@
   background: linear-gradient(135deg, rgba(91, 45, 199, 0.08), rgba(31, 138, 76, 0.06));
   border-color: rgba(91, 45, 199, 0.30);
 }
+/* Light-theme override for the "MRP + GST + Charges" total tile */
+.mall-price-tile.total {
+  background: linear-gradient(135deg, rgba(91, 45, 199, 0.10), rgba(255, 109, 184, 0.06));
+  border-color: rgba(124, 92, 255, 0.30);
+}
+.mall-price-tile.total .mall-price-tile-value {
+  background: linear-gradient(135deg, #5b2dc7, #c2185b);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.mall-price-tile-sub { color: rgba(26, 14, 46, 0.6); }
 .mall-price-tile-label { color: rgba(26, 14, 46, 0.55); }
 .mall-price-tile-value { color: #1a0e2e; }
 .mall-price-tile.upfront .mall-price-tile-value {
