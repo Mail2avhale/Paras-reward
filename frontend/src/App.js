@@ -615,7 +615,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             {/* TapGame removed - feature deprecated */}
             <Route path="/game" element={<Navigate to="/dashboard" replace />} />
             {/* Removed: Treasure Hunt and Scratch Card games */}
-            <Route path="/referrals" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Referrals user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/referrals" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Referrals user={user} onLogout={handleLogout} refreshUserData={refreshUserData} />) : <Navigate to="/login" />} />
             <Route path="/referrals/dashboard" element={<Navigate to="/referrals" replace />} />
             <Route path="/referrals/ai" element={<Navigate to="/referrals" replace />} />
             <Route path="/network" element={<Navigate to="/referrals" replace />} />

@@ -9,6 +9,27 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 28, 2026 — Self-Claim Referrer ("Enter Referral Code"))
+- 🎁 **Restored legacy endpoint** with safety guards. Users who signed up WITHOUT a referral code (e.g., legacy users, or users whose share link lost the `?ref=` param before our Feb 2026 fixes shipped) can now attach a referrer post-signup — one-shot, within 30 days.
+- **Backend** `routes/referral.py`:
+  - `POST /api/referral/apply/{uid}` (body: `{ referral_code: string }`)
+  - Guards: user exists, not already attached, within `SELF_CLAIM_WINDOW_DAYS=30` of signup, not self-referring, no circular chains (walks up the referrer's upline up to 20 levels)
+  - Side-effects: sets `referred_by`, `referred_by_name`, `referred_at`, `referred_via='self_claim'`; increments referrer's `referral_count`; inserts a `referral_joined` notification for the referrer
+  - Case-insensitive code lookup (matches the registration fix)
+- **Frontend** `pages/ReferralsEnhanced.js`:
+  - New **"Did someone refer you?"** gradient CTA card — shown ONLY when `!user.referred_by` (auto-hides post-attribution)
+  - Modal with live code lookup (debounced 350ms) → green "Referred by X" confirmation before commit
+  - Disabled submit until lookup status is `valid` (prevents wasted API calls)
+  - On success: closes modal, fires `refreshUserData()` so the CTA hides immediately
+  - data-testid coverage: `enter-referral-cta`, `claim-referrer-modal`, `claim-code-input`, `claim-submit-btn`, `claim-modal-close`, `claim-referrer-name`
+- **Tested live**:
+  - Fresh user (no referrer) → lowercase `?ref=ljua1czp` claim → DB shows `referred_by`, `referred_via=self_claim` ✓
+  - Re-claim attempt → 400 "already have a referrer attached" ✓
+  - Window-expired user (102 days old) → 400 with friendly message ✓
+  - Invalid code → 404 ✓
+
+
+
 ## Implemented (Feb 28, 2026 — assetlinks.json Auto-Patch in CI)
 - 🤖 **Zero-touch SHA-256 setup**: User reported they couldn't run keytool locally, so GitHub Actions now auto-extracts the upload key SHA-256 and patches `frontend/public/.well-known/assetlinks.json` on every AAB build.
 - **New workflow step** in `.github/workflows/build-android.yml` (step 7b, after keystore decode, before AAB build):
