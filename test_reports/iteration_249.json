@@ -1,0 +1,65 @@
+{
+  "summary": "PRODUCTION certification of Mall Product Mining 6-tier network cap (Feb 28 2026). Tested READ-ONLY against https://www.parasreward.com. 9 passed, 4 skipped (admin uid has no mall bookings, so admin-context-only tests skipped; cap math fully certified using PROD user 9421331342 who has 2 active mining bookings). CAP IS WORKING CORRECTLY.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mall_product_mining_cap_production.py",
+    "/app/test_reports/pytest/mall_cap_prod_results.xml"
+  ],
+  "certification_data": {
+    "production_url_tested": "https://www.parasreward.com",
+    "admin_login": "PASS — uid e2edbfbb-38f3-4fd1-96d3-454a5334f45c (admin has 0 mall bookings)",
+    "products_endpoint": "PASS — pricing breakdown fields present (mrp_inr, gst_inr, processing_inr, total_inr, total_prc, upfront_inr, upfront_prc); GST=18% MRP and processing=10% of (MRP+GST), total≈MRP×1.298 — all math verified",
+    "user_network_cap_field": "PASS — present on all 'mining' status bookings, integer in [800, 8000]",
+    "core_cap_math_certification": {
+      "user_uid": "6a4b7cf5-9d55-4ce1-b124-853c123e4855 (mobile 9421331342)",
+      "main_mining_raw_network_size": 1321,
+      "main_mining_network_cap": 800,
+      "main_mining_effective_network": 800,
+      "cap_is_actively_throttling": true,
+      "mall_user_network_cap": 800,
+      "unified_cap_source": "PASS — mall user_network_cap == main mining network_cap == 800",
+      "booking_1": {
+        "booking_id": "13ef2a26-0017-4132-9940-2d8a896257c2",
+        "position": 63,
+        "api_daily_rate_prc": 3244.6125172072216,
+        "expected_daily_rate_at_N=800": 3244.6125,
+        "abs_error": 0.0
+      },
+      "booking_2": {
+        "booking_id": "e44d9bfb-5d33-4c35-b044-8b505b96c866",
+        "position": 62,
+        "api_daily_rate_prc": 3244.6125172072216,
+        "expected_daily_rate_at_N=800": 3244.6125,
+        "abs_error": 0.0
+      },
+      "edge_case_flat_cap": "PASS — both bookings (different positions 62 vs 63) return IDENTICAL daily_rate 3244.6125 because N is clamped at cap=800. This proves the cap is flat-capping correctly: higher-position bookings can no longer earn more by adding people below them."
+    },
+    "verdict": "PASS — Mall Product Mining anti-inflation cap is correctly implemented and enforced on PRODUCTION. Cap source unified with main mining. Daily rate matches the capped formula to 0.0 PRC error. Flat-capping verified across multiple bookings of same user."
+  },
+  "action_items": [],
+  "critical_code_review_comments": [
+    "get_user_network_cap (paras_mall.py L238-262): clean implementation, fallbacks to 800 on error. Good.",
+    "/api/mall/my-bookings computes user_cap ONCE per request (L718) — avoids repeated BFS for downline counts. Performance-correct.",
+    "Booking response includes 'user_network_cap' field (L747) — smoking-gun field present, frontend can render CTA correctly.",
+    "Pre-Feb-2026 bookings on PROD do not carry pricing_breakdown snapshot field (test skipped). Not a defect — historical bookings predate the audit field; mall_products themselves carry the new breakdown."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mall_product_mining_cap_production.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 executed, 4 skipped due to admin having no mall bookings — covered via secondary user)"
+  },
+  "test_credentials": "Admin 9696969696 / 969696 (no mall bookings on PROD). Cap-bearing user: 9421331342 / 942133 (2 active mining bookings).",
+  "seed_data_creation": "NONE — read-only against production",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Production cap fully certified. If main agent ships further changes to get_user_network_cap, get_daily_rate_for_booking, or compute_session_accumulated, rerun /app/backend/tests/test_mall_product_mining_cap_production.py. The test self-discovers a user with active mining bookings via PROD user 9421331342."
+}
