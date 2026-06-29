@@ -151,8 +151,12 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
       setClaimLookup({ status: 'idle', referrerName: '', error: '' });
       // Refresh both the page data and the parent user object so the CTA
       // disappears immediately (canClaimReferrer flips to false).
+      // NOTE: refreshUserData REQUIRES the uid arg — without it the fetch
+      // goes to /api/user/undefined → 401 → user state never updates →
+      // purple CTA stays visible until manual reload. (Caught Feb 28 2026
+      // production test, iteration_250.)
       fetchData();
-      if (typeof refreshUserData === 'function') refreshUserData();
+      if (typeof refreshUserData === 'function') refreshUserData(user.uid);
     } catch (err) {
       const msg = err.response?.data?.detail || 'Could not attach referrer';
       toast.error(msg);
