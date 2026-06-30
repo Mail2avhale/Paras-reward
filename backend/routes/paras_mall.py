@@ -423,6 +423,114 @@ async def post_community_event(user_id: str, event_type: str, product_name: str,
         logging.warning(f"[MALL] community post failed: {e}")
 
 
+async def post_community_forum_delivery(booking: dict):
+    """Create a Community Forum post (community_posts collection) under the
+    new "Product Delivery" category when admin marks a booking as delivered.
+
+    Renders as a system-authored celebratory card in the forum with:
+      - Real user name (per product owner — user explicitly opted in)
+      - Product image (admin-uploaded via /admin/mall/upload-image)
+      - Booking + product metadata for downstream filtering / search
+
+    Idempotent: if a post for this booking already exists, skips the insert.
+    Best-effort: errors are logged but never block the delivery flow.
+    """
+    try:
+        booking_id = booking.get("booking_id")
+        if not booking_id:
+            return
+
+        # Idempotency — never double-post for the same delivery event
+        existing = await db.community_posts.find_one(
+            {"metadata.booking_id": booking_id, "category": "Product Delivery"},
+            {"_id": 1}
+        )
+        if existing:
+            return
+
+        user_id = booking.get("user_id")
+        user_doc = await db.users.find_one(
+            {"uid": user_id},
+            {"_id": 0, "name": 1, "city": 1, "state": 1}
+        ) or {}
+        user_name = user_doc.get("name") or "Paras Reward Member"
+        # Real name — user explicitly chose 1.a in confirmation
+        city = (user_doc.get("city") or "").strip()
+        state = (user_doc.get("state") or "").strip()
+        location = ", ".join([p for p in [city, state] if p]) or "India"
+
+        product_name = booking.get("product_name") or "Product"
+        # Resolve product image — admin-uploaded image via /admin/mall/upload-image
+        product = await db.mall_products.find_one(
+            {"product_id": booking.get("product_id")},
+            {"_id": 0, "image_url": 1}
+        ) or {}
+        image_url = product.get("image_url") or booking.get("product_image_url") or None
+
+        mrp_inr = booking.get("mrp_inr") or 0
+        now_iso = now_utc().isoformat()
+
+        post = {
+            "post_id": str(uuid.uuid4()),
+            # System-authored, but renders the recipient's real name prominently
+            "user_id": "system",
+            "user_name": "Paras Mall",
+            "user_plan": "admin",
+            "status": "active",
+            "is_helpful": False,
+            "report_count": 0,
+            "author_uid": "system",
+            "author_name": "Paras Mall",
+            "author_role": "admin",
+            "is_admin_post": True,
+            "is_success_story": True,
+            "category": "Product Delivery",
+            "title": f"📦 {user_name} received {product_name}!",
+            "content": "\n".join([
+                f"🚚 **{user_name}** from **{location}** just received their **{product_name}** through Paras Mall.",
+                "",
+                f"💎 Product Value: **₹{mrp_inr:,.0f}**",
+                "✅ Fully earned through PRC mining — no out-of-pocket cost.",
+                "",
+                "🛍️ Want yours? Visit **Paras Mall** and start booking today!",
+            ]),
+            "image_url": image_url,
+            "images": [image_url] if image_url else [],
+            "tags": ["product_delivery", "mall", "success", "delivered"],
+            "metadata": {
+                "service_type": "mall_delivered",
+                "service_label": "Product Delivery",
+                "service_icon": "🚚",
+                "amount_inr": mrp_inr,
+                "first_name": user_name,
+                "location": location,
+                "city": city,
+                "state": state,
+                "ref_id": f"mall_delivery_{booking_id}",
+                "booking_id": booking_id,
+                "product_id": booking.get("product_id"),
+                "product_name": product_name,
+                "product_image_url": image_url,
+                "user_uid": user_id,
+            },
+            "like_count": 0,
+            "reactions_count": {"celebrate": 0, "love": 0, "fire": 0},
+            "comment_count": 0,
+            "view_count": 0,
+            "bookmark_count": 0,
+            "helpful_count": 0,
+            "is_pinned": False,
+            "is_deleted": False,
+            "is_reported": False,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+        }
+        await db.community_posts.insert_one(post)
+        logging.info(f"[MALL DELIVERY FORUM] Posted '{product_name}' delivery for {user_name} ({booking_id})")
+    except Exception as e:
+        logging.warning(f"[MALL DELIVERY FORUM] forum post failed (non-fatal): {e}")
+
+
 async def write_prc_statement(user_id: str, amount: int, description: str, ref_id: str):
     """Write DEBIT entry to prc_ledger (the canonical PRC passbook source).
     Best-effort: errors logged but do not block booking flow.
@@ -1185,7 +1293,12 @@ async def admin_mark_delivered(booking_id: str):
         {"booking_id": booking_id},
         {"$set": {"status": "delivered", "delivered_at": now_utc().isoformat()}}
     )
+    # Re-fetch to get the now-delivered booking for downstream consumers.
+    b_after = await db.mall_bookings.find_one({"booking_id": booking_id}) or b
     await post_community_event(b["user_id"], "delivered", b["product_name"], booking_id)
+    # NEW: Auto-publish to Community Forum under "Product Delivery" category
+    # so social proof is visible to the entire user base.
+    await post_community_forum_delivery(b_after)
     return {"success": True, "message": "Marked delivered"}
 
 

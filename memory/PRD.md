@@ -9,6 +9,20 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 30, 2026 — Community Forum "🚚 Product Delivery" Auto-Posts)
+- 🎁 **New feature**: When admin marks a Mall booking as delivered (`POST /api/admin/mall/bookings/{id}/mark-delivered`), the system now auto-creates a celebratory post in the Community Forum under a brand-new **"Product Delivery"** category.
+- Post includes:
+  - **Real user name** (per user's choice 1.a) — e.g., `📦 Rahul Shinde received Smartphone!`
+  - **Admin-uploaded product image** (per choice 2.a) — pulled from `mall_products.image_url`
+  - User's city/state location for social proof
+  - Product MRP, congratulatory body, CTA back to Paras Mall
+  - Authored as `Paras Mall` (system) with `is_admin_post=True` so users cannot edit/delete
+- **Trigger**: Admin "Mark Delivered" click (per choice 3.a) — no separate user confirm step
+- **Idempotent**: Existing post detection via `metadata.booking_id` + double mark-delivered blocked by status check
+- **Two-system architecture preserved**: `community_feed` (Live Activity Ticker) AND `community_posts` (Forum) both receive entries on delivery
+- Files: `backend/routes/paras_mall.py` (new `post_community_forum_delivery` helper + wired into `admin_mark_delivered`), `backend/routes/community.py` (added `"Product Delivery"` to `CATEGORIES` whitelist), `frontend/src/pages/CommunityPage.js` (added `🚚 Product Delivery` chip + `Package` icon + teal color theme + chip→backend mapping)
+- **Verified end-to-end on preview**: Created test fulfilled booking → patched delivery address → POST /mark-delivered → forum post auto-appeared with correct title, image, category, real name, content + 2nd attempt idempotently blocked.
+
 ## Implemented (Jun 30, 2026 — Admin "Mining Complete" Orders Not Loading — URGENT)
 - 🐛 **P0 fix**: Admin Mall page → "Pending Delivery" tab was empty in production despite 7 bookings sitting in `status=fulfilled` (mining complete, awaiting delivery action). Root cause: backend admin endpoint default `limit=200` + sort by `created_at DESC` returned only the most recent 200 rows, which were **100% `mining`/`cancelled`** because production has 1,438 active mining bookings. The 7 fulfilled (≈10 days old) and 0 delivered rows were buried past the cutoff.
 - Fix split into two layers:

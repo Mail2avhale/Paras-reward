@@ -5,7 +5,7 @@ import {
   MessageCircle, Heart, Bookmark, Send, Search, Filter, Image,
   MoreVertical, Pin, Flag, Trash2, Shield, ChevronDown, Loader2,
   HelpCircle, Lightbulb, BookOpen, MessageSquare, Megaphone, Headphones,
-  X, CheckCircle, Clock, AlertTriangle, ChevronLeft, Trophy
+  X, CheckCircle, Clock, AlertTriangle, ChevronLeft, Trophy, Package
 } from 'lucide-react';
 import SuccessStoryCard from '../components/SuccessStoryCard';
 import TopRedeemersCard from '../components/TopRedeemersCard';
@@ -19,7 +19,8 @@ const CATEGORY_ICONS = {
   'General Discussion': MessageSquare,
   'Announcement': Megaphone,
   'Support': Headphones,
-  'Success Story': Trophy
+  'Success Story': Trophy,
+  'Product Delivery': Package
 };
 
 const CATEGORY_COLORS = {
@@ -29,7 +30,8 @@ const CATEGORY_COLORS = {
   'General Discussion': 'bg-slate-100 text-slate-700 border-slate-200',
   'Announcement': 'bg-purple-100 text-purple-700 border-purple-200',
   'Support': 'bg-rose-100 text-rose-700 border-rose-200',
-  'Success Story': 'bg-amber-100 text-amber-700 border-amber-200'
+  'Success Story': 'bg-amber-100 text-amber-700 border-amber-200',
+  'Product Delivery': 'bg-teal-100 text-teal-700 border-teal-200'
 };
 
 const CommunityPage = ({ user }) => {
@@ -80,7 +82,7 @@ const CommunityPage = ({ user }) => {
   const currentUserId = user?.uid || paras_user?.uid;
   const currentUserName = user?.name || paras_user?.name || 'User';
 
-  const categories = ['All', '🎉 Wins', 'Help Request', 'Knowledge Share', 'Tips & Tricks', 'General Discussion', 'Announcement', 'Support'];
+  const categories = ['All', '🎉 Wins', '🚚 Product Delivery', 'Help Request', 'Knowledge Share', 'Tips & Tricks', 'General Discussion', 'Announcement', 'Support'];
 
   const fetchPosts = useCallback(async (append = false) => {
     try {
@@ -88,7 +90,12 @@ const CommunityPage = ({ user }) => {
       else setLoading(true);
       const params = new URLSearchParams({ page, limit: 20, sort: sortBy });
       if (activeCategory !== 'All') {
-        const mapped = activeCategory === '🎉 Wins' ? 'Success Story' : activeCategory;
+        // Chip → backend category mapping. New "🚚 Product Delivery" chip
+        // maps to backend `Product Delivery` (auto-generated when admin
+        // marks a Mall booking as delivered).
+        let mapped = activeCategory;
+        if (activeCategory === '🎉 Wins') mapped = 'Success Story';
+        else if (activeCategory === '🚚 Product Delivery') mapped = 'Product Delivery';
         params.append('category', mapped);
       }
       if (searchQuery) params.append('search', searchQuery);

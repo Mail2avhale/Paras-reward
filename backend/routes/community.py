@@ -34,6 +34,7 @@ CATEGORIES = [
     "Announcement",
     "Support",
     "Success Story",  # Auto-generated system posts for completed transactions
+    "Product Delivery",  # Auto-generated when admin marks a Mall booking as delivered
 ]
 
 # Emoji reactions allowed on posts
