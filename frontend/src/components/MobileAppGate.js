@@ -96,10 +96,38 @@ function detectAndroidWebBrowser() {
 const MobileAppGate = ({ children }) => {
   const [showGate, setShowGate] = useState(false);
   const [playStoreUrl, setPlayStoreUrl] = useState(PLAY_STORE_URL_BASE);
+  const [intentUrl, setIntentUrl] = useState(
+    `intent://parasreward.com/#Intent;scheme=https;package=com.parasreward.prc;end`
+  );
 
   useEffect(() => {
     // Build the Play Store URL with referral attribution baked in.
     setPlayStoreUrl(buildPlayStoreUrl());
+    // Also forward the ref code in the "I already have the app" Android
+    // intent — so users with the app already installed land on
+    // /register?ref=XYZ inside the WebView, preserving attribution across
+    // browser→app handoff (only matters when Android App Links autoVerify
+    // hasn't kicked in yet, e.g., before SHA-256 propagation).
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      let ref = (sp.get('ref') || '').toUpperCase();
+      if (!ref) {
+        const raw = localStorage.getItem('paras_ref_code');
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed?.code) ref = String(parsed.code).toUpperCase();
+          } catch { ref = String(raw).toUpperCase(); }
+        }
+      }
+      const path = ref ? `/register?ref=${encodeURIComponent(ref)}` : '/';
+      const fallback = encodeURIComponent(ref ? buildPlayStoreUrl() : PLAY_STORE_URL_BASE);
+      setIntentUrl(
+        `intent://parasreward.com${path}#Intent;scheme=https;package=com.parasreward.prc;S.browser_fallback_url=${fallback};end`
+      );
+    } catch {
+      // keep default intentUrl
+    }
     // Step 1: cheap client-side check first
     if (!detectAndroidWebBrowser()) {
       setShowGate(false);
@@ -159,9 +187,10 @@ const MobileAppGate = ({ children }) => {
       </a>
 
       {/* "I have the app" — opens via Android intent so existing
-          install launches; falls back to Play Store. */}
+          install launches with the ref code preserved; falls back to
+          Play Store (also ref-tagged) when the app isn't installed. */}
       <a
-        href={`intent://parasreward.com/#Intent;scheme=https;package=com.parasreward.prc;S.browser_fallback_url=${encodeURIComponent(playStoreUrl)};end`}
+        href={intentUrl}
         data-testid="mobile-app-gate-open-btn"
         className="mt-3 w-full max-w-xs rounded-2xl border border-white/30 px-6 py-3 text-center font-semibold text-white/90 active:bg-white/10 transition-colors"
       >
