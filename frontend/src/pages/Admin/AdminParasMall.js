@@ -4,12 +4,13 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Package, Plus, Edit, Trash2, CheckCircle, Truck, RefreshCw, X, Save, Upload, Image as ImageIcon, Coins } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, CheckCircle, Truck, RefreshCw, X, Save, Upload, Image as ImageIcon, Coins, Sparkles, Wand2, Loader2, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Switch } from '../../components/ui/switch';
 import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
+import OrderPipelineKanban from './components/OrderPipelineKanban';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -161,8 +162,8 @@ const AdminParasMall = () => {
       )}
 
       {/* Tab pills */}
-      <div className="flex gap-2 mb-5">
-        {['products', 'bookings'].map((t) => (
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {['products', 'bookings', 'pipeline'].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -171,7 +172,11 @@ const AdminParasMall = () => {
             }`}
             data-testid={`admin-mall-tab-${t}`}
           >
-            {t === 'products' ? `Products (${products.length})` : `Bookings (${bookings.length})`}
+            {t === 'products'
+              ? `Products (${products.length})`
+              : t === 'pipeline'
+              ? `Order Pipeline`
+              : `Bookings (${bookings.length})`}
             {t === 'bookings' && pendingDeliveryBookings.length > 0 && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-900 font-bold animate-pulse"
@@ -184,6 +189,8 @@ const AdminParasMall = () => {
           </button>
         ))}
       </div>
+
+      {tab === 'pipeline' && <OrderPipelineKanban />}
 
       {tab === 'products' && (
         <div>
@@ -337,7 +344,59 @@ const AdminParasMall = () => {
 const ProductForm = ({ initial, isCreate, onSave, onCancel }) => {
   const [form, setForm] = useState(initial);
   const [uploading, setUploading] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiImgBusy, setAiImgBusy] = useState(false);
   const fileRef = useRef(null);
+
+  const runAiDraft = async () => {
+    if (!aiPrompt.trim()) { toast.error('Type a short product idea first'); return; }
+    setAiBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      const r = await axios.post(
+        `${API}/mall/v2/admin/ai-generate-product`,
+        { prompt: aiPrompt.trim(), category_hint: form.category || null },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const draft = r.data?.draft;
+      if (draft) {
+        setForm((f) => ({
+          ...f,
+          name: draft.title || f.name,
+          description: draft.description || f.description,
+          category: draft.category || f.category || 'general',
+        }));
+        toast.success('AI draft filled — review and Save');
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'AI generation failed');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const runAiImage = async () => {
+    const promptForImg = aiPrompt.trim() || form.name;
+    if (!promptForImg) { toast.error('Need a product name or AI prompt'); return; }
+    setAiImgBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      const r = await axios.post(
+        `${API}/mall/v2/admin/ai-generate-image`,
+        { prompt: promptForImg },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (r.data?.image_url) {
+        setForm((f) => ({ ...f, image_url: r.data.image_url }));
+        toast.success('AI image generated');
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'AI image failed');
+    } finally {
+      setAiImgBusy(false);
+    }
+  };
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -376,6 +435,55 @@ const ProductForm = ({ initial, isCreate, onSave, onCancel }) => {
           <button onClick={onCancel}><X className="w-5 h-5" /></button>
         </div>
         <div className="space-y-3">
+          {/* AI Generate Panel */}
+          <div className="bg-gradient-to-br from-violet-50 to-amber-50 border border-violet-200 rounded-lg p-3" data-testid="admin-mall-ai-panel">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-4 h-4 text-violet-600" />
+              <span className="text-xs font-bold uppercase tracking-wider text-violet-700">
+                AI Product Assistant (Gemini)
+              </span>
+            </div>
+            <Input
+              placeholder="e.g. 65 inch 4K Smart TV, Sony Bravia"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              data-testid="admin-mall-ai-prompt"
+              className="bg-white"
+            />
+            <div className="flex gap-2 mt-2">
+              <Button
+                type="button"
+                onClick={runAiDraft}
+                disabled={aiBusy}
+                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
+                data-testid="admin-mall-ai-draft"
+              >
+                {aiBusy ? (
+                  <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Drafting…</>
+                ) : (
+                  <><Wand2 className="w-4 h-4 mr-1" /> Generate Title + Description</>
+                )}
+              </Button>
+              <Button
+                type="button"
+                onClick={runAiImage}
+                disabled={aiImgBusy}
+                variant="outline"
+                className="flex-1 border-amber-400 text-amber-700"
+                data-testid="admin-mall-ai-image"
+              >
+                {aiImgBusy ? (
+                  <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Painting…</>
+                ) : (
+                  <><ImageIcon className="w-4 h-4 mr-1" /> Generate Image</>
+                )}
+              </Button>
+            </div>
+            <p className="text-[10px] text-violet-700/70 mt-1.5">
+              Tip: write the product idea, then click Generate. Title/Description/Category auto-fill; image saves to /api/static/mall.
+            </p>
+          </div>
+
           <div>
             <label className="text-xs uppercase tracking-wider text-slate-500">Name</label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} data-testid="admin-mall-form-name" />

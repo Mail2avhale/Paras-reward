@@ -11,18 +11,27 @@ USER endpoints
     /mall/v2/categories                               GET   active categories
     /mall/v2/saver-progress                           GET   PRC savings progress
     /mall/v2/booking/{booking_id}/timeline            GET   tracking timeline
+    /mall/v2/featured                                 GET   hero carousel + featured products
+    /mall/v2/mining-preview/{product_id}              GET   estimate daily rate + days for current user
 
 ADMIN endpoints
     /mall/v2/admin/analytics                          GET   dashboard stats
     /mall/v2/admin/categories                         GET / POST / DELETE
     /mall/v2/admin/product/{product_id}/badges        PATCH set is_new/is_trending/is_hot/stock
-    /mall/v2/admin/product/{product_id}/ai-description POST Gemini-generated description
-    /mall/v2/admin/products/bulk-import               POST CSV
+    /mall/v2/admin/ai-description                     POST  Gemini-generated description
+    /mall/v2/admin/ai-generate-product                POST  Gemini full product (title/desc/category/keywords) from short prompt
+    /mall/v2/admin/ai-generate-image                  POST  Gemini Nano Banana product image
+    /mall/v2/admin/products/bulk-import               POST  CSV
     /mall/v2/admin/booking/{booking_id}/status        PATCH update status (timeline event)
+    /mall/v2/admin/pipeline                           GET   Order Pipeline Kanban (bookings grouped by status)
     /mall/v2/admin/sales-export                       GET   CSV of all bookings
 """
 import io
+import os
+import re
 import csv
+import json
+import base64
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
@@ -455,6 +464,8 @@ class ProductBadgesBody(BaseModel):
     is_hot: Optional[bool] = None
     stock_count: Optional[int] = Field(None, ge=0, le=99999)
     category: Optional[str] = None
+    featured: Optional[bool] = None
+    featured_sort: Optional[int] = Field(None, ge=0, le=999)
 
 
 @router.patch("/admin/product/{product_id}/badges")
@@ -502,7 +513,7 @@ async def ai_generate_description(body: AIDescBody, user: dict = Depends(get_cur
         msg = UserMessage(text=prompt)
         text = await chat.send_message(msg)
         return {"success": True, "description": (text or "").strip()}
-    except Exception as e:
+    except Exception:
         # Don't leak library internals — just log
         import logging
         logging.exception("AI description failed")
@@ -589,6 +600,363 @@ async def update_booking_status(booking_id: str, body: BookingStatusBody, user: 
         },
     )
     return {"success": True, "event": event}
+
+
+# ── Order Pipeline Kanban (Bookings grouped by status) ────────────────────
+_PIPELINE_LABELS = ["Booked", "Confirmed", "Packed", "Shipped", "Delivered"]
+
+
+@router.get("/admin/pipeline")
+async def order_pipeline(limit: int = 200, user: dict = Depends(get_current_user)):
+    """Return active bookings (status in mining|fulfilled) grouped by their
+    latest pipeline label so the admin can render a Kanban board.
+
+    Rules:
+      - "Delivered" column also includes bookings with `status=='delivered'`.
+      - A booking with no `latest_status` defaults to the "Booked" column.
+      - Only the booking's most recent label is used (status_history is rich,
+        but the board only cares about current state).
+    """
+    _admin_only(user)
+    bookings = await db.mall_bookings.find(
+        {"status": {"$in": ["mining", "fulfilled", "delivered"]}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+
+    # Hydrate user info in one batch
+    user_ids = list({b.get("user_id") for b in bookings if b.get("user_id")})
+    users = await db.users.find(
+        {"uid": {"$in": user_ids}},
+        {"_id": 0, "uid": 1, "name": 1, "first_name": 1, "last_name": 1, "mobile": 1}
+    ).to_list(len(user_ids) or 1)
+    user_map = {
+        u["uid"]: {
+            "name": u.get("name") or " ".join(filter(None, [u.get("first_name"), u.get("last_name")])).strip() or "Unknown",
+            "mobile": u.get("mobile") or "",
+        }
+        for u in users
+    }
+
+    columns = {label: [] for label in _PIPELINE_LABELS}
+    for b in bookings:
+        latest = b.get("latest_status")
+        if not latest:
+            # Implicit defaults based on booking lifecycle status
+            if b.get("status") == "delivered":
+                latest = "Delivered"
+            elif b.get("status") == "fulfilled":
+                latest = "Confirmed"  # Awaiting admin action — sits in Confirmed lane
+            else:
+                latest = "Booked"
+        if latest not in columns:
+            latest = "Booked"
+        u = user_map.get(b.get("user_id"), {})
+        columns[latest].append({
+            "booking_id": b.get("booking_id"),
+            "product_id": b.get("product_id"),
+            "product_name": b.get("product_name"),
+            "user_id": b.get("user_id"),
+            "user_name": u.get("name"),
+            "user_mobile": u.get("mobile"),
+            "upfront_prc": b.get("upfront_prc"),
+            "total_prc": b.get("total_prc"),
+            "paid_prc": b.get("paid_prc"),
+            "progress_percent": round((b.get("paid_prc", 0) / max(b.get("total_prc", 1), 1)) * 100, 1),
+            "status": b.get("status"),
+            "latest_status": latest,
+            "latest_status_at": _iso(b.get("latest_status_at")),
+            "created_at": _iso(b.get("created_at")),
+            "delivery": b.get("delivery") or {},
+        })
+
+    return {
+        "success": True,
+        "labels": _PIPELINE_LABELS,
+        "columns": columns,
+        "totals": {label: len(items) for label, items in columns.items()},
+    }
+
+
+# ── Featured Products (Hero Carousel) ──────────────────────────────────────
+@router.get("/featured")
+async def featured_products(limit: int = 6):
+    """Top hero carousel feed. Sources:
+      1. Active products flagged `featured: true` (admin curated)
+      2. Fallback: top-viewed + most-booked active products
+    Limited to `limit` items.
+    """
+    curated = await db.mall_products.find(
+        {"active": True, "featured": True}, {"_id": 0}
+    ).sort("featured_sort", 1).limit(limit).to_list(limit)
+
+    if len(curated) >= limit:
+        return {"success": True, "products": curated, "source": "curated"}
+
+    # Need to top up — pull most-viewed actives, excluding curated ids
+    used = {p["product_id"] for p in curated}
+    fill_needed = limit - len(curated)
+    auto = await db.mall_products.find(
+        {"active": True, "product_id": {"$nin": list(used)}}, {"_id": 0}
+    ).sort([("view_count", -1), ("avg_rating", -1)]).limit(fill_needed).to_list(fill_needed)
+
+    return {
+        "success": True,
+        "products": curated + auto,
+        "source": "curated+auto" if curated else "auto",
+    }
+
+
+# ── Mining Preview (for product detail "live mining preview" UX) ──────────
+@router.get("/mining-preview/{product_id}")
+async def mining_preview(product_id: str, user: dict = Depends(get_current_user)):
+    """Live estimate of daily mining + days-to-complete for THIS user on
+    THIS product, BEFORE they book. Helps decide whether to book + sets
+    realistic expectations.
+
+    Uses the SAME formula as live bookings:
+      - PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
+      - daily_rate     = max(50, N × PRC_per_user(N))
+      - N (cap)        = user's 6-tier referral network cap
+    """
+    p = await db.mall_products.find_one({"product_id": product_id}, {"_id": 0})
+    if not p:
+        raise HTTPException(404, "Product not found")
+
+    # Pricing breakdown (mirrors paras_mall.compute_pricing_breakdown)
+    from routes.paras_mall import compute_pricing_breakdown, get_user_network_cap, MIN_DAILY_RATE_PRC
+    import math
+
+    breakdown = compute_pricing_breakdown(p.get("mrp_inr", 0))
+    total_prc = breakdown["total_prc"]
+    upfront_prc = breakdown["upfront_prc"]
+    remaining_prc = max(0, total_prc - upfront_prc)
+
+    user_cap = await get_user_network_cap(user["uid"])
+
+    # Estimate using N = min(active_after_position, user_cap). Since we haven't
+    # booked yet, assume the user lands AT the latest position → N ≈ 0
+    # initially, but as more bookings come in BEHIND them they earn more.
+    # For a realistic preview we project N at three tiers (low/mid/high) so
+    # the user understands the range.
+    def daily_rate(N: int) -> float:
+        if N <= 0:
+            return float(MIN_DAILY_RATE_PRC)
+        prc_per = max(2.5, 5.0 * (21.0 - math.log2(N)) / 14.0)
+        return max(float(MIN_DAILY_RATE_PRC), N * prc_per)
+
+    low_N = max(0, min(50, user_cap))
+    mid_N = max(0, min(user_cap // 3, user_cap))
+    high_N = user_cap
+
+    low_rate = daily_rate(low_N)
+    mid_rate = daily_rate(mid_N)
+    high_rate = daily_rate(high_N)
+
+    def days_for(rate):
+        if rate <= 0 or remaining_prc <= 0:
+            return 0
+        return int((remaining_prc + rate - 1) / rate)
+
+    return {
+        "success": True,
+        "product_id": product_id,
+        "user_network_cap": user_cap,
+        "pricing": {
+            "mrp_inr": breakdown["mrp_inr"],
+            "total_inr": breakdown["total_inr"],
+            "upfront_prc": upfront_prc,
+            "total_prc": total_prc,
+            "remaining_prc": remaining_prc,
+        },
+        "estimates": {
+            "slow":  {"daily_prc": round(low_rate, 0),  "days_to_complete": days_for(low_rate)},
+            "typical": {"daily_prc": round(mid_rate, 0), "days_to_complete": days_for(mid_rate)},
+            "fast":  {"daily_prc": round(high_rate, 0), "days_to_complete": days_for(high_rate)},
+        },
+        "hint": (
+            "Live estimate based on your referral tier. Daily rate goes UP as "
+            "more users book products positioned after yours."
+        ),
+    }
+
+
+# ── AI Generate Full Product (Nano Banana Text via Gemini) ─────────────────
+class AIGenProductBody(BaseModel):
+    prompt: str = Field(..., min_length=2, max_length=200)
+    category_hint: Optional[str] = None
+
+
+@router.post("/admin/ai-generate-product")
+async def ai_generate_full_product(body: AIGenProductBody, user: dict = Depends(get_current_user)):
+    """Generate a complete product draft (title, description, category, keywords)
+    from a short admin prompt using Gemini.
+    Returns strict JSON so the frontend can autofill the product form.
+    """
+    _admin_only(user)
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+    except Exception:
+        raise HTTPException(503, "LLM library not installed")
+
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(503, "EMERGENT_LLM_KEY not configured")
+
+    valid_categories = [
+        "electronics", "appliances", "kitchen", "furniture",
+        "vouchers", "jewelry", "vehicles", "home", "fashion", "general",
+    ]
+    cat_hint_clause = (
+        f" Strongly prefer the category '{body.category_hint}' if appropriate."
+        if body.category_hint else ""
+    )
+
+    sys_msg = (
+        "You are an e-commerce copywriter for an Indian reward-points shopping "
+        "platform called PARAS MALL. You ALWAYS reply with ONLY valid JSON — "
+        "no markdown, no preface, no code fences. Keys: title (string, ≤60 chars), "
+        "description (string, 40-80 words, plain text, no emojis), category (one of "
+        f"{valid_categories}), keywords (array of 4-6 short tag strings)."
+    )
+    user_msg = (
+        f"Product prompt: '{body.prompt}'. Write the product draft.{cat_hint_clause}"
+    )
+
+    session_id = f"ai-genprod-{uuid.uuid4()}"
+    try:
+        chat = (
+            LlmChat(api_key=api_key, session_id=session_id, system_message=sys_msg)
+            .with_model("gemini", "gemini-2.5-flash")
+        )
+        text = await chat.send_message(UserMessage(text=user_msg))
+    except Exception:
+        import logging
+        logging.exception("AI gen-product failed")
+        raise HTTPException(502, "AI generation failed. Please try again.")
+
+    raw = (text or "").strip()
+    # Strip code-fence if model decides to ignore the system instruction
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```$", "", raw)
+    try:
+        data = json.loads(raw)
+    except Exception:
+        raise HTTPException(502, "AI returned invalid JSON. Please retry.")
+
+    # Validate + sanitize
+    title = (data.get("title") or "").strip()[:80]
+    description = (data.get("description") or "").strip()[:600]
+    category = (data.get("category") or "general").strip().lower()
+    if category not in valid_categories:
+        category = "general"
+    keywords = data.get("keywords") or []
+    if not isinstance(keywords, list):
+        keywords = []
+    keywords = [str(k).strip()[:30] for k in keywords if str(k).strip()][:8]
+
+    if not title or not description:
+        raise HTTPException(502, "AI response was incomplete. Please retry.")
+
+    return {
+        "success": True,
+        "draft": {
+            "title": title,
+            "description": description,
+            "category": category,
+            "keywords": keywords,
+        },
+    }
+
+
+# ── AI Generate Product Image (Gemini Nano Banana) ─────────────────────────
+class AIGenImageBody(BaseModel):
+    prompt: str = Field(..., min_length=4, max_length=400)
+
+
+@router.post("/admin/ai-generate-image")
+async def ai_generate_product_image(body: AIGenImageBody, user: dict = Depends(get_current_user)):
+    """Generate a product image with Gemini Nano Banana
+    (gemini-3.1-flash-image-preview), normalize to 1024x1024 JPEG, persist
+    under /api/static/mall/, return the URL — ready to paste into product
+    create/update.
+    """
+    _admin_only(user)
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+    except Exception:
+        raise HTTPException(503, "LLM library not installed")
+
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(503, "EMERGENT_LLM_KEY not configured")
+
+    enriched_prompt = (
+        f"High-end e-commerce product photograph: {body.prompt}. "
+        "Centered subject on a clean, soft-gradient studio background, "
+        "professional lighting, ultra sharp focus, no text or watermarks. "
+        "Square 1:1 framing."
+    )
+
+    session_id = f"ai-genimg-{uuid.uuid4()}"
+    try:
+        chat = (
+            LlmChat(api_key=api_key, session_id=session_id, system_message="You are a product photography AI.")
+            .with_model("gemini", "gemini-3.1-flash-image-preview")
+            .with_params(modalities=["image", "text"])
+        )
+        text, images = await chat.send_message_multimodal_response(
+            UserMessage(text=enriched_prompt)
+        )
+    except Exception:
+        import logging
+        logging.exception("AI gen-image failed")
+        raise HTTPException(502, "AI image generation failed. Please try again.")
+
+    if not images:
+        raise HTTPException(502, "No image returned. Please rephrase the prompt and retry.")
+
+    # Use the first image; save to disk after PIL normalize.
+    raw_b64 = images[0].get("data")
+    if not raw_b64:
+        raise HTTPException(502, "Empty image payload")
+    try:
+        img_bytes = base64.b64decode(raw_b64)
+    except Exception:
+        raise HTTPException(502, "Could not decode AI image")
+
+    # Normalize to 1024x1024 JPEG using the same convention as the manual upload path
+    from PIL import Image, ImageOps
+    try:
+        im = Image.open(io.BytesIO(img_bytes))
+        im = ImageOps.exif_transpose(im).convert("RGB")
+        w, h = im.size
+        side = min(w, h)
+        left = (w - side) // 2
+        top = (h - side) // 2
+        im = im.crop((left, top, left + side, top + side))
+        if im.size[0] > 1024:
+            im = im.resize((1024, 1024), Image.LANCZOS)
+        buf = io.BytesIO()
+        im.save(buf, format="JPEG", quality=88, optimize=True, progressive=True)
+        buf.seek(0)
+        normalized = buf.read()
+    except Exception as e:
+        raise HTTPException(500, f"Could not process AI image: {e}")
+
+    slug = re.sub(r"[^a-zA-Z0-9_-]+", "_", body.prompt[:40]).strip("_").lower() or "ai-product"
+    ts = int(datetime.now(timezone.utc).timestamp())
+    fname = f"{slug}_{ts}_ai.jpg"
+    target_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "mall")
+    os.makedirs(target_dir, exist_ok=True)
+    with open(os.path.join(target_dir, fname), "wb") as f:
+        f.write(normalized)
+
+    return {
+        "success": True,
+        "image_url": f"/api/static/mall/{fname}",
+        "size_bytes": len(normalized),
+    }
 
 
 # ── Sales CSV Export ───────────────────────────────────────────────────────

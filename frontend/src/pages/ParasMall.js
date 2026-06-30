@@ -20,6 +20,9 @@ import WishlistHeart from '@/components/mall/WishlistHeart';
 import SaverProgressBar from '@/components/mall/SaverProgressBar';
 import ProductBadges from '@/components/mall/ProductBadges';
 import SkeletonGrid from '@/components/mall/SkeletonCard';
+import HeroCarousel from '@/components/mall/HeroCarousel';
+import CategoriesGrid from '@/components/mall/CategoriesGrid';
+import ProductDetailSheet from '@/components/mall/ProductDetailSheet';
 import './ParasMall.css';
 import ParasMallBookings from './ParasMallBookings';
 import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
@@ -63,6 +66,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [pendingBook, setPendingBook] = useState(null);
+  const [detailProduct, setDetailProduct] = useState(null);
   const [delivery, setDelivery] = useState({
     name: '', mobile: '', address_line: '', city: '', state: '', pin_code: '', landmark: '',
   });
@@ -311,6 +315,17 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
       {/* Mall 2.0: PRC Saver Progress (next-target motivator) */}
       <SaverProgressBar refreshKey={user?.prc_balance || 0} />
 
+      {/* Sub-Batch B: Hero Carousel + Categories Grid (landing refresh) */}
+      {tab === 'discover' && !searchOpen && (
+        <>
+          <HeroCarousel onSelectProduct={(p) => setDetailProduct(p)} />
+          <CategoriesGrid
+            active={category}
+            onSelect={(cid) => setCategory(cid)}
+          />
+        </>
+      )}
+
       <AnimatePresence>
         {searchOpen && (
           <motion.div
@@ -501,9 +516,18 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                         )}
                       </div>
                       {current?.image_url ? (
-                        <img src={resolveAssetUrl(current.image_url)} alt={current.name} className="mall-image" data-testid="mall-product-image" />
+                        <img
+                          src={resolveAssetUrl(current.image_url)}
+                          alt={current.name}
+                          className="mall-image"
+                          data-testid="mall-product-image"
+                          onClick={() => setDetailProduct(current)}
+                          style={{ cursor: 'pointer' }}
+                        />
                       ) : (
-                        <div className="mall-image-fallback"><Package className="w-20 h-20 text-purple-300" /></div>
+                        <div className="mall-image-fallback" onClick={() => setDetailProduct(current)} style={{ cursor: 'pointer' }}>
+                          <Package className="w-20 h-20 text-purple-300" />
+                        </div>
                       )}
                     </div>
 
@@ -560,6 +584,14 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                   >
                     <ShoppingBag className="w-4 h-4" />
                     {bookingInProgress ? 'Booking…' : `Book Now · ${fmtPrc(current?.upfront_prc)}`}
+                  </button>
+
+                  <button
+                    className="mall-view-details-btn"
+                    onClick={() => setDetailProduct(current)}
+                    data-testid="mall-view-details-btn"
+                  >
+                    View Full Details →
                   </button>
 
                   <div className="mall-hint">
@@ -745,6 +777,14 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Product Detail Sheet (Sub-Batch B premium UX) */}
+      <ProductDetailSheet
+        product={detailProduct}
+        open={!!detailProduct}
+        onClose={() => setDetailProduct(null)}
+        onBook={(p) => { setDetailProduct(null); setPendingBook(p); }}
+      />
     </div>
     </PullToRefresh>
   );

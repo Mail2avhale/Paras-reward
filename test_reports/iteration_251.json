@@ -1,0 +1,44 @@
+{
+  "summary": "PARAS MALL Sub-Batch B end-to-end testing (backend + frontend). All 6 backend endpoints + RBAC + admin Kanban transitions PASS (10/10 pytest). Frontend mall landing (HeroCarousel, CategoriesGrid, ProductDetailSheet via View Details + Hero tap) and Admin /admin/mall (Pipeline 5-column Kanban, dialog with 5 move buttons, AI text autofill, AI image autofill) all render and function. One bug found: opening ProductDetailSheet via Hero tap shows ZERO pricing (GST/Fees/Total/Upfront/Total PRC all ₹0 and CTA shows '0 PRC') because /api/mall/v2/featured returns raw product docs without computed pricing fields. Same product opened via 'View Full Details' shows correct pricing (19,470 PRC) because it uses the list endpoint that includes the breakdown.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ProductDetailSheet (when opened from HeroCarousel tap)",
+        "issue": "Pricing breakdown rows show ₹0 for GST/Processing Fee/Total and CTA bar shows '0 PRC' instead of e.g. '19,470 PRC'. Root cause: /api/mall/v2/featured returns raw product docs without computed pricing fields (gst_inr, processing_inr, total_inr, total_prc, upfront_prc). HeroCarousel passes that bare object directly to ProductDetailSheet via setDetailProduct(p) in /app/frontend/src/pages/ParasMall.js:321. ProductDetailSheet reads product.gst_inr / product.total_prc directly (ProductDetailSheet.js:160-173, 263-271) so they render as ₹0 / 0 PRC.",
+        "selector": "[data-testid='mall-detail-sheet'] [data-testid='mall-detail-cta-bar']",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mall_v2_sub_batch_b.py",
+    "/app/test_reports/pytest/mall_v2_sub_batch_b.xml"
+  ],
+  "action_items": [
+    "Fix Hero→Detail pricing: either (a) enrich /api/mall/v2/featured response by running compute_pricing_breakdown(p.mrp_inr) on each product and merging the breakdown into each item (mirrors how the products listing endpoint enriches), or (b) in HeroCarousel/ParasMall, refetch the full product (with pricing) before calling setDetailProduct. Option (a) is simpler and keeps the detail sheet stateless. Suggested patch: in routes/mall_v2.py featured_products(), after building the products list, enrich each product with compute_pricing_breakdown fields just like the list endpoint."
+  ],
+  "critical_code_review_comments": [
+    "mall_v2.py featured() returns DB documents as-is — they lack the pricing-breakdown fields (gst_inr, processing_inr, total_inr, total_prc, upfront_prc, daily_rate_prc) that ProductDetailSheet relies on. The list endpoint serving the rest of /mall must be enriching these on the fly; featured does not. This silent missing-data bug only surfaces when the detail sheet is opened from the hero (acceptance criterion: 'tapping a slide opens the ProductDetailSheet').",
+    "mall_v2.py file is ~995 lines — consider splitting AI generation (text + image) into a separate file (mall_v2_ai.py) for maintainability.",
+    "AI image generation is synchronous and can take 15-40 sec — no client-side timeout shown to admin. Consider returning a job_id + polling pattern or at least disable the form during generation (already shows a loading state — verify it's robust to network drop)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mall_v2_sub_batch_b.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10)",
+    "frontend": "~92% (1 visible bug on Hero→Detail pricing path)"
+  },
+  "test_credentials": "User 9970100782/997010, Admin admin@test.com/153759 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None. Tests use existing products and bookings. Pipeline status-advance test reverts the booking back to its original column after passing.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After main agent fixes /api/mall/v2/featured to include pricing-breakdown fields, re-run pytest /app/backend/tests/test_mall_v2_sub_batch_b.py (should still 10/10 PASS) and re-open ProductDetailSheet from a hero slide on /mall — pricing rows should show non-zero values and CTA should show e.g. '19,470 PRC' instead of '0 PRC'. Backend pytest file already has the helper to read REACT_APP_BACKEND_URL from /app/frontend/.env so it is portable. AI text + image, Pipeline GET + PATCH RBAC are all confirmed working end-to-end. AI image gen took ~10-30 sec in observed runs; the pytest timeout is 90 sec.",
+  "rca_of_the_issue": "Reproduction: login as user → /mall → click any HeroCarousel slide → ProductDetailSheet opens. Bug: pricing rows are ₹0, CTA says '0 PRC'. Compare with: same /mall → scroll to product card → click 'View Full Details' → same ProductDetailSheet but pricing is correct. Cause: /api/mall/v2/featured (routes/mall_v2.py:681-706) returns mall_products docs straight from Mongo without computing the GST/Processing/Total/PRC fields. The /mall product list endpoint enriches each row before returning, hence why View Full Details works. Mitigation: enrich featured() output with compute_pricing_breakdown() per item, OR have HeroCarousel/ParasMall fetch the enriched product (e.g. by product_id) before calling setDetailProduct."
+}
