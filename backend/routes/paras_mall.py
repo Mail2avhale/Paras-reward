@@ -242,6 +242,70 @@ def compute_total_prc(mrp_inr: int) -> int:
     return compute_pricing_breakdown(mrp_inr)["total_prc"]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Mall Mining — Subscription Gate (Jun 30, 2026)
+# User spec: Mall product mining requires an ACTIVE paid subscription. If the
+# plan is missing/explorer OR the subscription has expired, both
+# `start-session` and `collect` are blocked. Bookings stay intact — only the
+# PRC accrual is paused until the user renews.
+# ─────────────────────────────────────────────────────────────────────────────
+FREE_PLAN_NAMES = {"", "explorer", "free", "none"}
+
+
+async def assert_active_subscription_for_mining(user_id: str) -> None:
+    """Raise HTTPException(403) if the user lacks an active paid subscription.
+
+    Returns silently when the user is on a paid plan (Startup / Growth / Elite)
+    AND the subscription has not yet expired.
+    """
+    from utils.subscription_expiry import get_user_expiry
+
+    user = await db.users.find_one(
+        {"uid": user_id},
+        {"_id": 0, "subscription_plan": 1, "subscription_expiry": 1,
+         "subscription_expires": 1, "vip_expiry": 1, "subscription_expired": 1}
+    )
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    plan = (user.get("subscription_plan") or "").strip().lower()
+    if plan in FREE_PLAN_NAMES:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Mall product mining requires an active subscription. "
+                "Please activate Startup / Growth / Elite to start mining."
+            ),
+        )
+
+    # Hard-flag from cron sweeper (server.py expiry job)
+    if user.get("subscription_expired") is True:
+        raise HTTPException(
+            status_code=403,
+            detail="Your subscription has expired. Renew to resume Mall product mining.",
+        )
+
+    expiry = get_user_expiry(user)
+    if expiry:
+        try:
+            now = now_utc()
+            if expiry < now:
+                days = (now - expiry).days
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        f"Your subscription expired {days} day{'s' if days != 1 else ''} ago. "
+                        "Renew to resume Mall product mining."
+                    ),
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            # Don't block on a stray parse error — fail open for paid users
+            import logging
+            logging.exception(f"[mall-mining-gate] expiry parse error for {user_id}")
+
+
 async def get_user_network_cap(user_id: str) -> int:
     """Compute user's 6-tier network cap (800-8000) — IDENTICAL to main mining.
 
@@ -820,6 +884,9 @@ async def collect_booking(booking_id: str, body: CollectBookingRequest):
     if b.get("status") != "mining":
         raise HTTPException(400, "Booking is not in mining state")
 
+    # Subscription gate (Jun 30, 2026): no paid active plan → no mining
+    await assert_active_subscription_for_mining(body.user_id)
+
     # Lapse-check first; if just lapsed, accumulated will be ~0 and we tell user
     b = await maybe_lapse_or_renew_session(b)
     # Anti-inflation cap (mirrors main mining's 6-tier referral cap)
@@ -902,6 +969,9 @@ async def start_booking_session(booking_id: str, body: StartSessionRequest):
             "already_active": True,
             "session_start": b["session_start"],
         }
+
+    # Subscription gate (Jun 30, 2026): no paid active plan → no mining
+    await assert_active_subscription_for_mining(body.user_id)
 
     # Enforce cooldown
     next_avail = parse_iso(b.get("next_session_available_at"))
