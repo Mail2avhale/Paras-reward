@@ -4,7 +4,7 @@ import axios from 'axios';
 import RewardLoader from '@/components/RewardLoader';
 import { 
   Users, Copy, Check, Share2, ArrowLeft, TrendingUp, 
-  ChevronRight, UserCheck, Link2, RefreshCw, Gift, X
+  UserCheck, Link2, RefreshCw, Gift
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 
   // Self-claim modal state — for users who registered without a referral
   // code and want to attach a referrer post-signup (within 30 days).
-  const [showClaimModal, setShowClaimModal] = useState(false);
+  // Feb 2026 UX change: form is INLINE (no modal), so we only track input + lookup state.
   const [claimCodeInput, setClaimCodeInput] = useState('');
   const [claimLookup, setClaimLookup] = useState({ status: 'idle', referrerName: '', error: '' });
   const [submittingClaim, setSubmittingClaim] = useState(false);
@@ -112,7 +112,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
   // Live-lookup the code as the user types (debounced 350ms). Provides
   // immediate feedback ("Referred by Rajesh M.") before the user commits.
   useEffect(() => {
-    if (!showClaimModal) return;
+    if (!canClaimReferrer) return;
     const code = claimCodeInput.trim().toUpperCase();
     if (code.length < 4) {
       setClaimLookup({ status: 'idle', referrerName: '', error: '' });
@@ -132,7 +132,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
       }
     }, 350);
     return () => clearTimeout(timer);
-  }, [claimCodeInput, showClaimModal]);
+  }, [claimCodeInput, canClaimReferrer]);
 
   const handleSubmitClaim = async () => {
     const code = claimCodeInput.trim().toUpperCase();
@@ -146,15 +146,11 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
       toast.success(`Attached to ${res.data?.referrer_name || 'your referrer'}!`, {
         icon: <Gift className="w-5 h-5" />,
       });
-      setShowClaimModal(false);
       setClaimCodeInput('');
       setClaimLookup({ status: 'idle', referrerName: '', error: '' });
-      // Refresh both the page data and the parent user object so the CTA
-      // disappears immediately (canClaimReferrer flips to false).
-      // NOTE: refreshUserData REQUIRES the uid arg — without it the fetch
-      // goes to /api/user/undefined → 401 → user state never updates →
-      // purple CTA stays visible until manual reload. (Caught Feb 28 2026
-      // production test, iteration_250.)
+      // Refresh both the page data and the parent user object so the inline
+      // card disappears immediately (canClaimReferrer flips to false).
+      // refreshUserData REQUIRES the uid arg — see Feb 28 2026 prod fix.
       fetchData();
       if (typeof refreshUserData === 'function') refreshUserData(user.uid);
     } catch (err) {
@@ -205,28 +201,6 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 
       <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
         
-        {/* Self-Claim Referrer CTA — only for users without an attached referrer */}
-        {canClaimReferrer && (
-          <button
-            onClick={() => setShowClaimModal(true)}
-            data-testid="enter-referral-cta"
-            className="w-full text-left bg-gradient-to-r from-violet-600/90 to-fuchsia-600/90 hover:from-violet-600 hover:to-fuchsia-600 rounded-2xl p-5 shadow-lg transition active:scale-[0.99]"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                <Gift className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-bold text-base">Did someone refer you?</p>
-                <p className="text-white/80 text-xs mt-1 leading-snug">
-                  Enter their referral code to attach them to your account (one-time, within 30 days of signup).
-                </p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-white/70 shrink-0" />
-            </div>
-          </button>
-        )}
-
         {/* Referral Link Card */}
         {referralCode && (
           <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-5 shadow-lg" data-testid="referral-link-card">
@@ -262,6 +236,61 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                 Share on WhatsApp
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Self-Claim Referrer — inline card, shown ONLY when user has no
+            referrer yet. Sits right below the user's own Referral Link card
+            so the symmetry is obvious: "share yours / enter someone else's". */}
+        {canClaimReferrer && (
+          <div className="bg-gradient-to-br from-violet-600/90 to-fuchsia-600/85 rounded-2xl p-5 shadow-lg" data-testid="enter-referral-card">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                <Gift className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-white font-bold text-base leading-tight">Enter Referral Code</p>
+                <p className="text-white/75 text-[11px] mt-0.5">One-time. Within 30 days of signup.</p>
+              </div>
+            </div>
+
+            <input
+              type="text"
+              value={claimCodeInput}
+              onChange={(e) => setClaimCodeInput(e.target.value.toUpperCase())}
+              placeholder="e.g. ABCD1234"
+              maxLength={12}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck="false"
+              data-testid="claim-code-input"
+              disabled={submittingClaim}
+              className="w-full bg-black/30 border border-white/15 rounded-xl px-4 py-3 text-white font-mono text-base tracking-wider focus:outline-none focus:border-white/50 transition placeholder:text-white/30 disabled:opacity-60"
+            />
+
+            {/* Live lookup feedback */}
+            <div className="min-h-[20px] mt-2 px-1" aria-live="polite">
+              {claimLookup.status === 'loading' && (
+                <p className="text-white/55 text-xs">Looking up…</p>
+              )}
+              {claimLookup.status === 'valid' && (
+                <p className="text-emerald-200 text-xs font-medium flex items-center gap-1.5" data-testid="claim-referrer-name">
+                  <Check className="w-3.5 h-3.5" /> Referred by {claimLookup.referrerName}
+                </p>
+              )}
+              {claimLookup.status === 'invalid' && (
+                <p className="text-rose-200 text-xs">No user found with that code.</p>
+              )}
+            </div>
+
+            <Button
+              onClick={handleSubmitClaim}
+              disabled={submittingClaim || claimLookup.status !== 'valid'}
+              data-testid="claim-submit-btn"
+              className="w-full mt-3 bg-white/95 hover:bg-white text-violet-700 font-bold py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              {submittingClaim ? 'Attaching…' : 'Attach Referrer'}
+            </Button>
           </div>
         )}
 
@@ -502,84 +531,6 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
         </div>
 
       </div>
-
-      {/* Self-Claim Referrer Modal */}
-      {showClaimModal && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
-          onClick={() => !submittingClaim && setShowClaimModal(false)}
-          data-testid="claim-referrer-modal"
-        >
-          <div
-            className="w-full sm:max-w-md bg-gradient-to-b from-[#1a1538] to-[#0e0a1c] border border-white/10 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
-                  <Gift className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-lg leading-tight">Enter Referral Code</h3>
-                  <p className="text-white/50 text-xs mt-0.5">One-time. Cannot be changed later.</p>
-                </div>
-              </div>
-              <button
-                onClick={() => !submittingClaim && setShowClaimModal(false)}
-                disabled={submittingClaim}
-                className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition disabled:opacity-30"
-                data-testid="claim-modal-close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <label className="block text-white/70 text-xs font-semibold tracking-wider uppercase mb-2">
-              Referrer&apos;s Code
-            </label>
-            <input
-              type="text"
-              value={claimCodeInput}
-              onChange={(e) => setClaimCodeInput(e.target.value.toUpperCase())}
-              placeholder="e.g. ABCD1234"
-              maxLength={12}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck="false"
-              data-testid="claim-code-input"
-              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-base tracking-wider focus:outline-none focus:border-violet-400 transition placeholder:text-white/20"
-            />
-
-            {/* Live lookup feedback */}
-            <div className="min-h-[24px] mt-3" aria-live="polite">
-              {claimLookup.status === 'loading' && (
-                <p className="text-white/40 text-sm">Looking up…</p>
-              )}
-              {claimLookup.status === 'valid' && (
-                <p className="text-emerald-400 text-sm font-medium flex items-center gap-1.5" data-testid="claim-referrer-name">
-                  <Check className="w-4 h-4" /> Referred by {claimLookup.referrerName}
-                </p>
-              )}
-              {claimLookup.status === 'invalid' && (
-                <p className="text-rose-400 text-sm">No user found with that code.</p>
-              )}
-            </div>
-
-            <Button
-              onClick={handleSubmitClaim}
-              disabled={submittingClaim || claimLookup.status !== 'valid'}
-              data-testid="claim-submit-btn"
-              className="w-full mt-5 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-bold py-3.5 rounded-xl disabled:opacity-40 transition"
-            >
-              {submittingClaim ? 'Attaching…' : 'Attach Referrer'}
-            </Button>
-
-            <p className="text-white/40 text-[11px] text-center mt-4 leading-relaxed">
-              By tapping Attach, you confirm this person referred you. You can only attach a referrer once, and only within 30 days of signing up.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
