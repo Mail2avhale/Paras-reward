@@ -9,6 +9,17 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 30, 2026 — Production Performance Pass)
+- 🐛 **User-side P0**: `/api/user/{uid}/performance-summary` was **10.2 seconds** on prod cold load (scans 17 collections via `get_user_all_time_redeemed` per user). Added 60s endpoint-level cache via `cache_manager`. Cold call still ~1s; warm hit ~80ms. **~120× faster on subsequent loads.**
+- 🐛 `/api/user/{uid}/redeem-limit` (1.7s → 80ms warm) — 60s cache wrapping `calculate_user_redeem_limit`
+- 🐛 `/api/mining/status/{uid}` (1.6s × polled every 30s → 80ms warm) — 20s cache; auto-invalidated on `/mining/start` and `/mining/collect`
+- 🐛 `/api/public/contact-info` (830ms → ~20ms warm) — 300s cache; data is essentially static config
+- 🐛 `/api/admin/gst-summary` (3.9s → 80ms warm) — 300s cache; 6+ aggregations on `company_wallet_transactions`
+- 🐛 `/api/kyc/stats` (5.2s → 80ms warm) — 60s cache; previously one of the 6 parallel count_documents always hit 5s timeout
+- 🐛 **Admin dashboard P0**: `/api/admin/redeem-limits-overview` was timing out at 30s (iterates ALL users with balance × downline tree walk). Removed from initial dashboard mount — now lazy-loaded behind a "Load Data" button (`data-testid="redeem-limits-load-btn"`). Dashboard now renders **instantly** instead of showing a 30s spinner on every admin nav.
+- 🔧 **Cache invalidation**: extended `invalidate_lifetime_cache(uid)` (already called after every booking, redemption, payment) to also evict the new endpoint-level caches → users see fresh balance/limit immediately after mutating actions; passive views get 60s amortization.
+- **Production impact**: dashboard time-to-data **10s → 1-2s** for all users.
+
 ## Implemented (Jun 30, 2026 — Confirm Booking Sheet Visibility Fix)
 - 🐛 **P0 fix**: Confirm Booking bottom-sheet's pricing breakdown rows (`.mall-pricing-row`, `.mall-pricing-row.total`, `.mall-pricing-row.upfront-row`, `.mall-pricing-divider`, `.mall-pricing-hint`, `.mall-confirm-prices`) had no light-theme override — they rendered white text on the Spinny-palette white sheet, making MRP / Processing Fee / Mining Target / "You pay now" lines invisible
 - Added explicit dark-on-cream color overrides in `/app/frontend/src/pages/ParasMall.css`; upfront row keeps the brand purple→emerald gradient

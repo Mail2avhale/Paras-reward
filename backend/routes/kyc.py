@@ -16,11 +16,17 @@ router = APIRouter(prefix="/kyc", tags=["KYC"])
 
 # Import db from server (will be set during app initialization)
 db = None
+cache = None  # Optional cache manager — wired by server.py at startup
 
 def set_db(database):
     """Set database instance from main server"""
     global db
     db = database
+
+def set_cache(cache_manager):
+    """Set cache manager from main server (called once at startup)."""
+    global cache
+    cache = cache_manager
 
 # ========== KYC MODELS ==========
 class KYCDocument(BaseModel):
@@ -1163,7 +1169,21 @@ async def reject_kyc(uid: str, request: Request):
 
 @router.get("/stats")
 async def get_kyc_stats():
-    """Get KYC statistics (Admin) — counts run in parallel with timeout."""
+    """Get KYC statistics (Admin) — counts run in parallel with timeout.
+
+    Cached 60s — was consistently 5.2s on production because one of the 6
+    parallel count_documents calls always hit the inner 5s timeout. Cache
+    hides the cold cost and amortizes refresh across many admin clicks.
+    """
+    # ---- Cache (60s TTL) ----
+    if cache:
+        try:
+            cached_stats = await cache.get("admin:kyc_stats")
+            if cached_stats:
+                return cached_stats
+        except Exception:
+            pass
+
     async def _count(coll, q):
         try:
             return await asyncio.wait_for(coll.count_documents(q), timeout=5.0)
@@ -1178,7 +1198,7 @@ async def get_kyc_stats():
             _count(db.users, {"kyc_status": "pending"}),
             _count(db.users, {"kyc_status": {"$in": ["verified", "approved"]}}),
         )
-        return {
+        result = {
             "pending": pending,
             "verified": verified,
             "rejected": rejected,
@@ -1186,6 +1206,12 @@ async def get_kyc_stats():
             "users_kyc_pending": users_pending,
             "users_kyc_verified": users_verified,
         }
+        if cache:
+            try:
+                await cache.set("admin:kyc_stats", result, ttl=60)
+            except Exception:
+                pass
+        return result
     except Exception as e:
         logging.error(f"[KYC stats] error: {e}")
         # Never crash the page — return zeros so UI keeps rendering

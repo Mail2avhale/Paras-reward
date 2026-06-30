@@ -165,7 +165,13 @@ const AdminDashboard = ({ user }) => {
     setRedeemLoading(false);
   };
 
-  useEffect(() => { fetchRedeemLimits(); }, []);
+  // LAZY LOAD: This endpoint iterates ALL users with PRC balance > 0 and
+  // walks each user's downline tree — a single call can take 10-30s on
+  // production. We no longer fire it on mount; instead it loads on-demand
+  // when the admin scrolls/expands the Redeem Limits widget.
+  // (Previously fired in useEffect, causing 30s blocking spinner on every
+  // dashboard load.)
+  // useEffect(() => { fetchRedeemLimits(); }, []);
 
   // Memoize computed values
   const subscriptionStats = useMemo(() => ({
@@ -724,6 +730,25 @@ const AdminDashboard = ({ user }) => {
 
         {redeemLoading && !redeemLimits && (
           <div className="text-center py-8 text-slate-400 text-sm">Loading redeem limits data...</div>
+        )}
+
+        {/* Empty CTA: this expensive endpoint is now lazy-loaded so the
+            dashboard renders instantly. Admin clicks "Load Data" to fire it. */}
+        {!redeemLoading && !redeemLimits && (
+          <div className="text-center py-8" data-testid="redeem-limits-empty">
+            <p className="text-slate-500 text-sm mb-3">
+              Redeem limits data is heavy to compute — click below to load when needed.
+            </p>
+            <Button
+              size="sm"
+              onClick={fetchRedeemLimits}
+              disabled={redeemLoading}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
+              data-testid="redeem-limits-load-btn"
+            >
+              Load Data
+            </Button>
+          </div>
         )}
       </Card>
 

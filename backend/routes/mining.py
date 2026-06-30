@@ -436,7 +436,23 @@ async def get_mining_status(uid: str):
     
     Returns session info, mined coins, mining rate, etc.
     Explorer can start sessions but cannot collect.
+
+    Cached 20s — frontend polls every 30s + each call invokes
+    `calculate_mining_rate` (downline tree walk). Without cache, every
+    poll took 1.5-1.8s on production. Cache TTL chosen to be slightly
+    shorter than the poll interval so each poll still sees fresh data
+    once per cycle.
     """
+    # ---- Server-side cache (20s TTL) ----
+    ms_cache_key = f"mining:status:{uid}"
+    if cache:
+        try:
+            cached_status = await cache.get(ms_cache_key)
+            if cached_status:
+                return cached_status
+        except Exception:
+            pass
+
     try:
         user = await db.users.find_one({"uid": uid}, {"_id": 0})
         if not user:
@@ -503,7 +519,7 @@ async def get_mining_status(uid: str):
             except Exception:
                 cooldown_remaining = 0
         
-        return {
+        status_payload = {
             "mining_active": mining_active,
             "session_active": mining_active,  # Alias for frontend compatibility
             "mined_coins": round(max(0, mined_coins), 6),
@@ -540,6 +556,13 @@ async def get_mining_status(uid: str):
             "prc_per_user": rate_info["prc_per_user"],
             "subscription_type": rate_info["subscription_type"]
         }
+        # Cache the status for 20s (poll cycle is 30s)
+        if cache:
+            try:
+                await cache.set(ms_cache_key, status_payload, ttl=20)
+            except Exception:
+                pass
+        return status_payload
     except HTTPException:
         raise
     except Exception as e:
@@ -650,6 +673,13 @@ async def start_mining(uid: str):
     except Exception as e:
         logging.error(f"Start mining error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Invalidate cached status — mutation changes mining_active.
+        if cache:
+            try:
+                await cache.delete(f"mining:status:{uid}")
+            except Exception:
+                pass
 
 
 @router.post("/collect/{uid}")
@@ -826,6 +856,9 @@ async def collect_mining(uid: str, current_user: dict = Depends(_require_authent
         if cache:
             await cache.delete(f"user_data:{uid}")
             await cache.delete(f"user:dashboard:{uid}")
+            await cache.delete(f"mining:status:{uid}")
+            await cache.delete(f"user:perf_summary:{uid}")
+            await cache.delete(f"user:redeem_limit:{uid}")
         
         return {
             "success": True,

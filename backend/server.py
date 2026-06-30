@@ -80,7 +80,7 @@ from routes.manual_bank_transfer import router as bank_transfer_router, set_db a
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db
 from routes.sustainability_burn import set_db as set_sustainability_burn_db, apply_sustainability_burn, reverse_sustainability_burn
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
-from routes.kyc import router as kyc_router, set_db as set_kyc_db
+from routes.kyc import router as kyc_router, set_db as set_kyc_db, set_cache as set_kyc_cache
 from routes.prc_lock import (
     router as prc_lock_admin_router,
     user_router as prc_lock_user_router,
@@ -4827,9 +4827,26 @@ _REDEEMED_TOTAL_CACHE: dict = {}  # uid -> (ts_seconds, float_prc)
 _REDEEMED_TOTAL_CACHE_TTL: float = 60.0  # seconds
 
 def invalidate_lifetime_cache(user_id: str | None = None):
-    """Call after any service-collection write that changes lifetime spend."""
+    """Call after any service-collection write that changes lifetime spend.
+
+    Also invalidates the endpoint-level Redis/in-memory caches for
+    `performance-summary` and `redeem-limit` so freshly-mutated balances
+    propagate to the user's dashboard within the same request cycle.
+    """
     if user_id:
         _REDEEMED_TOTAL_CACHE.pop(user_id, None)
+        # Best-effort invalidation of endpoint-level caches (fire & forget).
+        if cache:
+            try:
+                import asyncio as _asyncio
+                loop = _asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(cache.delete(f"user:perf_summary:{user_id}"))
+                    loop.create_task(cache.delete(f"user:redeem_limit:{user_id}"))
+                    loop.create_task(cache.delete(f"user_data:{user_id}"))
+                    loop.create_task(cache.delete(f"user:dashboard:{user_id}"))
+            except Exception:
+                pass
     else:
         _REDEEMED_TOTAL_CACHE.clear()
 
@@ -18652,10 +18669,21 @@ async def get_user_redeem_limit(user_id: str, request: Request):
         except jwt.InvalidTokenError:
             pass  # Allow for backwards compatibility
     
+    # ---- Server-side cache (60s TTL) — endpoint repeatedly polled by
+    # dashboard + redeem flows; result only needs minute-level freshness. ----
+    rl_cache_key = f"user:redeem_limit:{user_id}"
+    if cache:
+        try:
+            cached_rl = await cache.get(rl_cache_key)
+            if cached_rl:
+                return cached_rl
+        except Exception:
+            pass
+
     try:
         limit_info = await calculate_user_redeem_limit(user_id)
         
-        return {
+        return_payload = {
             "success": True,
             "user_id": user_id,
             "limit": {
@@ -18684,6 +18712,12 @@ async def get_user_redeem_limit(user_id: str, request: Request):
                 "note": "Dynamic limit based on Growth Network. Grow your network to unlock more."
             }
         }
+        if cache:
+            try:
+                await cache.set(rl_cache_key, return_payload, ttl=60)
+            except Exception:
+                pass
+        return return_payload
     except Exception as e:
         logging.error(f"Error getting redeem limit: {e}")
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
@@ -18698,7 +18732,21 @@ async def get_performance_summary(user_id: str, request: Request):
     Shows: Total Subscription Paid (₹), Total Rewards Redeemed (₹),
            Available PRC Balance, Estimated PRC Value (₹).
     NO investment/profit/ROI language.
+
+    Cached 60s — previously took 10s on cold call due to 17-collection scan
+    in get_user_all_time_redeemed. Cache lives long enough to absorb the
+    rapid-fire dashboard mount + remount pattern without becoming stale.
     """
+    # ---- Server-side cache (60s TTL) ----
+    perf_cache_key = f"user:perf_summary:{user_id}"
+    if cache:
+        try:
+            cached_perf = await cache.get(perf_cache_key)
+            if cached_perf:
+                return cached_perf
+        except Exception:
+            pass
+
     try:
         user = await db.users.find_one(
             {"uid": user_id},
@@ -18770,7 +18818,7 @@ async def get_performance_summary(user_id: str, request: Request):
         # 4. Estimated PRC Value (₹) = prc_balance / 10
         estimated_value_inr = prc_balance / 10
 
-        return {
+        result = {
             "success": True,
             "data": {
                 "total_subscription_paid_inr": round(total_subscription_inr, 2),
@@ -18780,6 +18828,14 @@ async def get_performance_summary(user_id: str, request: Request):
                 "estimated_prc_value_inr": round(estimated_value_inr, 2)
             }
         }
+        # Cache the result for 60 seconds — balances and lifetime redeemed
+        # only need minute-level freshness for the summary card.
+        if cache:
+            try:
+                await cache.set(perf_cache_key, result, ttl=60)
+            except Exception:
+                pass
+        return result
     except HTTPException:
         raise
     except Exception as e:
@@ -30185,7 +30241,20 @@ async def get_gst_collection_summary():
     """
     Get GST Collection Summary for Admin Dashboard
     Shows total GST collected, trends, and source breakdown
+
+    Cached 5 min — runs 6+ aggregations against company_wallet_transactions
+    (4s on production); admin can hit "refresh" if real-time value needed.
     """
+    # ---- Cache (300s TTL) ----
+    gst_cache_key = "admin:gst_summary"
+    if cache:
+        try:
+            cached_gst = await cache.get(gst_cache_key)
+            if cached_gst:
+                return cached_gst
+        except Exception:
+            pass
+
     try:
         now = datetime.now(timezone.utc)
         
@@ -30287,7 +30356,7 @@ async def get_gst_collection_summary():
             {"_id": 0}
         ).sort("timestamp", -1).limit(10).to_list(10)
         
-        return {
+        gst_result = {
             "success": True,
             "summary": {
                 "total_gst_collected": round(total_credited, 2),
@@ -30304,6 +30373,12 @@ async def get_gst_collection_summary():
             "gst_rate": "18%",
             "formula": "GST = Base Price × 18%"
         }
+        if cache:
+            try:
+                await cache.set(gst_cache_key, gst_result, ttl=300)
+            except Exception:
+                pass
+        return gst_result
     except Exception as e:
         logging.error(f"GST Summary Error: {e}")
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
@@ -34348,7 +34423,21 @@ async def get_user_security_info(user_id: str):
 
 @api_router.get("/public/contact-info")
 async def get_public_contact_info():
-    """Get contact information for public display (Landing page, Contact Us, Footer)"""
+    """Get contact information for public display (Landing page, Contact Us, Footer).
+
+    Cached 5 min — contact info is essentially static configuration; the
+    earlier 830ms latency on this hot endpoint (called on every public
+    page mount + footer load) was pure waste."""
+    # ---- Cache (300s TTL) ----
+    contact_cache_key = "public:contact_info"
+    if cache:
+        try:
+            cached_contact = await cache.get(contact_cache_key)
+            if cached_contact:
+                return cached_contact
+        except Exception:
+            pass
+
     settings = await db.settings.find_one({}, {"_id": 0, "contact_settings": 1})
     
     default_settings = {
@@ -34379,7 +34468,7 @@ async def get_public_contact_info():
     
     full_address = ", ".join([p for p in address_parts if p and p.strip() and p != ", , - "])
     
-    return {
+    result = {
         "company_name": contact.get("company_name"),
         "address": full_address,
         "address_line1": contact.get("address_line1"),
@@ -34394,6 +34483,12 @@ async def get_public_contact_info():
         "email_business": contact.get("email_business"),
         "working_hours": contact.get("working_hours")
     }
+    if cache:
+        try:
+            await cache.set(contact_cache_key, result, ttl=300)
+        except Exception:
+            pass
+    return result
 
 @api_router.get("/admin/logo-settings")
 async def get_logo_settings():
@@ -36800,6 +36895,7 @@ api_router.include_router(monitor_router)
 
 # KYC Router - User KYC submission and admin verification
 set_kyc_db(db)
+set_kyc_cache(cache)
 api_router.include_router(kyc_router)
 
 # Inactive user cleanup (auto + manual)
