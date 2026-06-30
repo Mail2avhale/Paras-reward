@@ -67,56 +67,63 @@ COLLECT_TO_START_COOLDOWN_SECONDS = 60  # Mirror of main mining: after a user
 # seconds before manually starting a fresh mining session. This drives in-app
 # retention + AdMob impressions (consistent with the main mining flow).
 
-# Tax & fee constants (Feb 2026)
-# Cascading: GST is computed on MRP, processing fee is computed on (MRP + GST).
-# Final multiplier = (1 + GST) × (1 + PROCESSING) = 1.18 × 1.10 = 1.298.
-GST_PERCENT = 0.18         # 18% GST on MRP
-PROCESSING_PERCENT = 0.10  # 10% Processing fee on (MRP + GST)
-FINAL_PRICE_MULTIPLIER = (1 + GST_PERCENT) * (1 + PROCESSING_PERCENT)  # 1.298
+# Tax & fee constants — REVISED Jun 30 2026 (V2: Option B "separate entry fee")
+# OLD MODEL (pre-2026-06-30): MRP + 18% GST + 10% Processing → cascaded total
+# NEW MODEL: MRP is ALL-INCLUSIVE (no GST added). Processing fee is a SEPARATE
+# entry fee charged from the user's main PRC wallet at booking time. It does NOT
+# count toward the mining target — the user must still mine the full MRP × 10 PRC.
+#
+# Why the change? Users were confused by the 30% inflation between sticker price
+# and total mining target. Sticker = MRP, period. Processing fee is a transparent
+# one-time booking charge (clearly disclosed at checkout) deducted from the wallet.
+#
+# Existing bookings retain their old breakdown via their immutable
+# `pricing_breakdown` snapshot — only NEW bookings use the new model.
+GST_PERCENT = 0.0          # MRP is all-inclusive (legacy constant kept for back-compat)
+PROCESSING_PERCENT = 0.10  # 10% Processing fee on MRP (charged separately to wallet)
+FINAL_PRICE_MULTIPLIER = 1.0  # Total INR = MRP (no cascade)
+PRICING_MODEL_VERSION = "v2_separate_processing"  # Stored on new bookings for cancel-burn logic
 
 
 def compute_pricing_breakdown(mrp_inr: float) -> dict:
-    """Cascading pricing breakdown for a Mall product (Feb 2026).
+    """Pricing breakdown for a Mall product (V2 — MRP all-inclusive).
 
-    Layers, in order:
-      1. MRP (base product price)
-      2. + 18% GST → applied on MRP
-      3. + 10% Processing fee → applied on (MRP + GST)
+    New model (Jun 30 2026):
+      • MRP is the FINAL all-inclusive sticker price — no GST added on top.
+      • Processing fee (10% of MRP) is a SEPARATE one-time entry fee, charged
+        from the user's main PRC wallet at booking. It is NOT a deposit toward
+        the product — the user still mines the full MRP × PRC_INR_RATE PRC.
+      • `total_inr` reflects the product price (= MRP). `total_prc` is the
+        mining target.
+      • `upfront_prc` is renamed semantically: it's the processing fee in PRC.
+        We keep the field name for backwards compatibility with the rest of
+        the booking pipeline.
 
-    Returns a dict with every line item so the UI can render the full
-    breakdown to the user (regulatory transparency for tax + fee disclosure).
-
-    Upfront cost cascades the same fees on top of the base upfront amount,
-    so the user pays the proportional tax+fee at booking time too.
+    Returns the legacy GST keys (= 0) so older frontends that still read them
+    don't crash. Newer UIs check `gst_inr == 0` and hide that row.
     """
     mrp = float(mrp_inr)
-    gst_inr = round(mrp * GST_PERCENT, 2)
-    after_gst_inr = round(mrp + gst_inr, 2)
-    processing_inr = round(after_gst_inr * PROCESSING_PERCENT, 2)
-    total_inr = round(after_gst_inr + processing_inr, 2)
-
-    # Upfront base = max(10% MRP, ₹1000), then cascade the same fees.
-    upfront_base_inr = max(mrp * UPFRONT_PERCENT, float(UPFRONT_MIN_INR))
-    upfront_gst_inr = round(upfront_base_inr * GST_PERCENT, 2)
-    upfront_after_gst_inr = round(upfront_base_inr + upfront_gst_inr, 2)
-    upfront_processing_inr = round(upfront_after_gst_inr * PROCESSING_PERCENT, 2)
-    upfront_total_inr = round(upfront_after_gst_inr + upfront_processing_inr, 2)
+    processing_inr = round(mrp * PROCESSING_PERCENT, 2)
+    total_inr = round(mrp, 2)  # MRP is the final product price (all-inclusive)
 
     return {
-        # Total product price breakdown
+        # Total product price breakdown — V2
         "mrp_inr": round(mrp, 2),
-        "gst_percent": GST_PERCENT * 100,
-        "gst_inr": gst_inr,
+        # Legacy GST fields retained as 0 for back-compat
+        "gst_percent": 0.0,
+        "gst_inr": 0.0,
         "processing_percent": PROCESSING_PERCENT * 100,
         "processing_inr": processing_inr,
-        "total_inr": total_inr,
-        "total_prc": round(total_inr * PRC_INR_RATE),
-        # Upfront breakdown
-        "upfront_base_inr": round(upfront_base_inr, 2),
-        "upfront_gst_inr": upfront_gst_inr,
-        "upfront_processing_inr": upfront_processing_inr,
-        "upfront_inr": upfront_total_inr,
-        "upfront_prc": round(upfront_total_inr * PRC_INR_RATE),
+        "total_inr": total_inr,                  # = MRP
+        "total_prc": round(total_inr * PRC_INR_RATE),  # mining target = MRP × 10
+        # "Upfront" semantics in V2 = processing fee (separate entry fee)
+        "upfront_base_inr": round(mrp, 2),       # informational
+        "upfront_gst_inr": 0.0,
+        "upfront_processing_inr": processing_inr,
+        "upfront_inr": processing_inr,           # what user pays from wallet (INR equiv)
+        "upfront_prc": round(processing_inr * PRC_INR_RATE),  # what user pays from wallet (PRC)
+        # Model version — used by cancel-burn logic to pick the right formula
+        "model": PRICING_MODEL_VERSION,
     }
 
 
@@ -472,14 +479,18 @@ async def book_product(product_id: str, body: BookProductRequest):
         "mrp_inr": product["mrp_inr"],
         "total_prc": total_prc,
         "upfront_prc": upfront_prc,
-        # Immutable pricing snapshot (Feb 2026 tax+fee era)
+        # Immutable pricing snapshot (V2: MRP all-inclusive + separate processing fee)
         "pricing_breakdown": pricing_breakdown,
+        "pricing_model": pricing_breakdown.get("model", PRICING_MODEL_VERSION),
         # `total_prc_deducted` mirrors upfront_prc so this booking is counted
         # by the centralized lifetime-redeemed scanner (`get_user_all_time_redeemed`).
         # Only the wallet-debit portion counts; mined PRC never left the wallet.
         "total_prc_deducted": upfront_prc,
-        "paid_prc": upfront_prc,  # upfront credited immediately
-        "remaining_prc": total_prc - upfront_prc,
+        # V2: Processing fee is a SEPARATE entry fee — it does NOT count toward
+        # the mining target. paid_prc starts at 0; the user mines the full
+        # `total_prc` (= MRP × 10).
+        "paid_prc": 0,
+        "remaining_prc": total_prc,
         "position": position,
         "status": "mining",  # mining → fulfilled → delivered
         "session_start": now.isoformat(),
@@ -634,8 +645,14 @@ async def cancel_booking(
         )
 
     upfront_prc = int(booking.get("upfront_prc", 0))
-    paid_prc = float(booking.get("paid_prc", upfront_prc))
-    burned_prc = max(0.0, paid_prc - upfront_prc)  # mined PRC that gets burned
+    paid_prc = float(booking.get("paid_prc", 0))
+    # Burn formula depends on the pricing model used when this booking was created:
+    #   • V2 ("v2_separate_processing"): paid_prc is PURE mining accumulation
+    #     (processing fee was a separate entry charge). Burn = paid_prc.
+    #   • Legacy (pre-2026-06-30): paid_prc started at upfront_prc and grew via
+    #     mining. Burn = paid_prc - upfront_prc (mined-above-deposit portion).
+    is_v2 = booking.get("pricing_model") == PRICING_MODEL_VERSION
+    burned_prc = max(0.0, paid_prc if is_v2 else (paid_prc - upfront_prc))
 
     user = await db.users.find_one({"uid": body.user_id})
     if not user:

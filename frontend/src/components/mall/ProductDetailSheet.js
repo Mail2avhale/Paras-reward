@@ -156,20 +156,16 @@ export default function ProductDetailSheet({ product, open, onClose, onBook }) {
                 <div className="mall-detail-section-title">Pricing Breakdown</div>
                 <div className="mall-detail-price-grid">
                   <div className="mall-detail-price-row">
-                    <span>MRP</span>
+                    <span>MRP <span className="opacity-60 text-[10px]">(All Inclusive)</span></span>
                     <span>{fmtInr(product.mrp_inr)}</span>
-                  </div>
-                  <div className="mall-detail-price-row">
-                    <span>GST ({product.gst_percent || 18}%)</span>
-                    <span>+ {fmtInr(product.gst_inr)}</span>
                   </div>
                   <div className="mall-detail-price-row">
                     <span>Processing Fee ({product.processing_percent || 10}%)</span>
                     <span>+ {fmtInr(product.processing_inr)}</span>
                   </div>
                   <div className="mall-detail-price-row total">
-                    <span>Total Product Value</span>
-                    <span>{fmtInr(product.total_inr)}</span>
+                    <span>Mining Target</span>
+                    <span>{fmtPrc(product.total_prc)}</span>
                   </div>
                 </div>
               </div>
@@ -188,15 +184,15 @@ export default function ProductDetailSheet({ product, open, onClose, onBook }) {
                   <div className="mall-detail-preview" data-testid="mall-detail-preview">
                     <div className="mall-detail-preview-summary">
                       <div>
-                        <div className="mall-detail-preview-label">Upfront</div>
+                        <div className="mall-detail-preview-label">Booking Fee</div>
                         <div className="mall-detail-preview-val">
                           {fmtPrc(preview.pricing.upfront_prc)}
                         </div>
                       </div>
                       <div>
-                        <div className="mall-detail-preview-label">Remaining (mine it)</div>
+                        <div className="mall-detail-preview-label">Mining Target</div>
                         <div className="mall-detail-preview-val">
-                          {fmtPrc(preview.pricing.remaining_prc)}
+                          {fmtPrc(preview.pricing.total_prc)}
                         </div>
                       </div>
                       <div>
@@ -262,7 +258,7 @@ export default function ProductDetailSheet({ product, open, onClose, onBook }) {
             {/* Sticky bottom CTA */}
             <div className="mall-detail-cta-bar" data-testid="mall-detail-cta-bar">
               <div className="mall-detail-cta-price">
-                <div className="mall-detail-cta-label">You pay now</div>
+                <div className="mall-detail-cta-label">Booking Fee</div>
                 <div className="mall-detail-cta-value">{fmtPrc(product.upfront_prc)}</div>
               </div>
               <button

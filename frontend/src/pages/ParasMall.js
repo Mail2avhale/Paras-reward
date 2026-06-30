@@ -564,14 +564,14 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
 
                   <div className="mall-price-row">
                     <div className="mall-price-tile" data-testid="mall-mrp-tile">
-                      <div className="mall-price-tile-label">MRP</div>
+                      <div className="mall-price-tile-label">MRP (All Inclusive)</div>
                       <div className="mall-price-tile-value">{fmtInr(current?.mrp_inr)}</div>
                     </div>
                     <div className="mall-price-tile total" data-testid="mall-total-tile">
-                      <div className="mall-price-tile-label">MRP + GST + Charges</div>
-                      <div className="mall-price-tile-value">{fmtInr(current?.total_inr)}</div>
+                      <div className="mall-price-tile-label">Booking Fee (from PRC wallet)</div>
+                      <div className="mall-price-tile-value">{fmtInr(current?.processing_inr)}</div>
                       <div className="mall-price-tile-sub">
-                        +{fmtInr(current?.gst_inr)} GST · +{fmtInr(current?.processing_inr)} Fee
+                        = {fmtPrc(current?.upfront_prc)} (one-time)
                       </div>
                     </div>
                   </div>
@@ -655,32 +655,28 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
               )}
               <div className="mall-confirm-prices" data-testid="mall-confirm-pricing-breakdown">
                 <div className="mall-pricing-row">
-                  <span>MRP</span>
+                  <span>MRP <span className="text-amber-300/80 text-[10px]">(All Inclusive)</span></span>
                   <span>{fmtInr(pendingBook.mrp_inr)}</span>
-                </div>
-                <div className="mall-pricing-row">
-                  <span>GST ({pendingBook.gst_percent || 18}%)</span>
-                  <span>+ {fmtInr(pendingBook.gst_inr)}</span>
                 </div>
                 <div className="mall-pricing-row">
                   <span>Processing Fee ({pendingBook.processing_percent || 10}%)</span>
                   <span>+ {fmtInr(pendingBook.processing_inr)}</span>
                 </div>
                 <div className="mall-pricing-row total">
-                  <span>Total Product Value</span>
-                  <span>{fmtInr(pendingBook.total_inr)}</span>
+                  <span>Mining Target</span>
+                  <span>{fmtPrc(pendingBook.total_prc)}</span>
                 </div>
                 <div className="mall-pricing-divider" />
                 <div className="mall-pricing-row upfront-row">
-                  <span>You pay now (Upfront)</span>
+                  <span>You pay now (Booking Fee)</span>
                   <span className="upfront">{fmtPrc(pendingBook.upfront_prc)}</span>
                 </div>
                 <div className="mall-pricing-hint">
-                  ≈ {fmtInr(pendingBook.upfront_inr)} (Base {fmtInr(pendingBook.upfront_base_inr)} + GST {fmtInr(pendingBook.upfront_gst_inr)} + Fee {fmtInr(pendingBook.upfront_processing_inr)})
+                  ≈ {fmtInr(pendingBook.processing_inr)} — one-time entry fee from your PRC wallet. Mining target is unchanged.
                 </div>
               </div>
               <p className="mall-confirm-note">
-                Daily mining (50 PRC floor + downline boost) gradually fills the remaining {fmtPrc((pendingBook.total_prc || 0) - (pendingBook.upfront_prc || 0))}. Delivery at 100%.
+                Daily mining (50 PRC floor + downline boost) accumulates toward {fmtPrc(pendingBook.total_prc || 0)}. Delivery triggers at 100%.
               </p>
 
               {/* Delivery Address Form */}

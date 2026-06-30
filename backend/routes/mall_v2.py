@@ -743,7 +743,9 @@ async def mining_preview(product_id: str, user: dict = Depends(get_current_user)
     breakdown = compute_pricing_breakdown(p.get("mrp_inr", 0))
     total_prc = breakdown["total_prc"]
     upfront_prc = breakdown["upfront_prc"]
-    remaining_prc = max(0, total_prc - upfront_prc)
+    # V2 pricing: processing fee is a SEPARATE entry charge — the user mines
+    # the FULL total_prc, not (total_prc - upfront_prc).
+    remaining_prc = total_prc
 
     user_cap = await get_user_network_cap(user["uid"])
 
