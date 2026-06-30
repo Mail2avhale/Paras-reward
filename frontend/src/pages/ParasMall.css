@@ -503,6 +503,13 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
 }
+
+/* Skeleton shimmer animation (used by mall/SkeletonCard.js).
+   Defined globally so it works in both Mall pages without separate imports. */
+@keyframes mallSkelShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 .mall-pricing-row {
   display: flex;
   justify-content: space-between;

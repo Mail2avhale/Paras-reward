@@ -19,6 +19,7 @@ import { hapticPrimary, hapticSuccess, hapticError } from '@/utils/nativeUx';
 import WishlistHeart from '@/components/mall/WishlistHeart';
 import SaverProgressBar from '@/components/mall/SaverProgressBar';
 import ProductBadges from '@/components/mall/ProductBadges';
+import SkeletonGrid from '@/components/mall/SkeletonCard';
 import './ParasMall.css';
 import ParasMallBookings from './ParasMallBookings';
 import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
@@ -240,12 +241,20 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   }, [trackedProductId]);
 
   if (loading) {
+    // Shimmer skeleton instead of "Loading Mall" text — Amazon/Flipkart polish.
     return (
-      <div className="mall-loading" data-testid="mall-loading">
-        <div className="flex flex-col items-center gap-3">
-          <Sparkles className="w-8 h-8 animate-pulse" />
-          <p className="tracking-[0.32em] uppercase text-[11px] font-semibold">Loading Mall</p>
+      <div className="mall-root" data-testid="mall-loading" style={{ paddingTop: 20 }}>
+        <div style={{ padding: '0 16px', marginBottom: 16 }}>
+          <div
+            style={{
+              height: 28, width: '40%', borderRadius: 8,
+              background: 'linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 100%)',
+              backgroundSize: '200% 100%',
+              animation: 'mallSkelShimmer 1.4s ease-in-out infinite',
+            }}
+          />
         </div>
+        <SkeletonGrid count={4} variant="product" />
       </div>
     );
   }

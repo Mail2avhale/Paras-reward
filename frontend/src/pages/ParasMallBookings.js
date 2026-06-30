@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
 import RewardedAdPrompt from '@/components/RewardedAdPrompt';
 import ForcedAdInterstitial from '@/components/ForcedAdInterstitial';
+import MiningTimeline from '@/components/mall/MiningTimeline';
+import SkeletonGrid from '@/components/mall/SkeletonCard';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -275,6 +277,11 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
             to fulfill
           </p>
         )}
+
+        {/* Amazon-style lifecycle timeline: Booked → Mining → Fulfilled →
+            Shipped → Delivered. Cleaner mental model than the progress bar
+            alone, since it surfaces the post-mining stages users care about. */}
+        <MiningTimeline booking={booking} />
       </div>
 
       {booking.status === 'mining' && (
@@ -570,9 +577,8 @@ const ParasMallBookings = ({ user }) => {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-zinc-500" data-testid="mall-bookings-loading">
-        <Sparkles className="w-6 h-6 mx-auto mb-2 animate-pulse text-amber-400" />
-        <p className="text-[11px] uppercase tracking-[0.32em]">Loading bookings…</p>
+      <div className="px-4 pt-4 pb-24" data-testid="mall-bookings-loading">
+        <SkeletonGrid count={3} variant="booking" />
       </div>
     );
   }
