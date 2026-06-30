@@ -9,6 +9,13 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 30, 2026 — Confirm Booking Sheet Visibility Fix)
+- 🐛 **P0 fix**: Confirm Booking bottom-sheet's pricing breakdown rows (`.mall-pricing-row`, `.mall-pricing-row.total`, `.mall-pricing-row.upfront-row`, `.mall-pricing-divider`, `.mall-pricing-hint`, `.mall-confirm-prices`) had no light-theme override — they rendered white text on the Spinny-palette white sheet, making MRP / Processing Fee / Mining Target / "You pay now" lines invisible
+- Added explicit dark-on-cream color overrides in `/app/frontend/src/pages/ParasMall.css`; upfront row keeps the brand purple→emerald gradient
+- Verified end-to-end via Playwright on mobile viewport (420×880) — all rows now legible
+- Verified Delivery Address (P0 b) end-to-end: frontend form pre-fills from profile, backend `POST /api/mall/book/{product_id}` validates+persists, admin `GET /api/admin/mall/bookings` returns `delivery` block (addr_present=True, pin/city/mobile included), Admin Mall Bookings tab + Order Pipeline Kanban display full address
+- Verified Admin Image Upload + Auto-Crop (P0 c): `POST /api/admin/mall/upload-image` center-crops to 1:1, resizes to 1024×1024, JPEG quality 88, EXIF rotation honored, RGBA flattened onto white — tested with 1600×1200 PNG → 1024×1024 JPEG, 21% smaller
+
 ## Implemented (Jun 30, 2026 — PARAS MALL Sub-Batch B: Amazon/Flipkart-grade UX upgrade)
 - 🛒 **Hero Carousel + Categories Grid** — landing page refresh
   - New `HeroCarousel.js` component: auto-rotating featured products (4.5s), swipeable, dots + arrows

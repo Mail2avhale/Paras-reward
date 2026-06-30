@@ -1317,6 +1317,28 @@
 }
 .mall-confirm-note { color: rgba(26, 14, 46, 0.6); }
 .mall-confirm-cancel { background: #faf6f2; color: #1a0e2e; border-color: rgba(91, 45, 199, 0.14); }
+
+/* Light-theme override for the pricing breakdown rows inside the Confirm Booking sheet.
+   The original dark-theme styles used white text + a near-transparent white background
+   which rendered as invisible "white on white" once the light Spinny palette took over. */
+.mall-confirm-prices {
+  background: #faf6f2;
+  border-color: rgba(91, 45, 199, 0.14);
+  color: #1a0e2e;
+}
+.mall-pricing-row { color: rgba(26, 14, 46, 0.78); }
+.mall-pricing-row.total { color: #1a0e2e; }
+.mall-pricing-row.upfront-row { color: #1a0e2e; }
+.mall-pricing-row.upfront-row .upfront {
+  background: linear-gradient(135deg, #5b2dc7, #1f8a4c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.mall-pricing-divider {
+  background: linear-gradient(90deg, transparent, rgba(91, 45, 199, 0.22), transparent);
+}
+.mall-pricing-hint { color: rgba(26, 14, 46, 0.55); }
 .mall-confirm-go {
   background: linear-gradient(135deg, #5b2dc7 0%, #7c3aed 50%, #1f8a4c 100%);
   color: #fff;
