@@ -41,6 +41,9 @@ from datetime import datetime, timezone, timedelta
 # Database reference (set by main server)
 db = None
 check_redeem_limit_func = None
+# Subscription-stake INR cap check (set by server.py) — NEW Jun 2026
+# Sole gate for Bank/Recharge/Utility/EMI (replaces old PRC cap per user spec)
+check_subscription_cap_func = None
 
 def set_db(database):
     global db
@@ -50,10 +53,16 @@ def set_redeem_limit_check(func):
     global check_redeem_limit_func
     check_redeem_limit_func = func
 
+
+def set_subscription_cap_check(func):
+    """Subscription-stake-based INR cap (new Jun 2026)."""
+    global check_subscription_cap_func
+    check_subscription_cap_func = func
+
 # Cooldown check for BBPS services (24 hours)
 async def check_bbps_cooldown(user_id: str) -> dict:
     """Check if user can make a BBPS bill payment request (24 hour cooldown)"""
-    if not db or not user_id:
+    if db is None or not user_id:
         return {"allowed": True, "wait_hours": 0}
     
 
@@ -63,7 +72,7 @@ async def check_subscription_for_redeem(user_id: str, service_name: str = "bill 
     CRITICAL: Check if user has active paid subscription before allowing redeem.
     Only users with active startup/growth/elite can use redeem services.
     """
-    if not db or not user_id:
+    if db is None or not user_id:
         return {"allowed": False, "reason": "Invalid user"}
     
     user = await db.users.find_one({"uid": user_id})
@@ -901,20 +910,19 @@ async def pay_bill(data: PayBillRequest):
                 "data": None
             }
     
-    # ===== CHECK REDEEM LIMIT =====
-    if data.user_id and check_redeem_limit_func and data.amount:
+    # ===== CHECK SUBSCRIPTION-STAKE INR CAP (Jun 2026 — sole gate) =====
+    if data.user_id and check_subscription_cap_func and data.amount:
         try:
-            limit_check = await check_redeem_limit_func(data.user_id, float(data.amount))
-            if not limit_check.get("allowed"):
-                limit_info = limit_check.get("limit_info", {})
+            cap_check = await check_subscription_cap_func(data.user_id, float(data.amount))
+            if not cap_check.get("allowed"):
                 return {
                     "success": False,
                     "status": 403,
-                    "message": f"Redeem limit exceeded. Your limit: {limit_info.get('total_limit', 0):,.0f} PRC, Used: {limit_info.get('total_redeemed', 0):,.0f} PRC, Remaining: {limit_info.get('remaining_limit', 0):,.0f} PRC",
+                    "message": cap_check.get("reason"),
                     "data": None
                 }
         except Exception as e:
-            logging.error(f"[BBPS PAY] Redeem limit check error: {e}")
+            logging.error(f"[BBPS PAY] Subscription cap check error: {e}")
     
     if not validate_bbps_config():
         return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")

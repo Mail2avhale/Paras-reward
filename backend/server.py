@@ -74,10 +74,10 @@ from routes.user_logs import router as user_logs_router, set_db as set_user_logs
 from routes.hdfc_bulk_export import router as hdfc_export_router, set_db as set_hdfc_export_db
 from routes.notifications import create_notification
 from routes.razorpay_payments import router as razorpay_router, set_db as set_razorpay_db
-from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check, set_weekly_one_service_check as set_redeem_v2_weekly_check
+from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check, set_weekly_one_service_check as set_redeem_v2_weekly_check, set_subscription_cap_check as set_redeem_v2_sub_cap
+from routes.bbps_services import router as bbps_router, set_db as set_bbps_db, set_redeem_limit_check as set_bbps_redeem_limit_check, set_subscription_cap_check as set_bbps_sub_cap
+from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check, set_calculate_redeem_limit as set_bank_transfer_calc_limit, set_all_time_redeemed as set_bank_transfer_all_time, set_prc_rate_getter as set_bank_transfer_prc_rate, set_subscription_cap_check as set_bank_transfer_sub_cap
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db
-from routes.bbps_services import router as bbps_router, set_db as set_bbps_db, set_redeem_limit_check as set_bbps_redeem_limit_check
-from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check, set_calculate_redeem_limit as set_bank_transfer_calc_limit, set_all_time_redeemed as set_bank_transfer_all_time, set_prc_rate_getter as set_bank_transfer_prc_rate
 from routes.sustainability_burn import set_db as set_sustainability_burn_db, apply_sustainability_burn, reverse_sustainability_burn
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
@@ -36751,6 +36751,21 @@ api_router.include_router(redeem_v2_router)
 from routes.admin_unified_spend import router as unified_spend_router, set_db as set_unified_spend_db, sync_legacy_to_unified_redeem
 set_unified_spend_db(db)
 app.include_router(unified_spend_router)
+
+# Subscription-Stake Redeem Cap (Jun 2026)
+# Each successful subscription = +₹2,500 lifetime Bank/Recharge/Utility/EMI cap.
+# Sole gate for these 4 services (Mall keeps using the PRC cap).
+from routes.subscription_redeem_cap import (
+    router as sub_cap_router,
+    set_db as set_sub_cap_db,
+    check_subscription_redeem_cap,
+)
+set_sub_cap_db(db)
+app.include_router(sub_cap_router)
+# Inject the cap-check function into the 3 governed-service routes
+set_redeem_v2_sub_cap(check_subscription_redeem_cap)
+set_bbps_sub_cap(check_subscription_redeem_cap)
+set_bank_transfer_sub_cap(check_subscription_redeem_cap)
 
 # Manual Bank Transfer Router
 set_bank_transfer_db(db)

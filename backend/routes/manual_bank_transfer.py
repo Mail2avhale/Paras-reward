@@ -65,6 +65,10 @@ db = None
 # Global redeem limit check function (set by server.py)
 check_redeem_limit_func = None
 
+# Subscription-stake INR cap check (set by server.py) — NEW Jun 2026
+# Sole gate for Bank/Recharge/Utility/EMI (replaces old PRC cap per user spec 2b)
+check_subscription_cap_func = None
+
 # Weekly one service limit check function (set by server.py)
 check_weekly_one_service_func = None
 
@@ -84,6 +88,12 @@ def set_db(database):
 def set_redeem_limit_check(func):
     global check_redeem_limit_func
     check_redeem_limit_func = func
+
+
+def set_subscription_cap_check(func):
+    """Subscription-stake-based INR cap (new Jun 2026)."""
+    global check_subscription_cap_func
+    check_subscription_cap_func = func
 
 def set_weekly_one_service_check(func):
     global check_weekly_one_service_func
@@ -743,15 +753,14 @@ async def create_redeem_request(request: RedeemRequest):
         fees = await calculate_fees(amount)
         total_prc = fees["total_prc"]
         
-        # 5. Check Global Redeem Limit
-        if check_redeem_limit_func:
-            limit_check = await check_redeem_limit_func(user_id, total_prc)
-            if not limit_check.get("allowed"):
-                limit_info = limit_check.get("limit_info", {})
-                raise HTTPException(
-                    status_code=403,
-                    detail=f"Redeem limit exceeded. Monthly limit: {limit_info.get('total_limit', 0):,.0f} PRC, Used: {limit_info.get('total_redeemed', 0):,.0f} PRC, Remaining: {limit_info.get('remaining_limit', 0):,.0f} PRC"
-                )
+        # 5. Check Subscription-Stake INR Redeem Cap (Jun 2026 — sole gate)
+        # Each successful subscription unlocks ₹2,500 lifetime headroom for
+        # Bank+Recharge+Utility+EMI. The old PRC cap is bypassed here per the
+        # user-defined rule (Bank/Recharge/Utility use ONLY the INR cap).
+        if check_subscription_cap_func:
+            cap_check = await check_subscription_cap_func(user_id, float(amount))
+            if not cap_check.get("allowed"):
+                raise HTTPException(status_code=403, detail=cap_check.get("reason"))
         
         # 6. Verify IFSC and get bank name
         ifsc_result = await verify_ifsc_eko(bank.ifsc_code)

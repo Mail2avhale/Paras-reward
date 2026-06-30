@@ -56,6 +56,9 @@ def sanitize_sender_name(name: str) -> str:
 # Import redeem limit check function
 check_redeem_limit_func = None
 check_weekly_one_service_func = None
+# Subscription-stake INR cap check (set by server.py) — NEW Jun 2026
+# Sole gate for Bank/Recharge/Utility/EMI (replaces old PRC cap per user spec)
+check_subscription_cap_func = None
 
 def set_redeem_limit_check(func):
     """Set the redeem limit check function from server.py"""
@@ -66,6 +69,12 @@ def set_weekly_one_service_check(func):
     """Set the weekly one service limit check function from server.py"""
     global check_weekly_one_service_func
     check_weekly_one_service_func = func
+
+
+def set_subscription_cap_check(func):
+    """Subscription-stake-based INR cap (new Jun 2026)."""
+    global check_subscription_cap_func
+    check_subscription_cap_func = func
 
 import time
 import json
@@ -1070,21 +1079,20 @@ async def create_redeem_request(request: RedeemRequestCreate):
             logging.error(f"[REDEEM] Weekly limit check error: {e}")
     
     # ═══════════════════════════════════════════════════════════════
-    # STEP 9: GLOBAL REDEEM LIMIT CHECK
+    # STEP 9: SUBSCRIPTION-STAKE INR REDEEM CAP (Jun 2026 — sole gate)
+    # Each successful subscription unlocks ₹2,500 lifetime headroom for
+    # Bank+Recharge+Utility+EMI. Old PRC cap is bypassed here per the
+    # user-defined rule (Bank/Recharge/Utility use ONLY the INR cap).
     # ═══════════════════════════════════════════════════════════════
-    if check_redeem_limit_func:
+    if check_subscription_cap_func:
         try:
-            limit_check = await check_redeem_limit_func(request.user_id, request.amount)
-            if not limit_check.get("allowed"):
-                limit_info = limit_check.get("limit_info", {})
-                raise HTTPException(
-                    status_code=403,
-                    detail=f"Redeem limit exceeded. Your limit: ₹{limit_info.get('total_limit', 0):,.2f}, Used: ₹{limit_info.get('total_redeemed', 0):,.2f}, Remaining: ₹{limit_info.get('remaining_limit', 0):,.2f}"
-                )
+            cap_check = await check_subscription_cap_func(request.user_id, float(request.amount))
+            if not cap_check.get("allowed"):
+                raise HTTPException(status_code=403, detail=cap_check.get("reason"))
         except HTTPException:
             raise
         except Exception as e:
-            logging.error(f"[REDEEM] Limit check error: {e}")
+            logging.error(f"[REDEEM] Subscription cap check error: {e}")
     
     # ═══════════════════════════════════════════════════════════════
     # STEP 9.2: MONTHLY ₹1500 UTILITY LIMIT CHECK
