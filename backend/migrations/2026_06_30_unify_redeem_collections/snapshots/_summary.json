@@ -1,0 +1,25 @@
+{
+  "taken_at": "2026-06-30T07:13:00.081682+00:00",
+  "collections": {
+    "bank_transfer_requests": {
+      "count": 3,
+      "file": "bank_transfer_requests.json"
+    },
+    "bank_withdrawal_requests": {
+      "count": 2,
+      "file": "bank_withdrawal_requests.json"
+    },
+    "chatbot_withdrawal_requests": {
+      "count": 10,
+      "file": "chatbot_withdrawal_requests.json"
+    },
+    "recharge_transactions": {
+      "count": 16,
+      "file": "recharge_transactions.json"
+    },
+    "bill_payment_requests": {
+      "count": 2,
+      "file": "bill_payment_requests.json"
+    }
+  }
+}

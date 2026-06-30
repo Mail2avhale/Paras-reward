@@ -1,0 +1,36 @@
+[
+  {
+    "_id": "69af065ef089fb51af591668",
+    "request_id": "BBPS-TEST-001",
+    "user_id": "6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
+    "bill_type": "electricity",
+    "operator_name": "MSEDCL",
+    "consumer_number": "1234567890",
+    "prc_used": 300,
+    "amount_inr": 300,
+    "status": "completed",
+    "created_at": "2026-03-09T17:41:50.344Z",
+    "approved_at": "2026-03-09T17:41:50.344Z",
+    "eko_tid": "BBPS12345",
+    "eko_callback_at": "2026-04-06T08:03:52.640119+00:00",
+    "eko_callback_status": "completed",
+    "status_history": [
+      {
+        "status": "completed",
+        "timestamp": "2026-04-06T08:03:52.640137+00:00",
+        "note": "EKO Callback: tx_status=0 (completed)",
+        "source": "eko_callback"
+      }
+    ],
+    "updated_at": "2026-04-06T08:03:52.640124+00:00"
+  },
+  {
+    "_id": "69be97c1a541575b2ea26526",
+    "user_id": "cbdf46d7-7d66-4d43-8495-e1432a2ab071",
+    "status": "completed",
+    "prc_used": 500,
+    "total_prc_deducted": 500,
+    "service_type": "electricity",
+    "created_at": "2026-03-21T13:06:09.641805+00:00"
+  }
+]

@@ -1,0 +1,31 @@
+[
+  {
+    "_id": "69bebe417893b703330e79a5",
+    "request_id": "BTR-20260320124631",
+    "user_id": "cbdf46d7-7d66-4d43-8495-e1432a2ab071",
+    "status": "Paid",
+    "total_prc_deducted": 26510,
+    "amount": 2000,
+    "created_at": "2026-03-20T12:46:31+00:00"
+  },
+  {
+    "_id": "69bebe417893b703330e79a6",
+    "request_id": "BTR-20260321150000",
+    "user_id": "cbdf46d7-7d66-4d43-8495-e1432a2ab071",
+    "status": "failed",
+    "total_prc_deducted": 26510,
+    "amount": 2000,
+    "created_at": "2026-03-21T15:00:00+00:00",
+    "admin_remark": "Over Limit",
+    "prc_deducted": 26510,
+    "withdrawal_amount": 2000
+  },
+  {
+    "_id": "69e9a48046de27275cde24b3",
+    "user_id": "76b75808-47fa-48dd-ad7c-8074678e3607",
+    "status": "paid",
+    "amount_inr": 2500,
+    "request_id": "fake-bank-1",
+    "processed_at": "2026-04-23T00:02:00+00:00"
+  }
+]

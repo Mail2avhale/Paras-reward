@@ -36736,6 +36736,13 @@ set_redeem_limit_check(check_redeem_limit)  # Pass the redeem limit check functi
 set_redeem_v2_weekly_check(check_weekly_one_service_limit)  # Pass weekly one service limit check
 api_router.include_router(redeem_v2_router)
 
+# Admin Unified Spend Router (post-2026-06-30 consolidation)
+# Reports a user's exact spend across Bank Redeem + Recharge/Utility from
+# the single canonical `redeem_requests` collection.
+from routes.admin_unified_spend import router as unified_spend_router, set_db as set_unified_spend_db, sync_legacy_to_unified_redeem
+set_unified_spend_db(db)
+app.include_router(unified_spend_router)
+
 # Manual Bank Transfer Router
 set_bank_transfer_db(db)
 set_sustainability_burn_db(db)
@@ -37752,6 +37759,19 @@ async def startup_db():
             minutes=1,
             id='auto_sync_razorpay',
             name='Auto sync Razorpay payments every 1 minute',
+            replace_existing=True
+        )
+
+        # Unified Spend Sync (2026-06-30 migration) — keeps redeem_requests in sync
+        # with the legacy bank/utility collections so the admin's
+        # /api/admin/unified-spend/* always reflects the latest activity.
+        # Idempotent (uses _legacy_request_id to skip already-synced rows).
+        scheduler.add_job(
+            sync_legacy_to_unified_redeem,
+            'interval',
+            minutes=15,
+            id='sync_legacy_to_unified_redeem',
+            name='Mirror legacy redeem/recharge collections into redeem_requests',
             replace_existing=True
         )
         
