@@ -315,17 +315,6 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
       {/* Mall 2.0: PRC Saver Progress (next-target motivator) */}
       <SaverProgressBar refreshKey={user?.prc_balance || 0} />
 
-      {/* Sub-Batch B: Hero Carousel + Categories Grid (landing refresh) */}
-      {tab === 'discover' && !searchOpen && (
-        <>
-          <HeroCarousel onSelectProduct={(p) => setDetailProduct(p)} />
-          <CategoriesGrid
-            active={category}
-            onSelect={(cid) => setCategory(cid)}
-          />
-        </>
-      )}
-
       <AnimatePresence>
         {searchOpen && (
           <motion.div
@@ -376,17 +365,27 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         </div>
       )}
 
-      {/* Filter bar — single "Filter" button + active category label */}
+      {/* Sub-Batch B: Hero Carousel + Categories Grid (landing refresh) */}
       {tab === 'discover' && !searchOpen && (
-        <div className="mall-filter-bar" data-testid="mall-filter-bar">
+        <>
+          <HeroCarousel onSelectProduct={(p) => setDetailProduct(p)} />
+          <CategoriesGrid
+            active={category}
+            onSelect={(cid) => setCategory(cid)}
+          />
+        </>
+      )}
+
+      {/* Filter bar — compact strip (sort + count + advanced filter) */}
+      {tab === 'discover' && !searchOpen && (
+        <div className="mall-filter-bar mall-filter-bar-compact" data-testid="mall-filter-bar">
           <button
-            className={`mall-filter-btn ${category !== 'all' || sortBy !== 'default' ? 'active' : ''}`}
+            className={`mall-filter-btn ${sortBy !== 'default' ? 'active' : ''}`}
             onClick={() => setFilterOpen(true)}
             data-testid="mall-filter-open"
           >
             <span className="mall-filter-label">
-              {CATEGORIES.find(c => c.id === category)?.label || 'All'}
-              {sortBy !== 'default' ? ` · ${SORTS.find(s => s.id === sortBy)?.label}` : ''}
+              {sortBy !== 'default' ? `Sort: ${SORTS.find(s => s.id === sortBy)?.label}` : 'Sort & Filter'}
             </span>
             <span className="mall-filter-chev">▾</span>
           </button>

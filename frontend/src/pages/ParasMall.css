@@ -1342,13 +1342,14 @@
 /* --- Hero Carousel --- */
 .mall-hero-carousel {
   position: relative;
-  margin: 8px 14px 6px;
-  height: 124px;
-  border-radius: 16px;
+  margin: 10px 14px 8px;
+  height: 200px;
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.40);
   isolation: isolate;
-  background: linear-gradient(135deg, rgba(255,178,60,0.10), rgba(140,82,255,0.16));
+  z-index: 1;
+  background: linear-gradient(135deg, rgba(255,178,60,0.10), rgba(140,82,255,0.18));
 }
 .mall-hero-carousel-skel { background: rgba(255,255,255,0.04); }
 .mall-hero-shimmer {
@@ -1387,10 +1388,11 @@
   letter-spacing: 0.06em; text-transform: uppercase;
 }
 .mall-hero-title {
-  margin-top: 4px;
-  color: #fff; font-size: 17px; font-weight: 800;
-  text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+  margin-top: 6px;
+  color: #fff; font-size: 22px; font-weight: 800;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.75);
   line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 .mall-hero-cta {
   margin-top: 4px;
@@ -1419,21 +1421,30 @@
 }
 .mall-hero-dot.active { background: #fdba74; width: 16px; }
 
-/* --- Categories Grid (Flipkart-style) --- */
+/* --- Categories Grid (Flipkart-style horizontal scroll) --- */
 .mall-categories-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding: 6px 14px 10px;
+  display: flex;
+  gap: 10px;
+  padding: 4px 14px 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  position: relative;
+  z-index: 2;
 }
+.mall-categories-grid::-webkit-scrollbar { display: none; }
 .mall-cat-tile {
   position: relative;
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 8px 4px 9px;
+  flex: 0 0 auto;
+  min-width: 72px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 8px 10px 10px;
   border-radius: 14px;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.08);
   color: #f5e9ff;
+  scroll-snap-align: start;
   transition: transform 0.15s ease, background 0.2s ease;
 }
 .mall-cat-tile:active { transform: scale(0.96); }
@@ -1676,3 +1687,18 @@
   transition: background 0.2s ease;
 }
 .mall-view-details-btn:active { background: rgba(255,255,255,0.12); }
+
+/* Compact filter bar (post-redesign — categories now live above) */
+.mall-filter-bar-compact {
+  padding: 4px 14px 8px;
+  position: relative;
+  z-index: 2;
+}
+.mall-filter-bar-compact .mall-filter-btn {
+  padding: 7px 12px;
+  font-size: 12px;
+}
+.mall-filter-bar-compact .mall-filter-count {
+  font-size: 11px;
+  opacity: 0.7;
+}
