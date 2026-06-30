@@ -17,8 +17,23 @@ android {
         // 4. Mall pricing: MRP + 18% GST + 10% Processing fee (cascading)
         // 5. Referral attribution bug fix (case-insensitive backend lookup,
         //    localStorage persistence)
-        versionCode 14
-        versionName "1.1.3"
+        //
+        // versionCode 14 → 15 — Jun 30, 2026 release:
+        // 1. AndroidManifest.xml — fixed invalid `--` inside XML comment that
+        //    was breaking processReleaseMainManifest in GitHub Actions.
+        // 2. Confirm Booking sheet visibility fix (white-on-white pricing rows).
+        // 3. Admin Mall: "Mining Complete" bookings now load via per-status
+        //    fetch (fulfilled+delivered+recent-mining) so older fulfilled
+        //    rows are never buried by mining churn.
+        // 4. Community Forum: new "🚚 Product Delivery" head — admin
+        //    "Mark Delivered" auto-publishes celebratory post (real name +
+        //    product image) for social proof.
+        // 5. Production performance pass: 60s cache layer on
+        //    performance-summary / redeem-limit / mining-status / kyc-stats /
+        //    gst-summary / public-contact-info; admin redeem-limits-overview
+        //    moved to lazy-load. Dashboard time-to-data 10s → 1-2s.
+        versionCode 15
+        versionName "1.1.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
