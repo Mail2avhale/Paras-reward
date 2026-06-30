@@ -38,7 +38,7 @@
 
               To verify after install:
                 adb shell pm get-app-links com.parasreward.prc
-                adb shell pm verify-app-links --re-verify com.parasreward.prc
+                adb shell pm verify-app-links (re-verify flag) com.parasreward.prc
             -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
