@@ -237,6 +237,7 @@ LEGACY_COLLECTIONS = [
     "chatbot_withdrawal_requests",
     "recharge_transactions",
     "bill_payment_requests",
+    "unified_redemptions",
 ]
 
 
@@ -261,7 +262,7 @@ async def sync_legacy_to_unified_redeem():
         sys.path.insert(0, str(mig_dir))
     from migrate import (  # type: ignore[import-not-found]
         map_bank_transfer, map_bank_withdrawal, map_chatbot_withdrawal,
-        map_recharge_transaction, map_bill_payment,
+        map_recharge_transaction, map_bill_payment, map_unified_redemption,
     )
     from datetime import datetime, timezone
 
@@ -271,6 +272,7 @@ async def sync_legacy_to_unified_redeem():
         "chatbot_withdrawal_requests": map_chatbot_withdrawal,
         "recharge_transactions": map_recharge_transaction,
         "bill_payment_requests": map_bill_payment,
+        "unified_redemptions": map_unified_redemption,
     }
 
     already = set()

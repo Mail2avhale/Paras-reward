@@ -134,5 +134,5 @@ def test_migration_traceability():
         assert row.get("_migrated_from") in {
             "bank_transfer_requests", "bank_withdrawal_requests",
             "chatbot_withdrawal_requests", "recharge_transactions",
-            "bill_payment_requests",
+            "bill_payment_requests", "unified_redemptions",
         }

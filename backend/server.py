@@ -4926,6 +4926,9 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
     breakdown = []
     seen_refs: set = set()                  # strong dedup by reference
     seen_fp: set = set()                    # fallback dedup by (amount, minute)
+    # 2026-06-30 unify-redeem fix: names of collections we're scanning at
+    # layer-1, so we can skip mirrored copies in `redeem_requests`.
+    _scanned_source_names = {c for c, _, _ in service_sources}
 
     def _doc_ref(doc: dict):
         for rf in SVC_REF_FIELDS:
@@ -4972,6 +4975,12 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
             q = {"user_id": user_id, "status": {"$in": SUCCESS_STATUSES}}
             q.update(extra_match)
             async for doc in db[coll].find(q, {"_id": 0}):
+                # 2026-06-30 unify-redeem fix: skip migrated copies in
+                # `redeem_requests` whose source legacy collection is ALSO
+                # being scanned. The legacy collection has the original row;
+                # counting the mirrored copy would inflate the lifetime total.
+                if coll == "redeem_requests" and doc.get("_migrated_from") in _scanned_source_names:
+                    continue
                 amt, used_field = _amount(doc)
                 if amt <= 0:
                     continue

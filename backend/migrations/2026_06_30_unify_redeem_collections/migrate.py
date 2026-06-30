@@ -178,12 +178,31 @@ def map_bill_payment(d):
     }
 
 
+def map_unified_redemption(d):
+    """unified_redemptions → redeem_requests (very early-era pilot collection)"""
+    stype = d.get("service_type") or "mobile_recharge"
+    return {
+        "request_id": d.get("request_id") or d.get("redeem_id") or f"UR-{d['_id']}",
+        "user_id": d.get("user_id"),
+        "service_type": stype,
+        "service_name": d.get("service_name") or stype.replace("_", " ").title(),
+        "amount_inr": d.get("amount_inr") or d.get("amount") or (
+            (d.get("prc_deducted") or 0) / 10 if d.get("prc_deducted") else None
+        ),
+        "amount": d.get("amount_inr") or d.get("amount"),
+        "total_prc_deducted": d.get("prc_deducted") or d.get("total_prc_deducted") or d.get("prc_used"),
+        "status": status_norm(d.get("status")),
+        "created_at": d.get("created_at"),
+    }
+
+
 MAPPERS = [
     ("bank_transfer_requests", map_bank_transfer),
     ("bank_withdrawal_requests", map_bank_withdrawal),
     ("chatbot_withdrawal_requests", map_chatbot_withdrawal),
     ("recharge_transactions", map_recharge_transaction),
     ("bill_payment_requests", map_bill_payment),
+    ("unified_redemptions", map_unified_redemption),
 ]
 
 
