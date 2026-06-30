@@ -9,6 +9,19 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 30, 2026 — Admin "Mining Complete" Orders Not Loading — URGENT)
+- 🐛 **P0 fix**: Admin Mall page → "Pending Delivery" tab was empty in production despite 7 bookings sitting in `status=fulfilled` (mining complete, awaiting delivery action). Root cause: backend admin endpoint default `limit=200` + sort by `created_at DESC` returned only the most recent 200 rows, which were **100% `mining`/`cancelled`** because production has 1,438 active mining bookings. The 7 fulfilled (≈10 days old) and 0 delivered rows were buried past the cutoff.
+- Fix split into two layers:
+  - `frontend/src/pages/Admin/AdminParasMall.js` — replaced single `/admin/mall/bookings` call with 3 parallel calls: `?status=fulfilled&limit=500`, `?status=delivered&limit=500`, and `?limit=300` recent. Deduped by `booking_id`, sorted by status priority (fulfilled → delivered → mining → cancelled) then `created_at DESC` so actionable rows always surface at top.
+  - `backend/routes/mall_v2.py::order_pipeline` — same fix at backend; now fans out into three `asyncio.gather` queries (fulfilled all, delivered all, mining capped) so the Order Pipeline Kanban "Confirmed"/"Delivered" columns are no longer starved by mining churn.
+- Verified on preview: pipeline + admin bookings endpoints respond with correct `fulfilled` and `delivered` rows independent of `mining` volume.
+- **Production deploy required** for fix to take effect.
+
+## Implemented (Jun 30, 2026 — Android Build Fix)
+- 🐛 **Build failure**: GitHub Actions `:app:processReleaseMainManifest` was failing with `org.xml.sax.SAXParseException: The string "--" is not permitted within comments` at AndroidManifest.xml line 41. XML spec forbids consecutive `--` inside `<!-- ... -->` comments.
+- Fix: `/app/frontend/android/app/src/main/AndroidManifest.xml` — replaced `adb shell pm verify-app-links --re-verify com.parasreward.prc` with `adb shell pm verify-app-links (re-verify flag) com.parasreward.prc` in the documentation comment. Functional intent-filter behavior unchanged.
+- Verified: all `AndroidManifest.xml` files under `/app/frontend/android/` parse cleanly via `xml.etree.ElementTree`.
+
 ## Implemented (Jun 30, 2026 — Production Performance Pass)
 - 🐛 **User-side P0**: `/api/user/{uid}/performance-summary` was **10.2 seconds** on prod cold load (scans 17 collections via `get_user_all_time_redeemed` per user). Added 60s endpoint-level cache via `cache_manager`. Cold call still ~1s; warm hit ~80ms. **~120× faster on subsequent loads.**
 - 🐛 `/api/user/{uid}/redeem-limit` (1.7s → 80ms warm) — 60s cache wrapping `calculate_user_redeem_limit`

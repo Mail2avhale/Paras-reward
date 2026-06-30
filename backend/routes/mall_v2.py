@@ -33,6 +33,7 @@ import csv
 import json
 import base64
 import uuid
+import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
@@ -616,12 +617,23 @@ async def order_pipeline(limit: int = 200, user: dict = Depends(get_current_user
       - A booking with no `latest_status` defaults to the "Booked" column.
       - Only the booking's most recent label is used (status_history is rich,
         but the board only cares about current state).
+
+    IMPORTANT FIX (Jun 30 2026): Previously this fetched ALL three statuses
+    in a single sort-by-created_at query with limit=200/300. Production
+    has 1,400+ active `mining` bookings — they buried the (much smaller)
+    fulfilled + delivered rows past the cutoff, so admins never saw orders
+    that completed mining and were ready to action. We now fan out into
+    three targeted queries with separate caps so the actionable buckets
+    (fulfilled + delivered) are ALWAYS fully loaded, while the mining
+    bucket stays bounded to the most-recent `limit` rows.
     """
     _admin_only(user)
-    bookings = await db.mall_bookings.find(
-        {"status": {"$in": ["mining", "fulfilled", "delivered"]}},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(limit)
+    fulfilled_bookings, delivered_bookings, mining_bookings = await asyncio.gather(
+        db.mall_bookings.find({"status": "fulfilled"}, {"_id": 0}).sort("created_at", -1).to_list(500),
+        db.mall_bookings.find({"status": "delivered"}, {"_id": 0}).sort("created_at", -1).to_list(500),
+        db.mall_bookings.find({"status": "mining"}, {"_id": 0}).sort("created_at", -1).to_list(limit),
+    )
+    bookings = fulfilled_bookings + delivered_bookings + mining_bookings
 
     # Hydrate user info in one batch
     user_ids = list({b.get("user_id") for b in bookings if b.get("user_id")})

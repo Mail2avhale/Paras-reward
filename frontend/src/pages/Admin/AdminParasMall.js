@@ -46,13 +46,48 @@ const AdminParasMall = () => {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [productsRes, bookingsRes, analyticsRes] = await Promise.all([
+      // IMPORTANT: Production has 1,400+ active bookings. The default
+      // backend limit=200 (sorted by created_at DESC) buries older
+      // `fulfilled` (mining complete) and `delivered` rows past the window
+      // — admins reported "mining complete" orders never loading.
+      // Solution: fan out into three targeted server calls so each pipeline
+      // bucket is filtered server-side and the entire fulfilled/delivered
+      // history is always visible regardless of recent mining churn.
+      const [productsRes, fulfilledRes, deliveredRes, recentRes, analyticsRes] = await Promise.all([
         axios.get(`${API}/mall/products?only_active=false`),
-        axios.get(`${API}/admin/mall/bookings`, { headers }),
+        axios.get(`${API}/admin/mall/bookings?status=fulfilled&limit=500`, { headers }),
+        axios.get(`${API}/admin/mall/bookings?status=delivered&limit=500`, { headers }),
+        axios.get(`${API}/admin/mall/bookings?limit=300`, { headers }),
         axios.get(`${API}/admin/mall/analytics`, { headers }),
       ]);
       setProducts(productsRes.data?.products || []);
-      setBookings(bookingsRes.data?.bookings || []);
+      // Merge buckets — dedupe by booking_id so the "all" tab still has the
+      // full union (fulfilled + delivered + recent-mining) without dupes.
+      const seen = new Set();
+      const merged = [];
+      for (const list of [
+        fulfilledRes.data?.bookings || [],
+        deliveredRes.data?.bookings || [],
+        recentRes.data?.bookings || [],
+      ]) {
+        for (const b of list) {
+          if (!seen.has(b.booking_id)) {
+            seen.add(b.booking_id);
+            merged.push(b);
+          }
+        }
+      }
+      // Stable sort: status priority (fulfilled → delivered → mining → other),
+      // then most recent first within each bucket so admins see actionable
+      // rows at the top of the table.
+      const statusRank = { fulfilled: 0, delivered: 1, mining: 2, cancelled: 3 };
+      merged.sort((a, b) => {
+        const ra = statusRank[a.status] ?? 9;
+        const rb = statusRank[b.status] ?? 9;
+        if (ra !== rb) return ra - rb;
+        return (b.created_at || '').localeCompare(a.created_at || '');
+      });
+      setBookings(merged);
       setAnalytics(analyticsRes.data || null);
     } catch (e) {
       toast.error('Failed to load admin data');
