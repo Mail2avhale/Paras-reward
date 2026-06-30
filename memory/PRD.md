@@ -9,6 +9,30 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jun 30, 2026 — PARAS MALL Sub-Batch B: Amazon/Flipkart-grade UX upgrade)
+- 🛒 **Hero Carousel + Categories Grid** — landing page refresh
+  - New `HeroCarousel.js` component: auto-rotating featured products (4.5s), swipeable, dots + arrows
+  - New `CategoriesGrid.js` component: 8 categories (All, Electronics, Appliances, Kitchen, Furniture, Vouchers, Jewelry, Fashion) — click filters Mall
+  - Both wire-up on `/mall` under SaverProgressBar (discover tab only)
+- 🔍 **Premium Product Detail Sheet** — `ProductDetailSheet.js` bottom-sheet modal
+  - Multi-image gallery (uses `product.images[]` with `image_url` fallback) + thumbnails + prev/next
+  - Pricing breakdown card (MRP / GST / Processing Fee / Total)
+  - Live mining preview tiers (Slow / Typical / Fast) via new `GET /api/mall/v2/mining-preview/{product_id}` — shows daily PRC + days-to-complete per tier
+  - Trust badges (delivery, verified stock, cancel anytime)
+  - Sticky bottom CTA bar with "Book Now · {upfront PRC}"
+  - Reachable from: hero slide tap, product image tap, "View Full Details →" button
+- 🤖 **AI Product Assistant** in Admin Products form (Gemini via EMERGENT_LLM_KEY)
+  - `POST /api/mall/v2/admin/ai-generate-product` — Gemini `gemini-2.5-flash` returns strict JSON `{title, description, category, keywords[]}` → autofills form
+  - `POST /api/mall/v2/admin/ai-generate-image` — Gemini Nano Banana `gemini-3.1-flash-image-preview` returns base64 image, normalized 1024² JPEG, saved to `/app/backend/static/mall/`, returned as `/api/static/mall/...` URL
+  - UI: violet/amber `admin-mall-ai-panel` with prompt input + two buttons (Draft, Image) + loading spinners
+- 📦 **Order Pipeline Kanban** (Admin)
+  - `GET /api/mall/v2/admin/pipeline` returns bookings grouped into 5 columns: Booked → Confirmed → Packed → Shipped → Delivered (hydrates user name/mobile, delivery address, progress %)
+  - New `OrderPipelineKanban.js` Kanban board (admin-only) with column header counts, click-to-advance dialog (5 Move To buttons + optional shipping note), and delivery address preview inside the dialog
+  - New "Order Pipeline" tab in `/admin/mall` (`admin-mall-tab-pipeline`)
+- 🔧 **Bug fix during testing**: `/api/mall/v2/featured` now enriches each product with `compute_pricing_breakdown()` so `ProductDetailSheet` opened via hero tap shows correct upfront PRC / GST / Total (previously rendered ₹0)
+- ✅ Backend pytest **10/10 PASS** (`/app/backend/tests/test_mall_v2_sub_batch_b.py` — featured shape, mining-preview formula, RBAC on AI + Pipeline, status-advance round-trip)
+
+
 ## Implemented (Feb 28, 2026 — Self-Claim Referrer ("Enter Referral Code"))
 - 🎁 **Restored legacy endpoint** with safety guards. Users who signed up WITHOUT a referral code (e.g., legacy users, or users whose share link lost the `?ref=` param before our Feb 2026 fixes shipped) can now attach a referrer post-signup — one-shot, within 30 days.
 - **Backend** `routes/referral.py`:

@@ -690,7 +690,8 @@ async def featured_products(limit: int = 6):
     ).sort("featured_sort", 1).limit(limit).to_list(limit)
 
     if len(curated) >= limit:
-        return {"success": True, "products": curated, "source": "curated"}
+        enriched = [_enrich_product_pricing(p) for p in curated]
+        return {"success": True, "products": enriched, "source": "curated"}
 
     # Need to top up — pull most-viewed actives, excluding curated ids
     used = {p["product_id"] for p in curated}
@@ -699,11 +700,24 @@ async def featured_products(limit: int = 6):
         {"active": True, "product_id": {"$nin": list(used)}}, {"_id": 0}
     ).sort([("view_count", -1), ("avg_rating", -1)]).limit(fill_needed).to_list(fill_needed)
 
+    products = [_enrich_product_pricing(p) for p in (curated + auto)]
     return {
         "success": True,
-        "products": curated + auto,
+        "products": products,
         "source": "curated+auto" if curated else "auto",
     }
+
+
+def _enrich_product_pricing(p: dict) -> dict:
+    """Mirror the enrichment that /mall/products applies, so any consumer of
+    the product dict (e.g. ProductDetailSheet) gets full pricing fields."""
+    from routes.paras_mall import compute_pricing_breakdown
+    mrp = p.get("mrp_inr", 0)
+    breakdown = compute_pricing_breakdown(mrp)
+    # Don't override fields the admin may have manually set
+    for k, v in breakdown.items():
+        p.setdefault(k, v)
+    return p
 
 
 # ── Mining Preview (for product detail "live mining preview" UX) ──────────
