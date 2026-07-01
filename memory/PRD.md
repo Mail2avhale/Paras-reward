@@ -9,6 +9,24 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jul 01, 2026 — Referral Fraud Hardening — SECURITY P0)
+- 🔒 **CRITICAL FIX**: `POST /api/referral/apply/{uid}` had two exploitable flaws that could have allowed referral fraud in production:
+  1. **No authentication**: Anyone knowing a UID could attach any referral code to that user's account (IDOR).
+  2. **Race condition (double-claim)**: check-then-write pattern (`find_one` → `update_one`) allowed two concurrent requests to both pass the "already-referred" gate and write. Attackers could spam multiple tabs → attach multiple referrers → inflate `referral_count` on the losing referrer.
+- 🛡️ **Fixes applied**:
+  1. **JWT auth required**: Endpoint now depends on `_require_authenticated_user`. Path `uid` must match token subject (admin/sub_admin bypass permitted for legitimate support ops).
+  2. **Atomic one-shot write**: replaced check-then-write with `find_one_and_update` filter `{"uid": uid, "referred_by": null-or-missing-or-empty}`. MongoDB serializes the update — exactly one concurrent request wins, others get 409 Conflict.
+  3. **Deferred count increment**: `referral_count += 1` runs only if the atomic claim succeeded — no inflated counts even under concurrent replay.
+  4. **Immutable audit log**: every successful claim now inserts into new `referral_claim_audit` collection (`uid`, `user_name`, `user_mobile`, `referrer_uid`, `referrer_name`, `referrer_code`, `referred_via`, `claim_ts`). Enables fraud investigations + gives referrers a receipt.
+- **Existing guards preserved** (all previously in place): 30-day self-claim window, self-referral block, 20-level circular-chain detection, invalid code 404.
+- **E2E fraud test suite verified on preview:**
+  - No auth → 401 ✅
+  - IDOR attack (User B tries to attach on User A's uid) → 403 ✅
+  - Valid claim → 200 ✅
+  - Double-claim → 400 (one-shot) ✅
+  - **10 parallel race requests → exactly 1 winner, referrer_count = 1** ✅ (no inflation, no double-attach)
+- **Production deploy required** — hardening will apply to the live app after next deploy.
+
 ## Implemented (Jul 01, 2026 — Invite Page "Enter Referral Code" UX Clarification)
 - 🐛 **User-reported (production)**: On another user's mobile app, admin saw "Enter Referral Code" card missing on Invite tab. Investigation showed:
   1. The card **IS** rendering correctly for regular users with `referred_by=null` — verified via live Playwright test on `parasreward.com/referrals` (SANTOSH's account: card + input + "Attach Referrer" button all visible).

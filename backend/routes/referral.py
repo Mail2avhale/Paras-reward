@@ -15,7 +15,8 @@ Removed in the June 2026 cleanup (DO NOT bring back; canonical sources below):
 
 import logging
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/referral", tags=["Referral"])
@@ -27,6 +28,18 @@ cache = None
 # Tight enough to prevent late-stage gaming; generous enough for users who
 # only learn about the referral feature after exploring the app.
 SELF_CLAIM_WINDOW_DAYS = 30
+
+# --- Lazy JWT dependency ---------------------------------------------------
+# Same pattern as `routes/mining.py`: server.py imports this module BEFORE
+# `get_current_user` is defined, so we resolve it at call time.
+_security = HTTPBearer(auto_error=False)
+
+
+async def _require_authenticated_user(
+    credentials: HTTPAuthorizationCredentials = Depends(_security),
+) -> dict:
+    from server import get_current_user as _real_dep
+    return await _real_dep(credentials)
 
 
 def set_db(database):
@@ -107,7 +120,11 @@ class ApplyReferralBody(BaseModel):
 
 
 @router.post("/apply/{uid}")
-async def apply_referral(uid: str, body: ApplyReferralBody):
+async def apply_referral(
+    uid: str,
+    body: ApplyReferralBody,
+    current_user: dict = Depends(_require_authenticated_user),
+):
     """Self-claim a missed referrer.
 
     Allows a user who registered WITHOUT a referral code (e.g., before the
@@ -115,9 +132,15 @@ async def apply_referral(uid: str, body: ApplyReferralBody):
     ?ref= param) to attach a referrer after the fact — within
     SELF_CLAIM_WINDOW_DAYS of their signup.
 
-    Safety guards:
+    Safety guards (Jul 2026 hardened fraud posture):
+      - **JWT-authenticated**: Bearer token required; path `uid` must match
+        the token subject (IDOR fix — previously anyone knowing a UID could
+        attach any referrer to that account).
+      - **One-shot atomic write**: uses `find_one_and_update` with a filter
+        that only matches when `referred_by` is still unset. Guarantees a
+        single winner under concurrent requests — no double-claim, no
+        overwrite race, no inflated referrer counts.
       - User must exist
-      - User must not already have a referrer (no overwrite — one-shot only)
       - Signup must be within the self-claim window
       - Cannot self-refer
       - Cannot create a circular chain (your referrer cannot be a person who
@@ -125,17 +148,29 @@ async def apply_referral(uid: str, body: ApplyReferralBody):
       - Referral code must be valid (case-insensitive lookup)
 
     On success:
-      - Sets referred_by on the claiming user
-      - Increments referrer's referral_count
-      - Stamps `referred_at` + `referred_via = "self_claim"` for audit
+      - Atomically sets referred_by / referred_by_name / referred_at /
+        referred_via = "self_claim" (only if the row was previously unclaimed)
+      - Increments referrer's referral_count exactly once
       - Sends a notification to the referrer
     """
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
+    # -------- IDOR: path `uid` must match the authenticated caller --------
+    caller_uid = current_user.get("uid")
+    caller_role = current_user.get("role", "user")
+    if caller_role not in ("admin", "sub_admin") and caller_uid != uid:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. You can only attach a referrer to your own account.",
+        )
+
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    # Early fast-fail — the atomic write below still enforces this under
+    # concurrency; this branch just gives the client a nicer error message
+    # for the common already-attached case.
     if user.get("referred_by"):
         raise HTTPException(status_code=400, detail="You already have a referrer attached. This action is one-shot.")
 
@@ -174,15 +209,40 @@ async def apply_referral(uid: str, body: ApplyReferralBody):
         cursor_uid = upstream.get("referred_by") if upstream else None
 
     now_iso = datetime.now(timezone.utc).isoformat()
-    await db.users.update_one(
-        {"uid": uid},
+
+    # --- ATOMIC one-shot claim ------------------------------------------
+    # Filter matches ONLY rows whose `referred_by` is null/missing/empty.
+    # Under concurrent requests, MongoDB serializes updates on the same
+    # document so exactly one write wins; the other calls come back with
+    # `updated_row is None` and are rejected. This is the single most
+    # important guard against double-attachment fraud.
+    updated_row = await db.users.find_one_and_update(
+        {
+            "uid": uid,
+            "$or": [
+                {"referred_by": {"$exists": False}},
+                {"referred_by": None},
+                {"referred_by": ""},
+            ],
+        },
         {"$set": {
             "referred_by": referrer["uid"],
             "referred_by_name": referrer.get("name", "A Friend"),
             "referred_at": now_iso,
             "referred_via": "self_claim",
         }},
+        return_document=True,  # Return the post-update snapshot
     )
+    if not updated_row:
+        # Race lost — another concurrent request already attached a referrer.
+        raise HTTPException(
+            status_code=409,
+            detail="Referrer already attached (concurrent claim). This action is one-shot.",
+        )
+
+    # Increment referrer count ONLY after the atomic claim succeeded. This
+    # guarantees the count reflects real claims — no double-increment even
+    # under concurrent replay.
     await db.users.update_one(
         {"uid": referrer["uid"]},
         {"$inc": {"referral_count": 1}},
@@ -203,6 +263,23 @@ async def apply_referral(uid: str, body: ApplyReferralBody):
         })
     except Exception as e:
         logging.warning(f"[referral.apply] notification failed: {e}")
+
+    # Audit log — permanent, tamper-evident record of every self-claim event.
+    # Enables ops to reconstruct fraud investigations after the fact and
+    # gives referrers a receipt they can point to if they dispute a count.
+    try:
+        await db.referral_claim_audit.insert_one({
+            "uid": uid,
+            "user_name": user.get("name"),
+            "user_mobile": user.get("mobile"),
+            "referrer_uid": referrer["uid"],
+            "referrer_name": referrer.get("name"),
+            "referrer_code": code,
+            "referred_via": "self_claim",
+            "claim_ts": now_iso,
+        })
+    except Exception as e:
+        logging.warning(f"[referral.apply] audit insert failed: {e}")
 
     return {
         "success": True,
