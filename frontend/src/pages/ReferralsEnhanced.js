@@ -26,6 +26,10 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
   const [claimCodeInput, setClaimCodeInput] = useState('');
   const [claimLookup, setClaimLookup] = useState({ status: 'idle', referrerName: '', error: '' });
   const [submittingClaim, setSubmittingClaim] = useState(false);
+  // Jul 2026 UX fix: when a referrer is already attached we now render a
+  // clear "Referred by …" locked info card instead of silently hiding the
+  // whole section. Ambiguous absence was the #1 confusion in tickets.
+  const [attachedReferrer, setAttachedReferrer] = useState(null);
   
   // Referral code from user
   const referralCode = user?.referral_code || '';
@@ -108,6 +112,29 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
   // --- Self-claim referrer flow (Feb 2026 restoration) -----------------
   // Show the claim CTA only when the current user has NO referrer attached.
   const canClaimReferrer = !!user && !user.referred_by;
+  const hasReferrerAttached = !!user && !!user.referred_by;
+
+  // Resolve the attached referrer's name so the "Already referred by …"
+  // card can show a friendly identity instead of the raw uid.
+  useEffect(() => {
+    if (!hasReferrerAttached || !user?.uid) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.get(`${API}/api/referral/my-referrer/${user.uid}`, { timeout: 8000 });
+        if (!cancelled && res.data?.has_referrer) {
+          setAttachedReferrer({
+            name: res.data.referrer_name || 'A friend',
+            code: res.data.referral_code || null,
+          });
+        }
+      } catch {
+        // Silently fall back to a generic label — never block the page.
+        if (!cancelled) setAttachedReferrer({ name: 'A friend', code: null });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [hasReferrerAttached, user?.uid]);
 
   // Live-lookup the code as the user types (debounced 350ms). Provides
   // immediate feedback ("Referred by Rajesh M.") before the user commits.
@@ -291,6 +318,31 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             >
               {submittingClaim ? 'Attaching…' : 'Attach Referrer'}
             </Button>
+          </div>
+        )}
+
+        {/* Already-Referred info card — replaces the silent hide so users
+            understand WHY they can't enter a code. Renders whenever the
+            current user has a referrer already attached. */}
+        {hasReferrerAttached && (
+          <div
+            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 flex items-center gap-3"
+            data-testid="already-referred-card"
+          >
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+              <UserCheck className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-white/90 font-semibold text-sm">
+                Referred by{' '}
+                <span className="text-emerald-400" data-testid="attached-referrer-name">
+                  {attachedReferrer?.name || 'A friend'}
+                </span>
+              </p>
+              <p className="text-gray-500 text-xs mt-0.5">
+                Your referrer is already attached — you cannot enter another code.
+              </p>
+            </div>
           </div>
         )}
 

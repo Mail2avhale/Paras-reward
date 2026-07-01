@@ -63,6 +63,45 @@ async def lookup_referral_code(code: str):
     }
 
 
+@router.get("/my-referrer/{uid}")
+async def get_my_referrer(uid: str):
+    """Return the name/code of the referrer already attached to this user.
+
+    Used by the Invite page to render an "Already referred by …" locked card
+    when `user.referred_by` is set (instead of silently hiding the Enter
+    Referral Code CTA — that ambiguity caused Jul 2026 support tickets).
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    me = await db.users.find_one(
+        {"uid": uid},
+        {"_id": 0, "referred_by": 1}
+    )
+    if not me or not me.get("referred_by"):
+        return {"has_referrer": False}
+
+    ref_val = me["referred_by"]
+    # `referred_by` normally stores a UID (see auth.py registration path).
+    # We also fall back to matching by referral_code for legacy rows just
+    # in case migration ever mixed the two shapes.
+    referrer = await db.users.find_one(
+        {"$or": [{"uid": ref_val}, {"referral_code": ref_val}]},
+        {"_id": 0, "name": 1, "referral_code": 1}
+    )
+    if not referrer:
+        return {
+            "has_referrer": True,
+            "referrer_name": "A friend",
+            "referral_code": None,
+        }
+    return {
+        "has_referrer": True,
+        "referrer_name": referrer.get("name") or "A friend",
+        "referral_code": referrer.get("referral_code"),
+    }
+
+
 class ApplyReferralBody(BaseModel):
     referral_code: str = Field(..., min_length=1, max_length=32)
 

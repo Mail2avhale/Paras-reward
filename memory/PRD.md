@@ -9,6 +9,19 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jul 01, 2026 — Invite Page "Enter Referral Code" UX Clarification)
+- 🐛 **User-reported (production)**: On another user's mobile app, admin saw "Enter Referral Code" card missing on Invite tab. Investigation showed:
+  1. The card **IS** rendering correctly for regular users with `referred_by=null` — verified via live Playwright test on `parasreward.com/referrals` (SANTOSH's account: card + input + "Attach Referrer" button all visible).
+  2. Two legitimate scenarios hide it: (a) user is admin/manager → redirected to `/admin`, never sees Invite page; (b) user has `referred_by` already attached (Play Store install referrer or self-claim earlier).
+  3. Root UX bug: when `referred_by` was set, the section silently disappeared with **no explanation** → user confusion / support tickets.
+- 🎨 **Fix — "Referred by …" locked info card** shown instead of silent hide:
+  - New backend endpoint `GET /api/referral/my-referrer/{uid}` — returns `{has_referrer, referrer_name, referral_code}` resolving `referred_by` (UID) to a friendly name (falls back to legacy `referral_code` lookup for safety).
+  - Frontend `ReferralsEnhanced.js` — when `user.referred_by` is truthy, fetches referrer via new endpoint and renders a gray locked card:
+    `[✓] Referred by **SANTOSH AVHALE**` + `Your referrer is already attached — you cannot enter another code.`
+  - Test IDs: `already-referred-card`, `attached-referrer-name`
+- **E2E verified on preview**: patched a test user with `referred_by=<SANTOSH_uid>` → endpoint returned `{has_referrer:true, referrer_name:"SANTOSH AVHALE", referral_code:"4SQVIISB"}` → info card renders correctly.
+- **Production deploy required** to reach live users.
+
 ## Implemented (Jun 30, 2026 — Community Forum "🚚 Product Delivery" Auto-Posts)
 - 🎁 **New feature**: When admin marks a Mall booking as delivered (`POST /api/admin/mall/bookings/{id}/mark-delivered`), the system now auto-creates a celebratory post in the Community Forum under a brand-new **"Product Delivery"** category.
 - Post includes:
