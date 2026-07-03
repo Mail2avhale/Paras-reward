@@ -896,8 +896,24 @@ async def cancel_booking(
 
 
 @router.get("/my-bookings/{user_id}")
-async def my_bookings(user_id: str):
-    """Return user's bookings with live session info per booking."""
+async def my_bookings(
+    user_id: str,
+    current_user: dict = Depends(_require_authenticated_user),
+):
+    """Return user's bookings with live session info per booking.
+
+    IDOR-safe (Jul 2026 security pass): path `user_id` must match the JWT
+    subject. Was previously anonymous — leaked full booking history INCLUDING
+    delivery address + mobile PII for any UID an attacker could guess.
+    Admins bypass for legitimate support ops.
+    """
+    caller_uid = current_user.get("uid")
+    caller_role = current_user.get("role", "user")
+    if caller_role not in ("admin", "sub_admin") and caller_uid != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. You can only view your own bookings.",
+        )
     bookings = await db.mall_bookings.find(
         {"user_id": user_id}, {"_id": 0}
     ).sort("created_at", -1).to_list(200)

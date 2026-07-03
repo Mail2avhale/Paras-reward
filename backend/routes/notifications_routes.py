@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import logging
@@ -39,13 +40,43 @@ def set_helpers(helpers: dict):
     global _get_user_all_time_redeemed
     _get_user_all_time_redeemed = helpers.get('get_user_all_time_redeemed')
 
+
+# --- IDOR-safe auth dependency (Jul 2026 security pass) --------------------
+# Path `uid` must equal the JWT subject; admins bypass for support ops.
+_security = HTTPBearer(auto_error=False)
+
+
+async def _require_authenticated_user(
+    credentials: HTTPAuthorizationCredentials = Depends(_security),
+) -> dict:
+    from server import get_current_user as _real_dep
+    return await _real_dep(credentials)
+
+
+def _assert_notification_owner(uid: str, current_user: dict) -> None:
+    caller_uid = current_user.get("uid")
+    caller_role = current_user.get("role", "user")
+    if caller_role not in ("admin", "sub_admin") and caller_uid != uid:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. You can only view your own notifications.",
+        )
+
+
 @router.get("/{uid}")
-async def get_notifications(uid: str, page: int = 1, limit: int = 20, unread_only: bool = False):
-    """Get user's notifications.
+async def get_notifications(
+    uid: str,
+    page: int = 1,
+    limit: int = 20,
+    unread_only: bool = False,
+    current_user: dict = Depends(_require_authenticated_user),
+):
+    """Get user's notifications. Authenticated + IDOR-safe (Jul 2026).
 
     FIX (Feb 2026): Some services historically wrote only `user_id` and others
     wrote only `user_uid`. Query the union so we never silently drop docs.
     """
+    _assert_notification_owner(uid, current_user)
     skip = (page - 1) * limit
 
     owner_clause = {"$or": [{"user_uid": uid}, {"user_id": uid}]}

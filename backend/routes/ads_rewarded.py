@@ -169,12 +169,20 @@ async def credit_reward(body: CreditBody, user: dict = Depends(get_current_user)
     if not daily or daily.get("used", 0) > DAILY_MAX:
         raise HTTPException(status_code=429, detail="Daily limit reached")
 
-    # Credit PRC to user balance
-    upd = await db.users.update_one(
+    # Credit PRC to user balance — ATOMIC (Jul 2026 race fix).
+    # Previously we did `update_one({$inc:...})` then `find_one` to read the
+    # post-update balance. Under concurrent ad-completion webhooks that read
+    # could observe a mid-update snapshot, producing garbage
+    # balance_before/after values in the ledger. `find_one_and_update` with
+    # `return_document=True` returns the exact post-write snapshot atomically,
+    # eliminating the race.
+    updated_user = await db.users.find_one_and_update(
         {"uid": uid},
         {"$inc": {"prc_balance": bonus_prc}},
+        projection={"_id": 0, "prc_balance": 1},
+        return_document=True,
     )
-    if upd.matched_count == 0:
+    if not updated_user:
         # roll back counter
         await db.ad_rewards_daily.update_one(
             {"uid": uid, "day": day},
@@ -200,8 +208,7 @@ async def credit_reward(body: CreditBody, user: dict = Depends(get_current_user)
         "other": "Rewarded Ad",
     }.get(placement, "Rewarded Ad")
 
-    fresh_user = await db.users.find_one({"uid": uid}, {"_id": 0, "prc_balance": 1}) or {}
-    balance_after = float(fresh_user.get("prc_balance", 0) or 0)
+    balance_after = float(updated_user.get("prc_balance", 0) or 0)
     balance_before = balance_after - bonus_prc
 
     await db.prc_ledger.insert_one({

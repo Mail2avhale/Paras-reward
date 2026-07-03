@@ -2,7 +2,8 @@
 PRC Statement API - Bank Passbook Style Ledger
 Clean Credit/Debit statement with running balance
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from datetime import datetime, timezone
 from typing import Optional
 import logging
@@ -16,6 +17,34 @@ def set_db(database, cache_client=None):
     global db, cache
     db = database
     cache = cache_client
+
+
+# --- IDOR-safe auth dependency (Jul 2026 security pass) --------------------
+# Same lazy pattern as `routes/mining.py` — `server.get_current_user` is not
+# defined at import time. Path `uid` must match the JWT subject; admins bypass.
+_security = HTTPBearer(auto_error=False)
+
+
+async def _require_authenticated_user(
+    credentials: HTTPAuthorizationCredentials = Depends(_security),
+) -> dict:
+    from server import get_current_user as _real_dep
+    return await _real_dep(credentials)
+
+
+def _assert_uid_match(uid: str, current_user: dict) -> None:
+    """Reject if `uid` doesn't match the JWT subject (unless caller is admin).
+
+    Prevents the pre-Jul 2026 IDOR where any authenticated user could pull
+    another user's full PRC ledger by iterating UIDs.
+    """
+    caller_uid = current_user.get("uid")
+    caller_role = current_user.get("role", "user")
+    if caller_role not in ("admin", "sub_admin") and caller_uid != uid:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. You can only view your own statement.",
+        )
 
 
 TYPE_MAP = {
@@ -113,9 +142,11 @@ async def get_prc_statement(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=10, le=200),
     filter_type: str = Query("All"),
-    sort_order: str = Query("desc", regex="^(asc|desc)$")
+    sort_order: str = Query("desc", regex="^(asc|desc)$"),
+    current_user: dict = Depends(_require_authenticated_user),
 ):
-    """Get PRC statement - bank passbook style ledger."""
+    """Get PRC statement - bank passbook style ledger. Authenticated + IDOR-safe."""
+    _assert_uid_match(uid, current_user)
     try:
         user = await db.users.find_one({"uid": uid}, {"_id": 0, "prc_balance": 1})
         if not user:
@@ -308,7 +339,12 @@ async def get_prc_statement(
 
 
 @router.get("/usage-history/{uid}")
-async def get_prc_usage_history(uid: str):
+async def get_prc_usage_history(
+    uid: str,
+    current_user: dict = Depends(_require_authenticated_user),
+):
+    """User's PRC usage graph. Authenticated + IDOR-safe."""
+    _assert_uid_match(uid, current_user)
     """
     Date-wise PRC REDEEM usage history (services only, NO burns).
 

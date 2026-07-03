@@ -9,6 +9,32 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jul 03, 2026 — Comprehensive Security Pass — 15 IDORs Closed)
+- 🛡️ **Full codebase security audit** — swept every user-facing route with `{uid}` / `{user_id}` in path and confirmed anonymous access is blocked. Fixed 15 confirmed IDOR / data-leak endpoints in one batch.
+- **Class A — Missing auth entirely (leaked to anonymous callers):**
+  - `GET /api/prc-statement/{uid}` — full PRC ledger (transactions, ₹ amounts, running balance)
+  - `GET /api/prc-statement/usage-history/{uid}` — usage patterns, subscription payments, spend categories
+  - `GET /api/notifications/{uid}` — private notifications (referrals, followers, DMs)
+  - `GET /api/prc-lock/status/{uid}` — PRC balance + lock status
+  - `GET /api/mall/my-bookings/{uid}` — full booking history INCLUDING delivery address + mobile PII
+  - `GET /api/mining/status/{uid}` — mining status, daily rate, network breakdown
+  - `GET /api/mining/rate-breakdown/{uid}` — detailed L1-L5 downline counts
+  - `GET /api/mining/history/{uid}` — mining collection history
+- **Class B — "Silent bypass" pattern (returned data when Authorization header was absent):**
+  - `GET /api/user/{uid}/weekly-limits`
+  - `GET /api/user/{uid}/redemption-stats`
+  - `GET /api/subscription/user/{uid}`
+  - `GET /api/user/{uid}/redeem-limit`
+  - `GET /api/user/{uid}/performance-summary`
+  - `GET /api/user/{uid}/subscription-redeem-cap`
+  - `GET /api/subscription/history/{uid}`
+- **Fix pattern applied uniformly:** Bearer token now REQUIRED; JWT verified; path `{uid}` must equal token subject (admins/sub_admins bypass for legit support ops); invalid token returns 401; wrong uid returns 403.
+- **Verified via curl sweep** (anonymous) → all 15 return 401/403; authenticated own-data access → all return 200 with correct payloads.
+
+## Implemented (Jul 03, 2026 — Ads Rewarded Race Fix + Fetch Wrapper)
+- 🛡️ **ads_rewarded.credit_reward race condition fixed** (`routes/ads_rewarded.py`): previously did `update_one($inc)` then `find_one` to read post-update balance — under concurrent ad-completion callbacks the read could observe a mid-flight snapshot, garbling ledger `balance_before`/`balance_after`. Now uses atomic `find_one_and_update(return_document=True)` — post-write snapshot returned in the same call.
+- 🛡️ **Global `window.fetch` monkey-patch** (`App.js`): every raw `fetch()` in the frontend now triggers the same 401 → auto-logout redirect flow as axios. Closes the "stale logged-in shell after token expiry" gap on PRCStatement, PRCUsageHistory, AdminPopupMessages, AdminLedgerView, NotificationContext, KYCVerification, ProfileAdvanced, App.js's auth-me/logout, etc. E2E verified: raw fetch → 401 → all storage wiped + redirect to `/login` + red toast banner.
+
 ## Implemented (Jul 03, 2026 — Auto-Logout on Token Expiry — SECURITY P0)
 - 🐛 **User-reported (production)**: When JWT expired, the app kept rendering the logged-in shell with stale data. Users could still click through pages, but every API call was silently failing with 401. No logout, no redirect, no toast — dangerous UX + security hole (a stolen/expired session could linger indefinitely on shared devices).
 - 🛡️ **Fix**: Added a 401/403 handler inside the existing `axios.interceptors.response` block in `frontend/src/App.js`. On any authenticated call returning 401 (or a token-flavoured 403):

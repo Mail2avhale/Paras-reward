@@ -29,7 +29,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import bcrypt
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
@@ -38,6 +39,16 @@ load_dotenv("/app/backend/.env")
 
 router = APIRouter(prefix="/admin/prc-lock", tags=["PRC Lock"])
 user_router = APIRouter(prefix="/prc-lock", tags=["PRC Lock — User"])
+
+# --- IDOR-safe auth dependency (Jul 2026) ---
+_security = HTTPBearer(auto_error=False)
+
+
+async def _require_authenticated_user(
+    credentials: HTTPAuthorizationCredentials = Depends(_security),
+) -> dict:
+    from server import get_current_user as _real_dep
+    return await _real_dep(credentials)
 
 _mongo = AsyncIOMotorClient(os.environ["MONGO_URL"])
 db = _mongo[os.environ["DB_NAME"]]
@@ -348,8 +359,16 @@ async def unlock_percent(body: UnlockPercentRequest):
 # USER — Get current lock status (for Dashboard card)
 # ============================================================================
 @user_router.get("/status/{uid}")
-async def user_lock_status(uid: str):
-    """Return locked PRC + days remaining for the user's dashboard card."""
+async def user_lock_status(
+    uid: str,
+    current_user: dict = Depends(_require_authenticated_user),
+):
+    """Return locked PRC + days remaining for the user's dashboard card.
+    IDOR-safe (Jul 2026): path `uid` must match caller (admin bypass)."""
+    caller_uid = current_user.get("uid")
+    caller_role = current_user.get("role", "user")
+    if caller_role not in ("admin", "sub_admin") and caller_uid != uid:
+        raise HTTPException(status_code=403, detail="Access denied.")
     user = await db.users.find_one(
         {"uid": uid},
         {"_id": 0, "prc_balance": 1, "prc_locked": 1, "prc_locked_initial": 1,

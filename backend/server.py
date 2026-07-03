@@ -8949,19 +8949,19 @@ async def get_user_weekly_limits(uid: str, request: Request):
     Shows cooldown timer after first redemption of the week.
     SECURITY: IDOR Protection - Users can only access their own limits
     """
-    # SECURITY: Verify user authorization
+    # SECURITY (Jul 2026 hardened): Bearer token now REQUIRED — previously silent-bypass leaked data.
     auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header.replace("Bearer ", "")
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-            requesting_uid = payload.get("uid")
-            requesting_role = payload.get("role", "user")
-            
-            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
-                raise HTTPException(status_code=403, detail="Access denied. You can only view your own limits.")
-        except jwt.InvalidTokenError:
-            pass
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    token = auth_header.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        requesting_uid = payload.get("uid")
+        requesting_role = payload.get("role", "user")
+        if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+            raise HTTPException(status_code=403, detail="Access denied. You can only view your own limits.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
     
     try:
         user = await db.users.find_one({"uid": uid})
@@ -9057,19 +9057,19 @@ async def get_user_redemption_stats(uid: str, request: Request):
     OPTIMIZED: Cached for 2 minutes to reduce DB load on Mining page
     SECURITY: IDOR Protection - Users can only access their own stats
     """
-    # SECURITY: Verify user authorization
+    # SECURITY (Jul 2026 hardened): Bearer token now REQUIRED.
     auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header.replace("Bearer ", "")
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-            requesting_uid = payload.get("uid")
-            requesting_role = payload.get("role", "user")
-            
-            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
-                raise HTTPException(status_code=403, detail="Access denied. You can only view your own stats.")
-        except jwt.InvalidTokenError:
-            pass
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    token = auth_header.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        requesting_uid = payload.get("uid")
+        requesting_role = payload.get("role", "user")
+        if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+            raise HTTPException(status_code=403, detail="Access denied. You can only view your own stats.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
     
     # Try cache first (2 minute TTL)
     cache_key = f"redemption_stats:{uid}"
@@ -9362,17 +9362,17 @@ async def get_user_subscription(uid: str, request: Request):
     """
     # SECURITY: Verify user authorization
     auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header.replace("Bearer ", "")
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-            requesting_uid = payload.get("uid")
-            requesting_role = payload.get("role", "user")
-            
-            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
-                raise HTTPException(status_code=403, detail="Access denied. You can only view your own subscription.")
-        except jwt.InvalidTokenError:
-            pass
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    token = auth_header.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        requesting_uid = payload.get("uid")
+        requesting_role = payload.get("role", "user")
+        if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+            raise HTTPException(status_code=403, detail="Access denied. You can only view your own subscription.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
     
     user = await db.users.find_one({"uid": uid}, {"_id": 0})
     if not user:
@@ -9394,22 +9394,24 @@ async def get_user_subscription(uid: str, request: Request):
 
 @api_router.get("/subscription/history/{uid}")
 async def get_user_subscription_history(uid: str, request: Request):
-    """Get user's complete subscription history including expired ones
-    SECURITY: IDOR Protection - Users can only access their own history
+    """Get user's complete subscription history including expired ones.
+    SECURITY (Jul 2026 hardened): Bearer token now REQUIRED. Previously the
+    JWT check silently no-op'd when no Authorization header was present,
+    which meant anonymous callers could scrape any UID's subscription
+    payment history (financial PII).
     """
-    # SECURITY: Verify user authorization
     auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header.replace("Bearer ", "")
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-            requesting_uid = payload.get("uid")
-            requesting_role = payload.get("role", "user")
-            
-            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
-                raise HTTPException(status_code=403, detail="Access denied. You can only view your own history.")
-        except jwt.InvalidTokenError:
-            pass
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    token = auth_header.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        requesting_uid = payload.get("uid")
+        requesting_role = payload.get("role", "user")
+        if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+            raise HTTPException(status_code=403, detail="Access denied. You can only view your own history.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
     
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "subscription_plan": 1, "subscription_start": 1, "subscription_expiry": 1})
     if not user:
@@ -18651,23 +18653,23 @@ async def get_user_redeem_limit(user_id: str, request: Request):
     SECURITY: IDOR Protection - Users can only access their own redeem limit
     """
     
-    # SECURITY: Verify user authorization
+    # SECURITY (Jul 2026 hardened): Bearer token now REQUIRED — previously silent-bypass leaked data.
     auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header.replace("Bearer ", "")
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-            requesting_uid = payload.get("uid")
-            requesting_role = payload.get("role", "user")
-            
-            # IDOR Protection: Non-admins can only access their own data
-            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != user_id:
-                raise HTTPException(
-                    status_code=403, 
-                    detail="Access denied. You can only view your own redeem limit."
-                )
-        except jwt.InvalidTokenError:
-            pass  # Allow for backwards compatibility
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    token = auth_header.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        requesting_uid = payload.get("uid")
+        requesting_role = payload.get("role", "user")
+        # IDOR Protection: Non-admins can only access their own data
+        if requesting_role not in ["admin", "sub_admin"] and requesting_uid != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied. You can only view your own redeem limit."
+            )
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
     
     # ---- Server-side cache (60s TTL) — endpoint repeatedly polled by
     # dashboard + redeem flows; result only needs minute-level freshness. ----
@@ -18736,7 +18738,29 @@ async def get_performance_summary(user_id: str, request: Request):
     Cached 60s — previously took 10s on cold call due to 17-collection scan
     in get_user_all_time_redeemed. Cache lives long enough to absorb the
     rapid-fire dashboard mount + remount pattern without becoming stale.
+
+    SECURITY (Jul 2026 hardened): Bearer token now REQUIRED + path uid
+    must match the JWT subject. Prior to this the endpoint returned data
+    to anonymous callers, leaking lifetime spend / balance / subscription
+    totals for any UID.
     """
+    # ---- IDOR guard ----
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    token = auth_header.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        requesting_uid = payload.get("uid")
+        requesting_role = payload.get("role", "user")
+        if requesting_role not in ["admin", "sub_admin"] and requesting_uid != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied. You can only view your own performance summary.",
+            )
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
     # ---- Server-side cache (60s TTL) ----
     perf_cache_key = f"user:perf_summary:{user_id}"
     if cache:

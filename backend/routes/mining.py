@@ -430,12 +430,17 @@ async def calculate_mining_rate(user_id: str) -> dict:
 # ==================== API ENDPOINTS ====================
 
 @router.get("/status/{uid}")
-async def get_mining_status(uid: str):
+async def get_mining_status(
+    uid: str,
+    current_user: dict = Depends(_require_authenticated_user),
+):
     """
     Get current mining status for a user
     
     Returns session info, mined coins, mining rate, etc.
     Explorer can start sessions but cannot collect.
+
+    IDOR-safe (Jul 2026): path `uid` must match the JWT subject (admin bypass).
 
     Cached 20s — frontend polls every 30s + each call invokes
     `calculate_mining_rate` (downline tree walk). Without cache, every
@@ -443,6 +448,10 @@ async def get_mining_status(uid: str):
     shorter than the poll interval so each poll still sees fresh data
     once per cycle.
     """
+    caller_uid = current_user.get("uid")
+    caller_role = current_user.get("role", "user")
+    if caller_role not in ("admin", "sub_admin") and caller_uid != uid:
+        raise HTTPException(status_code=403, detail="Access denied.")
     # ---- Server-side cache (20s TTL) ----
     ms_cache_key = f"mining:status:{uid}"
     if cache:
@@ -890,12 +899,18 @@ async def claim_mining(uid: str):
 
 
 @router.get("/rate-breakdown/{uid}")
-async def get_rate_breakdown(uid: str):
+async def get_rate_breakdown(
+    uid: str,
+    current_user: dict = Depends(_require_authenticated_user),
+):
     """
-    Get detailed breakdown of mining rate calculation
-    
-    Shows Growth Economy formula components
+    Get detailed breakdown of mining rate calculation.
+    IDOR-safe (Jul 2026): path `uid` must match caller (admin bypass).
     """
+    caller_uid = current_user.get("uid")
+    caller_role = current_user.get("role", "user")
+    if caller_role not in ("admin", "sub_admin") and caller_uid != uid:
+        raise HTTPException(status_code=403, detail="Access denied.")
     try:
         rate_info = await calculate_mining_rate(uid)
         
@@ -1001,8 +1016,16 @@ async def admin_mining_rates_diagnostic(limit: int = 30, plan: str = "elite"):
 
 
 @router.get("/history/{uid}")
-async def get_mining_history(uid: str, limit: int = 20):
-    """Get mining collection history"""
+async def get_mining_history(
+    uid: str,
+    limit: int = 20,
+    current_user: dict = Depends(_require_authenticated_user),
+):
+    """Get mining collection history. IDOR-safe (Jul 2026)."""
+    caller_uid = current_user.get("uid")
+    caller_role = current_user.get("role", "user")
+    if caller_role not in ("admin", "sub_admin") and caller_uid != uid:
+        raise HTTPException(status_code=403, detail="Access denied.")
     try:
         history = await db.transactions.find(
             {"user_id": uid, "transaction_type": "mining"},

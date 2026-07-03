@@ -166,24 +166,28 @@ async def check_subscription_redeem_cap(user_id: str, amount_inr: float) -> dict
 async def user_cap_endpoint(user_id: str, request: Request):
     """User-facing endpoint — shows their bank/recharge/utility/EMI cap.
 
-    Security: a user can only fetch their own cap. Admins can fetch anyone's.
+    Security (Jul 2026 hardened): Bearer token is now REQUIRED. Previously
+    the endpoint would silently return data if no Authorization header was
+    supplied (allowing anonymous scraping of anyone's subscription cap).
+    A user can only fetch their own cap; admins can fetch anyone's.
     """
     # Lazy import to avoid circular dep on server.py at module-load time
     import os
     import jwt as jwt_lib
 
     auth = request.headers.get("Authorization", "")
-    if auth.startswith("Bearer "):
-        token = auth.replace("Bearer ", "")
-        try:
-            secret = os.environ.get("JWT_SECRET_KEY", "")
-            payload = jwt_lib.decode(token, secret, algorithms=["HS256"])
-            requesting_uid = payload.get("uid")
-            requesting_role = payload.get("role", "user")
-            if requesting_role not in ("admin", "sub_admin", "ADMIN") and requesting_uid != user_id:
-                raise HTTPException(403, "You can only view your own redeem cap")
-        except jwt_lib.InvalidTokenError:
-            raise HTTPException(401, "Invalid token")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    token = auth.replace("Bearer ", "")
+    try:
+        secret = os.environ.get("JWT_SECRET_KEY", "")
+        payload = jwt_lib.decode(token, secret, algorithms=["HS256"])
+        requesting_uid = payload.get("uid")
+        requesting_role = payload.get("role", "user")
+        if requesting_role not in ("admin", "sub_admin", "ADMIN") and requesting_uid != user_id:
+            raise HTTPException(403, "You can only view your own redeem cap")
+    except jwt_lib.InvalidTokenError:
+        raise HTTPException(401, "Invalid token")
 
     info = await get_subscription_redeem_cap(user_id)
     return {"success": True, "user_id": user_id, **info}
