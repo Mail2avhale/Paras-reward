@@ -9,6 +9,18 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jul 03, 2026 — Admin User 360 PIN Reset Modal Persistence Fix)
+- 🐛 **User-reported (production)**: After clicking "Generate New PIN" in Admin User 360 → Reset PIN modal, the newly generated 6-digit PIN appeared briefly then disappeared, preventing the admin from copying it.
+- **Root cause**: `handlePinReset()` was routed through the generic `handleAction()` wrapper. Inside `handleAction`, `await refreshUserData()` was called before returning the API response. The refresh triggered a full `setUserData(...)` re-render of the parent component. Because `setNewPin(result.new_pin)` was scheduled AFTER `await handleAction(...)` completed, there was a window where the modal re-rendered from the refresh before the PIN state got committed — causing a visible flash-and-clear behavior.
+- 🛡️ **Fix** (`frontend/src/pages/AdminUser360New.js`):
+  1. `handlePinReset()` now performs the `/admin/user-360/action` axios call directly, sets `newPin` **synchronously** on API success, then triggers `refreshUserData()` fire-and-forget so it can't clobber the modal state.
+  2. Hardened the PIN Reset Modal `onClose`: when a PIN is currently displayed, dismissal now requires an explicit `window.confirm` ("Have you copied the PIN? Closing will clear it permanently.") to prevent accidental loss.
+  3. Added a "Done — Close" button next to Copy PIN so admins have a clear intentional dismissal path.
+  4. Added `data-testid` attributes for QA: `new-pin-display`, `copy-new-pin-btn`, `done-close-pin-btn`, `generate-new-pin-btn`, `cancel-pin-reset-btn`.
+  5. Added warning line: "Copy this PIN now — it will not be shown again."
+- **Production deploy required** — restores admin's ability to safely reset & communicate PINs.
+
+
 ## Implemented (Jul 03, 2026 — Session Expired False-Positive Fix — URGENT HOTFIX)
 - 🐛 **User-reported (production)**: After deploying the Jul 03 security pass, every user was getting kicked to `/login` with "Your session has expired. Please log in again." toast immediately after login.
 - **Root cause**: The Jul 03 IDOR hardening required Bearer tokens on `/api/notifications/{uid}`, `/api/prc-statement/*`, etc. But many raw `fetch()` call-sites in the frontend (NotificationContext, PRCStatement, PRCUsageHistory, PopupMessage, HolidayCalendar, AdminLedgerView, App.js's `/api/user/{uid}`, `/api/auth/logout`, `/api/auth/validate-session`, etc.) forgot to attach the Authorization header. Backend correctly returned 401 → my newly-added global `window.fetch` wrapper detected 401 with a stored token → treated it as session expiry → wiped storage + toast + redirect to `/login`. **False-positive auto-logout on every dashboard mount.**

@@ -582,9 +582,35 @@ const AdminUser360New = ({ user: adminUser }) => {
   // ========== ACTION HANDLERS ==========
   
   const handlePinReset = async () => {
-    const result = await handleAction('reset_pin', {});
-    if (result?.new_pin) {
-      setNewPin(result.new_pin);
+    if (!userData?.user?.uid) return;
+    setActionLoading(true);
+    try {
+      // Direct API call — bypasses handleAction's auto refresh which caused
+      // a re-render race that made the newly generated PIN disappear before
+      // the admin could copy it.
+      const response = await axios.post(`${API}/admin/user-360/action`, {
+        action: 'reset_pin',
+        user_id: userData.user.uid,
+        admin_id: adminUser?.uid
+      }, {
+        headers: { Authorization: `Bearer ${adminUser?.token}` }
+      });
+      const pin = response.data?.new_pin;
+      if (pin) {
+        // Set PIN synchronously so the modal locks onto the value.
+        setNewPin(pin);
+        toast.success('PIN reset successfully — copy it before closing the modal');
+        // Refresh user data in the background (fire-and-forget) so it does
+        // not race with the newPin state / modal rendering.
+        refreshUserData();
+      } else {
+        toast.error('PIN reset failed — no PIN returned by server');
+      }
+    } catch (err) {
+      console.error('PIN reset error:', err.response?.data || err.message);
+      toast.error(err.response?.data?.detail || err.message || 'PIN reset failed');
+    } finally {
+      setActionLoading(false);
     }
   };
   
@@ -1965,28 +1991,57 @@ const AdminUser360New = ({ user: adminUser }) => {
       {/* ========== MODALS ========== */}
       
       {/* PIN Reset Modal */}
-      <Modal show={showPinReset} onClose={() => { setShowPinReset(false); setNewPin(null); }} title="Reset PIN">
+      <Modal
+        show={showPinReset}
+        onClose={() => {
+          // If PIN is currently displayed, require explicit confirmation before
+          // clearing it — this prevents accidental dismissal (e.g. re-clicking
+          // the X icon) from destroying the PIN before admin copies it.
+          if (newPin) {
+            const ok = window.confirm('Have you copied the PIN? Closing will clear it permanently.');
+            if (!ok) return;
+          }
+          setShowPinReset(false);
+          setNewPin(null);
+        }}
+        title="Reset PIN"
+      >
         <div className="space-y-4">
           <p className="text-slate-500">Generate a new 6-digit PIN for this user.</p>
           {newPin && (
             <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-lg text-center">
               <p className="text-sm text-slate-500 mb-2">New PIN:</p>
-              <div className="flex justify-center gap-2">
+              <div className="flex justify-center gap-2" data-testid="new-pin-display">
                 {newPin.split('').map((digit, i) => (
                   <div key={i} className="w-10 h-12 bg-white border border-green-500/50 rounded flex items-center justify-center">
                     <span className="text-2xl font-bold text-green-400">{digit}</span>
                   </div>
                 ))}
               </div>
-              <Button onClick={() => { navigator.clipboard.writeText(newPin); toast.success('Copied!'); }} className="mt-3 bg-green-600">
-                <Copy className="h-4 w-4 mr-2" />Copy PIN
-              </Button>
+              <div className="flex gap-2 justify-center mt-3">
+                <Button
+                  data-testid="copy-new-pin-btn"
+                  onClick={() => { navigator.clipboard.writeText(newPin); toast.success('PIN copied to clipboard!'); }}
+                  className="bg-green-600"
+                >
+                  <Copy className="h-4 w-4 mr-2" />Copy PIN
+                </Button>
+                <Button
+                  data-testid="done-close-pin-btn"
+                  onClick={() => { setShowPinReset(false); setNewPin(null); }}
+                  variant="outline"
+                  className="border-slate-300"
+                >
+                  Done — Close
+                </Button>
+              </div>
+              <p className="text-xs text-amber-600 mt-3">Copy this PIN now — it will not be shown again.</p>
             </div>
           )}
           {!newPin && (
             <div className="flex gap-3">
-              <Button onClick={() => setShowPinReset(false)} variant="outline" className="flex-1 border-slate-300">Cancel</Button>
-              <Button onClick={handlePinReset} disabled={actionLoading} className="flex-1 bg-amber-600 hover:bg-amber-700">
+              <Button onClick={() => setShowPinReset(false)} variant="outline" className="flex-1 border-slate-300" data-testid="cancel-pin-reset-btn">Cancel</Button>
+              <Button onClick={handlePinReset} disabled={actionLoading} className="flex-1 bg-amber-600 hover:bg-amber-700" data-testid="generate-new-pin-btn">
                 {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Generate New PIN'}
               </Button>
             </div>
