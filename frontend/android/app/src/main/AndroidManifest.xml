@@ -74,4 +74,36 @@
          Without this, requestPermissions() silently no-ops and notifications
          (mining session reminders, etc.) never reach Android 13+ users. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      Android 11+ (API 30+) Package Visibility — Required so Razorpay
+      Checkout.js can query installed UPI apps (PhonePe, GPay, Paytm, BHIM,
+      Amazon Pay, WhatsApp Pay etc.). Without this <queries> block,
+      PackageManager.queryIntentActivities() returns EMPTY and Razorpay
+      hides the UPI Apps section from the checkout modal — which is
+      exactly the "no UPI options in Android app but works on website"
+      bug users reported.
+    -->
+    <queries>
+        <!-- Generic UPI intent (catches every registered UPI PSP app) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" />
+        </intent>
+        <!-- Explicit UPI package fallbacks (belt-and-braces) -->
+        <package android:name="com.phonepe.app" />
+        <package android:name="com.google.android.apps.nbu.paisa.user" />
+        <package android:name="net.one97.paytm" />
+        <package android:name="in.org.npci.upiapp" />
+        <package android:name="in.amazon.mShop.android.shopping" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="com.dreamplug.androidapp" />
+        <package android:name="com.mobikwik_new" />
+        <package android:name="com.freecharge.android" />
+        <package android:name="com.csam.icici.bank.imobile" />
+        <package android:name="com.axis.mobile" />
+        <package android:name="com.snapwork.hdfc" />
+        <package android:name="com.sbi.upi" />
+    </queries>
 </manifest>

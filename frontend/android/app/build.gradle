@@ -32,8 +32,24 @@ android {
         //    performance-summary / redeem-limit / mining-status / kyc-stats /
         //    gst-summary / public-contact-info; admin redeem-limits-overview
         //    moved to lazy-load. Dashboard time-to-data 10s → 1-2s.
-        versionCode 15
-        versionName "1.1.4"
+        //
+        // versionCode 15 → 16 — Jul 03, 2026 release:
+        // 1. Razorpay UPI Apps (PhonePe / GPay / Paytm / BHIM / Amazon Pay /
+        //    WhatsApp Pay etc.) missing from checkout in Android APP fix.
+        //    Root cause: Android 11+ (API 30+) package visibility restriction
+        //    meant PackageManager.queryIntentActivities() returned EMPTY for
+        //    UPI apps → Razorpay Checkout.js hid the UPI Apps section.
+        //    Fix (AndroidManifest.xml): Added <queries> block declaring the
+        //    upi:// intent + explicit UPI PSP package names so the checkout
+        //    can enumerate installed UPI apps.
+        //    Fix (MainActivity.java): Override WebViewClient to correctly
+        //    parse intent:// scheme URIs via Intent.parseUri(URI_INTENT_SCHEME)
+        //    — Capacitor's default handler used plain Intent(ACTION_VIEW, uri)
+        //    which fails to route to the intent's target package.
+        // 2. Admin User 360 PIN Reset modal persistence fix (state race that
+        //    made the newly generated PIN vanish before admin could copy).
+        versionCode 16
+        versionName "1.1.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
