@@ -161,6 +161,63 @@ const RETRY_DELAY_MS = 800;
 const FRIENDLY_DB_BUSY_TEXT = 'Database is busy right now';
 // ============================================================================
 
+// ============================================================================
+// GLOBAL FETCH WRAPPER (Jul 2026)
+// ----------------------------------------------------------------------------
+// A large chunk of the app still calls window.fetch() directly (PRCStatement,
+// AdminPopupMessages, AdminLedgerView, NotificationContext, KYCVerification,
+// ProfileAdvanced, App.js's auth-me/logout/validate-session calls, etc.).
+//
+// The axios interceptor above only catches responses that flow through axios —
+// so a raw fetch() that gets 401 back would previously leave the user
+// wedged in the logged-in shell with silently-failing pages (exactly the
+// bug reported on Jul 3, 2026). To close that gap without touching every
+// call-site, we monkey-patch window.fetch once here to piggy-back the same
+// 401 detection + one-shot logout redirect logic.
+//
+// Safe because: we always call through to the real underlying fetch; we
+// never mutate the request; we only ADD post-response side-effects, and
+// only fire the logout redirect once via a window-scoped guard flag.
+// ============================================================================
+if (typeof window !== 'undefined' && !window.__parasFetchPatched) {
+  const _originalFetch = window.fetch.bind(window);
+  window.fetch = async function patchedFetch(input, init) {
+    const response = await _originalFetch(input, init);
+    try {
+      const urlStr = typeof input === 'string' ? input : (input?.url || '');
+      const status = response.status;
+      const isAuthEndpoint = urlStr.includes('/api/auth/login')
+        || urlStr.includes('/api/auth/register')
+        || urlStr.includes('/api/auth/verify-otp')
+        || urlStr.includes('/api/auth/forgot-pin')
+        || urlStr.includes('/api/auth/logout');
+      if (status === 401 && !isAuthEndpoint && !window.__parasAuthLogoutInProgress) {
+        const hadToken = !!localStorage.getItem('token') || !!localStorage.getItem('paras_session_token');
+        if (hadToken) {
+          window.__parasAuthLogoutInProgress = true;
+          localStorage.removeItem('paras_user');
+          sessionStorage.removeItem('paras_user');
+          localStorage.removeItem('paras_session_token');
+          localStorage.removeItem('token');
+          try {
+            toast.error('Your session has expired. Please log in again.', { duration: 5000 });
+          } catch (_) { /* toast lib not initialised */ }
+          setTimeout(() => {
+            const path = window.location.pathname || '';
+            if (!path.startsWith('/login') && !path.startsWith('/register') && path !== '/') {
+              window.location.href = '/login';
+            } else {
+              window.__parasAuthLogoutInProgress = false;
+            }
+          }, 400);
+        }
+      }
+    } catch (_) { /* never crash the request pipeline */ }
+    return response;
+  };
+  window.__parasFetchPatched = true;
+}
+
 // Axios response interceptor - suppress 404 toast errors for optional APIs
 axios.interceptors.response.use(
   response => response,
