@@ -9,6 +9,15 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jul 03, 2026 — Session Expired False-Positive Fix — URGENT HOTFIX)
+- 🐛 **User-reported (production)**: After deploying the Jul 03 security pass, every user was getting kicked to `/login` with "Your session has expired. Please log in again." toast immediately after login.
+- **Root cause**: The Jul 03 IDOR hardening required Bearer tokens on `/api/notifications/{uid}`, `/api/prc-statement/*`, etc. But many raw `fetch()` call-sites in the frontend (NotificationContext, PRCStatement, PRCUsageHistory, PopupMessage, HolidayCalendar, AdminLedgerView, App.js's `/api/user/{uid}`, `/api/auth/logout`, `/api/auth/validate-session`, etc.) forgot to attach the Authorization header. Backend correctly returned 401 → my newly-added global `window.fetch` wrapper detected 401 with a stored token → treated it as session expiry → wiped storage + toast + redirect to `/login`. **False-positive auto-logout on every dashboard mount.**
+- 🛡️ **Two-part fix** (`frontend/src/App.js`):
+  1. **Auto-inject Bearer token** in the global `fetch` wrapper — if the URL hits `/api/` (except auth endpoints) and no Authorization header is present, transparently attach `Bearer <stored_token>`. Legacy fetch call-sites now behave identically to axios without touching every file.
+  2. **Only trigger logout when a token was actually SENT** — both fetch wrapper and axios interceptor now check `tokenWasAttached`/`sentAuthHeader` before firing the logout flow. A 401 from a call that had no auth header just means the endpoint requires auth (public-flow scenario), not a live session expiry.
+- **E2E verified on preview**: User logs in → dashboard mounts → NotificationContext fires `fetch(/api/notifications/{uid})` → wrapper auto-attaches Bearer → **200 response, no false logout**. Screenshot confirms full dashboard render (PRC 78157.75 visible, Elite Plan card, bottom nav, notification bell "9"), no toast, no redirect.
+- **Production deploy required** — fixes the freshly-deployed regression.
+
 ## Implemented (Jul 03, 2026 — Comprehensive Security Pass — 15 IDORs Closed)
 - 🛡️ **Full codebase security audit** — swept every user-facing route with `{uid}` / `{user_id}` in path and confirmed anonymous access is blocked. Fixed 15 confirmed IDOR / data-leak endpoints in one batch.
 - **Class A — Missing auth entirely (leaked to anonymous callers):**

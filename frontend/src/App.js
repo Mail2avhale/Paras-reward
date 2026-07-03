@@ -182,35 +182,61 @@ const FRIENDLY_DB_BUSY_TEXT = 'Database is busy right now';
 if (typeof window !== 'undefined' && !window.__parasFetchPatched) {
   const _originalFetch = window.fetch.bind(window);
   window.fetch = async function patchedFetch(input, init) {
-    const response = await _originalFetch(input, init);
-    try {
-      const urlStr = typeof input === 'string' ? input : (input?.url || '');
-      const status = response.status;
-      const isAuthEndpoint = urlStr.includes('/api/auth/login')
-        || urlStr.includes('/api/auth/register')
-        || urlStr.includes('/api/auth/verify-otp')
-        || urlStr.includes('/api/auth/forgot-pin')
-        || urlStr.includes('/api/auth/logout');
-      if (status === 401 && !isAuthEndpoint && !window.__parasAuthLogoutInProgress) {
-        const hadToken = !!localStorage.getItem('token') || !!localStorage.getItem('paras_session_token');
-        if (hadToken) {
-          window.__parasAuthLogoutInProgress = true;
-          localStorage.removeItem('paras_user');
-          sessionStorage.removeItem('paras_user');
-          localStorage.removeItem('paras_session_token');
-          localStorage.removeItem('token');
-          try {
-            toast.error('Your session has expired. Please log in again.', { duration: 5000 });
-          } catch (_) { /* toast lib not initialised */ }
-          setTimeout(() => {
-            const path = window.location.pathname || '';
-            if (!path.startsWith('/login') && !path.startsWith('/register') && path !== '/') {
-              window.location.href = '/login';
-            } else {
-              window.__parasAuthLogoutInProgress = false;
-            }
-          }, 400);
+    // Normalise call signature so we can safely mutate headers.
+    let request = init || {};
+    const urlStr = typeof input === 'string' ? input : (input?.url || '');
+    const isApiCall = urlStr.includes('/api/');
+    const isAuthEndpoint = urlStr.includes('/api/auth/login')
+      || urlStr.includes('/api/auth/register')
+      || urlStr.includes('/api/auth/verify-otp')
+      || urlStr.includes('/api/auth/forgot-pin')
+      || urlStr.includes('/api/auth/logout')
+      || urlStr.includes('/api/auth/validate-session');
+
+    // AUTO-INJECT Bearer token for /api/ calls that don't already carry one.
+    // Many legacy fetch() call sites forgot to add the Authorization header;
+    // rather than patch every call site we transparently attach the token
+    // stored by the axios request interceptor. This makes raw fetch behave
+    // the same as axios for auth purposes.
+    let tokenWasAttached = false;
+    if (isApiCall && !isAuthEndpoint) {
+      const existingHeaders = new Headers(request.headers || (typeof input !== 'string' && input?.headers) || {});
+      if (!existingHeaders.has('Authorization')) {
+        const stored = localStorage.getItem('token') || localStorage.getItem('paras_session_token');
+        if (stored) {
+          existingHeaders.set('Authorization', `Bearer ${stored}`);
+          request = { ...request, headers: existingHeaders };
+          tokenWasAttached = true;
         }
+      } else {
+        tokenWasAttached = true;
+      }
+    }
+
+    const response = await _originalFetch(input, request);
+    try {
+      const status = response.status;
+      // Only trigger the session-expired flow when we ACTUALLY sent a token
+      // and the server rejected it. A 401 with no token attached just means
+      // the endpoint required auth and the caller hadn't logged in yet —
+      // not a session-expiry event.
+      if (status === 401 && !isAuthEndpoint && tokenWasAttached && !window.__parasAuthLogoutInProgress) {
+        window.__parasAuthLogoutInProgress = true;
+        localStorage.removeItem('paras_user');
+        sessionStorage.removeItem('paras_user');
+        localStorage.removeItem('paras_session_token');
+        localStorage.removeItem('token');
+        try {
+          toast.error('Your session has expired. Please log in again.', { duration: 5000 });
+        } catch (_) { /* toast lib not initialised */ }
+        setTimeout(() => {
+          const path = window.location.pathname || '';
+          if (!path.startsWith('/login') && !path.startsWith('/register') && path !== '/') {
+            window.location.href = '/login';
+          } else {
+            window.__parasAuthLogoutInProgress = false;
+          }
+        }, 400);
       }
     } catch (_) { /* never crash the request pipeline */ }
     return response;
@@ -277,11 +303,13 @@ axios.interceptors.response.use(
       (finalStatus === 403 && tokenExpiredKeywords.test(finalDetail));
 
     if (isTokenIssue && !isAuthEndpoint && !window.__parasAuthLogoutInProgress) {
-      // Only trigger for authenticated users — if we never had a token,
-      // this is just a public endpoint that requires auth (e.g., user
-      // hasn't logged in yet). Nothing to log out from.
-      const hadToken = !!localStorage.getItem('token') || !!localStorage.getItem('paras_session_token');
-      if (hadToken) {
+      // Only trigger for authenticated users — check that we actually SENT
+      // a token on this request. A 401 with no Authorization header just
+      // means the endpoint required auth (public flow), not that a live
+      // session expired. Prevents false-positive logout kicks on legacy
+      // call-sites that forgot to attach the token.
+      const sentAuthHeader = !!(config.headers && (config.headers.Authorization || config.headers.authorization));
+      if (sentAuthHeader) {
         window.__parasAuthLogoutInProgress = true;
         try {
           localStorage.removeItem('paras_user');
