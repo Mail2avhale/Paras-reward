@@ -198,6 +198,59 @@ axios.interceptors.response.use(
       error.__isFriendlyDBBusy = true;
     }
 
+    // ────────────────────────────────────────────────────────────────────
+    // AUTH GUARD (Jul 2026): When any protected endpoint responds with 401
+    // (or a "token expired / invalid" flavored 403), the JWT has aged out on
+    // the client. Previously we just rejected the promise, which meant the
+    // logged-in shell kept rendering with stale data while every fetch
+    // silently failed — users could navigate around with no clue they were
+    // "logged out". We now force a single, atomic global logout:
+    //   • wipes stored user + tokens
+    //   • toasts a friendly message
+    //   • redirects to /login
+    // Skips the login endpoint itself (401 there = bad credentials, not
+    // expiry) and the already-redirecting login page.
+    // Uses a window-scoped flag so simultaneous stale requests can't fire
+    // multiple redirects / toasts.
+    // ────────────────────────────────────────────────────────────────────
+    const finalStatus = error.response?.status;
+    const isAuthEndpoint = url.includes('/api/auth/login') || url.includes('/api/auth/register') || url.includes('/api/auth/verify-otp');
+    const tokenExpiredKeywords = /token|expired|invalid|authentication required|unauthori[sz]ed|please log ?in|session/i;
+    const isTokenIssue = (finalStatus === 401) ||
+      (finalStatus === 403 && tokenExpiredKeywords.test(finalDetail));
+
+    if (isTokenIssue && !isAuthEndpoint && !window.__parasAuthLogoutInProgress) {
+      // Only trigger for authenticated users — if we never had a token,
+      // this is just a public endpoint that requires auth (e.g., user
+      // hasn't logged in yet). Nothing to log out from.
+      const hadToken = !!localStorage.getItem('token') || !!localStorage.getItem('paras_session_token');
+      if (hadToken) {
+        window.__parasAuthLogoutInProgress = true;
+        try {
+          localStorage.removeItem('paras_user');
+          sessionStorage.removeItem('paras_user');
+          localStorage.removeItem('paras_session_token');
+          localStorage.removeItem('token');
+          // Best-effort user feedback — don't crash if toast isn't ready yet
+          try {
+            toast.error('Your session has expired. Please log in again.', { duration: 5000 });
+          } catch (_) { /* toast lib not initialised */ }
+        } finally {
+          // Redirect after a short pause so the toast has time to appear.
+          // Full page reload guarantees every in-memory user state, timer
+          // and interval is reset — no dangling authenticated components.
+          setTimeout(() => {
+            const path = window.location.pathname || '';
+            if (!path.startsWith('/login') && !path.startsWith('/register') && path !== '/') {
+              window.location.href = '/login';
+            } else {
+              window.__parasAuthLogoutInProgress = false;
+            }
+          }, 400);
+        }
+      }
+    }
+
     // Don't show toast for 404 errors on optional/stats endpoints
     const is404 = error.response?.status === 404;
     const isOptionalEndpoint = url.includes('subscription-stats') || 

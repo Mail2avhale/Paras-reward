@@ -9,6 +9,19 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Jul 03, 2026 — Auto-Logout on Token Expiry — SECURITY P0)
+- 🐛 **User-reported (production)**: When JWT expired, the app kept rendering the logged-in shell with stale data. Users could still click through pages, but every API call was silently failing with 401. No logout, no redirect, no toast — dangerous UX + security hole (a stolen/expired session could linger indefinitely on shared devices).
+- 🛡️ **Fix**: Added a 401/403 handler inside the existing `axios.interceptors.response` block in `frontend/src/App.js`. On any authenticated call returning 401 (or a token-flavoured 403):
+  - Wipes `paras_user`, `token`, `paras_session_token` from localStorage + sessionStorage
+  - Shows toast: `"Your session has expired. Please log in again."`
+  - Forces a full-page redirect to `/login` (guarantees every in-memory user state, timer, and interval is reset)
+  - Uses `window.__parasAuthLogoutInProgress` flag so simultaneous stale requests can't fire multiple redirects/toasts
+  - Skips the login/register/verify-otp endpoints (401 there = bad credentials, not expiry)
+  - Skips if the user never had a token in the first place (public endpoints)
+- **E2E verified on preview**: logged in → replaced localStorage tokens with garbage → reloaded → auto-logout fired → landed on landing page with Login/Register visible → all storage cleared.
+- **Files touched**: `frontend/src/App.js` (+~55 lines inside existing interceptor), `memory/PRD.md`.
+- **Production deploy required** — hardening applies to live app after next deploy.
+
 ## Implemented (Jul 01, 2026 — Referral Fraud Hardening — SECURITY P0)
 - 🔒 **CRITICAL FIX**: `POST /api/referral/apply/{uid}` had two exploitable flaws that could have allowed referral fraud in production:
   1. **No authentication**: Anyone knowing a UID could attach any referral code to that user's account (IDOR).
