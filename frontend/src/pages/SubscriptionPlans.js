@@ -16,6 +16,7 @@ import { validateUTR, formatUTR } from '@/utils/indianValidation';
 // PRCRateDisplay removed (PRC subscription payment deprecated April 2026)
 import InvoiceModal from '@/components/InvoiceModal';
 import SaleEliteSubscription from '@/components/SaleEliteSubscription';
+import { isNativePlatform } from '@/utils/nativeUx';
 
 import { API } from "../lib/api";
 
@@ -269,6 +270,14 @@ const SubscriptionPlans = ({ user }) => {
       
       const { order_id, amount, currency } = orderRes.data;
       
+      // Detect if we are running inside the Capacitor Android WebView.
+      // Razorpay Checkout.js requires an explicit `webview_intent: true`
+      // flag to expose the native UPI Apps section (PhonePe / GPay / Paytm /
+      // BHIM etc.) inside a WebView — without it, only the QR / collect flow
+      // is shown even though the OS is fully capable of launching UPI apps.
+      // Ref: https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/webview/upi-intent-android/
+      const runningInWebView = isNativePlatform();
+
       // Razorpay options
       const options = {
         key: key_id,
@@ -277,6 +286,8 @@ const SubscriptionPlans = ({ user }) => {
         name: 'PARAS REWARD',
         description: `${selectedPlan.name} - ${selectedDuration} Subscription`,
         order_id: order_id,
+        // 👇 UPI Apps (PhonePe / GPay / Paytm) visibility inside the Android app
+        ...(runningInWebView ? { webview_intent: true } : {}),
         handler: async function (response) {
           try {
             // Only proceed if we have all required response fields
