@@ -5,8 +5,7 @@
       "namespace": "android_app",
       "package_name": "com.parasreward.prc",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_PLAY_APP_SIGNING_SHA256_FROM_PLAY_CONSOLE",
-        "REPLACE_WITH_UPLOAD_KEY_SHA256_FROM_KEYSTORE"
+        "06:E8:37:C5:18:88:CA:B2:DB:A8:19:EA:2E:17:E9:79:1E:F9:11:DC:17:2F:AE:B0:DF:3C:0D:01:98:C4:6D:D8"
       ]
     }
   }
