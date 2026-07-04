@@ -24,6 +24,14 @@ const AdminSystemSettings = () => {
     referral_bonus_percent: 20,
     enabled: true
   });
+
+  // Global Redeem-Limit Formula Toggle (Jul 2026)
+  //   enabled=true  → network-based unlock% formula (existing behaviour)
+  //   enabled=false → flat unlock % for every user regardless of network
+  const [globalRedeem, setGlobalRedeem] = useState({
+    enabled: true,
+    flat_unlock_percent: 80,
+  });
   
   // Mining Rate Settings
   const [miningSettings, setMiningSettings] = useState({
@@ -40,18 +48,51 @@ const AdminSystemSettings = () => {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const [redeemRes, miningRes] = await Promise.all([
+      const [redeemRes, miningRes, globalRes] = await Promise.all([
         axios.get(`${API}/admin/settings/redeem-limit`).catch(() => ({ data: {} })),
-        axios.get(`${API}/admin/settings/mining-rates`).catch(() => ({ data: {} }))
+        axios.get(`${API}/admin/settings/mining-rates`).catch(() => ({ data: {} })),
+        axios.get(`${API}/admin/settings/redeem-limit-global`).catch(() => ({ data: {} })),
       ]);
       
       if (redeemRes.data) setRedeemSettings(prev => ({ ...prev, ...redeemRes.data }));
       if (miningRes.data?.rates) setMiningSettings(miningRes.data.rates);
+      if (globalRes.data && typeof globalRes.data.enabled === 'boolean') {
+        setGlobalRedeem({
+          enabled: globalRes.data.enabled,
+          flat_unlock_percent: Number(globalRes.data.flat_unlock_percent ?? 80),
+        });
+      }
       
     } catch (err) {
       console.error('Failed to fetch settings:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveGlobalRedeem = async () => {
+    setSaving(prev => ({ ...prev, globalRedeem: true }));
+    try {
+      const pct = Number(globalRedeem.flat_unlock_percent);
+      if (isNaN(pct) || pct < 0 || pct > 100) {
+        toast.error('Flat unlock % must be between 0 and 100');
+        setSaving(prev => ({ ...prev, globalRedeem: false }));
+        return;
+      }
+      await axios.post(`${API}/admin/settings/redeem-limit-global`, {
+        enabled: globalRedeem.enabled,
+        flat_unlock_percent: pct,
+      });
+      toast.success(
+        globalRedeem.enabled
+          ? 'Network-based unlock formula ENABLED'
+          : `Flat unlock (${pct}%) ACTIVE for all users`,
+        { duration: 4000 }
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to save global toggle');
+    } finally {
+      setSaving(prev => ({ ...prev, globalRedeem: false }));
     }
   };
 
@@ -126,6 +167,126 @@ const AdminSystemSettings = () => {
                 overrides have been removed.
               </p>
             </div>
+          </div>
+
+          {/* Global Redeem Limit Formula Toggle (Jul 2026) */}
+          <div
+            className="bg-white rounded-xl p-5 border border-slate-200 lg:col-span-2"
+            data-testid="global-redeem-limit-card"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className={`w-5 h-5 ${globalRedeem.enabled ? 'text-emerald-500' : 'text-amber-500'}`} />
+              <h2 className="text-lg font-semibold text-slate-800">
+                Global Redeem-Limit Formula
+              </h2>
+              <span
+                className={`ml-auto text-[10px] font-bold px-2 py-1 rounded-full ${
+                  globalRedeem.enabled
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-amber-100 text-amber-700'
+                }`}
+                data-testid="global-redeem-status-badge"
+              >
+                {globalRedeem.enabled
+                  ? 'NETWORK-BASED (default)'
+                  : `FLAT ${globalRedeem.flat_unlock_percent}% UNLOCK`}
+              </span>
+            </div>
+
+            <p className="text-slate-500 text-xs mb-4 leading-relaxed">
+              When <b>enabled</b> (default), a user&apos;s Redeem Limit unlock % is derived
+              from their active Single-Leg-Tree network size. When <b>disabled</b>, the
+              network formula is bypassed and every user gets a flat unlock percentage
+              (e.g. 80%) of their total mined PRC. Per-user admin overrides are still
+              respected on top (user gets <code>max(flat, override)</code>).
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="flex items-center justify-between bg-slate-50 rounded-lg p-3 border border-slate-200">
+                <div>
+                  <label className="text-slate-700 font-medium text-sm">
+                    Network-based Formula
+                  </label>
+                  <p className="text-slate-500 text-[11px] mt-0.5">
+                    ON = original logic • OFF = flat unlock below
+                  </p>
+                </div>
+                <button
+                  data-testid="global-redeem-enabled-toggle"
+                  onClick={() =>
+                    setGlobalRedeem((prev) => ({ ...prev, enabled: !prev.enabled }))
+                  }
+                  className={`w-12 h-6 rounded-full transition-colors ${
+                    globalRedeem.enabled ? 'bg-emerald-600' : 'bg-slate-300'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 bg-white rounded-full transition-transform shadow ${
+                      globalRedeem.enabled ? 'translate-x-6' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                <label className="text-slate-700 font-medium text-sm">
+                  Flat Unlock % (when disabled)
+                </label>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <Input
+                    data-testid="global-redeem-flat-percent-input"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={globalRedeem.flat_unlock_percent}
+                    onChange={(e) =>
+                      setGlobalRedeem((prev) => ({
+                        ...prev,
+                        flat_unlock_percent: e.target.value === '' ? '' : Number(e.target.value),
+                      }))
+                    }
+                    disabled={globalRedeem.enabled}
+                    className="bg-white border-slate-200 text-slate-800"
+                  />
+                  <span className="text-slate-500 text-sm">%</span>
+                </div>
+                <p className="text-slate-500 text-[11px] mt-1">
+                  Applied only when the toggle above is OFF.
+                </p>
+              </div>
+            </div>
+
+            {!globalRedeem.enabled && (
+              <div
+                className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-start gap-2"
+                data-testid="global-redeem-warning-banner"
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-xs text-amber-800 leading-relaxed">
+                  <b>Heads-up:</b> With the network formula OFF, every eligible user
+                  will instantly see up to{' '}
+                  <b>{globalRedeem.flat_unlock_percent}%</b> of their total mined PRC as
+                  redeemable — regardless of their referral / network size. Bank redeem
+                  &amp; bill-pay flows will approve larger amounts. Consider toggling back
+                  ON once your temporary campaign / issue is resolved.
+                </div>
+              </div>
+            )}
+
+            <Button
+              onClick={saveGlobalRedeem}
+              disabled={saving.globalRedeem}
+              className="w-full bg-purple-600 hover:bg-purple-700"
+              data-testid="save-global-redeem-btn"
+            >
+              {saving.globalRedeem ? (
+                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Save Global Toggle
+            </Button>
           </div>
 
           {/* Redeem Limit Settings */}

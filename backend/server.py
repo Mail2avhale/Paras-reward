@@ -18417,9 +18417,40 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         # total_earned = total_mined - total_redeemed (for display purposes)
         total_earned = max(0, reconciled_total_mined - total_redeemed)
         
-        # Get unlock % from Single Leg Tree ACTIVE network (tree_position + paid + mining active)
+        # -----------------------------------------------------------------
+        # GLOBAL REDEEM-LIMIT FORMULA TOGGLE (Jul 2026)
+        # -----------------------------------------------------------------
+        # Admin can globally disable the network-size-based unlock formula
+        # via `admin/settings/redeem-limit-global`. When disabled, every
+        # user gets a flat unlock percentage (default 80%) regardless of
+        # their active network size. Per-user `redeem_limit_override` is
+        # still honoured on top (see block further below).
+        try:
+            global_toggle_doc = await db.app_settings.find_one(
+                {"key": "redeem_limit_global"},
+                {"_id": 0, "enabled": 1, "flat_unlock_percent": 1}
+            )
+        except Exception:
+            global_toggle_doc = None
+
+        global_formula_enabled = True
+        flat_unlock_percent = 80.0
+        if global_toggle_doc:
+            global_formula_enabled = bool(global_toggle_doc.get("enabled", True))
+            try:
+                flat_unlock_percent = float(global_toggle_doc.get("flat_unlock_percent", 80.0))
+            except (TypeError, ValueError):
+                flat_unlock_percent = 80.0
+            # Clamp to sensible range at read time as a defensive measure.
+            flat_unlock_percent = max(0.0, min(100.0, flat_unlock_percent))
+
+        # Get unlock % — from network formula OR flat override
         network_size = await get_active_network_size(user_id)
-        redeem_limit_percent = calculate_growth_level(network_size)
+        if global_formula_enabled:
+            redeem_limit_percent = calculate_growth_level(network_size)
+        else:
+            # Bypass network-based unlock — flat percent for every user.
+            redeem_limit_percent = flat_unlock_percent
         
         # TOTAL LIMIT = total_mined × Unlock% (based on total_mined, not total_earned)
         redeemable = reconciled_total_mined * (redeem_limit_percent / 100)
@@ -18461,7 +18492,11 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
             "unlimited": False,
             "override_active": override_active,
             "override_value": round(override_value, 2) if override_active else 0,
-            "override_reason": user.get("redeem_limit_override_reason") if override_active else None
+            "override_reason": user.get("redeem_limit_override_reason") if override_active else None,
+            # Global toggle diagnostics — helps frontend show "Unlimited Mode"
+            # banner when admin has disabled the network-based formula.
+            "global_formula_enabled": global_formula_enabled,
+            "flat_unlock_percent": flat_unlock_percent if not global_formula_enabled else None,
         }
     except Exception as e:
         logging.error(f"Error calculating redeem limit for {user_id}: {e}")

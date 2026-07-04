@@ -80,6 +80,95 @@ async def update_redeem_limit_settings(request: Request, admin: dict = Depends(g
     return {"success": True, "message": "Redeem limit settings updated"}
 
 
+# ========== GLOBAL REDEEM LIMIT FORMULA TOGGLE ==========
+# When `enabled=True` (default): network-based unlock% formula from
+# calculate_growth_level(active_network_size) applies as usual.
+# When `enabled=False`: the network-based formula is bypassed and every user
+# gets a flat unlock percentage (default 80%). Per-user redeem_limit_override
+# is still respected on top — user gets max(flat_unlock, override).
+# Storage key: app_settings.key == "redeem_limit_global"
+
+DEFAULT_GLOBAL_REDEEM = {
+    "enabled": True,
+    "flat_unlock_percent": 80.0,
+}
+
+
+@router.get("/settings/redeem-limit-global")
+async def get_redeem_limit_global(admin: dict = Depends(get_current_admin)):
+    """Get global redeem-limit formula toggle - ADMIN ONLY."""
+    doc = await db.app_settings.find_one({"key": "redeem_limit_global"}, {"_id": 0})
+    if not doc:
+        return DEFAULT_GLOBAL_REDEEM
+    return {
+        "enabled": bool(doc.get("enabled", True)),
+        "flat_unlock_percent": float(doc.get("flat_unlock_percent", 80.0)),
+        "updated_at": doc.get("updated_at"),
+        "updated_by": doc.get("updated_by"),
+    }
+
+
+@router.post("/settings/redeem-limit-global")
+async def update_redeem_limit_global(request: Request, admin: dict = Depends(get_current_admin)):
+    """Update global redeem-limit formula toggle - ADMIN ONLY."""
+    data = await request.json()
+
+    enabled_raw = data.get("enabled")
+    if enabled_raw is None:
+        raise HTTPException(status_code=400, detail="Field 'enabled' is required (bool)")
+    enabled = bool(enabled_raw)
+
+    try:
+        flat_pct = float(data.get("flat_unlock_percent", 80.0))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="'flat_unlock_percent' must be a number")
+
+    # Clamp to sensible range.
+    if flat_pct < 0 or flat_pct > 100:
+        raise HTTPException(status_code=400, detail="'flat_unlock_percent' must be between 0 and 100")
+
+    now = datetime.now(timezone.utc).isoformat()
+    admin_uid = admin.get("uid") or admin.get("email") or "unknown"
+
+    await db.app_settings.update_one(
+        {"key": "redeem_limit_global"},
+        {
+            "$set": {
+                "key": "redeem_limit_global",
+                "enabled": enabled,
+                "flat_unlock_percent": flat_pct,
+                "updated_at": now,
+                "updated_by": admin_uid,
+            }
+        },
+        upsert=True,
+    )
+
+    if log_admin_action:
+        try:
+            await log_admin_action(
+                admin_uid,
+                "update_redeem_limit_global",
+                {"enabled": enabled, "flat_unlock_percent": flat_pct},
+            )
+        except Exception:
+            pass
+
+    # Invalidate cached per-user redeem-limit results so users see the
+    # new global setting immediately (otherwise 60s TTL delay applies).
+    try:
+        from cache_manager import cache as _cache
+        await _cache.delete_pattern("user:redeem_limit:*")
+        await _cache.delete("admin:redeem_limits_overview")
+    except Exception as _e:
+        logging.warning(f"[ADMIN] redeem-limit cache invalidation failed: {_e}")
+
+    logging.info(
+        f"[ADMIN] Redeem Limit GLOBAL updated by {admin_uid}: enabled={enabled}, flat={flat_pct}"
+    )
+    return {"success": True, "enabled": enabled, "flat_unlock_percent": flat_pct}
+
+
 # ========== MINING RATE SETTINGS ==========
 
 @router.get("/settings/mining-rates")
