@@ -14,6 +14,9 @@
 ## Admin
 - Email: admin@test.com
 - PIN: 153759
+- Mobile: 9999999999
+- UID: admin-test-123
+- Role: admin (promoted Jul 2026)
 
 ## Admin Operation PINs (backend/.env)
 - ADMIN_OPERATION_PIN=123456 (for bulk-fail, admin-credit, approve-all type guards)

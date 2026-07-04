@@ -1,0 +1,55 @@
+{
+  "summary": "Tested new Global Redeem-Limit Formula Toggle feature end-to-end. Admin UI works perfectly (card, badge, toggle, warning banner, save, persistence, ordering above Monthly Redeem Limit, toasts). Regression on Monthly Redeem Limit passes. BUT 2 backend bugs found: (1) CRITICAL cache invalidation is a no-op on Upstash Redis so admin toggle changes take up to 60 seconds to reach users; (2) /api/user/{uid}/redeem-limit response does NOT include the required `global_formula_enabled` / `flat_unlock_percent` diagnostic fields — the endpoint filters keys explicitly and drops them. 9/14 pytest cases pass; 5 fail due to those two bugs (not test issues).",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "cache_manager.delete_pattern (Upstash branch) invoked by POST /api/admin/settings/redeem-limit-global",
+        "issue": "Cache invalidation of pattern `user:redeem_limit:*` is a NO-OP when Upstash Redis is the backend. In cache_manager.py:174-179 the Upstash branch does `await self.redis_client.delete(prefixed_pattern)` on the literal pattern string containing `*`. Upstash SDK does not support SCAN/glob-delete, so no actual per-user cache keys are removed. Verified live: POST enabled=false flat=99 → GET returns 99 → POST enabled=false flat=33 → immediate GET still returns 99 → GET after 60s TTL returns 33. Consequence: every user sees a stale unlock% for up to 60 seconds after admin flips the toggle, directly contradicting the feature spec ('cache is auto-invalidated via delete_pattern in the POST handler').",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "GET /api/user/{uid}/redeem-limit",
+        "issue": "Response body is missing the required `global_formula_enabled` (bool) and `flat_unlock_percent` (float|null) fields. calculate_user_redeem_limit() DOES return them, but the endpoint at server.py:18723-18750 explicitly builds `return_payload.limit` from a hard-coded key allowlist that drops these two. Spec requires them so the frontend can render an 'Unlimited Mode' banner and diagnostics. Fix: add `\"global_formula_enabled\": limit_info.get(\"global_formula_enabled\", True)` and `\"flat_unlock_percent\": limit_info.get(\"flat_unlock_percent\")` inside the `limit` dict.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "User dashboard reflect admin toggle change",
+        "issue": "Because of the cache-invalidation bug above, when an admin flips the global toggle, the primary user's DashboardModern 'dashboard-redeem-limit-card' will show the OLD unlock_percent / total_limit for up to 60s. Frontend code itself is correct — this is a downstream symptom of the backend bug.",
+        "affected_selectors": ["dashboard-redeem-limit-card"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_global_redeem_limit_toggle.py",
+    "/app/test_reports/pytest/global_redeem_toggle.xml"
+  ],
+  "action_items": [
+    "FIX CRITICAL: Make cache invalidation actually work on Upstash. Options: (a) maintain a Redis SET of active per-user redeem-limit cache keys and iterate/delete on invalidation, (b) bump a versioned key namespace (`user:redeem_limit:v{N}:{uid}`) and only INCR the version counter on invalidation, or (c) shorten TTL to ~5s for this key. Option (b) is cleanest.",
+    "FIX HIGH: In server.py:18723 add `global_formula_enabled` and `flat_unlock_percent` into the returned `limit` dict so the spec is satisfied and the frontend can surface 'Unlimited Mode' UX when admin disables the network formula.",
+    "OPTIONAL: Frontend AdminSystemSettings.js — Input#global-redeem-flat-percent-input uses `type=\"number\"` with controlled Number() value, so `page.fill()` in tests shows a stray browser-side value briefly. Not a real bug but consider adding a `onBlur` normalizer.",
+    "OPTIONAL: log_admin_action call in routes/admin_settings.py:149 uses positional args (admin_uid, action, details) but the standard signature elsewhere in codebase (e.g. update_setting) uses keyword args (admin_uid=, action=, entity_type=, details=). Inconsistency — the try/except hides any signature mismatch."
+  ],
+  "critical_code_review_comments": [
+    "cache_manager.delete_pattern silently returns 1 on Upstash without doing anything useful — this is a foot-gun for ALL features that rely on pattern-based invalidation. Add a real implementation (versioned namespace or key registry) or at minimum log.warning() so the failure is not silent.",
+    "server.py get_user_redeem_limit endpoint uses a hard-coded key allowlist for the limit dict instead of returning limit_info directly. Any new diagnostic added to calculate_user_redeem_limit will be dropped silently. Consider merging: `limit_info` first, then override with computed extras. Same footgun happens 3× in nearby endpoints (18615, 18651, 18721).",
+    "The redeem_limit_override interaction test failed as a side-effect of the cache staleness — even after mongo write of override=5000, the user endpoint returned a cached response with override_active=False. Verify override changes also trigger cache invalidation somewhere in the User360 admin flow.",
+    "admin_settings.py:161-164 catches the cache invalidation failure but only logs a warning. If cache invalidation is business-critical (which the spec claims), a failure here should return 500 or set a flag in the response so the admin knows the change might take up to 60s to propagate."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_global_redeem_limit_toggle.py"
+  ],
+  "success_rate": {"backend": "64%", "frontend": "100%"},
+  "test_credentials": "Admin admin@test.com / PIN 153759; primary user mobile 9970100782 / PIN 997010 (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "Test used the existing primary user (uid=76b75808...) as-is. Temporary redeem_limit_override=5000 was set on that user during test then unset in cleanup fixture. app_settings.redeem_limit_global doc was deleted post-test to restore defaults.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend: 9/14 tests pass. Failing tests all trace back to two root causes: (1) Upstash Redis delete_pattern is a no-op (cache_manager.py:174-179), and (2) get_user_redeem_limit endpoint doesn't pass through global_formula_enabled + flat_unlock_percent to response.limit. Frontend admin UI (AdminSystemSettings.js) is fully working — no changes needed. After main agent fixes bugs, re-run `pytest backend/tests/test_global_redeem_limit_toggle.py -v`. User-side dashboard playwright was not explicitly re-run because the frontend code (DashboardModern.js) correctly reads unlock_percent/total_limit from the response — the observed staleness is purely backend cache behaviour. On the Upstash env available here, workaround for retest: sleep >60s after each POST to bypass cache.",
+  "rca of the issue": "Root cause #1 (cache staleness): cache_manager.py implements delete_pattern for two backends. Local-redis branch (line 181-187) uses scan_iter, which works. Upstash branch (line 175-179) has a comment 'Upstash doesn't support SCAN' and then just calls `redis_client.delete(prefixed_pattern)` on the raw pattern string (e.g. 'env:user:redeem_limit:*'), which deletes the literal `*` key that never exists. Reproduction: POST /api/admin/settings/redeem-limit-global with two different flat_unlock_percent values back-to-back and GET /api/user/{uid}/redeem-limit between them — the second GET returns the first value until 60s TTL expires. Mitigation: (i) short-term — reduce cache TTL from 60s to 5s on this key; (ii) proper fix — switch to versioned key namespace (`user:redeem_limit:v{v}:{uid}` where v is INCR'd on any global toggle change or per-user override write). Root cause #2 (missing fields): get_user_redeem_limit endpoint builds return_payload.limit from a static dict literal listing only 20 keys; new fields added to calculate_user_redeem_limit are dropped. Mitigation: replace the hand-crafted dict with `**limit_info` plus explicit computed overrides."
+}
