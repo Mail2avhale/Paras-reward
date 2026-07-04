@@ -18746,6 +18746,11 @@ async def get_user_redeem_limit(user_id: str, request: Request):
                 "override_active": limit_info.get("override_active", False),
                 "override_value": limit_info.get("override_value", 0),
                 "override_reason": limit_info.get("override_reason"),
+                # Global toggle diagnostics — surfaced so the dashboard
+                # can render an "Unlimited Mode" banner and QA can verify
+                # which formula produced the unlock_percent above.
+                "global_formula_enabled": limit_info.get("global_formula_enabled", True),
+                "flat_unlock_percent": limit_info.get("flat_unlock_percent"),
                 "note": "Dynamic limit based on Growth Network. Grow your network to unlock more."
             }
         }

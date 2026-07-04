@@ -156,17 +156,47 @@ async def update_redeem_limit_global(request: Request, admin: dict = Depends(get
 
     # Invalidate cached per-user redeem-limit results so users see the
     # new global setting immediately (otherwise 60s TTL delay applies).
+    # NOTE: cache_manager.delete_pattern() is a NO-OP on Upstash Redis (SCAN
+    # unsupported over REST). To guarantee invalidation on every backend we
+    # iterate active users and delete the exact per-user keys.
+    invalidated_count = 0
     try:
         from cache_manager import cache as _cache
-        await _cache.delete_pattern("user:redeem_limit:*")
-        await _cache.delete("admin:redeem_limits_overview")
+        # Best-effort pattern delete (works on local Redis + in-memory).
+        try:
+            await _cache.delete_pattern("user:redeem_limit:*")
+        except Exception:
+            pass
+        # Guaranteed exact-key delete for every registered user (works on Upstash).
+        cursor = db.users.find({}, {"uid": 1, "_id": 0})
+        async for u in cursor:
+            uid = u.get("uid")
+            if not uid:
+                continue
+            try:
+                await _cache.delete(f"user:redeem_limit:{uid}")
+                invalidated_count += 1
+            except Exception:
+                # Individual key failures should not abort the loop.
+                pass
+        # Also flush admin aggregate.
+        try:
+            await _cache.delete("admin:redeem_limits_overview")
+        except Exception:
+            pass
     except Exception as _e:
         logging.warning(f"[ADMIN] redeem-limit cache invalidation failed: {_e}")
 
     logging.info(
-        f"[ADMIN] Redeem Limit GLOBAL updated by {admin_uid}: enabled={enabled}, flat={flat_pct}"
+        f"[ADMIN] Redeem Limit GLOBAL updated by {admin_uid}: enabled={enabled}, "
+        f"flat={flat_pct} — invalidated {invalidated_count} per-user cache keys"
     )
-    return {"success": True, "enabled": enabled, "flat_unlock_percent": flat_pct}
+    return {
+        "success": True,
+        "enabled": enabled,
+        "flat_unlock_percent": flat_pct,
+        "cache_keys_invalidated": invalidated_count,
+    }
 
 
 # ========== MINING RATE SETTINGS ==========
