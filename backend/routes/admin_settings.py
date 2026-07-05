@@ -199,6 +199,121 @@ async def update_redeem_limit_global(request: Request, admin: dict = Depends(get
     }
 
 
+# ========== MINING COMMISSION TIERS (Jul 2026 — Live Admin Config) ==========
+# Admin can add/remove tiers up to MAX_ALLOWED_TIERS and set each tier's %.
+# The mining_commission.py distributor reads this doc on every collect so
+# changes take effect without a code deploy.
+
+MAX_ALLOWED_TIERS = 10
+DEFAULT_COMMISSION_CONFIG = {
+    "enabled": True,
+    "tiers": [
+        {"tier": 1, "percent": 1.0},
+        {"tier": 2, "percent": 1.0},
+        {"tier": 3, "percent": 1.0},
+    ],
+    "elite_only": True,
+    "roll_up": True,
+}
+
+
+@router.get("/settings/mining-commission-tiers")
+async def get_mining_commission_tiers(admin: dict = Depends(get_current_admin)):
+    """Get current mining referral commission tier config - ADMIN ONLY."""
+    doc = await db.app_settings.find_one({"key": "mining_commission_tiers"}, {"_id": 0})
+    if not doc:
+        return {**DEFAULT_COMMISSION_CONFIG, "max_allowed_tiers": MAX_ALLOWED_TIERS}
+    return {
+        "enabled": bool(doc.get("enabled", True)),
+        "tiers": doc.get("tiers", DEFAULT_COMMISSION_CONFIG["tiers"]),
+        "elite_only": bool(doc.get("elite_only", True)),
+        "roll_up": bool(doc.get("roll_up", True)),
+        "max_allowed_tiers": MAX_ALLOWED_TIERS,
+        "updated_at": doc.get("updated_at"),
+        "updated_by": doc.get("updated_by"),
+    }
+
+
+@router.post("/settings/mining-commission-tiers")
+async def update_mining_commission_tiers(request: Request, admin: dict = Depends(get_current_admin)):
+    """Update mining referral commission tier config - ADMIN ONLY."""
+    data = await request.json()
+
+    enabled = bool(data.get("enabled", True))
+    elite_only = bool(data.get("elite_only", True))
+    roll_up = bool(data.get("roll_up", True))
+
+    raw_tiers = data.get("tiers") or []
+    if not isinstance(raw_tiers, list) or len(raw_tiers) == 0:
+        raise HTTPException(status_code=400, detail="'tiers' must be a non-empty array")
+    if len(raw_tiers) > MAX_ALLOWED_TIERS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot exceed {MAX_ALLOWED_TIERS} tiers",
+        )
+
+    cleaned_tiers = []
+    total_pct = 0.0
+    for idx, t in enumerate(raw_tiers, start=1):
+        try:
+            pct = float(t.get("percent", 0)) if isinstance(t, dict) else float(t)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail=f"Tier {idx}: 'percent' must be numeric")
+        if pct < 0 or pct > 100:
+            raise HTTPException(status_code=400, detail=f"Tier {idx}: 'percent' must be 0-100")
+        cleaned_tiers.append({"tier": idx, "percent": round(pct, 4)})
+        total_pct += pct
+
+    if total_pct > 100:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Sum of all tier percentages must be ≤ 100 (got {total_pct:.2f})",
+        )
+
+    now = datetime.now(timezone.utc).isoformat()
+    admin_uid = admin.get("uid") or admin.get("email") or "unknown"
+
+    await db.app_settings.update_one(
+        {"key": "mining_commission_tiers"},
+        {
+            "$set": {
+                "key": "mining_commission_tiers",
+                "enabled": enabled,
+                "tiers": cleaned_tiers,
+                "elite_only": elite_only,
+                "roll_up": roll_up,
+                "updated_at": now,
+                "updated_by": admin_uid,
+            }
+        },
+        upsert=True,
+    )
+
+    if log_admin_action:
+        try:
+            await log_admin_action(
+                admin_uid,
+                "update_mining_commission_tiers",
+                {"enabled": enabled, "tier_count": len(cleaned_tiers), "total_pct": total_pct},
+            )
+        except Exception:
+            pass
+
+    logging.info(
+        f"[ADMIN] Mining commission tiers updated by {admin_uid}: "
+        f"enabled={enabled}, tiers={len(cleaned_tiers)}, total_pct={total_pct:.2f}%"
+    )
+
+    return {
+        "success": True,
+        "enabled": enabled,
+        "tiers": cleaned_tiers,
+        "elite_only": elite_only,
+        "roll_up": roll_up,
+        "total_percent": round(total_pct, 4),
+    }
+
+
 # ========== MINING RATE SETTINGS ==========
 
 @router.get("/settings/mining-rates")

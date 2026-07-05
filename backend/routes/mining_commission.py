@@ -37,7 +37,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
+from fastapi import APIRouter
+
 logger = logging.getLogger(__name__)
+
+router = APIRouter()
 
 # --------- MODULE STATE ----------
 db = None  # Injected via set_db() from server.py at startup
@@ -54,11 +58,83 @@ def set_cache(cache_manager) -> None:
     cache = cache_manager
 
 
+# --------- PUBLIC READ ENDPOINT ----------
+@router.get("/mining/commission-config")
+async def public_commission_config():
+    """
+    Public read-only view of the current mining commission tier config so
+    the user-facing Referrals / Growth Network UI can display the live
+    earn-potential (tier count, per-tier %, roll-up rules) without needing
+    admin auth.
+
+    Returns just the fields the frontend needs — no admin metadata.
+    """
+    cfg = await _load_commission_config()
+    total_pct = round(sum(float(t.get("percent", 0)) for t in cfg["tiers"]), 4)
+    return {
+        "enabled": cfg["enabled"],
+        "tiers": cfg["tiers"],
+        "elite_only": cfg["elite_only"],
+        "roll_up": cfg["roll_up"],
+        "total_percent": total_pct,
+        "max_tiers": len(cfg["tiers"]),
+    }
+
+
 # --------- CONSTANTS ----------
 ELITE_PLANS = {"elite", "vip", "startup", "growth", "pro"}
-COMMISSION_PCT_PER_TIER = 0.01  # 1% per tier
-MAX_TIERS = 3
+DEFAULT_COMMISSION_PCT_PER_TIER = 0.01  # 1% per tier — used as fallback if no admin config
+DEFAULT_MAX_TIERS = 3
 MAX_CHAIN_WALK = 200  # safety cap so a mis-configured referral loop can't hang the collect
+
+# Admin-controlled config cache — refreshed each collect (Mongo find is
+# ~1ms). This lets an admin edit the tier structure from the panel and see
+# the change take effect on the very next mining collect without any code
+# deploy or backend restart.
+
+
+async def _load_commission_config() -> dict:
+    """
+    Read the live commission config from db.app_settings. Falls back to the
+    documented default (3 tiers × 1%, Elite-only, roll-up ON) if the doc is
+    missing or malformed. Never raises — a bad config must not break the
+    collect flow.
+    """
+    fallback = {
+        "enabled": True,
+        "tiers": [{"tier": i, "percent": DEFAULT_COMMISSION_PCT_PER_TIER * 100} for i in range(1, DEFAULT_MAX_TIERS + 1)],
+        "elite_only": True,
+        "roll_up": True,
+    }
+    if db is None:
+        return fallback
+    try:
+        doc = await db.app_settings.find_one(
+            {"key": "mining_commission_tiers"},
+            {"_id": 0, "enabled": 1, "tiers": 1, "elite_only": 1, "roll_up": 1},
+        )
+    except Exception as e:
+        logger.warning(f"[MINING-COMMISSION] Config load failed, using default: {e}")
+        return fallback
+    if not doc:
+        return fallback
+    tiers = doc.get("tiers") or fallback["tiers"]
+    # Coerce any bad rows to safe values
+    safe_tiers = []
+    for idx, row in enumerate(tiers, start=1):
+        try:
+            pct = float(row.get("percent", 0)) if isinstance(row, dict) else float(row)
+            if pct < 0 or pct > 100:
+                pct = 0
+            safe_tiers.append({"tier": idx, "percent": pct})
+        except Exception:
+            safe_tiers.append({"tier": idx, "percent": 0})
+    return {
+        "enabled": bool(doc.get("enabled", True)),
+        "tiers": safe_tiers,
+        "elite_only": bool(doc.get("elite_only", True)),
+        "roll_up": bool(doc.get("roll_up", True)),
+    }
 
 
 # --------- HELPERS ----------
@@ -120,35 +196,31 @@ async def distribute_mining_collect_commission(
     collect_timestamp: Optional[datetime] = None,
 ) -> dict:
     """
-    Walk the referral chain from `collector_uid` upward, awarding
-    COMMISSION_PCT_PER_TIER of `collected_prc` to the first MAX_TIERS Elite
-    uplines encountered (with roll-up over non-Elite ancestors).
+    Walk the referral chain from `collector_uid` upward, awarding tier-N% of
+    `collected_prc` to the first N Elite uplines encountered (per admin
+    config). Non-Elite ancestors are skipped when roll_up is ON.
 
-    Parameters
-    ----------
-    collector_uid   : uid of the user who just collected PRC
-    collected_prc   : positive PRC amount that was collected
-    collect_timestamp : timestamp of the collect event (used for idempotency)
-
-    Returns
-    -------
-    {
-        "distributed": [{uid, name, prc}, ...],   # actual credits (0-3 items)
-        "skipped_tiers": int,                     # slots left empty (chain ended)
-        "total_distributed": float,               # sum of amounts credited
-        "per_tier_amount": float,
-    }
+    Reads live tier config from db.app_settings on every call so admin edits
+    take effect immediately.
     """
     if db is None:
         logger.error("[MINING-COMMISSION] db not injected — commission skipped")
-        return {"distributed": [], "skipped_tiers": MAX_TIERS, "total_distributed": 0.0, "per_tier_amount": 0.0}
+        return {"distributed": [], "skipped_tiers": 0, "total_distributed": 0.0}
 
     if not collector_uid or not collected_prc or collected_prc <= 0:
-        return {"distributed": [], "skipped_tiers": MAX_TIERS, "total_distributed": 0.0, "per_tier_amount": 0.0}
+        return {"distributed": [], "skipped_tiers": 0, "total_distributed": 0.0}
 
-    per_tier = round(collected_prc * COMMISSION_PCT_PER_TIER, 6)
-    if per_tier <= 0:
-        return {"distributed": [], "skipped_tiers": MAX_TIERS, "total_distributed": 0.0, "per_tier_amount": 0.0}
+    config = await _load_commission_config()
+    if not config["enabled"]:
+        logger.info("[MINING-COMMISSION] Feature disabled by admin — skipping")
+        return {"distributed": [], "skipped_tiers": 0, "total_distributed": 0.0, "disabled": True}
+
+    tiers = config["tiers"]
+    elite_only = config["elite_only"]
+    roll_up = config["roll_up"]
+    max_tiers = len(tiers)
+    if max_tiers == 0:
+        return {"distributed": [], "skipped_tiers": 0, "total_distributed": 0.0}
 
     ts = collect_timestamp or datetime.now(timezone.utc)
     ts_iso = ts.isoformat()
@@ -159,20 +231,16 @@ async def distribute_mining_collect_commission(
         {"_id": 0, "uid": 1, "name": 1, "first_name": 1, "last_name": 1, "referred_by": 1},
     )
     if not collector:
-        return {"distributed": [], "skipped_tiers": MAX_TIERS, "total_distributed": 0.0, "per_tier_amount": per_tier}
+        return {"distributed": [], "skipped_tiers": max_tiers, "total_distributed": 0.0}
 
     collector_name = _display_name(collector)
 
     # Idempotency key — one commission event per (collector, timestamp).
     source_ref = f"mining_collect:{collector_uid}:{ts_iso}"
 
-    # Idempotency guard — if we've already distributed for this exact collect
-    # event (e.g. transient retry after a partial success), bail out with the
-    # already-persisted result. This must be at the TOP because roll-up may
-    # advance to a different upline on a re-run and would otherwise double-pay.
     already_distributed = await db.prc_ledger.count_documents(
         {"source_ref": source_ref, "type": "mining_referral_reward"},
-        limit=MAX_TIERS + 1,
+        limit=max_tiers + 1,
     )
     if already_distributed > 0:
         logger.info(
@@ -181,18 +249,18 @@ async def distribute_mining_collect_commission(
         )
         return {
             "distributed": [],
-            "skipped_tiers": MAX_TIERS - already_distributed,
-            "total_distributed": round(per_tier * already_distributed, 6),
-            "per_tier_amount": per_tier,
+            "skipped_tiers": max_tiers - already_distributed,
+            "total_distributed": 0.0,
             "idempotent_skip": True,
         }
 
     distributed: list[dict] = []
-    already_paid: set[str] = {collector_uid}  # never credit self even via a loop
+    already_paid: set[str] = {collector_uid}
     current_referred_by = collector.get("referred_by")
     hops = 0
+    tier_idx = 0  # index into config["tiers"]
 
-    while len(distributed) < MAX_TIERS and hops < MAX_CHAIN_WALK:
+    while tier_idx < max_tiers and hops < MAX_CHAIN_WALK:
         hops += 1
         if not current_referred_by:
             break
@@ -203,40 +271,70 @@ async def distribute_mining_collect_commission(
 
         upline_uid = upline.get("uid")
         if not upline_uid or upline_uid in already_paid:
-            # Break early on loop — don't waste further walk.
             break
 
-        if _is_elite_active(upline):
-            recipient_name = _display_name(upline)
-            credited = await _credit_commission(
-                recipient_uid=upline_uid,
-                amount=per_tier,
-                collector_uid=collector_uid,
-                collector_name=collector_name,
-                collected_prc=collected_prc,
-                tier_index=len(distributed) + 1,
-                source_ref=source_ref,
-                timestamp=ts,
-            )
-            if credited:
-                distributed.append({"uid": upline_uid, "name": recipient_name, "prc": per_tier})
-                already_paid.add(upline_uid)
+        upline_is_elite = _is_elite_active(upline)
+        eligible = upline_is_elite if elite_only else True
 
-        # Continue walking upward regardless of whether we credited.
+        if not eligible:
+            if roll_up:
+                # Skip this ancestor, keep tier_idx unchanged so the current
+                # tier slot flows to the next Elite ancestor.
+                current_referred_by = upline.get("referred_by")
+                continue
+            else:
+                # Strict mode: non-Elite consumes the tier slot and receives nothing.
+                tier_idx += 1
+                current_referred_by = upline.get("referred_by")
+                continue
+
+        # Compute this tier's PRC amount from percent.
+        tier_config = tiers[tier_idx]
+        tier_percent = float(tier_config.get("percent", 0))
+        per_tier_amount = round(collected_prc * (tier_percent / 100.0), 6)
+        if per_tier_amount <= 0:
+            # 0% tier — skip the slot entirely (don't create noise in ledger).
+            tier_idx += 1
+            current_referred_by = upline.get("referred_by")
+            continue
+
+        recipient_name = _display_name(upline)
+        credited = await _credit_commission(
+            recipient_uid=upline_uid,
+            amount=per_tier_amount,
+            collector_uid=collector_uid,
+            collector_name=collector_name,
+            collected_prc=collected_prc,
+            tier_index=tier_idx + 1,
+            tier_percent=tier_percent,
+            source_ref=source_ref,
+            timestamp=ts,
+        )
+        if credited:
+            distributed.append({
+                "uid": upline_uid,
+                "name": recipient_name,
+                "prc": per_tier_amount,
+                "tier": tier_idx + 1,
+                "percent": tier_percent,
+            })
+            already_paid.add(upline_uid)
+
+        tier_idx += 1
         current_referred_by = upline.get("referred_by")
 
-    total = round(per_tier * len(distributed), 6)
+    total = round(sum(d["prc"] for d in distributed), 6)
     if distributed:
         logger.info(
             f"[MINING-COMMISSION] collector={collector_uid} collected={collected_prc:.4f} → "
-            f"credited {len(distributed)}/{MAX_TIERS} uplines × {per_tier:.4f} PRC (total {total:.4f})"
+            f"credited {len(distributed)}/{max_tiers} uplines (total {total:.4f} PRC)"
         )
 
     return {
         "distributed": distributed,
-        "skipped_tiers": MAX_TIERS - len(distributed),
+        "skipped_tiers": max_tiers - len(distributed),
         "total_distributed": total,
-        "per_tier_amount": per_tier,
+        "config_tier_count": max_tiers,
     }
 
 
@@ -248,16 +346,14 @@ async def _credit_commission(
     collector_name: str,
     collected_prc: float,
     tier_index: int,
+    tier_percent: float,
     source_ref: str,
     timestamp: datetime,
 ) -> bool:
     """
     Credit `amount` PRC to `recipient_uid`, insert an idempotent prc_ledger
-    row, and invalidate their caches. Returns True on success.
-
-    Idempotency: the ledger has an implicit uniqueness on
-    (user_id, source_ref, tier_index) — if a matching row already exists
-    (e.g. retry after a partial failure), we skip the credit.
+    row, dispatch a "Live Referral Ping" notification, and invalidate their
+    caches. Returns True on success.
     """
     ts_iso = timestamp.isoformat()
 
@@ -295,7 +391,7 @@ async def _credit_commission(
 
     description = (
         f"Mining Referral Reward — you received {amount:.4f} PRC from "
-        f"{collector_name} (Tier {tier_index}, 1% of {collected_prc:.4f} PRC collected)"
+        f"{collector_name} (Tier {tier_index}, {tier_percent:.2f}% of {collected_prc:.4f} PRC collected)"
     )
 
     try:
@@ -314,6 +410,7 @@ async def _credit_commission(
                 "service_ref_id": source_ref,
                 "source_ref": source_ref,
                 "tier_index": tier_index,
+                "tier_percent": tier_percent,
                 "downline_uid": collector_uid,
                 "downline_name": collector_name,
                 "downline_collect_amount": collected_prc,
@@ -323,7 +420,6 @@ async def _credit_commission(
             }
         )
     except Exception as ledger_err:
-        # Compensating rollback so we don't inflate balance without a ledger row.
         logger.error(
             f"[MINING-COMMISSION] Ledger insert failed — rolling back +{amount} PRC "
             f"on {recipient_uid}: {ledger_err}"
@@ -355,6 +451,24 @@ async def _credit_commission(
     except Exception as legacy_err:
         logger.warning(f"[MINING-COMMISSION] Legacy transaction insert failed: {legacy_err}")
 
+    # ── LIVE REFERRAL PING ────────────────────────────────────────────
+    # Insert a notification row so the recipient's in-app notification
+    # bell pings within the next poll (~30s), and any active mobile push
+    # / websocket listener can react in real time. Best-effort — a failure
+    # here MUST NOT roll back the credit.
+    try:
+        await _send_referral_ping(
+            recipient_uid=recipient_uid,
+            amount=amount,
+            collector_name=collector_name,
+            collector_uid=collector_uid,
+            tier_index=tier_index,
+            tier_percent=tier_percent,
+            collected_prc=collected_prc,
+        )
+    except Exception as ping_err:
+        logger.warning(f"[MINING-COMMISSION] Ping delivery failed: {ping_err}")
+
     # Best-effort cache invalidation so the recipient's screens refresh.
     if cache is not None:
         try:
@@ -366,3 +480,67 @@ async def _credit_commission(
             logger.debug(f"[MINING-COMMISSION] Cache invalidation skipped: {cache_err}")
 
     return True
+
+
+async def _send_referral_ping(
+    *,
+    recipient_uid: str,
+    amount: float,
+    collector_name: str,
+    collector_uid: str,
+    tier_index: int,
+    tier_percent: float,
+    collected_prc: float,
+) -> None:
+    """Insert a `mining_referral_reward` notification row for the recipient.
+
+    Uses the shared `create_notification` helper so the record is properly
+    typed (icon + color etc.). Falls back to a plain insert if the helper
+    isn't importable.
+    """
+    title = "🎉 Referral Reward Received!"
+    message = (
+        f"{collector_name} just collected mining PRC — you earned "
+        f"{amount:.4f} PRC as Tier {tier_index} referral reward ({tier_percent:.1f}%)."
+    )
+    data = {
+        "amount": round(amount, 6),
+        "collector_uid": collector_uid,
+        "collector_name": collector_name,
+        "tier_index": tier_index,
+        "tier_percent": tier_percent,
+        "collected_prc": round(collected_prc, 6),
+        "event": "mining_referral_reward",
+    }
+    try:
+        from routes.notifications import create_notification as _create_notif
+        await _create_notif(
+            user_id=recipient_uid,
+            notification_type="mining_referral_reward",
+            title=title,
+            message=message,
+            data=data,
+        )
+        return
+    except Exception as helper_err:
+        logger.debug(f"[MINING-COMMISSION] notifications.create_notification unavailable: {helper_err}")
+
+    # Fallback direct insert — mirrors the shared helper's shape so the
+    # frontend NotificationContext consumes it identically.
+    try:
+        await db.notifications.insert_one({
+            "notification_id": str(uuid.uuid4()),
+            "user_id": recipient_uid,
+            "user_uid": recipient_uid,
+            "type": "mining_referral_reward",
+            "title": title,
+            "message": message,
+            "icon": "gift",
+            "color": "purple",
+            "data": data,
+            "read": False,
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as e:
+        logger.warning(f"[MINING-COMMISSION] Fallback notification insert failed: {e}")

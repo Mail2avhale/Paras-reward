@@ -19,6 +19,10 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
   const [networkStats, setNetworkStats] = useState(null);
   const [directReferrals, setDirectReferrals] = useState([]);
   const [levelBreakdown, setLevelBreakdown] = useState(null);
+  // Elite Mining Commission live config (Jul 2026) — admin-controlled tiers
+  // and per-tier percentages, displayed as an earn-potential card so users
+  // understand exactly how much they earn from each downline collect.
+  const [commissionConfig, setCommissionConfig] = useState(null);
 
   // Self-claim modal state — for users who registered without a referral
   // code and want to attach a referrer post-signup (within 30 days).
@@ -44,7 +48,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
       // Fetch network stats, mining speed, and referrals in PARALLEL.
       // direct-list does heavy aggregation per referral — needs longer timeout
       // than the lighter stats endpoints.
-      const [statsRes, miningRes, referralsRes, breakdownRes] = await Promise.all([
+      const [statsRes, miningRes, referralsRes, breakdownRes, commissionRes] = await Promise.all([
         axios.get(`${API}/api/growth/network-stats/${user.uid}`, { timeout: 8000 }).catch(() => null),
         axios.get(`${API}/api/growth/mining-speed/${user.uid}`, { timeout: 8000 }).catch(() => null),
         axios.get(`${API}/api/notifications/referrals/${user.uid}/direct-list`, { timeout: 20000 }).catch((err) => {
@@ -55,6 +59,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
           console.error('[Invite] level-breakdown failed:', err?.message);
           return null;
         }),
+        axios.get(`${API}/api/mining/commission-config`, { timeout: 8000 }).catch(() => null),
       ]);
       
       if (statsRes?.data?.success) {
@@ -74,6 +79,10 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 
       if (breakdownRes?.data?.success) {
         setLevelBreakdown(breakdownRes.data);
+      }
+
+      if (commissionRes?.data && Array.isArray(commissionRes.data.tiers)) {
+        setCommissionConfig(commissionRes.data);
       }
       
     } catch (error) {
@@ -386,6 +395,68 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             <span className="text-gray-500 text-xs">Cap: {networkStats?.network_cap || 0}</span>
           </div>
         </div>
+
+        {/* Elite Mining Commission (Jul 2026 — Live admin config) */}
+        {commissionConfig && commissionConfig.enabled && commissionConfig.tiers?.length > 0 && (
+          <div
+            className="bg-gradient-to-br from-fuchsia-900/40 to-purple-900/40 border border-fuchsia-500/30 rounded-2xl p-5"
+            data-testid="elite-mining-commission-card"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-lg bg-fuchsia-500/20 flex items-center justify-center">
+                  <Gift className="w-5 h-5 text-fuchsia-400" />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold text-base leading-tight">
+                    Elite Mining Commission
+                  </h3>
+                  <p className="text-gray-400 text-[11px] leading-tight">
+                    Earn PRC when your downlines collect mining rewards
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Total Earn %</p>
+                <p
+                  className="text-fuchsia-300 font-bold tabular-nums text-lg"
+                  data-testid="commission-total-percent"
+                >
+                  {commissionConfig.total_percent.toFixed(2)}%
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
+              {commissionConfig.tiers.map((t) => (
+                <div
+                  key={t.tier}
+                  className="bg-black/40 border border-fuchsia-500/20 rounded-lg p-2 text-center"
+                  data-testid={`commission-tier-${t.tier}`}
+                >
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+                    Tier {t.tier}
+                  </p>
+                  <p className="text-fuchsia-300 font-bold tabular-nums">
+                    {Number(t.percent).toFixed(2)}%
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-gray-400 text-[11px] mt-3 leading-relaxed">
+              {commissionConfig.elite_only ? (
+                <><b className="text-fuchsia-300">Elite uplines</b> receive commission.</>
+              ) : (
+                <>All uplines receive commission.</>
+              )}
+              {commissionConfig.roll_up && (
+                <> Non-Elite ancestors are skipped — the tier slot rolls up to the next Elite user in your chain.</>
+              )}
+              {' '}Every time an Elite user in your downline collects PRC from their mining session, you earn a percentage — credited instantly to your wallet with a live notification.
+            </p>
+          </div>
+        )}
 
         {/* L1-L5 Level Breakdown (Jun 2026) */}
         {levelBreakdown && levelBreakdown.grand_total?.users > 0 && (

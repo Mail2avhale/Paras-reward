@@ -69,6 +69,11 @@ NOTIFICATION_TYPES = {
         "title": "Notification",
         "icon": "bell",
         "color": "gray"
+    },
+    "mining_referral_reward": {
+        "title": "Referral Reward Received",
+        "icon": "gift",
+        "color": "fuchsia"
     }
 }
 
