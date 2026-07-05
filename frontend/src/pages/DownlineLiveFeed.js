@@ -37,7 +37,7 @@ const DownlineLiveFeed = ({ user }) => {
     if (!user?.uid) return;
     try {
       const res = await axios.get(
-        `${API}/api/referrals/live-feed/${user.uid}?hours=${windowHours}&limit=100`,
+        `${API}/referrals/live-feed/${user.uid}?hours=${windowHours}&limit=100`,
         { timeout: 12_000 }
       );
       if (res.data?.success) setData(res.data);
