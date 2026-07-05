@@ -366,8 +366,13 @@ async def get_daily_rate_for_booking(booking_position: int, user_cap: Optional[i
 async def compute_session_accumulated(booking: dict, user_cap: Optional[int] = None) -> tuple[float, int]:
     """Return (accumulated_prc_this_session, seconds_elapsed).
 
-    If session has expired (>24h), session_prc lapses to 0 and a new session
-    auto-starts. The expired PRC is NOT credited toward the product.
+    LAPSE/BURN RULE (Feb 2026 — matches main-dashboard mining expiry semantics):
+    ------------------------------------------------------------------------
+    If the user fails to click "Collect" within 24 hours of session start,
+    the ENTIRE session accumulation LAPSES to 0. Points are burned — user
+    must start a fresh session to mine again. This enforces daily check-in
+    gamification and prevents idle sessions from silently banking 24h worth
+    of PRC forever.
 
     `user_cap` is the booking owner's network cap (Feb 2026 anti-inflation).
     Callers should compute it once per request and pass through to avoid
@@ -382,8 +387,11 @@ async def compute_session_accumulated(booking: dict, user_cap: Optional[int] = N
     elapsed = (now - session_start).total_seconds()
     if elapsed < 0:
         return (0.0, 0)
+    # LAPSE: if the 24h window has elapsed without a collect, burn all points.
+    if elapsed >= SECONDS_PER_DAY:
+        return (0.0, int(elapsed))
     rate_per_day = await get_daily_rate_for_booking(booking["position"], user_cap)
-    accumulated = (rate_per_day / SECONDS_PER_DAY) * min(elapsed, SECONDS_PER_DAY)
+    accumulated = (rate_per_day / SECONDS_PER_DAY) * elapsed
     return (round(accumulated, 6), int(elapsed))
 
 
@@ -953,12 +961,12 @@ async def my_bookings(
             b["per_second_prc"] = round(rate_per_day / SECONDS_PER_DAY, 6) if session_active else 0
             b["per_hour_prc"] = round(rate_per_day / 24, 4)
             b["cooldown_remaining_seconds"] = cooldown_remaining
-            # If a session has expired the user must Collect first — starting
-            # a new session while expired PRC is uncollected would drop it.
+            # If a session has expired the accumulated PRC has lapsed (burned).
+            # User can start a fresh session IMMEDIATELY — no cooldown required
+            # since nothing was collected.
             b["can_start_session"] = (
-                can_start_session
-                and not session_active
-                and not session_expired
+                (can_start_session and not session_active and not session_expired)
+                or session_expired
             )
             # Anti-inflation transparency: show booking owner's network cap.
             # Frontend can render "Build referrals to raise this cap" CTA.
@@ -1010,9 +1018,8 @@ async def get_booking(booking_id: str):
         b["per_hour_prc"] = round(rate_per_day / 24, 4)
         b["cooldown_remaining_seconds"] = cooldown_remaining
         b["can_start_session"] = (
-            cooldown_remaining == 0
-            and not session_active
-            and not session_expired
+            (cooldown_remaining == 0 and not session_active and not session_expired)
+            or session_expired
         )
         b["user_network_cap"] = user_cap  # Feb 2026 anti-inflation cap
     b["progress_percent"] = round((b.get("paid_prc", 0) / b.get("total_prc", 1)) * 100, 2)
@@ -1038,6 +1045,24 @@ async def collect_booking(booking_id: str, body: CollectBookingRequest):
     # Anti-inflation cap (mirrors main mining's 6-tier referral cap)
     user_cap = await get_user_network_cap(body.user_id)
     accumulated, elapsed = await compute_session_accumulated(b, user_cap=user_cap)
+
+    # LAPSE detection: if 24h elapsed, all accumulated PRC has burned. Clear
+    # the session so the user can immediately start a fresh one.
+    if elapsed >= SECONDS_PER_DAY and b.get("session_start"):
+        await db.mall_bookings.update_one(
+            {"booking_id": booking_id},
+            {"$set": {
+                "session_start": None,
+                "session_active": False,
+                "last_session_lapsed_at": now_utc().isoformat(),
+                "next_session_available_at": None,
+            }, "$inc": {"laps_count": 1}}
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Session expired — points lapsed. Please start a new mining session."
+        )
+
     if accumulated < 0.0001:
         raise HTTPException(400, "Nothing to collect yet")
 
@@ -1109,12 +1134,29 @@ async def start_booking_session(booking_id: str, body: StartSessionRequest):
     if b.get("status") != "mining":
         raise HTTPException(400, "Booking is not in mining state")
     if b.get("session_start"):
-        # Session already running — idempotent: return current state
-        return {
-            "success": True,
-            "already_active": True,
-            "session_start": b["session_start"],
-        }
+        # Check if the existing session has LAPSED (>=24h uncollected). If so,
+        # clear it silently so the fresh start below can proceed.
+        existing_start = parse_iso(b.get("session_start"))
+        if existing_start:
+            existing_elapsed = (now_utc() - existing_start).total_seconds()
+            if existing_elapsed >= SECONDS_PER_DAY:
+                await db.mall_bookings.update_one(
+                    {"booking_id": booking_id},
+                    {"$set": {
+                        "session_start": None,
+                        "session_active": False,
+                        "last_session_lapsed_at": now_utc().isoformat(),
+                        "next_session_available_at": None,
+                    }, "$inc": {"laps_count": 1}}
+                )
+                b["session_start"] = None
+            else:
+                # Session still within 24h window — idempotent return
+                return {
+                    "success": True,
+                    "already_active": True,
+                    "session_start": b["session_start"],
+                }
 
     # Subscription gate (Jun 30, 2026): no paid active plan → no mining
     await assert_active_subscription_for_mining(body.user_id)

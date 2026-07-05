@@ -1,0 +1,35 @@
+{
+  "summary": "Backend-only E2E verification of Paras Mall Mining Session LAPSE/BURN (>=24h). All 5 new API-level pytest cases PASS against the live preview env, and the existing 6-check unit test also PASSES. Behaviour matches spec: (a) my-bookings returns session_expired=true + accumulated=0 + can_start_session=true on aged bookings, (b) collect returns HTTP 400 with the exact required detail 'Session expired — points lapsed. Please start a new mining session.' AND clears session_start in Mongo AND increments laps_count, (c) start-session on a lapsed booking auto-clears and starts fresh (already_active=false), (d) 23h59m30s edge case still mines (>0 PRC, not expired).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mall_mining_burn_e2e_api.py",
+    "/app/backend/tests/test_mall_mining_burn.py",
+    "/app/test_reports/pytest/mall_mining_burn_e2e_api.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "compute_session_accumulated() at paras_mall.py:391-392 correctly returns (0.0, int(elapsed)) when elapsed>=SECONDS_PER_DAY — clean and unambiguous.",
+    "collect_booking() at paras_mall.py:1051-1064 uses a compound $set + $inc update to atomically clear session_start, record last_session_lapsed_at, and bump laps_count before raising HTTPException(400). Verified in DB: laps_count increments by exactly 1, session_start becomes null, next_session_available_at is cleared (so no cooldown for lapsed sessions — matches spec).",
+    "start_booking_session() at paras_mall.py:1136-1152 handles the 'existing session that has already lapsed' path by silently clearing the stale session and continuing to the normal fresh-start flow. Result: user sees already_active=false and a brand-new session_start — exactly the intended UX (no cooldown wall on burned points).",
+    "my_bookings() at paras_mall.py:967-970 correctly ORs `session_expired` into `can_start_session`, so the frontend receives can_start_session=true immediately on a lapsed booking (verified live).",
+    "Minor code hygiene: maybe_lapse_or_renew_session() at paras_mall.py:398-403 is now a no-op stub kept for compat with existing call-sites. Consider inlining/removing when convenient (dead-code smell) but harmless."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mall_mining_burn_e2e_api.py (new — 5-case E2E API test with Mongo snapshot/restore fixture; safe on live user data)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "not tested (backend-only request)"},
+  "test_credentials": "Elite plan user mobile 9970100782, PIN 997010, uid 76b75808-47fa-48dd-ad7c-8074678e3607 — loaded from /app/memory/test_credentials.md. Login endpoint: POST /api/auth/login with body {mobile, pin} returns JWT under 'token' key. IDOR-safe /api/mall/my-bookings/{uid} requires path uid to match JWT subject.",
+  "seed_data_creation": "No new seed. Test picks an existing mining booking on the live user (uid 76b75808...), snapshots its mutable fields (session_start, session_active, next_session_available_at, last_session_lapsed_at, laps_count, last_collected_at, paid_prc, remaining_prc, status), mutates session_start deterministically to +25h / +23h59m30s / +30s via direct Mongo update, then restores the snapshot in the pytest yield-fixture teardown. Live data is untouched after the run.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Feature is production-ready. Test file /app/backend/tests/test_mall_mining_burn_e2e_api.py is the canonical E2E regression for the 24h burn behaviour and should be re-run any time paras_mall.py:compute_session_accumulated / collect_booking / start_booking_session / my_bookings is touched. Command: `pytest backend/tests/test_mall_mining_burn_e2e_api.py -v`. Fixture handles snapshot/restore of the mutated booking. Frontend UI (ParasMallBookings.js — red banner data-testid='mall-session-expired-{booking_id}', green 'Start New Mining Session' button data-testid='mall-start-session-btn-{booking_id}', hidden Collect on expired) was NOT visually verified in this iteration since main agent scoped the request to backend-only. Recommend a quick smoke Playwright pass on /mall/my-bookings if time permits — the backend flags feeding that UI (session_expired, can_start_session) are confirmed correct.",
+  "rca of the issue": "N/A — no bug found. Spec fully implemented and verified end-to-end. compute_session_accumulated() gates on elapsed>=SECONDS_PER_DAY (86400s) and returns (0.0, int(elapsed)); collect_booking() raises HTTPException(400, 'Session expired — points lapsed. Please start a new mining session.') after atomic $set(session_start=null, last_session_lapsed_at=now) and $inc(laps_count:1); start_booking_session() detects lapsed session by re-checking elapsed vs SECONDS_PER_DAY and silently clears+resumes; my_bookings() sets session_expired=elapsed>=SECONDS_PER_DAY and can_start_session=session_expired OR (no cooldown && !active). All four surfaces align."
+}

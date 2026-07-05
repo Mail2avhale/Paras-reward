@@ -299,8 +299,11 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
 
       {booking.status === 'mining' && (
         <>
-          {/* Time Remaining — digit boxes (Dashboard-style) */}
-          <p className="text-zinc-400 text-xs text-center mb-2">Resets In</p>
+          {/* Time Remaining + Session Earnings panels — hidden after lapse since
+              points have burned and no meaningful ticker is running. */}
+          {!sessionExpired && (
+            <>
+              <p className="text-zinc-400 text-xs text-center mb-2">Resets In</p>
           <div className="flex items-center justify-center gap-0.5 mb-3">
             {formatTime(liveRemaining).split('').map((char, i) => (
               <div
@@ -379,39 +382,44 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
               </div>
             </div>
           </div>
+            </>
+          )}
 
           <button
             onClick={collect}
-            disabled={(!sessionActive && !sessionExpired) || liveAccumulated < 0.01}
+            disabled={!sessionActive || liveAccumulated < 0.01}
             className={`w-full ${
-              sessionActive || sessionExpired
-                ? sessionExpired
-                  ? 'bg-gradient-to-r from-rose-500 to-orange-500 disabled:from-zinc-700 disabled:to-zinc-800 text-white disabled:text-zinc-500 animate-pulse'
-                  : 'bg-gradient-to-r from-amber-500 to-amber-600 disabled:from-zinc-700 disabled:to-zinc-800 text-black disabled:text-zinc-500'
+              sessionActive
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 disabled:from-zinc-700 disabled:to-zinc-800 text-black disabled:text-zinc-500'
                 : 'hidden'
             } font-bold py-3 rounded-xl text-sm uppercase tracking-wider transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2`}
             data-testid={`mall-collect-btn-${booking.booking_id}`}
           >
             <Coins className="w-4 h-4" />
-            {sessionExpired
-              ? `Session Ended — Collect ${liveAccumulated > 0 ? liveAccumulated.toFixed(2) : '0.00'} PRC`
-              : `Collect ${liveAccumulated > 0 ? liveAccumulated.toFixed(2) : '0.00'} PRC`}
+            {`Collect ${liveAccumulated > 0 ? liveAccumulated.toFixed(2) : '0.00'} PRC`}
           </button>
 
-          {/* Session Ended banner — shown after the 24h boundary until user collects */}
+          {/* Session Expired / Lapsed banner — shown after the 24h boundary.
+              Points have been BURNED. User must start a fresh session. */}
           {sessionExpired && (
             <div
-              className="w-full bg-rose-500/10 border border-rose-500/30 rounded-xl py-2 px-3 flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-rose-500/10 border border-rose-500/40 rounded-xl py-3 px-3 flex items-start gap-2"
               data-testid={`mall-session-expired-${booking.booking_id}`}
             >
-              <AlertCircle className="w-3.5 h-3.5 text-rose-300" />
-              <p className="text-[11px] text-rose-200 font-medium">
-                24-hour mining session ended. Collect PRC to start a new session.
-              </p>
+              <AlertCircle className="w-4 h-4 text-rose-300 mt-0.5 shrink-0" />
+              <div className="text-left">
+                <p className="text-xs text-rose-200 font-bold uppercase tracking-wider">
+                  Session Expired - Points Lapsed
+                </p>
+                <p className="text-[11px] text-rose-300/80 mt-0.5">
+                  You didn&apos;t collect within 24 hours. All accumulated PRC has burned. Start a new session below.
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Cooldown timer — shown after Collect, before Start Session unlocks */}
+          {/* Cooldown timer — shown after Collect, before Start Session unlocks.
+              Not applicable when session lapsed (user can restart immediately). */}
           {!sessionActive && !sessionExpired && liveCooldown > 0 && (
             <div
               className="w-full bg-zinc-900/80 border border-amber-500/20 rounded-xl py-3 px-4 flex items-center justify-center gap-3"
@@ -427,9 +435,9 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
             </div>
           )}
 
-          {/* Start Session — manual restart after cooldown. Blocked when the
-              previous session's PRC is still uncollected (sessionExpired). */}
-          {!sessionActive && !sessionExpired && liveCooldown === 0 && (
+          {/* Start Session — manual restart after cooldown OR immediately when
+              session has lapsed (no cooldown for lapsed since points burned). */}
+          {!sessionActive && (sessionExpired || liveCooldown === 0) && (
             <button
               onClick={startSession}
               disabled={starting}
