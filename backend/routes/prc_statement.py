@@ -50,6 +50,7 @@ def _assert_uid_match(uid: str, current_user: dict) -> None:
 TYPE_MAP = {
     "mining": "Reward", "mining_started": "Reward", "mining_collect": "Reward",
     "mining_reward": "Reward", "growth_reward": "Reward", "daily_reward": "Reward", "reward": "Reward",
+    "mining_referral_reward": "Referral Reward",
     "credit": "Reward", "daily_streak": "Reward", "achievement": "Reward",
     "recharge": "Recharge", "mobile_recharge": "Recharge", "dth_recharge": "Recharge",
     "bill_payment_request": "Recharge",
@@ -74,7 +75,7 @@ TYPE_MAP = {
     "core_team_bonus": "Core Team Bonus",
 }
 
-FILTER_CATEGORIES = ["All", "Reward", "Recharge", "Bill Pay", "Redeem", "Bank Redeem", "Voucher Redeem", "Subscription", "Paras Mall", "Refund", "Burn", "Admin", "Core Team Bonus"]
+FILTER_CATEGORIES = ["All", "Reward", "Referral Reward", "Recharge", "Bill Pay", "Redeem", "Bank Redeem", "Voucher Redeem", "Subscription", "Paras Mall", "Refund", "Burn", "Admin", "Core Team Bonus"]
 
 
 def classify_type(raw_type: str) -> str:

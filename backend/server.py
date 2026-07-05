@@ -36870,6 +36870,13 @@ api_router.include_router(eko_callback_router)
 
 # Growth Economy Router (Mining, Referral, Redeem formulas)
 set_growth_economy_db(db)
+# Mining-Collect Commission (3-tier Elite referral reward, Jul 2026)
+try:
+    from routes.mining_commission import set_db as _set_mc_db, set_cache as _set_mc_cache
+    _set_mc_db(db)
+    _set_mc_cache(cache)
+except Exception as _mc_err:
+    logging.error(f"[STARTUP] mining_commission wiring failed: {_mc_err}")
 set_pool_wallet_db(db)
 set_pool_wallet_cache(cache)
 set_employee_db(db)

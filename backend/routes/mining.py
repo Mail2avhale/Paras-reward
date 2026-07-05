@@ -847,6 +847,23 @@ async def collect_mining(uid: str, current_user: dict = Depends(_require_authent
         except Exception as _ledger_err:
             logging.error(f"[MINING] PRC ledger write failed: {_ledger_err}")
 
+        # ── 3-Tier Elite Referral Commission (Jul 2026) ──────────────
+        # If the collector is Elite AND actually credited PRC, walk up
+        # their referral chain and pay 1% × 3 tiers to the first three
+        # Elite uplines (with roll-up over non-Elite ancestors). This is
+        # SYSTEM-FUNDED — the collector's wallet is unaffected. Wrapped
+        # in try/except so a commission failure never breaks collect.
+        if is_elite and mined_coins > 0:
+            try:
+                from routes.mining_commission import distribute_mining_collect_commission
+                await distribute_mining_collect_commission(
+                    collector_uid=uid,
+                    collected_prc=mined_coins,
+                    collect_timestamp=now,
+                )
+            except Exception as commission_err:
+                logging.error(f"[MINING] Referral commission distribution failed: {commission_err}")
+
         # Pool wallet + employee pool credits are tied to mined volume,
         # not to whether the user kept their PRC. They run for both tiers.
         try:

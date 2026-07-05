@@ -54,13 +54,20 @@ def set_db(database):
 
 DEFAULT_BASE_MINING = 1000  # Base daily PRC (user's own mining) — matches mining.py
 DEFAULT_BASE_MINING_THRESHOLD = 250  # Network size threshold: base=1000 if < 250, base=0 if >= 250
-DEFAULT_NETWORK_CAP_BASE = 800  # Tier 1: Base cap
-DEFAULT_NETWORK_CAP_MAX = 8000  # Tier 6: Absolute max from L1-L5 cascade
-DEFAULT_CAP_PER_DIRECT = 16  # +16 cap per L1 (direct) referral
-DEFAULT_CAP_PER_L1_INDIRECT = 5  # +5 cap per L2 (L1 indirect) referral
-DEFAULT_CAP_PER_L3 = 3  # +3 cap per L3 referral
-DEFAULT_CAP_PER_L4 = 2  # +2 cap per L4 referral
-DEFAULT_CAP_PER_L5 = 1  # +1 cap per L5 referral
+
+# ==================== NETWORK CAP (Jul 2026 restructure) ====================
+# Prior 6-tier cascade replaced by a flat base cap. The referral incentive
+# now lives in the NEW 3-tier Mining-Collect Commission system (routes/
+# mining_commission.py). We keep the calculate_network_cap() surface the
+# same so downstream code / analytics don't break — tier bonuses simply
+# return 0 and the final cap equals the base.
+DEFAULT_NETWORK_CAP_BASE = 800  # Everyone gets 800 (unchanged)
+DEFAULT_NETWORK_CAP_MAX = 8000  # Kept for backward-compat display, no longer reachable via referrals
+DEFAULT_CAP_PER_DIRECT = 0  # 6-tier cascade removed — see mining_commission.py
+DEFAULT_CAP_PER_L1_INDIRECT = 0
+DEFAULT_CAP_PER_L3 = 0
+DEFAULT_CAP_PER_L4 = 0
+DEFAULT_CAP_PER_L5 = 0
 DEFAULT_MIN_PRC_PER_USER = 2.5  # Minimum PRC per user in team (at 16384 users)
 DEFAULT_MAX_PRC_PER_USER = 7.142857  # Maximum PRC per user (at 2 users = 50/7)
 
