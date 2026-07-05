@@ -430,26 +430,14 @@ async def _credit_commission(
             pass
         return False
 
-    # Legacy `transactions` collection kept in sync for older dashboards.
-    try:
-        await db.transactions.insert_one(
-            {
-                "transaction_id": str(uuid.uuid4()),
-                "user_id": recipient_uid,
-                "type": "credit",
-                "amount": amount,
-                "transaction_type": "mining_referral_reward",
-                "description": description,
-                "balance_after": new_balance,
-                "timestamp": ts_iso,
-                "source_ref": source_ref,
-                "tier_index": tier_index,
-                "downline_uid": collector_uid,
-                "downline_name": collector_name,
-            }
-        )
-    except Exception as legacy_err:
-        logger.warning(f"[MINING-COMMISSION] Legacy transaction insert failed: {legacy_err}")
+    # NOTE (Feb 2026 duplicate-fix): We NO LONGER dual-write to the legacy
+    # `transactions` collection. That was surfacing duplicate rows in the
+    # PRC Statement (once as "Referral Reward" from prc_ledger, once as
+    # "Daily Reward Collected" from transactions) because the two writes
+    # use independent UUIDs and prc_statement.py dedupes only on `txn_id`.
+    # `prc_ledger` is the canonical passbook source — all consumers should
+    # read from it. Existing legacy rows are filtered out defensively in
+    # prc_statement.py.
 
     # ── LIVE REFERRAL PING ────────────────────────────────────────────
     # Insert a notification row so the recipient's in-app notification
@@ -544,3 +532,52 @@ async def _send_referral_ping(
         })
     except Exception as e:
         logger.warning(f"[MINING-COMMISSION] Fallback notification insert failed: {e}")
+
+
+
+# ---------------------------------------------------------------------------
+# ADMIN ONE-TIME CLEANUP — legacy duplicate mining_referral_reward rows
+# ---------------------------------------------------------------------------
+# Before Feb 2026 the commission credit was dual-written to both `prc_ledger`
+# AND legacy `transactions`. The two writes used independent UUIDs so the
+# PRC Statement dedup (txn_id-based) missed them → users saw every commission
+# twice ("Referral Reward" + "Reward / Daily Reward Collected").
+#
+# The dual-write has been removed. This endpoint removes the historical
+# leftovers from `transactions` in a single admin-triggered pass. It only
+# targets rows where `transaction_type` = 'mining_referral_reward' — no
+# other transaction category is touched. Safe + idempotent.
+from fastapi import HTTPException, Header
+
+
+@router.post("/admin/mining-commission/cleanup-legacy-duplicates")
+async def admin_cleanup_legacy_commission_duplicates(
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+):
+    """Delete legacy `transactions` rows that duplicate prc_ledger
+    mining_referral_reward entries. Requires ADMIN_OPERATION_PIN header.
+    Returns the delete count.
+    """
+    import os
+    expected_pin = os.environ.get("ADMIN_OPERATION_PIN")
+    if not expected_pin or x_admin_pin != expected_pin:
+        raise HTTPException(status_code=403, detail="Invalid admin operation PIN")
+
+    if db is None:
+        raise HTTPException(status_code=500, detail="DB not initialised")
+
+    result = await db.transactions.delete_many(
+        {"transaction_type": "mining_referral_reward"}
+    )
+    logger.info(
+        f"[MINING-COMMISSION CLEANUP] Removed {result.deleted_count} legacy "
+        f"duplicate mining_referral_reward rows from `transactions`."
+    )
+    return {
+        "success": True,
+        "deleted_legacy_rows": result.deleted_count,
+        "message": (
+            f"Removed {result.deleted_count} legacy duplicate rows. "
+            "PRC Statement will now show each commission exactly once."
+        ),
+    }

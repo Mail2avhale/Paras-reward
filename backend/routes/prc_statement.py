@@ -181,6 +181,13 @@ async def get_prc_statement(
 
         # 2. transactions (burn, etc.)
         for doc in await db.transactions.find({"user_id": uid, "deleted": {"$ne": True}}, {"_id": 0}).to_list(5000):
+            # De-duplication guard (Feb 2026): mining referral rewards are
+            # written ONLY to prc_ledger now. Filter out legacy duplicate
+            # rows still sitting in the `transactions` collection so the
+            # statement doesn't show the same commission twice.
+            tx_type = (doc.get("transaction_type") or doc.get("type") or "").lower().strip()
+            if tx_type == "mining_referral_reward":
+                continue
             txn_id = doc.get("transaction_id", "")
             if txn_id and txn_id in seen_txn_ids:
                 continue
