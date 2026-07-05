@@ -78,13 +78,13 @@ BASE_MINING_PRC = 1000  # Base daily PRC (when network < 250)
 BASE_MINING_THRESHOLD = 250  # Network size threshold: base=1000 if < 250, base=0 if >= 250
 EXPLORER_DAILY_PRC = 200  # Explorer plan fixed daily PRC rate (Jul 2026 — was 100% burn previously)
 MIN_PRC_PER_USER = 2.5  # Minimum PRC per user at 16384 network
-NETWORK_CAP_BASE = 800  # Tier 1: Base cap (single leg)
-NETWORK_CAP_MAX = 8000  # Tier 6: Absolute max from L1-L5 cascade
-CAP_PER_DIRECT = 16  # +16 cap per L1 (direct) referral
-CAP_PER_L1_INDIRECT = 5  # +5 cap per L2 (L1 indirect) referral
-CAP_PER_L3 = 3  # +3 cap per L3 referral
-CAP_PER_L4 = 2  # +2 cap per L4 referral
-CAP_PER_L5 = 1  # +1 cap per L5 referral
+NETWORK_CAP_BASE = 800  # Base cap — everyone gets 800 (Jul 2026: tier cascade removed, replaced by mining_commission.py 3-tier commission)
+NETWORK_CAP_MAX = 8000  # Kept for backward-compat clamp (no longer reachable via referrals)
+CAP_PER_DIRECT = 0  # 6-tier cascade removed
+CAP_PER_L1_INDIRECT = 0
+CAP_PER_L3 = 0
+CAP_PER_L4 = 0
+CAP_PER_L5 = 0
 SESSION_DURATION_HOURS = 24  # Mining session duration
 COLLECT_TO_START_COOLDOWN_SECONDS = 60  # Forced wait between collect and next session (AdMob retention)
 
