@@ -455,6 +455,15 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               )}
               {' '}Every time an Elite user in your downline collects PRC from their mining session, you earn a percentage — credited instantly to your wallet with a live notification.
             </p>
+
+            <button
+              onClick={() => navigate('/referrals/live-feed')}
+              className="w-full mt-3 py-2.5 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+              data-testid="view-downline-live-feed-btn"
+            >
+              <span>View Downline Live Feed</span>
+              <span className="text-fuchsia-200">→</span>
+            </button>
           </div>
         )}
 

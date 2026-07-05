@@ -25,8 +25,8 @@ Reward Formula (Single Source of Truth):
 - Formula: min(8000, 800 + 16*L1 + 5*L2 + 3*L3 + 2*L4 + 1*L5)
 
 Subscription:
-- Explorer: Shows rate (demo), CANNOT collect
-- Elite (Razorpay/Manual): 100% rate
+- Explorer: Fixed 200 PRC/day rate (credited to wallet on collect — Jul 2026 change).
+- Elite (Razorpay/Manual): Dynamic network-based rate, 100% credited.
 """
 
 import math
@@ -76,6 +76,7 @@ def set_helpers(helpers: dict):
 
 BASE_MINING_PRC = 1000  # Base daily PRC (when network < 250)
 BASE_MINING_THRESHOLD = 250  # Network size threshold: base=1000 if < 250, base=0 if >= 250
+EXPLORER_DAILY_PRC = 200  # Explorer plan fixed daily PRC rate (Jul 2026 — was 100% burn previously)
 MIN_PRC_PER_USER = 2.5  # Minimum PRC per user at 16384 network
 NETWORK_CAP_BASE = 800  # Tier 1: Base cap (single leg)
 NETWORK_CAP_MAX = 8000  # Tier 6: Absolute max from L1-L5 cascade
@@ -385,15 +386,51 @@ async def calculate_mining_rate(user_id: str) -> dict:
     # Calculate PRC per user using new formula
     prc_per_user = calculate_prc_per_user(effective_network)
     
-    # Calculate rates
+    # Explorer tier — fixed 200 PRC/day rate (Jul 2026 change: replaces the
+    # legacy "mine + 100% burn on collect" flow so Explorer users see real
+    # PRC accrue to their wallet at a demo rate). Elite users continue with
+    # the dynamic network-based formula below.
+    subscription_plan = (user.get("subscription_plan") or "explorer").lower()
+    membership_type = (user.get("membership_type") or "explorer").lower()
+    ELITE_PLANS_LOCAL = {"elite", "vip", "startup", "growth", "pro"}
+    is_explorer_tier = subscription_plan not in ELITE_PLANS_LOCAL and membership_type not in ELITE_PLANS_LOCAL
+
+    if is_explorer_tier:
+        total_daily_rate = float(EXPLORER_DAILY_PRC)
+        per_second_rate = total_daily_rate / 86400
+        return {
+            "base_rate": total_daily_rate,
+            "network_rate": 0.0,
+            "prc_per_user": 0.0,
+            "network_size": effective_network,
+            "raw_network_size": network_size,
+            "network_cap": network_cap,
+            "direct_referrals": direct_referrals,
+            "l1_indirect_referrals": l2_count,
+            "l3_count": l3_count,
+            "l4_count": l4_count,
+            "l5_count": l5_count,
+            "cap_tier1_base": cap_info["tier1_base"],
+            "cap_tier2_bonus": cap_info["tier2_bonus"],
+            "cap_tier3_bonus": cap_info["tier3_bonus"],
+            "cap_tier4_bonus": cap_info["tier4_bonus"],
+            "cap_tier5_bonus": cap_info["tier5_bonus"],
+            "cap_tier6_bonus": cap_info["tier6_bonus"],
+            "boost_multiplier": 1.0,
+            "subscription_type": "explorer",
+            "subscription_plan": subscription_plan,
+            "total_daily_rate": round(total_daily_rate, 2),
+            "per_second_rate": round(per_second_rate, 8),
+            "final_rate": round(per_second_rate, 8),
+        }
+
+    # Calculate rates for Elite users — network-based dynamic formula.
     # Base rule: 1000 PRC/day if network < 250, else 0 (only network bonus)
     base_rate = BASE_MINING_PRC if effective_network < BASE_MINING_THRESHOLD else 0
     network_rate = effective_network * prc_per_user
     
     # Subscription multiplier:
     # All Elite/paid plans = 100% (PRC subscription payment deprecated April 2026)
-    # Explorer = 100% (demo - shows speed but can't collect)
-    subscription_plan = user.get("subscription_plan", "explorer")
     boost_multiplier = 1.0
     
     # Apply multiplier
@@ -766,23 +803,20 @@ async def collect_mining(uid: str, current_user: dict = Depends(_require_authent
                 detail="No coins to collect"
             )
         
-        # Credit PRC to wallet — but ONLY for Elite users.
-        # For Explorer users, the wallet is left untouched (the mined PRC
-        # is burned). We still end the session and start the cooldown so
-        # the ad-bonus funnel proceeds identically for both tiers.
+        # Credit PRC to wallet.
+        # Jul 2026 change: Explorer users now ALSO receive their mined PRC
+        # (previously burned). Their rate is fixed 200 PRC/day (see
+        # calculate_mining_rate) so the flow is identical to Elite from
+        # here on. Referral commission distribution below is still gated
+        # on `is_elite` because only Elite downlines pay commission to
+        # uplines per the tier structure.
         current_balance = user.get("prc_balance", 0)
-        if is_elite:
-            new_balance = round(current_balance + mined_coins, 6)
-        else:
-            new_balance = current_balance  # burn — wallet unchanged
+        new_balance = round(current_balance + mined_coins, 6)
         
         # NOTE: Do NOT auto-start a new session. User must manually click "Start Session"
         # after a 60-second cooldown (drives AdMob impression RPM by keeping user in app).
         cooldown_until = now + timedelta(seconds=COLLECT_TO_START_COOLDOWN_SECONDS)
         
-        # Update user: credit PRC (Elite only) + stop mining + record collect time for cooldown.
-        # `total_mined_*` counters are still bumped for Explorer so analytics see the
-        # mined volume even though the PRC was burned at collect time.
         user_set = {
             "mining_active": False,
             "mining_start_time": None,
@@ -790,9 +824,8 @@ async def collect_mining(uid: str, current_user: dict = Depends(_require_authent
             "last_mining_collect": now.isoformat(),
             "next_session_available_at": cooldown_until.isoformat(),
             "last_mining_action": now.isoformat(),
+            "prc_balance": new_balance,
         }
-        if is_elite:
-            user_set["prc_balance"] = new_balance
 
         await db.users.update_one(
             {"uid": uid},
@@ -810,26 +843,22 @@ async def collect_mining(uid: str, current_user: dict = Depends(_require_authent
         await db.transactions.insert_one({
             "transaction_id": str(uuid.uuid4()),
             "user_id": uid,
-            "type": "credit" if is_elite else "burn",
+            "type": "credit",
             "amount": mined_coins,
-            "transaction_type": "mining" if is_elite else "mining_burn",
-            "description": "Mining session collection" if is_elite else "Explorer plan — session PRC burned",
+            "transaction_type": "mining",
+            "description": "Mining session collection",
             "balance_after": new_balance,
             "timestamp": now.isoformat()
         })
 
-        # ── PRC LEDGER entry ─────────────────────────────────────────
-        # Elite: CREDIT entry (mining_collect).
-        # Explorer: DEBIT entry (mining_session_burn). The wallet itself
-        # didn't move, so balance_before == balance_after — this makes
-        # the row read clearly as "you mined this, but it was burned".
+        # ── PRC LEDGER entry — mining_collect CREDIT for everyone.
         try:
             await db.prc_ledger.insert_one({
                 "txn_id": str(uuid.uuid4()),
                 "user_id": uid,
-                "type": "mining_collect" if is_elite else "mining_session_burn",
-                "entry_type": "credit" if is_elite else "debit",
-                "amount": mined_coins if is_elite else -mined_coins,
+                "type": "mining_collect",
+                "entry_type": "credit",
+                "amount": mined_coins,
                 "balance_before": round(current_balance, 2),
                 "balance_after": round(new_balance, 2),
                 "reference": now.isoformat(),
@@ -888,14 +917,10 @@ async def collect_mining(uid: str, current_user: dict = Depends(_require_authent
         
         return {
             "success": True,
-            "message": (
-                f"Collected {mined_coins:.4f} PRC"
-                if is_elite
-                else "Session ended. Watch ad below for bonus PRC."
-            ),
+            "message": f"Collected {mined_coins:.4f} PRC",
             "collected_amount": mined_coins,
             "new_balance": new_balance,
-            "burned": (not is_elite),
+            "burned": False,
             "tier": "elite" if is_elite else "explorer",
             "session_duration_seconds": elapsed_seconds,
             "auto_started": False,

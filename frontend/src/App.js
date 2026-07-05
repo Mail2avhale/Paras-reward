@@ -507,6 +507,7 @@ if (typeof window !== 'undefined') {
 
 // TapGame removed - feature deprecated
 const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
+const DownlineLiveFeed = lazy(() => import("@/pages/DownlineLiveFeed"));
 // Marketplace & Orders removed - feature deprecated (December 2025)
 // const Orders = lazy(() => import("@/pages/Orders"));
 // VIPMembership removed - replaced by SubscriptionPlans (new 4-tier system)
@@ -754,6 +755,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/game" element={<Navigate to="/dashboard" replace />} />
             {/* Removed: Treasure Hunt and Scratch Card games */}
             <Route path="/referrals" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Referrals user={user} onLogout={handleLogout} refreshUserData={refreshUserData} />) : <Navigate to="/login" />} />
+            <Route path="/referrals/live-feed" element={user ? <DownlineLiveFeed user={user} /> : <Navigate to="/login" />} />
             <Route path="/referrals/dashboard" element={<Navigate to="/referrals" replace />} />
             <Route path="/referrals/ai" element={<Navigate to="/referrals" replace />} />
             <Route path="/network" element={<Navigate to="/referrals" replace />} />

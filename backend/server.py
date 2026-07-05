@@ -36882,6 +36882,17 @@ try:
     api_router.include_router(_mining_commission_router)
 except Exception as _mc_err:
     logging.error(f"[STARTUP] mining_commission wiring failed: {_mc_err}")
+
+# Downline Live Feed (referral-reward feed, Jul 2026)
+try:
+    from routes.downline_live_feed import (
+        set_db as _set_dlf_db,
+        router as _dlf_router,
+    )
+    _set_dlf_db(db)
+    api_router.include_router(_dlf_router)
+except Exception as _dlf_err:
+    logging.error(f"[STARTUP] downline_live_feed wiring failed: {_dlf_err}")
 set_pool_wallet_db(db)
 set_pool_wallet_cache(cache)
 set_employee_db(db)
