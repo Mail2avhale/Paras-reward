@@ -698,3 +698,12 @@ See `/app/memory/test_credentials.md`
 - All Android build: Java 21, minSdk 23, compileSdk 35
 - Package: `com.parasreward.prc`
 - Build commands: `yarn build` (full web) vs `yarn build:user` (user-only Android)
+
+## 2026-02-05 — Paras Mall Mining Session LAPSE/BURN (24h)
+- Implemented strict 24-hour lapse on mall product mining sessions.
+- If user does NOT click Collect within 24h of `session_start`, all accumulated PRC LAPSES to 0 (burned).
+- User can then start a fresh mining session immediately — no cooldown wall for burned points.
+- Backend: `compute_session_accumulated()` returns `(0.0, elapsed)` when `elapsed >= 86400`. `/api/mall/collect/{id}` returns HTTP 400 "Session expired — points lapsed" and atomically clears `session_start` + increments `laps_count`. `/api/mall/start-session/{id}` auto-clears lapsed sessions and starts fresh. `/api/mall/my-bookings/{uid}` sets `session_expired=true`, `session_accumulated_prc=0`, `can_start_session=true` on lapsed bookings.
+- Frontend (`ParasMallBookings.js`): Red "Session Expired - Points Lapsed" banner + green "Start New Mining Session" button when lapsed. Collect button, Resets-In timer, and Session Earnings panels are all HIDDEN when expired.
+- Test: `/app/backend/tests/test_mall_mining_burn.py` (6/6 unit pass) + `/app/backend/tests/test_mall_mining_burn_e2e_api.py` (5/5 API E2E pass — verified live).
+
