@@ -37,6 +37,8 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
 
   // Live counter tick — only when session is active
   const sessionActive = !!booking.session_active;
+  // Post-24h boundary — session done, user MUST collect before starting new
+  const sessionExpired = !!booking.session_expired;
   const [liveAccumulated, setLiveAccumulated] = useState(booking.session_accumulated_prc || 0);
   const [liveRemaining, setLiveRemaining] = useState(booking.session_remaining_seconds || 0);
   const [liveCooldown, setLiveCooldown] = useState(booking.cooldown_remaining_seconds || 0);
@@ -58,16 +60,27 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
     setLiveCooldown(booking.cooldown_remaining_seconds || 0);
   }, [booking.session_accumulated_prc, booking.session_remaining_seconds, booking.cooldown_remaining_seconds]);
 
-  // Active-session mining tick: accumulate PRC every second
+  // Active-session mining tick: accumulate PRC every second, and when the
+  // 24h window elapses, auto-refresh so the server-side session_expired
+  // flag flows into the UI and the counter stops ticking forever.
   useEffect(() => {
     if (booking.status !== 'mining' || !sessionActive) return;
     const perSec = booking.per_second_prc || 0;
     tickRef.current = setInterval(() => {
       setLiveAccumulated((prev) => prev + perSec);
-      setLiveRemaining((r) => Math.max(0, r - 1));
+      setLiveRemaining((r) => {
+        const next = Math.max(0, r - 1);
+        if (next === 0 && r > 0) {
+          // Just crossed the expiry boundary — pull fresh session state
+          // so the UI swaps into the "Session Ended — Collect Now" view.
+          clearInterval(tickRef.current);
+          onRefresh?.();
+        }
+        return next;
+      });
     }, 1000);
     return () => clearInterval(tickRef.current);
-  }, [booking.status, booking.per_second_prc, sessionActive]);
+  }, [booking.status, booking.per_second_prc, sessionActive, onRefresh]);
 
   // Cooldown tick — counts down to zero, then auto-refresh so server can
   // expose can_start_session=true. Mirrors the main mining 60s cooldown.
@@ -369,20 +382,37 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
 
           <button
             onClick={collect}
-            disabled={!sessionActive || liveAccumulated < 0.01}
+            disabled={(!sessionActive && !sessionExpired) || liveAccumulated < 0.01}
             className={`w-full ${
-              sessionActive
-                ? 'bg-gradient-to-r from-amber-500 to-amber-600 disabled:from-zinc-700 disabled:to-zinc-800 text-black disabled:text-zinc-500'
+              sessionActive || sessionExpired
+                ? sessionExpired
+                  ? 'bg-gradient-to-r from-rose-500 to-orange-500 disabled:from-zinc-700 disabled:to-zinc-800 text-white disabled:text-zinc-500 animate-pulse'
+                  : 'bg-gradient-to-r from-amber-500 to-amber-600 disabled:from-zinc-700 disabled:to-zinc-800 text-black disabled:text-zinc-500'
                 : 'hidden'
             } font-bold py-3 rounded-xl text-sm uppercase tracking-wider transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2`}
             data-testid={`mall-collect-btn-${booking.booking_id}`}
           >
             <Coins className="w-4 h-4" />
-            Collect {liveAccumulated > 0 ? liveAccumulated.toFixed(2) : '0.00'} PRC
+            {sessionExpired
+              ? `Session Ended — Collect ${liveAccumulated > 0 ? liveAccumulated.toFixed(2) : '0.00'} PRC`
+              : `Collect ${liveAccumulated > 0 ? liveAccumulated.toFixed(2) : '0.00'} PRC`}
           </button>
 
+          {/* Session Ended banner — shown after the 24h boundary until user collects */}
+          {sessionExpired && (
+            <div
+              className="w-full bg-rose-500/10 border border-rose-500/30 rounded-xl py-2 px-3 flex items-center justify-center gap-2 mt-2"
+              data-testid={`mall-session-expired-${booking.booking_id}`}
+            >
+              <AlertCircle className="w-3.5 h-3.5 text-rose-300" />
+              <p className="text-[11px] text-rose-200 font-medium">
+                24-hour mining session ended. Collect PRC to start a new session.
+              </p>
+            </div>
+          )}
+
           {/* Cooldown timer — shown after Collect, before Start Session unlocks */}
-          {!sessionActive && liveCooldown > 0 && (
+          {!sessionActive && !sessionExpired && liveCooldown > 0 && (
             <div
               className="w-full bg-zinc-900/80 border border-amber-500/20 rounded-xl py-3 px-4 flex items-center justify-center gap-3"
               data-testid={`mall-cooldown-${booking.booking_id}`}
@@ -397,8 +427,9 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
             </div>
           )}
 
-          {/* Start Session — manual restart after cooldown */}
-          {!sessionActive && liveCooldown === 0 && (
+          {/* Start Session — manual restart after cooldown. Blocked when the
+              previous session's PRC is still uncollected (sessionExpired). */}
+          {!sessionActive && !sessionExpired && liveCooldown === 0 && (
             <button
               onClick={startSession}
               disabled={starting}

@@ -928,8 +928,14 @@ async def my_bookings(
         if b.get("status") == "mining":
             b = await maybe_lapse_or_renew_session(b)
             session_start = parse_iso(b.get("session_start"))
-            session_active = bool(session_start)
             accumulated, elapsed = await compute_session_accumulated(b, user_cap=user_cap)
+            # A session is considered ACTIVE only until it hits the 24h wall.
+            # After that, PRC accumulation stops (already capped in
+            # compute_session_accumulated) and the user must click Collect
+            # before starting a fresh session. This prevents the UI counter
+            # from ticking forever on stale sessions.
+            session_expired = bool(session_start) and elapsed >= SECONDS_PER_DAY
+            session_active = bool(session_start) and not session_expired
             rate_per_day = await get_daily_rate_for_booking(b["position"], user_cap=user_cap)
             # Cooldown countdown — only when session is paused after a collect
             next_avail = parse_iso(b.get("next_session_available_at"))
@@ -939,6 +945,7 @@ async def my_bookings(
                 cooldown_remaining = max(0, int((next_avail - now).total_seconds()))
                 can_start_session = cooldown_remaining == 0
             b["session_active"] = session_active
+            b["session_expired"] = session_expired
             b["session_accumulated_prc"] = accumulated
             b["session_elapsed_seconds"] = elapsed
             b["session_remaining_seconds"] = max(0, SECONDS_PER_DAY - elapsed) if session_active else 0
@@ -946,12 +953,19 @@ async def my_bookings(
             b["per_second_prc"] = round(rate_per_day / SECONDS_PER_DAY, 6) if session_active else 0
             b["per_hour_prc"] = round(rate_per_day / 24, 4)
             b["cooldown_remaining_seconds"] = cooldown_remaining
-            b["can_start_session"] = can_start_session and not session_active
+            # If a session has expired the user must Collect first — starting
+            # a new session while expired PRC is uncollected would drop it.
+            b["can_start_session"] = (
+                can_start_session
+                and not session_active
+                and not session_expired
+            )
             # Anti-inflation transparency: show booking owner's network cap.
             # Frontend can render "Build referrals to raise this cap" CTA.
             b["user_network_cap"] = user_cap
         else:
             b["session_active"] = False
+            b["session_expired"] = False
             b["session_accumulated_prc"] = 0
             b["session_elapsed_seconds"] = 0
             b["session_remaining_seconds"] = 0
@@ -975,8 +989,11 @@ async def get_booking(booking_id: str):
         # Anti-inflation cap (mirrors main mining's 6-tier referral cap)
         user_cap = await get_user_network_cap(b["user_id"])
         session_start = parse_iso(b.get("session_start"))
-        session_active = bool(session_start)
         accumulated, elapsed = await compute_session_accumulated(b, user_cap=user_cap)
+        # 24h expiry gate — mirrors the /my-bookings enrichment. Prevents the
+        # UI counter from running forever on a stale session.
+        session_expired = bool(session_start) and elapsed >= SECONDS_PER_DAY
+        session_active = bool(session_start) and not session_expired
         rate_per_day = await get_daily_rate_for_booking(b["position"], user_cap=user_cap)
         now = now_utc()
         next_avail = parse_iso(b.get("next_session_available_at"))
@@ -984,6 +1001,7 @@ async def get_booking(booking_id: str):
         if not session_active and next_avail:
             cooldown_remaining = max(0, int((next_avail - now).total_seconds()))
         b["session_active"] = session_active
+        b["session_expired"] = session_expired
         b["session_accumulated_prc"] = accumulated
         b["session_elapsed_seconds"] = elapsed
         b["session_remaining_seconds"] = max(0, SECONDS_PER_DAY - elapsed) if session_active else 0
@@ -991,7 +1009,11 @@ async def get_booking(booking_id: str):
         b["per_second_prc"] = round(rate_per_day / SECONDS_PER_DAY, 6) if session_active else 0
         b["per_hour_prc"] = round(rate_per_day / 24, 4)
         b["cooldown_remaining_seconds"] = cooldown_remaining
-        b["can_start_session"] = cooldown_remaining == 0 and not session_active
+        b["can_start_session"] = (
+            cooldown_remaining == 0
+            and not session_active
+            and not session_expired
+        )
         b["user_network_cap"] = user_cap  # Feb 2026 anti-inflation cap
     b["progress_percent"] = round((b.get("paid_prc", 0) / b.get("total_prc", 1)) * 100, 2)
     return b
