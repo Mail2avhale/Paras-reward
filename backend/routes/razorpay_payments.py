@@ -2410,7 +2410,17 @@ async def audit_paid_plans_without_payment(request: Request):
             {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1,
              "subscription_plan": 1, "subscription_expiry": 1,
              "subscription_start": 1, "admin_upgraded": 1,
-             "admin_fixed": 1, "created_at": 1}
+             "admin_fixed": 1, "created_at": 1,
+             # Feb 5 2026 (v2 audit): also honour these legit-legacy flags
+             # to avoid downgrading users granted subscriptions before the
+             # razorpay_orders collection existed or via VIP migration.
+             "migrated_from_vip": 1,
+             "subscription_payment_type": 1,
+             "last_prc_subscription": 1,
+             "membership_type": 1,
+             "subscription_status": 1,
+             "test_account": 1,
+             "role": 1}
         )
         users_on_paid_plan = await cursor.to_list(50000)
         logging.info(f"[AUDIT-PAID] Scanning {len(users_on_paid_plan)} paid-plan users")
@@ -2419,18 +2429,47 @@ async def audit_paid_plans_without_payment(request: Request):
         legit_paid = 0
         legit_prc = 0
         legit_admin_granted = 0
+        legit_vip_migration = 0
+        legit_prc_flag = 0
+        legit_tx_subscription = 0
+        legit_admin_role = 0
 
         for u in users_on_paid_plan:
             uid = u.get("uid")
             if not uid:
                 continue
 
-            # Fast paths — trust admin-granted flags
+            # ── Fast-path legit checks (in order of cost) ───────────────────
+            # 0. Admin / staff roles — never downgrade platform accounts.
+            role = (u.get("role") or "").lower().strip()
+            if role in ("admin", "sub_admin", "moderator", "staff", "system"):
+                legit_admin_role += 1
+                continue
+
+            # 1. Trust admin-granted / already-reconciled flags
             if u.get("admin_upgraded") is True or u.get("admin_fixed") is True:
                 legit_admin_granted += 1
                 continue
 
-            # 1. Any paid Razorpay order?
+            # 2. Legacy VIP → Startup migration (server.py:15855)
+            if u.get("migrated_from_vip") is True:
+                legit_vip_migration += 1
+                continue
+
+            # 3. PRC-based subscription flag (admin_misc.py:1189)
+            if u.get("subscription_payment_type") == "prc":
+                legit_prc_flag += 1
+                continue
+            if u.get("last_prc_subscription"):
+                legit_prc_flag += 1
+                continue
+
+            # 4. Test / seed accounts
+            if u.get("test_account") is True:
+                legit_admin_role += 1
+                continue
+
+            # 5. Any paid Razorpay order?
             has_paid_order = await db.razorpay_orders.find_one(
                 {"user_id": uid, "status": "paid"},
                 {"_id": 0, "order_id": 1},
@@ -2439,7 +2478,7 @@ async def audit_paid_plans_without_payment(request: Request):
                 legit_paid += 1
                 continue
 
-            # 2. Any subscription_payments row (PRC-based / manual)?
+            # 6. Any subscription_payments row (PRC-based / manual)?
             try:
                 has_sub_payment = await db.subscription_payments.find_one(
                     {"user_id": uid},
@@ -2450,6 +2489,22 @@ async def audit_paid_plans_without_payment(request: Request):
                     continue
             except Exception:
                 pass  # collection may not exist — non-fatal
+
+            # 7. Legacy transactions with type='subscription_prc' / 'subscription_payment'
+            try:
+                has_sub_tx = await db.transactions.find_one(
+                    {"user_id": uid,
+                     "type": {"$in": [
+                         "subscription_prc", "subscription_payment",
+                         "subscription", "elite_activation", "plan_purchase",
+                     ]}},
+                    {"_id": 0, "type": 1},
+                )
+                if has_sub_tx:
+                    legit_tx_subscription += 1
+                    continue
+            except Exception:
+                pass
 
             # ── SUSPICIOUS ──
             # Enrich with recent cancelled/failed orders for context
@@ -2505,18 +2560,27 @@ async def audit_paid_plans_without_payment(request: Request):
             "dry_run": dry_run,
             "summary": {
                 "total_users_on_paid_plan": len(users_on_paid_plan),
+                "legit_admin_or_staff_role": legit_admin_role,
+                "legit_admin_granted_flag": legit_admin_granted,
+                "legit_vip_migration": legit_vip_migration,
+                "legit_prc_flag": legit_prc_flag,
                 "legit_paid_razorpay_order": legit_paid,
                 "legit_prc_or_subscription_payment": legit_prc,
-                "legit_admin_granted": legit_admin_granted,
+                "legit_legacy_subscription_transaction": legit_tx_subscription,
                 "suspicious_count": len(suspicious),
+                "legit_total": (
+                    legit_admin_role + legit_admin_granted + legit_vip_migration
+                    + legit_prc_flag + legit_paid + legit_prc + legit_tx_subscription
+                ),
             },
             "suspicious_users": suspicious[:limit],
             "message": (
-                f"Found {len(suspicious)} paid-plan users with NO paid orders and NO PRC subscription. "
+                f"Found {len(suspicious)} paid-plan users with NO evidence of payment "
+                f"across 7 checked sources (paid order / subscription_payments / "
+                f"subscription tx / admin flags / VIP migration / PRC flag / admin role). "
                 f"{'DRY RUN — no changes made. ' if dry_run else 'DOWNGRADED all to Explorer. '}"
-                "Review carefully — false positives include: (a) subscriptions granted before "
-                "razorpay_orders collection existed, (b) legacy free upgrades. Downgrade only "
-                "after manual sample-check."
+                "Review carefully before dry_run=false — false positives may still exist "
+                "for users granted subscriptions via ad-hoc scripts or older code paths."
             ),
         }
     except HTTPException:
