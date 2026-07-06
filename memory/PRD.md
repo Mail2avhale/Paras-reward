@@ -763,3 +763,29 @@ Returns detailed suspicious_users list with recent cancelled orders for context.
 ### Verification
 15/15 pytest assertions passed across 10 test cases. Report: `/app/test_reports/iteration_257.json`. Test file: `/app/backend/tests/test_razorpay_webhook_audit_security.py`.
 
+
+## 2026-02-06 — Future-Proofing Layer 3: Recent Activations Monitor
+
+Decision: 113 existing suspicious users LEFT ALONE (too risky to bulk-downgrade; contains 21 legitimate legacy VIP founders from Jan 2026 platform launch). Focus on **preventing future leaks**.
+
+**Verified** on production (curl to https://www.parasreward.com/api/razorpay/webhook without signature → 401): `RAZORPAY_WEBHOOK_SECRET` env var IS set + signature check IS active. Attackers can no longer forge webhook events.
+
+**New endpoint added**: `POST /api/razorpay/admin/monitor-recent-activations`
+- Body: `{"admin_pin":"123456","days":7}`
+- Returns paid-plan users activated in the last N days who have NO payment evidence
+- Zero writes — safe to call anytime
+- Recommended weekly cadence — if `alerts_no_evidence` count stays 0, all reactive layers are holding.
+
+**Prevention layers now active:**
+1. Webhook mandatory signature (fail-closed on missing secret/sig)
+2. auto_sync_captured cron skips cancelled/failed orders
+3. auto_sync_razorpay_payments duplicate-key fixed
+4. Bank redeem admin-configurable limits (unrelated but adjacent)
+5. Recent-activations monitor endpoint for weekly canary
+
+**Historical leak breakdown (2098 paid-plan users audited, Feb 6):**
+- 7 users: Group A — failed/cancelled orders bug (₹8,252/mo loss, kept live per user decision)
+- ~85 users: Group B — likely webhook-bypass attack in Feb 2026 (~₹1L/mo)
+- ~21 users: Group C — legitimate legacy VIP founders (Jan 2026)
+- No further downgrades planned — customer relationship preserved.
+

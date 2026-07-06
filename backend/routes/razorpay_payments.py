@@ -2370,6 +2370,146 @@ async def audit_cancelled_with_elite(request: Request):
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
+
+# ═══════════════════════════════════════════════════════════════════════
+# LAYER 3 — REAL-TIME ACTIVATION MONITOR (Feb 6 2026)
+# ═══════════════════════════════════════════════════════════════════════
+# Admin can call this anytime to see recently-activated paid-plan users
+# who have NO payment evidence. Ideal for a daily/weekly proactive review
+# once the reactive fixes (webhook sig + cron gates) are live.
+
+@router.post("/admin/monitor-recent-activations")
+async def monitor_recent_activations(request: Request):
+    """Return paid-plan activations from the last N days that have NO
+    payment evidence anywhere. Zero writes.
+
+    Use daily/weekly as a proactive canary for any new leak vector that
+    slips past the reactive layers (webhook sig + cron cancelled-gate).
+
+    Auth: admin_pin=123456
+    Body: {"admin_pin": "123456", "days": 7}
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        days = int(data.get("days", 7))
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        if days < 1 or days > 90:
+            raise HTTPException(status_code=400, detail="days must be 1-90")
+
+        from datetime import datetime, timezone, timedelta
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+        # Find paid-plan users whose subscription started within the window.
+        # Match on both `subscription_start` (new activations) OR `created_at`
+        # (if the user was created recently on a paid plan directly).
+        recent = await db.users.find({
+            "subscription_plan": {"$in": ["elite", "growth", "startup"]},
+            "$or": [
+                {"subscription_start": {"$gte": cutoff}},
+                {"created_at": {"$gte": cutoff}},
+            ],
+        }, {
+            "_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1,
+            "subscription_plan": 1, "subscription_start": 1,
+            "subscription_expiry": 1, "created_at": 1,
+            "membership_type": 1, "role": 1,
+            "admin_upgraded": 1, "admin_fixed": 1,
+            "migrated_from_vip": 1, "subscription_payment_type": 1,
+            "last_prc_subscription": 1, "sponsored_by": 1,
+            "sale_elite_received_from": 1, "gifted_subscription": 1,
+            "activated_via": 1, "last_payment_id": 1,
+            "subscription_history": 1, "test_account": 1,
+        }).to_list(1000)
+
+        alerts = []
+        clean = 0
+        for u in recent:
+            uid = u.get("uid")
+            if not uid:
+                continue
+
+            role = (u.get("role") or "").lower()
+            if role in ("admin", "sub_admin", "moderator", "staff", "system"):
+                clean += 1
+                continue
+            # Trust legit signals first (same order as bulk audit)
+            legit_signals = []
+            if u.get("admin_upgraded"): legit_signals.append("admin_upgraded")
+            if u.get("admin_fixed"): legit_signals.append("admin_fixed")
+            if u.get("migrated_from_vip"): legit_signals.append("migrated_from_vip")
+            if u.get("subscription_payment_type") == "prc": legit_signals.append("prc_flag")
+            if u.get("last_prc_subscription"): legit_signals.append("last_prc_ts")
+            if u.get("test_account"): legit_signals.append("test_account")
+            if u.get("sponsored_by") or u.get("sale_elite_received_from") or u.get("gifted_subscription"):
+                legit_signals.append("gift_recipient")
+            if u.get("activated_via"): legit_signals.append(f"activated_via={u.get('activated_via')}")
+            if u.get("last_payment_id"): legit_signals.append("last_payment_id")
+            sh = u.get("subscription_history")
+            if isinstance(sh, list) and len(sh) > 0: legit_signals.append("sub_history")
+
+            if legit_signals:
+                clean += 1
+                continue
+
+            # Check DB collections (paid-only)
+            has_paid_order = await db.razorpay_orders.find_one(
+                {"user_id": uid, "status": "paid"}, {"_id": 0, "order_id": 1}
+            )
+            if has_paid_order:
+                clean += 1
+                continue
+            try:
+                has_sub_payment = await db.subscription_payments.find_one(
+                    {"user_id": uid, "status": "paid"}, {"_id": 0, "payment_id": 1}
+                )
+                if has_sub_payment:
+                    clean += 1
+                    continue
+            except Exception:
+                pass
+
+            # ── ALERT: no evidence ──
+            alerts.append({
+                "uid": uid,
+                "name": u.get("name"),
+                "mobile": u.get("mobile"),
+                "email": u.get("email"),
+                "current_plan": u.get("subscription_plan"),
+                "membership_type": u.get("membership_type"),
+                "subscription_start": str(u.get("subscription_start") or ""),
+                "subscription_expiry": str(u.get("subscription_expiry") or ""),
+                "user_created_at": str(u.get("created_at") or ""),
+                "severity": "HIGH — no payment evidence detected",
+            })
+
+        return {
+            "success": True,
+            "window_days": days,
+            "cutoff_utc": cutoff,
+            "summary": {
+                "total_recent_paid_plan_activations": len(recent),
+                "clean_with_evidence": clean,
+                "alerts_no_evidence": len(alerts),
+            },
+            "alerts": alerts,
+            "recommended_action": (
+                f"Review these {len(alerts)} alerts weekly. If count trends up, a new leak "
+                "vector has emerged — audit code paths that mutate subscription_plan. "
+                "If count stays 0, the reactive layers (webhook sig + cron gates) are holding."
+            ),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[MONITOR-RECENT] Error: {e}")
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
+
+
+
 @router.post("/admin/audit-single-user")
 async def audit_single_user(request: Request):
     """
