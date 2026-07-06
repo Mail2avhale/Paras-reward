@@ -2372,10 +2372,13 @@ async def auto_sync_razorpay_payments():
         }
         
         # Get all pending orders - REDUCED limit to prevent event loop blocking
-        # CRITICAL FIX: Exclude cancelled/failed orders from auto-sync
+        # CRITICAL FIX (Feb 2026): The previous version had a duplicate `status`
+        # key in the dict literal — the second `$nin` clause silently OVERRODE
+        # the first `$in` clause, causing the query to pull every order except
+        # cancelled/failed instead of only pending ones. Merged into a single
+        # `status: {$in: [...]}` clause. Cancelled/failed orders remain excluded.
         pending_orders = await db.razorpay_orders.find({
             "status": {"$in": ["created", "pending", "attempted"]},
-            "status": {"$nin": ["cancelled", "failed", "error", "timeout", "dismissed"]}
         }).to_list(20)  # Reduced from 200 to 20 to minimize blocking time
         
         if not pending_orders:
@@ -2434,10 +2437,15 @@ async def auto_sync_razorpay_payments():
                             continue
                         
                         # ATOMIC CLAIM: Mark order as processing to prevent race condition
+                        # Feb 2026: also exclude cancelled/failed/etc. to prevent
+                        # the auto-sync from over-riding a user-initiated cancel.
                         claim_result = await db.razorpay_orders.find_one_and_update(
                             {
                                 "order_id": order_id,
-                                "status": {"$nin": ["paid", "processing"]}
+                                "status": {"$nin": [
+                                    "paid", "processing",
+                                    "cancelled", "failed", "error", "timeout", "dismissed",
+                                ]}
                             },
                             {
                                 "$set": {
@@ -2671,6 +2679,28 @@ async def auto_sync_captured_from_razorpay():
                 # CRITICAL CHECK 1: If order is already paid/processing, skip completely
                 if order.get("status") in ["paid", "processing"]:
                     continue  # Already processed - skip to prevent double activation
+
+                # CRITICAL CHECK 1b (Feb 2026 revenue-leak fix): if the frontend
+                # already marked this order as cancelled / failed / errored /
+                # timed-out / dismissed, DO NOT activate the subscription even
+                # if a captured payment matches. This mirrors the same gate in
+                # the /webhook and /verify-payment endpoints. Preserves user
+                # intent — a cancelled order stays cancelled. If the user was
+                # actually charged (rare async-UPI edge case), support can
+                # manually reconcile via /admin/fix-subscription. Silent
+                # auto-activation of cancelled orders was the reported bug.
+                if order.get("status") in ["cancelled", "failed", "error", "timeout", "dismissed"]:
+                    print(f"[RAZORPAY-CAPTURED-SYNC] Order {order_id} is {order.get('status')} - NOT activating (respecting user cancel)")
+                    # Tag the order so support can find these easily
+                    await db.razorpay_orders.update_one(
+                        {"order_id": order_id},
+                        {"$set": {
+                            "captured_sync_skipped_reason": f"order_status_was_{order.get('status')}",
+                            "captured_sync_skipped_at": datetime.now(timezone.utc).isoformat(),
+                            "captured_payment_id_seen": payment_id,
+                        }}
+                    )
+                    continue
                 
                 # CRITICAL CHECK 2: Check if this specific payment was already used in vip_payments
                 existing_vip = await db.vip_payments.find_one({"payment_id": payment_id})
@@ -2700,10 +2730,15 @@ async def auto_sync_captured_from_razorpay():
                 now = datetime.now(timezone.utc)
                 
                 # ATOMIC CLAIM ORDER: Mark as processing to prevent race condition
+                # Feb 2026: also exclude cancelled/failed/etc. so this claim
+                # cannot race with a user cancel that landed a microsecond ago.
                 claim_order = await db.razorpay_orders.find_one_and_update(
                     {
                         "order_id": order_id,
-                        "status": {"$nin": ["paid", "processing"]}
+                        "status": {"$nin": [
+                            "paid", "processing",
+                            "cancelled", "failed", "error", "timeout", "dismissed",
+                        ]}
                     },
                     {
                         "$set": {

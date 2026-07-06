@@ -717,3 +717,28 @@ See `/app/memory/test_credentials.md`
 - **Tests**: `/app/backend/tests/test_iteration_256_features.py` (12/12 executed pass) + `/app/backend/tests/test_mall_mining_burn.py` (6/6 pass) regression.
 - **Testing agent report**: `/app/test_reports/iteration_256.json` — 100% pass, no bugs blocking launch. Two minor code-hygiene items fixed post-report (legacy MAX_WITHDRAWAL retirement + narrower except handling in bank redeem).
 
+
+## 2026-02-05 — CRITICAL Razorpay Subscription Revenue-Leak Fixes (3 bugs)
+
+**User report**: "Production var users razorpay gateway varun order cancel karto / fail hoto / pending hoto tar subscription active hote — paisa न milता."
+
+### Bug #1 (SECURITY — CVSS 8.8, revenue leak): Webhook signature bypass
+- **File**: `/app/backend/routes/razorpay_payments.py` `/webhook` endpoint (~line 666)
+- **Root cause**: `if webhook_secret and signature:` — when either was missing, fell through to `else` branch and processed the payload without ANY authentication.
+- **Attack chain**: Attacker with any valid account calls `POST /api/razorpay/create-order` → gets order_id → sends fake `POST /api/razorpay/webhook` with `{"event":"payment.captured","payload":{"payment":{"entity":{"order_id":"...","id":"any","amount":30000}}}}` — WITHOUT X-Razorpay-Signature header → subscription activated for free.
+- **Fix**: Hard-require BOTH `RAZORPAY_WEBHOOK_SECRET` env var AND `X-Razorpay-Signature` header. Uses `hmac.compare_digest` (constant-time). Missing secret → 503. Missing/invalid signature → 401.
+- **Verified**: no-sig → 401 ✅ / wrong-sig → 401 ✅ / correct-sig → 200 ✅.
+
+### Bug #2 (LOGIC): Auto-sync cron ignoring user cancellation
+- **File**: `/app/backend/server.py` `auto_sync_captured_from_razorpay()` (~line 2610)
+- **Root cause**: The cron only checked `if status in [paid, processing]: skip`. Missing `cancelled/failed/error/timeout/dismissed` gate → a user-cancelled order with a late-async-UPI capture would silently auto-activate ignoring the cancel.
+- **Fix**: Added explicit skip on cancelled/failed/error/timeout/dismissed statuses (matches the same gate in `/webhook` and `/verify-payment`). Also updated the atomic claim `$nin` list to prevent race conditions.
+
+### Bug #3 (LOGIC): Duplicate `status` key silently dropped filter
+- **File**: `/app/backend/server.py` `auto_sync_razorpay_payments()` (~line 2376)
+- **Root cause**: `{"status": {"$in": [...]}, "status": {"$nin": [...]}}` — Python dict literal, second key overrides first. Query became just `$nin`, pulling `paid`/`processing` orders too (though atomic claim caught them).
+- **Fix**: Merged into single `{"status": {"$in": ["created","pending","attempted"]}}` clause. Atomic claim `$nin` extended to include cancelled/failed statuses.
+
+### Production Redeploy Required
+User must trigger a production redeploy to push these fixes to https://bugzappers.emergent.host / www.parasreward.com. **Also verify**: `RAZORPAY_WEBHOOK_SECRET` env var IS set in production. If missing, webhook will now return 503 (safer than the old fail-open behavior).
+

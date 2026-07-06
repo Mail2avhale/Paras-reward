@@ -665,34 +665,51 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
 
 @router.post("/webhook")
 async def razorpay_webhook(request: Request):
-    """Handle Razorpay webhooks for payment events - WITH IDEMPOTENCY"""
+    """Handle Razorpay webhooks for payment events - WITH IDEMPOTENCY
+
+    SECURITY (Feb 2026): This endpoint is UNAUTHENTICATED (Razorpay servers
+    call it — no user JWT). Therefore signature verification is MANDATORY.
+    Historical behaviour allowed payloads through when signature/secret was
+    missing → attacker could forge `payment.captured` events and activate
+    subscriptions without paying. FIXED: strict signature check, no bypass.
+    """
     try:
         body = await request.body()
         signature = request.headers.get("X-Razorpay-Signature", "")
-        
+
         logging.info(f"[WEBHOOK] Received webhook call, signature present: {bool(signature)}")
-        
+
         # Verify webhook signature using WEBHOOK SECRET (not API secret!)
         webhook_secret = RAZORPAY_WEBHOOK_SECRET or RAZORPAY_KEY_SECRET
-        
-        if webhook_secret and signature:
-            expected_signature = hmac.new(
-                webhook_secret.encode('utf-8'),
-                body,
-                hashlib.sha256
-            ).hexdigest()
-            
-            if signature != expected_signature:
-                logging.warning(f"[WEBHOOK] Invalid signature. Expected: {expected_signature[:20]}..., Got: {signature[:20]}...")
-                # SECURITY FIX: Reject invalid signatures to prevent fake webhook attacks
-                raise HTTPException(status_code=401, detail="Invalid webhook signature")
-        else:
-            logging.warning("[WEBHOOK] No signature verification - WEBHOOK SECRET not configured!")
-            # Allow processing but log warning - admin should configure webhook secret
-        
+
+        # ── HARD-REQUIRE both webhook_secret AND signature. ────────────
+        # If either is missing, REJECT — never fall through to activation.
+        # A misconfigured server (missing RAZORPAY_WEBHOOK_SECRET) MUST fail
+        # closed rather than fail open. Rejects fake webhook attacks that
+        # send an empty / spoofed X-Razorpay-Signature header.
+        if not webhook_secret:
+            logging.error("[WEBHOOK] Rejected: RAZORPAY_WEBHOOK_SECRET not configured on server")
+            raise HTTPException(
+                status_code=503,
+                detail="Webhook secret not configured on server. Refusing to process webhook."
+            )
+        if not signature:
+            logging.warning("[WEBHOOK] Rejected: missing X-Razorpay-Signature header")
+            raise HTTPException(status_code=401, detail="Missing webhook signature")
+
+        expected_signature = hmac.new(
+            webhook_secret.encode('utf-8'),
+            body,
+            hashlib.sha256
+        ).hexdigest()
+
+        if not hmac.compare_digest(signature, expected_signature):
+            logging.warning(f"[WEBHOOK] Rejected: invalid signature. len(got)={len(signature)}")
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
         payload = await request.json()
         event = payload.get("event")
-        
+
         logging.info(f"[WEBHOOK] Event received: {event}")
         
         if event == "payment.captured":
