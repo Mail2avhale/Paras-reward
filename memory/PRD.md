@@ -742,3 +742,24 @@ See `/app/memory/test_credentials.md`
 ### Production Redeploy Required
 User must trigger a production redeploy to push these fixes to https://bugzappers.emergent.host / www.parasreward.com. **Also verify**: `RAZORPAY_WEBHOOK_SECRET` env var IS set in production. If missing, webhook will now return 503 (safer than the old fail-open behavior).
 
+
+## 2026-02-05 — Audit Endpoints Fixed + New Comprehensive Audit Endpoint
+
+Follow-up to the 3 Razorpay revenue-leak bugs. Discovered the existing audit/fix endpoints had a silent-false-negative bug themselves:
+
+### Bug #4 (audit was lying): `user_id` vs `uid` field mismatch
+- Files: `/admin/fix-cancelled-subscriptions` (~2152), `/admin/audit-cancelled-elite` (~2272)
+- Both queried `db.users.find_one({"user_id": uid})` — but users collection uses `uid`, not `user_id`. All lookups returned None → audit reported ZERO affected users even when leak was active.
+- Fix: Changed to `{"uid": uid}` in 3 places. Also extended plan-check to include `growth` + `startup` (not just `elite`).
+
+### NEW: `/api/razorpay/admin/audit-paid-plans-without-payment`
+Comprehensive scan endpoint. Finds users on ANY paid plan (elite/growth/startup) who have:
+- No paid razorpay_order, AND
+- No subscription_payments row, AND
+- No admin_upgraded / admin_fixed flag
+
+Returns detailed suspicious_users list with recent cancelled orders for context. Supports `dry_run=true` (default) for safe preview and `dry_run=false` for bulk downgrade to explorer. Uses `admin_pin=123456`.
+
+### Verification
+15/15 pytest assertions passed across 10 test cases. Report: `/app/test_reports/iteration_257.json`. Test file: `/app/backend/tests/test_razorpay_webhook_audit_security.py`.
+
