@@ -2193,16 +2193,20 @@ async def fix_cancelled_order_subscriptions(request: Request):
             user_id = order.get("user_id")
             if not user_id:
                 continue
-            
-            # Get user
-            user = await db.users.find_one({"user_id": user_id})
+
+            # Get user — CRITICAL BUG FIX (Feb 2026): the users collection
+            # keys on `uid`, NOT `user_id`. Previous version silently found
+            # zero users → downgraded nobody → the audit endpoint reported
+            # false-negative "all clean" while dozens of leaks stayed live.
+            user = await db.users.find_one({"uid": user_id})
             if not user:
                 continue
-            
+
             current_plan = user.get("subscription_plan", "explorer")
-            
-            # Only process if user has Elite but order is cancelled
-            if current_plan != "elite":
+
+            # Only process users on PAID plans (Elite / Growth / Startup).
+            # Explorer is free — a cancelled order there is a no-op.
+            if current_plan not in ("elite", "growth", "startup"):
                 already_correct += 1
                 continue
             
@@ -2229,9 +2233,9 @@ async def fix_cancelled_order_subscriptions(request: Request):
             })
             
             if not dry_run:
-                # Downgrade to Explorer
+                # Downgrade to Explorer (uid, not user_id)
                 await db.users.update_one(
-                    {"user_id": user_id},
+                    {"uid": user_id},
                     {
                         "$set": {
                             "subscription_plan": "explorer",
@@ -2239,12 +2243,13 @@ async def fix_cancelled_order_subscriptions(request: Request):
                             "subscription_start": None,
                             "downgrade_reason": f"Cancelled order {order.get('order_id')} - no paid orders",
                             "downgrade_date": datetime.now(timezone.utc).isoformat(),
-                            "admin_fixed": True
+                            "admin_fixed": True,
+                            "previous_plan_at_downgrade": current_plan,
                         }
                     }
                 )
                 fixed_count += 1
-                logging.info(f"[FIX-CANCELLED] Downgraded {user_id} ({user.get('name')}) to Explorer - no paid orders")
+                logging.info(f"[FIX-CANCELLED] Downgraded {user_id} ({user.get('name')}) from {current_plan} → Explorer — no paid orders")
         
         return {
             "success": True,
@@ -2304,15 +2309,15 @@ async def audit_cancelled_with_elite(request: Request):
             
             processed_users.add(user_id)
             
-            # Get user
-            user = await db.users.find_one({"user_id": user_id})
+            # Get user — BUG FIX (Feb 2026): user schema uses `uid` not `user_id`.
+            user = await db.users.find_one({"uid": user_id})
             if not user:
                 continue
-            
+
             current_plan = user.get("subscription_plan", "explorer")
-            
-            # Only show Elite users
-            if current_plan != "elite":
+
+            # Show ALL paid plans (elite / growth / startup), not just elite.
+            if current_plan not in ("elite", "growth", "startup"):
                 continue
             
             # Get all orders for this user
@@ -2363,6 +2368,166 @@ async def audit_cancelled_with_elite(request: Request):
         import traceback
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
+
+
+@router.post("/admin/audit-paid-plans-without-payment")
+async def audit_paid_plans_without_payment(request: Request):
+    """
+    COMPREHENSIVE AUDIT (Feb 2026) — Find every user currently on a PAID plan
+    (elite / growth / startup) who has NO evidence of a legitimate payment.
+
+    "Legitimate payment" = any of:
+      1. A razorpay_order with status="paid" for this user, OR
+      2. A `subscription_payments` row (admin/PRC-based activations), OR
+      3. An `admin_fixed=True` flag on the user (already reconciled), OR
+      4. `admin_upgraded=True` (manually granted by admin) — bypasses check.
+
+    Users failing ALL of these are HIGHLY suspicious — the plan was likely
+    activated via the webhook-bypass revenue leak (fixed Feb 5 2026) or the
+    cron cancelled-order gap. Support should manually review each row before
+    downgrading in bulk.
+
+    Auth: admin PIN `123456` required. `dry_run=true` by default — no writes.
+
+    Usage:
+      curl -X POST "$API/api/razorpay/admin/audit-paid-plans-without-payment" \\
+        -H "Content-Type: application/json" \\
+        -d '{"admin_pin":"123456","dry_run":true}'
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        dry_run = bool(data.get("dry_run", True))
+        limit = int(data.get("limit", 500))
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+
+        paid_plans = ["elite", "growth", "startup"]
+        cursor = db.users.find(
+            {"subscription_plan": {"$in": paid_plans}},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1,
+             "subscription_plan": 1, "subscription_expiry": 1,
+             "subscription_start": 1, "admin_upgraded": 1,
+             "admin_fixed": 1, "created_at": 1}
+        )
+        users_on_paid_plan = await cursor.to_list(50000)
+        logging.info(f"[AUDIT-PAID] Scanning {len(users_on_paid_plan)} paid-plan users")
+
+        suspicious = []
+        legit_paid = 0
+        legit_prc = 0
+        legit_admin_granted = 0
+
+        for u in users_on_paid_plan:
+            uid = u.get("uid")
+            if not uid:
+                continue
+
+            # Fast paths — trust admin-granted flags
+            if u.get("admin_upgraded") is True or u.get("admin_fixed") is True:
+                legit_admin_granted += 1
+                continue
+
+            # 1. Any paid Razorpay order?
+            has_paid_order = await db.razorpay_orders.find_one(
+                {"user_id": uid, "status": "paid"},
+                {"_id": 0, "order_id": 1},
+            )
+            if has_paid_order:
+                legit_paid += 1
+                continue
+
+            # 2. Any subscription_payments row (PRC-based / manual)?
+            try:
+                has_sub_payment = await db.subscription_payments.find_one(
+                    {"user_id": uid},
+                    {"_id": 0, "payment_id": 1},
+                )
+                if has_sub_payment:
+                    legit_prc += 1
+                    continue
+            except Exception:
+                pass  # collection may not exist — non-fatal
+
+            # ── SUSPICIOUS ──
+            # Enrich with recent cancelled/failed orders for context
+            recent_cancelled = await db.razorpay_orders.find(
+                {"user_id": uid,
+                 "status": {"$in": ["cancelled", "failed", "error", "timeout", "dismissed"]}},
+                {"_id": 0, "order_id": 1, "status": 1, "created_at": 1, "amount": 1},
+            ).sort("created_at", -1).to_list(5)
+            total_orders = await db.razorpay_orders.count_documents({"user_id": uid})
+
+            suspicious.append({
+                "uid": uid,
+                "name": u.get("name"),
+                "email": u.get("email"),
+                "mobile": u.get("mobile"),
+                "current_plan": u.get("subscription_plan"),
+                "subscription_start": str(u.get("subscription_start") or ""),
+                "subscription_expiry": str(u.get("subscription_expiry") or ""),
+                "created_at": str(u.get("created_at") or ""),
+                "total_razorpay_orders": total_orders,
+                "recent_cancelled_orders": [
+                    {
+                        "order_id": o.get("order_id"),
+                        "status": o.get("status"),
+                        "amount": o.get("amount"),
+                        "created_at": str(o.get("created_at") or ""),
+                    }
+                    for o in recent_cancelled
+                ],
+                "reason": (
+                    "on_paid_plan_no_paid_orders_no_prc_payment"
+                    if total_orders == 0
+                    else "on_paid_plan_only_cancelled_or_failed_orders"
+                ),
+            })
+
+            if not dry_run and len(suspicious) <= limit:
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {
+                        "subscription_plan": "explorer",
+                        "subscription_expiry": None,
+                        "previous_plan_at_downgrade": u.get("subscription_plan"),
+                        "downgrade_reason": "audit_paid_plans_without_payment",
+                        "downgrade_date": datetime.now(timezone.utc).isoformat(),
+                        "admin_fixed": True,
+                    }}
+                )
+
+        # Cap the response payload for network safety
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "summary": {
+                "total_users_on_paid_plan": len(users_on_paid_plan),
+                "legit_paid_razorpay_order": legit_paid,
+                "legit_prc_or_subscription_payment": legit_prc,
+                "legit_admin_granted": legit_admin_granted,
+                "suspicious_count": len(suspicious),
+            },
+            "suspicious_users": suspicious[:limit],
+            "message": (
+                f"Found {len(suspicious)} paid-plan users with NO paid orders and NO PRC subscription. "
+                f"{'DRY RUN — no changes made. ' if dry_run else 'DOWNGRADED all to Explorer. '}"
+                "Review carefully — false positives include: (a) subscriptions granted before "
+                "razorpay_orders collection existed, (b) legacy free upgrades. Downgrade only "
+                "after manual sample-check."
+            ),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[AUDIT-PAID] Error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
+
+
 
 
 @router.post("/admin/bulk-reverse-subscriptions")
