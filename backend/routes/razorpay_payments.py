@@ -2416,11 +2416,14 @@ async def audit_single_user(request: Request):
              "subscription_plan": 1, "subscription_expiry": 1,
              "subscription_start": 1, "subscription_status": 1,
              "subscription_payment_type": 1, "last_prc_subscription": 1,
+             "subscription_type": 1, "activated_via": 1,
+             "subscription_expired": 1, "subscription_history": 1,
              "membership_type": 1, "migrated_from_vip": 1,
              "admin_upgraded": 1, "admin_fixed": 1,
              "test_account": 1, "role": 1, "created_at": 1,
              "downgrade_reason": 1, "previous_plan_at_downgrade": 1,
-             "last_payment_id": 1},
+             "last_payment_id": 1, "sponsored_by": 1,
+             "sale_elite_received_from": 1, "gifted_subscription": 1},
         ).to_list(5)
 
         if not candidates:
@@ -2494,14 +2497,38 @@ async def audit_single_user(request: Request):
                 reasons_for_legit.append("has last_prc_subscription timestamp")
             if u.get("test_account") is True:
                 reasons_for_legit.append("test_account=true")
+            # Sponsored / gift subscriptions — beneficiary of legit gift.
+            if u.get("sponsored_by") or u.get("sale_elite_received_from") or u.get("gifted_subscription"):
+                reasons_for_legit.append(
+                    f"gift-recipient (sponsored_by={u.get('sponsored_by') or u.get('sale_elite_received_from')})"
+                )
+            # `activated_via` is stamped by the auto-sync / manual-activate paths
+            # that require a real captured Razorpay payment. Trust it.
+            if u.get("activated_via"):
+                reasons_for_legit.append(f"activated_via={u.get('activated_via')}")
+            # Any historical subscription_history entry — legacy grants.
+            sh = u.get("subscription_history")
+            if isinstance(sh, list) and len(sh) > 0:
+                reasons_for_legit.append(f"subscription_history has {len(sh)} entries")
+            # last_payment_id present = user was linked to a real payment at some point.
+            if u.get("last_payment_id"):
+                reasons_for_legit.append(f"last_payment_id={u.get('last_payment_id')[:20]}…")
+
             if paid_orders:
                 reasons_for_legit.append(
                     f"{len(paid_orders)} paid Razorpay order(s)"
                 )
             if sub_payments:
-                reasons_for_legit.append(
-                    f"{len(sub_payments)} row(s) in subscription_payments"
-                )
+                # Only count subscription_payments with status=paid as legit.
+                # A failed / cancelled sub_payment does NOT prove real payment.
+                paid_sub_payments = [
+                    p for p in sub_payments
+                    if (p.get("status") or "").lower() == "paid"
+                ]
+                if paid_sub_payments:
+                    reasons_for_legit.append(
+                        f"{len(paid_sub_payments)} PAID subscription_payments row(s)"
+                    )
             if sub_transactions:
                 reasons_for_legit.append(
                     f"{len(sub_transactions)} subscription txn(s) in transactions"
@@ -2558,6 +2585,17 @@ async def audit_single_user(request: Request):
                     "downgrade_reason": u.get("downgrade_reason"),
                     "previous_plan_at_downgrade": u.get("previous_plan_at_downgrade"),
                     "last_payment_id": u.get("last_payment_id"),
+                    # Additional signals — Feb 6 2026
+                    "activated_via": u.get("activated_via"),
+                    "subscription_type": u.get("subscription_type"),
+                    "subscription_expired": u.get("subscription_expired"),
+                    "sponsored_by": u.get("sponsored_by"),
+                    "sale_elite_received_from": u.get("sale_elite_received_from"),
+                    "gifted_subscription": u.get("gifted_subscription"),
+                    "subscription_history_count": (
+                        len(u.get("subscription_history") or [])
+                        if isinstance(u.get("subscription_history"), list) else None
+                    ),
                 },
 
                 # Full evidence — payment history
@@ -2640,7 +2678,14 @@ async def audit_paid_plans_without_payment(request: Request):
              "membership_type": 1,
              "subscription_status": 1,
              "test_account": 1,
-             "role": 1}
+             "role": 1,
+             # Feb 6 2026 (v3 audit): additional signals for legit legacy grants.
+             "activated_via": 1,
+             "last_payment_id": 1,
+             "sponsored_by": 1,
+             "sale_elite_received_from": 1,
+             "gifted_subscription": 1,
+             "subscription_history": 1}
         )
         users_on_paid_plan = await cursor.to_list(50000)
         logging.info(f"[AUDIT-PAID] Scanning {len(users_on_paid_plan)} paid-plan users")
@@ -2653,6 +2698,10 @@ async def audit_paid_plans_without_payment(request: Request):
         legit_prc_flag = 0
         legit_tx_subscription = 0
         legit_admin_role = 0
+        legit_activated_via = 0
+        legit_last_payment_id = 0
+        legit_gift_recipient = 0
+        legit_sub_history = 0
 
         for u in users_on_paid_plan:
             uid = u.get("uid")
@@ -2689,7 +2738,28 @@ async def audit_paid_plans_without_payment(request: Request):
                 legit_admin_role += 1
                 continue
 
-            # 5. Any paid Razorpay order?
+            # 5. Gift recipient — someone else sponsored this user's plan
+            if u.get("sponsored_by") or u.get("sale_elite_received_from") or u.get("gifted_subscription"):
+                legit_gift_recipient += 1
+                continue
+
+            # 6. Activated via a legit auto/manual sync path (requires captured payment)
+            if u.get("activated_via"):
+                legit_activated_via += 1
+                continue
+
+            # 7. Historical subscription_history — legacy grants
+            sh = u.get("subscription_history")
+            if isinstance(sh, list) and len(sh) > 0:
+                legit_sub_history += 1
+                continue
+
+            # 8. last_payment_id linked to any real payment
+            if u.get("last_payment_id"):
+                legit_last_payment_id += 1
+                continue
+
+            # 9. Any paid Razorpay order?
             has_paid_order = await db.razorpay_orders.find_one(
                 {"user_id": uid, "status": "paid"},
                 {"_id": 0, "order_id": 1},
@@ -2698,10 +2768,10 @@ async def audit_paid_plans_without_payment(request: Request):
                 legit_paid += 1
                 continue
 
-            # 6. Any subscription_payments row (PRC-based / manual)?
+            # 10. Any PAID subscription_payments row (checks status too, not just existence)
             try:
                 has_sub_payment = await db.subscription_payments.find_one(
-                    {"user_id": uid},
+                    {"user_id": uid, "status": "paid"},
                     {"_id": 0, "payment_id": 1},
                 )
                 if has_sub_payment:
@@ -2710,7 +2780,7 @@ async def audit_paid_plans_without_payment(request: Request):
             except Exception:
                 pass  # collection may not exist — non-fatal
 
-            # 7. Legacy transactions with type='subscription_prc' / 'subscription_payment'
+            # 11. Legacy transactions with type='subscription_prc' / 'subscription_payment'
             try:
                 has_sub_tx = await db.transactions.find_one(
                     {"user_id": uid,
@@ -2784,23 +2854,29 @@ async def audit_paid_plans_without_payment(request: Request):
                 "legit_admin_granted_flag": legit_admin_granted,
                 "legit_vip_migration": legit_vip_migration,
                 "legit_prc_flag": legit_prc_flag,
+                "legit_gift_recipient": legit_gift_recipient,
+                "legit_activated_via": legit_activated_via,
+                "legit_subscription_history": legit_sub_history,
+                "legit_last_payment_id": legit_last_payment_id,
                 "legit_paid_razorpay_order": legit_paid,
-                "legit_prc_or_subscription_payment": legit_prc,
+                "legit_paid_subscription_payments": legit_prc,
                 "legit_legacy_subscription_transaction": legit_tx_subscription,
                 "suspicious_count": len(suspicious),
                 "legit_total": (
                     legit_admin_role + legit_admin_granted + legit_vip_migration
-                    + legit_prc_flag + legit_paid + legit_prc + legit_tx_subscription
+                    + legit_prc_flag + legit_gift_recipient + legit_activated_via
+                    + legit_sub_history + legit_last_payment_id
+                    + legit_paid + legit_prc + legit_tx_subscription
                 ),
             },
             "suspicious_users": suspicious[:limit],
             "message": (
                 f"Found {len(suspicious)} paid-plan users with NO evidence of payment "
-                f"across 7 checked sources (paid order / subscription_payments / "
-                f"subscription tx / admin flags / VIP migration / PRC flag / admin role). "
+                f"across 11 checked sources (paid order / PAID subscription_payments / "
+                f"subscription tx / admin flags / VIP migration / PRC flag / admin role / "
+                f"gift recipient / activated_via / subscription_history / last_payment_id). "
                 f"{'DRY RUN — no changes made. ' if dry_run else 'DOWNGRADED all to Explorer. '}"
-                "Review carefully before dry_run=false — false positives may still exist "
-                "for users granted subscriptions via ad-hoc scripts or older code paths."
+                "Enhanced Feb 6 2026 audit."
             ),
         }
     except HTTPException:
