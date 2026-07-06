@@ -36806,6 +36806,20 @@ api_router.include_router(admin_redeem_limits_router, prefix="/admin/redeem-limi
 # User-facing bank details (NOT admin-only) — allows self-service profile saves
 api_router.include_router(user_bank_details_router, prefix="/users")
 
+# ── Admin Bank Redeem Limits Config (Feb 5 2026) ─────────────────────────
+# Admin-editable min / max / monthly-cap for bank redemptions. Reads by
+# manual_bank_transfer.py at request time.
+try:
+    from routes.admin_bank_redeem_config import (
+        router as admin_bank_redeem_config_router,
+        set_db as set_admin_bank_redeem_config_db,
+    )
+    set_admin_bank_redeem_config_db(db)
+    api_router.include_router(admin_bank_redeem_config_router)
+    logging.info("[STARTUP] admin_bank_redeem_config router wired")
+except Exception as _abrc_err:
+    logging.error(f"[STARTUP] admin_bank_redeem_config wiring failed: {_abrc_err}")
+
 # Include admin dashboard router (refactored)
 set_admin_dashboard_db(db)
 set_admin_dashboard_cache(cache)

@@ -631,13 +631,60 @@ async def create_redeem_request(request: RedeemRequest):
                 ),
             )
 
-        # 1b. Legacy progressive ceiling kept ONLY as an upper bound sanity
-        # guard (per-request cap). The lower-bound minimum is no longer
-        # enforced for the public flow because amounts are now fixed.
-        progressive = await compute_progressive_min_withdrawal(user_id)
-        user_max = max(progressive["maximum"], MAX_WITHDRAWAL)
-        if amount > user_max:
-            raise HTTPException(status_code=400, detail=f"Maximum withdrawal is ₹{user_max:,}")
+        # 1b. Legacy progressive ceiling — RETIRED Feb 5 2026 in favour of
+        # admin-configurable limits (1c below). Kept only for the API response
+        # in `progressive` for backward-compat with older clients that read it.
+        # The actual max-cap enforcement is now done via admin_bank_redeem_config.
+        progressive = await compute_progressive_min_withdrawal(user_id)  # noqa: F841
+
+        # 1c. NEW (Feb 5 2026): Admin-configurable per-tx + monthly-cap limits.
+        # Reads /admin_settings/_id=bank_redeem_limits. Falls back to hardcoded
+        # defaults if the config doc is missing. Enforced BEFORE fee calc.
+        try:
+            from routes.admin_bank_redeem_config import (
+                get_bank_redeem_config,
+                get_user_monthly_bank_redeem_total,
+            )
+            cfg = await get_bank_redeem_config()
+            cfg_min = int(cfg["min_withdrawal_inr"])
+            cfg_max = int(cfg["max_withdrawal_inr"])
+            monthly_cap = int(cfg["monthly_user_cap_inr"])
+            if amount < cfg_min:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Minimum bank redeem is ₹{cfg_min:,} (admin configured).",
+                )
+            if amount > cfg_max:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Maximum bank redeem is ₹{cfg_max:,} (admin configured).",
+                )
+            if monthly_cap > 0:
+                month_total = await get_user_monthly_bank_redeem_total(user_id)
+                if month_total + amount > monthly_cap:
+                    remaining = max(0, monthly_cap - month_total)
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            f"Monthly cap ₹{monthly_cap:,} would be exceeded. "
+                            f"You've redeemed ₹{month_total:,} this month — only ₹{remaining:,} remains. "
+                            "Try again next month or pick a smaller amount."
+                        ),
+                    )
+        except HTTPException:
+            raise
+        except ImportError as _cfg_err:
+            # Config module missing — log & fall through to hardcoded defaults.
+            logging.warning(f"[BANK-REDEEM] admin_bank_redeem_config unavailable: {_cfg_err}")
+        except Exception as _cfg_err:
+            # DB / infra error — log loudly but do NOT fail-open. Enforce the
+            # hardcoded defaults (100 min, 10000 max) so a Mongo outage cannot
+            # be used to bypass admin-configured limits by attackers.
+            logging.error(f"[BANK-REDEEM] Admin config read failed: {_cfg_err}")
+            if amount < 100:
+                raise HTTPException(status_code=400, detail="Minimum bank redeem is ₹100.")
+            if amount > 10000:
+                raise HTTPException(status_code=400, detail="Maximum bank redeem is ₹10,000.")
         
         # 2. Get user
         user = await db.users.find_one({"uid": user_id})

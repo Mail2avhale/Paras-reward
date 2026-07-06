@@ -67,62 +67,76 @@ COLLECT_TO_START_COOLDOWN_SECONDS = 60  # Mirror of main mining: after a user
 # seconds before manually starting a fresh mining session. This drives in-app
 # retention + AdMob impressions (consistent with the main mining flow).
 
-# Tax & fee constants — REVISED Jun 30 2026 (V2: Option B "separate entry fee")
-# OLD MODEL (pre-2026-06-30): MRP + 18% GST + 10% Processing → cascaded total
-# NEW MODEL: MRP is ALL-INCLUSIVE (no GST added). Processing fee is a SEPARATE
-# entry fee charged from the user's main PRC wallet at booking time. It does NOT
-# count toward the mining target — the user must still mine the full MRP × 10 PRC.
+# Tax & fee constants — REVISED Feb 5 2026 (V3: "Prepaid Deposit" model)
+# HISTORY:
+#   • V0 (pre-Jun 2026): MRP + 18% GST + 10% Processing → cascaded total
+#   • V2 (Jun 30 2026):   MRP all-inclusive; upfront = SEPARATE processing
+#                         fee that did NOT count toward mining target.
+#   • V3 (Feb  5 2026):   Upfront is a USER-SELECTABLE PREPAID DEPOSIT
+#                         (10% / 20% / 35% / 50%) that COUNTS toward the
+#                         mining target. Paying more upfront reduces the
+#                         remaining PRC the user has to mine → faster
+#                         fulfillment. User CHOOSES the percentage at
+#                         booking time.
 #
-# Why the change? Users were confused by the 30% inflation between sticker price
-# and total mining target. Sticker = MRP, period. Processing fee is a transparent
-# one-time booking charge (clearly disclosed at checkout) deducted from the wallet.
-#
-# Existing bookings retain their old breakdown via their immutable
-# `pricing_breakdown` snapshot — only NEW bookings use the new model.
-GST_PERCENT = 0.0          # MRP is all-inclusive (legacy constant kept for back-compat)
-PROCESSING_PERCENT = 0.10  # 10% Processing fee on MRP (charged separately to wallet)
-FINAL_PRICE_MULTIPLIER = 1.0  # Total INR = MRP (no cascade)
-PRICING_MODEL_VERSION = "v2_separate_processing"  # Stored on new bookings for cancel-burn logic
+# Rationale for V3: gives high-PRC-holder users an "instant progress" lever
+# without changing the product price. Small stakes still start at 10%.
+# Existing V2/V0 bookings keep their historical breakdown via the immutable
+# `pricing_breakdown` snapshot on the booking doc.
+GST_PERCENT = 0.0            # MRP is all-inclusive (legacy constant kept)
+PROCESSING_PERCENT = 0.10    # Default upfront % (min). User can pick higher.
+FINAL_PRICE_MULTIPLIER = 1.0
+PRICING_MODEL_VERSION = "v3_prepaid_deposit"  # Stored on new bookings
+ALLOWED_UPFRONT_PERCENTS = (0.10, 0.20, 0.35, 0.50)  # Fixed dropdown values
 
 
-def compute_pricing_breakdown(mrp_inr: float) -> dict:
-    """Pricing breakdown for a Mall product (V2 — MRP all-inclusive).
+def compute_pricing_breakdown(mrp_inr: float, upfront_percent: float = PROCESSING_PERCENT) -> dict:
+    """Pricing breakdown for a Mall product (V3 — PREPAID DEPOSIT model).
 
-    New model (Jun 30 2026):
-      • MRP is the FINAL all-inclusive sticker price — no GST added on top.
-      • Processing fee (10% of MRP) is a SEPARATE one-time entry fee, charged
-        from the user's main PRC wallet at booking. It is NOT a deposit toward
-        the product — the user still mines the full MRP × PRC_INR_RATE PRC.
-      • `total_inr` reflects the product price (= MRP). `total_prc` is the
-        mining target.
-      • `upfront_prc` is renamed semantically: it's the processing fee in PRC.
-        We keep the field name for backwards compatibility with the rest of
-        the booking pipeline.
-
-    Returns the legacy GST keys (= 0) so older frontends that still read them
-    don't crash. Newer UIs check `gst_inr == 0` and hide that row.
+    Feb 5 2026 model:
+      • MRP is the FINAL all-inclusive sticker price.
+      • `upfront_percent` is user-selected: 10% (default) / 20% / 35% / 50%.
+      • Upfront PRC = MRP × upfront_percent × PRC_INR_RATE. This is
+        DEBITED from the user's wallet at booking time AND counts as
+        `paid_prc` on the booking — it is a DEPOSIT toward the product,
+        NOT a separate fee.
+      • Mining target (`total_prc`) is ALWAYS MRP × 10 PRC — full product cost.
+      • Remaining to mine = total_prc - upfront_prc. Higher upfront →
+        smaller remaining → faster fulfillment.
+      • Legacy GST fields returned as 0 for backward-compat with older UIs.
     """
     mrp = float(mrp_inr)
-    processing_inr = round(mrp * PROCESSING_PERCENT, 2)
-    total_inr = round(mrp, 2)  # MRP is the final product price (all-inclusive)
+    # Clamp / snap to allowed values so callers can't pass junk
+    if upfront_percent not in ALLOWED_UPFRONT_PERCENTS:
+        upfront_percent = PROCESSING_PERCENT  # default 10%
+
+    upfront_inr = round(mrp * upfront_percent, 2)
+    total_inr = round(mrp, 2)  # sticker = MRP (all-inclusive)
+    upfront_prc = round(upfront_inr * PRC_INR_RATE)
+    total_prc = round(total_inr * PRC_INR_RATE)
+    remaining_prc = round(max(0, total_prc - upfront_prc))
 
     return {
-        # Total product price breakdown — V2
+        # Total product price breakdown — V3
         "mrp_inr": round(mrp, 2),
-        # Legacy GST fields retained as 0 for back-compat
         "gst_percent": 0.0,
         "gst_inr": 0.0,
-        "processing_percent": PROCESSING_PERCENT * 100,
-        "processing_inr": processing_inr,
-        "total_inr": total_inr,                  # = MRP
-        "total_prc": round(total_inr * PRC_INR_RATE),  # mining target = MRP × 10
-        # "Upfront" semantics in V2 = processing fee (separate entry fee)
-        "upfront_base_inr": round(mrp, 2),       # informational
+        # Semantic in V3: this is the user-selected DEPOSIT %, not a fee
+        "processing_percent": upfront_percent * 100,
+        "processing_inr": upfront_inr,
+        "total_inr": total_inr,
+        "total_prc": total_prc,             # mining target = MRP × 10 (unchanged)
+        # Upfront = prepaid deposit (counts toward paid_prc)
+        "upfront_base_inr": round(mrp, 2),
         "upfront_gst_inr": 0.0,
-        "upfront_processing_inr": processing_inr,
-        "upfront_inr": processing_inr,           # what user pays from wallet (INR equiv)
-        "upfront_prc": round(processing_inr * PRC_INR_RATE),  # what user pays from wallet (PRC)
-        # Model version — used by cancel-burn logic to pick the right formula
+        "upfront_processing_inr": upfront_inr,
+        "upfront_inr": upfront_inr,         # INR debited from wallet
+        "upfront_prc": upfront_prc,         # PRC debited from wallet
+        "upfront_percent": upfront_percent, # numeric fraction (0.10 - 0.50)
+        # V3-specific fields
+        "prepaid_prc": upfront_prc,         # alias — the deposit is prepaid
+        "remaining_prc_after_upfront": remaining_prc,
+        # Model version — cancel-burn / analytics can dispatch on this
         "model": PRICING_MODEL_VERSION,
     }
 
@@ -176,6 +190,10 @@ class DeliveryAddress(BaseModel):
 class BookProductRequest(BaseModel):
     user_id: str
     delivery: Optional[DeliveryAddress] = None  # required for new bookings, optional for legacy
+    # V3 (Feb 5 2026): user-selectable upfront/deposit percentage.
+    # Allowed: 0.10 (default), 0.20, 0.35, 0.50.
+    # Higher deposit = smaller remaining PRC to mine = faster fulfillment.
+    upfront_percent: Optional[float] = 0.10
 
 
 class CollectBookingRequest(BaseModel):
@@ -225,20 +243,18 @@ def parse_iso(s):
         return None
 
 
-def compute_upfront_prc(mrp_inr: int) -> int:
-    """Upfront in PRC = (10% MRP, floor ₹1000) + 18% GST + 10% Processing fee.
+def compute_upfront_prc(mrp_inr: int, upfront_percent: float = PROCESSING_PERCENT) -> int:
+    """Upfront/deposit in PRC (V3 — Feb 2026): MRP × upfront_percent × 10.
 
-    Feb 2026: switched from raw 10% MRP to cascading-fee variant.
-    See `compute_pricing_breakdown` for the full layered math.
+    upfront_percent is user-selected: 0.10 / 0.20 / 0.35 / 0.50.
+    This deposit is DEBITED from wallet AND counts toward paid_prc on the
+    booking (deposit model — user mines only the remaining target).
     """
-    return compute_pricing_breakdown(mrp_inr)["upfront_prc"]
+    return compute_pricing_breakdown(mrp_inr, upfront_percent)["upfront_prc"]
 
 
 def compute_total_prc(mrp_inr: int) -> int:
-    """Total product cost in PRC = MRP + 18% GST + 10% Processing fee (cascading).
-
-    Feb 2026: switched from raw `MRP × 10` to fully tax+fee-loaded total.
-    """
+    """Total mining target in PRC = MRP × 10 (V3 unchanged from V2)."""
     return compute_pricing_breakdown(mrp_inr)["total_prc"]
 
 
@@ -307,30 +323,17 @@ async def assert_active_subscription_for_mining(user_id: str) -> None:
 
 
 async def get_user_network_cap(user_id: str) -> int:
-    """Compute user's 6-tier network cap (800-8000) — IDENTICAL to main mining.
+    """Feb 2026 (V3): Flat 800 cap for all Mall bookings — regardless of
+    referrals. The 6-tier referral cap has been REMOVED for Paras Mall
+    per product decision on Feb 5 2026.
 
-    Mirrors `routes/mining.calculate_network_cap()` so product mining and main
-    mining use the SAME inflation control: a user's referral effort gates how
-    big their effective mining network can be on either side.
+    Rationale: Mall mining should not favor users with large downlines.
+    Everyone gets an equal shot at the same daily throughput. Main mining
+    still uses the referral-based cap (unchanged).
 
-    Range: 800 (no referrals) → 8000 (max via L1-L5 cascade).
-    Falls back to 800 on any error so booking rates never break.
+    Returns: 800 (constant).
     """
-    try:
-        from routes.mining import calculate_network_cap
-        from routes.growth_economy import get_downline_level_counts
-        level_counts = await get_downline_level_counts(user_id, max_depth=5)
-        cap_info = calculate_network_cap(
-            direct_referrals=level_counts.get("l1", 0),
-            l1_indirect_referrals=level_counts.get("l2", 0),
-            l3_count=level_counts.get("l3", 0),
-            l4_count=level_counts.get("l4", 0),
-            l5_count=level_counts.get("l5", 0),
-        )
-        return int(cap_info["cap"])
-    except Exception as e:
-        logging.warning(f"[mall] failed to compute network cap for {user_id}: {e}")
-        return 800  # Tier 1 default — safe baseline matching main mining
+    return 800
 
 
 async def get_daily_rate_for_booking(booking_position: int, user_cap: Optional[int] = None) -> float:
@@ -600,7 +603,9 @@ async def get_product(product_id: str):
 
 @router.post("/book/{product_id}")
 async def book_product(product_id: str, body: BookProductRequest):
-    """Book a product. Debits upfront PRC, creates booking + session."""
+    """Book a product. Debits upfront PRC (user-selected 10/20/35/50%) and
+    credits it toward paid_prc as a prepaid deposit. User mines the rest.
+    """
     product = await db.mall_products.find_one({"product_id": product_id, "active": True})
     if not product:
         raise HTTPException(404, "Product not found or inactive")
@@ -609,12 +614,19 @@ async def book_product(product_id: str, body: BookProductRequest):
     if not user:
         raise HTTPException(404, "User not found")
 
-    upfront_prc = compute_upfront_prc(product["mrp_inr"])
+    # V3 (Feb 2026): validate + snap upfront_percent to allowed values.
+    up_pct = float(body.upfront_percent or PROCESSING_PERCENT)
+    if up_pct not in ALLOWED_UPFRONT_PERCENTS:
+        raise HTTPException(
+            400,
+            f"upfront_percent must be one of {ALLOWED_UPFRONT_PERCENTS} "
+            f"(got {up_pct})."
+        )
+
+    upfront_prc = compute_upfront_prc(product["mrp_inr"], up_pct)
     total_prc = compute_total_prc(product["mrp_inr"])
-    # Full breakdown snapshot — stored on the booking so we have an
-    # immutable audit trail of GST/processing-fee rates at booking time
-    # (in case rates change later, historical bookings keep their context).
-    pricing_breakdown = compute_pricing_breakdown(product["mrp_inr"])
+    # Full breakdown snapshot for audit trail (V3 model recorded).
+    pricing_breakdown = compute_pricing_breakdown(product["mrp_inr"], up_pct)
 
     # Check available PRC balance (respect locked PRC vault)
     balance = float(user.get("prc_balance", 0))
@@ -659,18 +671,18 @@ async def book_product(product_id: str, body: BookProductRequest):
         "mrp_inr": product["mrp_inr"],
         "total_prc": total_prc,
         "upfront_prc": upfront_prc,
-        # Immutable pricing snapshot (V2: MRP all-inclusive + separate processing fee)
+        # V3 immutable pricing snapshot (user-selected upfront_percent + deposit model)
         "pricing_breakdown": pricing_breakdown,
         "pricing_model": pricing_breakdown.get("model", PRICING_MODEL_VERSION),
+        "upfront_percent": up_pct,
         # `total_prc_deducted` mirrors upfront_prc so this booking is counted
         # by the centralized lifetime-redeemed scanner (`get_user_all_time_redeemed`).
-        # Only the wallet-debit portion counts; mined PRC never left the wallet.
         "total_prc_deducted": upfront_prc,
-        # V2: Processing fee is a SEPARATE entry fee — it does NOT count toward
-        # the mining target. paid_prc starts at 0; the user mines the full
-        # `total_prc` (= MRP × 10).
-        "paid_prc": 0,
-        "remaining_prc": total_prc,
+        # V3: Upfront is a PREPAID DEPOSIT — it COUNTS toward the mining
+        # target. paid_prc starts at upfront_prc. The user mines only the
+        # remaining `total_prc - upfront_prc` to reach fulfillment.
+        "paid_prc": upfront_prc,
+        "remaining_prc": max(0, total_prc - upfront_prc),
         "position": position,
         "status": "mining",  # mining → fulfilled → delivered
         "session_start": now.isoformat(),
@@ -827,12 +839,21 @@ async def cancel_booking(
     upfront_prc = int(booking.get("upfront_prc", 0))
     paid_prc = float(booking.get("paid_prc", 0))
     # Burn formula depends on the pricing model used when this booking was created:
+    #   • V3 ("v3_prepaid_deposit"): paid_prc starts at upfront_prc (deposit) and
+    #     grows via mining. Refund the deposit, burn only the mined portion:
+    #     burn = paid_prc - upfront_prc.
     #   • V2 ("v2_separate_processing"): paid_prc is PURE mining accumulation
     #     (processing fee was a separate entry charge). Burn = paid_prc.
     #   • Legacy (pre-2026-06-30): paid_prc started at upfront_prc and grew via
     #     mining. Burn = paid_prc - upfront_prc (mined-above-deposit portion).
-    is_v2 = booking.get("pricing_model") == PRICING_MODEL_VERSION
-    burned_prc = max(0.0, paid_prc if is_v2 else (paid_prc - upfront_prc))
+    model = booking.get("pricing_model") or ""
+    if model == PRICING_MODEL_VERSION or model == "v3_prepaid_deposit":
+        burned_prc = max(0.0, paid_prc - upfront_prc)
+    elif model == "v2_separate_processing":
+        burned_prc = max(0.0, paid_prc)
+    else:
+        # Legacy V0 / unknown — same math as V3 (paid included upfront)
+        burned_prc = max(0.0, paid_prc - upfront_prc)
 
     user = await db.users.find_one({"uid": body.user_id})
     if not user:
@@ -1322,15 +1343,41 @@ async def admin_update_product(product_id: str, body: UpdateProductRequest):
 
 @admin_router.delete("/products/{product_id}")
 async def admin_delete_product(product_id: str):
+    """SOFT delete a product (Feb 2026): sets `active=False` so the product
+    disappears from the public listing/booking endpoints — but existing
+    active bookings continue to mine normally (booking docs snapshot
+    product name + MRP, so removing the master row wouldn't break them
+    functionally; keeping the doc preserves image_url / description for
+    reporting).
+
+    Idempotent: repeated calls on an already-inactive product are no-ops.
+    """
+    product = await db.mall_products.find_one({"product_id": product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(404, "Product not found")
+
     active_bookings = await db.mall_bookings.count_documents({
         "product_id": product_id, "status": {"$in": ["mining", "fulfilled"]}
     })
-    if active_bookings > 0:
-        raise HTTPException(400, f"Cannot delete: {active_bookings} active bookings exist")
-    result = await db.mall_products.delete_one({"product_id": product_id})
-    if result.deleted_count == 0:
-        raise HTTPException(404, "Product not found")
-    return {"success": True}
+
+    await db.mall_products.update_one(
+        {"product_id": product_id},
+        {"$set": {
+            "active": False,
+            "deleted_at": now_utc().isoformat(),
+            "deleted_reason": "admin_soft_delete",
+        }}
+    )
+    return {
+        "success": True,
+        "soft_deleted": True,
+        "product_id": product_id,
+        "message": (
+            f"Product hidden from new bookings. "
+            f"{active_bookings} active booking(s) will continue mining normally."
+        ),
+        "active_bookings_continuing": active_bookings,
+    }
 
 
 @admin_router.get("/bookings")

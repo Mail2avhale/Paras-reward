@@ -550,6 +550,61 @@
   margin-top: 2px;
   line-height: 1.4;
 }
+/* V3 (Feb 2026): user-selectable upfront deposit selector — 10/20/35/50% */
+.mall-upfront-selector {
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, rgba(255, 216, 124, 0.08), rgba(255, 142, 79, 0.06));
+  border: 1px solid rgba(255, 216, 124, 0.28);
+  border-radius: 12px;
+}
+.mall-upfront-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffd87c;
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.mall-upfront-hint {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+  letter-spacing: normal;
+}
+.mall-upfront-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.mall-upfront-chip {
+  padding: 8px 4px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+.mall-upfront-chip:hover {
+  background: rgba(255, 216, 124, 0.08);
+  color: #ffd87c;
+  border-color: rgba(255, 216, 124, 0.35);
+}
+.mall-upfront-chip.active {
+  background: linear-gradient(135deg, #ffd87c, #ff8e4f);
+  color: #1a0e2e;
+  border-color: #ffd87c;
+  box-shadow: 0 4px 12px rgba(255, 142, 79, 0.35);
+  transform: scale(1.02);
+}
+
 .mall-confirm-label {
   font-size: 9px;
   letter-spacing: 0.18em;

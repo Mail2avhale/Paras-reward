@@ -67,6 +67,8 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [pendingBook, setPendingBook] = useState(null);
   const [detailProduct, setDetailProduct] = useState(null);
+  // V3 (Feb 2026): user-selectable upfront/deposit % — 10 (default) / 20 / 35 / 50
+  const [upfrontPercent, setUpfrontPercent] = useState(0.10);
   const [delivery, setDelivery] = useState({
     name: '', mobile: '', address_line: '', city: '', state: '', pin_code: '', landmark: '',
   });
@@ -74,6 +76,8 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   // Pre-fill delivery form from user profile when modal opens
   useEffect(() => {
     if (pendingBook && user) {
+      // Reset upfront back to default 10% each time modal reopens
+      setUpfrontPercent(0.10);
       setDelivery(d => {
         const profileAddrLine = [user.address_line1, user.address_line2]
           .filter(Boolean).join(', ');
@@ -196,7 +200,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
     return () => window.removeEventListener('keydown', handler);
   }, [tab, swipe]);
 
-  const bookProduct = async (product, delivery) => {
+  const bookProduct = async (product, delivery, upfrontPct = 0.10) => {
     if (!user?.uid) { toast.error('Please log in to book'); return; }
     if (!delivery) { toast.error('Delivery details required'); return; }
     setBookingInProgress(true);
@@ -204,6 +208,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
       const res = await axios.post(`${API}/mall/book/${product.product_id}`, {
         user_id: user.uid,
         delivery,
+        upfront_percent: upfrontPct,
       });
       if (res.data?.success) {
         hapticSuccess();
@@ -657,21 +662,56 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                   <span>MRP <span className="text-amber-300/80 text-[10px]">(All Inclusive)</span></span>
                   <span>{fmtInr(pendingBook.mrp_inr)}</span>
                 </div>
-                <div className="mall-pricing-row">
-                  <span>Processing Fee ({pendingBook.processing_percent || 10}%)</span>
-                  <span>+ {fmtInr(pendingBook.processing_inr)}</span>
-                </div>
                 <div className="mall-pricing-row total">
                   <span>Mining Target</span>
                   <span>{fmtPrc(pendingBook.total_prc)}</span>
                 </div>
                 <div className="mall-pricing-divider" />
+
+                {/* V3 Prepaid Deposit selector — 10 / 20 / 35 / 50% */}
+                <div className="mall-upfront-selector" data-testid="mall-upfront-selector">
+                  <div className="mall-upfront-label">
+                    💰 Upfront Deposit
+                    <span className="mall-upfront-hint">— pay more now, fulfil faster</span>
+                  </div>
+                  <div className="mall-upfront-options">
+                    {[0.10, 0.20, 0.35, 0.50].map((pct) => {
+                      const isActive = Math.abs(upfrontPercent - pct) < 0.001;
+                      return (
+                        <button
+                          key={pct}
+                          type="button"
+                          className={`mall-upfront-chip${isActive ? ' active' : ''}`}
+                          onClick={() => setUpfrontPercent(pct)}
+                          data-testid={`mall-upfront-${Math.round(pct * 100)}`}
+                        >
+                          {Math.round(pct * 100)}%
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="mall-pricing-row upfront-row">
-                  <span>You pay now (Booking Fee)</span>
-                  <span className="upfront">{fmtPrc(pendingBook.upfront_prc)}</span>
+                  <span>You pay now (Deposit)</span>
+                  <span className="upfront" data-testid="mall-upfront-prc">
+                    {fmtPrc(Math.round((pendingBook.mrp_inr || 0) * upfrontPercent * 10))}
+                  </span>
+                </div>
+                <div className="mall-pricing-row">
+                  <span>Remaining to mine</span>
+                  <span data-testid="mall-remaining-prc">
+                    {fmtPrc(
+                      Math.max(
+                        0,
+                        (pendingBook.total_prc || 0) -
+                          Math.round((pendingBook.mrp_inr || 0) * upfrontPercent * 10)
+                      )
+                    )}
+                  </span>
                 </div>
                 <div className="mall-pricing-hint">
-                  ≈ {fmtInr(pendingBook.processing_inr)} — one-time entry fee from your PRC wallet. Mining target is unchanged.
+                  Deposit counts toward the mining target — the more you pay now, the less you mine later. ≈ {fmtInr((pendingBook.mrp_inr || 0) * upfrontPercent)} from your wallet.
                 </div>
               </div>
               <p className="mall-confirm-note">
@@ -759,8 +799,9 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                     if (delivery.pin_code.length !== 6) { toast.error('PIN code must be 6 digits'); return; }
                     const p = pendingBook;
                     const d = { ...delivery };
+                    const up = upfrontPercent;
                     setPendingBook(null);
-                    await bookProduct(p, d);
+                    await bookProduct(p, d, up);
                   }}
                   disabled={bookingInProgress}
                   data-testid="mall-confirm-go"

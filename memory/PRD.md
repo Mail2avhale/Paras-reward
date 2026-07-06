@@ -707,3 +707,13 @@ See `/app/memory/test_credentials.md`
 - Frontend (`ParasMallBookings.js`): Red "Session Expired - Points Lapsed" banner + green "Start New Mining Session" button when lapsed. Collect button, Resets-In timer, and Session Earnings panels are all HIDDEN when expired.
 - Test: `/app/backend/tests/test_mall_mining_burn.py` (6/6 unit pass) + `/app/backend/tests/test_mall_mining_burn_e2e_api.py` (5/5 API E2E pass — verified live).
 
+
+## 2026-02-05 — 4 Feature Launch: Cap flat / Deposit selector / Soft delete / Bank limits config
+1. **Paras Mall Network Cap = 800 flat** — `get_user_network_cap()` in `paras_mall.py` now returns constant 800 for all users. Referral-based scaling removed for Mall only (main mining unchanged).
+2. **Upfront Fee = Prepaid Deposit selector (V3)** — User picks 10% / 20% / 35% / 50% at booking time. Higher deposit = smaller mining target (deposit counts as `paid_prc`). Model: `v3_prepaid_deposit` stored on booking. UI: `mall-upfront-selector` in `ParasMall.js`. Cancel-burn logic branches on `pricing_model`.
+3. **Admin Product Soft Delete** — `DELETE /api/admin/mall/products/{id}` now sets `active=False + deleted_at + deleted_reason` instead of physical delete. Active bookings continue mining. Product hidden from listing (already gated by `only_active=True`).
+4. **Admin Bank Redeem Limits Config** — New module `admin_bank_redeem_config.py`. `GET /api/admin/bank-redeem-limits/config` returns current limits. `PATCH /api/admin/bank-redeem-limits/config` (X-Admin-Pin=123456) updates min/max/monthly-cap. Enforced in `manual_bank_transfer.py`. Legacy hardcoded MAX_WITHDRAWAL cap retired. Fail-safe: on config-read error, falls back to hard defaults (100 min / 10000 max) rather than fail-open. UI card in `AdminSystemSettings.js` at `/admin/settings-hub?tab=system`.
+
+- **Tests**: `/app/backend/tests/test_iteration_256_features.py` (12/12 executed pass) + `/app/backend/tests/test_mall_mining_burn.py` (6/6 pass) regression.
+- **Testing agent report**: `/app/test_reports/iteration_256.json` — 100% pass, no bugs blocking launch. Two minor code-hygiene items fixed post-report (legacy MAX_WITHDRAWAL retirement + narrower except handling in bank redeem).
+

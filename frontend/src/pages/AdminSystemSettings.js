@@ -55,6 +55,14 @@ const AdminSystemSettings = () => {
     elite: { base_rate: 100, tap_bonus: 20 }
   });
 
+  // Bank Redeem Limits Config (Feb 5 2026 — admin editable min / max / monthly cap)
+  const [bankRedeem, setBankRedeem] = useState({
+    min_withdrawal_inr: 100,
+    max_withdrawal_inr: 10000,
+    monthly_user_cap_inr: 25000,
+  });
+  const [bankRedeemPin, setBankRedeemPin] = useState('');
+
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -62,11 +70,12 @@ const AdminSystemSettings = () => {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const [redeemRes, miningRes, globalRes, commissionRes] = await Promise.all([
+      const [redeemRes, miningRes, globalRes, commissionRes, bankRedeemRes] = await Promise.all([
         axios.get(`${API}/admin/settings/redeem-limit`).catch(() => ({ data: {} })),
         axios.get(`${API}/admin/settings/mining-rates`).catch(() => ({ data: {} })),
         axios.get(`${API}/admin/settings/redeem-limit-global`).catch(() => ({ data: {} })),
         axios.get(`${API}/admin/settings/mining-commission-tiers`).catch(() => ({ data: {} })),
+        axios.get(`${API}/admin/bank-redeem-limits/config`).catch(() => ({ data: {} })),
       ]);
       
       if (redeemRes.data) setRedeemSettings(prev => ({ ...prev, ...redeemRes.data }));
@@ -86,6 +95,13 @@ const AdminSystemSettings = () => {
           })),
           elite_only: Boolean(commissionRes.data.elite_only),
           roll_up: Boolean(commissionRes.data.roll_up),
+        });
+      }
+      if (bankRedeemRes.data?.success) {
+        setBankRedeem({
+          min_withdrawal_inr: Number(bankRedeemRes.data.min_withdrawal_inr ?? 100),
+          max_withdrawal_inr: Number(bankRedeemRes.data.max_withdrawal_inr ?? 10000),
+          monthly_user_cap_inr: Number(bankRedeemRes.data.monthly_user_cap_inr ?? 25000),
         });
       }
       
@@ -119,6 +135,46 @@ const AdminSystemSettings = () => {
       toast.error(err.response?.data?.detail || 'Failed to save global toggle');
     } finally {
       setSaving(prev => ({ ...prev, globalRedeem: false }));
+    }
+  };
+
+  // Save Bank Redeem Limits config (Feb 5 2026)
+  const saveBankRedeemLimits = async () => {
+    setSaving(prev => ({ ...prev, bankRedeem: true }));
+    try {
+      const minV = Number(bankRedeem.min_withdrawal_inr);
+      const maxV = Number(bankRedeem.max_withdrawal_inr);
+      const monV = Number(bankRedeem.monthly_user_cap_inr);
+      if (isNaN(minV) || isNaN(maxV) || isNaN(monV)) {
+        toast.error('All fields must be valid numbers');
+        setSaving(prev => ({ ...prev, bankRedeem: false }));
+        return;
+      }
+      if (minV < 1) { toast.error('Min must be ≥ ₹1'); setSaving(p => ({ ...p, bankRedeem: false })); return; }
+      if (maxV < minV) { toast.error('Max must be ≥ Min'); setSaving(p => ({ ...p, bankRedeem: false })); return; }
+      if (monV > 0 && monV < minV) { toast.error('Monthly cap must be ≥ Min (or 0 to disable)'); setSaving(p => ({ ...p, bankRedeem: false })); return; }
+      if (!bankRedeemPin || bankRedeemPin.length < 4) {
+        toast.error('Admin operation PIN is required');
+        setSaving(prev => ({ ...prev, bankRedeem: false }));
+        return;
+      }
+      const stored = JSON.parse(localStorage.getItem('paras_user') || '{}');
+      await axios.patch(
+        `${API}/admin/bank-redeem-limits/config`,
+        {
+          admin_id: stored.uid || 'admin',
+          min_withdrawal_inr: minV,
+          max_withdrawal_inr: maxV,
+          monthly_user_cap_inr: monV,
+        },
+        { headers: { 'X-Admin-Pin': bankRedeemPin } }
+      );
+      toast.success('Bank Redeem Limits updated', { duration: 4000 });
+      setBankRedeemPin('');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to save bank redeem limits');
+    } finally {
+      setSaving(prev => ({ ...prev, bankRedeem: false }));
     }
   };
 
@@ -387,6 +443,94 @@ const AdminSystemSettings = () => {
                 <Save className="w-4 h-4 mr-2" />
               )}
               Save Global Toggle
+            </Button>
+          </div>
+
+          {/* Bank Redeem Limits (Feb 5 2026 — admin editable) */}
+          <div
+            className="bg-white rounded-xl p-5 border border-slate-200 lg:col-span-2"
+            data-testid="bank-redeem-limits-card"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <DollarSign className="w-5 h-5 text-emerald-500" />
+              <h2 className="text-lg font-semibold text-slate-800">
+                Bank Redeem Limits
+              </h2>
+              <span className="ml-auto text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                LIVE
+              </span>
+            </div>
+            <p className="text-slate-500 text-xs mb-4 leading-relaxed">
+              Platform-wide limits for bank withdrawal requests. <b>Per-transaction Min/Max</b>
+              gate the amount a user can request in a single redeem. <b>Monthly Cap</b> limits
+              the total INR a single user can redeem across all requests in the current calendar
+              month (set to 0 to disable). Changes take effect immediately for all new redemptions.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Per-Transaction Min (₹)
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={bankRedeem.min_withdrawal_inr}
+                  onChange={(e) => setBankRedeem((p) => ({ ...p, min_withdrawal_inr: e.target.value }))}
+                  data-testid="bank-redeem-min-input"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Per-Transaction Max (₹)
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={bankRedeem.max_withdrawal_inr}
+                  onChange={(e) => setBankRedeem((p) => ({ ...p, max_withdrawal_inr: e.target.value }))}
+                  data-testid="bank-redeem-max-input"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Monthly User Cap (₹) <span className="text-slate-400 font-normal">— 0 = disabled</span>
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={bankRedeem.monthly_user_cap_inr}
+                  onChange={(e) => setBankRedeem((p) => ({ ...p, monthly_user_cap_inr: e.target.value }))}
+                  data-testid="bank-redeem-monthly-cap-input"
+                />
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Admin Operation PIN <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                type="password"
+                placeholder="Enter ADMIN_OPERATION_PIN"
+                value={bankRedeemPin}
+                onChange={(e) => setBankRedeemPin(e.target.value)}
+                data-testid="bank-redeem-admin-pin-input"
+              />
+            </div>
+
+            <Button
+              onClick={saveBankRedeemLimits}
+              disabled={saving.bankRedeem}
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              data-testid="save-bank-redeem-limits-btn"
+            >
+              {saving.bankRedeem ? (
+                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Save Bank Redeem Limits
             </Button>
           </div>
 
