@@ -2811,6 +2811,8 @@ async def audit_paid_plans_without_payment(request: Request):
                 "email": u.get("email"),
                 "mobile": u.get("mobile"),
                 "current_plan": u.get("subscription_plan"),
+                "membership_type": u.get("membership_type"),
+                "role": u.get("role"),
                 "subscription_start": str(u.get("subscription_start") or ""),
                 "subscription_expiry": str(u.get("subscription_expiry") or ""),
                 "created_at": str(u.get("created_at") or ""),
