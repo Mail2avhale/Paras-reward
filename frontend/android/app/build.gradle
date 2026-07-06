@@ -56,8 +56,35 @@ android {
         //    intent's target package.
         // 4. Admin User 360 PIN Reset modal persistence fix (state race that
         //    made the newly generated PIN vanish before admin could copy).
-        versionCode 17
-        versionName "1.1.6"
+        //
+        // versionCode 16 → 18 — Feb 06, 2026 release (Security + Mall + Audit):
+        // 1. CRITICAL Razorpay webhook signature strict enforcement — fixes a
+        //    revenue-leak where attackers could forge webhook events (missing
+        //    signature or missing server-side secret → payloads accepted).
+        //    Now BOTH secret + signature are mandatory; 401 on either missing.
+        // 2. auto_sync_captured_from_razorpay cron: skip cancelled/failed/
+        //    error/timeout/dismissed orders (previously activated regardless).
+        // 3. auto_sync_razorpay_payments: fixed duplicate `status` dict key
+        //    silently dropping the $in filter clause.
+        // 4. Paras Mall Product Mining: 24h LAPSE/BURN logic — if user
+        //    doesn't collect within 24h, all accumulated PRC burns.
+        // 5. Paras Mall Prepaid Deposit selector — user picks 10/20/35/50%
+        //    upfront at booking time; higher deposit → smaller mining target
+        //    → faster fulfillment.
+        // 6. Paras Mall network cap flat 800 (removed referral scaling for
+        //    Mall — main mining unchanged).
+        // 7. Product delete → SOFT delete (active bookings continue mining,
+        //    hidden from listing only).
+        // 8. Admin Bank Redeem Limits config UI — per-tx min/max + monthly
+        //    user cap adjustable from AdminSystemSettings without deploy.
+        // 9. Admin audit endpoints: /audit-single-user, /audit-paid-plans-
+        //    without-payment, /monitor-recent-activations — comprehensive
+        //    detection for subscription-without-payment leaks.
+        // 10. PRC Statement dedup — removed legacy duplicate "Referral Reward"
+        //     entries that appeared as both "Referral Reward" + "Daily Reward".
+        // 11. Downline Live Feed data-fetch URL fix (double /api prefix).
+        versionCode 18
+        versionName "1.1.7"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
