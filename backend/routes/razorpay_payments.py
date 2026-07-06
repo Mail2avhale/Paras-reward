@@ -2370,6 +2370,226 @@ async def audit_cancelled_with_elite(request: Request):
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
+@router.post("/admin/audit-single-user")
+async def audit_single_user(request: Request):
+    """
+    LASER-FOCUSED SINGLE-USER AUDIT (Feb 5 2026)
+    =============================================
+    Given a user identifier (name / email / mobile / uid), returns EVERY
+    payment-related evidence source so an admin can eyeball whether the
+    user's active subscription came from a legitimate payment or is a
+    leaked activation.
+
+    Zero writes — pure read. Safe to call anytime.
+
+    Auth: admin_pin=123456.
+
+    Usage (production):
+      curl -X POST "https://www.parasreward.com/api/razorpay/admin/audit-single-user" \\
+        -H "Content-Type: application/json" \\
+        -d '{"admin_pin":"123456","query":"Sadadiya"}'
+
+    `query` can match: uid (exact) / email (contains) / mobile (contains) /
+    name (contains, case-insensitive). Returns UP TO 5 matching users so
+    you can disambiguate common names.
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        query = (data.get("query") or "").strip()
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        if not query or len(query) < 3:
+            raise HTTPException(status_code=400, detail="query must be at least 3 chars")
+
+        # Multi-field search — try uid exact first, then contains on others.
+        candidates = await db.users.find(
+            {"$or": [
+                {"uid": query},
+                {"email": {"$regex": query, "$options": "i"}},
+                {"mobile": {"$regex": query}},
+                {"name": {"$regex": query, "$options": "i"}},
+            ]},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1,
+             "subscription_plan": 1, "subscription_expiry": 1,
+             "subscription_start": 1, "subscription_status": 1,
+             "subscription_payment_type": 1, "last_prc_subscription": 1,
+             "membership_type": 1, "migrated_from_vip": 1,
+             "admin_upgraded": 1, "admin_fixed": 1,
+             "test_account": 1, "role": 1, "created_at": 1,
+             "downgrade_reason": 1, "previous_plan_at_downgrade": 1,
+             "last_payment_id": 1},
+        ).to_list(5)
+
+        if not candidates:
+            return {
+                "success": True,
+                "matches_found": 0,
+                "message": f"No user matched '{query}'.",
+            }
+
+        results = []
+        for u in candidates:
+            uid = u.get("uid")
+            if not uid:
+                continue
+
+            # Fetch ALL evidence sources in parallel-ish (mongo motor)
+            all_orders = await db.razorpay_orders.find(
+                {"user_id": uid},
+                {"_id": 0, "order_id": 1, "status": 1, "amount": 1,
+                 "created_at": 1, "notes": 1},
+            ).sort("created_at", -1).to_list(50)
+
+            paid_orders = [o for o in all_orders if o.get("status") == "paid"]
+            cancelled_orders = [
+                o for o in all_orders
+                if o.get("status") in
+                ["cancelled", "failed", "error", "timeout", "dismissed"]
+            ]
+            pending_orders = [
+                o for o in all_orders
+                if o.get("status") in ["created", "pending", "attempted"]
+            ]
+
+            try:
+                sub_payments = await db.subscription_payments.find(
+                    {"user_id": uid},
+                    {"_id": 0, "payment_id": 1, "status": 1, "plan_name": 1,
+                     "payment_method": 1, "prc_amount": 1, "inr_equivalent": 1,
+                     "created_at": 1, "activated_by_admin": 1},
+                ).sort("created_at", -1).to_list(50)
+            except Exception:
+                sub_payments = []
+
+            try:
+                sub_transactions = await db.transactions.find(
+                    {"user_id": uid,
+                     "type": {"$in": [
+                         "subscription_prc", "subscription_payment",
+                         "subscription", "elite_activation", "plan_purchase",
+                     ]}},
+                    {"_id": 0, "type": 1, "amount": 1, "created_at": 1,
+                     "description": 1, "admin_action": 1},
+                ).sort("created_at", -1).to_list(50)
+            except Exception:
+                sub_transactions = []
+
+            # ── VERDICT LOGIC (matches /audit-paid-plans-without-payment) ──
+            role = (u.get("role") or "").lower().strip()
+            reasons_for_legit = []
+            if role in ("admin", "sub_admin", "moderator", "staff", "system"):
+                reasons_for_legit.append(f"role={role}")
+            if u.get("admin_upgraded") is True:
+                reasons_for_legit.append("admin_upgraded=true")
+            if u.get("admin_fixed") is True:
+                reasons_for_legit.append("admin_fixed=true (already reconciled)")
+            if u.get("migrated_from_vip") is True:
+                reasons_for_legit.append("migrated_from_vip (legacy VIP)")
+            if u.get("subscription_payment_type") == "prc":
+                reasons_for_legit.append("subscription_payment_type=prc")
+            if u.get("last_prc_subscription"):
+                reasons_for_legit.append("has last_prc_subscription timestamp")
+            if u.get("test_account") is True:
+                reasons_for_legit.append("test_account=true")
+            if paid_orders:
+                reasons_for_legit.append(
+                    f"{len(paid_orders)} paid Razorpay order(s)"
+                )
+            if sub_payments:
+                reasons_for_legit.append(
+                    f"{len(sub_payments)} row(s) in subscription_payments"
+                )
+            if sub_transactions:
+                reasons_for_legit.append(
+                    f"{len(sub_transactions)} subscription txn(s) in transactions"
+                )
+
+            current_plan = u.get("subscription_plan", "explorer")
+            is_paid_plan = current_plan in ("elite", "growth", "startup")
+
+            if not is_paid_plan:
+                verdict = "USER_NOT_ON_PAID_PLAN"
+                summary = f"Current plan is '{current_plan}' — nothing to worry about."
+            elif reasons_for_legit:
+                verdict = "LEGITIMATE"
+                summary = (
+                    f"Subscription IS backed by real payment/grant. Evidence: "
+                    + "; ".join(reasons_for_legit)
+                )
+            else:
+                verdict = "SUSPICIOUS_LEAK"
+                summary = (
+                    f"⚠️ User is on '{current_plan}' plan but has NO paid "
+                    "orders, NO subscription_payments, NO PRC flag, NO VIP "
+                    "migration, and NO admin grant. Recent cancelled/failed "
+                    f"orders: {len(cancelled_orders)}. This is a real leak — "
+                    "candidate for downgrade."
+                )
+
+            results.append({
+                "uid": uid,
+                "name": u.get("name"),
+                "email": u.get("email"),
+                "mobile": u.get("mobile"),
+                "current_plan": current_plan,
+                "subscription_start": str(u.get("subscription_start") or ""),
+                "subscription_expiry": str(u.get("subscription_expiry") or ""),
+                "subscription_status": u.get("subscription_status"),
+                "membership_type": u.get("membership_type"),
+                "role": u.get("role"),
+                "user_created_at": str(u.get("created_at") or ""),
+
+                # Verdict
+                "verdict": verdict,
+                "verdict_summary": summary,
+                "legit_evidence": reasons_for_legit,
+
+                # Legacy grant flags (quick eyeball)
+                "flags": {
+                    "admin_upgraded": u.get("admin_upgraded"),
+                    "admin_fixed": u.get("admin_fixed"),
+                    "migrated_from_vip": u.get("migrated_from_vip"),
+                    "subscription_payment_type": u.get("subscription_payment_type"),
+                    "last_prc_subscription": u.get("last_prc_subscription"),
+                    "test_account": u.get("test_account"),
+                    "downgrade_reason": u.get("downgrade_reason"),
+                    "previous_plan_at_downgrade": u.get("previous_plan_at_downgrade"),
+                    "last_payment_id": u.get("last_payment_id"),
+                },
+
+                # Full evidence — payment history
+                "razorpay_orders_summary": {
+                    "total": len(all_orders),
+                    "paid": len(paid_orders),
+                    "cancelled_or_failed": len(cancelled_orders),
+                    "pending": len(pending_orders),
+                },
+                "recent_paid_orders": paid_orders[:5],
+                "recent_cancelled_or_failed_orders": cancelled_orders[:5],
+                "recent_pending_orders": pending_orders[:5],
+                "subscription_payments_count": len(sub_payments),
+                "recent_subscription_payments": sub_payments[:5],
+                "subscription_transactions_count": len(sub_transactions),
+                "recent_subscription_transactions": sub_transactions[:5],
+            })
+
+        return {
+            "success": True,
+            "matches_found": len(results),
+            "users": results,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[AUDIT-SINGLE] Error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
+
+
 @router.post("/admin/audit-paid-plans-without-payment")
 async def audit_paid_plans_without_payment(request: Request):
     """
