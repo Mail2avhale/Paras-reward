@@ -2510,6 +2510,203 @@ async def monitor_recent_activations(request: Request):
 
 
 
+# ─── Mining diagnostic helper (Feb 6 2026) ──────────────────────────────
+async def _compute_mining_diagnostic(db_ref, uid: str, user_doc: dict) -> dict:
+    """Compute mining-side diagnostic info for a user: subscription_position,
+    active network size (subscription-position-based), 6-tier network cap,
+    effective network, and expected daily/hourly PRC rate. Zero writes.
+    """
+    try:
+        from routes.mining import (
+            calculate_prc_per_user, calculate_network_cap,
+            BASE_MINING_PRC, BASE_MINING_THRESHOLD, EXPLORER_DAILY_PRC,
+        )
+        from routes.growth_economy import get_downline_level_counts
+        from datetime import datetime, timezone
+
+        sub_pos = user_doc.get("subscription_position")
+        plan = (user_doc.get("subscription_plan") or "explorer").lower()
+        membership = (user_doc.get("membership_type") or "").lower()
+
+        # Active network — mirror routes.mining.get_subscription_network_size
+        network_size = 0
+        if sub_pos:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            network_size = await db_ref.users.count_documents({
+                "subscription_position": {"$gt": sub_pos},
+                "subscription_plan": {"$in": [
+                    "elite", "vip", "startup", "growth", "pro",
+                    "Elite", "VIP", "Startup", "Growth", "Pro",
+                ]},
+                "$or": [
+                    {"subscription_expiry": {"$gt": now_iso}},
+                ],
+            })
+
+        # 6-tier network cap
+        try:
+            level_counts = await get_downline_level_counts(uid, max_depth=5)
+        except Exception:
+            level_counts = {"l1": 0, "l2": 0, "l3": 0, "l4": 0, "l5": 0}
+        cap_info = calculate_network_cap(
+            level_counts.get("l1", 0),
+            level_counts.get("l2", 0),
+            level_counts.get("l3", 0),
+            level_counts.get("l4", 0),
+            level_counts.get("l5", 0),
+        )
+        cap = cap_info["cap"]
+        effective_network = min(network_size, cap)
+        prc_per_user = calculate_prc_per_user(effective_network)
+
+        ELITE_PLANS = {"elite", "vip", "startup", "growth", "pro"}
+        is_explorer = plan not in ELITE_PLANS and membership not in ELITE_PLANS
+
+        if is_explorer:
+            daily = float(EXPLORER_DAILY_PRC)
+            base_rate = daily
+            network_rate = 0
+        else:
+            base_rate = BASE_MINING_PRC if effective_network < BASE_MINING_THRESHOLD else 0
+            network_rate = effective_network * prc_per_user
+            daily = base_rate + network_rate
+
+        return {
+            "subscription_position": sub_pos,
+            "has_subscription_position": bool(sub_pos),
+            "raw_network_size": network_size,
+            "network_cap": cap,
+            "effective_network": effective_network,
+            "prc_per_user": round(prc_per_user, 4),
+            "base_rate_daily": base_rate,
+            "network_rate_daily": round(network_rate, 2),
+            "total_daily_rate": round(daily, 2),
+            "expected_hourly_rate": round(daily / 24, 2),
+            "l1_referrals": level_counts.get("l1", 0),
+            "l2_referrals": level_counts.get("l2", 0),
+            "l3_referrals": level_counts.get("l3", 0),
+            "l4_referrals": level_counts.get("l4", 0),
+            "l5_referrals": level_counts.get("l5", 0),
+            "diagnostic_notes": (
+                "❌ No subscription_position set — user cannot mine (fix: set it)"
+                if not sub_pos else (
+                    "⚠️ subscription_position set but 0 downline positions above"
+                    " — user is at the top OR downline hasn't paid"
+                    if network_size == 0
+                    else "✅ Mining network active"
+                )
+            ),
+        }
+    except Exception as e:
+        return {"error": f"Diagnostic failed: {e}"}
+
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ADMIN — Retroactive fix for users missing subscription_position (Feb 6 2026)
+# ═══════════════════════════════════════════════════════════════════════
+# Backfill for the bulk_sync activation bug — users activated via that path
+# never got a subscription_position assigned, so their mining network stayed
+# at 0. This endpoint retro-assigns positions to any active paid-plan user
+# without one, in a single sweep.
+
+@router.post("/admin/fix-missing-subscription-positions")
+async def fix_missing_subscription_positions(request: Request):
+    """Retroactively assign `subscription_position` to any user on a paid
+    plan whose position is currently missing. Safe to call anytime.
+
+    Auth: admin_pin=123456
+    Body: {"admin_pin": "123456", "dry_run": true, "user_uid": null | "..."}
+      • dry_run=true → count-only, no writes
+      • user_uid=<uid> → target a single user (for spot fix)
+      • user_uid=null → sweep ALL affected users
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        dry_run = bool(data.get("dry_run", True))
+        target_uid = data.get("user_uid")
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+
+        # Users on paid plans WITHOUT subscription_position
+        paid_plans = ["elite", "vip", "startup", "growth", "pro"]
+        query_filter = {
+            "subscription_plan": {"$in": paid_plans},
+            "$or": [
+                {"subscription_position": {"$exists": False}},
+                {"subscription_position": None},
+                {"subscription_position": 0},
+            ],
+        }
+        if target_uid:
+            query_filter["uid"] = target_uid
+
+        affected = await db.users.find(
+            query_filter,
+            {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
+             "subscription_plan": 1, "subscription_start": 1,
+             "activated_via": 1},
+        ).to_list(10000)
+
+        fixed_users = []
+        errors = []
+
+        if not dry_run:
+            from routes.mining import assign_subscription_position
+            for u in affected:
+                uid = u.get("uid")
+                if not uid:
+                    continue
+                try:
+                    await assign_subscription_position(uid)
+                    updated = await db.users.find_one(
+                        {"uid": uid},
+                        {"_id": 0, "subscription_position": 1},
+                    )
+                    fixed_users.append({
+                        "uid": uid,
+                        "name": u.get("name"),
+                        "mobile": u.get("mobile"),
+                        "plan": u.get("subscription_plan"),
+                        "activated_via": u.get("activated_via"),
+                        "new_position": (updated or {}).get("subscription_position"),
+                    })
+                except Exception as e:
+                    errors.append({"uid": uid, "error": str(e)})
+
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "target_uid": target_uid,
+            "summary": {
+                "affected_users_count": len(affected),
+                "fixed_count": len(fixed_users),
+                "error_count": len(errors),
+            },
+            "affected_sample": affected[:20] if dry_run else fixed_users[:20],
+            "errors_sample": errors[:10],
+            "message": (
+                f"DRY RUN — {len(affected)} users on paid plans have missing "
+                "subscription_position. Would be retro-assigned on next call."
+                if dry_run else
+                f"Fixed subscription_position for {len(fixed_users)} users. "
+                f"{len(errors)} errored (see errors_sample)."
+            ),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[FIX-SUB-POS] Error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
+
+
+
+
 @router.post("/admin/audit-single-user")
 async def audit_single_user(request: Request):
     """
@@ -2563,7 +2760,10 @@ async def audit_single_user(request: Request):
              "test_account": 1, "role": 1, "created_at": 1,
              "downgrade_reason": 1, "previous_plan_at_downgrade": 1,
              "last_payment_id": 1, "sponsored_by": 1,
-             "sale_elite_received_from": 1, "gifted_subscription": 1},
+             "sale_elite_received_from": 1, "gifted_subscription": 1,
+             # Feb 6 2026: Mining diagnostic fields
+             "subscription_position": 1, "referred_by": 1,
+             "referral_code": 1, "tree_position": 1, "prc_balance": 1},
         ).to_list(5)
 
         if not candidates:
@@ -2713,6 +2913,9 @@ async def audit_single_user(request: Request):
                 "verdict": verdict,
                 "verdict_summary": summary,
                 "legit_evidence": reasons_for_legit,
+
+                # Mining diagnostic fields (Feb 6 2026)
+                "mining_diagnostic": await _compute_mining_diagnostic(db, uid, u),
 
                 # Legacy grant flags (quick eyeball)
                 "flags": {

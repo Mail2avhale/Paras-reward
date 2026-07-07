@@ -10645,6 +10645,21 @@ async def bulk_sync_captured_payments(request: Request):
                 
                 activated_count += 1
 
+                # ── SUBSCRIPTION POSITION (Feb 6 2026 fix) ─────────────────
+                # CRITICAL: bulk_sync path was missing assign_subscription_position
+                # → activated users had `subscription_position=None` → their
+                # `get_subscription_network_size()` returned 0 → mining Network
+                # Size stuck at 0 forever, hourly rate never went above the
+                # base 30 PRC/hr (740 PRC/day / 24). Verify-payment path was
+                # patched in May 2026 but the bulk sync path was overlooked.
+                # Now aligned across all 3 subscription-activation entry points.
+                try:
+                    from routes.mining import assign_subscription_position
+                    await assign_subscription_position(user_id)
+                    logging.info(f"[BULK-SYNC] Assigned subscription_position for {user_id}")
+                except Exception as _pos_err:
+                    logging.warning(f"[BULK-SYNC] assign_subscription_position failed (non-fatal) for {user_id}: {_pos_err}")
+
                 # Community success-story hook
                 try:
                     from routes.community import create_success_story_post
