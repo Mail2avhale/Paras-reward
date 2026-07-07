@@ -74,10 +74,10 @@ def set_helpers(helpers: dict):
 
 # ==================== MINING FORMULA CONSTANTS ====================
 
-BASE_MINING_PRC = 1000  # Base daily PRC (when network < 250)
-BASE_MINING_THRESHOLD = 250  # Network size threshold: base=1000 if < 250, base=0 if >= 250
+BASE_MINING_PRC = 740  # Base daily PRC (when network < 250). Feb 6 2026: scaled from 1000 → 740 (135→100 PRC/hr @ 800 network ratio)
+BASE_MINING_THRESHOLD = 250  # Network size threshold: base=740 if < 250, base=0 if >= 250
 EXPLORER_DAILY_PRC = 200  # Explorer plan fixed daily PRC rate (Jul 2026 — was 100% burn previously)
-MIN_PRC_PER_USER = 2.5  # Minimum PRC per user at 16384 network
+MIN_PRC_PER_USER = 1.85  # Minimum PRC per user at 16384 network. Feb 6 2026: scaled from 2.5 → 1.85 (proportional to base scaling)
 NETWORK_CAP_BASE = 800  # Base cap — everyone gets 800 (Jul 2026: tier cascade removed, replaced by mining_commission.py 3-tier commission)
 NETWORK_CAP_MAX = 8000  # Kept for backward-compat clamp (no longer reachable via referrals)
 CAP_PER_DIRECT = 0  # 6-tier cascade removed
@@ -173,25 +173,32 @@ async def get_subscription_network_size(user_id: str) -> int:
 def calculate_prc_per_user(network_size: int) -> float:
     """
     Calculate PRC per user based on network size (Decreasing formula)
-    
-    Formula: PRC_per_user = max(2.5, 5 × (21 - log₂(N)) / 14)
-    
-    Spreadsheet:
-    | Users | PRC/User |
-    |   2   |  7.14    |
-    | 128   |  5.00    |
-    |16384  |  2.50    |
+
+    Formula (Feb 6 2026 — scaled from 5.0 → 3.7 multiplier):
+        PRC_per_user = max(1.85, 3.7 × (21 - log₂(N)) / 14)
+
+    Rationale: platform-wide 26% mining rate reduction. At the sweet-spot
+    N=800 network, PRC/user drops from 4.06 → 3.00 → daily 3244 → 2400 →
+    per-hour 135 → 100. All other network sizes scale proportionally.
+    Floor drops from 2.5 → 1.85 for consistency at 16k+ mega networks.
+
+    Spreadsheet (post Feb-6 scaling):
+    | Users |  PRC/User (was) → (now)   |
+    |   2   |  7.14 → 5.29             |
+    | 128   |  5.00 → 3.70             |
+    | 800   |  4.06 → 3.00 (sweet spot)|
+    |16384  |  2.50 → 1.85 (min floor) |
     """
     if network_size <= 0:
         return 0  # No team = no team bonus
-    
+
     if network_size == 1:
-        # 1 user: 5 × (21 - 0) / 14 = 7.5, but cap per spreadsheet pattern
-        return 5 * (21 - math.log2(2)) / 14  # Treat as 2 → 7.142857
-    
+        # 1 user: treat as 2 → 3.7 × (21 - log₂(2)) / 14 = 5.29
+        return 3.7 * (21 - math.log2(2)) / 14
+
     log_value = math.log2(max(2, network_size))
-    prc_per_user = 5 * (21 - log_value) / 14
-    
+    prc_per_user = 3.7 * (21 - log_value) / 14
+
     return round(max(MIN_PRC_PER_USER, prc_per_user), 6)
 
 
