@@ -24953,6 +24953,10 @@ async def user_360_quick_action(request: Request):
             }}
         )
         result_message = f"PIN reset successful. New temporary PIN: {temp_pin}"
+        # Feb 2026 fix: Frontend Admin User 360 modal reads `new_pin` from the
+        # response body to display the freshly generated PIN. Return it in the
+        # response so the modal can lock onto the value before closing.
+        _generated_pin_to_return = temp_pin
     
     elif action == "update_user_details":
         # Admin can update user profile details
@@ -25289,7 +25293,15 @@ async def user_360_quick_action(request: Request):
         "timestamp": now.isoformat()
     })
     
-    return {"success": True, "message": result_message}
+    response = {"success": True, "message": result_message}
+    # Feb 2026: Admin User 360 reset_pin flow — include the generated PIN so
+    # the frontend modal can display it. Only present when action was reset_pin.
+    if action == "reset_pin":
+        try:
+            response["new_pin"] = _generated_pin_to_return
+        except NameError:
+            pass  # branch didn't execute (shouldn't happen — defensive)
+    return response
 
 
 # ========== VIP MEMBERSHIP & PAYMENT CONFIGURATION ==========
