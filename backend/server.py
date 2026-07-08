@@ -36868,6 +36868,22 @@ api_router.include_router(admin_redeem_limits_router, prefix="/admin/redeem-limi
 # User-facing bank details (NOT admin-only) — allows self-service profile saves
 api_router.include_router(user_bank_details_router, prefix="/users")
 
+# ── Partner Positions System (Feb 6 2026) ─────────────────────────────
+# Multi-tier referral position system (User / District / Regional State /
+# State / National Partner). Admin assigns via `/admin/partners/assign`.
+try:
+    from routes.partner_positions import (
+        router as partner_positions_router,
+        admin_router as partner_positions_admin_router,
+        set_db as set_partner_positions_db,
+    )
+    set_partner_positions_db(db)
+    api_router.include_router(partner_positions_router)
+    api_router.include_router(partner_positions_admin_router)
+    logging.info("[STARTUP] partner_positions routers wired")
+except Exception as _pp_err:
+    logging.error(f"[STARTUP] partner_positions wiring failed: {_pp_err}")
+
 # ── Admin Bank Redeem Limits Config (Feb 5 2026) ─────────────────────────
 # Admin-editable min / max / monthly-cap for bank redemptions. Reads by
 # manual_bank_transfer.py at request time.

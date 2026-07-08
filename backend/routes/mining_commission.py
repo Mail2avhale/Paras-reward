@@ -185,6 +185,7 @@ async def _resolve_referrer(referred_by: str) -> Optional[dict]:
             "subscription_expired": 1,
             "referred_by": 1,
             "prc_balance": 1,
+            "partner_position": 1,
         },
     )
 
@@ -258,9 +259,13 @@ async def distribute_mining_collect_commission(
     already_paid: set[str] = {collector_uid}
     current_referred_by = collector.get("referred_by")
     hops = 0
-    tier_idx = 0  # index into config["tiers"]
+    tier_idx = 0  # index into config["tiers"] (only used for legacy USER-position fallback)
+    # Feb 6 2026 — walk up to the DEEPEST position's max levels (NATIONAL = 7).
+    # Legacy config only fires when tier_idx < max_tiers, but position uplines
+    # can still receive commission at deeper hops.
+    max_walk = max(max_tiers, 7)
 
-    while tier_idx < max_tiers and hops < MAX_CHAIN_WALK:
+    while hops < max_walk and hops < MAX_CHAIN_WALK:
         hops += 1
         if not current_referred_by:
             break
@@ -276,24 +281,52 @@ async def distribute_mining_collect_commission(
         upline_is_elite = _is_elite_active(upline)
         eligible = upline_is_elite if elite_only else True
 
+        # ── PARTNER POSITION overlay (Feb 6 2026) ──────────────────────
+        # If this upline has a non-USER partner_position assigned, use the
+        # position config to decide tier depth + commission %. Otherwise
+        # fall back to the legacy `mining_commission_tiers` admin config.
+        # Elite-plan gate applies to BOTH paths per user spec (5b).
+        upline_position = (upline.get("partner_position") or "user").lower().strip()
+        use_position_path = upline_position != "user"
+        if use_position_path:
+            try:
+                from routes.partner_positions import POSITION_CONFIG
+                pos_meta = POSITION_CONFIG.get(upline_position, POSITION_CONFIG["user"])
+                position_max_tier = int(pos_meta["levels"])
+                position_pct = float(pos_meta["commission_pct"]) * 100  # convert to percent (0.01 → 1)
+                # For position users, `hops` is the effective tier depth (1 = direct parent).
+                # Skip this upline if we've walked past their allowed depth.
+                if hops > position_max_tier:
+                    tier_idx += 1
+                    current_referred_by = upline.get("referred_by")
+                    continue
+            except Exception:
+                use_position_path = False
+
         if not eligible:
             if roll_up:
-                # Skip this ancestor, keep tier_idx unchanged so the current
-                # tier slot flows to the next Elite ancestor.
                 current_referred_by = upline.get("referred_by")
                 continue
             else:
-                # Strict mode: non-Elite consumes the tier slot and receives nothing.
                 tier_idx += 1
                 current_referred_by = upline.get("referred_by")
                 continue
 
-        # Compute this tier's PRC amount from percent.
-        tier_config = tiers[tier_idx]
-        tier_percent = float(tier_config.get("percent", 0))
+        # Compute this tier's PRC amount.
+        if use_position_path:
+            tier_percent = position_pct
+        else:
+            # Legacy path: only pay if we still have a tier slot in the admin config.
+            if tier_idx >= max_tiers:
+                # Walked past legacy tier depth AND upline is USER position → stop.
+                # Continue walking in case a deeper upline has a partner position
+                # that grants them commission at this hop.
+                current_referred_by = upline.get("referred_by")
+                continue
+            tier_config = tiers[tier_idx]
+            tier_percent = float(tier_config.get("percent", 0))
         per_tier_amount = round(collected_prc * (tier_percent / 100.0), 6)
         if per_tier_amount <= 0:
-            # 0% tier — skip the slot entirely (don't create noise in ledger).
             tier_idx += 1
             current_referred_by = upline.get("referred_by")
             continue

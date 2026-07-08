@@ -789,3 +789,44 @@ Decision: 113 existing suspicious users LEFT ALONE (too risky to bulk-downgrade;
 - ~21 users: Group C — legitimate legacy VIP founders (Jan 2026)
 - No further downgrades planned — customer relationship preserved.
 
+
+## 2026-02-06 — Partner Positions System (Multi-Tier Referral)
+
+Advanced multi-tier referral system where admin assigns positions granting commission on downline Main Dashboard mining collects.
+
+### Positions & Rules
+| Position | Levels | Cap | Recipient Plan | Commission |
+|---|:---:|:---:|:---:|:---:|
+| USER (default) | L1-L3 | 500 | Elite only | 1% |
+| DISTRICT_PARTNER | L1-L4 | 1,000 | Elite only | 1% |
+| REGIONAL_STATE_PARTNER | L1-L5 | 2,000 | Elite only | 1% |
+| STATE_PARTNER | L1-L6 | 4,000 | Elite only | 1% |
+| NATIONAL_PARTNER | L1-L7 | 8,000 | Elite only | 1% |
+
+- CAP = total across all applicable levels combined (not per-level)
+- Recipient must be on Elite plan to receive commission (else assigned but inactive)
+- Trigger = Main Dashboard mining collect only (not Paras Mall)
+- No expiry — permanent until admin revokes
+- HYBRID mode: users WITHOUT partner position still get legacy 3-tier admin config commission
+
+### New Files
+- `backend/routes/partner_positions.py` — router + admin router + POSITION_CONFIG constants
+- `frontend/src/pages/AdminPartners.js` — admin management page at `/admin/partners`
+
+### Modified Files
+- `backend/server.py` — wired partner_positions routers
+- `backend/routes/mining_commission.py` — commission distribution now checks upline's `partner_position` and applies position-specific levels + commission %
+- `frontend/src/App.js` — new admin route `/admin/partners`
+- `frontend/src/pages/ReferralsEnhanced.js` — position badge card with per-level breakdown + cap usage bar
+
+### Admin Endpoints (all require X-Admin-Pin header)
+- `POST /api/admin/partners/assign` — body: {admin_id, query, position}
+- `POST /api/admin/partners/revoke` — body: {admin_id, uid}
+- `GET /api/admin/partners/list` — list all non-USER partners
+
+### User Endpoint
+- `GET /api/partners/my-position/{uid}` — returns position + cap breakdown for Invite page badge
+
+### Notifications
+On assignment, an in-app notification is inserted into `db.notifications` for the user with title "🎉 Promoted to {position_label}" and full explanation.
+

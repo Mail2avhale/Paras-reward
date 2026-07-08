@@ -34,6 +34,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
   // clear "Referred by …" locked info card instead of silently hiding the
   // whole section. Ambiguous absence was the #1 confusion in tickets.
   const [attachedReferrer, setAttachedReferrer] = useState(null);
+  const [partnerPosition, setPartnerPosition] = useState(null);  // Feb 6 2026 — partner position badge
   
   // Referral code from user
   const referralCode = user?.referral_code || '';
@@ -48,7 +49,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
       // Fetch network stats, mining speed, and referrals in PARALLEL.
       // direct-list does heavy aggregation per referral — needs longer timeout
       // than the lighter stats endpoints.
-      const [statsRes, miningRes, referralsRes, breakdownRes, commissionRes] = await Promise.all([
+      const [statsRes, miningRes, referralsRes, breakdownRes, commissionRes, positionRes] = await Promise.all([
         axios.get(`${API}/api/growth/network-stats/${user.uid}`, { timeout: 8000 }).catch(() => null),
         axios.get(`${API}/api/growth/mining-speed/${user.uid}`, { timeout: 8000 }).catch(() => null),
         axios.get(`${API}/api/notifications/referrals/${user.uid}/direct-list`, { timeout: 20000 }).catch((err) => {
@@ -60,7 +61,13 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
           return null;
         }),
         axios.get(`${API}/api/mining/commission-config`, { timeout: 8000 }).catch(() => null),
+        // Feb 6 2026 — partner position badge feed
+        axios.get(`${API}/partners/my-position/${user.uid}`, { timeout: 8000 }).catch(() => null),
       ]);
+      
+      if (positionRes?.data?.success) {
+        setPartnerPosition(positionRes.data);
+      }
       
       if (statsRes?.data?.success) {
         const stats = { ...statsRes.data.data };
@@ -606,6 +613,79 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Partner Position Badge (Feb 6 2026) */}
+        {partnerPosition && (
+          <div
+            className="bg-gradient-to-br from-indigo-900/60 via-purple-900/50 to-slate-900/60 border border-indigo-500/30 rounded-2xl p-5"
+            data-testid="partner-position-badge"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl">
+                {partnerPosition.partner_position === 'national_partner' ? '🇮🇳' :
+                 partnerPosition.partner_position === 'state_partner' ? '🏛️' :
+                 partnerPosition.partner_position === 'regional_state_partner' ? '📍' :
+                 partnerPosition.partner_position === 'district_partner' ? '🏙️' : '👤'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] uppercase tracking-wider text-indigo-300 font-semibold">Your Rank</p>
+                <p className="text-white font-bold text-lg truncate" data-testid="partner-position-label">
+                  {partnerPosition.position_label}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-indigo-300">Commission</p>
+                <p className="text-emerald-300 font-bold text-sm">
+                  {(partnerPosition.position_config?.commission_pct * 100).toFixed(0)}%
+                </p>
+              </div>
+            </div>
+
+            {/* Cap usage */}
+            <div className="mb-3">
+              <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>Downline Cap Usage (L1-L{partnerPosition.position_config?.levels})</span>
+                <span className="font-mono text-indigo-300">
+                  {partnerPosition.counted_towards_commission} / {partnerPosition.cap}
+                </span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden bg-slate-800">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(100, partnerPosition.cap_used_pct)}%`,
+                    background: partnerPosition.over_cap
+                      ? 'linear-gradient(90deg, #f43f5e, #f97316)'
+                      : 'linear-gradient(90deg, #6366f1, #a855f7)',
+                  }}
+                />
+              </div>
+              {partnerPosition.over_cap && (
+                <p className="text-[10px] text-orange-300 mt-1">
+                  ⚠️ Downlines exceed cap. Only earliest {partnerPosition.cap} count for commission.
+                </p>
+              )}
+            </div>
+
+            {/* Per-level breakdown */}
+            <div className="grid grid-cols-4 md:grid-cols-7 gap-1.5 mb-3">
+              {partnerPosition.per_level_counts?.map((lvl) => (
+                <div key={lvl.level} className="bg-slate-800/60 rounded-lg py-2 text-center">
+                  <p className="text-[9px] text-slate-500 uppercase">L{lvl.level}</p>
+                  <p className="text-white font-bold text-sm tabular-nums">{lvl.count}</p>
+                </div>
+              ))}
+            </div>
+
+            {!partnerPosition.commission_active && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 text-center">
+                <p className="text-[11px] text-amber-300">
+                  ⚡ Upgrade to <strong>Elite</strong> plan to activate commission earning
+                </p>
+              </div>
+            )}
           </div>
         )}
 
