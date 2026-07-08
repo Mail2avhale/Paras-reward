@@ -1,0 +1,78 @@
+{
+  "summary": "E2E test of the new Partner Positions 5-tier referral system. 23/23 pytest tests PASSED + 1 xfail documenting a real notification-persistence bug. Frontend AdminPartners page renders correctly, PIN + assign flow verified with live toast 'SANTOSH AVHALE → National Partner'. Two backend bugs found (see rca).",
+  "test_results": {
+    "backend_admin_assign_wrong_pin_403": "PASS",
+    "backend_admin_assign_invalid_position_422": "PASS",
+    "backend_admin_assign_nonexistent_user_404": "PASS",
+    "backend_assign_district_regional_state_national_configs": "PASS (all 4 tiers — cap/levels/commission_pct match POSITION_CONFIG)",
+    "backend_admin_list_requires_pin_403_and_returns_labels": "PASS",
+    "backend_admin_revoke_reverts_to_user_and_404_on_unknown": "PASS",
+    "backend_my_position_default_user_cap500_3levels": "PASS",
+    "backend_my_position_reflects_all_4_partner_tiers": "PASS (district=1000/L4, regional=2000/L5, state=4000/L6, national=8000/L7)",
+    "backend_my_position_commission_active_gate_non_elite": "PASS (commission_active=false when plan=explorer)",
+    "backend_my_position_unknown_uid_404": "PASS",
+    "backend_commission_national_partner_7_hops": "PASS (u8 at hop 7 credited 1.0 PRC from 100 PRC collect, ledger row correct: type=mining_referral_reward, tier_percent=1.0, downline_name populated)",
+    "backend_commission_district_partner_depth_cap_hop5_excluded": "PASS (u6 at hop 5 not credited when levels=4)",
+    "backend_commission_elite_gate_blocks_non_elite_state_partner": "PASS (u4 with state_partner + explorer plan gets 0 commission; ledger empty)",
+    "backend_commission_idempotency_same_timestamp": "PASS (2 calls → 1 ledger row per recipient)",
+    "backend_notification_persistence_XFAIL": "XFAIL — KNOWN BUG documented (see rca)",
+    "frontend_admin_login_and_partners_page_loads": "PASS (heading + all data-testid inputs render)",
+    "frontend_assign_position_e2e_flow": "PASS (PIN + query + select + submit → toast 'SANTOSH AVHALE → National Partner')",
+    "frontend_load_partners_after_assign": "PARTIAL — assign toast was success but the auto-refreshed list did not immediately show the newly-assigned row in the test session (see minor issue)"
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/admin/partners/assign",
+        "issue": "Notification insert silently fails with E11000 duplicate key on notification_id=null. First assignment succeeds only IF no prior row with notification_id=null exists in db.notifications. Result: users never receive the in-app 'promoted to X' notification (swallowed by try/except in partner_positions.py:132-147)."
+      },
+      {
+        "endpoint": "GET /api/partners/my-position/{uid}",
+        "issue": "commission_active uses strict `subscription_plan == 'elite'` check (line 267) but mining_commission.py uses ELITE_PLANS = {elite,vip,startup,growth,pro} PLUS membership_type field. Users with membership_type='vip' or 'elite'/'startup'/'growth'/'pro' plan will see 'Upgrade to Elite' banner even though they DO receive commission. Example: test user 9970100782 with membership_type='vip' — badge tells him to upgrade despite being fully eligible."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "AdminPartners.js",
+        "issue": "After successful assign(), fetchPartners() is invoked but in one test run the auto-refreshed 'Current Partners' list did not include the newly-assigned partner row (data-testid partner-row-{uid} not present). Manual refresh via 'Load Partners' button may still show 0 rows in some cases. Possible race with fetchPartners response caching or list reset.",
+        "selector": "[data-testid=partners-list-table]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_partner_positions_e2e.py",
+    "/app/test_reports/pytest/partner_positions_e2e.xml"
+  ],
+  "action_items": [
+    "FIX: partner_positions.py:133 — add `notification_id: str(uuid.uuid4())` to the notification insert dict (or use routes.notifications.create_notification helper like mining_commission.py already does). This will restore the promotion notification bell.",
+    "FIX: partner_positions.py:267 — change `user.get('subscription_plan') == 'elite'` to use the same ELITE_PLANS set + membership_type check that mining_commission.py:141 uses (`_is_elite_active`), so the badge accurately reflects who will actually receive commission.",
+    "INVESTIGATE: Post-assign list refresh in AdminPartners.js — verify pin state isn't being cleared/reset when the axios request settles; consider making the assign response push the new partner into `partners` state directly instead of relying on a follow-up GET."
+  ],
+  "critical_code_review_comments": [
+    "partner_positions.py is only 274 lines — well within guidelines. Good.",
+    "POSITION_CONFIG is defined in Python and duplicated as POSITION_OPTIONS in AdminPartners.js. Consider exposing POSITION_CONFIG via a GET endpoint so the two never drift.",
+    "mining_commission.py has partner_position overlay logic mixed with legacy tier logic in a single 165-line while loop; readable but consider extracting `_calculate_tier_for_upline(upline, hop, legacy_tiers)` for testability.",
+    "admin_assign_position endpoint uses `email regex` for lookup with user input directly interpolated in `$regex`. If the query contains regex metacharacters (e.g. '.*'), it could match unintended users. Recommend `re.escape(q)` before interpolation.",
+    "distribute_mining_collect_commission's max_walk = max(max_tiers, 7) hardcodes 7 to match NATIONAL_PARTNER levels. Better: `max_walk = max(max_tiers, max(cfg['levels'] for cfg in POSITION_CONFIG.values()))` to auto-adjust if a new deeper tier is added.",
+    "AdminPartners.js has NO auth-gate on component mount — relies entirely on route-level canAccessAdmin. The X-Admin-Pin is entered client-side (fine) but the JWT Bearer token from localStorage is what actually gates /api/admin/* via server middleware. Good defence-in-depth."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_partner_positions_e2e.py (new — 24 tests, 23 PASS + 1 XFAIL)"
+  ],
+  "success_rate": {
+    "backend": "100% (23/23 PASS, 1 XFAIL documenting known bug)",
+    "frontend": "90% (page loads + assign flow + toast verified; list-refresh race observed once)"
+  },
+  "test_credentials": "Admin: admin@test.com / PIN 153759 (works). Elite user: 9970100782 / 997010 (works). X-Admin-Pin header: 123456 (verified from ADMIN_OPERATION_PIN env).",
+  "seed_data_creation": "Created 8 TEST_pp_u1..TEST_pp_u8 users forming an 8-deep referral chain for commission distribution testing. All auto-cleaned in fixture teardown (users + prc_ledger + notifications). No production data mutated.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "To rerun: `pytest /app/backend/tests/test_partner_positions_e2e.py -v`. All tests seed and teardown their own data. If notification bug is fixed, remove the pytest.xfail marker in TestNotificationBug and the assertion will become a hard PASS. If commission_active elite-gate is fixed to use ELITE_PLANS set, update test_position_reflects_in_my_position to also verify commission_active=True for membership_type='vip' users.",
+  "rca_of_the_issue": "TWO BACKEND BUGS FOUND: (1) NOTIFICATION DUP-KEY: partner_positions.py inserts partner_position_assigned notifications without a `notification_id` field, but db.notifications has a UNIQUE INDEX on notification_id → first insert stores null, all subsequent inserts crash with E11000. The try/except swallows the failure, so callers see success. Repro: assign a position to any user twice, tail backend logs for '[PARTNERS] notification insert failed' → E11000 duplicate key error. Fix: add `\"notification_id\": str(uuid.uuid4())` on line 134 of partner_positions.py, or route through routes.notifications.create_notification helper which already handles this. (2) ELITE-GATE MISMATCH: partner_positions.py:267 checks `user.get('subscription_plan') == 'elite'` for commission_active in the UI badge, but mining_commission.py:141 (`_is_elite_active`) accepts any of ELITE_PLANS={elite,vip,startup,growth,pro} AND checks membership_type too. Repro: for user 9970100782 (membership_type=vip, subscription_plan=explorer originally) → my-position returns commission_active=false, prompting 'Upgrade to Elite', but distribute_mining_collect_commission WILL credit them because they pass _is_elite_active. Fix: replace line 267 with `commission_active: _is_elite_active(user)` and import the helper from mining_commission, OR duplicate the same ELITE_PLANS + membership_type check inline."
+}
