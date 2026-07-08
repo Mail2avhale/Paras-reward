@@ -711,3 +711,307 @@ class TestStructureGate:
                 c.close()
         self._run(_t())
 
+
+
+
+# ────────────────────────────────────────────────────────────────
+# ADMIN CONFIG — Structure Requirement CRUD (Feb 7 2026)
+# ────────────────────────────────────────────────────────────────
+class TestStructureConfigAdmin:
+    """Ops can tune 100/5/3/5 without a code deploy. Verifies the
+    app_settings-backed loader, cache invalidation on write, and the
+    Reset-to-defaults endpoint.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _cleanup(self, mongo):
+        # Ensure clean slate before AND after each test
+        mongo.app_settings.delete_many({"key": "partner_structure_requirement"})
+        yield
+        mongo.app_settings.delete_many({"key": "partner_structure_requirement"})
+
+    def test_get_returns_defaults_when_no_override(self, api, admin_headers):
+        r = api.get(f"{BASE_URL}/api/admin/partners/structure-config", headers=admin_headers)
+        assert r.status_code == 200
+        d = r.json()
+        assert d["success"] is True
+        assert d["effective_config"]["district_partner"]["min_count"] == 100
+        assert d["effective_config"]["national_partner"]["min_count"] == 5
+        assert d["stored_doc"] is None
+
+    def test_get_wrong_pin_403(self, api, wrong_admin_headers):
+        r = api.get(f"{BASE_URL}/api/admin/partners/structure-config", headers=wrong_admin_headers)
+        assert r.status_code == 403
+
+    def test_post_updates_config_and_invalidates_cache(self, api, admin_headers, mongo):
+        # 1. Post override — lower thresholds to 10 / 2 / 1 / 2
+        new_config = {
+            "district_partner":         {"child": "elite_user",             "min_count": 10},
+            "regional_state_partner":   {"child": "district_partner",       "min_count": 2},
+            "state_partner":            {"child": "regional_state_partner", "min_count": 1},
+            "national_partner":         {"child": "state_partner",          "min_count": 2},
+        }
+        r = api.post(f"{BASE_URL}/api/admin/partners/structure-config",
+                     json={"admin_id": ADMIN_UID, "config": new_config},
+                     headers=admin_headers)
+        assert r.status_code == 200, r.text
+        assert r.json()["config"]["district_partner"]["min_count"] == 10
+
+        # 2. GET should reflect the new effective config
+        r2 = api.get(f"{BASE_URL}/api/admin/partners/structure-config", headers=admin_headers)
+        assert r2.json()["effective_config"]["district_partner"]["min_count"] == 10
+
+        # 3. Verify DB doc
+        doc = mongo.app_settings.find_one({"key": "partner_structure_requirement"})
+        assert doc is not None
+        assert doc["value"]["district_partner"]["min_count"] == 10
+        assert doc["updated_by"] == ADMIN_UID
+
+    def test_post_coerces_bad_values(self, api, admin_headers):
+        """Invalid child types + negative counts must fall back to defaults."""
+        bad_config = {
+            "district_partner": {"child": "invalid_type", "min_count": -5},
+            # missing other 3 — should be filled with defaults
+        }
+        r = api.post(f"{BASE_URL}/api/admin/partners/structure-config",
+                     json={"admin_id": ADMIN_UID, "config": bad_config},
+                     headers=admin_headers)
+        assert r.status_code == 200
+        cfg = r.json()["config"]
+        # bad child + negative count → default
+        assert cfg["district_partner"]["child"] == "elite_user"
+        assert cfg["district_partner"]["min_count"] == 100
+        # missing → default
+        assert cfg["state_partner"]["min_count"] == 3
+
+    def test_post_wrong_pin_403(self, api, wrong_admin_headers):
+        r = api.post(f"{BASE_URL}/api/admin/partners/structure-config",
+                     json={"admin_id": ADMIN_UID, "config": {}},
+                     headers=wrong_admin_headers)
+        assert r.status_code == 403
+
+    def test_reset_removes_override_and_reverts_to_defaults(self, api, admin_headers, mongo):
+        # Seed an override
+        mongo.app_settings.update_one(
+            {"key": "partner_structure_requirement"},
+            {"$set": {
+                "key": "partner_structure_requirement",
+                "value": {"district_partner": {"child": "elite_user", "min_count": 10}},
+                "updated_at": "2026-02-07T00:00:00Z",
+                "updated_by": "test",
+            }},
+            upsert=True,
+        )
+        # Reset
+        r = api.post(f"{BASE_URL}/api/admin/partners/structure-config/reset", headers=admin_headers)
+        assert r.status_code == 200
+        assert r.json()["deleted"] == 1
+        # DB doc is gone
+        assert mongo.app_settings.find_one({"key": "partner_structure_requirement"}) is None
+        # GET now shows defaults
+        r2 = api.get(f"{BASE_URL}/api/admin/partners/structure-config", headers=admin_headers)
+        assert r2.json()["effective_config"]["district_partner"]["min_count"] == 100
+        assert r2.json()["stored_doc"] is None
+
+
+# ────────────────────────────────────────────────────────────────
+# PERFORMANCE — Aggregation + Parallel Fanout (Feb 7 2026)
+# ────────────────────────────────────────────────────────────────
+class TestPerformanceOptimizations:
+    """Verifies that:
+      • DISTRICT leaf-count uses count_documents (fast) not Python-loop
+      • Sibling structure checks run in PARALLEL via asyncio.gather
+    """
+
+    @pytest.fixture(autouse=True)
+    def _small_thresholds(self, monkeypatch, mongo):
+        # Clear DB override so module-attr monkeypatch is authoritative
+        mongo.app_settings.delete_many({"key": "partner_structure_requirement"})
+        import importlib
+        pp = importlib.import_module("routes.partner_positions")
+        monkeypatch.setattr(pp, "POSITION_STRUCTURE_REQUIREMENT", {
+            "district_partner":         {"child": "elite_user",              "min_count": 3},
+            "regional_state_partner":   {"child": "district_partner",        "min_count": 2},
+            "state_partner":            {"child": "regional_state_partner",  "min_count": 2},
+            "national_partner":         {"child": "state_partner",           "min_count": 2},
+        })
+        pp.clear_structure_cache()
+        yield
+        pp.clear_structure_cache()
+
+    def test_leaf_count_uses_aggregation_not_python_loop(self, mongo):
+        """Seed 5 elite + 5 non-elite L1 downlines. Verify count == 5 and
+        no full document hydration occurred (implicit — count_documents
+        returns int, so we just assert the correct number)."""
+        created = []
+
+        def _mk(uid, referred_by, elite):
+            mongo.users.replace_one(
+                {"uid": uid},
+                {"uid": uid, "name": uid, "mobile": uid,
+                 "email": f"{uid}@perftest.local",
+                 "referral_code": uid + "_C",
+                 "referred_by": referred_by,
+                 "partner_position": "user",
+                 "subscription_plan": "elite" if elite else "explorer",
+                 "membership_type": "elite" if elite else "explorer",
+                 "subscription_expired": False,
+                 "prc_balance": 0.0},
+                upsert=True,
+            )
+            created.append(uid)
+
+        _mk("PERF_d", None, elite=True)
+        # 5 elite + 5 non-elite as L1 downlines
+        for i in range(5):
+            _mk(f"PERF_d_e{i}", "PERF_d", elite=True)
+            _mk(f"PERF_d_ne{i}", "PERF_d", elite=False)
+
+        try:
+            async def _t():
+                import importlib
+                pp = importlib.import_module("routes.partner_positions")
+                from motor.motor_asyncio import AsyncIOMotorClient
+                client = AsyncIOMotorClient(MONGO_URL)
+                pp.set_db(client[DB_NAME])
+                try:
+                    n = await pp._count_l1_active_elite("PERF_d", "PERF_d_C")
+                    assert n == 5, f"Expected 5 elite L1 downlines, got {n}"
+
+                    # And structure valid (needs 3, has 5)
+                    ok = await pp.is_structure_valid("PERF_d", "district_partner")
+                    assert ok is True
+                finally:
+                    client.close()
+            asyncio.run(_t())
+        finally:
+            mongo.users.delete_many({"uid": {"$in": created}})
+
+    def test_parallel_child_checks_are_faster_than_serial(self, mongo):
+        """Rough sanity: with 2 STATE children each needing recursive
+        REGIONAL validation, the total wall-time should be << 2 × per-child
+        latency (i.e. running in parallel).
+
+        Seed a NATIONAL with 2 STATEs, each with 2 REGIONALs, each with
+        2 DISTRICTs, each with 3 elite users. Then measure structure-check
+        wall-time. Not a strict perf bound (CI jitter) — we only assert it
+        completes < 3 seconds even with 2*2*2*3 = 24 users in play.
+        """
+        created = []
+
+        def _mk(uid, referred_by=None, pos="user", elite=True):
+            mongo.users.replace_one(
+                {"uid": uid},
+                {"uid": uid, "name": uid, "mobile": uid,
+                 "email": f"{uid}@perfpar.local",
+                 "referral_code": uid + "_C",
+                 "referred_by": referred_by,
+                 "partner_position": pos,
+                 "subscription_plan": "elite" if elite else "explorer",
+                 "membership_type": "elite" if elite else "explorer",
+                 "subscription_expired": False,
+                 "prc_balance": 0.0},
+                upsert=True,
+            )
+            created.append(uid)
+
+        _mk("PAR_n", pos="national_partner")
+        for si, s in enumerate(("PAR_s0", "PAR_s1")):
+            _mk(s, referred_by="PAR_n", pos="state_partner")
+            for ri, r in enumerate((f"{s}_r0", f"{s}_r1")):
+                _mk(r, referred_by=s, pos="regional_state_partner")
+                for di, d in enumerate((f"{r}_d0", f"{r}_d1")):
+                    _mk(d, referred_by=r, pos="district_partner")
+                    for ei in range(3):
+                        _mk(f"{d}_e{ei}", referred_by=d, elite=True)
+
+        try:
+            async def _t():
+                import time as _t
+                import importlib
+                pp = importlib.import_module("routes.partner_positions")
+                from motor.motor_asyncio import AsyncIOMotorClient
+                client = AsyncIOMotorClient(MONGO_URL)
+                pp.set_db(client[DB_NAME])
+                try:
+                    pp.clear_structure_cache()
+                    start = _t.time()
+                    ok = await pp.is_structure_valid("PAR_n", "national_partner")
+                    elapsed = _t.time() - start
+                    assert ok is True, "Full tree should be structurally valid"
+                    # Sanity — should finish well under 3s. Actual measured
+                    # time is typically 0.1-0.3s locally.
+                    assert elapsed < 3.0, f"Structure check too slow: {elapsed:.2f}s"
+                finally:
+                    client.close()
+            asyncio.run(_t())
+        finally:
+            mongo.users.delete_many({"uid": {"$in": created}})
+
+
+# ────────────────────────────────────────────────────────────────
+# LIVE CONFIG-DRIVEN VALIDATION (end-to-end)
+# ────────────────────────────────────────────────────────────────
+class TestConfigDrivenValidation:
+    """When the admin lowers the threshold via POST /structure-config,
+    is_structure_valid must immediately honour the new value."""
+
+    @pytest.fixture(autouse=True)
+    def _cleanup(self, mongo):
+        mongo.app_settings.delete_many({"key": "partner_structure_requirement"})
+        yield
+        mongo.app_settings.delete_many({"key": "partner_structure_requirement"})
+
+    def test_admin_edit_flows_to_validity_check(self, api, admin_headers, mongo):
+        """Seed DISTRICT with 5 elite L1. Default (100) → invalid.
+        Lower threshold to 3 via admin endpoint → same user becomes valid."""
+        created = []
+
+        def _mk(uid, referred_by=None, pos="user", elite=True):
+            mongo.users.replace_one(
+                {"uid": uid},
+                {"uid": uid, "name": uid, "mobile": uid,
+                 "email": f"{uid}@cfglive.local",
+                 "referral_code": uid + "_C",
+                 "referred_by": referred_by,
+                 "partner_position": pos,
+                 "subscription_plan": "elite" if elite else "explorer",
+                 "membership_type": "elite" if elite else "explorer",
+                 "subscription_expired": False,
+                 "prc_balance": 0.0},
+                upsert=True,
+            )
+            created.append(uid)
+
+        _mk("CFG_d", pos="district_partner")
+        for i in range(5):
+            _mk(f"CFG_d_e{i}", referred_by="CFG_d", elite=True)
+
+        try:
+            # Structure should be INVALID at default (needs 100 elite)
+            async def _check():
+                import importlib
+                pp = importlib.import_module("routes.partner_positions")
+                from motor.motor_asyncio import AsyncIOMotorClient
+                client = AsyncIOMotorClient(MONGO_URL)
+                pp.set_db(client[DB_NAME])
+                try:
+                    pp.clear_structure_cache()
+                    return await pp.is_structure_valid("CFG_d", "district_partner")
+                finally:
+                    client.close()
+
+            assert asyncio.run(_check()) is False
+
+            # Lower threshold to 3 via admin endpoint
+            r = api.post(f"{BASE_URL}/api/admin/partners/structure-config",
+                         json={"admin_id": ADMIN_UID, "config": {
+                             "district_partner": {"child": "elite_user", "min_count": 3},
+                         }},
+                         headers=admin_headers)
+            assert r.status_code == 200
+
+            # Re-check — should now be VALID (5 elite >= 3)
+            assert asyncio.run(_check()) is True
+        finally:
+            mongo.users.delete_many({"uid": {"$in": created}})

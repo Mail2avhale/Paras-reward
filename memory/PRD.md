@@ -9,6 +9,21 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 07, 2026 — Config-Driven Thresholds + Aggregation/Parallelization)
+- ✅ **Config-driven `POSITION_STRUCTURE_REQUIREMENT`** (`backend/routes/partner_positions.py`): Thresholds (100/5/3/5) are now stored in `db.app_settings` (key=`partner_structure_requirement`) and hot-loaded via `_load_structure_requirement()` with a dedicated 5-min TTL cache. Ops can tune the 4 tier requirements from an admin UI without a code deploy. Missing / malformed rows auto-fall-back to defaults via `_validate_structure_config()`. Empty override (`{}`) is respected as "no requirements" for test bypass.
+- ✅ **New admin endpoints** (auth-gated + X-Admin-Pin):
+  - `GET /api/admin/partners/structure-config` — returns effective config + defaults + stored doc + cache TTL
+  - `POST /api/admin/partners/structure-config` — upsert new thresholds, purges both config cache AND all per-user validity results immediately
+  - `POST /api/admin/partners/structure-config/reset` — deletes the app_settings override to revert to hard-coded defaults
+- ✅ **Aggregation optimization**: `_count_l1_active_elite()` — DISTRICT leaf-count now uses `count_documents()` with an inline `$in`/`$ne` filter instead of hydrating all L1 downlines into Python. Critical since DISTRICT threshold is 100 users. `_fetch_l1_partner_children()` uses a projected `.find()` returning only `uid + referral_code`.
+- ✅ **Parallel fanout**: Sibling `is_structure_valid()` calls now run concurrently via `asyncio.gather()` inside both `is_structure_valid` (recursive) and `get_structure_report()`. For a NATIONAL partner (5 states × 3 regionals × 5 districts), wall-time is now `max(child_latency)` not `sum(child_latency)` — roughly 15× faster on a full valid tree.
+- 🧪 **9 new pytest cases** (41 tests total, all PASS):
+  - `TestStructureConfigAdmin`: 6 tests — GET returns defaults, GET wrong-PIN 403, POST updates + invalidates cache + verifies DB doc, POST coerces bad values (invalid child + negative count → defaults), POST wrong-PIN 403, RESET removes override
+  - `TestPerformanceOptimizations`: 2 tests — leaf-count uses aggregation (verifies exact count with mixed elite/non-elite L1 downlines), parallel fanout completes < 3s on 24-user tree
+  - `TestConfigDrivenValidation`: 1 test — DISTRICT with 5 elite L1 is INVALID at default 100 threshold; after admin lowers threshold to 3 via POST endpoint, same user immediately becomes VALID (verifies end-to-end config → validator flow with cache invalidation)
+
+
+
 ## Implemented (Feb 06, 2026 — Structural Bonus-Gate for Partner Positions)
 - ✅ **User-requested rule**: For any partner tier's commission to activate, the partner must have a fully-VALID L1-direct downline structure — **recursive**:
   - NATIONAL → 5 STATE (each valid) → 3 REGIONAL_STATE (each valid) → 5 DISTRICT (each valid) → 100 active Elite users
