@@ -24,6 +24,7 @@ assigned does the new position-based path override.
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Optional, Literal
 
@@ -131,7 +132,9 @@ async def admin_assign_position(
     # calculation time; we still notify even non-Elite users so they know).
     try:
         await db.notifications.insert_one({
+            "notification_id": str(uuid.uuid4()),
             "user_id": user["uid"],
+            "user_uid": user["uid"],
             "type": "partner_position_assigned",
             "title": f"🎉 Promoted to {meta['label']}",
             "message": (
@@ -141,6 +144,7 @@ async def admin_assign_position(
             ),
             "created_at": now_iso,
             "read": False,
+            "is_read": False,
             "position": body.position,
         })
     except Exception as e:
@@ -233,13 +237,24 @@ async def get_my_position(uid: str):
     user = await db.users.find_one(
         {"uid": uid},
         {"_id": 0, "uid": 1, "name": 1, "partner_position": 1,
-         "subscription_plan": 1, "referral_code": 1}
+         "subscription_plan": 1, "membership_type": 1,
+         "subscription_expired": 1, "referral_code": 1}
     )
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     position = user.get("partner_position") or DEFAULT_POSITION
     meta = position_meta(position)
+
+    # Elite eligibility — must match mining_commission._is_elite_active exactly,
+    # else the UI badge would tell an eligible user to "upgrade" while the
+    # commission engine happily pays them. Import lazily to avoid a hard
+    # circular-import at module load.
+    try:
+        from routes.mining_commission import _is_elite_active
+        commission_active = _is_elite_active(user)
+    except Exception:
+        commission_active = (user.get("subscription_plan") or "").lower() == "elite"
 
     # Compute per-tier downline counts up to the position's max level
     try:
@@ -264,7 +279,7 @@ async def get_my_position(uid: str):
         "position_config": meta,
         "subscription_plan": user.get("subscription_plan"),
         "elite_required_for_commission": True,
-        "commission_active": user.get("subscription_plan") == "elite",
+        "commission_active": commission_active,
         "cap": meta["cap"],
         "per_level_counts": per_level,
         "total_downlines_in_scope": total,

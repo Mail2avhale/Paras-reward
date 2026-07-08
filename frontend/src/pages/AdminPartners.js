@@ -4,7 +4,7 @@
  * Admin assigns multi-tier partner positions to users. Backed by
  * /api/admin/partners/* endpoints. Requires ADMIN_OPERATION_PIN.
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { API } from '../lib/api';
@@ -57,7 +57,31 @@ export default function AdminPartners({ user, onLogout }) {
       );
       toast.success(res.data?.message || 'Position assigned', { duration: 4000 });
       setQuery('');
-      await fetchPartners();
+
+      // Optimistic list update — merge/replace the newly-assigned partner
+      // into local state so the table refreshes without a race on the
+      // follow-up GET (which sometimes returns stale reads under load).
+      const u = res.data?.user;
+      if (u && u.new_position && u.new_position !== 'user') {
+        setPartners(prev => {
+          const filtered = prev.filter(p => p.uid !== u.uid);
+          return [
+            {
+              uid: u.uid,
+              name: u.name,
+              mobile: u.mobile,
+              partner_position: u.new_position,
+              position_label: u.config?.label || u.new_position,
+              subscription_plan: u.subscription_plan,
+              partner_position_assigned_at: new Date().toISOString(),
+              partner_position_assigned_by: user?.uid || 'admin',
+            },
+            ...filtered,
+          ];
+        });
+      }
+      // Still fire a background refresh to reconcile with server truth.
+      fetchPartners();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to assign position');
     } finally {
@@ -74,7 +98,9 @@ export default function AdminPartners({ user, onLogout }) {
         { headers: { 'X-Admin-Pin': pin } }
       );
       toast.success(`${name} → User`);
-      await fetchPartners();
+      // Optimistic removal from local list, then background sync.
+      setPartners(prev => prev.filter(p => p.uid !== uid));
+      fetchPartners();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to revoke position');
     }
