@@ -24,6 +24,7 @@ assigned does the new position-based path override.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, Literal
@@ -104,13 +105,15 @@ async def admin_assign_position(
     if body.position not in POSITION_CONFIG:
         raise HTTPException(status_code=400, detail=f"Invalid position. Choose one of: {list(POSITION_CONFIG.keys())}")
 
-    # Resolve user
+    # Resolve user — escape the query so regex metacharacters like '.*' in
+    # user-controlled input cannot broaden the match to unintended users.
     q = body.query.strip()
+    q_safe = re.escape(q)
     user = await db.users.find_one({
         "$or": [
             {"uid": q},
             {"mobile": q},
-            {"email": {"$regex": f"^{q}$", "$options": "i"}},
+            {"email": {"$regex": f"^{q_safe}$", "$options": "i"}},
         ]
     }, {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1,
         "subscription_plan": 1, "partner_position": 1})

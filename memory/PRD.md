@@ -9,6 +9,16 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 06, 2026 — Partner Positions E2E Testing + Bug Fixes)
+- ✅ **E2E test run of new Partner Positions 5-tier referral system** (`testing_agent_v3_fork` iteration 258): 23/23 backend + full frontend flow PASS on first pass, 2 backend bugs + 1 frontend race condition identified and FIXED, all 24 pytest cases now PASS.
+- 🐛 **BUG FIX #1 — Notification E11000 duplicate key** (`backend/routes/partner_positions.py`): partner_position_assigned notification was silently failing on every 2nd+ assignment because `notification_id` was missing → dup-key on null. Added `notification_id: str(uuid.uuid4())`, `user_uid`, and `is_read` fields to match the shared notification schema. Users now correctly get their promotion notification.
+- 🐛 **BUG FIX #2 — Elite-gate UI/backend mismatch** (`backend/routes/partner_positions.py:get_my_position`): Badge was using strict `subscription_plan == 'elite'` while the actual commission engine (`mining_commission._is_elite_active`) accepts the full `ELITE_PLANS = {elite, vip, startup, growth, pro}` set + `membership_type` field. Users with `membership_type='vip'` etc. were being told to "Upgrade to Elite" while silently receiving commissions. Now imports and reuses `_is_elite_active()` — single source of truth for elite eligibility across UI and engine.
+- 🐛 **BUG FIX #3 — Frontend partner list race** (`frontend/src/pages/AdminPartners.js`): After a successful assign/revoke, the follow-up GET sometimes returned stale reads. Switched to optimistic local-state update (splice new partner into `partners` array immediately, then background-reconcile with server). No more disappearing rows.
+- 🔒 **HARDENING — Regex injection on admin lookup** (`backend/routes/partner_positions.py:admin_assign_position`): Email lookup was directly interpolating user input into `$regex`. Added `re.escape()` so `.*`-style search inputs can't broaden the match to unintended users.
+- 🧪 **Regression suite added**: `/app/backend/tests/test_partner_positions_e2e.py` — 24 tests covering assign/revoke/list/my-position/commission chain/Elite gate/depth cap/idempotency. Auto-seeds and tears down its own users; safe to run against any environment.
+
+
+
 ## Implemented (Jul 03, 2026 — Admin User 360 PIN Reset Modal Persistence Fix)
 - 🐛 **User-reported (production)**: After clicking "Generate New PIN" in Admin User 360 → Reset PIN modal, the newly generated 6-digit PIN appeared briefly then disappeared, preventing the admin from copying it.
 - **Root cause**: `handlePinReset()` was routed through the generic `handleAction()` wrapper. Inside `handleAction`, `await refreshUserData()` was called before returning the API response. The refresh triggered a full `setUserData(...)` re-render of the parent component. Because `setNewPin(result.new_pin)` was scheduled AFTER `await handleAction(...)` completed, there was a window where the modal re-rendered from the refresh before the PIN state got committed — causing a visible flash-and-clear behavior.
