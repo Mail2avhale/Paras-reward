@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import {
   Settings, CreditCard, Cpu, Globe, Share2, Shield, Video,
   ChevronRight, ArrowLeft, Sparkles, Receipt, Building2, ToggleLeft,
-  Play, Bell, UserX, RefreshCw, Clock
+  Play, Bell, UserX, RefreshCw, Clock, Award
 } from 'lucide-react';
 
 import { API } from "../lib/api";
@@ -96,7 +96,7 @@ const settingsCategories = [
     bgColor: 'bg-red-500/10',
     borderColor: 'border-red-500/30'
   },
-  { 
+  {
     id: 'service-toggles', 
     label: 'Service On/Off', 
     icon: ToggleLeft, 
@@ -105,6 +105,16 @@ const settingsCategories = [
     color: 'from-rose-500 to-red-500',
     bgColor: 'bg-rose-500/10',
     borderColor: 'border-rose-500/30'
+  },
+  {
+    id: 'partners',
+    label: 'Partner Positions',
+    icon: Award,
+    description: '5-tier referral system (District → Regional → State → National). Assign positions & structure rules.',
+    path: '/admin/partners',
+    color: 'from-yellow-500 to-amber-500',
+    bgColor: 'bg-yellow-500/10',
+    borderColor: 'border-yellow-500/30'
   }
 ];
 
