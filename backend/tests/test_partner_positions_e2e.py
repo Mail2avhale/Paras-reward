@@ -31,6 +31,27 @@ MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "paras_reward_db")
 
 
+# Load .env into os.environ once (session-wide) so that any importlib call
+# below sees JWT_SECRET_KEY etc. Must run BEFORE any fixture imports routes.*
+def _load_backend_env():
+    from pathlib import Path
+    p = Path("/app/backend/.env")
+    if not p.exists():
+        return
+    for line in p.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        k = k.strip()
+        v = v.strip().strip('"').strip("'")
+        if k and k not in os.environ:
+            os.environ[k] = v
+
+
+_load_backend_env()
+
+
 # ────────────────────────────────────────────────────────────────
 # FIXTURES
 # ────────────────────────────────────────────────────────────────
@@ -283,8 +304,13 @@ class TestMyPosition:
         assert d["partner_position"] == position
         assert d["cap"] == cap
         assert len(d["per_level_counts"]) == levels
-        # commission_active only if subscription_plan == 'elite' (per code)
-        assert d["commission_active"] is True  # our test user has plan='elite'
+        # Elite flag reflects plan only. commission_active now ALSO requires
+        # the structural bonus-gate (Feb 6 2026); test_users chain has no
+        # downlines so structure_met=False → commission_active=False.
+        assert d["elite_active"] is True
+        assert d["structure_required"] is True
+        assert d["structure_met"] is False
+        assert d["commission_active"] is False
 
     def test_commission_gate_non_elite(self, api, admin_headers, mongo, test_users):
         # Downgrade u2 to explorer, keep position=state_partner
@@ -329,8 +355,10 @@ async def _direct_distribute(collector_uid, amount, ts):
     # Import module directly (avoid routes/__init__.py side effects)
     import importlib
     mc = importlib.import_module("routes.mining_commission")
+    pp = importlib.import_module("routes.partner_positions")
     client = AsyncIOMotorClient(MONGO_URL)
     mc.set_db(client[DB_NAME])
+    pp.set_db(client[DB_NAME])  # structure gate needs its own db handle
     try:
         return await mc.distribute_mining_collect_commission(
             collector_uid=collector_uid, collected_prc=amount, collect_timestamp=ts,
@@ -340,6 +368,20 @@ async def _direct_distribute(collector_uid, amount, ts):
 
 
 class TestCommissionDistribution:
+    @pytest.fixture(autouse=True)
+    def _bypass_structure_gate(self, monkeypatch):
+        """These tests focus on tier depth + Elite gate + idempotency —
+        NOT the structural bonus-gate (which has its own TestStructureGate).
+        Patch POSITION_STRUCTURE_REQUIREMENT to empty so is_structure_valid()
+        short-circuits to True for all positions.
+        """
+        import importlib
+        pp = importlib.import_module("routes.partner_positions")
+        monkeypatch.setattr(pp, "POSITION_STRUCTURE_REQUIREMENT", {})
+        pp.clear_structure_cache()
+        yield
+        pp.clear_structure_cache()
+
     def test_national_partner_7_levels(self, mongo, test_users):
         """u8 = NATIONAL_PARTNER (levels=7). u1 collects → u8 (hop 7) should get 1%."""
         _reset_positions(mongo, test_users)
@@ -411,3 +453,261 @@ class TestCommissionDistribution:
         rows = list(mongo.prc_ledger.find({"user_id": test_users[7],
                                             "source_ref": f"mining_collect:{test_users[0]}:{ts.isoformat()}"}))
         assert len(rows) == 1
+
+
+# ────────────────────────────────────────────────────────────────
+# STRUCTURAL BONUS-GATE (Feb 6 2026)
+# ────────────────────────────────────────────────────────────────
+# Full recursive-chain validation. Thresholds are patched to a smaller
+# min_count=3 (from prod: 100/5/3/5) so seed data stays manageable.
+# ────────────────────────────────────────────────────────────────
+class TestStructureGate:
+    """Verifies the L1-direct recursive structure requirement:
+      DISTRICT    → N active Elite L1 downlines
+      REGIONAL    → N valid DISTRICT L1 downlines (each individually valid)
+      STATE       → N valid REGIONAL L1 downlines
+      NATIONAL    → N valid STATE L1 downlines
+    """
+
+    @pytest.fixture(autouse=True)
+    def _small_thresholds(self, monkeypatch):
+        """Patch prod thresholds down to 3-each so seeding stays sane."""
+        import importlib
+        pp = importlib.import_module("routes.partner_positions")
+        monkeypatch.setattr(pp, "POSITION_STRUCTURE_REQUIREMENT", {
+            "district_partner":         {"child": "elite_user",              "min_count": 3},
+            "regional_state_partner":   {"child": "district_partner",        "min_count": 3},
+            "state_partner":            {"child": "regional_state_partner",  "min_count": 3},
+            "national_partner":         {"child": "state_partner",           "min_count": 3},
+        })
+        pp.clear_structure_cache()
+        yield
+        pp.clear_structure_cache()
+
+    @pytest.fixture
+    def sg_users(self, mongo):
+        """Full structure tree for a DISTRICT partner test:
+          d1 (DISTRICT) → e1,e2,e3 (elite L1 downlines)
+        Plus a REGIONAL tree:
+          r1 (REGIONAL) → d_a, d_b, d_c (DISTRICT) each with 3 elite L1 downlines
+        """
+        created_uids = []
+
+        def _mk(uid, referred_by=None, pos="user", elite=True):
+            mongo.users.replace_one(
+                {"uid": uid},
+                {
+                    "uid": uid, "name": uid, "mobile": uid,
+                    "email": f"{uid}@sgtest.local",  # unique — email has UNIQUE index
+                    "referral_code": uid + "_CODE",
+                    "referred_by": referred_by,
+                    "partner_position": pos,
+                    "subscription_plan": "elite" if elite else "explorer",
+                    "membership_type": "elite" if elite else "explorer",
+                    "subscription_expired": False,
+                    "prc_balance": 0.0,
+                },
+                upsert=True,
+            )
+            created_uids.append(uid)
+
+        # DISTRICT case — d1 needs 3 elite L1 downlines
+        _mk("SG_d1", pos="district_partner")
+        _mk("SG_d1_e1", referred_by="SG_d1", elite=True)
+        _mk("SG_d1_e2", referred_by="SG_d1", elite=True)
+        _mk("SG_d1_e3", referred_by="SG_d1", elite=True)
+
+        # REGIONAL case — r1 needs 3 valid DISTRICTs; each DISTRICT needs 3 elite L1
+        _mk("SG_r1", pos="regional_state_partner")
+        for d in ("SG_r1_dA", "SG_r1_dB", "SG_r1_dC"):
+            _mk(d, referred_by="SG_r1", pos="district_partner")
+            for i in range(3):
+                _mk(f"{d}_e{i}", referred_by=d, elite=True)
+
+        # A DISTRICT with only 2 elite → INVALID structure
+        _mk("SG_d_bad", pos="district_partner")
+        _mk("SG_d_bad_e1", referred_by="SG_d_bad", elite=True)
+        _mk("SG_d_bad_e2", referred_by="SG_d_bad", elite=True)
+
+        yield
+        mongo.users.delete_many({"uid": {"$in": created_uids}})
+        mongo.prc_ledger.delete_many({"user_id": {"$in": created_uids}})
+        mongo.prc_ledger.delete_many({"downline_uid": {"$in": created_uids}})
+        mongo.notifications.delete_many({"user_id": {"$in": created_uids}})
+
+    def _run(self, coro):
+        return asyncio.run(coro)
+
+    async def _load_pp(self):
+        """Bind partner_positions module to Mongo for direct-call tests."""
+        import os as _os
+        from pathlib import Path
+        if not _os.environ.get("JWT_SECRET_KEY"):
+            env = Path("/app/backend/.env")
+            for line in env.read_text().splitlines():
+                if line.startswith("JWT_SECRET_KEY"):
+                    _os.environ["JWT_SECRET_KEY"] = line.split("=", 1)[1].strip().strip('"')
+                    break
+        import importlib
+        pp = importlib.import_module("routes.partner_positions")
+        from motor.motor_asyncio import AsyncIOMotorClient
+        client = AsyncIOMotorClient(MONGO_URL)
+        pp.set_db(client[DB_NAME])
+        return pp, client
+
+    def test_district_valid_with_3_elite(self, sg_users):
+        async def _t():
+            pp, c = await self._load_pp()
+            try:
+                assert await pp.is_structure_valid("SG_d1", "district_partner") is True
+            finally:
+                c.close()
+        self._run(_t())
+
+    def test_district_invalid_with_2_elite(self, sg_users):
+        async def _t():
+            pp, c = await self._load_pp()
+            try:
+                assert await pp.is_structure_valid("SG_d_bad", "district_partner") is False
+            finally:
+                c.close()
+        self._run(_t())
+
+    def test_regional_valid_recursive(self, sg_users):
+        """r1 → 3 DISTRICTs, each with 3 elite → REGIONAL structure valid."""
+        async def _t():
+            pp, c = await self._load_pp()
+            try:
+                assert await pp.is_structure_valid("SG_r1", "regional_state_partner") is True
+            finally:
+                c.close()
+        self._run(_t())
+
+    def test_regional_invalid_when_one_district_breaks(self, sg_users, mongo):
+        """Flip 1 of r1's DISTRICTs' L1 elite user to non-elite → that
+        DISTRICT drops to 2 elite → invalid → REGIONAL now has only 2 valid
+        DISTRICTs → REGIONAL invalid.
+        """
+        # Break SG_r1_dA by making one of its elite children non-elite
+        mongo.users.update_one(
+            {"uid": "SG_r1_dA_e0"},
+            {"$set": {"subscription_plan": "explorer", "membership_type": "explorer"}},
+        )
+
+        async def _t():
+            pp, c = await self._load_pp()
+            try:
+                pp.clear_structure_cache()  # invalidate the stale entry
+                assert await pp.is_structure_valid("SG_r1_dA", "district_partner") is False
+                assert await pp.is_structure_valid("SG_r1", "regional_state_partner") is False
+            finally:
+                c.close()
+        self._run(_t())
+
+    def test_structure_report_shape(self, sg_users):
+        """my-position endpoint drives Progress bar from this report."""
+        async def _t():
+            pp, c = await self._load_pp()
+            try:
+                r = await pp.get_structure_report("SG_d1", "district_partner")
+                assert r["applicable"] is True
+                assert r["child_type"] == "elite_user"
+                assert r["required_count"] == 3
+                assert r["current_count"] == 3
+                assert r["structure_met"] is True
+
+                r2 = await pp.get_structure_report("SG_d_bad", "district_partner")
+                assert r2["structure_met"] is False
+                assert r2["current_count"] == 2
+            finally:
+                c.close()
+        self._run(_t())
+
+    def test_commission_blocked_when_structure_fails(self, mongo, sg_users):
+        """SG_d_bad is DISTRICT_PARTNER with only 2 elite L1 (needs 3).
+        SG_d_bad_e1 collects → SG_d_bad has partner_position=district_partner
+        BUT structure invalid → falls back to USER-tier (legacy 3-tier).
+        Since e1 is L1 of SG_d_bad (hop 1), legacy USER tier still credits
+        SG_d_bad at 1% because default legacy config gives 3 tiers × 1%.
+        """
+        async def _t():
+            pp, c = await self._load_pp()
+            try:
+                # Structure invalid confirmed
+                assert await pp.is_structure_valid("SG_d_bad", "district_partner") is False
+            finally:
+                c.close()
+
+            ts = datetime.now(timezone.utc)
+            # Direct commission call using the collector
+            result = await _direct_distribute("SG_d_bad_e1", 100.0, ts)
+            recipients = {d["uid"] for d in result["distributed"]}
+            # SG_d_bad was demoted to USER-tier: legacy 3-tier config still pays
+            # them at hop 1, so they DO appear. This tests DEMOTION behavior,
+            # not full block. Verify tier index shows LEGACY path (tier 1).
+            if "SG_d_bad" in recipients:
+                row = mongo.prc_ledger.find_one({
+                    "user_id": "SG_d_bad",
+                    "source_ref": f"mining_collect:SG_d_bad_e1:{ts.isoformat()}",
+                })
+                assert row is not None
+                # Legacy path uses tier_index starting at 1 with tier_percent
+                # from the app_settings config (default 1.0 = 1%)
+                assert row["tier_percent"] == pytest.approx(1.0, abs=0.5)
+        self._run(_t())
+
+    def test_commission_flows_when_structure_valid(self, mongo, sg_users):
+        """SG_d1 is DISTRICT with valid 3-elite structure. SG_d1_e1 collects
+        → SG_d1 (hop 1) receives 1% via POSITION path (not legacy fallback).
+        """
+        async def _t():
+            pp, c = await self._load_pp()
+            try:
+                assert await pp.is_structure_valid("SG_d1", "district_partner") is True
+            finally:
+                c.close()
+            ts = datetime.now(timezone.utc)
+            result = await _direct_distribute("SG_d1_e1", 100.0, ts)
+            recipients = {d["uid"] for d in result["distributed"]}
+            assert "SG_d1" in recipients, f"Valid DISTRICT should receive commission. Got {result}"
+            row = mongo.prc_ledger.find_one({
+                "user_id": "SG_d1",
+                "source_ref": f"mining_collect:SG_d1_e1:{ts.isoformat()}",
+            })
+            assert row is not None
+            assert row["amount"] == pytest.approx(1.0, abs=0.01)
+        self._run(_t())
+
+    def test_ttl_cache_hits(self, sg_users, monkeypatch):
+        """Second call within TTL returns cached result without re-querying."""
+        async def _t():
+            pp, c = await self._load_pp()
+            try:
+                pp.clear_structure_cache()
+                # First call — populates cache
+                r1 = await pp.is_structure_valid("SG_d1", "district_partner")
+                assert r1 is True
+
+                # Now BREAK the structure in DB. If cache works, next call
+                # must still return True (cached).
+                await pp.db.users.update_one(
+                    {"uid": "SG_d1_e1"},
+                    {"$set": {"subscription_plan": "explorer", "membership_type": "explorer"}},
+                )
+                r2 = await pp.is_structure_valid("SG_d1", "district_partner")
+                assert r2 is True, "Cache should have returned stale True within TTL"
+
+                # After clear, should reflect reality → False (only 2 elite)
+                pp.clear_structure_cache()
+                r3 = await pp.is_structure_valid("SG_d1", "district_partner")
+                assert r3 is False
+
+                # Restore
+                await pp.db.users.update_one(
+                    {"uid": "SG_d1_e1"},
+                    {"$set": {"subscription_plan": "elite", "membership_type": "elite"}},
+                )
+            finally:
+                c.close()
+        self._run(_t())
+

@@ -679,10 +679,53 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               ))}
             </div>
 
-            {!partnerPosition.commission_active && (
+            {/* Structural bonus-gate progress (Feb 6 2026) */}
+            {partnerPosition.structure_required && partnerPosition.structure_report && (
+              <div className={`rounded-lg p-3 border ${partnerPosition.structure_met
+                ? 'bg-emerald-500/10 border-emerald-500/30'
+                : 'bg-rose-500/10 border-rose-500/30'}`}
+                data-testid="partner-structure-progress"
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-semibold text-white">
+                    {partnerPosition.structure_met ? '✅ Structure Complete' : '🔒 Structure Requirement'}
+                  </span>
+                  <span className={`text-[11px] font-bold ${partnerPosition.structure_met ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    {partnerPosition.structure_report.current_count} / {partnerPosition.structure_report.required_count}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-300">
+                  Requires <strong>{partnerPosition.structure_report.required_count}</strong>{' '}
+                  <strong>{partnerPosition.structure_report.child_label}</strong> as direct L1 downlines
+                  {partnerPosition.structure_report.child_type !== 'elite_user' &&
+                    ' (each must individually meet their own structure)'}.
+                </p>
+                <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(100, (partnerPosition.structure_report.current_count / partnerPosition.structure_report.required_count) * 100)}%`,
+                      background: partnerPosition.structure_met
+                        ? 'linear-gradient(90deg, #10b981, #34d399)'
+                        : 'linear-gradient(90deg, #f43f5e, #fb7185)',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {!partnerPosition.elite_active && (
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 text-center">
                 <p className="text-[11px] text-amber-300">
                   ⚡ Upgrade to <strong>Elite</strong> plan to activate commission earning
+                </p>
+              </div>
+            )}
+
+            {partnerPosition.elite_active && partnerPosition.structure_required && !partnerPosition.structure_met && (
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-2 text-center">
+                <p className="text-[11px] text-rose-300">
+                  🔒 Commission paused — build the required structure above to unlock your bonus
                 </p>
               </div>
             )}

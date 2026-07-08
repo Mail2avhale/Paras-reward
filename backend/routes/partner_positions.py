@@ -48,10 +48,212 @@ VALID_POSITIONS = tuple(POSITION_CONFIG.keys())
 DEFAULT_POSITION = "user"
 
 
+# ────────────────────────────────────────────────────────────────────────
+# STRUCTURAL BONUS-GATE REQUIREMENT (Feb 6 2026 — user-confirmed spec)
+# ────────────────────────────────────────────────────────────────────────
+# To ACTIVATE commission earning, each partner must have a fully-valid
+# downline structure. Validation is RECURSIVE + L1-DIRECT-ONLY:
+#
+#   NATIONAL  → 5 STATE (each individually valid)
+#   STATE     → 3 REGIONAL_STATE (each individually valid)
+#   REGIONAL  → 5 DISTRICT (each individually valid)
+#   DISTRICT  → 100 active Elite users (leaf requirement)
+#
+# Only L1 direct downlines count (users whose `referred_by` == this user's
+# uid or referral_code). Failure to meet the count OR failure of ANY
+# child's structure demotes this partner to USER-tier commission for the
+# collect event (per Q2=b). Elite plan gate applies on top independently.
+POSITION_STRUCTURE_REQUIREMENT = {
+    "district_partner":         {"child": "elite_user",             "min_count": 100},
+    "regional_state_partner":   {"child": "district_partner",       "min_count": 5},
+    "state_partner":            {"child": "regional_state_partner", "min_count": 3},
+    "national_partner":         {"child": "state_partner",          "min_count": 5},
+}
+
+# In-memory TTL cache — 5-minute expiry per user's Q4=c choice.
+# Key: f"{uid}:{position}"  Value: (expiry_epoch, is_valid_bool)
+import time as _time
+_STRUCTURE_CACHE: dict = {}
+_STRUCTURE_CACHE_TTL_SEC = 300  # 5 minutes
+
+
+def _cache_get(key: str):
+    ent = _STRUCTURE_CACHE.get(key)
+    if not ent:
+        return None
+    if ent[0] < _time.time():
+        _STRUCTURE_CACHE.pop(key, None)
+        return None
+    return ent[1]
+
+
+def _cache_set(key: str, value):
+    _STRUCTURE_CACHE[key] = (_time.time() + _STRUCTURE_CACHE_TTL_SEC, value)
+
+
+def clear_structure_cache(uid: Optional[str] = None) -> int:
+    """Testing / admin helper — drop cache entries. Returns count removed."""
+    if uid is None:
+        n = len(_STRUCTURE_CACHE)
+        _STRUCTURE_CACHE.clear()
+        return n
+    removed = [k for k in list(_STRUCTURE_CACHE.keys()) if k.startswith(f"{uid}:")]
+    for k in removed:
+        _STRUCTURE_CACHE.pop(k, None)
+    return len(removed)
+
+
 def position_meta(position: Optional[str]) -> dict:
     """Return config for a position (or default USER)."""
     p = (position or DEFAULT_POSITION).lower().strip()
     return POSITION_CONFIG.get(p, POSITION_CONFIG[DEFAULT_POSITION])
+
+
+# ────────────────────────────────────────────────────────────────────────
+# STRUCTURE VALIDATION (Feb 6 2026)
+# ────────────────────────────────────────────────────────────────────────
+async def _fetch_l1_downlines(uid: str, referral_code: Optional[str]) -> list:
+    """All L1 direct downlines of `uid` — anyone whose `referred_by` matches
+    the user's uid OR their referral_code (system stores either).
+    """
+    if db is None:
+        return []
+    tokens = [uid]
+    if referral_code:
+        tokens.append(referral_code)
+    return await db.users.find(
+        {"referred_by": {"$in": tokens}},
+        {"_id": 0, "uid": 1, "referral_code": 1, "partner_position": 1,
+         "subscription_plan": 1, "membership_type": 1,
+         "subscription_expired": 1}
+    ).to_list(20000)
+
+
+def _is_active_elite(u: dict) -> bool:
+    """Local shadow of mining_commission._is_elite_active — kept here to
+    avoid a circular import at module-load time."""
+    if not u:
+        return False
+    plan = (u.get("subscription_plan") or "").lower()
+    mem = (u.get("membership_type") or "").lower()
+    ELITE = {"elite", "vip", "startup", "growth", "pro"}
+    if plan not in ELITE and mem not in ELITE:
+        return False
+    if u.get("subscription_expired") is True:
+        return False
+    return True
+
+
+async def is_structure_valid(uid: str, position: str) -> bool:
+    """Recursive full-chain validation. USER position → always True.
+    Uses 5-minute TTL in-memory cache. Never raises; on error returns False.
+    """
+    pos = (position or "user").lower().strip()
+    if pos == "user":
+        return True
+    req = POSITION_STRUCTURE_REQUIREMENT.get(pos)
+    if not req:
+        return True  # unknown position → don't block
+
+    key = f"{uid}:{pos}"
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+
+    if db is None:
+        return False
+
+    try:
+        me = await db.users.find_one(
+            {"uid": uid},
+            {"_id": 0, "uid": 1, "referral_code": 1},
+        )
+        if not me:
+            _cache_set(key, False)
+            return False
+
+        downlines = await _fetch_l1_downlines(uid, me.get("referral_code"))
+        min_count = int(req["min_count"])
+        child_type = req["child"]
+
+        if child_type == "elite_user":
+            count = sum(1 for u in downlines if _is_active_elite(u))
+            result = count >= min_count
+            _cache_set(key, result)
+            return result
+
+        # Recursive case — count L1 children with the required partner
+        # position AND whose OWN structure is individually valid.
+        valid = 0
+        for u in downlines:
+            if (u.get("partner_position") or "").lower() != child_type:
+                continue
+            if await is_structure_valid(u["uid"], child_type):
+                valid += 1
+                if valid >= min_count:
+                    _cache_set(key, True)
+                    return True
+        _cache_set(key, False)
+        return False
+    except Exception as e:
+        logger.warning(f"[PARTNERS] structure check failed for {uid}/{pos}: {e}")
+        return False
+
+
+async def get_structure_report(uid: str, position: str) -> dict:
+    """Detailed structure breakdown for a partner — powers the Invite badge
+    and the admin audit endpoint. Returns child counts (raw + valid) so the
+    UI can render 'Progress 3 / 5 State Partners valid'.
+    """
+    pos = (position or "user").lower().strip()
+    if pos == "user":
+        return {"applicable": False, "position": "user"}
+    req = POSITION_STRUCTURE_REQUIREMENT.get(pos)
+    if not req or db is None:
+        return {"applicable": False, "position": pos}
+
+    me = await db.users.find_one(
+        {"uid": uid}, {"_id": 0, "uid": 1, "referral_code": 1}
+    )
+    if not me:
+        return {"applicable": True, "position": pos, "error": "user_not_found"}
+
+    downlines = await _fetch_l1_downlines(uid, me.get("referral_code"))
+    child_type = req["child"]
+    min_count = int(req["min_count"])
+
+    if child_type == "elite_user":
+        matched = [u for u in downlines if _is_active_elite(u)]
+        current = len(matched)
+        met = current >= min_count
+        return {
+            "applicable": True,
+            "position": pos,
+            "child_type": "elite_user",
+            "child_label": "Active Elite Users",
+            "required_count": min_count,
+            "current_count": current,
+            "structure_met": met,
+        }
+
+    matched = [u for u in downlines if (u.get("partner_position") or "").lower() == child_type]
+    valid_children = []
+    for u in matched:
+        ok = await is_structure_valid(u["uid"], child_type)
+        valid_children.append({"uid": u["uid"], "valid": ok})
+    current = sum(1 for c in valid_children if c["valid"])
+    met = current >= min_count
+    return {
+        "applicable": True,
+        "position": pos,
+        "child_type": child_type,
+        "child_label": POSITION_CONFIG.get(child_type, {}).get("label", child_type),
+        "required_count": min_count,
+        "current_count": current,
+        "raw_child_count": len(matched),
+        "structure_met": met,
+    }
+
 
 
 # ────────────────────────────────────────────────────────────────────────
@@ -273,6 +475,15 @@ async def get_my_position(uid: str):
         per_level.append({"level": i, "count": c})
         total += c
 
+    # Structural bonus-gate (Feb 6 2026). USER position never requires it.
+    structure_report = await get_structure_report(uid, position)
+    structure_met = True
+    if structure_report.get("applicable"):
+        structure_met = bool(structure_report.get("structure_met", False))
+
+    # Final commission_active = Elite plan AND structure met.
+    final_commission_active = commission_active and structure_met
+
     return {
         "success": True,
         "uid": uid,
@@ -282,7 +493,11 @@ async def get_my_position(uid: str):
         "position_config": meta,
         "subscription_plan": user.get("subscription_plan"),
         "elite_required_for_commission": True,
-        "commission_active": commission_active,
+        "elite_active": commission_active,
+        "structure_required": structure_report.get("applicable", False),
+        "structure_report": structure_report,
+        "structure_met": structure_met,
+        "commission_active": final_commission_active,
         "cap": meta["cap"],
         "per_level_counts": per_level,
         "total_downlines_in_scope": total,
@@ -290,3 +505,46 @@ async def get_my_position(uid: str):
         "over_cap": total > meta["cap"],
         "counted_towards_commission": min(total, meta["cap"]),
     }
+
+
+# ────────────────────────────────────────────────────────────────────────
+# ADMIN AUDIT — Structure health check for a single partner
+# ────────────────────────────────────────────────────────────────────────
+@admin_router.get("/audit-structure/{uid}")
+async def admin_audit_structure(
+    uid: str,
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+):
+    """Return the detailed structure report for a partner uid so admins can
+    diagnose why a bonus is / isn't active."""
+    import os
+    expected_pin = os.environ.get("ADMIN_OPERATION_PIN")
+    if not expected_pin or x_admin_pin != expected_pin:
+        raise HTTPException(status_code=403, detail="Invalid admin operation PIN")
+    if db is None:
+        raise HTTPException(status_code=500, detail="DB not initialised")
+
+    user = await db.users.find_one(
+        {"uid": uid},
+        {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
+         "partner_position": 1, "subscription_plan": 1, "membership_type": 1,
+         "subscription_expired": 1},
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    pos = (user.get("partner_position") or "user").lower()
+    report = await get_structure_report(uid, pos)
+    elite_active = _is_active_elite(user)
+    return {
+        "success": True,
+        "user": {
+            "uid": user["uid"], "name": user.get("name"),
+            "mobile": user.get("mobile"),
+            "partner_position": pos,
+        },
+        "elite_active": elite_active,
+        "structure_report": report,
+        "commission_active": elite_active and (report.get("structure_met", True) if report.get("applicable") else True),
+    }
+

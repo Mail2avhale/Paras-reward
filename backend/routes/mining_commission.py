@@ -290,13 +290,22 @@ async def distribute_mining_collect_commission(
         use_position_path = upline_position != "user"
         if use_position_path:
             try:
-                from routes.partner_positions import POSITION_CONFIG
+                from routes.partner_positions import POSITION_CONFIG, is_structure_valid
                 pos_meta = POSITION_CONFIG.get(upline_position, POSITION_CONFIG["user"])
                 position_max_tier = int(pos_meta["levels"])
                 position_pct = float(pos_meta["commission_pct"]) * 100  # convert to percent (0.01 → 1)
-                # For position users, `hops` is the effective tier depth (1 = direct parent).
-                # Skip this upline if we've walked past their allowed depth.
-                if hops > position_max_tier:
+                # Structural bonus-gate (Q2=b): if this upline's own downline
+                # structure does NOT satisfy the tier's requirement, demote
+                # them to USER-tier commission (legacy 3-tier config, 500 cap).
+                structure_ok = await is_structure_valid(upline_uid, upline_position)
+                if not structure_ok:
+                    use_position_path = False
+                    # If we've walked past the legacy USER tier depth (3), skip.
+                    # The legacy branch below handles this by continuing.
+                elif hops > position_max_tier:
+                    # For position users, `hops` is the effective tier depth
+                    # (1 = direct parent). Skip if we've walked past their
+                    # allowed depth.
                     tier_idx += 1
                     current_referred_by = upline.get("referred_by")
                     continue

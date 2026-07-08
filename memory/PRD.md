@@ -9,6 +9,23 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 06, 2026 — Structural Bonus-Gate for Partner Positions)
+- ✅ **User-requested rule**: For any partner tier's commission to activate, the partner must have a fully-VALID L1-direct downline structure — **recursive**:
+  - NATIONAL → 5 STATE (each valid) → 3 REGIONAL_STATE (each valid) → 5 DISTRICT (each valid) → 100 active Elite users
+  - STATE / REGIONAL / DISTRICT each need only their own chain from that point downward
+- ✅ **Implementation** (`backend/routes/partner_positions.py`):
+  - `POSITION_STRUCTURE_REQUIREMENT` config (100 / 5 / 3 / 5 per prod spec)
+  - `is_structure_valid(uid, position)` — async recursive validator, L1-direct downlines only (Q1=a), returns False the moment a child fails
+  - `get_structure_report(uid, position)` — detailed count + met status for the UI progress bar
+  - In-memory TTL cache (5 min, Q4=c) with `clear_structure_cache()` helper
+- ✅ **Commission engine** (`backend/routes/mining_commission.py`): position-path branch now calls `is_structure_valid`; on failure the upline is demoted to USER-tier (legacy 3-tier) commission (Q2=b — "temporarily treat as user")
+- ✅ **`GET /api/partners/my-position/{uid}` response updated** with `structure_required`, `structure_report`, `structure_met`, `elite_active`, and recomputed `commission_active = elite_active AND structure_met`. USER position bypasses structure requirement.
+- ✅ **New admin endpoint** `GET /api/admin/partners/audit-structure/{uid}` — diagnose why a partner's bonus is / isn't active
+- ✅ **Invite page badge** (`frontend/src/pages/ReferralsEnhanced.js`): new "Structure Requirement" progress bar with green/red state, count out of target, separate messaging for Elite-gate vs Structure-gate failures. Users clearly see WHAT they need to build to unlock their bonus.
+- 🧪 **8 new pytest cases** in `TestStructureGate` (32 tests total, all PASS): recursive valid path, invalid on missing child, invalid when nested child breaks, report shape, cache TTL behavior, commission blocked/allowed scenarios. Existing `TestCommissionDistribution` uses autouse fixture to bypass the gate so tier-depth / Elite tests continue to isolate their concerns.
+
+
+
 ## Implemented (Feb 06, 2026 — Partner Positions E2E Testing + Bug Fixes)
 - ✅ **E2E test run of new Partner Positions 5-tier referral system** (`testing_agent_v3_fork` iteration 258): 23/23 backend + full frontend flow PASS on first pass, 2 backend bugs + 1 frontend race condition identified and FIXED, all 24 pytest cases now PASS.
 - 🐛 **BUG FIX #1 — Notification E11000 duplicate key** (`backend/routes/partner_positions.py`): partner_position_assigned notification was silently failing on every 2nd+ assignment because `notification_id` was missing → dup-key on null. Added `notification_id: str(uuid.uuid4())`, `user_uid`, and `is_read` fields to match the shared notification schema. Users now correctly get their promotion notification.
