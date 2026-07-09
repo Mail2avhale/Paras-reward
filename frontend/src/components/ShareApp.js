@@ -23,18 +23,23 @@ const ShareApp = ({ user, variant = 'button', className = '' }) => {
   const referralCode = user?.referral_code || 'PARAS';
   const referralLink = `${SHARE_DOMAIN}/register?ref=${referralCode}`;
   
-  const shareMessage = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
+  const shareMessage = `*PARAS REWARD - India's Trusted Reward Platform*
 
-✨ Use my referral code: ${referralCode}
+I'm using PARAS REWARD and really enjoying the experience.
+
+Join me on PARAS REWARD, a smart Reward & Engagement Platform where you can:
+✨ Collect PRC through daily activities
+🎁 Redeem PRC for Cash Vouchers & Redeem to bank & Utility services
+🛍️ Shop through Paras Mall
+📈 Earn Referral Rewards by growing your network
+🚀 Enjoy regular feature updates and new opportunities
+
+Sign up using my referral code and we'll both receive Bonus PRC!
+
+Referral Code: *${referralCode}*
 🔗 ${referralLink}
 
-💰 Earn PRC Daily
-🛒 Shop & Save  
-💳 Pay Bills
-🎁 Redeem Gift Vouchers
-👥 5-Level Referral Bonus
-
-Download now & start earning!`;
+Join today and start your reward journey with me! 💎`;
 
   const copyLink = async () => {
     try {

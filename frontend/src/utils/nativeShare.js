@@ -11,12 +11,24 @@ const isNative = () =>
   typeof window !== "undefined" &&
   !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 
-const buildMessage = ({ link, code, name }) => {
-  const intro = name ? `Hey! I'm using PARAS REWARD` : `Hey! I'm using PARAS REWARD`;
+const buildMessage = ({ link, code }) => {
+  // Marketing copy approved Feb 8 2026 — highlights the full platform value
+  // (PRC earning, redemption channels, Mall, referral rewards) instead of
+  // just the recharge angle. Referral code appears both inline AND in the
+  // register URL so the recipient can either type it or click through.
   return (
-    `${intro} — recharge mobile/DTH/bills and earn PRC rewards on every transaction! 💰\n\n` +
-    `Sign up with my referral code *${code}* and we both get bonus PRC.\n\n` +
-    `👉 ${link}`
+    `*PARAS REWARD - India's Trusted Reward Platform*\n\n` +
+    `I'm using PARAS REWARD and really enjoying the experience.\n\n` +
+    `Join me on PARAS REWARD, a smart Reward & Engagement Platform where you can:\n` +
+    `✨ Collect PRC through daily activities\n` +
+    `🎁 Redeem PRC for Cash Vouchers & Redeem to bank & Utility services\n` +
+    `🛍️ Shop through Paras Mall\n` +
+    `📈 Earn Referral Rewards by growing your network\n` +
+    `🚀 Enjoy regular feature updates and new opportunities\n\n` +
+    `Sign up using my referral code and we'll both receive Bonus PRC!\n\n` +
+    `Referral Code: *${code}*\n` +
+    `🔗 ${link}\n\n` +
+    `Join today and start your reward journey with me! 💎`
   );
 };
 
