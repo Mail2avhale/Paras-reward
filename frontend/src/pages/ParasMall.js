@@ -26,6 +26,7 @@ import ProductDetailSheet from '@/components/mall/ProductDetailSheet';
 import './ParasMall.css';
 import ParasMallBookings from './ParasMallBookings';
 import { resolveAssetUrl } from '@/utils/resolveAssetUrl';
+import { useRewardedInterstitial } from '@/components/RewardedInterstitialTrigger';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 const fmtInr = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
@@ -52,6 +53,11 @@ const SORTS = [
 const ParasMall = ({ user, onBalanceUpdate }) => {
   const navigate = useNavigate();
   const [tab, setTab] = useState('discover');
+
+  // Rewarded Interstitial trigger — opens after a successful booking so
+  // the user sees "watch to earn +10 bonus PRC" opt-in. Never gates the
+  // primary booking (Google AdMob policy safe).
+  const rewardedAd = useRewardedInterstitial();
   const [products, setProducts] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [feed, setFeed] = useState([]);
@@ -215,6 +221,13 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         toast.success(`Booked ${product.name}! Mining started.`);
         // App Open ads now auto-show on app foreground (per Google policy);
         // they MUST NOT be triggered as interstitials after in-app actions.
+
+        // NEW (Feb 8 2026) — Post-action Rewarded Interstitial opt-in.
+        // Non-gating: booking is already saved on the server; the modal
+        // just offers a bonus in exchange for watching an ad. Skipping
+        // is 100% harmless.
+        rewardedAd.open({ bonusPrc: 10 });
+
         // Phase 3: maybe prompt Play Store review after a successful booking
         setTimeout(async () => {
           const { maybePromptReview } = await import('@/utils/inAppReview');
@@ -277,6 +290,9 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
     <PullToRefresh onRefresh={loadAllMallData}>
     <div className="mall-root" data-testid="paras-mall-root">
       <div className="mall-bg" />
+      {/* Post-booking Rewarded Interstitial modal — hidden until bookProduct
+          success triggers rewardedAd.open(). */}
+      {rewardedAd.element}
 
       {/* TOP CHROME — Back / Title block / Search */}
       <div className="mall-overlay-top">

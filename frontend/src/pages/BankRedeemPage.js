@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { API } from "../lib/api";
+import { useRewardedInterstitial } from '@/components/RewardedInterstitialTrigger';
 
 // Status badge component
 const StatusBadge = ({ status }) => {
@@ -44,6 +45,11 @@ const BankRedeemPage = ({ user: initialUser }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [verifyingIFSC, setVerifyingIFSC] = useState(false);
+
+  // Rewarded Interstitial trigger — fires after a successful redeem submission
+  // so the user sees a "watch to earn +5 PRC" opt-in. Never blocks the
+  // primary bank-transfer flow (Google AdMob compliance).
+  const rewardedAd = useRewardedInterstitial();
   
   // Config from backend
   const [config, setConfig] = useState({
@@ -359,10 +365,16 @@ const BankRedeemPage = ({ user: initialUser }) => {
         setIfscVerified(false);
         setAgreedToPolicy(false);
         
-        // Redirect to dashboard after successful submission
+        // Post-action Rewarded Interstitial (opt-in bonus). Fires BEFORE
+        // the redirect so users see the offer while still on this screen.
+        // Skipping does NOT affect the bank transfer.
+        rewardedAd.open({ bonusPrc: 5 });
+
+        // Redirect to dashboard after successful submission — bumped to
+        // 4.5s so the ad prompt has time to appear + be interacted with.
         setTimeout(() => {
           navigate('/dashboard');
-        }, 1500);
+        }, 4500);
       }
     } catch (error) {
       const msg = error.response?.data?.detail || 'Failed to submit request';
@@ -382,6 +394,9 @@ const BankRedeemPage = ({ user: initialUser }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pb-20">
+      {/* Post-action Rewarded Interstitial modal — mounts once, opens
+          from rewardedAd.open() after a successful redeem submission. */}
+      {rewardedAd.element}
       {/* Header */}
       <div className="px-4 py-6" style={{ background: 'linear-gradient(145deg, #2e1065 0%, #4c1d95 50%, #5b21b6 100%)' }}>
         <div className="max-w-lg mx-auto">

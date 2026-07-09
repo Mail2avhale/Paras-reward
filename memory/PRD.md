@@ -9,6 +9,18 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 08, 2026 — Rewarded Interstitial Placements)
+- ✅ Activated the previously-unused **Rewarded Interstitial** AdMob ad unit (`ca-app-pub-3556805218952480/2377737544`) — expected additional revenue stream since this unit had impressions=0 before.
+- ✅ **New reusable component** `frontend/src/components/RewardedInterstitialTrigger.js` — Portal-based modal + `useRewardedInterstitial()` hook that other pages can call imperatively after successful actions.
+- ✅ **Two placements wired**:
+  1. **Bank Redeem** (`BankRedeemPage.js`) — modal opens **after** a successful `/bank-transfer/request` submission, +5 PRC bonus offer. Redirect delay bumped from 1.5s → 4.5s so ad prompt has time to appear.
+  2. **Paras Mall Booking** (`ParasMall.js:bookProduct`) — modal opens **after** a successful `/mall/book/{product_id}` post, +10 PRC bonus offer.
+- 🛡️ **Google AdMob Policy Compliance**: Modal is **non-gating** — primary action (redeem submission / booking) is fully committed on the server BEFORE the ad prompt appears. User can skip with zero consequence. Reward value is disclosed BEFORE ad start. User-initiated only (not on random screens).
+- 📱 On web: ad plays as no-op (Capacitor plugin unavailable) — modal shows briefly then auto-closes with "Ad not available right now" toast; no PRC credit attempted.
+- 🎨 UX: Yellow/gold "Watch & Earn" primary button + "No thanks" secondary — 3 phase states (idle → playing → crediting) with spinner during ad load.
+
+
+
 ## Implemented (Feb 07, 2026 — Device Binding + ANR Fix)
 
 ### 🔐 Device Binding (1-per-lifetime enforcement)
