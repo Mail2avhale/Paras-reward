@@ -10,6 +10,7 @@ import { Mail, Lock, User, AlertCircle, CheckCircle, Gift, Phone, KeyRound, Load
 import { toast } from 'sonner';
 import PinInput from '@/components/PinInput';
 import SEO, { SEOConfigs } from '@/components/SEO';
+import { getDeviceIdentity } from '@/utils/deviceIdentity';
 
 import { API, BACKEND_URL } from "../lib/api";
 
@@ -192,13 +193,23 @@ const RegisterSimple = () => {
     const refCodeNormalized = (formData.referral_code || '').trim().toUpperCase();
 
     try {
+      // Grab reliable device identity so backend can enforce 1-device-1-account.
+      let deviceMeta = {};
+      try {
+        deviceMeta = await getDeviceIdentity();
+      } catch { /* non-fatal */ }
+
       const response = await axios.post(`${API}/auth/register/simple`, {
         full_name: formData.full_name.trim(),
         mobile: formData.mobile,
         email: formData.email,
         password: formData.pin, // Backend still uses 'password' field
         role: formData.role,
-        referral_code: refCodeNormalized
+        referral_code: refCodeNormalized,
+        device_id: deviceMeta.device_id,
+        device_fingerprint: deviceMeta.device_id,
+        device_model: deviceMeta.device_model,
+        os_version: deviceMeta.os_version,
       });
 
       if (refCodeNormalized && response.data.referred_by) {

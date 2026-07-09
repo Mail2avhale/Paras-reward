@@ -22,6 +22,7 @@ import BiometricSetup from '@/components/BiometricSetup';
 import AnimatedFeedback from '@/components/AnimatedFeedback';
 import PinInput from '@/components/PinInput';
 import SEO, { SEOConfigs } from '@/components/SEO';
+import { getDeviceIdentity, getDeviceIdentitySync } from '@/utils/deviceIdentity';
 
 import { API, BACKEND_URL } from "../lib/api";
 
@@ -68,11 +69,22 @@ const LoginNew = ({ onLogin }) => {
     }
   }, []);
 
-  // Generate device ID
+  // Generate device ID (native Android_ID / iOS identifierForVendor when
+  // running as Capacitor app, else localStorage UUID fallback). Backend
+  // uses the AND- / IOS- prefix to decide whether to enforce binding.
   useEffect(() => {
-    const deviceId = localStorage.getItem('device_id') || `DEV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('device_id', deviceId);
-    setLoginData(prev => ({ ...prev, device_id: deviceId }));
+    // Sync seed so form state is never empty on first render.
+    const seed = getDeviceIdentitySync();
+    setLoginData(prev => ({ ...prev, device_id: seed.device_id }));
+    // Async upgrade to the real native id (if available).
+    getDeviceIdentity().then(id => {
+      setLoginData(prev => ({
+        ...prev,
+        device_id: id.device_id,
+        device_model: id.device_model,
+        os_version: id.os_version,
+      }));
+    }).catch(() => { /* non-fatal */ });
   }, []);
 
   // Get IP address
@@ -193,6 +205,8 @@ const LoginNew = ({ onLogin }) => {
           identifier: loginData.identifier,
           password: loginData.pin,
           device_id: loginData.device_id,
+          device_model: loginData.device_model,
+          os_version: loginData.os_version,
           ip_address: loginData.ip_address
         },
         {

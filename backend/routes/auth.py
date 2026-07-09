@@ -176,6 +176,34 @@ async def simple_register(request: Request):
     existing = await db.users.find_one({"email": email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    # ── DEVICE BINDING pre-check (Feb 7 2026) ────────────────────────────
+    signup_device_id = data.get("device_id") or data.get("device_fingerprint")
+    if signup_device_id:
+        try:
+            from routes.device_binding import (
+                is_trusted_device_id as _is_trusted,
+                is_enforcement_enabled as _is_enforce,
+            )
+            if _is_trusted(signup_device_id) and await _is_enforce():
+                existing_bind = await db.device_bindings.find_one(
+                    {"device_id": signup_device_id, "active": True},
+                    {"_id": 0, "user_uid": 1}
+                )
+                if existing_bind:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=(
+                            "This device is already registered to another "
+                            "Paras account. Only one account per device is "
+                            "allowed. Please log in with the existing account "
+                            "or contact support."
+                        ),
+                    )
+        except HTTPException:
+            raise
+        except Exception as _sb_err:
+            logging.warning(f"[REGISTER-SIMPLE DEVICE-BIND] non-fatal: {_sb_err}")
     
     referrer = None
     if referral_code:
@@ -242,8 +270,23 @@ async def simple_register(request: Request):
         user_data["network_parent"] = None
     
     await db.users.insert_one(user_data)
-    
-    # Send welcome notification
+
+    # ── DEVICE BINDING post-write (Feb 7 2026) ───────────────────────────
+    try:
+        from routes.device_binding import check_and_bind_device as _post_bind_simple
+        if signup_device_id:
+            await _post_bind_simple(
+                uid=user_data["uid"],
+                device_id=signup_device_id,
+                device_model=data.get("device_model"),
+                os_version=data.get("os_version"),
+                ip_address=get_client_ip(request) if 'get_client_ip' in globals() else None,
+                user_agent=request.headers.get("user-agent"),
+                event="register",
+            )
+    except Exception as _pb_err:
+        logging.warning(f"[REGISTER-SIMPLE DEVICE-BIND] post-bind non-fatal: {_pb_err}")
+
     try:
         welcome_notification = {
             "notification_id": str(uuid.uuid4()),
@@ -330,7 +373,40 @@ async def register_user(request: Request):
     
     if not fraud_check["allowed"]:
         raise HTTPException(status_code=403, detail=fraud_check["block_reason"])
-    
+
+    # ── DEVICE BINDING pre-check (Feb 7 2026) ────────────────────────────
+    # Prevent a new signup when the caller's native device_id is already
+    # bound to another account. Feature-flag gated inside the helper. This
+    # runs BEFORE we insert a new user to avoid orphan rows.
+    signup_device_id = data.get("device_id") or data.get("device_fingerprint")
+    if signup_device_id:
+        try:
+            from routes.device_binding import (
+                check_and_bind_device as _pre_bind_check,
+                is_trusted_device_id as _is_trusted,
+                is_enforcement_enabled as _is_enforce,
+            )
+            if _is_trusted(signup_device_id) and await _is_enforce():
+                existing_bind = await db.device_bindings.find_one(
+                    {"device_id": signup_device_id, "active": True},
+                    {"_id": 0, "user_uid": 1}
+                )
+                if existing_bind:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=(
+                            "This device is already registered to another "
+                            "Paras account. Only one account is allowed per "
+                            "device. If the previous account is yours, log "
+                            "in with it. Otherwise use a different device or "
+                            "contact support."
+                        ),
+                    )
+        except HTTPException:
+            raise
+        except Exception as _sb_err:
+            logging.warning(f"[REGISTER DEVICE-BIND] non-fatal check error: {_sb_err}")
+
     if data.get('first_name') or data.get('last_name'):
         name_parts = []
         if data.get('first_name'):
@@ -411,6 +487,25 @@ async def register_user(request: Request):
         user_dict["network_parent"] = None
     
     await db.users.insert_one(user_dict)
+
+    # ── DEVICE BINDING post-write (Feb 7 2026) ───────────────────────────
+    # Now that the user row exists, create the canonical binding for their
+    # native device_id (if any). Non-fatal on error — the pre-check above
+    # already prevented collisions when enforcement is on.
+    try:
+        from routes.device_binding import check_and_bind_device as _post_bind
+        if signup_device_id:
+            await _post_bind(
+                uid=user_dict.get("uid") or user.uid,
+                device_id=signup_device_id,
+                device_model=data.get("device_model"),
+                os_version=data.get("os_version"),
+                ip_address=client_ip,
+                user_agent=request.headers.get("user-agent"),
+                event="register",
+            )
+    except Exception as _pb_err:
+        logging.warning(f"[REGISTER DEVICE-BIND] post-bind non-fatal: {_pb_err}")
     
     # Auto-set Security PIN = last 4 digits of mobile (hashed)
     mobile_raw = data.get("mobile", "") or ""
@@ -869,7 +964,51 @@ async def login(request: Request):
     
     if user.get("is_banned"):
         raise HTTPException(status_code=403, detail=f"Account suspended: {user.get('suspension_reason', 'Contact support')}")
-    
+
+    # ── DEVICE BINDING (Feb 7 2026) ─────────────────────────────────────
+    # 1-per-lifetime device→user binding. Runs its own feature-flag check;
+    # when the flag is OFF this is a no-op audit only. When ON, a native
+    # device_id already bound to a different uid gets a 403 with a helpful
+    # message pointing at the self-service OTP unbind flow.
+    #
+    # ALSO: `device_binding_locked` flag on the user (set by the retro-
+    # block admin sweep) hard-blocks login regardless of flag state — the
+    # admin explicitly locked this account.
+    if user.get("device_binding_locked"):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "This account was locked because another account was already "
+                "registered on the same device. Please contact support to "
+                "reactivate this account."
+            ),
+        )
+    try:
+        from routes.device_binding import check_and_bind_device
+        bind_result = await check_and_bind_device(
+            uid=user["uid"],
+            device_id=device_id,
+            device_model=data.get("device_model"),
+            os_version=data.get("os_version"),
+            ip_address=real_ip,
+            user_agent=user_agent,
+            event="login",
+        )
+        if not bind_result.allowed:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "This device is already registered to another Paras "
+                    "account. To use this device with your account, first "
+                    "release it from the previous account via the "
+                    "'Change Device' option (OTP verification required)."
+                ),
+            )
+    except HTTPException:
+        raise
+    except Exception as _bind_err:
+        logging.warning(f"[LOGIN DEVICE-BIND] non-fatal error, allowing login: {_bind_err}")
+
     # Admin IP whitelist check
     if user.get("role") in ["admin", "sub_admin"]:
         ip_allowed = await check_ip_whitelist(real_ip, user["uid"])

@@ -12,6 +12,7 @@
     "@capacitor/browser": "7",
     "@capacitor/cli": "7",
     "@capacitor/core": "7",
+    "@capacitor/device": "^7",
     "@capacitor/haptics": "7",
     "@capacitor/local-notifications": "7",
     "@capacitor/preferences": "7",

@@ -9,6 +9,33 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 07, 2026 — Device Binding + ANR Fix)
+
+### 🔐 Device Binding (1-per-lifetime enforcement)
+- **New backend module** `backend/routes/device_binding.py` — self-contained router + admin_router + set_db + ensure_indexes.
+- **Data model**: `db.device_bindings` (unique partial index on `(device_id, active=True)`) + `db.device_binding_collisions` (audit) + `db.device_unbind_otps` (self-service).
+- **Feature flag** at `app_settings.device_binding.enabled` (default OFF, 5-min TTL cache). Admin can flip via `POST /api/admin/device-binding/flag`.
+- **Trusted vs untrusted device_id**: Native Capacitor IDs (prefixed `AND-` / `IOS-`) enforce; browser localStorage UUIDs (`DEV-`) always skip enforcement per Q2=a.
+- **Enforcement hooks** wired into `auth.py` `login()` + `register()` + `/register/simple`. Login also hard-blocks users with `device_binding_locked=True` flag set by retro-block sweep.
+- **Admin endpoints**: `GET/POST /flag`, `GET /retro-scan`, `POST /retro-block` (dry-run + apply, keeps earliest account per colliding device), `GET /collisions`, `GET /suspicious` (same IP + 3+ signups in 24h auto-flag per Q5=c), `POST /unbind`.
+- **User self-service**: `POST /device-binding/unbind/request-otp` + `POST /device-binding/unbind/verify-otp` — user proves ownership via SMS OTP to legally release their old device without admin help (Q4=a).
+- **Frontend**:
+  - `frontend/src/utils/deviceIdentity.js` — new util reading `@capacitor/device` native ID with graceful web fallback; installed `@capacitor/device@7.0.5`.
+  - `LoginNew.js` and `RegisterSimple.js` now send `device_id + device_model + os_version` on their respective flows.
+  - New admin page `frontend/src/pages/AdminDeviceBinding.js` — flag toggle, retro-scan, retro-block dry-run/apply, collisions log, suspicious clusters, manual unbind. Route `/admin/device-binding` (canAccessAdmin-gated) + card added to `AdminSettingsHub`.
+- **Testing**: `backend/tests/test_device_binding_e2e.py` — 17 tests (flag CRUD, retro-scan, suspicious, native regex, core binding matrix incl. soft/hard collision modes, my-bindings, admin unbind errors, retro-block dry-run + apply). **17/17 PASS**. Existing partner_positions 41/41 still PASS. Total suite **58/58**.
+
+### 📱 ANR Fix (Play Console 1.47% → target < 0.47%)
+- **Root cause**: `useAdMob` hook (called from App root) previously awaited App Open ad load for up to **4 seconds** BEFORE hiding the splash. On low-end Android this triggered the 5-second ANR watchdog.
+- **Fix** in `frontend/src/hooks/useAdMob.js`:
+  1. `hideSplashSafe()` runs IMMEDIATELY on mount (idempotent guard flag). WebView interactive in < 100 ms.
+  2. AdMob init moved into `scheduleAdMobInit()` — detached from splash flow, runs on `requestIdleCallback` (fallback `setTimeout(0)` on older WebViews).
+  3. Cold-start ad timeout reduced from **4000 ms → 1500 ms**.
+  4. Splash hide no longer awaited by ad chain; ad init runs completely detached.
+- **capacitor.config.json**: `launchAutoHide: false → true` + `launchShowDuration: 5000 → 800` (safety net so OS itself dismisses splash even if JS hangs).
+
+
+
 ## Implemented (Feb 07, 2026 — Config-Driven Thresholds + Aggregation/Parallelization)
 - ✅ **Config-driven `POSITION_STRUCTURE_REQUIREMENT`** (`backend/routes/partner_positions.py`): Thresholds (100/5/3/5) are now stored in `db.app_settings` (key=`partner_structure_requirement`) and hot-loaded via `_load_structure_requirement()` with a dedicated 5-min TTL cache. Ops can tune the 4 tier requirements from an admin UI without a code deploy. Missing / malformed rows auto-fall-back to defaults via `_validate_structure_config()`. Empty override (`{}`) is respected as "no requirements" for test bypass.
 - ✅ **New admin endpoints** (auth-gated + X-Admin-Pin):

@@ -115,6 +115,16 @@ const settingsCategories = [
     color: 'from-yellow-500 to-amber-500',
     bgColor: 'bg-yellow-500/10',
     borderColor: 'border-yellow-500/30'
+  },
+  {
+    id: 'device-binding',
+    label: 'Device Binding',
+    icon: Shield,
+    description: '1-account-per-device enforcement. Retro-scan multi-account devices, review collisions, unbind users.',
+    path: '/admin/device-binding',
+    color: 'from-indigo-500 to-purple-500',
+    bgColor: 'bg-indigo-500/10',
+    borderColor: 'border-indigo-500/30'
   }
 ];
 

@@ -36884,6 +36884,25 @@ try:
 except Exception as _pp_err:
     logging.error(f"[STARTUP] partner_positions wiring failed: {_pp_err}")
 
+# ── Device Binding (Feb 7 2026) ──────────────────────────────────────────
+# 1-per-lifetime device→user binding, opt-in via db.app_settings feature
+# flag. Provides self-service OTP unbind + admin retro-scan / retro-block
+# / suspicious-signup flagging. See routes/device_binding.py header.
+try:
+    from routes.device_binding import (
+        router as device_binding_router,
+        admin_router as device_binding_admin_router,
+        set_db as set_device_binding_db,
+        ensure_indexes as ensure_device_binding_indexes,
+    )
+    set_device_binding_db(db)
+    api_router.include_router(device_binding_router)
+    api_router.include_router(device_binding_admin_router)
+    asyncio.create_task(ensure_device_binding_indexes())
+    logging.info("[STARTUP] device_binding routers wired")
+except Exception as _db_err:
+    logging.error(f"[STARTUP] device_binding wiring failed: {_db_err}")
+
 # ── Admin Bank Redeem Limits Config (Feb 5 2026) ─────────────────────────
 # Admin-editable min / max / monthly-cap for bank redemptions. Reads by
 # manual_bank_transfer.py at request time.
