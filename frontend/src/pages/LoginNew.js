@@ -585,6 +585,20 @@ const LoginNew = ({ onLogin }) => {
             )}
           </div>
 
+          {/* Change Device link — user cannot log in on a new phone because
+              their account is bound to an old one. Goes to the admin-approval
+              request flow. */}
+          <div className="mt-3 text-center">
+            <button
+              type="button"
+              onClick={() => navigate('/change-device')}
+              className="text-[12px] text-gray-500 hover:text-purple-600 underline"
+              data-testid="change-device-link"
+            >
+              Switched to a new phone? Request device change
+            </button>
+          </div>
+
           {/* Biometric Login */}
           {showBiometricOption && loginData.identifier && (
             <>

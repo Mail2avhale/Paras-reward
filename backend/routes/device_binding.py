@@ -758,6 +758,204 @@ async def admin_suspicious(
 
 # ────────────────────────────────────────────────────────────────────────
 # INTERNAL — admin PIN guard
+
+
+# ────────────────────────────────────────────────────────────────────────
+# CHANGE-DEVICE REQUEST (Admin-approval flow — Feb 8 2026)
+# ────────────────────────────────────────────────────────────────────────
+# User has no SMS gateway configured, so instead of the OTP flow above,
+# a support-desk-style request queue is used:
+#
+#   1. User submits `/change-device/request` from the "Change Device"
+#      self-service page with their old device details + reason.
+#   2. Row lands in db.device_change_requests with status=pending.
+#   3. Admin sees pending queue in AdminDeviceBinding.js panel.
+#   4. Admin clicks Approve → server unbinds the device + clears
+#      device_binding_locked on the user, updates the request row.
+#   5. Admin clicks Reject → row marked rejected with an optional reason.
+#
+# Rate limit: 3 open requests per user (prevents spam).
+class ChangeDeviceRequest(BaseModel):
+    identifier: str            # mobile OR email OR uid of the user
+    old_device_model: Optional[str] = None
+    reason: Optional[str] = None
+    contact_notes: Optional[str] = None   # e.g. "call me on 987654..." for admin
+
+
+@router.post("/change-device/request")
+async def submit_change_device(body: ChangeDeviceRequest, request: Request):
+    """Public — a user (potentially locked out) submits their case. No auth
+    required because the whole point of this flow is that they cannot log
+    in on their new device yet.
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="DB not initialised")
+
+    user = await _find_user_by_identifier(body.identifier)
+    if not user:
+        raise HTTPException(status_code=404, detail="Account not found for that identifier")
+
+    # Anti-spam: max 3 open (pending) requests per user
+    open_count = await db.device_change_requests.count_documents({
+        "user_uid": user["uid"], "status": "pending",
+    })
+    if open_count >= 3:
+        raise HTTPException(
+            status_code=429,
+            detail="You already have pending requests. Please wait for admin review.",
+        )
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    req_id = str(uuid.uuid4())
+    row = {
+        "request_id": req_id,
+        "user_uid": user["uid"],
+        "user_name": user.get("name"),
+        "user_mobile": user.get("mobile"),
+        "user_email": user.get("email"),
+        "old_device_model": body.old_device_model,
+        "reason": body.reason,
+        "contact_notes": body.contact_notes,
+        "status": "pending",
+        "requested_at": now_iso,
+        "requester_ip": request.client.host if request.client else None,
+        "requester_ua": (request.headers.get("user-agent") or "")[:200],
+    }
+    await db.device_change_requests.insert_one(row)
+    logger.info(f"[DEVICE-BIND] change-request submitted for {user['uid']}: id={req_id}")
+
+    return {
+        "success": True,
+        "request_id": req_id,
+        "message": (
+            "Your request has been submitted. Our team will review and "
+            "approve it within 24 hours. You will receive a notification "
+            "in the app once approved."
+        ),
+    }
+
+
+@admin_router.get("/change-requests")
+async def admin_list_change_requests(
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+    status: str = "pending",
+    limit: int = 50,
+):
+    _require_admin(x_admin_pin)
+    q = {} if status == "all" else {"status": status}
+    rows = await db.device_change_requests.find(q, {"_id": 0}) \
+        .sort("requested_at", -1).to_list(limit)
+    return {"success": True, "count": len(rows), "requests": rows}
+
+
+class ChangeRequestDecision(BaseModel):
+    admin_id: str
+    reject_reason: Optional[str] = None
+
+
+@admin_router.post("/change-requests/{request_id}/approve")
+async def admin_approve_change_request(
+    request_id: str,
+    body: ChangeRequestDecision,
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+):
+    """Approve = unbind the user's currently-bound device (if any) + clear
+    device_binding_locked so they can log in on a fresh device. Atomic on
+    the request row so double-clicks are idempotent.
+    """
+    _require_admin(x_admin_pin)
+    req = await db.device_change_requests.find_one(
+        {"request_id": request_id, "status": "pending"},
+        {"_id": 0},
+    )
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found or already resolved")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    uid = req["user_uid"]
+
+    # Deactivate any active binding + clear lock
+    unbind_res = await db.device_bindings.update_many(
+        {"user_uid": uid, "active": True},
+        {"$set": {
+            "active": False,
+            "unbound_at": now_iso,
+            "unbound_reason": "admin_approved_change_request",
+            "unbound_by_admin": body.admin_id,
+            "unbound_via_request": request_id,
+        }},
+    )
+    await db.users.update_one(
+        {"uid": uid},
+        {"$unset": {
+            "primary_device_id": "",
+            "primary_device_bound_at": "",
+            "device_binding_locked": "",
+            "device_binding_locked_at": "",
+            "device_binding_locked_reason": "",
+        }},
+    )
+    # Mark the request row approved (idempotent — pending → approved)
+    await db.device_change_requests.update_one(
+        {"request_id": request_id, "status": "pending"},
+        {"$set": {
+            "status": "approved",
+            "reviewed_at": now_iso,
+            "reviewed_by": body.admin_id,
+            "unbindings_count": unbind_res.modified_count,
+        }},
+    )
+
+    # Best-effort notification for when the user next opens the app
+    try:
+        await db.notifications.insert_one({
+            "notification_id": str(uuid.uuid4()),
+            "user_id": uid,
+            "user_uid": uid,
+            "type": "device_change_approved",
+            "title": "✅ Device Change Approved",
+            "message": (
+                "Your device change request has been approved. You can now "
+                "log in on your new device — it will be bound automatically."
+            ),
+            "created_at": now_iso,
+            "read": False,
+            "is_read": False,
+        })
+    except Exception as e:
+        logger.warning(f"[DEVICE-BIND] change-approve notif failed: {e}")
+
+    return {
+        "success": True,
+        "request_id": request_id,
+        "unbindings_deactivated": unbind_res.modified_count,
+        "message": "Approved — user can now log in on a new device.",
+    }
+
+
+@admin_router.post("/change-requests/{request_id}/reject")
+async def admin_reject_change_request(
+    request_id: str,
+    body: ChangeRequestDecision,
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+):
+    _require_admin(x_admin_pin)
+    now_iso = datetime.now(timezone.utc).isoformat()
+    res = await db.device_change_requests.update_one(
+        {"request_id": request_id, "status": "pending"},
+        {"$set": {
+            "status": "rejected",
+            "reviewed_at": now_iso,
+            "reviewed_by": body.admin_id,
+            "reject_reason": body.reject_reason or "not_specified",
+        }},
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Request not found or already resolved")
+    return {"success": True, "request_id": request_id}
+
+
+
 # ────────────────────────────────────────────────────────────────────────
 def _require_admin(pin: str):
     expected = os.environ.get("ADMIN_OPERATION_PIN")
@@ -791,6 +989,10 @@ async def ensure_indexes():
         await db.device_unbind_otps.create_index(
             [("user_uid", 1), ("device_id", 1)], unique=True
         )
+        await db.device_change_requests.create_index(
+            [("status", 1), ("requested_at", -1)]
+        )
+        await db.device_change_requests.create_index([("user_uid", 1)])
         logger.info("[DEVICE-BIND] indexes ensured")
     except Exception as e:
         logger.warning(f"[DEVICE-BIND] index ensure failed (non-fatal): {e}")

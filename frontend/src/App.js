@@ -582,6 +582,7 @@ const AdminSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkNa
 const AdminSettingsHub = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettingsHub"));
 const AdminPartners = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPartners"));
 const AdminDeviceBinding = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDeviceBinding"));
+const ChangeDevice = lazy(() => import(/* webpackChunkName: "auth" */ "@/pages/ChangeDevice"));
 // AdminPRCRateControl - REMOVED (June 2026, fixed 10 PRC = ₹1)
 const AdminSecurityDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSecurityDashboard"));
 // AdminVIPPlans and AdminVIPPaymentVerification removed - replaced by AdminSubscriptionManagement (new 4-tier system)
@@ -712,6 +713,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogArticle />} />
             <Route path="/login" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <Login onLogin={handleLogin} />} />
+            <Route path="/change-device" element={<Suspense fallback={<LoadingFallback />}><ChangeDevice /></Suspense>} />
             <Route path="/careers" element={<Suspense fallback={<LoadingFallback />}><CareersPage /></Suspense>} />
             <Route path="/investors" element={<Suspense fallback={<LoadingFallback />}><InvestorsPage /></Suspense>} />
             <Route path="/register" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RegisterSimple />} />

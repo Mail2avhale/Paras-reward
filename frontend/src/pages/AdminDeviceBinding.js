@@ -17,7 +17,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Switch } from '../components/ui/switch';
-import { Shield, RefreshCw, AlertTriangle, Lock, Unlock, Users, Activity } from 'lucide-react';
+import { Shield, RefreshCw, AlertTriangle, Lock, Unlock, Users, Activity, Inbox, Check, X as XIcon } from 'lucide-react';
 import { API } from '../lib/api';
 
 const AdminDeviceBinding = ({ user }) => {
@@ -30,6 +30,8 @@ const AdminDeviceBinding = ({ user }) => {
   const [collisions, setCollisions] = useState([]);
   const [suspicious, setSuspicious] = useState([]);
   const [unbindTarget, setUnbindTarget] = useState({ uid: '', device_id: '' });
+  const [changeRequests, setChangeRequests] = useState([]);
+  const [changeReqBusy, setChangeReqBusy] = useState(false);
 
   const headers = useCallback(() => ({ 'X-Admin-Pin': pin }), [pin]);
 
@@ -139,6 +141,36 @@ const AdminDeviceBinding = ({ user }) => {
       setUnbindTarget({ uid: '', device_id: '' });
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Unbind failed');
+    }
+  };
+
+  const loadChangeRequests = async () => {
+    setChangeReqBusy(true);
+    try {
+      const r = await axios.get(
+        `${API}/admin/device-binding/change-requests?status=pending&limit=50`,
+        { headers: headers() },
+      );
+      setChangeRequests(r.data?.requests || []);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to load requests');
+    } finally {
+      setChangeReqBusy(false);
+    }
+  };
+
+  const decideRequest = async (request_id, approve, reject_reason = null) => {
+    try {
+      const path = approve ? 'approve' : 'reject';
+      const r = await axios.post(
+        `${API}/admin/device-binding/change-requests/${request_id}/${path}`,
+        { admin_id: user?.uid || 'admin', reject_reason },
+        { headers: headers() },
+      );
+      toast.success(r.data?.message || (approve ? 'Approved' : 'Rejected'));
+      setChangeRequests(prev => prev.filter(x => x.request_id !== request_id));
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to update request');
     }
   };
 
@@ -324,6 +356,83 @@ const AdminDeviceBinding = ({ user }) => {
               </div>
             ))}
           </div>
+        )}
+      </Card>
+
+      {/* Change-Device Requests (admin-approval queue) */}
+      <Card className="p-4 border-indigo-300/40" data-testid="device-binding-change-requests-card">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-bold text-lg flex items-center gap-2">
+            <Inbox className="w-5 h-5 text-indigo-500" /> Change Device Requests
+            {changeRequests.length > 0 && (
+              <span className="ml-2 text-[11px] bg-indigo-500 text-white rounded-full px-2 py-0.5" data-testid="change-requests-badge">
+                {changeRequests.length} pending
+              </span>
+            )}
+          </h2>
+          <Button
+            data-testid="change-requests-load-btn"
+            variant="outline"
+            onClick={loadChangeRequests}
+            disabled={!pin || changeReqBusy}
+          >
+            {changeReqBusy ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : null}
+            Load Pending
+          </Button>
+        </div>
+        {changeRequests.length > 0 && (
+          <div className="space-y-3 max-h-[500px] overflow-y-auto">
+            {changeRequests.map((req) => (
+              <div
+                key={req.request_id}
+                data-testid={`change-request-${req.request_id}`}
+                className="p-3 rounded-lg border border-gray-200 bg-white space-y-2"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm text-gray-900">
+                      {req.user_name || '(no name)'} — {req.user_mobile || req.user_email || req.user_uid}
+                    </p>
+                    <p className="text-[11px] text-gray-500 font-mono truncate">
+                      UID: {req.user_uid}
+                    </p>
+                  </div>
+                  <span className="text-[10px] text-gray-500 shrink-0">
+                    {(req.requested_at || '').slice(0, 19).replace('T', ' ')}
+                  </span>
+                </div>
+                <div className="text-[12px] text-gray-700 space-y-0.5">
+                  <p><b>Reason:</b> {req.reason || '—'}</p>
+                  {req.old_device_model && <p><b>Old device:</b> {req.old_device_model}</p>}
+                  {req.contact_notes && <p><b>Notes:</b> {req.contact_notes}</p>}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    data-testid={`approve-request-${req.request_id}`}
+                    onClick={() => decideRequest(req.request_id, true)}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white flex-1"
+                  >
+                    <Check className="w-3 h-3 mr-1" /> Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    data-testid={`reject-request-${req.request_id}`}
+                    variant="destructive"
+                    onClick={() => {
+                      const r = window.prompt('Reason for rejection (optional):') || 'not_specified';
+                      decideRequest(req.request_id, false, r);
+                    }}
+                  >
+                    <XIcon className="w-3 h-3 mr-1" /> Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {!changeReqBusy && changeRequests.length === 0 && (
+          <p className="text-sm text-gray-500">Click &quot;Load Pending&quot; to see any pending device change requests.</p>
         )}
       </Card>
 
