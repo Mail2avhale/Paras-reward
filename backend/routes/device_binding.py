@@ -40,6 +40,8 @@ from __future__ import annotations
 import logging
 import os
 import re
+import secrets
+import string
 import time
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -104,7 +106,10 @@ def _clear_flag_cache():
 # "IOS-" from the frontend adapter. Anything else (browser fallback with
 # "DEV-" prefix or empty / "unknown") is treated as an untrusted id and
 # enforcement is skipped, per Q2=a.
-NATIVE_DEVICE_ID_PATTERN = re.compile(r"^(AND|IOS)-[A-Za-z0-9\-]{6,}$")
+# Native id format: `AND-` or `IOS-` prefix, then 6-128 alphanumeric/hyphen
+# chars. Max bound guards against DB bloat if a hostile client sends a
+# 500-char payload.
+NATIVE_DEVICE_ID_PATTERN = re.compile(r"^(AND|IOS)-[A-Za-z0-9\-]{6,128}$")
 
 
 def is_trusted_device_id(device_id: Optional[str]) -> bool:
@@ -321,7 +326,9 @@ async def request_unbind_otp(body: UnbindOtpRequest):
             detail="This device is bound to a different account. Please contact support."
         )
 
-    otp = "".join([str(uuid.uuid4().int)[-1] for _ in range(6)])  # 6-digit
+    # Cryptographically-random 6-digit OTP using secrets (not uuid) — safe
+    # against adversaries who might otherwise brute-force via retry.
+    otp = "".join(secrets.choice(string.digits) for _ in range(6))
     now = datetime.now(timezone.utc)
     await db.device_unbind_otps.update_one(
         {"user_uid": user["uid"], "device_id": body.device_id},
