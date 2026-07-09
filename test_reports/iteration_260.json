@@ -1,0 +1,36 @@
+{
+  "summary": "Full Device Binding E2E — 17 baseline pytest tests PASS + 9 NEW scenarios PASS (26 total, 100% success). Frontend AdminDeviceBinding panel verified end-to-end: title, all 8 data-testids present, admin PIN input works, enforcement toggle ON/OFF toast fires, Run Scan / Load Collisions / Suspicious Scan buttons operate, Manual Unbind flow triggers API. AdminSettingsHub card 'Device Binding' navigates to /admin/device-binding correctly. Feature flag left OFF; all DBTEST-namespaced data cleaned.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_device_binding_e2e.py",
+    "/app/backend/tests/test_device_binding_new_scenarios.py",
+    "/app/test_reports/pytest/device_binding_baseline.xml",
+    "/app/test_reports/pytest/device_binding_new.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "device_binding.py:324 — OTP generation uses str(uuid.uuid4().int)[-1] repeated 6x. Each iteration recomputes a fresh UUID, so the OTP is effectively random, but the pattern is unusual. Consider `''.join(secrets.choice(string.digits) for _ in range(6))` for clarity + cryptographic randomness.",
+    "device_binding.py:107 NATIVE_DEVICE_ID_PATTERN — regex does not enforce a MAX length; a 500-char device_id would pass {6,}. Consider bounding to {6,128} to defend against DB bloat.",
+    "auth.py:181 signup_device_id = data.get('device_id') or data.get('device_fingerprint') — falls back to device_fingerprint if device_id absent. Since fingerprints don't match the AND-/IOS- pattern they never trigger enforcement (safe by Q2=a); just documenting the fallback.",
+    "Admin endpoints require both X-Admin-Pin PIN AND JWT bearer (global auth middleware). AdminDeviceBinding.js headers() only sets 'X-Admin-Pin' — it relies on axios default interceptor injecting Authorization from localStorage. Curl tests need both headers.",
+    "device_binding.py:487 admin_set_flag clears the local module cache (_clear_flag_cache) but does NOT propagate to other worker processes if uvicorn scales beyond 1 worker. The 5-min TTL will resolve eventually. Consider pub/sub or redis-backed flag if going multi-worker."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_device_binding_new_scenarios.py (NEW — 9 tests covering OTP unbind loop, login-locked, signup enforcement ON/OFF, admin unbind by uid, my-bindings with data, collisions endpoint)"
+  ],
+  "success_rate": {"backend": "100% (26/26)", "frontend": "100% (all testids + navigation verified)"},
+  "test_credentials": "admin@test.com / PIN 153759 / uid admin-test-123; ADMIN_OPERATION_PIN=123456 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "All test data uses uid prefix 'DBTEST-' and device_id prefix 'AND-DBTEST-'. Fully cleaned in module-scope teardown fixture. Confirmed 0 rows remain post-run.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "26 pytest tests across test_device_binding_e2e.py (17) and test_device_binding_new_scenarios.py (9). Feature flag is OFF at rest. When adding new tests: (1) always restore flag=False in teardown, (2) use DBTEST-/AND-DBTEST- namespaces, (3) OTP for unbind is stored plaintext in db.device_unbind_otps and can be read directly (SMS gateway is best-effort per handoff), (4) admin endpoints need BOTH X-Admin-Pin AND JWT Authorization header. Frontend testids verified: device-binding-pin-input, -enforcement-toggle, -scan-btn, -collisions-btn, -suspicious-btn, -unbind-uid, -unbind-device-id, -unbind-btn (plus block-dryrun-btn and block-apply-btn appear only after scan finds >0 clusters).",
+  "rca of the issue": "N/A — no issues found. Feature is production-ready pending main-agent decision on when to flip flag ON."
+}
