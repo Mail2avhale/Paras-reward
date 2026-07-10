@@ -658,6 +658,7 @@ class AdminUnbindRequest(BaseModel):
     admin_id: str
     device_id: Optional[str] = None
     uid: Optional[str] = None
+    identifier: Optional[str] = None  # NEW (Feb 8 2026) — mobile / email / uid all accepted
     reason: Optional[str] = "admin_manual"
 
 
@@ -666,22 +667,66 @@ async def admin_unbind(
     body: AdminUnbindRequest,
     x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
 ):
-    """Admin-force unbind. Either device_id OR uid must be provided. If
-    both, they must match. Also clears device_binding_locked on the user.
+    """Admin-force unbind. Accepts ANY of:
+       • `device_id`  — a specific AND-/IOS- device id (exact match)
+       • `uid`        — user uid (exact match)
+       • `identifier` — flexible: mobile OR email OR uid (Feb 8 2026)
+
+    At least one must be provided; when both device_id and a user-side
+    field are given they must match the same binding. Clears
+    device_binding_locked on the affected user.
     """
     _require_admin(x_admin_pin)
-    if not body.device_id and not body.uid:
-        raise HTTPException(status_code=400, detail="device_id or uid required")
+    if not body.device_id and not body.uid and not body.identifier:
+        raise HTTPException(
+            status_code=400,
+            detail="device_id, uid, or identifier required",
+        )
+
+    # Resolve `identifier` → uid, if the caller used the flexible field.
+    resolved_uid = body.uid
+    if not resolved_uid and body.identifier:
+        u = await _find_user_by_identifier(body.identifier)
+        if not u:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No user found for identifier: {body.identifier}",
+            )
+        resolved_uid = u["uid"]
 
     now_iso = datetime.now(timezone.utc).isoformat()
     q = {"active": True}
     if body.device_id:
         q["device_id"] = body.device_id
-    if body.uid:
-        q["user_uid"] = body.uid
+    if resolved_uid:
+        q["user_uid"] = resolved_uid
 
     binding = await db.device_bindings.find_one(q, {"_id": 0})
     if not binding:
+        # Even without an active binding, we still clear the lock flag —
+        # a user may be `device_binding_locked=True` from the retro-block
+        # sweep without ever having an active binding row.
+        target_uid = resolved_uid
+        cleared = 0
+        if target_uid:
+            res = await db.users.update_one(
+                {"uid": target_uid, "device_binding_locked": True},
+                {"$unset": {
+                    "primary_device_id": "",
+                    "primary_device_bound_at": "",
+                    "device_binding_locked": "",
+                    "device_binding_locked_at": "",
+                    "device_binding_locked_reason": "",
+                }}
+            )
+            cleared = res.modified_count
+        if cleared > 0:
+            return {
+                "success": True,
+                "unbound": None,
+                "lock_cleared_only": True,
+                "message": "No active binding, but device_binding_locked flag cleared.",
+            }
         raise HTTPException(status_code=404, detail="No active binding matches")
 
     await db.device_bindings.update_one(

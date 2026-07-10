@@ -29,7 +29,7 @@ const AdminDeviceBinding = ({ user }) => {
   const [scanResults, setScanResults] = useState(null);
   const [collisions, setCollisions] = useState([]);
   const [suspicious, setSuspicious] = useState([]);
-  const [unbindTarget, setUnbindTarget] = useState({ uid: '', device_id: '' });
+  const [unbindTarget, setUnbindTarget] = useState({ uid: '', device_id: '', identifier: '' });
   const [changeRequests, setChangeRequests] = useState([]);
   const [changeReqBusy, setChangeReqBusy] = useState(false);
 
@@ -122,8 +122,8 @@ const AdminDeviceBinding = ({ user }) => {
   };
 
   const doUnbind = async () => {
-    if (!unbindTarget.uid && !unbindTarget.device_id) {
-      toast.error('Provide uid or device_id');
+    if (!unbindTarget.uid && !unbindTarget.device_id && !unbindTarget.identifier) {
+      toast.error('Provide UID, mobile/email, or device_id');
       return;
     }
     try {
@@ -133,12 +133,16 @@ const AdminDeviceBinding = ({ user }) => {
           admin_id: user?.uid || 'admin',
           uid: unbindTarget.uid || undefined,
           device_id: unbindTarget.device_id || undefined,
+          identifier: unbindTarget.identifier || undefined,
           reason: 'admin_manual',
         },
         { headers: headers() },
       );
-      toast.success('Unbound successfully');
-      setUnbindTarget({ uid: '', device_id: '' });
+      const msg = r.data?.lock_cleared_only
+        ? 'No active binding — but lock flag was cleared'
+        : 'Unbound successfully';
+      toast.success(msg);
+      setUnbindTarget({ uid: '', device_id: '', identifier: '' });
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Unbind failed');
     }
@@ -438,27 +442,39 @@ const AdminDeviceBinding = ({ user }) => {
 
       {/* Manual unbind */}
       <Card className="p-4">
-        <h2 className="font-bold text-lg flex items-center gap-2 mb-3">
+        <h2 className="font-bold text-lg flex items-center gap-2 mb-1">
           <Unlock className="w-5 h-5" /> Manual Unbind
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+        <p className="text-[12px] text-gray-500 mb-3">
+          Fill ANY one field below. Use &quot;Mobile / Email / UID&quot; for the fastest lookup
+          (works even if the account was retro-blocked without an active binding).
+        </p>
+        <div className="space-y-2 mb-3">
           <Input
-            data-testid="device-binding-unbind-uid"
-            placeholder="User UID"
-            value={unbindTarget.uid}
-            onChange={(e) => setUnbindTarget({ ...unbindTarget, uid: e.target.value })}
+            data-testid="device-binding-unbind-identifier"
+            placeholder="Mobile / Email / UID (any one — recommended)"
+            value={unbindTarget.identifier}
+            onChange={(e) => setUnbindTarget({ ...unbindTarget, identifier: e.target.value })}
           />
-          <Input
-            data-testid="device-binding-unbind-device-id"
-            placeholder="OR Device ID (AND-...)"
-            value={unbindTarget.device_id}
-            onChange={(e) => setUnbindTarget({ ...unbindTarget, device_id: e.target.value })}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <Input
+              data-testid="device-binding-unbind-uid"
+              placeholder="OR exact User UID"
+              value={unbindTarget.uid}
+              onChange={(e) => setUnbindTarget({ ...unbindTarget, uid: e.target.value })}
+            />
+            <Input
+              data-testid="device-binding-unbind-device-id"
+              placeholder="OR Device ID (AND-...)"
+              value={unbindTarget.device_id}
+              onChange={(e) => setUnbindTarget({ ...unbindTarget, device_id: e.target.value })}
+            />
+          </div>
         </div>
         <Button
           data-testid="device-binding-unbind-btn"
           onClick={doUnbind}
-          disabled={!pin || (!unbindTarget.uid && !unbindTarget.device_id)}
+          disabled={!pin || (!unbindTarget.uid && !unbindTarget.device_id && !unbindTarget.identifier)}
           variant="destructive"
         >
           Unbind
