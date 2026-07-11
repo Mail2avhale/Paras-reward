@@ -16,6 +16,11 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - ✅ **AdMob compliance**: Rewarded Interstitial fires non-blocking when opening Live Feed; navigation succeeds regardless of ad state.
 - ✅ **IDOR fix applied**: `/api/referrals/live-feed/{uid}` and `/api/referrals/earnings-summary/{uid}` now require JWT via `Depends(get_current_user)` + assert `caller.uid == uid` (or role in admin/sub_admin). Verified: no auth → 401, owner → 200, cross-uid → 403, admin → 200.
 - ✅ **Total Earned truncation bug fix** (production feedback): `/live-feed/{uid}` `total_earned_prc` and `distinct_downlines` were previously computed from the truncated top-100 rows, so heavy earners saw silently capped totals (e.g. 3D window showed 801 PRC / 100 events when actual was 5500+ PRC across 700+ events). Now a separate `$group` MongoDB aggregation runs over the full window so totals are always accurate; added `total_events` field to distinguish display-count vs true window-count. Frontend `DownlineLiveFeed.js` updated to render `total_events` in the Events card.
+- ✅ **Admin Paras Mall — Pagination + Delivery Address column** (Feb 11, 2026):
+  - Added client-side pagination to Products grid (12/page) and Bookings table (25/page) with prev/next Paginator component. Bookings page auto-resets to 1 when switching sub-tabs (Pending/Delivered/All).
+  - New dedicated "Delivery Address" column in Bookings table showing full customer name, mobile, address_line, landmark, city+state, pin_code — with copy-to-clipboard button per row.
+  - "No Address Captured" red warning badge for legacy bookings that predate address-mandatory rollout; corresponding "Mark Delivered" button auto-disabled to prevent blind shipment.
+  - **Testing agent verified 100% E2E**: backend 9/9 pytest, frontend all pagination + address column + copy toast + sub-tab reset + Kanban intact.
 
 
 
