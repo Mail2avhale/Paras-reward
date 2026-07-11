@@ -141,3 +141,80 @@ async def get_downline_live_feed(
         "distinct_downlines": distinct_downlines,
         "feed": feed,
     }
+
+
+# ────────────────────────────────────────────────────────────────────────
+# EARNINGS SUMMARY — Today / Yesterday / This Week / This Month (Feb 8 2026)
+# ────────────────────────────────────────────────────────────────────────
+# Powers the four "earned PRC" tiles on the Live Feed page so users can
+# see their referral income at a glance and feel the compounding effect.
+@router.get("/referrals/earnings-summary/{uid}")
+async def get_earnings_summary(uid: str):
+    """Aggregate `mining_referral_reward` PRC earned by `uid` across four
+    canonical buckets: today, yesterday, this_week (Mon-based ISO week),
+    this_month. Uses IST-friendly UTC boundaries (00:00 UTC = 05:30 IST is
+    close enough for a display card; can be refined later if the user
+    wants strict local-timezone bucketing).
+    """
+    if db is None:
+        raise HTTPException(status_code=503, detail="DB not initialised")
+
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    # ISO week — Monday is 0; align to the current week's Monday 00:00.
+    week_start = today_start - timedelta(days=today_start.weekday())
+    month_start = today_start.replace(day=1)
+
+    # Fetch just what we need; sum aggregation via $group would work but
+    # a single find→python-fold is simpler and still O(rows-in-month).
+    cursor = db.prc_ledger.find(
+        {
+            "user_id": uid,
+            "type": "mining_referral_reward",
+            "timestamp": {"$gte": month_start.isoformat()},
+        },
+        {"_id": 0, "amount": 1, "timestamp": 1},
+    )
+    rows = await cursor.to_list(length=100000)
+
+    totals = {"today": 0.0, "yesterday": 0.0, "this_week": 0.0, "this_month": 0.0}
+    counts = {"today": 0, "yesterday": 0, "this_week": 0, "this_month": 0}
+
+    for r in rows:
+        amt = float(r.get("amount") or 0)
+        ts_raw = r.get("timestamp")
+        if not ts_raw:
+            continue
+        try:
+            # Accept both "…Z" and "+00:00" ISO strings
+            ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+        except Exception:
+            continue
+
+        # Every row is at least "this_month" since our query scoped to it.
+        totals["this_month"] += amt
+        counts["this_month"] += 1
+
+        if ts >= week_start:
+            totals["this_week"] += amt
+            counts["this_week"] += 1
+        if ts >= today_start:
+            totals["today"] += amt
+            counts["today"] += 1
+        elif ts >= yesterday_start:
+            totals["yesterday"] += amt
+            counts["yesterday"] += 1
+
+    return {
+        "success": True,
+        "uid": uid,
+        "buckets": {
+            k: {"earned_prc": round(v, 4), "events": counts[k]}
+            for k, v in totals.items()
+        },
+        "generated_at": now.isoformat(),
+    }
+

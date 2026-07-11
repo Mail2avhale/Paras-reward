@@ -32,15 +32,23 @@ const DownlineLiveFeed = ({ user }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [windowHours, setWindowHours] = useState(24);
+  const [summary, setSummary] = useState(null);  // 4-bucket earnings tiles
 
   const fetchFeed = useCallback(async () => {
     if (!user?.uid) return;
     try {
-      const res = await axios.get(
-        `${API}/referrals/live-feed/${user.uid}?hours=${windowHours}&limit=100`,
-        { timeout: 12_000 }
-      );
-      if (res.data?.success) setData(res.data);
+      const [feedRes, summaryRes] = await Promise.all([
+        axios.get(
+          `${API}/referrals/live-feed/${user.uid}?hours=${windowHours}&limit=100`,
+          { timeout: 12_000 }
+        ),
+        axios.get(
+          `${API}/referrals/earnings-summary/${user.uid}`,
+          { timeout: 12_000 }
+        ).catch(() => null),
+      ]);
+      if (feedRes.data?.success) setData(feedRes.data);
+      if (summaryRes?.data?.success) setSummary(summaryRes.data.buckets);
     } catch (err) {
       console.error('[LiveFeed] fetch failed', err?.message);
     } finally {
@@ -91,6 +99,39 @@ const DownlineLiveFeed = ({ user }) => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
+        {/* 4-Bucket Earnings Tiles — Today / Yesterday / This Week / This Month */}
+        <div
+          className="grid grid-cols-2 md:grid-cols-4 gap-2"
+          data-testid="live-feed-earnings-tiles"
+        >
+          {[
+            { key: 'today',      label: "Today's",      accent: 'from-emerald-500/20 to-emerald-600/10',  icon: '☀️' },
+            { key: 'yesterday',  label: 'Yesterday',    accent: 'from-sky-500/20 to-sky-600/10',          icon: '🕒' },
+            { key: 'this_week',  label: 'This Week',    accent: 'from-fuchsia-500/20 to-fuchsia-600/10',  icon: '📅' },
+            { key: 'this_month', label: 'This Month',   accent: 'from-amber-500/20 to-amber-600/10',      icon: '🏆' },
+          ].map((tile) => {
+            const bucket = summary?.[tile.key] || { earned_prc: 0, events: 0 };
+            return (
+              <div
+                key={tile.key}
+                data-testid={`earnings-tile-${tile.key}`}
+                className={`rounded-xl p-3 bg-gradient-to-br ${tile.accent} border border-white/10`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] uppercase tracking-wider text-gray-400">{tile.label}</span>
+                  <span className="text-sm">{tile.icon}</span>
+                </div>
+                <p className="text-white font-bold text-lg tabular-nums leading-tight">
+                  {Number(bucket.earned_prc || 0).toFixed(2)}
+                </p>
+                <p className="text-[10px] text-gray-400 leading-tight">
+                  PRC · {bucket.events} event{bucket.events === 1 ? '' : 's'}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Summary Card */}
         <div
           className="bg-gradient-to-br from-fuchsia-900/40 to-purple-900/40 border border-fuchsia-500/30 rounded-2xl p-5"
