@@ -1,0 +1,51 @@
+{
+  "summary": "Rich-Text Popup Messages v2 backend fully verified via pytest (14/14 PASS). Sanitizer blocks <script>/onerror/javascript:/iframe/style-injection XSS vectors; anchors auto-decorated with target=_blank rel=noopener noreferrer; YouTube ID parsed correctly from watch/youtu.be/embed URLs; multi-CTA order preserved; PUT replaces cta_buttons array atomically and enabling one popup auto-disables others. Public GET /api/admin/popup/active works without auth and returns all new fields (message_html, image_url, youtube_url, youtube_id, cta_buttons). Upload endpoint: admin auth accepted (200), no-auth = 401, regular-user token = 403, oversize (>5MB) rejected 400, bad extension rejected 400. Frontend admin panel rendered and interactive: /admin/popup-messages page loads, `admin-popup-new-btn` opens form + side-by-side live preview (`admin-popup-form` + `admin-popup-preview`), title input updates preview in real-time, CTA add/remove/max-3-disabled works. TipTap editor mounts with all toolbar buttons (bold/italic/underline/h2/h3/bullets/numbers/link/undo/redo). Playwright keyboard typing into contenteditable with rapid toolbar clicks had race conditions that made deep formatting E2E flaky — code inspection confirms wiring is correct (onUpdate emits getHTML into formData.message_html which flows to PopupPreviewCard via dangerouslySetInnerHTML). Backend tests are the authoritative correctness check for the sanitizer & shape.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/admin/popup/upload-image",
+        "issue": "Small images (<800 wide) are only 16:9-cropped, NOT upscaled to 800x450. Spec/PRD says 'auto-normalized to 16:9 800x450 JPEG' but code only downsizes when img.size[0] > 800 (admin_popup_routes.py L380-381). 400x300 input yields 400x225 output. Aspect ratio is correct; absolute size is not. Low priority — end-user popup renderer uses w-full anyway."
+      },
+      {
+        "endpoint": "POST /api/admin/popup/create with <script>alert(1)</script>",
+        "issue": "bleach strip=True removes the <script> element but preserves inner text ('alert(1)' remains as visible text in message_html). Not exploitable (rendered as text, never executed) but shows raw XSS payload text to end-users. Consider using bleach's strip_comments + Cleaner with strip=True OR post-process to drop script/style text content entirely."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_popup_v2_rich_text.py",
+    "/app/test_reports/pytest/admin_popup_v2.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: main agent may want to upscale small uploaded images to exactly 800x450 to match spec (currently only downsizes) — one-liner: `if img.size != (800,450): img = img.resize((800,450), Image.LANCZOS)` after the crop, regardless of original width.",
+    "OPTIONAL: consider stripping inner text of disallowed tags (script/style) so users don't see raw JS-looking payload text if an admin ever pastes it. e.g., pre-strip tags with content: `raw = re.sub(r'<(script|style)[^>]*>.*?</\\1>', '', raw, flags=re.I|re.S)` before bleach.",
+    "Retest not needed unless spec strictness on 800x450 exact dimensions is enforced."
+  ],
+  "critical_code_review_comments": [
+    "admin_popup_routes.py L380: only resizes DOWN — spec says 800x450 exact; small images bypass resize. Consider unconditional resize to (800,450) after 16:9 crop.",
+    "admin_popup_routes.py sanitize_html: regex-based post-processing of <a> tags after bleach can be fragile against edge cases (e.g., <a\\n href=...>). Consider using bleach's built-in `set_attributes` callback or `linkify` for safer link handling.",
+    "PopupEditor.js: TipTap Link.configure has openOnClick: false (correct for admin editor), but no URL validation before setLink() call. A malicious admin could still enter javascript:... URL in the prompt — server sanitizer catches it, but client-side UX would still show the anchor in the preview. Low priority.",
+    "AdminPopupMessages.js uploadImage(): does not clear image_url on error; uses `d.detail || d.message`, but FastAPI 401/403 returns {detail: '...'} which is correctly handled. OK.",
+    "PopupPreviewCard uses dangerouslySetInnerHTML with unsanitized formData.message_html straight from the TipTap editor (client-side). This is safe today because TipTap only generates whitelisted tags, but if extensions change (e.g., raw HTML paste allowed), preview could render XSS locally. Not a security issue since it's admin-only, but worth noting.",
+    "Backend `/api/admin/popup/create` returns `success:false` with status 200 on server errors (see except block L234-236). Downstream tests can't rely on non-200 status codes to detect failure — consider raising HTTPException(500) instead of returning success:false."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_popup_v2_rich_text.py (NEW — 14 pytest cases across 5 classes: create+sanitize, public/active, image upload with auth guards + size + extension validation, XSS vector parametrized, update+enable-cascade)"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 pytest passed)",
+    "frontend": "Admin popup page + form + preview + CTA add/remove + save + edit-pre-populate + delete cleanup all confirmed working via Playwright. TipTap editor rich-formatting could not be end-to-end verified via Playwright due to contenteditable+toolbar-click race (Playwright artifact, not product bug). Code path inspected and correct."
+  },
+  "test_credentials": "Admin: email=admin@test.com, PIN=153759. Test user: mobile=9970100782, PIN=997010 (both from /app/memory/test_credentials.md).",
+  "seed_data_creation": "None. All test popups created during backend pytest are cleaned up via fixture teardown. Frontend E2E popup 'TEST_Rich_Popup_E2E' was created + deleted in the same run.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend v2 rich-text popup fully covered by /app/backend/tests/test_admin_popup_v2_rich_text.py. Legacy /app/backend/tests/test_admin_popup.py still passes for pre-v2 fields. If image upload upscaling is added, update TestImageUpload.test_upload_image_admin_small_16_9_crop assertions accordingly. Playwright login note: after typing 6-digit PIN into login-pin-0 through login-pin-5, PinInput auto-submits — do NOT click login-submit-btn again after PIN is complete. Wait ~10s post-PIN for navigation. Ensure editor formatting tests type all text first, then select-and-apply-bold via Shift+ArrowLeft; direct toolbar-click-then-type sequence races with TipTap's chain().focus().",
+  "rca of the issue": "N/A — new feature verification, not a bug fix. Two minor observations documented in backend_issues (image upscaling gap vs spec; script tag inner text not stripped by bleach). Neither is a security vulnerability."
+}

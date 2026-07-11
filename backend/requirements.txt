@@ -138,3 +138,5 @@ wrapt==2.0.0
 xlsxwriter==3.2.9
 yarl==1.22.0
 zipp==3.23.0
+bleach==6.4.0
+webencodings==0.5.1
