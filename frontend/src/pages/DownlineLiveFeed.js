@@ -8,7 +8,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Gift, RefreshCw, TrendingUp, Users, Clock } from 'lucide-react';
+import { ArrowLeft, Gift, RefreshCw, Clock } from 'lucide-react';
 import { API } from '../lib/api';
 
 const POLL_INTERVAL_MS = 30_000;
@@ -63,12 +63,6 @@ const DownlineLiveFeed = ({ user }) => {
   }, [fetchFeed]);
 
   const feed = data?.feed || [];
-  const totalEarned = data?.total_earned_prc || 0;
-  const distinctDownlines = data?.distinct_downlines || 0;
-  // Feb 11 2026 — prefer server-computed total_events (true window count)
-  // over feed.length (capped at limit=100). Falls back to feed.length for
-  // older API responses.
-  const totalEvents = data?.total_events ?? feed.length;
 
   return (
     <div
@@ -142,64 +136,29 @@ const DownlineLiveFeed = ({ user }) => {
           })}
         </div>
 
-        {/* Summary Card */}
+        {/* Compact window switcher — controls the feed's time window. */}
         <div
-          className="bg-white rounded-2xl p-5 ring-1 ring-gray-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.10)]"
-          data-testid="live-feed-summary-card"
+          className="flex items-center justify-between gap-2 px-1"
+          data-testid="live-feed-window-switcher"
         >
-          <div className="flex items-center justify-between mb-4 gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shrink-0 shadow-sm">
-                <Gift className="w-5 h-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold">Total Earned</p>
-                <p
-                  className="text-gray-900 font-extrabold text-2xl tabular-nums leading-none tracking-tight"
-                  data-testid="live-feed-total-earned"
-                >
-                  {totalEarned.toFixed(4)}
-                  <span className="text-gray-400 text-base font-semibold ml-1">PRC</span>
-                </p>
-              </div>
-            </div>
-            {/* Window selector — pill switch */}
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
-              {[24, 72, 168].map((h) => (
-                <button
-                  key={h}
-                  onClick={() => setWindowHours(h)}
-                  className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors ${
-                    windowHours === h
-                      ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-gray-200'
-                      : 'text-gray-500 hover:text-gray-800'
-                  }`}
-                  data-testid={`live-feed-window-${h}h`}
-                >
-                  {h === 24 ? '24H' : h === 72 ? '3D' : '7D'}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-gray-50 ring-1 ring-gray-100 p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="w-3.5 h-3.5 text-fuchsia-600" />
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold">Downlines</p>
-              </div>
-              <p className="text-gray-900 font-bold text-lg tabular-nums" data-testid="live-feed-distinct-downlines">
-                {distinctDownlines}
-              </p>
-            </div>
-            <div className="rounded-xl bg-gray-50 ring-1 ring-gray-100 p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold">Events</p>
-              </div>
-              <p className="text-gray-900 font-bold text-lg tabular-nums" data-testid="live-feed-event-count">
-                {totalEvents}
-              </p>
-            </div>
+          <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">
+            Recent commissions
+          </p>
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
+            {[24, 72, 168].map((h) => (
+              <button
+                key={h}
+                onClick={() => setWindowHours(h)}
+                className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors ${
+                  windowHours === h
+                    ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-gray-200'
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+                data-testid={`live-feed-window-${h}h`}
+              >
+                {h === 24 ? '24H' : h === 72 ? '3D' : '7D'}
+              </button>
+            ))}
           </div>
         </div>
 
