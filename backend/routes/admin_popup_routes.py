@@ -59,6 +59,17 @@ def sanitize_html(raw: Optional[str]) -> str:
     """
     if not raw:
         return ""
+    # Pre-strip content of tags that bleach's `strip=True` would leave
+    # behind as visible text (e.g. <script>alert(1)</script> becomes the
+    # literal string "alert(1)"). Not a security issue — bleach still
+    # removes the executable tag — but ugly UX when an admin fat-fingers
+    # a payload. Strip script/style tag *contents* entirely first.
+    raw = re.sub(
+        r'<(script|style|iframe)\b[^>]*>.*?</\1>',
+        '',
+        raw,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
     cleaned = bleach.clean(
         raw,
         tags=ALLOWED_TAGS,
@@ -376,8 +387,9 @@ async def upload_popup_image(file: UploadFile = File(...)):
             top = (h - new_h) // 2
             img = img.crop((0, top, w, top + new_h))
 
-        # Resize to 800x450 max
-        if img.size[0] > 800:
+        # Resize to exact 800x450 — always. Small inputs get upscaled so
+        # every popup banner is served at a consistent hero-image size.
+        if img.size != (800, 450):
             img = img.resize((800, 450), Image.LANCZOS)
 
         out = io.BytesIO()
