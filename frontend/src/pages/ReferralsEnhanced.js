@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useRewardedInterstitial } from '@/components/RewardedInterstitialTrigger';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -29,6 +30,18 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
   // Feb 2026 UX change: form is INLINE (no modal), so we only track input + lookup state.
   const [claimCodeInput, setClaimCodeInput] = useState('');
   const [claimLookup, setClaimLookup] = useState({ status: 'idle', referrerName: '', error: '' });
+
+  // Rewarded Interstitial trigger — fires when user opens Live Feed so we
+  // offer a "+5 PRC bonus for watching an ad" opt-in. Non-gating: user
+  // reaches the Live Feed regardless (compliant with Google AdMob policy).
+  const rewardedAd = useRewardedInterstitial();
+  const openLiveFeed = () => {
+    // Fire-and-forget ad prompt, then navigate immediately. The modal
+    // renders on TOP of the destination page, so it still counts as a
+    // rewarded moment tied to this action.
+    try { rewardedAd.open({ bonusPrc: 5 }); } catch { /* non-fatal */ }
+    navigate('/referrals/live-feed');
+  };
   const [submittingClaim, setSubmittingClaim] = useState(false);
   // Jul 2026 UX fix: when a referrer is already attached we now render a
   // clear "Referred by …" locked info card instead of silently hiding the
@@ -219,6 +232,8 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] pb-24">
+      {/* Rewarded Interstitial modal — opens from openLiveFeed() */}
+      {rewardedAd.element}
       {/* Header */}
       <div className="sticky top-0 bg-[#0a0a0f]/95 backdrop-blur-lg border-b border-gray-800/50 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
@@ -464,7 +479,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             </p>
 
             <button
-              onClick={() => navigate('/referrals/live-feed')}
+              onClick={openLiveFeed}
               className="w-full mt-3 py-2.5 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
               data-testid="view-downline-live-feed-btn"
             >

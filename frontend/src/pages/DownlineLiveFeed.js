@@ -68,28 +68,32 @@ const DownlineLiveFeed = ({ user }) => {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950 pb-24"
+      className="min-h-screen bg-white pb-24"
+      style={{ fontFamily: '"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' }}
       data-testid="downline-live-feed-page"
     >
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-slate-950/80 backdrop-blur border-b border-purple-500/20">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-4xl mx-auto px-5 py-4 flex items-center gap-3">
           <button
             onClick={() => navigate('/referrals')}
-            className="p-2 rounded-lg hover:bg-white/5 text-white"
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-700 transition"
             data-testid="live-feed-back-btn"
+            aria-label="Back"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1">
-            <h1 className="text-white font-semibold text-base leading-tight">Downline Live Feed</h1>
-            <p className="text-gray-400 text-[11px] leading-tight">
-              Real-time referral rewards from downline mining
+            <h1 className="text-gray-900 font-bold text-lg leading-tight tracking-tight">
+              Downline Live Feed
+            </h1>
+            <p className="text-gray-500 text-[12px] leading-tight mt-0.5">
+              Real-time referral rewards from your network
             </p>
           </div>
           <button
             onClick={fetchFeed}
-            className="p-2 rounded-lg hover:bg-white/5 text-fuchsia-300"
+            className="p-2 rounded-full hover:bg-gray-100 text-indigo-600 transition"
             data-testid="live-feed-refresh-btn"
             aria-label="Refresh"
           >
@@ -98,33 +102,35 @@ const DownlineLiveFeed = ({ user }) => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
-        {/* 4-Bucket Earnings Tiles — Today / Yesterday / This Week / This Month */}
+      <div className="max-w-4xl mx-auto px-5 py-5 space-y-5">
+        {/* 4-Bucket Earnings Tiles — light theme, unique gradients + shadow */}
         <div
-          className="grid grid-cols-2 md:grid-cols-4 gap-2"
+          className="grid grid-cols-2 md:grid-cols-4 gap-3"
           data-testid="live-feed-earnings-tiles"
         >
           {[
-            { key: 'today',      label: "Today's",      accent: 'from-emerald-500/20 to-emerald-600/10',  icon: '☀️' },
-            { key: 'yesterday',  label: 'Yesterday',    accent: 'from-sky-500/20 to-sky-600/10',          icon: '🕒' },
-            { key: 'this_week',  label: 'This Week',    accent: 'from-fuchsia-500/20 to-fuchsia-600/10',  icon: '📅' },
-            { key: 'this_month', label: 'This Month',   accent: 'from-amber-500/20 to-amber-600/10',      icon: '🏆' },
+            { key: 'today',      label: "Today's",    ring: 'ring-emerald-100',  chip: 'bg-emerald-50 text-emerald-700',  num: 'text-emerald-700',  icon: '☀️' },
+            { key: 'yesterday',  label: 'Yesterday',  ring: 'ring-sky-100',      chip: 'bg-sky-50 text-sky-700',          num: 'text-sky-700',      icon: '🕒' },
+            { key: 'this_week',  label: 'This Week',  ring: 'ring-fuchsia-100',  chip: 'bg-fuchsia-50 text-fuchsia-700',  num: 'text-fuchsia-700',  icon: '📅' },
+            { key: 'this_month', label: 'This Month', ring: 'ring-amber-100',    chip: 'bg-amber-50 text-amber-700',      num: 'text-amber-700',    icon: '🏆' },
           ].map((tile) => {
             const bucket = summary?.[tile.key] || { earned_prc: 0, events: 0 };
             return (
               <div
                 key={tile.key}
                 data-testid={`earnings-tile-${tile.key}`}
-                className={`rounded-xl p-3 bg-gradient-to-br ${tile.accent} border border-white/10`}
+                className={`rounded-2xl p-4 bg-white ring-1 ${tile.ring} shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-gray-400">{tile.label}</span>
-                  <span className="text-sm">{tile.icon}</span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${tile.chip}`}>
+                    {tile.label}
+                  </span>
+                  <span className="text-base leading-none">{tile.icon}</span>
                 </div>
-                <p className="text-white font-bold text-lg tabular-nums leading-tight">
+                <p className={`font-extrabold text-2xl tabular-nums leading-tight ${tile.num}`}>
                   {Number(bucket.earned_prc || 0).toFixed(2)}
                 </p>
-                <p className="text-[10px] text-gray-400 leading-tight">
+                <p className="text-[11px] text-gray-500 leading-tight mt-1">
                   PRC · {bucket.events} event{bucket.events === 1 ? '' : 's'}
                 </p>
               </div>
@@ -134,34 +140,35 @@ const DownlineLiveFeed = ({ user }) => {
 
         {/* Summary Card */}
         <div
-          className="bg-gradient-to-br from-fuchsia-900/40 to-purple-900/40 border border-fuchsia-500/30 rounded-2xl p-5"
+          className="bg-white rounded-2xl p-5 ring-1 ring-gray-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.10)]"
           data-testid="live-feed-summary-card"
         >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-fuchsia-500/20 flex items-center justify-center">
-                <Gift className="w-5 h-5 text-fuchsia-400" />
+          <div className="flex items-center justify-between mb-4 gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shrink-0 shadow-sm">
+                <Gift className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <p className="text-gray-400 text-[10px] uppercase tracking-wider">Total Earned</p>
+              <div className="min-w-0">
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold">Total Earned</p>
                 <p
-                  className="text-white font-bold text-2xl tabular-nums"
+                  className="text-gray-900 font-extrabold text-2xl tabular-nums leading-none tracking-tight"
                   data-testid="live-feed-total-earned"
                 >
-                  {totalEarned.toFixed(4)} <span className="text-gray-400 text-base">PRC</span>
+                  {totalEarned.toFixed(4)}
+                  <span className="text-gray-400 text-base font-semibold ml-1">PRC</span>
                 </p>
               </div>
             </div>
-            {/* Window selector */}
-            <div className="flex gap-1 bg-black/30 rounded-lg p-1">
+            {/* Window selector — pill switch */}
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
               {[24, 72, 168].map((h) => (
                 <button
                   key={h}
                   onClick={() => setWindowHours(h)}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors ${
                     windowHours === h
-                      ? 'bg-fuchsia-600 text-white'
-                      : 'text-gray-400 hover:text-white'
+                      ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-gray-200'
+                      : 'text-gray-500 hover:text-gray-800'
                   }`}
                   data-testid={`live-feed-window-${h}h`}
                 >
@@ -171,27 +178,21 @@ const DownlineLiveFeed = ({ user }) => {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-black/30 border border-fuchsia-500/20 rounded-lg p-3">
+            <div className="rounded-xl bg-gray-50 ring-1 ring-gray-100 p-3">
               <div className="flex items-center gap-2 mb-1">
-                <Users className="w-3.5 h-3.5 text-fuchsia-400" />
-                <p className="text-gray-400 text-[10px] uppercase tracking-wider">Downlines</p>
+                <Users className="w-3.5 h-3.5 text-fuchsia-600" />
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold">Downlines</p>
               </div>
-              <p
-                className="text-white font-bold text-lg tabular-nums"
-                data-testid="live-feed-distinct-downlines"
-              >
+              <p className="text-gray-900 font-bold text-lg tabular-nums" data-testid="live-feed-distinct-downlines">
                 {distinctDownlines}
               </p>
             </div>
-            <div className="bg-black/30 border border-fuchsia-500/20 rounded-lg p-3">
+            <div className="rounded-xl bg-gray-50 ring-1 ring-gray-100 p-3">
               <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                <p className="text-gray-400 text-[10px] uppercase tracking-wider">Events</p>
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold">Events</p>
               </div>
-              <p
-                className="text-white font-bold text-lg tabular-nums"
-                data-testid="live-feed-event-count"
-              >
+              <p className="text-gray-900 font-bold text-lg tabular-nums" data-testid="live-feed-event-count">
                 {feed.length}
               </p>
             </div>
@@ -201,20 +202,22 @@ const DownlineLiveFeed = ({ user }) => {
         {/* Feed */}
         <div className="space-y-2" data-testid="live-feed-list">
           {loading && feed.length === 0 && (
-            <div className="text-center py-10">
-              <RefreshCw className="w-8 h-8 text-fuchsia-400 animate-spin mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">Loading feed…</p>
+            <div className="text-center py-14">
+              <RefreshCw className="w-7 h-7 text-indigo-500 animate-spin mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">Loading feed…</p>
             </div>
           )}
 
           {!loading && feed.length === 0 && (
             <div
-              className="text-center py-12 bg-black/20 border border-slate-800 rounded-2xl"
+              className="text-center py-14 bg-white rounded-2xl ring-1 ring-gray-100 shadow-sm"
               data-testid="live-feed-empty-state"
             >
-              <Gift className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-white font-medium mb-1">No rewards yet in this window</p>
-              <p className="text-gray-400 text-sm px-6">
+              <div className="w-14 h-14 rounded-full bg-fuchsia-50 flex items-center justify-center mx-auto mb-3">
+                <Gift className="w-7 h-7 text-fuchsia-500" />
+              </div>
+              <p className="text-gray-900 font-semibold mb-1">No rewards yet in this window</p>
+              <p className="text-gray-500 text-sm px-6 max-w-md mx-auto">
                 Once someone in your downline collects mining PRC, their referral
                 reward will appear here in real time. Grow your Elite network to
                 start earning.
@@ -225,17 +228,13 @@ const DownlineLiveFeed = ({ user }) => {
           {feed.map((row) => (
             <div
               key={row.id}
-              className="flex items-center gap-3 bg-slate-900/60 border border-purple-500/20 rounded-xl p-3 hover:bg-slate-900/80 transition-colors"
+              className="flex items-center gap-3 bg-white ring-1 ring-gray-100 rounded-2xl p-3.5 hover:ring-indigo-200 transition"
               data-testid={`live-feed-row-${row.id}`}
             >
-              {/* Avatar / initial */}
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-white font-bold shrink-0">
+              {/* Avatar */}
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-white font-bold shrink-0 text-sm shadow-sm">
                 {row.downline_profile_pic ? (
-                  <img
-                    src={row.downline_profile_pic}
-                    alt=""
-                    className="w-full h-full rounded-full object-cover"
-                  />
+                  <img src={row.downline_profile_pic} alt="" className="w-full h-full rounded-full object-cover" />
                 ) : (
                   (row.downline_name || 'U').charAt(0).toUpperCase()
                 )}
@@ -243,17 +242,17 @@ const DownlineLiveFeed = ({ user }) => {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-white font-medium text-sm truncate">
-                  <span className="text-fuchsia-300">{row.downline_name}</span>
-                  <span className="text-gray-400 font-normal"> collected mining PRC</span>
+                <p className="text-gray-900 font-medium text-sm truncate">
+                  <span className="text-fuchsia-700 font-semibold">{row.downline_name}</span>
+                  <span className="text-gray-600 font-normal"> collected mining PRC</span>
                 </p>
-                <div className="flex items-center gap-2 text-[11px] text-gray-500 mt-0.5">
-                  <span className="bg-fuchsia-500/15 text-fuchsia-300 px-1.5 py-0.5 rounded font-semibold">
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-1 flex-wrap">
+                  <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-semibold text-[10px]">
                     Tier {row.tier}
                   </span>
-                  <span>•</span>
+                  <span className="text-gray-300">·</span>
                   <span>{Number(row.tier_percent || 0).toFixed(2)}% of {row.downline_collect_amount.toFixed(4)}</span>
-                  <span>•</span>
+                  <span className="text-gray-300">·</span>
                   <Clock className="w-3 h-3" />
                   <span>{timeAgo(row.timestamp)}</span>
                 </div>
@@ -261,10 +260,10 @@ const DownlineLiveFeed = ({ user }) => {
 
               {/* Amount */}
               <div className="text-right shrink-0">
-                <p className="text-emerald-400 font-bold tabular-nums text-sm">
+                <p className="text-emerald-600 font-extrabold tabular-nums text-sm">
                   +{row.amount.toFixed(4)}
                 </p>
-                <p className="text-gray-500 text-[10px]">PRC</p>
+                <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider">PRC</p>
               </div>
             </div>
           ))}
