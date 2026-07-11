@@ -65,6 +65,10 @@ const DownlineLiveFeed = ({ user }) => {
   const feed = data?.feed || [];
   const totalEarned = data?.total_earned_prc || 0;
   const distinctDownlines = data?.distinct_downlines || 0;
+  // Feb 11 2026 — prefer server-computed total_events (true window count)
+  // over feed.length (capped at limit=100). Falls back to feed.length for
+  // older API responses.
+  const totalEvents = data?.total_events ?? feed.length;
 
   return (
     <div
@@ -193,7 +197,7 @@ const DownlineLiveFeed = ({ user }) => {
                 <p className="text-gray-500 text-[10px] uppercase tracking-wider font-semibold">Events</p>
               </div>
               <p className="text-gray-900 font-bold text-lg tabular-nums" data-testid="live-feed-event-count">
-                {feed.length}
+                {totalEvents}
               </p>
             </div>
           </div>

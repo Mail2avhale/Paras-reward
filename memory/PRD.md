@@ -14,7 +14,10 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - ✅ **Backend tests**: `/app/backend/tests/test_live_feed_ist_bucketing.py` (main-agent) + `/app/backend/tests/test_live_feed_p0_review.py` (testing-agent) — 5/5 IST boundary + empty-uid + seeded-feed cases PASS.
 - ✅ **Frontend E2E verified**: Login → /referrals → click `view-downline-live-feed-btn` → /referrals/live-feed loads with white theme, 4 earnings tiles, summary card, window pills (24H/3D/7D), empty state, back/refresh buttons. All 13 required data-testids present.
 - ✅ **AdMob compliance**: Rewarded Interstitial fires non-blocking when opening Live Feed; navigation succeeds regardless of ad state.
-- ✅ **IDOR fix applied** (Feb 11, 2026): `/api/referrals/live-feed/{uid}` and `/api/referrals/earnings-summary/{uid}` now require JWT via `Depends(get_current_user)` + assert `caller.uid == uid` (or `role in admin/sub_admin`). Verified: no auth → 401, owner → 200, cross-uid → 403, admin → 200. IST bucketing pytests updated to include admin bearer token — still 2/2 PASS.
+- ✅ **IDOR fix applied**: `/api/referrals/live-feed/{uid}` and `/api/referrals/earnings-summary/{uid}` now require JWT via `Depends(get_current_user)` + assert `caller.uid == uid` (or role in admin/sub_admin). Verified: no auth → 401, owner → 200, cross-uid → 403, admin → 200.
+- ✅ **Total Earned truncation bug fix** (production feedback): `/live-feed/{uid}` `total_earned_prc` and `distinct_downlines` were previously computed from the truncated top-100 rows, so heavy earners saw silently capped totals (e.g. 3D window showed 801 PRC / 100 events when actual was 5500+ PRC across 700+ events). Now a separate `$group` MongoDB aggregation runs over the full window so totals are always accurate; added `total_events` field to distinguish display-count vs true window-count. Frontend `DownlineLiveFeed.js` updated to render `total_events` in the Events card.
+
+
 
 
 ## Implemented (Feb 08, 2026 — Rewarded Interstitial Placements)

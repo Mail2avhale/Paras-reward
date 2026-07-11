@@ -109,12 +109,10 @@ async def get_downline_live_feed(
             }
 
     feed = []
-    total_earned = 0.0
     for r in rows:
         du = r.get("downline_uid")
         fresh = fresh_names.get(du, {})
         amount = float(r.get("amount") or 0)
-        total_earned += amount
         feed.append({
             "id": r.get("txn_id"),
             "timestamp": r.get("timestamp") or r.get("created_at"),
@@ -127,14 +125,41 @@ async def get_downline_live_feed(
             "downline_collect_amount": round(float(r.get("downline_collect_amount") or 0), 4),
         })
 
-    # Distinct downline count in this window
-    distinct_downlines = len({f["downline_uid"] for f in feed if f["downline_uid"]})
+    # BUGFIX (Feb 11, 2026): Previously total_earned_prc & distinct_downlines
+    # were computed from the truncated `feed` list, so heavy earners with
+    # >`limit` events per window saw their totals silently capped at 100
+    # rows. Now we run a separate $group aggregation across the FULL
+    # window so the totals shown in the UI's "Total Earned" card are
+    # always accurate regardless of display limit.
+    agg_pipeline = [
+        {"$match": {
+            "user_id": uid,
+            "type": "mining_referral_reward",
+            "timestamp": {"$gte": since},
+        }},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": "$amount"},
+            "count": {"$sum": 1},
+            "downlines": {"$addToSet": "$downline_uid"},
+        }},
+    ]
+    total_earned = 0.0
+    total_events = 0
+    distinct_downlines = 0
+    agg_result = await db.prc_ledger.aggregate(agg_pipeline).to_list(length=1)
+    if agg_result:
+        agg = agg_result[0]
+        total_earned = float(agg.get("total") or 0)
+        total_events = int(agg.get("count") or 0)
+        distinct_downlines = len([d for d in (agg.get("downlines") or []) if d])
 
     return {
         "success": True,
         "uid": uid,
         "window_hours": hours,
-        "count": len(feed),
+        "count": len(feed),                    # displayed rows
+        "total_events": total_events,          # true window-wide event count
         "total_earned_prc": round(total_earned, 6),
         "distinct_downlines": distinct_downlines,
         "feed": feed,
