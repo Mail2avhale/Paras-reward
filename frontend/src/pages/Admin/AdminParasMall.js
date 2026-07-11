@@ -2,9 +2,9 @@
  * Admin — Paras Mall
  * Manage products + view bookings + mark delivered.
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
-import { Package, Plus, Edit, Trash2, CheckCircle, Truck, RefreshCw, X, Save, Upload, Image as ImageIcon, Coins, Sparkles, Wand2, Loader2, Star } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, CheckCircle, Truck, RefreshCw, X, Save, Upload, Image as ImageIcon, Coins, Sparkles, Wand2, Loader2, Star, Copy, MapPin, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -20,6 +20,55 @@ const STATUS_COLORS = {
   delivered: 'bg-blue-100 text-blue-700 border-blue-300',
 };
 
+// Page sizes — keep tables/grid scannable on typical laptop screens.
+const PRODUCT_PAGE_SIZE = 12;
+const BOOKING_PAGE_SIZE = 25;
+
+// Compact previous/next paginator. Placed under any long list.
+const Paginator = ({ page, totalPages, onChange, testIdPrefix }) => {
+  if (totalPages <= 1) return null;
+  const go = (p) => onChange(Math.min(Math.max(1, p), totalPages));
+  return (
+    <div
+      className="flex items-center justify-between gap-2 mt-3 px-1"
+      data-testid={`${testIdPrefix}-paginator`}
+    >
+      <button
+        onClick={() => go(page - 1)}
+        disabled={page <= 1}
+        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+        data-testid={`${testIdPrefix}-paginator-prev`}
+      >
+        <ChevronLeft className="w-3.5 h-3.5" /> Prev
+      </button>
+      <span
+        className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold tabular-nums"
+        data-testid={`${testIdPrefix}-paginator-info`}
+      >
+        Page {page} <span className="text-slate-300">/</span> {totalPages}
+      </span>
+      <button
+        onClick={() => go(page + 1)}
+        disabled={page >= totalPages}
+        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+        data-testid={`${testIdPrefix}-paginator-next`}
+      >
+        Next <ChevronRight className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+};
+
+// Copy helper — surfaces a toast on success/failure. Used for shipping labels.
+const copyText = async (text, label = 'Address') => {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  } catch {
+    toast.error('Copy failed — please select manually');
+  }
+};
+
 const AdminParasMall = () => {
   const [tab, setTab] = useState('products');
   // Booking sub-tab: 'pending_delivery' (default) | 'delivered' | 'all'
@@ -31,6 +80,13 @@ const AdminParasMall = () => {
   const [editing, setEditing] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
 
+  // Pagination — one page pointer per pageable view. Bookings sub-tab
+  // switching resets bookings page to 1 so admins don't land on an empty
+  // page when filtering to a smaller bucket.
+  const [productsPage, setProductsPage] = useState(1);
+  const [bookingsPage, setBookingsPage] = useState(1);
+  useEffect(() => { setBookingsPage(1); }, [bookingsTab]);
+
   // Derived booking lists
   const pendingDeliveryBookings = bookings.filter((b) => b.status === 'fulfilled');
   const deliveredBookings = bookings.filter((b) => b.status === 'delivered');
@@ -40,6 +96,25 @@ const AdminParasMall = () => {
       : bookingsTab === 'delivered'
       ? deliveredBookings
       : bookings;
+
+  // Paginated slices — recomputed only when list or page changes.
+  const productsTotalPages = Math.max(1, Math.ceil(products.length / PRODUCT_PAGE_SIZE));
+  const bookingsTotalPages = Math.max(1, Math.ceil(visibleBookings.length / BOOKING_PAGE_SIZE));
+  const productsSlice = useMemo(
+    () => products.slice((productsPage - 1) * PRODUCT_PAGE_SIZE, productsPage * PRODUCT_PAGE_SIZE),
+    [products, productsPage],
+  );
+  const bookingsSlice = useMemo(
+    () => visibleBookings.slice((bookingsPage - 1) * BOOKING_PAGE_SIZE, bookingsPage * BOOKING_PAGE_SIZE),
+    [visibleBookings, bookingsPage],
+  );
+  // Clamp when the underlying list shrinks (e.g. refresh removes rows).
+  useEffect(() => {
+    if (productsPage > productsTotalPages) setProductsPage(productsTotalPages);
+  }, [productsTotalPages, productsPage]);
+  useEffect(() => {
+    if (bookingsPage > bookingsTotalPages) setBookingsPage(bookingsTotalPages);
+  }, [bookingsTotalPages, bookingsPage]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -234,7 +309,7 @@ const AdminParasMall = () => {
           </Button>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {products.map((p) => (
+            {productsSlice.map((p) => (
               <div key={p.product_id} className="bg-white border border-slate-200 rounded-xl p-3 flex gap-3" data-testid={`admin-mall-product-${p.product_id}`}>
                 {p.image_url ? (
                   <img src={resolveAssetUrl(p.image_url)} className="w-20 h-20 object-cover rounded-lg bg-slate-100" alt="" />
@@ -264,6 +339,12 @@ const AdminParasMall = () => {
               </div>
             ))}
           </div>
+          <Paginator
+            page={productsPage}
+            totalPages={productsTotalPages}
+            onChange={setProductsPage}
+            testIdPrefix="admin-mall-products"
+          />
         </div>
       )}
 
@@ -311,6 +392,7 @@ const AdminParasMall = () => {
               <tr>
                 <th className="text-left p-3">User</th>
                 <th className="text-left p-3">Product</th>
+                <th className="text-left p-3 min-w-[220px]">Delivery Address</th>
                 <th className="text-right p-3">Paid / Total</th>
                 <th className="text-right p-3">Progress</th>
                 <th className="text-center p-3">Status</th>
@@ -318,8 +400,19 @@ const AdminParasMall = () => {
               </tr>
             </thead>
             <tbody>
-              {visibleBookings.map((b) => (
-                <tr key={b.booking_id} className="border-t border-slate-100" data-testid={`admin-mall-booking-${b.booking_id}`}>
+              {bookingsSlice.map((b) => {
+                const d = b.delivery || {};
+                const hasAddress = Boolean(d.address_line);
+                const fullAddress = [
+                  d.name,
+                  d.mobile,
+                  d.address_line,
+                  d.landmark,
+                  [d.city, d.state].filter(Boolean).join(', '),
+                  d.pin_code,
+                ].filter(Boolean).join('\n');
+                return (
+                <tr key={b.booking_id} className="border-t border-slate-100 align-top" data-testid={`admin-mall-booking-${b.booking_id}`}>
                   <td className="p-3" data-testid={`admin-mall-booking-user-${b.booking_id}`}>
                     <div className="font-semibold text-slate-800 text-xs">{b.user_name || 'Unknown'}</div>
                     {b.user_mobile && (
@@ -328,6 +421,45 @@ const AdminParasMall = () => {
                     <div className="text-[9px] text-slate-400 font-mono">{b.user_id?.slice(0, 8)}…</div>
                   </td>
                   <td className="p-3">{b.product_name}</td>
+                  <td className="p-3" data-testid={`admin-mall-booking-address-${b.booking_id}`}>
+                    {hasAddress ? (
+                      <div className="text-[11px] text-slate-700 leading-snug space-y-0.5 max-w-[260px]">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="font-semibold text-slate-800 flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-blue-600 shrink-0" />
+                            <span className="truncate">{d.name || '—'}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => copyText(fullAddress, 'Address')}
+                            className="text-slate-400 hover:text-blue-600 shrink-0"
+                            title="Copy full address"
+                            data-testid={`admin-mall-booking-copy-${b.booking_id}`}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                        {d.mobile && (
+                          <div className="text-slate-500 font-mono text-[10px]">📞 {d.mobile}</div>
+                        )}
+                        <div className="text-slate-700">{d.address_line}</div>
+                        {d.landmark && (
+                          <div className="text-slate-500 text-[10px]">Landmark: {d.landmark}</div>
+                        )}
+                        <div className="text-slate-600 text-[10px]">
+                          {[d.city, d.state].filter(Boolean).join(', ')} <span className="font-bold text-slate-800">{d.pin_code}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-md px-2 py-1"
+                        data-testid={`admin-mall-booking-noaddress-${b.booking_id}`}
+                        title="Booking was placed before delivery address was mandatory. Cannot ship."
+                      >
+                        <AlertTriangle className="w-3 h-3" /> No Address Captured
+                      </div>
+                    )}
+                  </td>
                   <td className="p-3 text-right tabular-nums">{Math.round(b.paid_prc)} / {b.total_prc}</td>
                   <td className="p-3 text-right tabular-nums">{b.progress_percent}%</td>
                   <td className="p-3 text-center">
@@ -336,21 +468,24 @@ const AdminParasMall = () => {
                     </span>
                   </td>
                   <td className="p-3 text-right">
-                    {b.delivery?.address_line && (
-                      <div className="text-[10px] text-slate-500 mb-1 max-w-[180px] truncate" title={`${b.delivery.name}, ${b.delivery.address_line}, ${b.delivery.city || ''} ${b.delivery.pin_code}`}>
-                        📍 {b.delivery.pin_code} · {b.delivery.city || b.delivery.address_line.slice(0, 18)}
-                      </div>
-                    )}
                     {b.status === 'fulfilled' && (
-                      <Button size="sm" onClick={() => markDelivered(b)} className="bg-blue-600 hover:bg-blue-700 text-white" data-testid={`admin-mall-deliver-${b.booking_id}`}>
+                      <Button
+                        size="sm"
+                        onClick={() => markDelivered(b)}
+                        disabled={!hasAddress}
+                        className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        data-testid={`admin-mall-deliver-${b.booking_id}`}
+                        title={hasAddress ? 'Mark this booking as delivered' : 'No delivery address on file — cannot mark delivered'}
+                      >
                         <Truck className="w-3 h-3 mr-1" /> Mark Delivered
                       </Button>
                     )}
                   </td>
                 </tr>
-              ))}
-              {visibleBookings.length === 0 && (
-                <tr><td colSpan="6" className="p-6 text-center text-slate-400" data-testid="admin-mall-bookings-empty">
+                );
+              })}
+              {bookingsSlice.length === 0 && (
+                <tr><td colSpan="7" className="p-6 text-center text-slate-400" data-testid="admin-mall-bookings-empty">
                   {bookingsTab === 'pending_delivery'
                     ? 'No bookings pending delivery. Great job! 🎉'
                     : bookingsTab === 'delivered'
@@ -361,6 +496,12 @@ const AdminParasMall = () => {
             </tbody>
           </table>
           </div>
+          <Paginator
+            page={bookingsPage}
+            totalPages={bookingsTotalPages}
+            onChange={setBookingsPage}
+            testIdPrefix="admin-mall-bookings"
+          />
         </div>
       )}
 
