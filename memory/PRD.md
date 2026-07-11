@@ -9,6 +9,14 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - **Native App**: Capacitor + AdMob + Android signed AAB (user-only build = 37% smaller)
 - **CI/CD**: GitHub Actions — `.github/workflows/build-android.yml`
 
+## Implemented (Feb 11, 2026 — IST Bucketing + Live Feed E2E)
+- ✅ **IST timezone fix** in `backend/routes/downline_live_feed.py:get_earnings_summary` — today/yesterday/this_week/this_month buckets now align to India Standard Time (UTC+05:30) midnight instead of UTC midnight. Fixes off-by-hours bug where rows timestamped IST 00:00–05:29 were incorrectly reported as "yesterday".
+- ✅ **Backend tests**: `/app/backend/tests/test_live_feed_ist_bucketing.py` (main-agent) + `/app/backend/tests/test_live_feed_p0_review.py` (testing-agent) — 5/5 IST boundary + empty-uid + seeded-feed cases PASS.
+- ✅ **Frontend E2E verified**: Login → /referrals → click `view-downline-live-feed-btn` → /referrals/live-feed loads with white theme, 4 earnings tiles, summary card, window pills (24H/3D/7D), empty state, back/refresh buttons. All 13 required data-testids present.
+- ✅ **AdMob compliance**: Rewarded Interstitial fires non-blocking when opening Live Feed; navigation succeeds regardless of ad state.
+- ⚠️ **Known open item (bumped to P1 from P2)**: `/api/referrals/live-feed/{uid}` and `/api/referrals/earnings-summary/{uid}` have NO explicit auth dep. Testing agent flagged HIGH-priority IDOR — anyone with a UID can read another user's earnings. Recommend wiring `Depends(_get_user_from_token)` and asserting `token.sub == uid`.
+
+
 ## Implemented (Feb 08, 2026 — Rewarded Interstitial Placements)
 - ✅ Activated the previously-unused **Rewarded Interstitial** AdMob ad unit (`ca-app-pub-3556805218952480/2377737544`) — expected additional revenue stream since this unit had impressions=0 before.
 - ✅ **New reusable component** `frontend/src/components/RewardedInterstitialTrigger.js` — Portal-based modal + `useRewardedInterstitial()` hook that other pages can call imperatively after successful actions.
