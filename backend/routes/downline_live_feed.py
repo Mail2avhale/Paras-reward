@@ -152,19 +152,29 @@ async def get_downline_live_feed(
 async def get_earnings_summary(uid: str):
     """Aggregate `mining_referral_reward` PRC earned by `uid` across four
     canonical buckets: today, yesterday, this_week (Mon-based ISO week),
-    this_month. Uses IST-friendly UTC boundaries (00:00 UTC = 05:30 IST is
-    close enough for a display card; can be refined later if the user
-    wants strict local-timezone bucketing).
+    this_month. Buckets align to India Standard Time (IST, UTC+05:30)
+    midnight so users see day rollovers at their local midnight — not
+    05:30 AM IST like the previous UTC-only version.
     """
     if db is None:
         raise HTTPException(status_code=503, detail="DB not initialised")
 
-    now = datetime.now(timezone.utc)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    yesterday_start = today_start - timedelta(days=1)
-    # ISO week — Monday is 0; align to the current week's Monday 00:00.
-    week_start = today_start - timedelta(days=today_start.weekday())
-    month_start = today_start.replace(day=1)
+    IST = timezone(timedelta(hours=5, minutes=30))
+    now_utc = datetime.now(timezone.utc)
+    now_ist = now_utc.astimezone(IST)
+
+    # IST midnight boundaries → convert back to UTC for Mongo comparisons.
+    today_start_ist = now_ist.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start_ist = today_start_ist - timedelta(days=1)
+    # ISO week — Monday is 0; align to this week's Monday 00:00 IST.
+    week_start_ist = today_start_ist - timedelta(days=today_start_ist.weekday())
+    month_start_ist = today_start_ist.replace(day=1)
+
+    today_start = today_start_ist.astimezone(timezone.utc)
+    yesterday_start = yesterday_start_ist.astimezone(timezone.utc)
+    week_start = week_start_ist.astimezone(timezone.utc)
+    month_start = month_start_ist.astimezone(timezone.utc)
+    now = now_utc
 
     # Fetch just what we need; sum aggregation via $group would work but
     # a single find→python-fold is simpler and still O(rows-in-month).

