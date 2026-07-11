@@ -14,7 +14,7 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - ✅ **Backend tests**: `/app/backend/tests/test_live_feed_ist_bucketing.py` (main-agent) + `/app/backend/tests/test_live_feed_p0_review.py` (testing-agent) — 5/5 IST boundary + empty-uid + seeded-feed cases PASS.
 - ✅ **Frontend E2E verified**: Login → /referrals → click `view-downline-live-feed-btn` → /referrals/live-feed loads with white theme, 4 earnings tiles, summary card, window pills (24H/3D/7D), empty state, back/refresh buttons. All 13 required data-testids present.
 - ✅ **AdMob compliance**: Rewarded Interstitial fires non-blocking when opening Live Feed; navigation succeeds regardless of ad state.
-- ⚠️ **Known open item (bumped to P1 from P2)**: `/api/referrals/live-feed/{uid}` and `/api/referrals/earnings-summary/{uid}` have NO explicit auth dep. Testing agent flagged HIGH-priority IDOR — anyone with a UID can read another user's earnings. Recommend wiring `Depends(_get_user_from_token)` and asserting `token.sub == uid`.
+- ✅ **IDOR fix applied** (Feb 11, 2026): `/api/referrals/live-feed/{uid}` and `/api/referrals/earnings-summary/{uid}` now require JWT via `Depends(get_current_user)` + assert `caller.uid == uid` (or `role in admin/sub_admin`). Verified: no auth → 401, owner → 200, cross-uid → 403, admin → 200. IST bucketing pytests updated to include admin bearer token — still 2/2 PASS.
 
 
 ## Implemented (Feb 08, 2026 — Rewarded Interstitial Placements)

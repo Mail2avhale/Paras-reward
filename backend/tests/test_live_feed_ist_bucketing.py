@@ -50,9 +50,25 @@ async def _seed(db, uid: str, ts_utc: datetime, amount: float) -> None:
     })
 
 
-async def _fetch(uid: str) -> dict:
+async def _admin_token() -> str:
     async with httpx.AsyncClient(timeout=15) as client:
-        r = await client.get(f"{BASE_URL}/api/referrals/earnings-summary/{uid}")
+        r = await client.post(
+            f"{BASE_URL}/api/auth/login",
+            json={"email": "admin@test.com", "pin": "153759"},
+        )
+        r.raise_for_status()
+        d = r.json()
+        return d.get("access_token") or d.get("token") or d.get("session_token") or ""
+
+
+async def _fetch(uid: str) -> dict:
+    tok = await _admin_token()
+    headers = {"Authorization": f"Bearer {tok}"} if tok else {}
+    async with httpx.AsyncClient(timeout=15) as client:
+        r = await client.get(
+            f"{BASE_URL}/api/referrals/earnings-summary/{uid}",
+            headers=headers,
+        )
         r.raise_for_status()
         return r.json()
 

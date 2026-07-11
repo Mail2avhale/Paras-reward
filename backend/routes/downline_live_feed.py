@@ -17,13 +17,16 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+# server.get_current_user is the canonical JWT auth dependency used across
+# this codebase (see mall_v2, ads_rewarded, admin_unified_spend, etc.).
+from server import get_current_user
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 # Module state injected from server.py
 db = None
-_get_user_from_token = None  # dependency callable
 
 
 def set_db(database) -> None:
@@ -31,25 +34,19 @@ def set_db(database) -> None:
     db = database
 
 
-def set_auth_dependency(callable_dep) -> None:
-    global _get_user_from_token
-    _get_user_from_token = callable_dep
-
-
-def _identity_dep(token_user):
-    """Small indirection so we can wire the auth dep at startup."""
-    return token_user
-
-
-def _ensure_auth():
-    """FastAPI dependency that resolves the injected auth callable."""
-    if _get_user_from_token is None:
-        raise HTTPException(status_code=503, detail="Auth not initialised")
-
-    async def _wrapped(*args, **kwargs):
-        return await _get_user_from_token(*args, **kwargs)
-
-    return _wrapped
+def _assert_self_or_admin(current_user: dict, uid: str) -> None:
+    """IDOR guard — only the owner (or an admin/sub_admin) may read this
+    user's referral earnings / feed. Anything else is 403.
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    caller_uid = current_user.get("uid")
+    role = current_user.get("role")
+    if caller_uid == uid:
+        return
+    if role in ("admin", "sub_admin"):
+        return
+    raise HTTPException(status_code=403, detail="Forbidden — cannot read another user's referral data")
 
 
 @router.get("/referrals/live-feed/{uid}")
@@ -57,14 +54,15 @@ async def get_downline_live_feed(
     uid: str,
     limit: int = Query(50, ge=1, le=200),
     hours: int = Query(24, ge=1, le=720),
+    current_user: dict = Depends(get_current_user),
 ):
     """Return the last `limit` referral-reward events earned by this user
     from their downline's mining collects in the past `hours` window.
 
-    Note: This endpoint is opt-in read-only and doesn't require an admin
-    bypass. IDOR protection is added by requiring the token subject to
-    match `uid`, enforced upstream via the existing user auth chain.
+    IDOR-protected: the JWT subject must equal `uid`, or the caller must
+    be an admin/sub_admin.
     """
+    _assert_self_or_admin(current_user, uid)
     if db is None:
         raise HTTPException(status_code=503, detail="DB not initialised")
 
@@ -149,13 +147,16 @@ async def get_downline_live_feed(
 # Powers the four "earned PRC" tiles on the Live Feed page so users can
 # see their referral income at a glance and feel the compounding effect.
 @router.get("/referrals/earnings-summary/{uid}")
-async def get_earnings_summary(uid: str):
+async def get_earnings_summary(uid: str, current_user: dict = Depends(get_current_user)):
     """Aggregate `mining_referral_reward` PRC earned by `uid` across four
     canonical buckets: today, yesterday, this_week (Mon-based ISO week),
     this_month. Buckets align to India Standard Time (IST, UTC+05:30)
     midnight so users see day rollovers at their local midnight — not
     05:30 AM IST like the previous UTC-only version.
+
+    IDOR-protected: caller JWT.uid must equal `uid` (or be admin).
     """
+    _assert_self_or_admin(current_user, uid)
     if db is None:
         raise HTTPException(status_code=503, detail="DB not initialised")
 
