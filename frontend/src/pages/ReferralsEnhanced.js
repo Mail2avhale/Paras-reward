@@ -930,11 +930,12 @@ const openWhatsAppNudge = (mobile, name) => {
     ? digits
     : digits.length === 10 ? `91${digits}` : digits;
   const message =
-    `Namaskar ${name || 'friend'} 👋\n\n` +
-    `तुम्ही Paras Reward वर आजचं mining केलं आहे का? 🚀\n\n` +
-    `Login → Start Mining करून daily PRC कमवा. रोजची streak break करू नका!\n\n` +
+    `Hi ${name || 'there'} 👋\n\n` +
+    `Have you mined on Paras Reward today? 🚀\n\n` +
+    `Log in and tap Start Mining to earn daily PRC. ` +
+    `Don't break your streak!\n\n` +
     `App: https://parasreward.com\n\n` +
-    `— तुमचा Referrer`;
+    `— Your Referrer`;
   const url = `https://wa.me/${e164}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank', 'noopener,noreferrer');
 };
