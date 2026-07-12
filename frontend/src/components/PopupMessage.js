@@ -132,12 +132,15 @@ const PopupMessage = () => {
           className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-3"
           data-testid="popup-body"
         >
-          {/* Banner image */}
+          {/* Banner image — old prod popups may reference legacy
+              `/api/static/popups/*.jpg` URLs whose files were wiped on
+              redeploy. onError hides the broken-image icon gracefully. */}
           {popup.image_url && (
             <img
               src={absolute(popup.image_url)}
               alt=""
               className="w-full rounded-xl"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
               data-testid="popup-image"
             />
           )}
