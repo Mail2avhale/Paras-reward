@@ -1,0 +1,45 @@
+{
+  "summary": "Popup Image MongoDB Migration hotfix VERIFIED end-to-end. Backend pytest 6/6 PASS (upload writes doc to db.popup_images w/ base64 data + width=800/height=450/content_type=image/jpeg + 32-char hex image_id; public GET /api/popup-image/{id} returns 200 w/ real JPEG bytes matching upload size WITHOUT any Authorization header — the critical browser <img> use-case; nonexistent id → 404; no auth = 401; regular user token = 403; create+active-fetch round-trip returns the /api/popup-image/{id} URL intact). Frontend E2E via Playwright: admin login → /admin/popup-messages → New Popup → image upload → Live Preview shows the image (data-testid='admin-popup-image-preview', src=https://…/api/popup-image/<hex>, naturalWidth=800, naturalHeight=450) → Save. Logged out and back in as test user (9970100782/997010) → popup rendered with image visible (naturalWidth=800, naturalHeight=450 → confirms image successfully loaded, not broken). All 3 close escape hatches verified: × close button, backdrop click (with fresh sessionStorage), ESC key press. Regression: legacy /api/static/popups/xxx.jpg URLs return 404 but frontend renders `<img>` tag with no crash (no onError needed — browser handles gracefully).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/popup-image/{id}",
+        "issue": "Cache-Control header 'public, max-age=31536000, immutable' set by handler but overridden by upstream middleware to 'no-store' (documented as known/acceptable in review request). Image still loads correctly; only client caching is disabled. Low priority — can revisit."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_popup_image_mongo_migration.py",
+    "/app/test_reports/pytest/popup_image_migration.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: consider adding onError={(e)=>{e.currentTarget.style.display='none'}} on <img data-testid='popup-image'> to avoid broken-image icon for legacy /api/static/popups/*.jpg records that still exist in DB but files were wiped. Current behavior is browser-default (blank space), which is acceptable but not polished.",
+    "OPTIONAL: response payload of /upload-image also returns 'compression_ratio' — for tiny source PNGs (e.g. 400x300 solid) this can be a negative percentage since PNG (7KB) → JPEG 800x450 (88KB) is a growth, not shrink. Consider clamping/labeling appropriately, or drop the field to avoid confusing UX in admin panel."
+  ],
+  "critical_code_review_comments": [
+    "admin_popup_routes.py L437: hard-coded `/api/popup-image/{image_id}` string in response — good, matches server.py wiring at L37188. Any future refactor of the api_router prefix must update BOTH the handler string and the router mount to stay consistent.",
+    "admin_popup_routes.py L446 `get_popup_image` is a **public** endpoint by design — confirmed working w/ no auth header. Ensure no future auth middleware is applied to `public_router` (it currently has no auth deps and inherits nothing from admin_popup_router).",
+    "admin_popup_routes.py L453 projection `{'_id': 0, 'data_b64': 1, 'content_type': 1}` mixes exclusion (_id) with inclusion — MongoDB accepts this special case for _id but flagging for reviewer awareness. Works today.",
+    "PopupMessage.js L136-143: `<img>` has no `onError` handler. If image_url points to a deleted resource, browser will show broken-image icon. Add gracefully hide-on-error for robustness (see action_items).",
+    "admin_popup_routes.py L378: 5 MB limit check happens AFTER file.read() — for adversarial 5 GB uploads this could DoS RAM. Consider streaming/size-check via `file.size` or Content-Length header before read. Low priority given upstream ingress limits."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_popup_image_mongo_migration.py (NEW — 6 pytest cases across 4 classes covering upload/mongo-shape, public fetch bytes, 404, auth guards 401/403, and create+active round-trip)"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6 pytest passed)",
+    "frontend": "100% (admin upload → preview → save → user render → image loaded 800x450 → all 3 close mechanisms work)"
+  },
+  "test_credentials": "Admin: email=admin@test.com, PIN=153759. Test user: mobile=9970100782, PIN=997010.",
+  "seed_data_creation": "All created popups (TEST_ImageMigration_E2E, TEST_ImageMigrationE2E, etc.) and popup_images docs (test_migration.png, fetch_test.png, e2e.png, popup_test.png, nauth.png, reg.png) deleted via cleanup script. db.popup_images now has 0 remaining test docs.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Migration verified: popup images now stored in db.popup_images (base64) served via public /api/popup-image/{id}. Legacy /api/static/popups/*.jpg URLs still 404 gracefully with no frontend crash. If main agent adds onError handling on <img> or drops compression_ratio field, add regression test in test_popup_image_mongo_migration.py. Login flow: fill [data-testid='login-identifier-input'], click login-submit-btn, then fill login-pin-0…5 (auto-submits at 6 digits); wait ~10s for navigation. Frontend session-storage tracks closed_popups so `sessionStorage.removeItem('closed_popups')` is needed to re-test popup rendering between test steps.",
+  "rca of the issue": "Original prod bug: popup images stored on local disk (backend/static/popups/) — Emergent containers have ephemeral storage → files wiped on redeploy/restart → end-user <img> tags 404 while admin preview (in-memory session) still displayed the image. Fix migrates storage to db.popup_images (base64 in MongoDB, guaranteed cross-pod + cross-restart persistence) with a new PUBLIC /api/popup-image/{id} endpoint (browser <img> tags need no auth header). Verified end-to-end: upload persists to Mongo, public fetch returns real JPEG bytes matching upload size, end-user browser renders the image with naturalWidth=800/naturalHeight=450 (proves successful decode, not broken)."
+}

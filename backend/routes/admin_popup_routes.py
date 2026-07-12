@@ -11,16 +11,23 @@ additionally carry `message_html` (sanitized rich text), `image_url`
 
 from datetime import datetime, timezone
 from typing import List, Optional
+import base64
 import io
 import logging
-import os
 import re
+import uuid
 
 import bleach
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/admin/popup", tags=["Admin - Popup Messages"])
+
+# Public router — served under /api (no /admin prefix) so browser <img>
+# tags can render popup banners without needing auth headers. Mounted
+# alongside `router` from server.py.
+public_router = APIRouter(tags=["Popup - Public"])
 
 # Database reference — injected from server.py at startup.
 db = None
@@ -341,12 +348,24 @@ async def delete_popup(popup_id: str):
 
 
 # ================== IMAGE UPLOAD ==================
+#
+# Design note (Feb 12, 2026 — production hotfix):
+#
+# Popup images are stored in MongoDB (base64 in the `popup_images`
+# collection) rather than on local disk. Emergent production containers
+# have ephemeral storage, so files under `backend/static/popups/` are
+# wiped on container restart / redeploy — causing broken <img> tags on
+# the end-user popup even though the admin's live-preview (rendered
+# from memory in the same session) still shows the image.
+#
+# MongoDB persists across pod restarts AND is shared across pods, so
+# the same image is now guaranteed to render for every user.
 
 @router.post("/upload-image")
 async def upload_popup_image(file: UploadFile = File(...)):
     """Upload + normalize an image used in a popup body. Produces a
-    16:9 (800x450) JPEG under `/api/static/popups/` — good for hero
-    banners inside a modal without blowing up mobile viewport height.
+    16:9 (800x450) JPEG saved to MongoDB. Response `image_url` is the
+    dedicated fetch endpoint below.
     """
     if not file.filename:
         raise HTTPException(400, "Missing filename")
@@ -377,12 +396,10 @@ async def upload_popup_image(file: UploadFile = File(...)):
         target_ratio = 16 / 9
         current_ratio = w / h
         if current_ratio > target_ratio:
-            # too wide — crop sides
             new_w = int(h * target_ratio)
             left = (w - new_w) // 2
             img = img.crop((left, 0, left + new_w, h))
         else:
-            # too tall — crop top+bottom
             new_h = int(w / target_ratio)
             top = (h - new_h) // 2
             img = img.crop((0, top, w, top + new_h))
@@ -400,25 +417,54 @@ async def upload_popup_image(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(400, f"Invalid image: {e}")
 
-    # Persist under backend/static/popups/ — served by StaticFiles mount.
-    base = file.filename.rsplit(".", 1)[0]
-    slug = re.sub(r"[^a-zA-Z0-9_-]+", "_", base).strip("_").lower() or "popup"
-    ts = int(datetime.now(timezone.utc).timestamp())
-    fname = f"{slug}_{ts}.jpg"
-    target_dir = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "static", "popups",
-    )
-    os.makedirs(target_dir, exist_ok=True)
-    path = os.path.join(target_dir, fname)
-    with open(path, "wb") as f:
-        f.write(normalized)
+    # Persist to MongoDB — b64-encoded so the document round-trips cleanly
+    # through any driver. ~112 KB doc for a 84 KB JPEG (33% b64 overhead).
+    image_id = uuid.uuid4().hex
+    doc = {
+        "image_id": image_id,
+        "content_type": "image/jpeg",
+        "data_b64": base64.b64encode(normalized).decode("ascii"),
+        "size_bytes": len(normalized),
+        "width": final_w,
+        "height": final_h,
+        "original_filename": file.filename,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.popup_images.insert_one(doc)
 
     return {
         "success": True,
-        "image_url": f"/api/static/popups/{fname}",
-        "filename": fname,
+        "image_url": f"/api/popup-image/{image_id}",
+        "image_id": image_id,
         "size_bytes": len(normalized),
         "original_size_bytes": len(blob),
         "compression_ratio": f"{(1 - len(normalized) / len(blob)) * 100:.0f}%",
         "dimensions": f"{final_w}x{final_h}",
     }
+
+
+@public_router.get("/popup-image/{image_id}")
+async def get_popup_image(image_id: str):
+    """Serve a popup image from MongoDB. **Public** (no auth) so browser
+    <img> tags can render the popup banner without an Authorization
+    header. Aggressive cache headers because these images are immutable
+    — once uploaded, `image_id` never gets reused.
+    """
+    doc = await db.popup_images.find_one(
+        {"image_id": image_id},
+        {"_id": 0, "data_b64": 1, "content_type": 1},
+    )
+    if not doc:
+        raise HTTPException(404, "Image not found")
+    try:
+        blob = base64.b64decode(doc["data_b64"])
+    except Exception:
+        raise HTTPException(500, "Corrupted image data")
+    return Response(
+        content=blob,
+        media_type=doc.get("content_type", "image/jpeg"),
+        headers={
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "Content-Length": str(len(blob)),
+        },
+    )

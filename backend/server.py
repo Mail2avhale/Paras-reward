@@ -92,7 +92,7 @@ from routes.inactive_user_cleanup import (
     set_db as set_inactive_cleanup_db,
     daily_inactive_cleanup_task,
 )
-from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
+from routes.admin_popup_routes import router as admin_popup_router, public_router as popup_public_router, set_db as set_admin_popup_db
 from routes.leaderboard import router as leaderboard_router, set_db as set_leaderboard_db
 # Chatbot withdrawal routes REMOVED - feature deprecated (March 2026)
 from routes.admin_ledger import router as admin_ledger_router, set_db as set_admin_ledger_db
@@ -37185,6 +37185,7 @@ set_admin_popup_db(db)
 set_leaderboard_db(db)
 # set_social_db and set_support_db removed - files deleted
 api_router.include_router(admin_popup_router)
+api_router.include_router(popup_public_router)
 
 # Gift Subscription Router
 from routes.gift_subscription import router as gift_router
