@@ -4,7 +4,7 @@ import axios from 'axios';
 import RewardLoader from '@/components/RewardLoader';
 import { 
   Users, Copy, Check, Share2, ArrowLeft, TrendingUp, 
-  UserCheck, Link2, RefreshCw, Gift, ChevronRight, ChevronDown, Loader2
+  UserCheck, Link2, RefreshCw, Gift, ChevronRight, ChevronDown, Loader2, MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -896,6 +896,7 @@ const NetworkTreeView = ({ rootUid, branches, totalL1 }) => {
                 node={{
                   uid: branch.uid,
                   name: branch.name,
+                  mobile: branch.mobile || '',
                   is_active: branch.is_active,
                   plan: branch.plan,
                   // Server-computed count on the initial payload — used
@@ -914,6 +915,28 @@ const NetworkTreeView = ({ rootUid, branches, totalL1 }) => {
       )}
     </div>
   );
+};
+
+// -------------------------------------------------------------------
+// Compose a pre-filled WhatsApp nudge for a downline. The URL uses the
+// wa.me deep-link so it works on both mobile (opens native WhatsApp)
+// AND desktop (opens WhatsApp Web). Numbers are normalised to E.164
+// India format (91XXXXXXXXXX) — bare 10-digit inputs get prefixed.
+// -------------------------------------------------------------------
+const openWhatsAppNudge = (mobile, name) => {
+  const digits = (mobile || '').replace(/\D/g, '');
+  if (!digits) return;
+  const e164 = digits.startsWith('91') && digits.length === 12
+    ? digits
+    : digits.length === 10 ? `91${digits}` : digits;
+  const message =
+    `Namaskar ${name || 'friend'} 👋\n\n` +
+    `तुम्ही Paras Reward वर आजचं mining केलं आहे का? 🚀\n\n` +
+    `Login → Start Mining करून daily PRC कमवा. रोजची streak break करू नका!\n\n` +
+    `App: https://parasreward.com\n\n` +
+    `— तुमचा Referrer`;
+  const url = `https://wa.me/${e164}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
 };
 
 const TreeNode = ({ rootUid, node, depth, isLast }) => {
@@ -1001,6 +1024,29 @@ const TreeNode = ({ rootUid, node, depth, isLast }) => {
             </span>
           )}
         </button>
+        {/* WhatsApp nudge — opens wa.me with a pre-filled reactivation
+            message. Only rendered when the downline has a mobile on
+            file. Inactive members get a slightly stronger visual to
+            hint that they're the priority to reach out to. */}
+        {node.mobile && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openWhatsAppNudge(node.mobile, node.name);
+            }}
+            className={`mt-1 p-1.5 rounded-md border transition ${
+              node.is_active
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25'
+                : 'bg-emerald-500/25 border-emerald-500/50 text-emerald-200 hover:bg-emerald-500/40 animate-pulse'
+            }`}
+            title={`Send WhatsApp nudge to ${node.name}`}
+            aria-label={`WhatsApp ${node.name}`}
+            data-testid={`tree-node-whatsapp-${node.uid}`}
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {open && (

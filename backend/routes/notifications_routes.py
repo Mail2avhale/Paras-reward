@@ -1226,6 +1226,7 @@ async def get_referrals_level_breakdown(
                 tree_branches[u["uid"]] = {
                     "uid": u["uid"],
                     "name": u.get("name", "User"),
+                    "mobile": u.get("mobile") or "",
                     "plan": plan or "explorer",
                     "is_active": is_active,
                     "partner_position": u.get("partner_position") or None,
@@ -1350,6 +1351,7 @@ async def get_downline_subtree(
         children.append({
             "uid": c["uid"],
             "name": c.get("name", "User"),
+            "mobile": c.get("mobile") or "",
             "mobile_last4": (c.get("mobile") or "")[-4:],
             "plan": plan or "explorer",
             "is_active": plan in ("startup", "growth", "elite"),
