@@ -23,6 +23,12 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
   - **End-user** (`/app/frontend/src/components/PopupMessage.js`): sticky header + scrollable body + sticky multi-CTA footer, banner image, YouTube tap-to-play thumbnail (privacy-friendly, iframe embed only after user consent), `dangerouslySetInnerHTML` for the sanitized HTML body.
   - Dependencies added: bleach 6.4.0 (backend), @tiptap/react + starter-kit + underline + link + placeholder (frontend).
   - **Testing**: 14/14 pytest PASS (sanitizer + XSS vectors + auth guards + shape + toggle cascade); frontend E2E confirmed for admin form + live preview + CTA add/remove + save/edit/delete + end-user render.
+- ✅ **Growth Network page refactor** (Feb 11, 2026, per user feedback):
+  - **Cap levels displayed to L1-L3** (from L1-L5) via `?max_depth=3` query param; backend legacy default preserved at 5 for backward compat.
+  - **NEW "Partner Positions in Your Network" section** — 2×2 grid showing counts of District / Regional / State / National partners across the entire walked downline (auto-hidden when total == 0).
+  - **NEW "Network Tree" diagram** — compact CSS tree showing top-5 L1 branches with L2 + L3 child counts, active/inactive indicator dots, root "YOU" node with vertical trunk connector.
+  - **Backend** (`/app/backend/routes/notifications_routes.py`): extended `/level-breakdown` with `max_depth` param + `partner_counts` (4-tier dict) + `top_branches` (list) in response. **IDOR-protected** — added `Depends(_require_authenticated_user)` + `_assert_notification_owner` (401 no-auth, 403 cross-user, 200 owner/admin). Defensive fix for `max_depth=0` (now clamps to L1 instead of falling back to legacy L5).
+  - **Testing**: 7/7 pytest PASS; frontend Playwright verified all 3 new sections + IDOR guard (all 5 scenarios: no-auth/owner/cross-user/admin/max_depth=0).
 
 - ✅ **Admin Paras Mall — Pagination + Delivery Address column** (Feb 11, 2026):
   - Added client-side pagination to Products grid (12/page) and Bookings table (25/page) with prev/next Paginator component. Bookings page auto-resets to 1 when switching sub-tabs (Pending/Delivered/All).

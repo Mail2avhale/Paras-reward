@@ -1126,7 +1126,11 @@ async def update_user_ip_location(uid: str, request: Request):
 # ========== REFERRAL PROGRAM ==========
 
 @router.get("/referrals/{user_id}/level-breakdown")
-async def get_referrals_level_breakdown(user_id: str, max_depth: int = 5):
+async def get_referrals_level_breakdown(
+    user_id: str,
+    max_depth: int = 5,
+    current_user: dict = Depends(_require_authenticated_user),
+):
     """L1-L5 breakdown for /referrals page (Jun 2026).
 
     For each level returns: total count, active count, inactive count,
@@ -1139,8 +1143,16 @@ async def get_referrals_level_breakdown(user_id: str, max_depth: int = 5):
     tiers (District/Regional/State/National) across the entire walked
     network, plus a light-weight `top_branches` tree summary (L1
     directs each with their L2 count + L3 count for the tree diagram).
+
+    IDOR-protected (Feb 2026): only the owner (or an admin/sub_admin)
+    may enumerate a user's downline shape.
     """
-    depth_cap = max(1, min(int(max_depth or 5), 5))
+    _assert_notification_owner(user_id, current_user)
+
+    # `max_depth or 5` used to be a falsy trap (max_depth=0 fell back to
+    # legacy L1..L5). Explicit None-check keeps 0 as a valid clamp source.
+    _raw = 5 if max_depth is None else int(max_depth)
+    depth_cap = max(1, min(_raw, 5))
     levels = {f"L{i}": {"total": 0, "active": 0, "inactive": 0,
                         "prc_sum": 0.0, "top": None} for i in range(1, depth_cap + 1)}
     grand_total = {"users": 0, "active": 0, "prc_sum": 0.0}
