@@ -9,6 +9,7 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useRewardedInterstitial } from '@/components/RewardedInterstitialTrigger';
+import CommunityDashboard from './CommunityDashboard';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -24,6 +25,8 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
   // and per-tier percentages, displayed as an earn-potential card so users
   // understand exactly how much they earn from each downline collect.
   const [commissionConfig, setCommissionConfig] = useState(null);
+  // Feb 12 2026 — new gamified Community Growth dashboard payload.
+  const [communityData, setCommunityData] = useState(null);
 
   // Self-claim modal state — for users who registered without a referral
   // code and want to attach a referrer post-signup (within 30 days).
@@ -62,7 +65,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
       // Fetch network stats, mining speed, and referrals in PARALLEL.
       // direct-list does heavy aggregation per referral — needs longer timeout
       // than the lighter stats endpoints.
-      const [statsRes, miningRes, referralsRes, breakdownRes, commissionRes, positionRes] = await Promise.all([
+      const [statsRes, miningRes, referralsRes, breakdownRes, commissionRes, positionRes, communityRes] = await Promise.all([
         axios.get(`${API}/api/growth/network-stats/${user.uid}`, { timeout: 8000 }).catch(() => null),
         axios.get(`${API}/api/growth/mining-speed/${user.uid}`, { timeout: 8000 }).catch(() => null),
         axios.get(`${API}/api/notifications/referrals/${user.uid}/direct-list`, { timeout: 20000 }).catch((err) => {
@@ -76,7 +79,16 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
         axios.get(`${API}/api/mining/commission-config`, { timeout: 8000 }).catch(() => null),
         // Feb 6 2026 — partner position badge feed
         axios.get(`${API}/partners/my-position/${user.uid}`, { timeout: 8000 }).catch(() => null),
+        // Feb 12 2026 — composite Community Growth dashboard endpoint
+        axios.get(`${API}/api/community/dashboard/${user.uid}`, { timeout: 15000 }).catch((err) => {
+          console.error('[Community] dashboard fetch failed:', err?.message);
+          return null;
+        }),
       ]);
+
+      if (communityRes?.data?.success) {
+        setCommunityData(communityRes.data);
+      }
       
       if (positionRes?.data?.success) {
         setPartnerPosition(positionRes.data);
@@ -245,7 +257,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             >
               <ArrowLeft className="w-5 h-5 text-gray-400" />
             </button>
-            <h1 className="text-lg font-semibold text-white">Growth Network</h1>
+            <h1 className="text-lg font-semibold text-white">Community Growth</h1>
           </div>
           <button
             onClick={fetchData}
@@ -258,6 +270,21 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+
+        {/* NEW gamified Community Growth dashboard — sits at top, powered
+            by /api/community/dashboard. Includes: Overview cards, Invite
+            Friends w/ QR, Community Growth Bonus, Community Goal, Next
+            Milestone, Health, Power, Analytics, Redeem Unlock, Daily
+            Mission, Badges, Leaderboard, Timeline, Monthly Challenge,
+            Share Banner. Existing referral link card + tree + level
+            cards continue below (unchanged, per user request). */}
+        {communityData && (
+          <CommunityDashboard
+            data={communityData}
+            user={user}
+            onOpenLiveFeed={openLiveFeed}
+          />
+        )}
         
         {/* Referral Link Card */}
         {referralCode && (
@@ -398,10 +425,14 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
           </div>
         </div>
 
-        {/* Network Capacity Progress Bar */}
+        {/* Network Capacity Progress Bar — hidden when the new
+            "Community Goal" section (in CommunityDashboard) is available
+            to avoid duplication. Legacy fallback for users where the
+            dashboard fetch failed. */}
+        {!communityData && (
         <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5" data-testid="network-progress-card">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-gray-400 text-sm">Network Capacity</span>
+            <span className="text-gray-400 text-sm">Community Goal</span>
             <span className="text-amber-400 font-bold text-lg">
               {networkProgress.toFixed(0)}%
             </span>
@@ -414,12 +445,15 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
           </div>
           <div className="flex items-center justify-between mt-2">
             <span className="text-gray-500 text-xs">{activeNetwork} active users</span>
-            <span className="text-gray-500 text-xs">Cap: {networkStats?.network_cap || 0}</span>
+            <span className="text-gray-500 text-xs">Target: {networkStats?.network_cap || 0}</span>
           </div>
         </div>
+        )}
 
-        {/* Elite Mining Commission (Jul 2026 — Live admin config) */}
-        {commissionConfig && commissionConfig.enabled && commissionConfig.tiers?.length > 0 && (
+        {/* Elite Mining Commission — hidden when new "Community Growth
+            Bonus" section (in CommunityDashboard) is rendered. Legacy
+            fallback for users where the dashboard fetch failed. */}
+        {!communityData && commissionConfig && commissionConfig.enabled && commissionConfig.tiers?.length > 0 && (
           <div
             className="bg-gradient-to-br from-fuchsia-900/40 to-purple-900/40 border border-fuchsia-500/30 rounded-2xl p-5"
             data-testid="elite-mining-commission-card"
@@ -431,7 +465,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                 </div>
                 <div>
                   <h3 className="text-white font-semibold text-base leading-tight">
-                    Elite Mining Commission
+                    Community Growth Bonus
                   </h3>
                   <p className="text-gray-400 text-[11px] leading-tight">
                     Earn PRC when your downlines collect mining rewards
@@ -468,9 +502,9 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 
             <p className="text-gray-400 text-[11px] mt-3 leading-relaxed">
               {commissionConfig.elite_only ? (
-                <><b className="text-fuchsia-300">Elite uplines</b> receive commission.</>
+                <><b className="text-fuchsia-300">Elite uplines</b> receive Community Bonus.</>
               ) : (
-                <>All uplines receive commission.</>
+                <>All uplines receive Community Bonus.</>
               )}
               {commissionConfig.roll_up && (
                 <> Non-Elite ancestors are skipped — the tier slot rolls up to the next Elite user in your chain.</>
@@ -497,7 +531,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             <div className="flex items-center justify-between px-1">
               <h3 className="text-white font-semibold text-base">Network by Level</h3>
               <div className="text-right">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Mining Boost</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Community Power</p>
                 <p className="text-emerald-400 font-bold tabular-nums" data-testid="total-mining-boost">
                   +{levelBreakdown.total_mining_boost_pct}%
                 </p>
@@ -715,7 +749,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-indigo-300">Commission</p>
+                <p className="text-[10px] text-indigo-300">Bonus %</p>
                 <p className="text-emerald-300 font-bold text-sm">
                   {(partnerPosition.position_config?.commission_pct * 100).toFixed(0)}%
                 </p>
@@ -743,7 +777,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               </div>
               {partnerPosition.over_cap && (
                 <p className="text-[10px] text-orange-300 mt-1">
-                  ⚠️ Downlines exceed cap. Only earliest {partnerPosition.cap} count for commission.
+                  ⚠️ Downlines exceed cap. Only earliest {partnerPosition.cap} count for Community Bonus.
                 </p>
               )}
             </div>
@@ -796,7 +830,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             {!partnerPosition.elite_active && (
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 text-center">
                 <p className="text-[11px] text-amber-300">
-                  ⚡ Upgrade to <strong>Elite</strong> plan to activate commission earning
+                  ⚡ Upgrade to <strong>Elite</strong> plan to activate Community Bonus earning
                 </p>
               </div>
             )}
@@ -804,7 +838,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             {partnerPosition.elite_active && partnerPosition.structure_required && !partnerPosition.structure_met && (
               <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-2 text-center">
                 <p className="text-[11px] text-rose-300">
-                  🔒 Commission paused — build the required structure above to unlock your bonus
+                  🔒 Community Bonus paused — build the required structure above to unlock your bonus
                 </p>
               </div>
             )}

@@ -37155,6 +37155,7 @@ api_router.include_router(app_version_router)
 
 # Rewarded video ad PRC crediting (Phase 2)
 from routes.ads_rewarded import router as ads_rewarded_router, set_db as set_ads_rewarded_db
+from routes.community_dashboard import router as community_dashboard_router, set_db as set_community_dashboard_db
 set_ads_rewarded_db(db)
 api_router.include_router(ads_rewarded_router)
 
@@ -37182,10 +37183,12 @@ api_router.include_router(prc_audit_router)
 
 # Admin Popup Messages Router
 set_admin_popup_db(db)
+set_community_dashboard_db(db)
 set_leaderboard_db(db)
 # set_social_db and set_support_db removed - files deleted
 api_router.include_router(admin_popup_router)
 api_router.include_router(popup_public_router)
+api_router.include_router(community_dashboard_router)
 
 # Gift Subscription Router
 from routes.gift_subscription import router as gift_router
