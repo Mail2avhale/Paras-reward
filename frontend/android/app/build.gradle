@@ -83,8 +83,39 @@ android {
         // 10. PRC Statement dedup — removed legacy duplicate "Referral Reward"
         //     entries that appeared as both "Referral Reward" + "Daily Reward".
         // 11. Downline Live Feed data-fetch URL fix (double /api prefix).
-        versionCode 18
-        versionName "1.1.7"
+        //
+        // versionCode 18 → 19 — Feb 12, 2026 release:
+        // 12. IST timezone fix for Live Feed earnings buckets (was using UTC).
+        // 13. IDOR guards on /live-feed, /earnings-summary, /level-breakdown,
+        //     /subtree — cross-user access now 403.
+        // 14. "Total Earned" truncation bug fix — was capped at 100 events;
+        //     now uses full $group aggregation across window.
+        // 15. Admin Mall — pagination (products 12/page, bookings 25/page)
+        //     + dedicated Delivery Address column with copy-to-clipboard
+        //     + auto-disabled "Mark Delivered" for legacy no-address bookings.
+        // 16. Popup Message — sticky header/footer + max-h-90vh scroll body
+        //     + ESC + backdrop-click dismiss (fixes trapped-user mobile bug
+        //     on long-text popups).
+        // 17. Rich-Text Popup Messages v2 — WYSIWYG editor (TipTap),
+        //     image upload, YouTube embed, multi-CTA, live preview.
+        //     bleach HTML sanitizer on backend blocks XSS.
+        // 18. PRODUCTION HOTFIX — popup images migrated from ephemeral
+        //     disk to MongoDB (Emergent containers wipe disk on redeploy).
+        // 19. Community Growth Dashboard — full /referrals redesign:
+        //     17-section gamified page (Overview, Invite Friends w/ QR,
+        //     Community Growth Bonus, Goal, Milestone, Health, Power,
+        //     Analytics, Redeem Unlock, Mission, Badges, Leaderboard,
+        //     Timeline, Monthly Challenge, Share Banner). Terminology
+        //     overhaul — no "Commission" in UI.
+        // 20. Community Members section — search + sort + tri-state
+        //     activity (Active Today / Recently Active / Needs Activity)
+        //     + WhatsApp/Call quick actions + empty-state + motivation.
+        // 21. Interactive Community Tree — tap-to-drill-down (L1→L2→L3)
+        //     with lazy loading + partner badges + WhatsApp nudge button
+        //     with pre-filled English reactivation message.
+        // 22. BottomNav rename "Invite" → "Community".
+        versionCode 19
+        versionName "1.1.8"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
