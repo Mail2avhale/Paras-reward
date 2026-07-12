@@ -614,6 +614,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                   <NetworkTreeView
                     rootUid={user.uid}
                     branches={levelBreakdown.top_branches}
+                    totalL1={levelBreakdown.levels?.L1?.total || levelBreakdown.top_branches.length}
                   />
                 </div>
               </div>
@@ -857,10 +858,12 @@ const PARTNER_BADGE = {
   national_partner: { label: 'N', cls: 'bg-rose-500/25 text-rose-200 border-rose-500/40' },
 };
 
-const NetworkTreeView = ({ rootUid, branches }) => {
+const NetworkTreeView = ({ rootUid, branches, totalL1 }) => {
   // The root ("YOU") starts expanded, showing L1 branches already fetched
   // in the initial level-breakdown response — no extra API call needed.
   const [rootOpen, setRootOpen] = useState(true);
+  // Show TRUE L1 total (from level-breakdown), not top-5 truncated count.
+  const showCount = totalL1 ?? branches.length;
 
   return (
     <div>
@@ -874,12 +877,17 @@ const NetworkTreeView = ({ rootUid, branches }) => {
         >
           {rootOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           <Users className="w-3.5 h-3.5" /> YOU
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/30 text-white/80">{branches.length}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/30 text-white/80">{showCount}</span>
         </button>
       </div>
       {rootOpen && (
         <>
           <div className="w-px h-3 bg-gray-700 mx-auto" />
+          {totalL1 > branches.length && (
+            <p className="text-center text-[10px] text-gray-500 mb-1" data-testid="tree-truncation-note">
+              Showing top {branches.length} of {totalL1} L1 downlines
+            </p>
+          )}
           <div className="pl-1">
             {branches.map((branch, idx) => (
               <TreeNode
