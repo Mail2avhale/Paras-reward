@@ -286,43 +286,10 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
           />
         )}
         
-        {/* Referral Link Card */}
-        {referralCode && (
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-5 shadow-lg" data-testid="referral-link-card">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Link2 className="w-5 h-5 text-white/80" />
-                <span className="text-white/80 text-sm font-medium">Your Referral Link</span>
-              </div>
-              <span className="bg-white/20 px-2 py-1 rounded text-white text-xs font-bold">
-                {referralCode}
-              </span>
-            </div>
-            
-            <div className="bg-black/20 rounded-xl p-3 mb-4 truncate">
-              <p className="text-white/90 text-sm font-mono truncate">{referralLink}</p>
-            </div>
-            
-            <div className="flex gap-3">
-              <Button
-                onClick={handleCopy}
-                className="flex-1 bg-white/20 hover:bg-white/30 text-white border-0"
-                data-testid="copy-button"
-              >
-                {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                {copied ? 'Copied!' : 'Copy'}
-              </Button>
-              <Button
-                onClick={handleShare}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
-                data-testid="share-button"
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                Share on WhatsApp
-              </Button>
-            </div>
-          </div>
-        )}
+        {/* Referral Link Card — REMOVED (Feb 12, 2026): user requested
+            only "Invite Friends" (inside CommunityDashboard) should
+            remain, not both cards. Copy/share/QR flows all live inside
+            the new dashboard's Invite Friends section. */}
 
         {/* Self-Claim Referrer — inline card, shown ONLY when user has no
             referrer yet. Sits right below the user's own Referral Link card
