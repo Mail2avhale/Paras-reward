@@ -1,0 +1,49 @@
+{
+  "summary": "Growth Network page (/referrals) Feb-2026 refactor verified end-to-end. Backend: 7/7 pytest cases PASS covering (a) max_depth=3 caps levels to L1/L2/L3, (b) response now includes new keys partner_counts (4-tier dict) + top_branches (list of ≤5 L1 nodes with l2_count/l3_count), (c) legacy (no max_depth) still returns L1..L5 backward-compat, (d) empty downline user returns all zeros / empty top_branches without crashing. A synthetic 9-user tree (3 L1 with distinct partner_positions + 2 L2 each incl. 1 national_partner L2) was seeded in MongoDB and cleaned up in the fixture teardown. Frontend Playwright (mobile viewport 390x844): logged in as 9970100782/997010, navigated to /referrals, confirmed data-testid level-breakdown-section renders exactly three cards (referral-level-card-L1/L2/L3), and referral-level-card-L4 and -L5 are correctly ABSENT. partner-positions-section rendered with all 4 tiles (partner-tile-district_partner, -regional_state_partner, -state_partner, -national_partner) each showing count=1. network-tree-section rendered with tree-root-node (YOU) + 5 tree-branch-* nodes (top-5 cap enforced correctly — 3 seeded TEST_FE branches + 2 pre-existing real branches). Each seeded branch shows 'L2: 2' pill as expected. Regression: total-mining-boost pill visible (+18%), direct-referrals-list rendered, view-downline-live-feed-btn rendered. Empty-state (partner_counts all 0) validated implicitly after cleanup: real user now has 3 L1 downlines with no partner_position → curl confirms partner_counts={0,0,0,0} so section will hide per frontend guard `if (totalPartners === 0) return null;`.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/notifications/referrals/{uid}/level-breakdown",
+        "issue": "Defensive input handling: `depth_cap = max(1, min(int(max_depth or 5), 5))` — because 0 is falsy, passing max_depth=0 silently falls back to L1..L5 instead of being clamped to 1. Low priority; behaviour is documented in test test_max_depth_zero_falls_back_to_legacy. Consider `int(max_depth) if max_depth is not None else 5`."
+      },
+      {
+        "endpoint": "/api/notifications/referrals/{uid}/level-breakdown",
+        "issue": "No auth/IDOR check on this endpoint. Any caller can query any user's downline aggregate (though it only returns counts + first-name + mobile last-4). Other referral endpoints in same file use `_assert_notification_owner`. Consider adding same guard for consistency (medium priority — data leak of downline size/partner tiers by uid enumeration)."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_growth_network_l3_partner_positions.py",
+    "/app/test_reports/pytest/growth_network_l3.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: harden max_depth guard against falsy 0 (see backend_issues.minor #1).",
+    "OPTIONAL / SECURITY: add `_assert_notification_owner(user_id, current_user)` to /level-breakdown to prevent cross-user downline enumeration (backend_issues.minor #2)."
+  ],
+  "critical_code_review_comments": [
+    "notifications_routes.py L1128 get_referrals_level_breakdown is NOT protected by authentication (no Depends(_require_authenticated_user)). Enumerating uids can leak network-size + partner-tier counts. Recommend gating with the same IDOR check used by /notifications/{uid}.",
+    "notifications_routes.py L1143: `int(max_depth or 5)` — falsy 0 leaks into default of 5. Minor defensive nit.",
+    "notifications_routes.py L1198-1200: partner_position tally uses `.lower().strip()`, but the storage side (admin promote / seed scripts) does not enforce case. Acceptable defensively, but a future MongoDB index on partner_position may want the same case normalisation at write time.",
+    "ReferralsEnhanced.js L505: `['L1','L2','L3'].map(...)` — the level list is hard-coded on the frontend AND capped via max_depth=3 query param. If backend cap ever changes to L1..L4, frontend won't reflect the new level. Consider `Object.keys(levelBreakdown.levels).map(...)` for a single source of truth.",
+    "ReferralsEnhanced.js L627 tree-branch key uses `branch.uid` — good, but the top_branches sort key `(l2_count + l3_count, is_active)` puts active=true users below same-count inactive users (Python `True > False`, `reverse=True` therefore keeps active LAST when counts tie). Sorted branches in test showed inactive real users below the seeded active ones — this is fine only because seeded ones have higher l2_count. Consider `(x['l2_count']+x['l3_count'], 1 if x['is_active'] else 0)`."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_growth_network_l3_partner_positions.py (NEW — 7 pytest cases, 3 test classes, MongoDB seed+teardown fixture)"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7 pytest passed)",
+    "frontend": "100% — all 3 new sections + all data-testids + regression items verified via Playwright on mobile viewport."
+  },
+  "test_credentials": "Primary test user: mobile=9970100782, PIN=997010, UID=76b75808-47fa-48dd-ad7c-8074678e3607 (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "Pytest fixture created 1 root + 3 L1 + 6 L2 users with TEST- prefix in mongo.users; cleaned up in fixture teardown. Frontend E2E: 3 L1 + 6 L2 seeded under primary test user with TEST-FE- prefix, cleaned up post-run via /app/backend/tests inline python. Zero residue confirmed via db.count_documents({uid: /^TEST-FE/}) == 0.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend endpoint /api/notifications/referrals/{uid}/level-breakdown is currently PUBLIC (unauthenticated). If main agent adds IDOR guard, update test to include Authorization header (see test_admin_popup_v2_rich_text.py for pattern using login-then-token fixture). Login flow uses login-identifier-input then login-pin-{0..5} — PIN auto-submits on 6th digit, do NOT click submit again. Referrals page selectors are stable and rely on 3 sections (level-breakdown-section, partner-positions-section, network-tree-section) with sub-testids as documented in review_request.other_misc_info.",
+  "rca of the issue": "N/A — new feature verification, no regression bugs found. Two minor observations documented (auth guard missing, max_depth=0 edge case). Neither blocks release."
+}

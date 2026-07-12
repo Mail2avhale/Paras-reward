@@ -69,7 +69,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
           console.error('[Invite] direct-list fetch failed:', err?.message);
           return null;
         }),
-        axios.get(`${API}/api/notifications/referrals/${user.uid}/level-breakdown`, { timeout: 25000 }).catch((err) => {
+        axios.get(`${API}/api/notifications/referrals/${user.uid}/level-breakdown?max_depth=3`, { timeout: 25000 }).catch((err) => {
           console.error('[Invite] level-breakdown failed:', err?.message);
           return null;
         }),
@@ -489,7 +489,9 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
           </div>
         )}
 
-        {/* L1-L5 Level Breakdown (Jun 2026) */}
+        {/* L1-L3 Level Breakdown (Feb 2026 — capped from L1-L5 to L1-L3
+            per user feedback: deeper levels contribute negligible boost
+            and clutter the mobile view). */}
         {levelBreakdown && levelBreakdown.grand_total?.users > 0 && (
           <div className="space-y-3" data-testid="level-breakdown-section">
             <div className="flex items-center justify-between px-1">
@@ -502,17 +504,15 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {['L1', 'L2', 'L3', 'L4', 'L5'].map((lvl, idx) => {
+              {['L1', 'L2', 'L3'].map((lvl, idx) => {
                 const data = levelBreakdown.levels?.[lvl] || {};
                 const boost = levelBreakdown.boosts_pct?.[lvl] || 0;
                 const gradients = [
                   'from-amber-500/20 to-orange-500/10 border-amber-500/40',
                   'from-blue-500/20 to-cyan-500/10 border-blue-500/40',
                   'from-purple-500/20 to-pink-500/10 border-purple-500/40',
-                  'from-emerald-500/20 to-teal-500/10 border-emerald-500/40',
-                  'from-rose-500/20 to-red-500/10 border-rose-500/40',
                 ];
-                const labels = ['Direct', '2nd', '3rd', '4th', '5th'];
+                const labels = ['Direct', '2nd', '3rd'];
                 return (
                   <div
                     key={lvl}
@@ -556,6 +556,113 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                 );
               })}
             </div>
+
+            {/* Partner Positions in your network — new Feb 2026 section.
+                Zeros are hidden individually so basic users see a clean
+                empty state instead of "0 0 0 0". */}
+            {(() => {
+              const pc = levelBreakdown.partner_counts || {};
+              const partnerTiles = [
+                { key: 'district_partner',        label: 'District Partners',  cnt: pc.district_partner || 0,        cls: 'from-amber-500/20 to-yellow-500/10 border-amber-500/40 text-amber-300' },
+                { key: 'regional_state_partner',  label: 'Regional Partners',  cnt: pc.regional_state_partner || 0,  cls: 'from-sky-500/20 to-blue-500/10 border-sky-500/40 text-sky-300' },
+                { key: 'state_partner',           label: 'State Partners',     cnt: pc.state_partner || 0,           cls: 'from-fuchsia-500/20 to-pink-500/10 border-fuchsia-500/40 text-fuchsia-300' },
+                { key: 'national_partner',        label: 'National Partners',  cnt: pc.national_partner || 0,        cls: 'from-rose-500/20 to-red-500/10 border-rose-500/40 text-rose-300' },
+              ];
+              const totalPartners = partnerTiles.reduce((s, t) => s + t.cnt, 0);
+              if (totalPartners === 0) return null;
+              return (
+                <div className="pt-1" data-testid="partner-positions-section">
+                  <div className="flex items-center justify-between px-1 mb-2">
+                    <h3 className="text-white font-semibold text-base">Partner Positions in Your Network</h3>
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+                      Total: <span className="text-white font-bold">{totalPartners}</span>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {partnerTiles.map((t) => (
+                      <div
+                        key={t.key}
+                        data-testid={`partner-tile-${t.key}`}
+                        className={`bg-gradient-to-br ${t.cls} border rounded-2xl p-3 flex items-center justify-between`}
+                      >
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-gray-400 leading-tight">{t.label}</p>
+                          <p className="text-2xl font-bold text-white tabular-nums">{t.cnt}</p>
+                        </div>
+                        <div className={`w-8 h-8 rounded-full bg-white/5 border ${t.cnt > 0 ? 'opacity-100' : 'opacity-40'} flex items-center justify-center`}>
+                          <Users className="w-4 h-4" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Network Tree diagram — top 5 L1 branches by depth.
+                Rendered as compact tree with connector lines using pure
+                CSS. Skipped when no L1 downlines exist. */}
+            {levelBreakdown.top_branches && levelBreakdown.top_branches.length > 0 && (
+              <div className="pt-1" data-testid="network-tree-section">
+                <div className="flex items-center justify-between px-1 mb-2">
+                  <h3 className="text-white font-semibold text-base">Network Tree</h3>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+                    Top {levelBreakdown.top_branches.length} branches
+                  </span>
+                </div>
+                <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+                  {/* Root node */}
+                  <div className="flex justify-center mb-2">
+                    <div
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold"
+                      data-testid="tree-root-node"
+                    >
+                      <Users className="w-3.5 h-3.5" /> YOU
+                    </div>
+                  </div>
+                  {/* Vertical trunk from root */}
+                  <div className="w-px h-4 bg-gray-700 mx-auto" />
+                  {/* Branches */}
+                  <div className="space-y-3">
+                    {levelBreakdown.top_branches.map((branch) => (
+                      <div key={branch.uid} className="relative" data-testid={`tree-branch-${branch.uid}`}>
+                        {/* Horizontal connector from trunk */}
+                        <div className="absolute left-1/2 -top-1.5 w-px h-3 bg-gray-700" />
+                        <div className="flex flex-col items-center gap-1">
+                          {/* L1 node */}
+                          <div
+                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium ${
+                              branch.is_active
+                                ? 'bg-blue-500/15 border-blue-500/40 text-blue-200'
+                                : 'bg-gray-800 border-gray-700 text-gray-400'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${branch.is_active ? 'bg-emerald-400' : 'bg-gray-500'}`} />
+                            {(branch.name || 'User').slice(0, 20)}
+                          </div>
+                          {/* L2 + L3 leaf count strip */}
+                          {(branch.l2_count > 0 || branch.l3_count > 0) && (
+                            <div className="flex items-center gap-3 text-[10px] text-gray-500 mt-0.5">
+                              {branch.l2_count > 0 && (
+                                <span className="text-cyan-300">
+                                  L2: <span className="font-bold text-white">{branch.l2_count}</span>
+                                </span>
+                              )}
+                              {branch.l3_count > 0 && (
+                                <span className="text-purple-300">
+                                  L3: <span className="font-bold text-white">{branch.l3_count}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-3 text-[11px] text-gray-400 leading-relaxed">
               💡 Each <strong className="text-emerald-400">Active</strong> network member contributes
               <span className="text-emerald-400 font-bold"> +2% </span>

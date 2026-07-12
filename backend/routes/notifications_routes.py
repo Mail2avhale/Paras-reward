@@ -1126,7 +1126,7 @@ async def update_user_ip_location(uid: str, request: Request):
 # ========== REFERRAL PROGRAM ==========
 
 @router.get("/referrals/{user_id}/level-breakdown")
-async def get_referrals_level_breakdown(user_id: str):
+async def get_referrals_level_breakdown(user_id: str, max_depth: int = 5):
     """L1-L5 breakdown for /referrals page (Jun 2026).
 
     For each level returns: total count, active count, inactive count,
@@ -1134,24 +1134,53 @@ async def get_referrals_level_breakdown(user_id: str):
 
     "Active" = subscription_plan ∈ {startup, growth, elite}.
     Mining-boost benefit per level computed downstream on frontend.
+
+    Feb 2026 addition — also aggregates the count of Partner Position
+    tiers (District/Regional/State/National) across the entire walked
+    network, plus a light-weight `top_branches` tree summary (L1
+    directs each with their L2 count + L3 count for the tree diagram).
     """
+    depth_cap = max(1, min(int(max_depth or 5), 5))
     levels = {f"L{i}": {"total": 0, "active": 0, "inactive": 0,
-                        "prc_sum": 0.0, "top": None} for i in range(1, 6)}
+                        "prc_sum": 0.0, "top": None} for i in range(1, depth_cap + 1)}
     grand_total = {"users": 0, "active": 0, "prc_sum": 0.0}
 
-    async def walk(uids, depth):
-        if depth > 5 or not uids:
+    # Feb 2026 — partner position counts across the entire walked network.
+    partner_counts = {
+        "district_partner": 0,
+        "regional_state_partner": 0,
+        "state_partner": 0,
+        "national_partner": 0,
+    }
+
+    # Tree-summary buckets — used by the frontend tree diagram. Each L1
+    # direct downline gets its own entry with counts of its L2 and L3
+    # branches. Keeps payload tiny (~O(L1) not O(all users)).
+    tree_branches: dict = {}  # keyed by L1 uid
+
+    async def walk(uids_with_parent, depth):
+        if depth > depth_cap or not uids_with_parent:
             return
-        children_uids = []
+        parent_by_uid = {uid: parent_l1 for uid, parent_l1 in uids_with_parent}
+        target_uids = list(parent_by_uid.keys())
+        children = []  # list of (child_uid, l1_ancestor)
         cursor = db.users.find(
-            {"referred_by": {"$in": uids}},
+            {"referred_by": {"$in": target_uids}},
             {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
              "subscription_plan": 1, "prc_balance": 1, "is_mining": 1,
+             "referred_by": 1, "partner_position": 1,
              "last_login_at": 1, "created_at": 1}
         )
         bucket = levels[f"L{depth}"]
         async for u in cursor:
-            children_uids.append(u["uid"])
+            # Which L1 ancestor does this row roll up to?
+            parent_uid = u.get("referred_by")
+            if depth == 1:
+                l1_ancestor = u["uid"]
+            else:
+                l1_ancestor = parent_by_uid.get(parent_uid, parent_uid)
+
+            children.append((u["uid"], l1_ancestor))
             bucket["total"] += 1
             grand_total["users"] += 1
             plan = (u.get("subscription_plan") or "").lower()
@@ -1165,7 +1194,12 @@ async def get_referrals_level_breakdown(user_id: str):
             bucket["prc_sum"] += prc
             grand_total["prc_sum"] += prc
 
-            # Track top performer (highest PRC)
+            # Partner tier tally
+            ppos = (u.get("partner_position") or "").lower().strip()
+            if ppos in partner_counts:
+                partner_counts[ppos] += 1
+
+            # Track top performer per level (highest PRC)
             if not bucket["top"] or prc > (bucket["top"].get("prc_balance") or 0):
                 bucket["top"] = {
                     "uid": u["uid"],
@@ -1174,11 +1208,27 @@ async def get_referrals_level_breakdown(user_id: str):
                     "prc_balance": prc,
                     "plan": plan or "explorer",
                 }
-        if children_uids:
-            await walk(children_uids, depth + 1)
+
+            # Tree bucket for the diagram — only track first 3 levels.
+            if depth == 1:
+                tree_branches[u["uid"]] = {
+                    "uid": u["uid"],
+                    "name": u.get("name", "User"),
+                    "plan": plan or "explorer",
+                    "is_active": is_active,
+                    "l2_count": 0,
+                    "l3_count": 0,
+                }
+            elif depth == 2 and l1_ancestor in tree_branches:
+                tree_branches[l1_ancestor]["l2_count"] += 1
+            elif depth == 3 and l1_ancestor in tree_branches:
+                tree_branches[l1_ancestor]["l3_count"] += 1
+
+        if children:
+            await walk(children, depth + 1)
 
     try:
-        await walk([user_id], 1)
+        await walk([(user_id, user_id)], 1)
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -1193,12 +1243,22 @@ async def get_referrals_level_breakdown(user_id: str):
 
     total_boost = sum(boosts.values())
 
+    # Top-branches — sort by (l2_count + l3_count) desc, keep top 5 for the
+    # tree diagram card. Full list can be added later if needed.
+    top_branches = sorted(
+        tree_branches.values(),
+        key=lambda x: (x["l2_count"] + x["l3_count"], x["is_active"]),
+        reverse=True,
+    )[:5]
+
     return {
         "success": True,
         "levels": levels,
         "boosts_pct": boosts,
         "total_mining_boost_pct": total_boost,
         "grand_total": grand_total,
+        "partner_counts": partner_counts,
+        "top_branches": top_branches,
     }
 
 
