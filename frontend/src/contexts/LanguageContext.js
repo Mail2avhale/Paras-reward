@@ -223,17 +223,17 @@ const translations = {
     bn: 'পুরস্কার অর্জন করুন',
     pa: 'ਇਨਾਮ ਕਮਾਓ'
   },
-  // tapGame translation kept for backward compatibility but text changed to Invite Friends
+  // tapGame translation kept for backward compatibility but text changed to Community
   tapGame: {
-    en: 'Invite',
-    hi: 'आमंत्रित करें',
-    mr: 'आमंत्रित करा',
-    gu: 'આમંત્રિત કરો',
-    ta: 'அழைக்க',
-    te: 'ఆహ్వానించు',
-    kn: 'ಆಹ್ವಾನಿಸಿ',
-    bn: 'আমন্ত্রণ',
-    pa: 'ਸੱਦੋ'
+    en: 'Community',
+    hi: 'Community',
+    mr: 'Community',
+    gu: 'Community',
+    ta: 'Community',
+    te: 'Community',
+    kn: 'Community',
+    bn: 'Community',
+    pa: 'Community'
   },
   shop: {
     en: 'Shop',
@@ -1535,15 +1535,15 @@ const translations = {
     pa: 'ਖੇਡੋ'
   },
   invite: {
-    en: 'Invite',
-    hi: 'आमंत्रित करें',
-    mr: 'आमंत्रित करा',
-    gu: 'આમંત્રણ આપો',
-    ta: 'அழைக்கவும்',
-    te: 'ఆహ్వానించండి',
-    kn: 'ಆಹ್ವಾನಿಸಿ',
-    bn: 'আমন্ত্রণ জানান',
-    pa: 'ਸੱਦੋ'
+    en: 'Community',
+    hi: 'Community',
+    mr: 'Community',
+    gu: 'Community',
+    ta: 'Community',
+    te: 'Community',
+    kn: 'Community',
+    bn: 'Community',
+    pa: 'Community'
   },
   upgradeToVip: {
     en: 'Upgrade to VIP',
