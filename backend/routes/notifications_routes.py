@@ -1228,6 +1228,7 @@ async def get_referrals_level_breakdown(
                     "name": u.get("name", "User"),
                     "plan": plan or "explorer",
                     "is_active": is_active,
+                    "partner_position": u.get("partner_position") or None,
                     "l2_count": 0,
                     "l3_count": 0,
                 }
@@ -1273,6 +1274,99 @@ async def get_referrals_level_breakdown(
         "top_branches": top_branches,
     }
 
+
+
+@router.get("/referrals/{root_uid}/subtree/{parent_uid}")
+async def get_downline_subtree(
+    root_uid: str,
+    parent_uid: str,
+    limit: int = 30,
+    current_user: dict = Depends(_require_authenticated_user),
+):
+    """Lazy-load the direct children of `parent_uid`, given that
+    `parent_uid` is somewhere in `root_uid`'s downline (up to depth 2).
+
+    Powers the interactive collapsible tree on /referrals — the browser
+    fetches one hop at a time as the user taps to expand a node.
+
+    IDOR: caller must equal `root_uid` (or be admin), AND `parent_uid`
+    must be either equal to root_uid, a direct child of root_uid, or a
+    grandchild of root_uid. Anything else → 403.
+    """
+    _assert_notification_owner(root_uid, current_user)
+
+    # Validate parent_uid's ancestry chain (max 2 hops up to root_uid).
+    if parent_uid != root_uid:
+        parent_doc = await db.users.find_one(
+            {"uid": parent_uid},
+            {"_id": 0, "uid": 1, "referred_by": 1},
+        )
+        if not parent_doc:
+            raise HTTPException(status_code=404, detail="Parent user not found")
+        anc_uid = parent_doc.get("referred_by")
+        # depth-1: parent's immediate ancestor is root
+        if anc_uid != root_uid:
+            # depth-2: parent's ancestor's ancestor is root
+            grand_doc = await db.users.find_one(
+                {"uid": anc_uid},
+                {"_id": 0, "referred_by": 1},
+            ) if anc_uid else None
+            if not grand_doc or grand_doc.get("referred_by") != root_uid:
+                # Admin bypass — otherwise reject.
+                if current_user.get("role") not in ("admin", "sub_admin"):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Forbidden — parent_uid is not in your downline",
+                    )
+
+    lim = max(1, min(int(limit or 30), 100))
+
+    # Fetch this parent's direct children.
+    child_docs = await db.users.find(
+        {"referred_by": parent_uid},
+        {"_id": 0, "uid": 1, "name": 1, "mobile": 1,
+         "subscription_plan": 1, "prc_balance": 1,
+         "partner_position": 1, "created_at": 1},
+    ).limit(lim).to_list(length=lim)
+
+    # For each child, count *its* direct children (one extra roundtrip
+    # per child — acceptable at limit≤100). Enables the caret arrow on
+    # the tree UI: "has expandable children" indicator.
+    child_uids = [c["uid"] for c in child_docs]
+    grand_counts: dict = {}
+    if child_uids:
+        pipeline = [
+            {"$match": {"referred_by": {"$in": child_uids}}},
+            {"$group": {"_id": "$referred_by", "cnt": {"$sum": 1}}},
+        ]
+        async for row in db.users.aggregate(pipeline):
+            grand_counts[row["_id"]] = row["cnt"]
+
+    total_children_count = await db.users.count_documents({"referred_by": parent_uid})
+
+    children = []
+    for c in child_docs:
+        plan = (c.get("subscription_plan") or "").lower()
+        children.append({
+            "uid": c["uid"],
+            "name": c.get("name", "User"),
+            "mobile_last4": (c.get("mobile") or "")[-4:],
+            "plan": plan or "explorer",
+            "is_active": plan in ("startup", "growth", "elite"),
+            "prc_balance": round(float(c.get("prc_balance") or 0), 2),
+            "partner_position": c.get("partner_position") or None,
+            "children_count": grand_counts.get(c["uid"], 0),
+        })
+
+    return {
+        "success": True,
+        "root_uid": root_uid,
+        "parent_uid": parent_uid,
+        "children": children,
+        "total_children": total_children_count,
+        "returned": len(children),
+        "truncated": total_children_count > len(children),
+    }
 
 
 @router.get("/user/{user_id}/full-debug")

@@ -1,0 +1,46 @@
+{
+  "summary": "Jan-2026 interactive collapsible Network Tree on /referrals — full backend + frontend verification. Backend: 11/11 pytest cases PASS on NEW GET /api/notifications/referrals/{root_uid}/subtree/{parent_uid} — covers 401 no-auth, 403 cross-user root IDOR, 403 non-downline parent, 404 unknown parent, 200 subtree(parent=self), 200 subtree(parent=L1), 200 subtree(parent=L2 returning L3 child), partner_position propagation, children_count computation, and confirms /level-breakdown top_branches now includes `partner_position` key on every branch. Frontend: logged in as 9970100782/997010 on mobile viewport (390x844), seeded 2 L1 (district_partner + regional_state_partner) + 4 L2 + 1 L3 under primary test user. Verified: tree-root-node YOU pill clickable → collapses/expands children; partner badges D (amber) + R (sky) render on the two seeded L1 nodes; non-partner L1s render no badge; clicking tree-node-toggle-{L1A_uid} lazy-fetches and renders 2 L2 tree-branch nodes; clicking L2A1 toggle lazy-fetches and renders the L3 tree-branch node; L3 toggle button carries `cursor-default` class confirming depth-3 cap; collapsing L1A then re-expanding produces 0 additional /subtree/ API calls (cached in TreeNode state); children-count pill visible on nodes with children_count>0; empty-span placeholder (no chevron SVG) on childless L1 nodes. Regression: level-breakdown-section, partner-positions-section, total-mining-boost, direct-referrals-list, view-downline-live-feed-btn all PRESENT. Seed data cleaned up (0 residue).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/notifications/referrals/{root_uid}/subtree/{parent_uid}",
+        "issue": "Ancestry walk is 2 hops UP (parent.referred_by == root, OR parent.referred_by.referred_by == root) — so an L3 uid (whose grandparent is L1, not root) returns 403 even though it is legitimately in the caller's downline. Review-request states 'subtree(parent=L3_uid) → 200 (grandchild depth-2 is still walkable)'; actual behaviour is 403. NOT USER-VISIBLE because the frontend TreeNode component caps `canExpand` at `depth < 3`, so an L3 node never triggers a subtree fetch. Recommend either (a) update spec/comment to say 'walkable up to L2 (2 hops from root)' or (b) extend walk to 3 hops if L4+ tree ever added."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_referrals_subtree_lazy_tree.py",
+    "/app/test_reports/pytest/subtree_lazy_tree.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: reconcile 2-hop ancestry walk vs. review-request 'L3 walkable' expectation in notifications_routes.py L1298-1320. Current behaviour is safe because UI caps depth at 3, but the endpoint contract diverges from the stated spec."
+  ],
+  "critical_code_review_comments": [
+    "notifications_routes.py L1338-1343: per-child grand_count aggregation runs one query per subtree fetch; acceptable at limit≤100 but consider caching or bulk pre-computation if lists grow. The comment says 'one extra roundtrip per child' but it's actually a single aggregation on all child_uids ($in). Comment is out of date — good code, misleading doc.",
+    "notifications_routes.py L1296: _assert_notification_owner is invoked BEFORE the parent lookup, which is correct — IDOR blocked before any DB read. Good order.",
+    "notifications_routes.py L1298-1320: 2-hop ancestry walk is O(1) DB round trips but hard-codes depth. Consider parameterising max_walk_depth so future UI depth cap changes don't need code changes here.",
+    "ReferralsEnhanced.js L916: `canExpand = (node.children_count || 0) > 0 && depth < 3` — depth cap logic is in the child renderer, meaning the button IS rendered but disabled. Correct per spec, but note that user CANNOT expand L3 via UI (which incidentally masks the backend 3-hop 403 bug).",
+    "ReferralsEnhanced.js L925: children === null check for 'not yet loaded' — good. But on API failure (setError), children stays null, so a subsequent re-open re-fetches (which is the desired retry behaviour). Verified in code review, not exercised in test.",
+    "ReferralsEnhanced.js L963: `disabled={!canExpand && !loading}` — subtle: if a node has 0 children AND is not loading, button is disabled. Correct. But since !canExpand also covers depth===3, an L3 node's button is disabled which correctly maps to cursor-default styling. Verified visually.",
+    "ReferralsEnhanced.js L878: root pill's count `{branches.length}` shows only the number of top-5 L1 branches present in `top_branches`, NOT the total L1 count. If a user has 20 L1 downlines, YOU pill will show '5' not '20'. Minor UX ambiguity — consider showing `levelBreakdown.levels.L1.count` instead."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_referrals_subtree_lazy_tree.py (NEW — 11 pytest cases, 3 test classes, MongoDB seed+teardown for 3-level synthetic tree under primary test user)"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 pytest passed)",
+    "frontend": "100% — all interactive flows (root toggle, L1 lazy-load, L2 lazy-load L3, depth cap, badge rendering, cached re-expand, regression items) verified via Playwright on mobile viewport."
+  },
+  "test_credentials": "Primary test user: mobile=9970100782, PIN=997010, UID=76b75808-47fa-48dd-ad7c-8074678e3607. Cross-user: 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21 for IDOR check.",
+  "seed_data_creation": "Pytest fixture seeded 2 L1 + 4 L2 + 1 L3 with TEST-SUB-* prefix + emails in mongo.users under PRIMARY_UID; cleaned up in fixture teardown. Frontend E2E: 2 L1 + 4 L2 + 1 L3 seeded with TESTFE-* prefix, cleaned up post-run. Zero residue confirmed (db.users.count_documents({uid:/^(TESTFE-|TEST-SUB-)/})==0).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend subtree endpoint is IDOR-safe via _assert_notification_owner(root_uid, current_user) — auth REQUIRED (unlike /level-breakdown which is still public, see iteration_264.json minor issue #2). Login flow: fill [data-testid=login-identifier-input] with mobile, click [data-testid=login-submit-btn] to advance to PIN step, then fill [data-testid=login-pin-{0..5}]. PIN auto-submits on 6th digit — do NOT click submit again. Referrals data-testids: tree-root-node (root YOU pill, clickable), tree-branch-{uid} (each node wrapper), tree-node-toggle-{uid} (expand button inside each branch). Partner badge letters: D=district_partner (amber), R=regional_state_partner (sky), S=state_partner, N=national_partner. NOTE: L3 nodes have canExpand=false so tapping them is a no-op (correct depth-cap). The backend actually returns 403 for subtree(parent=L3) — masked by UI.",
+  "rca of the issue": "N/A — new feature verification, no regression bugs found. One minor spec vs. implementation discrepancy documented (2-hop vs. 3-hop ancestry walk), currently harmless due to frontend depth cap."
+}

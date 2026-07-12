@@ -4,7 +4,7 @@ import axios from 'axios';
 import RewardLoader from '@/components/RewardLoader';
 import { 
   Users, Copy, Check, Share2, ArrowLeft, TrendingUp, 
-  UserCheck, Link2, RefreshCw, Gift
+  UserCheck, Link2, RefreshCw, Gift, ChevronRight, ChevronDown, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -607,58 +607,14 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                 <div className="flex items-center justify-between px-1 mb-2">
                   <h3 className="text-white font-semibold text-base">Network Tree</h3>
                   <span className="text-[10px] text-gray-500 uppercase tracking-wider">
-                    Top {levelBreakdown.top_branches.length} branches
+                    Tap any node to expand
                   </span>
                 </div>
                 <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
-                  {/* Root node */}
-                  <div className="flex justify-center mb-2">
-                    <div
-                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold"
-                      data-testid="tree-root-node"
-                    >
-                      <Users className="w-3.5 h-3.5" /> YOU
-                    </div>
-                  </div>
-                  {/* Vertical trunk from root */}
-                  <div className="w-px h-4 bg-gray-700 mx-auto" />
-                  {/* Branches */}
-                  <div className="space-y-3">
-                    {levelBreakdown.top_branches.map((branch) => (
-                      <div key={branch.uid} className="relative" data-testid={`tree-branch-${branch.uid}`}>
-                        {/* Horizontal connector from trunk */}
-                        <div className="absolute left-1/2 -top-1.5 w-px h-3 bg-gray-700" />
-                        <div className="flex flex-col items-center gap-1">
-                          {/* L1 node */}
-                          <div
-                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium ${
-                              branch.is_active
-                                ? 'bg-blue-500/15 border-blue-500/40 text-blue-200'
-                                : 'bg-gray-800 border-gray-700 text-gray-400'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${branch.is_active ? 'bg-emerald-400' : 'bg-gray-500'}`} />
-                            {(branch.name || 'User').slice(0, 20)}
-                          </div>
-                          {/* L2 + L3 leaf count strip */}
-                          {(branch.l2_count > 0 || branch.l3_count > 0) && (
-                            <div className="flex items-center gap-3 text-[10px] text-gray-500 mt-0.5">
-                              {branch.l2_count > 0 && (
-                                <span className="text-cyan-300">
-                                  L2: <span className="font-bold text-white">{branch.l2_count}</span>
-                                </span>
-                              )}
-                              {branch.l3_count > 0 && (
-                                <span className="text-purple-300">
-                                  L3: <span className="font-bold text-white">{branch.l3_count}</span>
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <NetworkTreeView
+                    rootUid={user.uid}
+                    branches={levelBreakdown.top_branches}
+                  />
                 </div>
               </div>
             )}
@@ -887,3 +843,175 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 };
 
 export default ReferralsEnhanced;
+
+// -------------------------------------------------------------------
+// Interactive collapsible Network Tree.
+// Root "YOU" → tap to expand top-branches (L1) → tap L1 to lazy-load
+// L2 children via /api/notifications/referrals/{root}/subtree/{parent}
+// → tap L2 for L3. Depth capped at 3 to match the display cards.
+// -------------------------------------------------------------------
+const PARTNER_BADGE = {
+  district_partner: { label: 'D', cls: 'bg-amber-500/25 text-amber-200 border-amber-500/40' },
+  regional_state_partner: { label: 'R', cls: 'bg-sky-500/25 text-sky-200 border-sky-500/40' },
+  state_partner: { label: 'S', cls: 'bg-fuchsia-500/25 text-fuchsia-200 border-fuchsia-500/40' },
+  national_partner: { label: 'N', cls: 'bg-rose-500/25 text-rose-200 border-rose-500/40' },
+};
+
+const NetworkTreeView = ({ rootUid, branches }) => {
+  // The root ("YOU") starts expanded, showing L1 branches already fetched
+  // in the initial level-breakdown response — no extra API call needed.
+  const [rootOpen, setRootOpen] = useState(true);
+
+  return (
+    <div>
+      {/* Root node — clickable to collapse/expand the whole tree */}
+      <div className="flex justify-center mb-2">
+        <button
+          type="button"
+          onClick={() => setRootOpen((v) => !v)}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition"
+          data-testid="tree-root-node"
+        >
+          {rootOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          <Users className="w-3.5 h-3.5" /> YOU
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/30 text-white/80">{branches.length}</span>
+        </button>
+      </div>
+      {rootOpen && (
+        <>
+          <div className="w-px h-3 bg-gray-700 mx-auto" />
+          <div className="pl-1">
+            {branches.map((branch, idx) => (
+              <TreeNode
+                key={branch.uid}
+                rootUid={rootUid}
+                node={{
+                  uid: branch.uid,
+                  name: branch.name,
+                  is_active: branch.is_active,
+                  plan: branch.plan,
+                  // Server-computed count on the initial payload — used
+                  // to display the "has children" indicator before we
+                  // lazy-fetch. Frontend uses `l2_count` here as the
+                  // count of *this L1's* direct children.
+                  children_count: branch.l2_count || 0,
+                  partner_position: branch.partner_position || null,
+                }}
+                depth={1}
+                isLast={idx === branches.length - 1}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+const TreeNode = ({ rootUid, node, depth, isLast }) => {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [children, setChildren] = useState(null);   // null = not-yet-loaded
+  const [error, setError] = useState(null);
+  const canExpand = (node.children_count || 0) > 0 && depth < 3;
+
+  const toggle = async () => {
+    if (!canExpand) return;
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    // Lazy-load on first open only.
+    if (children === null) {
+      setLoading(true);
+      setError(null);
+      try {
+        const r = await axios.get(
+          `${API}/api/notifications/referrals/${rootUid}/subtree/${node.uid}?limit=30`,
+          { timeout: 15000 },
+        );
+        if (r.data?.success) {
+          setChildren(r.data.children || []);
+        } else {
+          setError('Failed to load');
+        }
+      } catch (e) {
+        setError(e.response?.status === 403 ? 'Not allowed' : 'Load failed');
+      } finally {
+        setLoading(false);
+      }
+    }
+    setOpen(true);
+  };
+
+  // Colour palette per depth for visual hierarchy.
+  const nodeCls = node.is_active
+    ? 'bg-blue-500/15 border-blue-500/40 text-blue-100 hover:bg-blue-500/25'
+    : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700/70';
+  const partnerBadge = node.partner_position ? PARTNER_BADGE[node.partner_position] : null;
+
+  return (
+    <div className="relative" data-testid={`tree-branch-${node.uid}`}>
+      {/* Vertical guide line from parent, indented by depth. */}
+      <div className={`absolute left-2 top-0 bottom-0 w-px bg-gray-800 ${isLast ? 'h-3' : ''}`} />
+      <div className="flex items-start gap-1 py-1">
+        {/* Horizontal connector stub */}
+        <div className="mt-3 h-px w-3 bg-gray-800 shrink-0" />
+        <button
+          type="button"
+          onClick={toggle}
+          disabled={!canExpand && !loading}
+          className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition ${nodeCls} ${
+            !canExpand ? 'cursor-default' : 'cursor-pointer'
+          }`}
+          data-testid={`tree-node-toggle-${node.uid}`}
+        >
+          {canExpand ? (
+            loading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : open ? (
+              <ChevronDown className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5" />
+            )
+          ) : (
+            <span className="w-3.5 h-3.5" />
+          )}
+          <span className={`w-1.5 h-1.5 rounded-full ${node.is_active ? 'bg-emerald-400' : 'bg-gray-500'}`} />
+          <span className="max-w-[140px] truncate">{(node.name || 'User').slice(0, 22)}</span>
+          {partnerBadge && (
+            <span
+              className={`ml-1 text-[9px] px-1.5 py-0.5 rounded border font-bold ${partnerBadge.cls}`}
+              title={node.partner_position}
+            >
+              {partnerBadge.label}
+            </span>
+          )}
+          {canExpand && (
+            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-black/30 text-white/70 tabular-nums">
+              {node.children_count}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {open && (
+        <div className="ml-6 pl-1 border-l border-gray-800/60 mb-1">
+          {error && <p className="text-[11px] text-red-400 py-1">{error}</p>}
+          {!error && children !== null && children.length === 0 && (
+            <p className="text-[11px] text-gray-500 italic py-1">No downlines under this node</p>
+          )}
+          {children?.map((child, idx) => (
+            <TreeNode
+              key={child.uid}
+              rootUid={rootUid}
+              node={child}
+              depth={depth + 1}
+              isLast={idx === children.length - 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
