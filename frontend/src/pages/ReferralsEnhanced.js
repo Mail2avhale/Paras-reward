@@ -379,7 +379,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               <Users className="w-6 h-6 text-blue-400" />
             </div>
             <p className="text-3xl font-bold text-white">{networkStats?.direct_referrals || 0}</p>
-            <p className="text-sm text-gray-500">Direct Referrals</p>
+            <p className="text-sm text-gray-500">My Community Members</p>
           </div>
 
           {/* Network Size (Single Leg Tree) */}
@@ -388,7 +388,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               <TrendingUp className="w-6 h-6 text-purple-400" />
             </div>
             <p className="text-3xl font-bold text-white">{networkStats?.single_leg_network ?? networkStats?.network_size ?? 0}</p>
-            <p className="text-sm text-gray-500">Network Size</p>
+            <p className="text-sm text-gray-500">Community Members</p>
           </div>
         </div>
 
@@ -496,7 +496,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
         {levelBreakdown && levelBreakdown.grand_total?.users > 0 && (
           <div className="space-y-3" data-testid="level-breakdown-section">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-white font-semibold text-base">Network by Level</h3>
+              <h3 className="text-white font-semibold text-base">Community Levels</h3>
               <div className="text-right">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider">Community Power</p>
                 <p className="text-emerald-400 font-bold tabular-nums" data-testid="total-mining-boost">
@@ -513,7 +513,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                   'from-blue-500/20 to-cyan-500/10 border-blue-500/40',
                   'from-purple-500/20 to-pink-500/10 border-purple-500/40',
                 ];
-                const labels = ['Direct', '2nd', '3rd'];
+                const labels = ['Direct Community', 'Growth Level 2', 'Growth Level 3'];
                 return (
                   <div
                     key={lvl}
@@ -523,7 +523,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-gray-400">
-                          {lvl} · {labels[idx]} downline
+                          {lvl} · {labels[idx]}
                         </p>
                         <p className="text-2xl font-bold text-white tabular-nums">
                           {data.total || 0}
@@ -539,14 +539,14 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                         <p className="text-emerald-300 font-bold tabular-nums">{data.active || 0}</p>
                       </div>
                       <div className="bg-black/30 rounded-lg px-2 py-1.5">
-                        <p className="text-gray-500 text-[10px]">Inactive</p>
-                        <p className="text-gray-400 font-bold tabular-nums">{data.inactive || 0}</p>
+                        <p className="text-gray-500 text-[10px]">Needs Activity</p>
+                        <p className="text-amber-300 font-bold tabular-nums">{data.inactive || 0}</p>
                       </div>
                     </div>
                     {data.top?.name && (
                       <div className="mt-2 pt-2 border-t border-white/10 text-[11px]">
                         <p className="text-gray-400">
-                          🏆 Top: <span className="text-white font-medium">{data.top.name}</span>
+                          🏆 Top Contributor: <span className="text-white font-medium">{data.top.name}</span>
                           <span className="text-gray-500 ml-1">
                             ({Math.round(data.top.prc_balance || 0).toLocaleString()} PRC)
                           </span>
@@ -604,21 +604,36 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                 Rendered as compact tree with connector lines using pure
                 CSS. Skipped when no L1 downlines exist. */}
             {levelBreakdown.top_branches && levelBreakdown.top_branches.length > 0 && (
-              <div className="pt-1" data-testid="network-tree-section">
-                <div className="flex items-center justify-between px-1 mb-2">
-                  <h3 className="text-white font-semibold text-base">Network Tree</h3>
-                  <span className="text-[10px] text-gray-500 uppercase tracking-wider">
-                    Tap any node to expand
-                  </span>
+              <>
+                <div className="pt-1" data-testid="network-tree-section">
+                  <div className="flex items-center justify-between px-1 mb-2">
+                    <h3 className="text-white font-semibold text-base">Community Tree</h3>
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+                      Tap any node to expand
+                    </span>
+                  </div>
+                  <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+                    <NetworkTreeView
+                      rootUid={user.uid}
+                      branches={levelBreakdown.top_branches}
+                      totalL1={levelBreakdown.levels?.L1?.total || levelBreakdown.top_branches.length}
+                    />
+                  </div>
                 </div>
-                <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
-                  <NetworkTreeView
-                    rootUid={user.uid}
-                    branches={levelBreakdown.top_branches}
-                    totalL1={levelBreakdown.levels?.L1?.total || levelBreakdown.top_branches.length}
-                  />
+                {/* Community motivation callout — reinforces the retention
+                    loop: helping members stay active grows your Power. */}
+                <div
+                  className="bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-cyan-500/10 border border-emerald-500/20 rounded-2xl p-4 text-[12px] text-emerald-100 leading-relaxed"
+                  data-testid="community-motivation"
+                >
+                  <p className="mb-1">
+                    <span className="text-emerald-300 font-bold">Every active community member</span> helps strengthen your community and increases your Community Power.
+                  </p>
+                  <p className="text-emerald-200/80">
+                    Stay active, help your members remain active, and grow together. 🚀
+                  </p>
                 </div>
-              </div>
+              </>
             )}
 
             <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-3 text-[11px] text-gray-400 leading-relaxed">
@@ -637,62 +652,37 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 
 
 
-        {/* Direct Referrals List */}
+        {/* My Community Members — enhanced with search, filter, tri-state
+            activity indicator (Active Today / Recently Active / Needs
+            Activity), WhatsApp quick-action button, and premium
+            glassmorphism card. */}
         {directReferrals.length > 0 && (
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden" data-testid="direct-referrals-list">
-            <div className="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
-              <h3 className="text-white font-semibold flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-blue-400" />
-                Your Direct Referrals
-              </h3>
-              <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg text-sm">
-                {directReferrals.length}
-              </span>
+          <MyCommunityMembersSection referrals={directReferrals} />
+        )}
+
+        {/* Empty state — shown when the user has 0 community members.
+            Encourages an immediate share action. */}
+        {directReferrals.length === 0 && !loading && (
+          <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-8 text-center" data-testid="community-empty-state">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-[0_0_40px_-8px_rgba(251,191,36,0.6)]">
+              <Users className="w-10 h-10 text-white" />
             </div>
-            
-            <div className="divide-y divide-gray-800 max-h-[500px] overflow-y-auto">
-              {directReferrals.map((ref, index) => (
-                <div key={ref.uid || index} className="px-5 py-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                          ref.is_active 
-                            ? 'bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/30' 
-                            : 'bg-red-500/10 text-red-400 ring-2 ring-red-500/20'
-                        }`}>
-                          {ref.name?.charAt(0)?.toUpperCase() || 'U'}
-                        </div>
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-gray-900 ${
-                          ref.is_active ? 'bg-emerald-500' : 'bg-red-500'
-                        }`} />
-                      </div>
-                      <div>
-                        <p className="text-white text-sm font-medium">{ref.name || 'User'}</p>
-                        <p className="text-xs text-gray-500 font-mono">
-                          {ref.mobile ? ref.mobile.slice(0, 2) + '****' + ref.mobile.slice(-4) : '—'}
-                        </p>
-                      </div>
-                    </div>
-                    {ref.is_active ? (
-                      <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-lg font-medium">Active</span>
-                    ) : (
-                      <span className="px-2 py-1 bg-red-500/15 text-red-400 text-xs rounded-lg font-medium">Inactive</span>
-                    )}
-                  </div>
-                  
-                  {/* Total PRC Redeemed in INR */}
-                  <div className="ml-[52px]">
-                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-1.5 inline-block" data-testid={`ref-redeemed-inr-${index}`}>
-                      <p className="text-[10px] text-gray-500 uppercase">Total Redeemed</p>
-                      <p className="text-amber-400 text-sm font-bold">
-                        ₹{Number(ref.redeemed_inr || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <h3 className="text-white font-bold text-lg">No Community Members Yet</h3>
+            <p className="text-gray-400 text-sm mt-1 max-w-xs mx-auto">
+              Invite friends and build your community to unlock more rewards.
+            </p>
+            <button
+              onClick={async () => {
+                if (navigator.share) {
+                  try { await navigator.share({ title: 'Paras Reward', url: referralLink }); return; } catch (_e) { /* user cancelled */ }
+                }
+                try { await navigator.clipboard.writeText(referralLink); toast.success('Link copied — share with friends!'); } catch { toast.error('Copy failed'); }
+              }}
+              className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-bold shadow-lg hover:scale-[1.02] transition"
+              data-testid="community-empty-share-btn"
+            >
+              <Share2 className="w-4 h-4" /> Share Now
+            </button>
           </div>
         )}
 
@@ -845,6 +835,182 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 };
 
 export default ReferralsEnhanced;
+
+// -------------------------------------------------------------------
+// My Community Members — search + filter + tri-state activity indicator
+// (Active Today / Recently Active / Needs Activity) + WhatsApp/Call.
+// -------------------------------------------------------------------
+
+// Bucket a downline into an activity tier based on last_login_at.
+// Falls back to `is_active` (subscription-based) when timestamp missing.
+const _activityTier = (ref) => {
+  const ts = ref.last_login_at || ref.updated_at;
+  if (ts) {
+    const then = new Date(ts).getTime();
+    if (!isNaN(then)) {
+      const hoursAgo = (Date.now() - then) / 36e5;
+      if (hoursAgo < 24) return 'today';
+      if (hoursAgo < 24 * 7) return 'recent';
+      return 'inactive';
+    }
+  }
+  return ref.is_active ? 'recent' : 'inactive';
+};
+
+const TIER_STYLES = {
+  today:    { dot: 'bg-emerald-500', text: 'text-emerald-300', bg: 'bg-emerald-500/15 border-emerald-500/30', label: 'Active Today' },
+  recent:   { dot: 'bg-amber-400',   text: 'text-amber-300',   bg: 'bg-amber-500/15 border-amber-500/30',   label: 'Recently Active' },
+  inactive: { dot: 'bg-slate-500',   text: 'text-slate-400',   bg: 'bg-slate-500/15 border-slate-500/30',   label: 'Needs Activity' },
+};
+
+const openWA = (mobile, name) => {
+  const digits = (mobile || '').replace(/\D/g, '');
+  if (!digits) return;
+  const e164 = digits.startsWith('91') && digits.length === 12 ? digits : digits.length === 10 ? `91${digits}` : digits;
+  const msg = `Hi ${name || 'there'} 👋\n\nHave you mined on Paras Reward today? 🚀\n\nLog in and tap Start Mining to earn daily PRC. Don't break your streak!\n\nApp: https://parasreward.com\n\n— Your Referrer`;
+  window.open(`https://wa.me/${e164}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+};
+
+const openCall = (mobile) => {
+  const digits = (mobile || '').replace(/\D/g, '');
+  if (!digits) return;
+  window.location.href = `tel:+${digits.startsWith('91') ? digits : `91${digits}`}`;
+};
+
+function MyCommunityMembersSection({ referrals }) {
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState('newest');   // newest | active | prc | redeemed
+
+  const filtered = referrals
+    .filter((r) => {
+      if (!query) return true;
+      const q = query.toLowerCase();
+      return (r.name || '').toLowerCase().includes(q) || (r.mobile || '').includes(q);
+    })
+    .slice()
+    .sort((a, b) => {
+      switch (sort) {
+        case 'active':   return (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0);
+        case 'prc':      return (b.prc_balance || 0) - (a.prc_balance || 0);
+        case 'redeemed': return (b.redeemed_inr || 0) - (a.redeemed_inr || 0);
+        case 'newest':
+        default:         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      }
+    });
+
+  return (
+    <div className="bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden" data-testid="direct-referrals-list">
+      <div className="px-5 py-4 border-b border-gray-800 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-white font-semibold flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-blue-400" />
+            My Community Members
+          </h3>
+          <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg text-sm tabular-nums">
+            {referrals.length}
+          </span>
+        </div>
+
+        {/* Search + Sort */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search Community Member..."
+            className="flex-1 bg-black/40 border border-gray-800 rounded-lg px-3 py-2 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-blue-500/50"
+            data-testid="community-member-search"
+          />
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="bg-black/40 border border-gray-800 rounded-lg px-2 py-2 text-white text-xs focus:outline-none focus:border-blue-500/50"
+            data-testid="community-member-sort"
+          >
+            <option value="newest">Newest</option>
+            <option value="active">Most Active</option>
+            <option value="prc">Highest PRC</option>
+            <option value="redeemed">Highest Redeemed</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="divide-y divide-gray-800 max-h-[500px] overflow-y-auto">
+        {filtered.length === 0 && (
+          <div className="p-6 text-center text-sm text-gray-500" data-testid="community-member-no-results">
+            No members match your search.
+          </div>
+        )}
+        {filtered.map((ref, index) => {
+          const tier = _activityTier(ref);
+          const s = TIER_STYLES[tier];
+          return (
+            <div key={ref.uid || index} className="px-5 py-4 hover:bg-white/[0.02] transition" data-testid={`community-member-row-${ref.uid || index}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative shrink-0">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 ${s.bg} ${s.text}`}>
+                      {ref.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-gray-900 ${s.dot}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{ref.name || 'User'}</p>
+                    <p className="text-xs text-gray-500 font-mono">
+                      {ref.mobile ? ref.mobile.slice(0, 2) + '****' + ref.mobile.slice(-4) : '—'}
+                    </p>
+                  </div>
+                </div>
+                <span className={`px-2 py-1 text-[10px] rounded-lg font-medium border ${s.bg} ${s.text} whitespace-nowrap`}>
+                  {s.label}
+                </span>
+              </div>
+
+              <div className="ml-[52px] flex flex-wrap items-center gap-2">
+                {(ref.redeemed_inr || 0) > 0 && (
+                  <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-2.5 py-1" data-testid={`ref-redeemed-inr-${index}`}>
+                    <p className="text-[9px] text-gray-500 uppercase leading-none">Redeemed</p>
+                    <p className="text-amber-400 text-xs font-bold">
+                      ₹{Number(ref.redeemed_inr).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </p>
+                  </div>
+                )}
+                {ref.subscription_plan && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-300 font-semibold uppercase">
+                    {ref.subscription_plan}
+                  </span>
+                )}
+                <div className="ml-auto flex gap-1.5">
+                  {ref.mobile && (
+                    <>
+                      <button
+                        onClick={() => openWA(ref.mobile, ref.name)}
+                        className="p-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/30 transition"
+                        title="WhatsApp"
+                        data-testid={`community-member-whatsapp-${index}`}
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => openCall(ref.mobile)}
+                        className="p-1.5 rounded-md border border-sky-500/30 bg-sky-500/15 text-sky-300 hover:bg-sky-500/30 transition"
+                        title="Call"
+                        data-testid={`community-member-call-${index}`}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 // -------------------------------------------------------------------
 // Interactive collapsible Network Tree.
