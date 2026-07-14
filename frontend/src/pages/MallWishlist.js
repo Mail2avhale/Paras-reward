@@ -95,7 +95,7 @@ export default function MallWishlist() {
           </button>
         </div>
       ) : (
-        <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3 px-3 pt-3">
+        <ul className="grid grid-cols-1 gap-3 px-3 pt-3 max-w-md mx-auto">
           {items.map((it) => {
             const p = it.product || {};
             return (

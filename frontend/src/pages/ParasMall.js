@@ -3,14 +3,14 @@
  * Full-screen overlay (z-index 9999) with category chips, live ticker,
  * balance pill, sort, and social proof.
  */
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import PullToRefresh from '@/components/PullToRefresh';
 import {
-  ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight, Sparkles, Package,
-  Coins, Search, X, ChevronUp, Flame, ArrowUpDown, TrendingUp, Users, Heart
+  ArrowLeft, ShoppingBag, Sparkles, Package,
+  Coins, Search, X, Flame, ArrowUpDown, TrendingUp, Users, Heart
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { hapticPrimary, hapticSuccess, hapticError } from '@/utils/nativeUx';
@@ -63,7 +63,6 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
   const [feed, setFeed] = useState([]);
   const [bookingCounts, setBookingCounts] = useState({});  // by_product_name → count (all-time)
   const [loading, setLoading] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0);
   const [bookingInProgress, setBookingInProgress] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,8 +98,6 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
       });
     }
   }, [pendingBook, user]);
-  const dragStartX = useRef(null);
-  const dragStartY = useRef(null);
 
   const refreshBookings = useCallback(async () => {
     if (!user?.uid) return;
@@ -167,44 +164,14 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
     return list;
   }, [products, category, searchQuery, sortBy]);
 
-  useEffect(() => { setActiveIndex(0); }, [searchQuery, category, sortBy]);
-
-  const swipe = useCallback((dir) => {
-    setActiveIndex(i => dir === 'next' ? Math.min(filtered.length - 1, i + 1) : Math.max(0, i - 1));
-  }, [filtered.length]);
-
-  const onTouchStart = (e) => {
-    dragStartX.current = e.touches[0].clientX;
-    dragStartY.current = e.touches[0].clientY;
-  };
-  const onTouchEnd = (e) => {
-    if (dragStartX.current == null) return;
-    const dx = e.changedTouches[0].clientX - dragStartX.current;
-    const dy = e.changedTouches[0].clientY - dragStartY.current;
-    const absDx = Math.abs(dx); const absDy = Math.abs(dy);
-    if (absDy > 80 && absDy > absDx * 1.4) {
-      if (dy < 0) {
-        const cur = filtered[activeIndex];
-        if (cur && !bookingInProgress) setPendingBook(cur);
-      }
-      if (dy > 0 && pendingBook) setPendingBook(null);
-    } else if (absDx > 50 && absDx > absDy * 1.2) {
-      swipe(dx < 0 ? 'next' : 'prev');
-    }
-    dragStartX.current = null;
-    dragStartY.current = null;
-  };
-
   useEffect(() => {
     const handler = (e) => {
       if (tab !== 'discover') return;
-      if (e.key === 'ArrowLeft') swipe('prev');
-      if (e.key === 'ArrowRight') swipe('next');
       if (e.key === 'Escape') { setSearchOpen(false); setPendingBook(null); setSortOpen(false); setFilterOpen(false); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [tab, swipe]);
+  }, [tab]);
 
   const bookProduct = async (product, delivery, upfrontPct = 0.10) => {
     if (!user?.uid) { toast.error('Please log in to book'); return; }
@@ -252,8 +219,8 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
     }
   };
 
-  // Mall 2.0: auto-track recently-viewed when card changes (MUST be before any early return)
-  const trackedProductId = filtered[activeIndex]?.product_id;
+  // Mall 2.0: auto-track recently-viewed — grid layout tracks the first product on load
+  const trackedProductId = filtered[0]?.product_id;
   useEffect(() => {
     if (!trackedProductId) return;
     const t = setTimeout(() => {
@@ -280,11 +247,6 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
       </div>
     );
   }
-
-  const current = filtered[activeIndex];
-  const visibleDotsStart = Math.max(0, activeIndex - 3);
-  const visibleDots = filtered.slice(visibleDotsStart, activeIndex + 4);
-  const socialCount = current ? bookingCountByProduct[current.name] || 0 : 0;
 
   return (
     <PullToRefresh onRefresh={loadAllMallData}>
@@ -480,15 +442,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
         )}
       </AnimatePresence>
 
-      {tab === 'discover' && filtered.length > 0 && (
-        <div className="mall-progress-dots">
-          {visibleDots.map((_, i) => {
-            const idx = visibleDotsStart + i;
-            return <span key={idx} className={`mall-dot ${idx === activeIndex ? 'active' : ''}`} />;
-          })}
-        </div>
-      )}
-
+      {/* 1-COLUMN PRODUCT GRID (was: swipe/carousel single-product view) */}
       <AnimatePresence mode="wait">
         {tab === 'discover' && (
           <motion.div
@@ -496,12 +450,10 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="mall-hero"
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
+            className="mall-hero mall-hero-grid"
           >
             {filtered.length === 0 ? (
-              <div className="flex-1 grid place-items-center text-center px-6">
+              <div className="flex-1 grid place-items-center text-center px-6 py-20">
                 <div>
                   <Package className="w-12 h-12 mx-auto mb-3 text-purple-400 opacity-60" />
                   <p className="text-white font-semibold mb-1">No products found</p>
@@ -509,120 +461,119 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                 </div>
               </div>
             ) : (
-              <>
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={current?.product_id}
-                    initial={{ opacity: 0, scale: 0.96, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96, y: -10 }}
-                    transition={{ duration: 0.26 }}
-                    className="mall-image-wrap"
-                  >
-                    <div className="mall-image-frame">
-                      {/* Trending badge on first 5 */}
-                      {/* New: admin-set badges (NEW / HOT / TRENDING / low stock) — top-left stack */}
-                      <ProductBadges product={current} />
-                      {/* Top-right stack: wishlist heart + social-proof badge */}
-                      <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
-                        <WishlistHeart productId={current?.product_id} />
-                        {socialCount > 0 && (
+              <div className="mall-grid-1col" data-testid="mall-grid-1col">
+                {filtered.map((product, idx) => {
+                  const socialForCard = bookingCountByProduct[product.name] || 0;
+                  const mrp = Number(product.mrp_inr || 0);
+                  const bookingFee = Number(product.processing_inr || 0);
+                  const discount = mrp > 0 && bookingFee > 0 && bookingFee < mrp
+                    ? Math.round(((mrp - bookingFee) / mrp) * 100)
+                    : 0;
+                  return (
+                    <motion.article
+                      key={product.product_id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.24, delay: Math.min(idx * 0.04, 0.24) }}
+                      className="mall-product-card"
+                      data-testid={`mall-product-card-${product.product_id}`}
+                    >
+                      {/* Image + overlays */}
+                      <div className="mall-product-card-image-wrap">
+                        <ProductBadges product={product} />
+                        <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
+                          <WishlistHeart productId={product.product_id} />
+                          {socialForCard > 0 && (
+                            <div
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase bg-white/95 text-emerald-700 shadow ring-1 ring-emerald-200"
+                              data-testid={`mall-social-badge-${product.product_id}`}
+                            >
+                              <Users className="w-3 h-3" /> {socialForCard} booked
+                            </div>
+                          )}
+                        </div>
+                        {product.image_url ? (
+                          <img
+                            src={resolveAssetUrl(product.image_url)}
+                            alt={product.name}
+                            className="mall-product-card-image"
+                            data-testid={`mall-product-image-${product.product_id}`}
+                            onClick={() => setDetailProduct(product)}
+                          />
+                        ) : (
                           <div
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase bg-white/95 text-emerald-700 shadow ring-1 ring-emerald-200"
-                            data-testid="mall-social-badge"
+                            className="mall-product-card-image-fallback"
+                            onClick={() => setDetailProduct(product)}
                           >
-                            <Users className="w-3 h-3" /> {socialCount} booked
+                            <Package className="w-20 h-20 text-purple-300" />
+                          </div>
+                        )}
+                        {discount > 0 && (
+                          <div className="mall-product-card-discount-tag" data-testid={`mall-product-discount-${product.product_id}`}>
+                            {discount}% Off
                           </div>
                         )}
                       </div>
-                      {current?.image_url ? (
-                        <img
-                          src={resolveAssetUrl(current.image_url)}
-                          alt={current.name}
-                          className="mall-image"
-                          data-testid="mall-product-image"
-                          onClick={() => setDetailProduct(current)}
-                          style={{ cursor: 'pointer' }}
-                        />
-                      ) : (
-                        <div className="mall-image-fallback" onClick={() => setDetailProduct(current)} style={{ cursor: 'pointer' }}>
-                          <Package className="w-20 h-20 text-purple-300" />
+
+                      {/* Body */}
+                      <div className="mall-product-card-body">
+                        <div className="mall-category-strip">
+                          <Sparkles className="w-3 h-3" />
+                          {product.category}
                         </div>
-                      )}
-                    </div>
+                        <h2 className="mall-product-name" data-testid={`mall-product-name-${product.product_id}`}>
+                          {product.name}
+                        </h2>
 
-                    <button onClick={() => swipe('prev')} disabled={activeIndex === 0} className="mall-nav-arrow left" data-testid="mall-prev-btn">
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button onClick={() => swipe('next')} disabled={activeIndex >= filtered.length - 1} className="mall-nav-arrow right" data-testid="mall-next-btn">
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </motion.div>
-                </AnimatePresence>
+                        {Array.isArray(product.brands) && product.brands.length > 0 && (
+                          <div className="mall-brands-row" data-testid={`mall-brands-row-${product.product_id}`}>
+                            <span className="mall-brands-label">Top Brands</span>
+                            <div className="mall-brands-list">
+                              {product.brands.slice(0, 5).map((b) => (
+                                <span key={b} className="mall-brand-chip">
+                                  {b}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
-                <div className="mall-card">
-                  <div className="mall-category-strip">
-                    <Sparkles className="w-3 h-3" />
-                    {current?.category} · #{activeIndex + 1} of {filtered.length}
-                  </div>
-                  <h2 className="mall-product-name" data-testid="mall-product-name">
-                    {current?.name}
-                  </h2>
+                        <div className="mall-price-row">
+                          <div className="mall-price-tile" data-testid={`mall-mrp-tile-${product.product_id}`}>
+                            <div className="mall-price-tile-label">MRP (All Inclusive)</div>
+                            <div className="mall-price-tile-value">{fmtInr(product.mrp_inr)}</div>
+                          </div>
+                          <div className="mall-price-tile total" data-testid={`mall-total-tile-${product.product_id}`}>
+                            <div className="mall-price-tile-label">Booking Fee (from PRC wallet)</div>
+                            <div className="mall-price-tile-value">{fmtInr(product.processing_inr)}</div>
+                            <div className="mall-price-tile-sub">
+                              = {fmtPrc(product.upfront_prc)} (one-time)
+                            </div>
+                          </div>
+                        </div>
 
-                  {Array.isArray(current?.brands) && current.brands.length > 0 && (
-                    <div className="mall-brands-row" data-testid="mall-brands-row">
-                      <span className="mall-brands-label">Top Brands</span>
-                      <div className="mall-brands-list">
-                        {current.brands.slice(0, 5).map((b) => (
-                          <span key={b} className="mall-brand-chip" data-testid={`mall-brand-${b}`}>
-                            {b}
-                          </span>
-                        ))}
+                        <button
+                          className="mall-book-btn"
+                          onClick={() => { hapticPrimary(); setPendingBook(product); }}
+                          disabled={bookingInProgress}
+                          data-testid={`mall-book-btn-${product.product_id}`}
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                          {bookingInProgress ? 'Booking…' : `Book Now · ${fmtPrc(product.upfront_prc)}`}
+                        </button>
+
+                        <button
+                          className="mall-view-details-btn"
+                          onClick={() => setDetailProduct(product)}
+                          data-testid={`mall-view-details-btn-${product.product_id}`}
+                        >
+                          View Full Details →
+                        </button>
                       </div>
-                    </div>
-                  )}
-
-                  <div className="mall-price-row">
-                    <div className="mall-price-tile" data-testid="mall-mrp-tile">
-                      <div className="mall-price-tile-label">MRP (All Inclusive)</div>
-                      <div className="mall-price-tile-value">{fmtInr(current?.mrp_inr)}</div>
-                    </div>
-                    <div className="mall-price-tile total" data-testid="mall-total-tile">
-                      <div className="mall-price-tile-label">Booking Fee (from PRC wallet)</div>
-                      <div className="mall-price-tile-value">{fmtInr(current?.processing_inr)}</div>
-                      <div className="mall-price-tile-sub">
-                        = {fmtPrc(current?.upfront_prc)} (one-time)
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    className="mall-book-btn"
-                    onClick={() => { hapticPrimary(); setPendingBook(current); }}
-                    disabled={bookingInProgress || !current}
-                    data-testid="mall-book-btn"
-                  >
-                    <ShoppingBag className="w-4 h-4" />
-                    {bookingInProgress ? 'Booking…' : `Book Now · ${fmtPrc(current?.upfront_prc)}`}
-                  </button>
-
-                  <button
-                    className="mall-view-details-btn"
-                    onClick={() => setDetailProduct(current)}
-                    data-testid="mall-view-details-btn"
-                  >
-                    View Full Details →
-                  </button>
-
-                  <div className="mall-hint">
-                    <span>← Swipe</span>
-                    <span className="dot" />
-                    <ChevronUp className="w-3 h-3 text-amber-300" /> Swipe Up to Book
-                    <span className="dot" />
-                    <span>Swipe →</span>
-                  </div>
-                </div>
-              </>
+                    </motion.article>
+                  );
+                })}
+              </div>
             )}
           </motion.div>
         )}
