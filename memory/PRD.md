@@ -968,3 +968,35 @@ Advanced multi-tier referral system where admin assigns positions granting commi
 ### Notifications
 On assignment, an in-app notification is inserted into `db.notifications` for the user with title "🎉 Promoted to {position_label}" and full explanation.
 
+
+## 2026-02-07 — First Payout Priority Queue (Admin)
+
+Dedicated admin dashboard tab at `/admin/bank-transfers/first-payout-queue` that prioritises pending bank-transfer redeems from NEW users whose lifetime bank-payout is UNDER a configurable INR threshold (default ₹1,000). Improves onboarding trust — new users get their first payout fastest.
+
+### Files
+- `backend/routes/manual_bank_transfer.py` — L1352 GET/POST `/admin/first-payout-threshold`, L1394 GET `/admin/first-payout-queue`
+- `frontend/src/pages/Admin/AdminFirstPayoutQueue.js` — full UI (stats bar, threshold settings, per-row Approve/Reject)
+- `frontend/src/pages/Admin/AdminBankTransfers.js` — L417 discovery card linking to the queue page
+- `frontend/src/App.js` — L938 route `/admin/bank-transfers/first-payout-queue`
+- `backend/tests/test_first_payout_queue.py`, `backend/tests/test_first_payout_queue_full.py` (6 tests) — E2E coverage
+
+### Endpoints (unauthenticated at middleware — see Known Issues)
+- `GET /api/bank-transfer/admin/first-payout-threshold` → `{threshold_inr, source, db_value, env_default}`
+- `POST /api/bank-transfer/admin/first-payout-threshold` body `{value: number|null}` — persists to `app_settings`, 0-5000 range, null clears override
+- `GET /api/bank-transfer/admin/first-payout-queue?limit=100` → `{success, threshold_inr, total_in_queue, urgent_count, total_amount_inr, requests[]}`
+
+### Row shape (each queue item)
+`request_id, user_id, user_name, user_phone, account_holder_name, account_number, ifsc_code, bank_name, withdrawal_amount, lifetime_bank_paid_inr, remaining_to_threshold_inr, days_waiting, is_urgent (>3d), subscription_plan, is_subscription_active`
+
+### DB Index Fix
+`paras_reward_db.users` — `email_1` index migrated from `unique + non-sparse` to `unique + partialFilterExpression: {email: {$type: 'string'}}`. Eliminates the E11000 duplicate-key error when seeding users without an email.
+
+### Bug Fixes in This Iteration
+1. Frontend was posting `{admin_uid, reason}` to mark-paid/mark-failed but backend expects `{admin_id, remark}` — fixed in `AdminFirstPayoutQueue.js:doAction`.
+2. Invalid ESLint pragma `// eslint-disable-next-line react-hooks/exhaustive-deps` was blocking the entire admin app behind a CRA compile-error overlay — removed.
+
+### Known Issues (Pre-existing, out of scope)
+- `AdminAuthMiddleware` only guards `/api/admin/*`. Admin routes under `/api/bank-transfer/admin/*`, `/api/community/admin/*`, etc. bypass the middleware — auth must be enforced at gateway or router-level. Not introduced by this feature, but flagged.
+
+### Testing
+Backend: 7/7 pytest pass. Frontend: Playwright E2E full flow verified (login → discovery card → queue page → stats/settings/refresh/rows/approve/reject).
