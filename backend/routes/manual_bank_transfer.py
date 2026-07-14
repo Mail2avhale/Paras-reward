@@ -1349,6 +1349,139 @@ async def get_request_details(request_id: str):
         logging.error(f"Error fetching request details: {e}")
         raise HTTPException(status_code=500, detail="Server error")
 
+@router.get("/admin/first-payout-threshold")
+async def get_first_payout_threshold():
+    """Return the current threshold (₹) below which pending redeem
+    requests are auto-priority-queued for admin. DB override takes
+    precedence over the `NEW_USER_PRIORITY_INR_THRESHOLD` env default.
+    """
+    import os
+    env_default = float(os.environ.get("NEW_USER_PRIORITY_INR_THRESHOLD", "1000"))
+    doc = await db.app_settings.find_one({"key": "first_payout_threshold_inr"}, {"_id": 0})
+    db_value = float(doc.get("value")) if doc and doc.get("value") is not None else None
+    return {
+        "success": True,
+        "threshold_inr": db_value if db_value is not None else env_default,
+        "source": "database" if db_value is not None else "env",
+        "env_default": env_default,
+        "db_value": db_value,
+    }
+
+
+@router.post("/admin/first-payout-threshold")
+async def set_first_payout_threshold(payload: dict):
+    """Admin panel setter for first-payout threshold. Accepts {value:
+    float} in the 0-5000 range. Set value to `null` to clear the DB
+    override and fall back to env default.
+    """
+    val = payload.get("value")
+    if val is not None:
+        try:
+            val = float(val)
+            if not (0 <= val <= 5000):
+                raise ValueError("out of range")
+        except (TypeError, ValueError):
+            raise HTTPException(400, "value must be a number 0-5000 or null")
+    await db.app_settings.update_one(
+        {"key": "first_payout_threshold_inr"},
+        {"$set": {"key": "first_payout_threshold_inr", "value": val,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"success": True, "threshold_inr": val}
+
+
+@router.get("/admin/first-payout-queue")
+async def get_first_payout_queue(limit: int = Query(default=100, le=500)):
+    """Priority queue: pending bank-transfer requests from users whose
+    LIFETIME BANK PAYOUT is under the threshold. Oldest pending first
+    (FIFO) so new users get their first ₹1,000 fastest — improves
+    onboarding conversion and trust.
+
+    Response shape mirrors /admin/requests item shape + adds:
+      • lifetime_bank_paid_inr — sum of this user's paid-out bank txns
+      • days_waiting — days since request created_at (integer)
+      • is_urgent — days_waiting > 3
+    """
+    import os
+    env_default = float(os.environ.get("NEW_USER_PRIORITY_INR_THRESHOLD", "1000"))
+    doc = await db.app_settings.find_one({"key": "first_payout_threshold_inr"}, {"_id": 0})
+    threshold = float(doc.get("value")) if doc and doc.get("value") is not None else env_default
+
+    # 1) Aggregate lifetime bank-paid amount per user across all COMPLETED
+    #    bank_transfer_requests. `paid` (canonical) is the completed status.
+    lifetime_by_user: dict = {}
+    async for row in db.bank_transfer_requests.aggregate([
+        {"$match": {"status": {"$in": ["paid", "completed", "success"]}}},
+        {"$group": {"_id": "$user_id", "total": {"$sum": "$withdrawal_amount"}}},
+    ]):
+        if row.get("_id"):
+            lifetime_by_user[row["_id"]] = float(row.get("total") or 0)
+
+    # 2) Fetch all pending requests, sort oldest-first (FIFO).
+    pending = await db.bank_transfer_requests.find(
+        {"status": {"$in": ["pending", "processing"]}},
+        {"_id": 0},
+    ).sort("created_at", 1).to_list(length=2000)
+
+    # 3) Filter to only new-user requests (lifetime < threshold), enrich
+    #    with waiting days.
+    now = datetime.now(timezone.utc)
+    queue = []
+    for req in pending:
+        uid = req.get("user_id")
+        lifetime = lifetime_by_user.get(uid, 0.0)
+        if lifetime >= threshold:
+            continue
+        # Compute days waiting from created_at.
+        created = req.get("created_at")
+        days = 0
+        try:
+            if created:
+                dt = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+                if not dt.tzinfo:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                days = int((now - dt).total_seconds() // 86400)
+        except Exception:
+            days = 0
+        req["lifetime_bank_paid_inr"] = round(lifetime, 2)
+        req["remaining_to_threshold_inr"] = round(threshold - lifetime, 2)
+        req["days_waiting"] = days
+        req["is_urgent"] = days > 3
+        queue.append(req)
+        if len(queue) >= limit:
+            break
+
+    # 4) Enrich with subscription status from users collection (single
+    #    $in query for perf).
+    uids = list({q["user_id"] for q in queue if q.get("user_id")})
+    if uids:
+        user_map = {}
+        async for u in db.users.find(
+            {"uid": {"$in": uids}},
+            {"_id": 0, "uid": 1, "subscription_plan": 1, "created_at": 1},
+        ):
+            user_map[u["uid"]] = u
+        for q in queue:
+            u = user_map.get(q.get("user_id"), {})
+            plan = (u.get("subscription_plan") or "").lower()
+            q["subscription_plan"] = plan or "explorer"
+            q["is_subscription_active"] = plan in ("startup", "growth", "elite")
+            q["user_created_at"] = u.get("created_at")
+
+    total_amount = sum(q.get("withdrawal_amount") or 0 for q in queue)
+    urgent_count = sum(1 for q in queue if q["is_urgent"])
+
+    return {
+        "success": True,
+        "threshold_inr": threshold,
+        "total_in_queue": len(queue),
+        "urgent_count": urgent_count,
+        "total_amount_inr": round(total_amount, 2),
+        "requests": queue,
+    }
+
+
 @router.post("/admin/mark-paid")
 async def mark_request_paid(action: AdminActionRequest):
     """Mark a request as paid after manual bank transfer."""

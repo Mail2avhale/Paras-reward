@@ -410,6 +410,22 @@ const AdminBankTransfers = () => {
             </h1>
             <p className="text-slate-600 mt-1">Manage PRC to Bank transfer requests</p>
           </div>
+
+          {/* First Payout Queue discovery card — takes admin to the
+              priority page for new users under the threshold. */}
+          <a
+            href="/admin/bank-transfers/first-payout-queue"
+            className="group relative flex items-center gap-3 rounded-xl border-2 border-emerald-400 bg-gradient-to-br from-emerald-50 to-amber-50 px-4 py-3 shadow-sm hover:shadow-md hover:scale-[1.02] transition"
+            data-testid="first-payout-queue-link"
+          >
+            <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center shadow-md">
+              <span className="text-lg">🎁</span>
+            </div>
+            <div>
+              <p className="text-emerald-900 font-bold text-sm leading-tight">First Payout Queue</p>
+              <p className="text-emerald-700 text-xs">New users &lt; ₹1,000 lifetime — prioritize →</p>
+            </div>
+          </a>
           
           <div className="flex gap-2">
             <Button
