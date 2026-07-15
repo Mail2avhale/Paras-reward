@@ -808,7 +808,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
         {partnerPosition && partnerPosition.community_health && (
           <div
             className="bg-gradient-to-br from-slate-900/60 to-slate-950/60 border border-slate-700 rounded-2xl p-5"
-            data-testid="community-health-card"
+            data-testid="leadership-community-health-card"
           >
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -822,7 +822,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                   partnerPosition.community_health.status === 'red' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' :
                   'bg-slate-500/20 text-slate-300 border border-slate-500/40'
                 }`}
-                data-testid="community-health-status"
+                data-testid="leadership-community-health-status"
               >
                 {partnerPosition.community_health.status === 'green' ? 'Healthy' :
                  partnerPosition.community_health.status === 'yellow' ? 'Average' :

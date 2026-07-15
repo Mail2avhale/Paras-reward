@@ -1000,3 +1000,51 @@ Dedicated admin dashboard tab at `/admin/bank-transfers/first-payout-queue` that
 
 ### Testing
 Backend: 7/7 pytest pass. Frontend: Playwright E2E full flow verified (login → discovery card → queue page → stats/settings/refresh/rows/approve/reject).
+
+## 2026-02-15 — Community Leadership Program (Phase C + Phase D)
+
+Full rename of Partner Program → Community Leadership Program + Phase C user dashboard widgets.
+
+### Terminology Rename (UI-only, DB fields unchanged)
+- Partner Position → Leadership Position
+- Commission → Leadership Reward
+- Downline → Community Network
+- Upline → Mentor
+- User (default) → Community Member
+- District/Regional State/State/National Partner → District/Regional/State/National Coordinator
+- Downline cap → Reward Ceiling
+
+### Files renamed (UI text)
+- `backend/routes/partner_positions.py` — POSITION_CONFIG labels + notification message body ("Leadership Reward" wording)
+- `backend/routes/mining_commission.py` L531 — notification title "🎉 Leadership Reward Received!" + "Tier X Leadership Reward" body
+- `frontend/src/pages/AdminPartners.js` — page title, dropdown, columns, tooltips
+- `frontend/src/pages/AdminSystemSettings.js` — "Leadership Reward Tiers" section + "Save Reward Tiers" button
+- `frontend/src/pages/AdminSettingsHub.js` — Community Leadership card description
+- `frontend/src/pages/ReferralsEnhanced.js` — Position badge, Reward Ceiling label, Community Live Feed link
+- `frontend/src/pages/DownlineLiveFeed.js` — header "Community Live Feed" + subtitle
+- `frontend/src/pages/BankRedeemPage.js` — "verified Community Members" notice
+- `frontend/src/pages/CommunityDashboard.js` — invariant comment updated
+- `frontend/src/pages/ReferralCalculator.js`, `AdminInactiveCleanup.js`, `ParasMall.js` — minor copy fixes
+
+### Phase C — User Dashboard Widgets (NEW in `/api/partners/my-position/{uid}`)
+- `hierarchy_score_pct` — progressive % (0-100) instead of boolean pass/fail
+- `community_health` block: `{active_count, inactive_count, total_elite_l1, health_pct, status}` — status ∈ green/yellow/red/gray. **Active definition**: Elite subscription active + last mining collect within 7 days (per user spec Q2=e).
+- `next_promotion` block: `{next_position, next_label, child_label, required_count, current_count, missing_count, progress_pct, ready}` — null for NATIONAL (highest tier).
+- New helper `_count_l1_health_active()` in `partner_positions.py` for the strict active count.
+
+### Frontend Phase C testids
+`partner-position-label`, `leadership-community-health-card`, `leadership-community-health-status`, `ch-active-count`, `ch-inactive-count`, `ch-health-pct`, `next-promotion-tracker`, `next-promotion-label`.
+
+### Cap Semantics (per user Q1=b)
+- Community Member: 500 reward ceiling · District: 1,000 · Regional: 2,000 · State: 4,000 · National: 8,000
+- Ceiling = **max downlines whose collects credit reward to this leader**. Community can grow beyond (unlimited) but only earliest-added FIFO members earn Leadership Reward for the leader.
+
+### Testing
+- New comprehensive test file: `/app/backend/tests/test_community_leadership_phaseC.py` — 17 tests, 16 pass, 1 xfail (FIFO gap — see Known Issues).
+- Testing iteration: `/app/test_reports/iteration_268.json` — 94% backend + 90% frontend PASS.
+- 1 HIGH bug fixed by testing agent: missing `/api/` prefix on axios call at `ReferralsEnhanced.js:81`.
+- 1 duplicate testid fixed by main agent: renamed Phase C card testids to `leadership-community-health-*` to avoid collision with the pre-existing CommunityDashboard component.
+
+### Known Gaps (require user decision)
+1. **FIFO reward-ceiling enforcement** — `POSITION_CONFIG` documents "earliest cap-many count" but `mining_commission.distribute_mining_collect_commission` does NOT filter L1 by created_at order. Currently every valid position holder receives the full 1%. Options: (a) implement per-collect BFS rank lookup, (b) precompute rank at signup, (c) drop the doc claim. Not blocking existing behaviour — pre-existing gap surfaced during Phase C tests.
+2. **`/admin/system-settings` "Leadership Reward Tiers" section** — testing agent's Playwright scan didn't reach the section (may need auth PIN or scroll). Verified manually by main agent via direct file check — rename is in place at L544.
