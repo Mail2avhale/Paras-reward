@@ -682,7 +682,7 @@ const ParasMall = ({ user, onBalanceUpdate }) => {
                 </div>
               </div>
               <p className="mall-confirm-note">
-                Daily mining (50 PRC floor + downline boost) accumulates toward {fmtPrc(pendingBook.total_prc || 0)}. Delivery triggers at 100%.
+                Daily mining (50 PRC floor + Community boost) accumulates toward {fmtPrc(pendingBook.total_prc || 0)}. Delivery triggers at 100%.
               </p>
 
               {/* Delivery Address Form */}

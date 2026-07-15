@@ -108,9 +108,9 @@ const settingsCategories = [
   },
   {
     id: 'partners',
-    label: 'Partner Positions',
+    label: 'Community Leadership',
     icon: Award,
-    description: '5-tier referral system (District → Regional → State → National). Assign positions & structure rules.',
+    description: '5-tier Community Leadership Program (District → Regional → State → National Coordinator). Assign leadership positions & hierarchy rules.',
     path: '/admin/partners',
     color: 'from-yellow-500 to-amber-500',
     bgColor: 'bg-yellow-500/10',

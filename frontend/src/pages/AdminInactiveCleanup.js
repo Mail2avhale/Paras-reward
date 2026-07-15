@@ -115,7 +115,7 @@ const AdminInactiveCleanup = ({ user }) => {
 
       const errSuffix = totalErrors > 0 ? ` · ⚠ ${totalErrors} cascade timeouts (re-run)` : '';
       toast.success(
-        `✅ TOTAL: ${totalDeleted} users · ${totalRedeems} pending redeems · ${totalOrphans} downline${errSuffix}`,
+        `✅ TOTAL: ${totalDeleted} users · ${totalRedeems} pending redeems · ${totalOrphans} orphan links${errSuffix}`,
         { duration: 20000 }
       );
       setCustomPreview(null);
@@ -305,7 +305,7 @@ const AdminInactiveCleanup = ({ user }) => {
 
       const errSuffix = totalErrors > 0 ? ` · ⚠ ${totalErrors} cascade timeouts (re-run)` : '';
       toast.success(
-        `✅ TOTAL: Deleted ${totalDeleted} users · ${totalOrphans} downline${errSuffix}`,
+        `✅ TOTAL: Deleted ${totalDeleted} users · ${totalOrphans} orphan links${errSuffix}`,
         { duration: 20000 }
       );
       fetchPreview();

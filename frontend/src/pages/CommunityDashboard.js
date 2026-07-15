@@ -5,10 +5,12 @@
  * from `/api/community/dashboard/{uid}` (one composite endpoint).
  *
  * Terminology invariants (must be preserved when editing):
- *   • Never use the words "Commission", "Referral Income", or
- *     "Passive Income" in user-facing copy. Use "Community Bonus".
+ *   • Never use the words "Commission", "Referral Income",
+ *     "Passive Income", "Downline", or "Upline" in user-facing copy.
+ *     Use "Leadership Reward" / "Community Network" / "Mentor".
  *   • "Network Capacity" → "Community Goal"
  *   • "Mining Boost"      → "Community Power"
+ *   • "Partner Position"  → "Leadership Position"
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';

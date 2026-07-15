@@ -243,7 +243,7 @@ const AdminSystemSettings = () => {
         roll_up: commissionCfg.roll_up,
       });
       toast.success(
-        `Commission tiers saved (${res.data.tiers.length} tiers, total ${res.data.total_percent}%)`,
+        `Leadership Reward tiers saved (${res.data.tiers.length} tiers, total ${res.data.total_percent}%)`,
         { duration: 4000 }
       );
     } catch (err) {
@@ -542,7 +542,7 @@ const AdminSystemSettings = () => {
             <div className="flex items-center gap-2 mb-3">
               <Gift className={`w-5 h-5 ${commissionCfg.enabled ? 'text-fuchsia-500' : 'text-slate-400'}`} />
               <h2 className="text-lg font-semibold text-slate-800">
-                Mining Commission Tiers
+                Leadership Reward Tiers
               </h2>
               <span
                 className={`ml-auto text-[10px] font-bold px-2 py-1 rounded-full ${
@@ -557,9 +557,9 @@ const AdminSystemSettings = () => {
             </div>
 
             <p className="text-slate-500 text-xs mb-4 leading-relaxed">
-              Configure up to {MAX_COMMISSION_TIERS} referral tiers that share PRC when a downline Elite user
+              Configure up to {MAX_COMMISSION_TIERS} Leadership Reward tiers that share PRC when a Community Elite user
               collects mining rewards. Each tier percentage is applied to the collected PRC and
-              credited to the nth Elite upline in the chain. Roll-up rule: non-Elite ancestors are
+              credited to the nth Elite mentor in the chain. Roll-up rule: non-Elite mentors are
               skipped so the tier slot passes to the next Elite user. Changes take effect on the
               very next mining collect — no code deploy required.
             </p>
@@ -708,7 +708,7 @@ const AdminSystemSettings = () => {
               ) : (
                 <Save className="w-4 h-4 mr-2" />
               )}
-              Save Commission Tiers
+              Save Reward Tiers
             </Button>
           </div>
 

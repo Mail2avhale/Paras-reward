@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Literal
 
 from fastapi import APIRouter, HTTPException, Header
@@ -38,11 +38,11 @@ logger = logging.getLogger(__name__)
 # POSITION CONFIGURATION
 # ────────────────────────────────────────────────────────────────────────
 POSITION_CONFIG = {
-    "user":                    {"levels": 3, "cap": 500,  "commission_pct": 0.01, "label": "User"},
-    "district_partner":        {"levels": 4, "cap": 1000, "commission_pct": 0.01, "label": "District Partner"},
-    "regional_state_partner":  {"levels": 5, "cap": 2000, "commission_pct": 0.01, "label": "Regional State Partner"},
-    "state_partner":           {"levels": 6, "cap": 4000, "commission_pct": 0.01, "label": "State Partner"},
-    "national_partner":        {"levels": 7, "cap": 8000, "commission_pct": 0.01, "label": "National Partner"},
+    "user":                    {"levels": 3, "cap": 500,  "commission_pct": 0.01, "label": "Community Member"},
+    "district_partner":        {"levels": 4, "cap": 1000, "commission_pct": 0.01, "label": "District Coordinator"},
+    "regional_state_partner":  {"levels": 5, "cap": 2000, "commission_pct": 0.01, "label": "Regional Coordinator"},
+    "state_partner":           {"levels": 6, "cap": 4000, "commission_pct": 0.01, "label": "State Coordinator"},
+    "national_partner":        {"levels": 7, "cap": 8000, "commission_pct": 0.01, "label": "National Coordinator"},
 }
 VALID_POSITIONS = tuple(POSITION_CONFIG.keys())
 DEFAULT_POSITION = "user"
@@ -220,6 +220,28 @@ async def _count_l1_active_elite(uid: str, referral_code: Optional[str]) -> int:
             {"subscription_plan": {"$in": ELITE}},
             {"membership_type": {"$in": ELITE}},
         ],
+    })
+
+
+async def _count_l1_health_active(uid: str, referral_code: Optional[str]) -> int:
+    """L1 downlines who are ACTIVE for Community Health (Feb 2026 spec):
+    Elite subscription + mining collect in the last 7 days.
+    """
+    if db is None:
+        return 0
+    tokens = [uid]
+    if referral_code:
+        tokens.append(referral_code)
+    ELITE = ["elite", "vip", "startup", "growth", "pro"]
+    seven_days_ago_iso = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    return await db.users.count_documents({
+        "referred_by": {"$in": tokens},
+        "subscription_expired": {"$ne": True},
+        "$or": [
+            {"subscription_plan": {"$in": ELITE}},
+            {"membership_type": {"$in": ELITE}},
+        ],
+        "last_mining_collect": {"$gte": seven_days_ago_iso},
     })
 
 
@@ -495,8 +517,8 @@ async def admin_assign_position(
             "title": f"🎉 Promoted to {meta['label']}",
             "message": (
                 f"You've been promoted to {meta['label']}. You will now earn "
-                f"{meta['commission_pct']*100:.0f}% commission from your L1-L{meta['levels']} "
-                f"downlines' Main Dashboard mining collects (Elite plan required to receive)."
+                f"{meta['commission_pct']*100:.0f}% Leadership Reward from your L1-L{meta['levels']} "
+                f"Community Network's Main Dashboard mining collects (Elite plan required to receive)."
             ),
             "created_at": now_iso,
             "read": False,
@@ -635,6 +657,57 @@ async def get_my_position(uid: str):
     # Final commission_active = Elite plan AND structure met.
     final_commission_active = commission_active and structure_met
 
+    # ── Phase C additions (Feb 2026) ──────────────────────────────────
+    # 1) Hierarchy Score % — progressive completion for the CURRENT tier
+    #    (0 → 100). USER position → always 100 (no gate required).
+    if not structure_report.get("applicable"):
+        hierarchy_score_pct = 100.0
+    else:
+        req_cnt = int(structure_report.get("required_count") or 0)
+        cur_cnt = int(structure_report.get("current_count") or 0)
+        hierarchy_score_pct = round(min(100.0, (cur_cnt / req_cnt) * 100), 1) if req_cnt > 0 else 100.0
+
+    # 2) Community Health — L1 active members (Elite + collect in last 7d)
+    l1_active_health = await _count_l1_health_active(uid, user.get("referral_code"))
+    l1_active_elite = await _count_l1_active_elite(uid, user.get("referral_code"))
+    l1_inactive = max(0, l1_active_elite - l1_active_health)
+    health_pct = round((l1_active_health / l1_active_elite) * 100, 1) if l1_active_elite > 0 else 0.0
+    if l1_active_elite == 0:
+        health_status = "gray"
+    elif health_pct >= 70:
+        health_status = "green"
+    elif health_pct >= 40:
+        health_status = "yellow"
+    else:
+        health_status = "red"
+
+    # 3) Next Promotion Tracker — what's needed for the NEXT tier
+    _POSITION_ORDER = ["user", "district_partner", "regional_state_partner",
+                       "state_partner", "national_partner"]
+    next_promotion = None
+    try:
+        idx = _POSITION_ORDER.index(position)
+        if idx < len(_POSITION_ORDER) - 1:
+            next_pos = _POSITION_ORDER[idx + 1]
+            next_meta = position_meta(next_pos)
+            next_report = await get_structure_report(uid, next_pos)
+            next_req = int(next_report.get("required_count") or 0)
+            next_cur = int(next_report.get("current_count") or 0)
+            next_missing = max(0, next_req - next_cur)
+            next_pct = round(min(100.0, (next_cur / next_req) * 100), 1) if next_req > 0 else 0.0
+            next_promotion = {
+                "next_position": next_pos,
+                "next_label": next_meta["label"],
+                "child_label": next_report.get("child_label"),
+                "required_count": next_req,
+                "current_count": next_cur,
+                "missing_count": next_missing,
+                "progress_pct": next_pct,
+                "ready": next_cur >= next_req,
+            }
+    except (ValueError, IndexError):
+        next_promotion = None
+
     return {
         "success": True,
         "uid": uid,
@@ -655,6 +728,17 @@ async def get_my_position(uid: str):
         "cap_used_pct": round(min(100.0, (total / meta["cap"]) * 100), 2) if meta["cap"] > 0 else 0,
         "over_cap": total > meta["cap"],
         "counted_towards_commission": min(total, meta["cap"]),
+        # Phase C additions
+        "hierarchy_score_pct": hierarchy_score_pct,
+        "community_health": {
+            "active_count": l1_active_health,
+            "inactive_count": l1_inactive,
+            "total_elite_l1": l1_active_elite,
+            "health_pct": health_pct,
+            "status": health_status,
+            "criterion": "Elite subscription active AND mining collect in last 7 days",
+        },
+        "next_promotion": next_promotion,
     }
 
 

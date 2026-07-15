@@ -78,7 +78,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
         }),
         axios.get(`${API}/api/mining/commission-config`, { timeout: 8000 }).catch(() => null),
         // Feb 6 2026 — partner position badge feed
-        axios.get(`${API}/partners/my-position/${user.uid}`, { timeout: 8000 }).catch(() => null),
+        axios.get(`${API}/api/partners/my-position/${user.uid}`, { timeout: 8000 }).catch(() => null),
         // Feb 12 2026 — composite Community Growth dashboard endpoint
         axios.get(`${API}/api/community/dashboard/${user.uid}`, { timeout: 15000 }).catch((err) => {
           console.error('[Community] dashboard fetch failed:', err?.message);
@@ -469,14 +469,14 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 
             <p className="text-gray-400 text-[11px] mt-3 leading-relaxed">
               {commissionConfig.elite_only ? (
-                <><b className="text-fuchsia-300">Elite uplines</b> receive Community Bonus.</>
+                <><b className="text-fuchsia-300">Elite mentors</b> receive Leadership Reward.</>
               ) : (
-                <>All uplines receive Community Bonus.</>
+                <>All mentors receive Leadership Reward.</>
               )}
               {commissionConfig.roll_up && (
-                <> Non-Elite ancestors are skipped — the tier slot rolls up to the next Elite user in your chain.</>
+                <> Non-Elite mentors are skipped — the tier slot rolls up to the next Elite user in your chain.</>
               )}
-              {' '}Every time an Elite user in your downline collects PRC from their mining session, you earn a percentage — credited instantly to your wallet with a live notification.
+              {' '}Every time an Elite user in your Community Network collects PRC from their mining session, you earn a percentage — credited instantly to your wallet with a live notification.
             </p>
 
             <button
@@ -484,7 +484,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               className="w-full mt-3 py-2.5 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
               data-testid="view-downline-live-feed-btn"
             >
-              <span>View Downline Live Feed</span>
+              <span>View Community Live Feed</span>
               <span className="text-fuchsia-200">→</span>
             </button>
           </div>
@@ -558,23 +558,23 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               })}
             </div>
 
-            {/* Partner Positions in your network — new Feb 2026 section.
+            {/* Leadership Positions in your network — new Feb 2026 section.
                 Zeros are hidden individually so basic users see a clean
                 empty state instead of "0 0 0 0". */}
             {(() => {
               const pc = levelBreakdown.partner_counts || {};
               const partnerTiles = [
-                { key: 'district_partner',        label: 'District Partners',  cnt: pc.district_partner || 0,        cls: 'from-amber-500/20 to-yellow-500/10 border-amber-500/40 text-amber-300' },
-                { key: 'regional_state_partner',  label: 'Regional Partners',  cnt: pc.regional_state_partner || 0,  cls: 'from-sky-500/20 to-blue-500/10 border-sky-500/40 text-sky-300' },
-                { key: 'state_partner',           label: 'State Partners',     cnt: pc.state_partner || 0,           cls: 'from-fuchsia-500/20 to-pink-500/10 border-fuchsia-500/40 text-fuchsia-300' },
-                { key: 'national_partner',        label: 'National Partners',  cnt: pc.national_partner || 0,        cls: 'from-rose-500/20 to-red-500/10 border-rose-500/40 text-rose-300' },
+                { key: 'district_partner',        label: 'District Coordinators',  cnt: pc.district_partner || 0,        cls: 'from-amber-500/20 to-yellow-500/10 border-amber-500/40 text-amber-300' },
+                { key: 'regional_state_partner',  label: 'Regional Coordinators',  cnt: pc.regional_state_partner || 0,  cls: 'from-sky-500/20 to-blue-500/10 border-sky-500/40 text-sky-300' },
+                { key: 'state_partner',           label: 'State Coordinators',     cnt: pc.state_partner || 0,           cls: 'from-fuchsia-500/20 to-pink-500/10 border-fuchsia-500/40 text-fuchsia-300' },
+                { key: 'national_partner',        label: 'National Coordinators',  cnt: pc.national_partner || 0,        cls: 'from-rose-500/20 to-red-500/10 border-rose-500/40 text-rose-300' },
               ];
               const totalPartners = partnerTiles.reduce((s, t) => s + t.cnt, 0);
               if (totalPartners === 0) return null;
               return (
                 <div className="pt-1" data-testid="partner-positions-section">
                   <div className="flex items-center justify-between px-1 mb-2">
-                    <h3 className="text-white font-semibold text-base">Partner Positions in Your Network</h3>
+                    <h3 className="text-white font-semibold text-base">Community Leaders in Your Network</h3>
                     <span className="text-[10px] text-gray-500 uppercase tracking-wider">
                       Total: <span className="text-white font-bold">{totalPartners}</span>
                     </span>
@@ -700,13 +700,13 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                  partnerPosition.partner_position === 'district_partner' ? '🏙️' : '👤'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase tracking-wider text-indigo-300 font-semibold">Your Rank</p>
+                <p className="text-[10px] uppercase tracking-wider text-indigo-300 font-semibold">Your Leadership Position</p>
                 <p className="text-white font-bold text-lg truncate" data-testid="partner-position-label">
                   {partnerPosition.position_label}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-indigo-300">Bonus %</p>
+                <p className="text-[10px] text-indigo-300">Reward %</p>
                 <p className="text-emerald-300 font-bold text-sm">
                   {(partnerPosition.position_config?.commission_pct * 100).toFixed(0)}%
                 </p>
@@ -716,9 +716,9 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             {/* Cap usage */}
             <div className="mb-3">
               <div className="flex justify-between text-[11px] text-slate-400 mb-1">
-                <span>Downline Cap Usage (L1-L{partnerPosition.position_config?.levels})</span>
+                <span>Reward Ceiling Usage (L1-L{partnerPosition.position_config?.levels})</span>
                 <span className="font-mono text-indigo-300">
-                  {partnerPosition.counted_towards_commission} / {partnerPosition.cap}
+                  {partnerPosition.counted_towards_commission} / {partnerPosition.cap?.toLocaleString('en-IN')}
                 </span>
               </div>
               <div className="h-2 rounded-full overflow-hidden bg-slate-800">
@@ -734,7 +734,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               </div>
               {partnerPosition.over_cap && (
                 <p className="text-[10px] text-orange-300 mt-1">
-                  ⚠️ Downlines exceed cap. Only earliest {partnerPosition.cap} count for Community Bonus.
+                  ⚠️ Community exceeds reward ceiling. Only earliest {partnerPosition.cap?.toLocaleString('en-IN')} members earn Leadership Reward. Keep growing — bigger tier unlocks higher ceiling!
                 </p>
               )}
             </div>
@@ -749,7 +749,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               ))}
             </div>
 
-            {/* Structural bonus-gate progress (Feb 6 2026) */}
+            {/* Hierarchy verification progress (Feb 6 2026) */}
             {partnerPosition.structure_required && partnerPosition.structure_report && (
               <div className={`rounded-lg p-3 border ${partnerPosition.structure_met
                 ? 'bg-emerald-500/10 border-emerald-500/30'
@@ -758,17 +758,19 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[11px] font-semibold text-white">
-                    {partnerPosition.structure_met ? '✅ Structure Complete' : '🔒 Structure Requirement'}
+                    {partnerPosition.structure_met ? '✅ Hierarchy Verified' : '🔒 Hierarchy Verification'}
                   </span>
                   <span className={`text-[11px] font-bold ${partnerPosition.structure_met ? 'text-emerald-300' : 'text-rose-300'}`}>
                     {partnerPosition.structure_report.current_count} / {partnerPosition.structure_report.required_count}
+                    {' · '}
+                    <span className="tabular-nums">{partnerPosition.hierarchy_score_pct}%</span>
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-300">
                   Requires <strong>{partnerPosition.structure_report.required_count}</strong>{' '}
-                  <strong>{partnerPosition.structure_report.child_label}</strong> as direct L1 downlines
+                  <strong>{partnerPosition.structure_report.child_label}</strong> as direct L1 Community members
                   {partnerPosition.structure_report.child_type !== 'elite_user' &&
-                    ' (each must individually meet their own structure)'}.
+                    ' (each must individually meet their own hierarchy)'}.
                 </p>
                 <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden mt-2">
                   <div
@@ -785,20 +787,150 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             )}
 
             {!partnerPosition.elite_active && (
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 text-center">
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 text-center mt-3">
                 <p className="text-[11px] text-amber-300">
-                  ⚡ Upgrade to <strong>Elite</strong> plan to activate Community Bonus earning
+                  ⚡ Upgrade to <strong>Elite</strong> plan to activate Leadership Reward earning
                 </p>
               </div>
             )}
 
             {partnerPosition.elite_active && partnerPosition.structure_required && !partnerPosition.structure_met && (
-              <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-2 text-center">
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-2 text-center mt-3">
                 <p className="text-[11px] text-rose-300">
-                  🔒 Community Bonus paused — build the required structure above to unlock your bonus
+                  🔒 Leadership Reward paused — complete the hierarchy above to unlock your reward
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Community Health (Phase C — Feb 2026) */}
+        {partnerPosition && partnerPosition.community_health && (
+          <div
+            className="bg-gradient-to-br from-slate-900/60 to-slate-950/60 border border-slate-700 rounded-2xl p-5"
+            data-testid="community-health-card"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Community Health</p>
+                <p className="text-white font-bold text-base">L1 Community Activity</p>
+              </div>
+              <div
+                className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                  partnerPosition.community_health.status === 'green' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
+                  partnerPosition.community_health.status === 'yellow' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
+                  partnerPosition.community_health.status === 'red' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' :
+                  'bg-slate-500/20 text-slate-300 border border-slate-500/40'
+                }`}
+                data-testid="community-health-status"
+              >
+                {partnerPosition.community_health.status === 'green' ? 'Healthy' :
+                 partnerPosition.community_health.status === 'yellow' ? 'Average' :
+                 partnerPosition.community_health.status === 'red' ? 'Needs Attention' : 'No Data'}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="bg-emerald-900/30 border border-emerald-800/40 rounded-lg py-2 px-2 text-center">
+                <p className="text-[9px] text-emerald-400 uppercase tracking-wider">Active</p>
+                <p className="text-emerald-300 font-bold text-lg tabular-nums" data-testid="ch-active-count">
+                  {partnerPosition.community_health.active_count}
+                </p>
+              </div>
+              <div className="bg-slate-800/60 border border-slate-700 rounded-lg py-2 px-2 text-center">
+                <p className="text-[9px] text-slate-400 uppercase tracking-wider">Inactive</p>
+                <p className="text-slate-300 font-bold text-lg tabular-nums" data-testid="ch-inactive-count">
+                  {partnerPosition.community_health.inactive_count}
+                </p>
+              </div>
+              <div className="bg-indigo-900/30 border border-indigo-800/40 rounded-lg py-2 px-2 text-center">
+                <p className="text-[9px] text-indigo-400 uppercase tracking-wider">Health</p>
+                <p className="text-indigo-300 font-bold text-lg tabular-nums" data-testid="ch-health-pct">
+                  {partnerPosition.community_health.health_pct}%
+                </p>
+              </div>
+            </div>
+
+            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${partnerPosition.community_health.health_pct}%`,
+                  background:
+                    partnerPosition.community_health.status === 'green' ? 'linear-gradient(90deg, #10b981, #34d399)' :
+                    partnerPosition.community_health.status === 'yellow' ? 'linear-gradient(90deg, #f59e0b, #fbbf24)' :
+                    'linear-gradient(90deg, #f43f5e, #fb7185)',
+                }}
+              />
+            </div>
+
+            <p className="text-[10px] text-slate-500 mt-2">
+              Active = Elite subscription + mining collect within last 7 days
+            </p>
+          </div>
+        )}
+
+        {/* Next Promotion Tracker (Phase C — Feb 2026) */}
+        {partnerPosition && partnerPosition.next_promotion && (
+          <div
+            className={`rounded-2xl p-5 border ${
+              partnerPosition.next_promotion.ready
+                ? 'bg-gradient-to-br from-emerald-900/40 to-teal-900/30 border-emerald-500/40'
+                : 'bg-gradient-to-br from-purple-900/40 to-fuchsia-900/30 border-purple-500/40'
+            }`}
+            data-testid="next-promotion-tracker"
+          >
+            <div className="flex items-start justify-between mb-3 gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-purple-300">Next Promotion</p>
+                <p className="text-white font-bold text-lg truncate" data-testid="next-promotion-label">
+                  {partnerPosition.next_promotion.next_label}
+                </p>
+              </div>
+              <div
+                className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap ${
+                  partnerPosition.next_promotion.ready
+                    ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/40'
+                    : 'bg-slate-800/60 text-slate-300 border border-slate-700'
+                }`}
+              >
+                {partnerPosition.next_promotion.ready ? 'Ready ✨' : `${partnerPosition.next_promotion.progress_pct}%`}
+              </div>
+            </div>
+
+            <div className="mb-2">
+              <div className="flex items-baseline justify-between mb-1">
+                <span className="text-xs text-slate-300">
+                  {partnerPosition.next_promotion.child_label} required
+                </span>
+                <span className="text-sm font-mono font-bold text-white">
+                  {partnerPosition.next_promotion.current_count} / {partnerPosition.next_promotion.required_count}
+                </span>
+              </div>
+              <div className="w-full h-2 bg-slate-800/80 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${partnerPosition.next_promotion.progress_pct}%`,
+                    background: partnerPosition.next_promotion.ready
+                      ? 'linear-gradient(90deg, #10b981, #34d399)'
+                      : 'linear-gradient(90deg, #a855f7, #ec4899)',
+                  }}
+                />
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-300">
+              {partnerPosition.next_promotion.ready ? (
+                <>🎉 You&apos;ve met the requirement! Contact admin for promotion review.</>
+              ) : (
+                <>
+                  <strong className="text-amber-300">{partnerPosition.next_promotion.missing_count}</strong> more{' '}
+                  {partnerPosition.next_promotion.child_label} needed to unlock{' '}
+                  <strong className="text-white">{partnerPosition.next_promotion.next_label}</strong>.
+                </>
+              )}
+            </p>
           </div>
         )}
 

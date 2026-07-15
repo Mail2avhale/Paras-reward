@@ -1,0 +1,56 @@
+{
+  "summary": "Phase C Community Leadership Program (PARAS REWARD, Feb 15 2026 rename) end-to-end test. Seeded a 5-tier synthetic tree (1 NATIONAL → 5 STATE → 15 REGIONAL → 75 DISTRICT → 100+ L1 members plus a partial-72 district, a 1200-leaf FIFO district, a CH-strict test district, and a Community Member). Verified all Phase C additions on GET /api/partners/my-position/{uid} — labels, cap, hierarchy_score_pct, community_health block, next_promotion block. Verified Community Health strict-active definition (Elite+collect<=7d) with green/yellow/red/gray thresholds. Verified recursive hierarchy validation (partial DISTRICT 72/100 fails; NATIONAL with incomplete subtree fails). Verified admin assign/revoke via X-Admin-Pin uses new 'District Coordinator' label + Leadership Reward notification (NOT 'commission'). Verified mining_referral_reward notification title '🎉 Leadership Reward Received!' and 'Tier X Leadership Reward' message. Ran Playwright UI tests as Elite user 9970100782 on /referrals — after fixing 1 URL bug in ReferralsEnhanced.js, all Phase C widgets render (partner-position-label, community-health-card, ch-active-count, ch-inactive-count, ch-health-pct, community-health-status, next-promotion-tracker, next-promotion-label). Verified /admin/partners page, /referrals/live-feed header, /bank-redeem verified notice all use new Community Leadership terminology.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/partners/my-position/{uid}", "issue": "FIFO reward-ceiling ordering (docstring at partner_positions.py L15: 'only the earliest-position cap-many count') is NOT implemented in mining_commission.distribute_mining_collect_commission — cap is not enforced by counting L1s in created_at order; any position-tier upline at valid hop receives full 1% regardless of downline count > cap. Test xfail flagged."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ReferralsEnhanced.js L81", "issue": "URL missing /api/ prefix on partners/my-position call → returned HTML instead of JSON → partnerPosition state never set → partner-position-label, Reward Ceiling Usage, next-promotion-tracker all invisible in production. FIXED by testing agent (added /api/ prefix).", "selector": "axios.get(`${API}/partners/my-position/...`)", "priority": "HIGH"},
+      {"component": "community-health-status (duplicate testid?)", "issue": "Playwright inner_text() on [data-testid=community-health-status] returned 'JUST STARTING' (backend text from /api/community/dashboard), but the Phase C code at ReferralsEnhanced.js L825-829 maps status→Healthy/Average/Needs Attention/No Data. Possible duplicate testid across two components. Needs main-agent review.", "selector": "[data-testid=\"community-health-status\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_community_leadership_phaseC.py",
+    "/app/test_reports/pytest/community_leadership_phaseC.xml"
+  ],
+  "action_items": [
+    "Main agent: Confirm the ReferralsEnhanced.js L81 /api/ prefix fix (applied by testing agent).",
+    "Main agent: Implement or explicitly retire the FIFO reward-ceiling ordering — docstring claims 'earliest cap-many count' but distribute_mining_collect_commission has no cap-based FIFO filter.",
+    "Main agent: Investigate duplicate [data-testid=community-health-status] — the Phase C card status ('Healthy/Average/Needs Attention/No Data') is being shadowed by community_dashboard.py's 'Just Starting' text in the same card.",
+    "Main agent: (nit) 'Community Network' phrase not present on /referrals page — page uses 'Community Growth' branding instead. Confirm this is intentional (Community Live Feed / bank-redeem / admin pages all use 'Community Network' correctly).",
+    "Main agent: /admin/system-settings page did not surface 'Leadership Reward Tiers' section during scan (may need PIN entry or the section is far down); please verify manually."
+  ],
+  "critical_code_review_comments": [
+    "routes/partner_positions.py L15 documents 'earliest-position cap-many count' but no code enforces cap ordering. Either implement (sort L1 by created_at, take first N, skip others in distribute_mining_collect_commission) or remove the docstring claim.",
+    "routes/mining_commission.py: create_notification helper in routes/notifications.py swallows all exceptions and returns None, so mining_commission's fallback direct-insert path never fires when notifications.db is None (surfaced during isolated tests, not prod). Consider re-raising in create_notification or removing the redundant fallback.",
+    "ReferralsEnhanced.js: mixed use of `${API}/api/...` and `${API}/...` — the buggy L81 shows this class of typo can silently break UI (SPA returns HTML for unknown paths, no console error until JSON.parse). Consider centralizing an axios base client with /api prefix."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/ReferralsEnhanced.js (fixed L81 URL /api/ prefix)",
+    "/app/backend/tests/test_community_leadership_phaseC.py (new comprehensive test file, 17 tests: 16 pass + 1 xfail for FIFO)"
+  ],
+  "success_rate": {"backend": "94% (16/17 pass, 1 xfail documented FIFO)", "frontend": "90% (all Phase C testids + terminology strings present after URL fix; minor duplicate-testid + missing 'Community Network' phrase on /referrals)"},
+  "test_credentials": "Admin: 9999999999 / PIN 153759. Elite user: 9970100782 / PIN 997010. ADMIN_OPERATION_PIN=123456 (from backend/.env).",
+  "seed_data_creation": "test_community_leadership_phaseC.py creates ~1500+ TEST_clp_* users per run (uid prefix TEST_clp_<random8>_*), auto-cleaned in session teardown. Seeded UIDs written to /tmp/community_seed.json during a run for external cleanup if needed.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The comprehensive test file is /app/backend/tests/test_community_leadership_phaseC.py — use it as regression. FIFO ordering is xfailed intentionally. When testing frontend, remember: /referrals uses lazy ReferralsEnhanced.js (not ReferralsSimplified). The URL bug at L81 was fixed here — if regressed, re-add /api/ prefix. Admin login flow: enter mobile → click Sign In → enter 6-digit PIN across 6 boxes with maxlength=1 → click Sign In again (or auto-submits). Elite user 9970100782/997010 works for /referrals; admin 9999999999/153759 redirects from /referrals to /admin.",
+  "rca of the issue": {
+    "phase_c_ui_hidden_bug": {
+      "symptom": "Phase C UI widgets (partner-position-label, Reward Ceiling Usage progress bar, next-promotion-tracker) not visible on /referrals for Elite user with position=user.",
+      "root_cause": "ReferralsEnhanced.js line 81 called `${API}/partners/my-position/${uid}` — missing the /api/ prefix. Kubernetes ingress routes only /api/* to backend; other paths return the SPA index.html. axios.get succeeded (HTTP 200) but the body was HTML, so positionRes.data.success was undefined and `if (positionRes?.data?.success)` never populated partnerPosition state.",
+      "reproduction": "1. Login as Elite user with position=user. 2. Visit /referrals. 3. Scroll — no Reward Ceiling / next promotion / partner label. 4. Open DevTools Network — call to /partners/my-position/{uid} returns index.html with content-type text/html.",
+      "mitigation": "Added /api/ prefix on ReferralsEnhanced.js L81. Verified after fix: all 8 Phase C testids render with correct labels and values."
+    },
+    "fifo_cap_missing": {
+      "symptom": "1200th leaf's mining collect propagated to DISTRICT upline; spec says only earliest 1000 should count.",
+      "root_cause": "mining_commission.py distribute_mining_collect_commission never filters by L1 rank/order — it walks upline once per hop and pays every valid position holder.",
+      "mitigation": "Not fixed by testing agent (business logic). Test is xfail-marked with reason pointing to partner_positions.py L15 doc-only claim."
+    }
+  }
+}

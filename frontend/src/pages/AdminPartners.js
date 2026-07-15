@@ -1,7 +1,7 @@
 /**
- * Admin — Partner Positions Management (Feb 6 2026)
- * ===================================================
- * Admin assigns multi-tier partner positions to users. Backed by
+ * Admin — Community Leadership Positions Management (Feb 6 2026)
+ * ================================================================
+ * Admin assigns multi-tier leadership positions to users. Backed by
  * /api/admin/partners/* endpoints. Requires ADMIN_OPERATION_PIN.
  */
 import React, { useState, useCallback } from 'react';
@@ -11,11 +11,11 @@ import { API } from '../lib/api';
 import { UserCog, Search, Trash2, Users, TrendingUp } from 'lucide-react';
 
 const POSITION_OPTIONS = [
-  { value: 'user',                    label: 'User (default)',            levels: 3, cap: 500 },
-  { value: 'district_partner',        label: 'District Partner',          levels: 4, cap: 1000 },
-  { value: 'regional_state_partner',  label: 'Regional State Partner',    levels: 5, cap: 2000 },
-  { value: 'state_partner',           label: 'State Partner',             levels: 6, cap: 4000 },
-  { value: 'national_partner',        label: 'National Partner',          levels: 7, cap: 8000 },
+  { value: 'user',                    label: 'Community Member (default)',  levels: 3, cap: 500 },
+  { value: 'district_partner',        label: 'District Coordinator',        levels: 4, cap: 1000 },
+  { value: 'regional_state_partner',  label: 'Regional Coordinator',        levels: 5, cap: 2000 },
+  { value: 'state_partner',           label: 'State Coordinator',           levels: 6, cap: 4000 },
+  { value: 'national_partner',        label: 'National Coordinator',        levels: 7, cap: 8000 },
 ];
 
 export default function AdminPartners({ user, onLogout }) {
@@ -111,7 +111,7 @@ export default function AdminPartners({ user, onLogout }) {
       <div className="max-w-5xl mx-auto px-4 pt-6">
         <div className="flex items-center gap-3 mb-6">
           <UserCog className="w-7 h-7 text-indigo-600" />
-          <h1 className="text-2xl font-bold text-slate-800">Partners Management</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Community Leadership Management</h1>
         </div>
 
         {/* PIN + Refresh */}
@@ -134,17 +134,17 @@ export default function AdminPartners({ user, onLogout }) {
               className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
               data-testid="partners-refresh-btn"
             >
-              {loading ? 'Loading…' : 'Load Partners'}
+              {loading ? 'Loading…' : 'Load Leaders'}
             </button>
           </div>
-          <p className="text-[11px] text-slate-500 mt-2">Required for all Partner assign/revoke/list operations.</p>
+          <p className="text-[11px] text-slate-500 mt-2">Required for all Leadership Position assign/revoke/list operations.</p>
         </div>
 
         {/* Assign Form */}
         <div className="bg-white rounded-xl p-5 border border-slate-200 mb-6" data-testid="assign-partner-card">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-slate-800">Assign / Promote Partner</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Assign / Promote Leader</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -165,7 +165,7 @@ export default function AdminPartners({ user, onLogout }) {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Position</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Leadership Position</label>
               <select
                 value={selectedPos}
                 onChange={(e) => setSelectedPos(e.target.value)}
@@ -174,7 +174,7 @@ export default function AdminPartners({ user, onLogout }) {
               >
                 {POSITION_OPTIONS.map(p => (
                   <option key={p.value} value={p.value}>
-                    {p.label} — L1-L{p.levels}, cap {p.cap}
+                    {p.label} — L1-L{p.levels}, reward ceiling {p.cap.toLocaleString()}
                   </option>
                 ))}
               </select>
@@ -187,21 +187,21 @@ export default function AdminPartners({ user, onLogout }) {
             className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-2.5 rounded-lg text-sm disabled:opacity-60"
             data-testid="assign-partner-submit-btn"
           >
-            {assigning ? 'Assigning…' : 'Assign Position'}
+            {assigning ? 'Assigning…' : 'Assign Leadership Position'}
           </button>
         </div>
 
-        {/* Current Partners List */}
+        {/* Current Leaders List */}
         <div className="bg-white rounded-xl p-5 border border-slate-200" data-testid="partners-list-card">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-5 h-5 text-slate-700" />
-            <h2 className="text-lg font-semibold text-slate-800">Current Partners</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Current Community Leaders</h2>
             <span className="ml-auto text-xs text-slate-500">{partners.length} active</span>
           </div>
 
           {partners.length === 0 ? (
             <div className="text-center py-8 text-slate-400 text-sm">
-              {loading ? 'Loading…' : 'No partners yet. Enter PIN + click "Load Partners" above.'}
+              {loading ? 'Loading…' : 'No leaders yet. Enter PIN + click "Load Leaders" above.'}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -210,7 +210,7 @@ export default function AdminPartners({ user, onLogout }) {
                   <tr>
                     <th className="text-left py-2 px-2">Name</th>
                     <th className="text-left py-2 px-2">Mobile</th>
-                    <th className="text-left py-2 px-2">Position</th>
+                    <th className="text-left py-2 px-2">Leadership Position</th>
                     <th className="text-left py-2 px-2">Plan</th>
                     <th className="text-left py-2 px-2">Assigned</th>
                     <th className="text-right py-2 px-2">Action</th>
@@ -234,7 +234,7 @@ export default function AdminPartners({ user, onLogout }) {
                         <button
                           onClick={() => revoke(p.uid, p.name || p.mobile)}
                           className="p-1.5 hover:bg-rose-50 rounded"
-                          title="Revert to User"
+                          title="Revert to Community Member"
                           data-testid={`revoke-partner-${p.uid}`}
                         >
                           <Trash2 className="w-4 h-4 text-rose-500" />

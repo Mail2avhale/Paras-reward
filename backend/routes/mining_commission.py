@@ -528,10 +528,10 @@ async def _send_referral_ping(
     typed (icon + color etc.). Falls back to a plain insert if the helper
     isn't importable.
     """
-    title = "🎉 Referral Reward Received!"
+    title = "🎉 Leadership Reward Received!"
     message = (
         f"{collector_name} just collected mining PRC — you earned "
-        f"{amount:.4f} PRC as Tier {tier_index} referral reward ({tier_percent:.1f}%)."
+        f"{amount:.4f} PRC as Tier {tier_index} Leadership Reward ({tier_percent:.1f}%)."
     )
     data = {
         "amount": round(amount, 6),

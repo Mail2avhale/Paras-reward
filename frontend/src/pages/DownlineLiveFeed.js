@@ -83,10 +83,10 @@ const DownlineLiveFeed = ({ user }) => {
           </button>
           <div className="flex-1">
             <h1 className="text-gray-900 font-bold text-lg leading-tight tracking-tight">
-              Downline Live Feed
+              Community Live Feed
             </h1>
             <p className="text-gray-500 text-[12px] leading-tight mt-0.5">
-              Real-time referral rewards from your network
+              Real-time Leadership Reward from your Community Network
             </p>
           </div>
           <button
@@ -181,8 +181,8 @@ const DownlineLiveFeed = ({ user }) => {
               </div>
               <p className="text-gray-900 font-semibold mb-1">No rewards yet in this window</p>
               <p className="text-gray-500 text-sm px-6 max-w-md mx-auto">
-                Once someone in your downline collects mining PRC, their referral
-                reward will appear here in real time. Grow your Elite network to
+                Once someone in your Community Network collects mining PRC, their Leadership
+                Reward will appear here in real time. Grow your Elite Community to
                 start earning.
               </p>
             </div>

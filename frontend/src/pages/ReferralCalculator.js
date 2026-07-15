@@ -56,7 +56,7 @@ const FAQS = [
   },
   {
     q: 'What is a "direct referral" vs "L1 indirect" on Paras Reward?',
-    a: "A direct referral is someone who signs up using your referral code. An L1 indirect is someone who signs up using YOUR direct referral's code — they're your 'second level' downline. Both contribute to your mining rate but with different weights.",
+    a: "A direct referral is someone who signs up using your referral code. An L1 indirect is someone who signs up using YOUR direct referral's code — they're your 'second level' Community member. Both contribute to your mining rate but with different weights.",
   },
   {
     q: 'How much can I realistically earn from referrals in a month?',
