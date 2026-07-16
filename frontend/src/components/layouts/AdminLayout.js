@@ -21,6 +21,9 @@ const MENU_TO_PERMISSION = {
   // General
   'dashboard': 'dashboard',
   'user360': 'user360',
+  'paras-mall-admin': 'user360',      // Reuses user360 permission (admin-level)
+  'community-leaders': 'user360',     // Reuses user360 permission
+  'partner-stores': 'user360',        // Reuses user360 permission
   'members': 'members',
   'core-team': 'core-team',
   'failed-transactions': 'failed-transactions',
@@ -169,6 +172,9 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'careers', label: 'Careers', icon: Briefcase, path: '/admin/careers' },
     { id: 'investors', label: 'Investors', icon: TrendingUp, path: '/admin/investors' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
+    { id: 'paras-mall-admin', label: '🛍️ Paras Mall', icon: ShoppingBag, path: '/admin/mall', highlight: true },
+    { id: 'community-leaders', label: '👥 Community Leaders', icon: Award, path: '/admin/partners', highlight: true },
+    { id: 'partner-stores', label: '🏪 Store Partners', icon: Store, path: '/admin/partner-stores', highlight: true },
     { id: 'inactive-cleanup', label: 'Inactive User Cleanup', icon: Trash2, path: '/admin/inactive-cleanup', highlight: true },
     { id: 'prc-lock', label: 'PRC Lock Vault (25k)', icon: KeyRound, path: '/admin/prc-lock', highlight: true },
     { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },
