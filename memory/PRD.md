@@ -1266,3 +1266,21 @@ All ads dismissible; each placement independently manageable; zero cross-placeme
 - Consider index on `partner_store_audit_log.{severity: 1, created_at: -1}` when log grows > 10k rows
 - CSV export loads all rows to memory — swap to StreamingResponse for >50k row exports
 - Consider adding `severity: critical` events for repeated fraud from same user (future automated detection)
+
+---
+
+## Feb 16, 2026 — P0 FIX: Admin Auto-Logout on Wrong Operation PIN (Community Leaders)
+
+### Bug
+Admins reported being force-logged-out mid-workflow when assigning a Community Leadership Position. Root cause: `partner_positions.py` returns `HTTPException(status_code=403, detail="Invalid admin operation PIN")` on any wrong/mistyped `X-Admin-Pin`. The global axios response interceptor in `/app/frontend/src/App.js` used a very broad regex (`/token|expired|invalid|.../i`) to classify a 403 as a session-expired event → wiped tokens, toasted "session expired", and redirected to `/login`. The lone word "invalid" in the detail matched.
+
+### Fix
+Tightened `tokenExpiredKeywords` regex so a 403 only triggers session-expiry logout when the detail explicitly contains a token/session/auth-related phrase (e.g., `token expired`, `invalid token`, `session expired`, `authentication required`, `unauthorized`). Business-logic 403s (wrong PIN, forbidden role, IP block) now surface as normal error toasts from the calling component's `catch` block.
+
+- File changed: `/app/frontend/src/App.js` (interceptor regex only)
+- Backend auth middleware verified to always return **401** (not 403) for genuine token failures — session-expiry path fully preserved.
+
+### Verification
+- Curl regression: wrong PIN → 403 `Invalid admin operation PIN`; correct PIN 123456 → 200 + assignment succeeds.
+- Playwright E2E: admin login → `/admin/partners` → wrong PIN + `Assign` → URL stays at `/admin/partners`, error toast visible, no logout.
+- No regressions on other admin PIN-gated endpoints (revoke, list, audit, structure-config) — same tightened classifier applies.

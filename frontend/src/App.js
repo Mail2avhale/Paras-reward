@@ -298,7 +298,13 @@ axios.interceptors.response.use(
     // ────────────────────────────────────────────────────────────────────
     const finalStatus = error.response?.status;
     const isAuthEndpoint = url.includes('/api/auth/login') || url.includes('/api/auth/register') || url.includes('/api/auth/verify-otp');
-    const tokenExpiredKeywords = /token|expired|invalid|authentication required|unauthori[sz]ed|please log ?in|session/i;
+    // Feb 2026 — regex was too broad: "Invalid admin operation PIN" (from
+    // admin PIN-gated endpoints like /admin/partners/assign) matched
+    // /invalid/i and force-logged the admin out. Now we require an actual
+    // auth/token/session context keyword before treating a 403 as a
+    // session-expiry event. Non-session 403s (wrong PIN, forbidden role,
+    // IP block) surface as normal toast errors to the calling component.
+    const tokenExpiredKeywords = /token[ _-]?(expired|invalid)|(expired|invalid)[ _-]?token|jwt|session[ _-]?(expired|invalid|timeout)|authentication (required|failed|expired)|unauthori[sz]ed|please log ?in again/i;
     const isTokenIssue = (finalStatus === 401) ||
       (finalStatus === 403 && tokenExpiredKeywords.test(finalDetail));
 
