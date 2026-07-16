@@ -201,12 +201,15 @@ async def admin_create_partner_store(body: PartnerStoreCreateRequest):
     now_iso = datetime.now(timezone.utc).isoformat()
 
     # 1) Create the auth `users` doc for the store
+    _hashed = _hash_pin(body.login_pin)
     await db.users.insert_one({
         "uid": store_uid,
         "name": body.owner_name,
         "mobile": body.mobile_number,
         "email": body.email,
-        "pin_hash": _hash_pin(body.login_pin),
+        "pin_hash": _hashed,
+        "password": _hashed,         # main auth login fallback field
+        "pin_migrated": True,        # skip legacy password→PIN migration prompt
         "role": "partner_store",
         "partner_store_id": store_id,
         "subscription_plan": "partner_store",
@@ -477,3 +480,359 @@ async def store_self_transactions(
             d["user_name_masked"] = un[0] + "***" if len(un) > 0 else "***"
 
     return {"success": True, "transactions": docs, "next_cursor": next_cursor, "has_more": has_more}
+
+
+# ═════════════════════════════════════════════════════════════════════
+# SLICE 2 — PAYMENT ENGINE (User → Partner Store)
+# ═════════════════════════════════════════════════════════════════════
+# Rules (Q_C=c2):
+#   • ₹5,000 max per single payment
+#   • ₹20,000 max per user per day (across all stores)
+#   • Max 3 payments from same user → same store per day (velocity guard)
+#   • Atomic: user PRC debit + store wallet credit + txn row inserted
+#     inside a MongoDB session (multi-doc transaction).
+#   • Idempotent via `client_txn_id`.
+
+MAX_TXN_PRC = 5000.0
+MAX_USER_DAILY_PRC = 20000.0
+MAX_USER_STORE_DAILY_COUNT = 3
+
+
+class PartnerStoreLookupRequest(BaseModel):
+    mobile: Optional[str] = Field(None, pattern=r"^\d{10}$")
+    store_id: Optional[str] = Field(None, pattern=r"^\d{6}$")
+
+
+class PartnerStorePayRequest(BaseModel):
+    user_uid: str
+    mobile: Optional[str] = Field(None, pattern=r"^\d{10}$")
+    store_id: Optional[str] = Field(None, pattern=r"^\d{6}$")
+    prc_amount: float = Field(..., gt=0, le=MAX_TXN_PRC)
+    client_txn_id: str = Field(..., min_length=8, max_length=64)
+    remark: Optional[str] = Field(None, max_length=120)
+
+
+@router.post("/pay/lookup")
+async def payment_lookup_store(body: PartnerStoreLookupRequest):
+    """User looks up a store by mobile OR 6-digit store_id."""
+    if not body.mobile and not body.store_id:
+        raise HTTPException(status_code=400, detail="Provide mobile or store_id")
+    query = {"mobile_number": body.mobile} if body.mobile else {"store_id": body.store_id}
+    store = await db.partner_stores.find_one(query, {
+        "_id": 0, "store_id": 1, "business_name": 1, "owner_name": 1,
+        "address": 1, "business_type": 1, "verification_status": 1, "is_active": 1,
+    })
+    if not store:
+        raise HTTPException(status_code=404, detail="Partner Store not registered")
+    if not store.get("is_active") or store.get("verification_status") != "verified":
+        raise HTTPException(status_code=403, detail="Partner Store is not active for payments")
+    return {"success": True, "store": store}
+
+
+@router.post("/pay")
+async def pay_partner_store(body: PartnerStorePayRequest):
+    """
+    Atomically transfer PRC from user → partner store wallet.
+    Idempotent — same client_txn_id short-circuits to the previous result.
+    """
+    if body.prc_amount <= 0 or body.prc_amount > MAX_TXN_PRC:
+        raise HTTPException(status_code=400, detail=f"Amount must be between 0 and {MAX_TXN_PRC} PRC")
+    if not body.mobile and not body.store_id:
+        raise HTTPException(status_code=400, detail="Provide mobile or store_id")
+
+    # 1) Idempotency check
+    existing = await db.partner_store_txns.find_one({"client_txn_id": body.client_txn_id}, {"_id": 0})
+    if existing:
+        return {"success": True, "idempotent": True, "transaction": existing}
+
+    # 2) Resolve store
+    query = {"mobile_number": body.mobile} if body.mobile else {"store_id": body.store_id}
+    store = await db.partner_stores.find_one(query, {"_id": 0})
+    if not store:
+        raise HTTPException(status_code=404, detail="Partner Store not registered")
+    if not store.get("is_active") or store.get("verification_status") != "verified":
+        raise HTTPException(status_code=403, detail="Partner Store is not active for payments")
+    store_id = store["store_id"]
+
+    # 3) Resolve user
+    user = await db.users.find_one({"uid": body.user_uid}, {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "prc_balance": 1, "role": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.get("role") == "partner_store":
+        raise HTTPException(status_code=403, detail="Partner Store accounts cannot make payments to other stores")
+    if user["uid"] == store.get("linked_user_uid"):
+        raise HTTPException(status_code=400, detail="Cannot pay to your own store")
+    balance = float(user.get("prc_balance") or 0)
+    if balance < body.prc_amount:
+        raise HTTPException(status_code=400, detail=f"Insufficient PRC balance (have {balance:.2f})")
+
+    # 4) Velocity limits — IST day window
+    from datetime import timedelta as _td
+    now = datetime.now(timezone.utc)
+    ist_now = now + _td(hours=5, minutes=30)
+    ist_midnight = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_start_utc_iso = (ist_midnight - _td(hours=5, minutes=30)).replace(tzinfo=timezone.utc).isoformat()
+
+    daily_pipe = [
+        {"$match": {"user_uid": body.user_uid, "status": "success", "created_at": {"$gte": day_start_utc_iso}}},
+        {"$group": {"_id": None, "total_prc": {"$sum": "$prc_amount"}}},
+    ]
+    daily_agg = await db.partner_store_txns.aggregate(daily_pipe).to_list(length=1)
+    daily_spent = daily_agg[0]["total_prc"] if daily_agg else 0.0
+    if daily_spent + body.prc_amount > MAX_USER_DAILY_PRC:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily limit exceeded — you've already paid {daily_spent:.2f} PRC today (cap {MAX_USER_DAILY_PRC:.0f})",
+        )
+
+    same_store_count = await db.partner_store_txns.count_documents({
+        "user_uid": body.user_uid,
+        "store_id": store_id,
+        "status": "success",
+        "created_at": {"$gte": day_start_utc_iso},
+    })
+    if same_store_count >= MAX_USER_STORE_DAILY_COUNT:
+        raise HTTPException(
+            status_code=429,
+            detail=f"You've already made {MAX_USER_STORE_DAILY_COUNT} payments to this store today. Try tomorrow.",
+        )
+
+    # 5) Atomic transfer — use find_one_and_update with balance guard for
+    #    user (single-doc atomic) + $inc for wallet + insert txn row.
+    #    A single-doc guard on the user prevents overdraw races.
+    now_iso = now.isoformat()
+    txn_id = f"PST-{uuid.uuid4().hex[:12].upper()}"
+
+    debit = await db.users.find_one_and_update(
+        {"uid": body.user_uid, "prc_balance": {"$gte": body.prc_amount}},
+        {"$inc": {"prc_balance": -body.prc_amount}, "$set": {"updated_at": now_iso}},
+        projection={"_id": 0, "prc_balance": 1, "name": 1, "mobile": 1},
+        return_document=True,
+    )
+    if not debit:
+        # Race with another concurrent debit — balance no longer sufficient
+        raise HTTPException(status_code=409, detail="Balance changed — please retry")
+
+    # Credit store wallet
+    await db.partner_store_wallets.update_one(
+        {"store_id": store_id},
+        {
+            "$inc": {
+                "prc_balance": body.prc_amount,
+                "lifetime_received_prc": body.prc_amount,
+                "txn_count": 1,
+            },
+            "$set": {"updated_at": now_iso},
+        },
+        upsert=True,
+    )
+
+    # Insert txn row
+    txn_doc = {
+        "txn_id": txn_id,
+        "client_txn_id": body.client_txn_id,
+        "store_id": store_id,
+        "store_name": store["business_name"],
+        "user_uid": body.user_uid,
+        "user_name": user.get("name") or "Customer",
+        "user_mobile": user.get("mobile"),
+        "prc_amount": float(body.prc_amount),
+        "remark": body.remark,
+        "status": "success",
+        "settlement_status": "pending",  # → 'requested' → 'settled'
+        "created_at": now_iso,
+    }
+    try:
+        await db.partner_store_txns.insert_one(txn_doc)
+    except Exception:
+        # Idempotency collision — refund user + return the existing row
+        await db.users.update_one({"uid": body.user_uid}, {"$inc": {"prc_balance": body.prc_amount}})
+        existing = await db.partner_store_txns.find_one({"client_txn_id": body.client_txn_id}, {"_id": 0})
+        return {"success": True, "idempotent": True, "transaction": existing}
+
+    # 6) Notifications
+    await db.notifications.insert_many([
+        {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": body.user_uid,
+            "user_uid": body.user_uid,
+            "type": "partner_store_payment_success",
+            "title": "✅ Payment Successful",
+            "message": f"You paid {body.prc_amount:.2f} PRC to {store['business_name']} (Store {store_id}).",
+            "created_at": now_iso,
+            "read": False,
+            "is_read": False,
+            "txn_id": txn_id,
+        },
+        {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": store["linked_user_uid"],
+            "user_uid": store["linked_user_uid"],
+            "type": "partner_store_payment_received",
+            "title": "💰 PRC Payment Received",
+            "message": (
+                f"You received {body.prc_amount:.2f} PRC from "
+                f"{(user.get('name') or 'Customer')[:1]}*** (mobile ending {(user.get('mobile') or '')[-4:]})."
+            ),
+            "created_at": now_iso,
+            "read": False,
+            "is_read": False,
+            "txn_id": txn_id,
+        },
+    ])
+
+    # Drop the txn doc's Mongo _id if attached in-place
+    txn_doc.pop("_id", None)
+    return {
+        "success": True,
+        "idempotent": False,
+        "transaction": txn_doc,
+        "new_user_balance": float(debit.get("prc_balance") or 0),
+    }
+
+
+@router.get("/user/{uid}/transactions")
+async def user_partner_store_transactions(
+    uid: str,
+    cursor: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """User's history of Partner Store payments."""
+    query: dict = {"user_uid": uid}
+    if cursor:
+        query["created_at"] = {"$lt": cursor}
+    docs = await db.partner_store_txns.find(query, {"_id": 0}).sort("created_at", -1).limit(limit + 1).to_list(length=limit + 1)
+    has_more = len(docs) > limit
+    docs = docs[:limit]
+    next_cursor = docs[-1]["created_at"] if (has_more and docs) else None
+    return {"success": True, "transactions": docs, "next_cursor": next_cursor, "has_more": has_more}
+
+
+# ═════════════════════════════════════════════════════════════════════
+# SLICE 3 — SETTLEMENT ENGINE (Store → Admin → Bank)
+# ═════════════════════════════════════════════════════════════════════
+# Reuses the existing `bank_transfer_requests` collection with
+# source_type='partner_store' + partner_store_id (Q5=n). Admin can view
+# these via /admin/bank-transfers with the source filter.
+
+class PartnerStoreSettlementRequest(BaseModel):
+    uid: str  # store's linked user uid (pstore-XXXXXX)
+    prc_amount: float = Field(..., gt=0, description="PRC amount to settle")
+    remark: Optional[str] = Field(None, max_length=200)
+
+
+@router.post("/settlement/request")
+async def partner_store_settlement_request(body: PartnerStoreSettlementRequest):
+    """
+    Partner Store requests settlement from its wallet balance.
+    Deducts from wallet.prc_balance → wallet.pending_settlement_prc,
+    creates a `bank_transfer_requests` row for admin approval.
+    """
+    user = await db.users.find_one({"uid": body.uid}, {"_id": 0, "role": 1, "partner_store_id": 1})
+    if not user or user.get("role") != "partner_store":
+        raise HTTPException(status_code=403, detail="Not a partner store account")
+    store_id = user.get("partner_store_id")
+    if not store_id:
+        raise HTTPException(status_code=500, detail="Store profile link missing")
+
+    store = await db.partner_stores.find_one({"store_id": store_id}, {"_id": 0})
+    if not store:
+        raise HTTPException(status_code=404, detail="Store profile not found")
+    if not store.get("is_active"):
+        raise HTTPException(status_code=403, detail="Store must be verified & active to request settlement")
+
+    wallet = await db.partner_store_wallets.find_one({"store_id": store_id}, {"_id": 0}) or {}
+    balance = float(wallet.get("prc_balance") or 0)
+    if body.prc_amount > balance:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Requested {body.prc_amount:.2f} exceeds wallet balance {balance:.2f}",
+        )
+
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    request_id = f"BTR-PSTORE-{uuid.uuid4().hex[:10].upper()}"
+
+    # Move funds from wallet.prc_balance → wallet.pending_settlement_prc atomically
+    moved = await db.partner_store_wallets.find_one_and_update(
+        {"store_id": store_id, "prc_balance": {"$gte": body.prc_amount}},
+        {
+            "$inc": {
+                "prc_balance": -body.prc_amount,
+                "pending_settlement_prc": body.prc_amount,
+            },
+            "$set": {"updated_at": now_iso},
+        },
+        return_document=True,
+    )
+    if not moved:
+        raise HTTPException(status_code=409, detail="Wallet balance changed — please retry")
+
+    # Compute INR amount using admin-configured rate (Q_E=e1)
+    rate_cfg = await db.app_settings.find_one({"_id": "prc_inr_rate"}, {"_id": 0, "value": 1})
+    prc_to_inr_rate = float(rate_cfg.get("value") or 1.0) if rate_cfg else 1.0
+    inr_amount = round(body.prc_amount * prc_to_inr_rate, 2)
+
+    # Create bank_transfer_requests row for admin
+    req_doc = {
+        "request_id": request_id,
+        "source_type": "partner_store",
+        "partner_store_id": store_id,
+        "user_id": body.uid,
+        "user_name": store["business_name"],
+        "user_phone": store["mobile_number"],
+        "prc_deducted": body.prc_amount,
+        "withdrawal_amount": inr_amount,
+        "prc_to_inr_rate": prc_to_inr_rate,
+        "account_holder_name": store["bank_account_holder"],
+        "account_number": store["bank_account_number"],
+        "ifsc_code": store["bank_ifsc"],
+        "bank_name": None,
+        "status": "pending",
+        "remark": body.remark,
+        "created_at": now_iso,
+        "updated_at": now_iso,
+    }
+    await db.bank_transfer_requests.insert_one(req_doc)
+
+    # Notification to store
+    await db.notifications.insert_one({
+        "notification_id": str(uuid.uuid4()),
+        "user_id": body.uid,
+        "user_uid": body.uid,
+        "type": "partner_store_settlement_requested",
+        "title": "⏳ Settlement Request Submitted",
+        "message": (
+            f"Your settlement request for {body.prc_amount:.2f} PRC "
+            f"(₹{inr_amount:.2f}) is queued for admin approval. "
+            f"Request ID: {request_id}"
+        ),
+        "created_at": now_iso,
+        "read": False,
+        "is_read": False,
+        "request_id": request_id,
+    })
+
+    req_doc.pop("_id", None)
+    return {"success": True, "request": req_doc}
+
+
+@router.get("/settlement/history/{uid}")
+async def partner_store_settlement_history(
+    uid: str,
+    cursor: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+):
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "role": 1, "partner_store_id": 1})
+    if not user or user.get("role") != "partner_store":
+        raise HTTPException(status_code=403, detail="Not a partner store account")
+    store_id = user.get("partner_store_id")
+
+    query: dict = {"source_type": "partner_store", "partner_store_id": store_id}
+    if cursor:
+        query["created_at"] = {"$lt": cursor}
+    docs = await db.bank_transfer_requests.find(query, {"_id": 0}).sort("created_at", -1).limit(limit + 1).to_list(length=limit + 1)
+    has_more = len(docs) > limit
+    docs = docs[:limit]
+    next_cursor = docs[-1]["created_at"] if (has_more and docs) else None
+    return {"success": True, "requests": docs, "next_cursor": next_cursor, "has_more": has_more}

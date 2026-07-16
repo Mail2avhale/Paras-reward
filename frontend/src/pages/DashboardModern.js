@@ -1044,6 +1044,42 @@ const DashboardModern = ({ user, onLogout }) => {
         }} />
       </div>
 
+      {/* Pay to Partner Store — v2.0 (Feb 2026) */}
+      <div className="px-5 mb-4" data-testid="dashboard-pay-partner-store-card">
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          onClick={() => navigate('/pay-partner-store')}
+          className="w-full rounded-xl p-4 relative overflow-hidden text-left"
+          style={{
+            background: 'linear-gradient(135deg, #064e3b 0%, #10b981 50%, #34d399 100%)',
+            border: '1px solid rgba(52, 211, 153, 0.4)',
+            boxShadow: '0 8px 25px -5px rgba(16, 185, 129, 0.30)'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-white font-bold text-sm">Pay to Partner Store</p>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/20 text-white">NEW</span>
+              </div>
+              <p className="text-emerald-100 text-[11px] mt-0.5 truncate">
+                Use PRC at verified local shops via mobile or Store ID
+              </p>
+            </div>
+            <svg className="w-4 h-4 text-white opacity-80" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+            </svg>
+          </div>
+        </motion.button>
+      </div>
+
       {/* Redeem Limit Card */}
       {redeemLimit && (
         <div className="px-5 mb-4" data-testid="dashboard-redeem-limit-card">

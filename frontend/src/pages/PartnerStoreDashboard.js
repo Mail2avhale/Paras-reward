@@ -16,6 +16,7 @@ import { API } from '../lib/api';
 import {
   Store, Wallet, TrendingUp, Clock, CheckCircle2,
   RefreshCw, LogOut, Copy, ShieldCheck, ShieldAlert,
+  Banknote, X,
 } from 'lucide-react';
 
 const inr = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
@@ -31,19 +32,26 @@ const fmtDate = (iso) => {
 export default function PartnerStoreDashboard({ user, onLogout }) {
   const [data, setData] = useState(null);
   const [txns, setTxns] = useState([]);
+  const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showSettleModal, setShowSettleModal] = useState(false);
+  const [settleAmount, setSettleAmount] = useState('');
+  const [settleRemark, setSettleRemark] = useState('');
+  const [submittingSettle, setSubmittingSettle] = useState(false);
 
   const loadAll = useCallback(async () => {
     if (!user?.uid) return;
     setRefreshing(true);
     try {
-      const [selfRes, txnRes] = await Promise.all([
+      const [selfRes, txnRes, settlementRes] = await Promise.all([
         axios.get(`${API}/v2/partner-stores/self/${user.uid}`),
         axios.get(`${API}/v2/partner-stores/self/${user.uid}/transactions?limit=20`),
+        axios.get(`${API}/v2/partner-stores/settlement/history/${user.uid}?limit=20`),
       ]);
       if (selfRes.data.success) setData(selfRes.data);
       if (txnRes.data.success) setTxns(txnRes.data.transactions || []);
+      if (settlementRes.data.success) setSettlements(settlementRes.data.requests || []);
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Failed to load dashboard');
     } finally {
@@ -53,6 +61,30 @@ export default function PartnerStoreDashboard({ user, onLogout }) {
   }, [user]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  const requestSettlement = async () => {
+    const amt = parseFloat(settleAmount);
+    if (!amt || amt <= 0) { toast.error('Enter a valid amount'); return; }
+    setSubmittingSettle(true);
+    try {
+      const res = await axios.post(`${API}/v2/partner-stores/settlement/request`, {
+        uid: user.uid,
+        prc_amount: amt,
+        remark: settleRemark || undefined,
+      });
+      if (res.data.success) {
+        toast.success(`Settlement of ${amt} PRC requested — admin will review`);
+        setShowSettleModal(false);
+        setSettleAmount('');
+        setSettleRemark('');
+        loadAll();
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Settlement request failed');
+    } finally {
+      setSubmittingSettle(false);
+    }
+  };
 
   const copyStoreId = () => {
     if (!data?.store?.store_id) return;
@@ -235,6 +267,19 @@ export default function PartnerStoreDashboard({ user, onLogout }) {
           </div>
         </div>
 
+        {/* Request Settlement Button */}
+        {isVerified && (
+          <button
+            onClick={() => setShowSettleModal(true)}
+            disabled={(wallet.prc_balance || 0) <= 0}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="ps-dash-request-settlement-btn"
+          >
+            <Banknote className="w-4 h-4" />
+            Request Settlement to Bank
+          </button>
+        )}
+
         {/* Recent Transactions */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden" data-testid="ps-dash-txns-card">
           <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
@@ -270,7 +315,100 @@ export default function PartnerStoreDashboard({ user, onLogout }) {
             </ul>
           )}
         </div>
+
+        {/* Settlement History */}
+        {settlements.length > 0 && (
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden" data-testid="ps-dash-settlements-card">
+            <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="font-bold text-white text-sm">Settlement History</h3>
+              <span className="text-[10px] text-slate-500">{settlements.length}</span>
+            </div>
+            <ul className="divide-y divide-slate-800">
+              {settlements.map((s) => (
+                <li key={s.request_id} className="px-4 py-3" data-testid={`ps-dash-settlement-${s.request_id}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white font-semibold text-sm tabular-nums">
+                      {prc(s.prc_deducted)} → ₹{Number(s.withdrawal_amount || 0).toLocaleString('en-IN')}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                      s.status === 'paid' ? 'bg-emerald-500/20 text-emerald-300' :
+                      s.status === 'pending' ? 'bg-amber-500/20 text-amber-300' :
+                      'bg-rose-500/20 text-rose-300'
+                    }`}>
+                      {s.status}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    {fmtDate(s.created_at)} · {s.request_id}
+                    {s.utr_number && <> · UTR {s.utr_number}</>}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
+
+      {/* Settlement Request Modal */}
+      {showSettleModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur grid place-items-center p-4"
+          onClick={() => setShowSettleModal(false)}
+          data-testid="ps-settle-modal"
+        >
+          <div
+            className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-white">Request Settlement</h3>
+              <button onClick={() => setShowSettleModal(false)} className="text-slate-400 hover:text-white" data-testid="ps-settle-modal-close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-slate-800/60 rounded-lg p-3 mb-3">
+              <p className="text-[10px] uppercase tracking-wider text-slate-400">Available Balance</p>
+              <p className="text-xl font-bold text-emerald-300 tabular-nums">{prc(wallet.prc_balance)}</p>
+            </div>
+
+            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Amount (PRC)</label>
+            <input
+              type="number"
+              min="1"
+              max={wallet.prc_balance || 0}
+              step="0.01"
+              value={settleAmount}
+              onChange={(e) => setSettleAmount(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-lg font-bold tabular-nums"
+              data-testid="ps-settle-amount-input"
+            />
+
+            <label className="block text-[11px] font-semibold text-slate-400 mb-1 mt-3">Note (optional)</label>
+            <input
+              type="text"
+              maxLength={200}
+              value={settleRemark}
+              onChange={(e) => setSettleRemark(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-sm"
+              data-testid="ps-settle-remark-input"
+            />
+
+            <p className="text-[11px] text-slate-500 mt-3">
+              Funds will be deducted from your wallet and queued for admin approval. On approval, the equivalent INR will be transferred to your registered bank account.
+            </p>
+
+            <button
+              onClick={requestSettlement}
+              disabled={submittingSettle || !settleAmount || parseFloat(settleAmount) <= 0}
+              className="w-full mt-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm disabled:opacity-60"
+              data-testid="ps-settle-submit-btn"
+            >
+              {submittingSettle ? 'Submitting…' : 'Submit Settlement Request'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

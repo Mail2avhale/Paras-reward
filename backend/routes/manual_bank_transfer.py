@@ -1419,8 +1419,13 @@ async def get_first_payout_queue(limit: int = Query(default=100, le=500)):
             lifetime_by_user[row["_id"]] = float(row.get("total") or 0)
 
     # 2) Fetch all pending requests, sort oldest-first (FIFO).
+    #    Exclude partner_store settlement requests — this queue is for
+    #    user first-payouts only (Paras Reward v2.0 spec, Feb 2026).
     pending = await db.bank_transfer_requests.find(
-        {"status": {"$in": ["pending", "processing"]}},
+        {
+            "status": {"$in": ["pending", "processing"]},
+            "source_type": {"$ne": "partner_store"},
+        },
         {"_id": 0},
     ).sort("created_at", 1).to_list(length=2000)
 
@@ -1510,6 +1515,47 @@ async def mark_request_paid(action: AdminActionRequest):
         )
         
         logging.info(f"[BANK TRANSFER] Marked PAID: {action.request_id} | Admin: {action.admin_id} | UTR: {action.utr_number}")
+
+        # Partner Store settlement hook (Feb 2026, v2.0) — when a
+        # partner-store settlement is paid, move funds from
+        # pending_settlement_prc → lifetime_settled_prc on the store wallet.
+        try:
+            if request.get("source_type") == "partner_store":
+                store_id_ = request.get("partner_store_id")
+                prc_amt_ = float(request.get("prc_deducted") or 0)
+                if store_id_ and prc_amt_ > 0:
+                    await db.partner_store_wallets.update_one(
+                        {"store_id": store_id_},
+                        {
+                            "$inc": {
+                                "pending_settlement_prc": -prc_amt_,
+                                "lifetime_settled_prc": prc_amt_,
+                            },
+                            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+                        },
+                    )
+                    logging.info(f"[PARTNER-STORE-SETTLEMENT] store={store_id_} settled {prc_amt_} PRC")
+                    # Notify store
+                    linked_uid = request.get("user_id")
+                    if linked_uid:
+                        await db.notifications.insert_one({
+                            "notification_id": __import__('uuid').uuid4().hex,
+                            "user_id": linked_uid,
+                            "user_uid": linked_uid,
+                            "type": "partner_store_settlement_completed",
+                            "title": "🏦 Settlement Completed",
+                            "message": (
+                                f"Your settlement of {prc_amt_:.2f} PRC "
+                                f"(₹{float(request.get('withdrawal_amount') or 0):.2f}) has been transferred. "
+                                f"UTR: {action.utr_number or '—'}"
+                            ),
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                            "read": False,
+                            "is_read": False,
+                            "request_id": action.request_id,
+                        })
+        except Exception as _e:
+            logging.warning(f"[PARTNER-STORE-SETTLEMENT] hook failed (non-fatal): {_e}")
 
         # PROGRESSIVE MIN-WITHDRAWAL (May 2026): every approved/paid redeem
         # raises the user's next minimum floor to amount × 1.5. Updated atomically
@@ -1610,8 +1656,43 @@ async def mark_request_failed(action: AdminActionRequest):
         # Refund PRC
         prc_to_refund = request.get("prc_deducted", 0)
         user_id = request.get("user_id")
-        
-        if prc_to_refund > 0:
+
+        # Partner Store settlement refund (Feb 2026, v2.0) — route the refund
+        # back to the store wallet instead of the user's PRC balance.
+        is_partner_store_settlement = request.get("source_type") == "partner_store"
+        credit_result = {"success": True, "txn_id": None}
+        if prc_to_refund > 0 and is_partner_store_settlement:
+            store_id_ = request.get("partner_store_id")
+            if store_id_:
+                await db.partner_store_wallets.update_one(
+                    {"store_id": store_id_},
+                    {
+                        "$inc": {
+                            "pending_settlement_prc": -prc_to_refund,
+                            "prc_balance": prc_to_refund,
+                        },
+                        "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+                    },
+                )
+                # Notify the store
+                await db.notifications.insert_one({
+                    "notification_id": __import__('uuid').uuid4().hex,
+                    "user_id": user_id,
+                    "user_uid": user_id,
+                    "type": "partner_store_settlement_rejected",
+                    "title": "❌ Settlement Rejected",
+                    "message": (
+                        f"Your settlement request has been rejected. "
+                        f"{prc_to_refund:.2f} PRC returned to your wallet. "
+                        f"Reason: {action.remark or 'Rejected by admin'}"
+                    ),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "read": False,
+                    "is_read": False,
+                    "request_id": action.request_id,
+                })
+                logging.info(f"[PARTNER-STORE-SETTLEMENT] refunded {prc_to_refund} PRC → store {store_id_}")
+        elif prc_to_refund > 0:
             credit_result = WalletServiceV2.credit(
                 user_id=user_id,
                 amount=prc_to_refund,
@@ -1620,7 +1701,7 @@ async def mark_request_failed(action: AdminActionRequest):
                 reference=action.request_id,
                 service_type="bank_transfer_refund"
             )
-            
+
             if not credit_result.get("success"):
                 logging.error(f"Failed to refund PRC for {action.request_id}: {credit_result}")
                 raise HTTPException(status_code=500, detail="Failed to refund PRC")

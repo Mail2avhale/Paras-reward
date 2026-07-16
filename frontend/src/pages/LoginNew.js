@@ -264,6 +264,8 @@ const LoginNew = ({ onLogin }) => {
         setTimeout(() => navigate('/outlet/dashboard'), 1500);
       } else if (response.data.role === 'delivery') {
         setTimeout(() => navigate('/delivery/dashboard'), 1500);
+      } else if (response.data.role === 'partner_store') {
+        setTimeout(() => navigate('/partner-store/dashboard'), 1500);
       } else {
         setTimeout(() => navigate('/dashboard'), 1500);
       }
