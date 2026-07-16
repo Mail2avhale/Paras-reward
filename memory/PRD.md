@@ -1221,3 +1221,48 @@ All ads dismissible; each placement independently manageable; zero cross-placeme
 ### Backlog
 - 🟡 P2 — Admin popup editor UI: add "Placement" select dropdown (currently admin must POST with `placement` field manually or defaults to `app_startup`)
 - 🟡 P2 — Ad performance analytics (impressions, clicks, dismissals per placement)
+
+## 2026-02-16 (later) — Partner Store v2.0 SLICE 4 + 5 COMPLETE
+
+### Slice 4 — Audit Log + Fraud Monitoring (Backend)
+- **New collection**: `partner_store_audit_log` — append-only compliance trail
+- **New helper**: `_audit_log(event_type, user_uid, store_id, severity, details)` in `partner_store.py` line 360
+- **Event types written**:
+  - `payment_success` (severity: info) — every successful payment
+  - `payment_rejected_insufficient_balance` (severity: info) — 400 rejects
+  - `fraud_daily_limit_exceeded` (severity: warning) — >₹20k/user/day 429 rejects
+  - `fraud_velocity_same_store_exceeded` (severity: warning) — 4th+ payment same user/store/day 429 rejects
+- **New admin endpoint**: `GET /api/v2/partner-stores/admin/audit-log`
+  - Query filters: `event_type`, `severity`, `user_uid`, `store_id`, cursor pagination
+  - Returns `count_by_event` aggregate summary + events[]
+  - Requires `X-Admin-Pin` header
+
+### Slice 5 — Reports + CSV Export
+- **`GET /api/v2/partner-stores/admin/reports/summary`** — admin dashboard analytics:
+  - Payments: `total_prc`, `txn_count`, `unique_stores`, `unique_users`, `avg_prc`
+  - Settlements: `{status: {count, sum_prc, sum_inr}}`
+  - `fraud_events`, `stores_by_status`
+  - Optional `?from=ISO&to=ISO` date window
+- **`GET /api/v2/partner-stores/admin/reports/csv?type=payments|settlements|fraud`** — CSV export:
+  - Payments: 10-column export (txn_id, dates, store, user, amount, remark, status)
+  - Settlements: 14-column export (request_id, bank details, status, UTR)
+  - Fraud: severity in [warning, critical] only, JSON-stringified details
+  - Content-Disposition: `attachment; filename="..."`
+  - RFC-4180 compliant escaping via `_csv_row()` helper
+- **`GET /api/v2/partner-stores/self/{uid}/report/csv`** — store's own GST/accounting export
+  - Role-guarded (403 for non-partner_store users)
+  - 7-column: txn_id, date, prc_amount, user, mobile, remark, settlement_status
+
+### Critical bug FIXED by testing agent (RCA in iteration_270.json)
+- **Route ordering collision**: `/admin/{store_id}` catch-all was declared BEFORE `/admin/audit-log`, causing FastAPI to match audit-log requests to the catch-all and 404.
+- Fix: moved `/admin/{store_id}` to end of file. NEVER re-add new `/admin/{X}` routes below it.
+
+### Testing (Iteration 270)
+- **Backend: 62/62 pytest PASS (100%)** — combines new Slice 4/5 (28 cases) + iteration 269 (34 cases)
+- Test file: `/app/backend/tests/test_partner_store_v2_slice_4_5.py`
+- Full regression pass: Community Leadership, Paras Mall grid, First Payout Queue, Ad Banners
+
+### Code review notes (non-blocking, for future)
+- Consider index on `partner_store_audit_log.{severity: 1, created_at: -1}` when log grows > 10k rows
+- CSV export loads all rows to memory — swap to StreamingResponse for >50k row exports
+- Consider adding `severity: critical` events for repeated fraud from same user (future automated detection)
