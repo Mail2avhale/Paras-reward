@@ -70,16 +70,26 @@ async def _allocate_store_id() -> str:
     """
     Atomically allocate the next sequential 6-digit Store ID (Q_A=a1).
     Uses a counters document — safe under concurrent creates.
+
+    Race-safety: seed the counter to STORE_ID_START-1 on first invocation
+    so $inc always returns >= STORE_ID_START. This eliminates the
+    theoretical window where two concurrent creates could get low IDs
+    (1, 2, ...) before the bump-to-100001 fixup ran.
     """
+    # First-time seed — set counter to STORE_ID_START-1 only if missing
+    await db.counters.update_one(
+        {"_id": "partner_store_id_seq"},
+        {"$setOnInsert": {"value": STORE_ID_START - 1}},
+        upsert=True,
+    )
     doc = await db.counters.find_one_and_update(
         {"_id": "partner_store_id_seq"},
         {"$inc": {"value": 1}},
-        upsert=True,
         return_document=True,  # pymongo.ReturnDocument.AFTER
     )
-    value = doc.get("value", 0)
+    value = doc.get("value", STORE_ID_START)
     if value < STORE_ID_START:
-        # First allocation — bump to start value.
+        # Defensive fallback (should not happen with seed above)
         await db.counters.update_one(
             {"_id": "partner_store_id_seq"},
             {"$set": {"value": STORE_ID_START}},
@@ -213,7 +223,7 @@ async def admin_create_partner_store(body: PartnerStoreCreateRequest):
         "role": "partner_store",
         "partner_store_id": store_id,
         "subscription_plan": "partner_store",
-        "kyc_status": "verified" if False else "pending",
+        "kyc_status": "pending",
         "created_at": now_iso,
         "updated_at": now_iso,
     })
@@ -645,8 +655,17 @@ async def pay_partner_store(body: PartnerStorePayRequest):
     try:
         await db.partner_store_txns.insert_one(txn_doc)
     except Exception:
-        # Idempotency collision — refund user + return the existing row
+        # Idempotency collision — refund user AND revert wallet credit
+        # (otherwise the store retains a phantom credit).
         await db.users.update_one({"uid": body.user_uid}, {"$inc": {"prc_balance": body.prc_amount}})
+        await db.partner_store_wallets.update_one(
+            {"store_id": store_id},
+            {"$inc": {
+                "prc_balance": -body.prc_amount,
+                "lifetime_received_prc": -body.prc_amount,
+                "txn_count": -1,
+            }},
+        )
         existing = await db.partner_store_txns.find_one({"client_txn_id": body.client_txn_id}, {"_id": 0})
         return {"success": True, "idempotent": True, "transaction": existing}
 

@@ -1099,3 +1099,43 @@ Full rename of Partner Program → Community Leadership Program + Phase C user d
 
 ### Test Credentials
 - Sample store: Store ID `100001`, mobile `8888800001`, PIN `999888` (Sharma Kirana Store)
+
+## 2026-02-16 (later) — Partner Store v2.0 SLICES 2 + 3 COMPLETE + Full E2E Test
+
+### Slice 2 — Payment Engine
+- `POST /api/v2/partner-stores/pay/lookup` — resolve store by mobile OR store_id
+- `POST /api/v2/partner-stores/pay` — atomic PRC transfer (user debit → store credit → txn insert → notifications). Idempotent via `client_txn_id`.
+- Fraud limits per Q_C=c2: ₹5000/txn · ₹20000/user/day · 3 payments/user/store/day (IST-bounded)
+- `GET /user/{uid}/transactions` — user's Partner Store payment history
+
+### Slice 3 — Settlement Engine
+- `POST /api/v2/partner-stores/settlement/request` — moves wallet.prc_balance → pending_settlement_prc, creates `bank_transfer_requests{source_type: 'partner_store', partner_store_id}` for admin approval.
+- Admin approval hook in `manual_bank_transfer.py:mark_request_paid` — on paid: pending → lifetime_settled + "Settlement Completed" notification. On rejected: pending → prc_balance refund + "Settlement Rejected" notification.
+- Reuses existing `/admin/bank-transfers` panel with source filter.
+
+### Frontend
+- `/pay-partner-store` (`PayPartnerStore.js`) — user-facing payment UI: lookup → amount + quick buttons → confirm → success screen with receipt
+- `PartnerStoreDashboard.js` — added Request Settlement button + modal + Settlement History section
+- `DashboardModern.js` — new "Pay to Partner Store" card (green gradient) below Mining widget
+- `App.js` — route `/pay-partner-store`, guarded (not partner_store role)
+
+### Testing (Iteration 269 — Comprehensive Full-Session Test)
+- **Backend: 100% (34/34 pytest)** — file: `/app/backend/tests/test_partner_store_v2_complete.py`
+- **Frontend: 100%** — all testids + Playwright flows verified
+- **Regression pass**: Community Leadership Phase C, Paras Mall 1-col grid, First Payout Queue all working
+
+### 3 Blockers Fixed by Testing Agent
+1. **Partner Store login blocked** — `admin_create_partner_store` didn't set `pin_migrated:True` + `password` fields → LoginNew.js forced /set-new-pin instead of PIN login. FIXED.
+2. **Wrong redirect after login** — `LoginNew.js:handleLoginSubmit` had hardcoded role routing missing `partner_store` case → landed on /dashboard. FIXED with explicit branch → `/partner-store/dashboard`.
+3. **First Payout Queue leaked partner store rows** — endpoint didn't filter `source_type='partner_store'`. FIXED with `$ne` filter.
+
+### 3 Code Review Cleanups (Main Agent)
+- Removed dead-branch ternary `kyc_status: 'verified' if False else 'pending'` (`partner_store.py`)
+- Seeded `partner_store_id_seq` counter with `$setOnInsert: STORE_ID_START-1` to eliminate first-allocation race (`_allocate_store_id`)
+- Fixed idempotency rollback to also revert wallet credit (not just user debit) — prevents phantom store credit on txn insert collision
+
+### Current Backlog
+- 🟡 P2 — Slice 4: Fraud detection (rate limits done; velocity monitoring TBD), audit log, notification templates
+- 🟡 P2 — Slice 5: Reports + CSV export + 10k-scale performance verification
+- 🟡 P2 — FIFO reward-ceiling enforcement (Community Leadership)
+- 🟡 P2 — Legacy `/api/api/` double-prefix cleanup in other files
