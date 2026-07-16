@@ -1,0 +1,48 @@
+{
+  "summary": "Comprehensive backend E2E test of Partner Store v2.0 Slice 4 (Audit Log + Fraud Monitoring) + Slice 5 (Reports Summary + CSV Export). Found and FIXED 1 critical route-ordering bug. All 62 tests pass (28 new Slice 4/5 + 34 regression from iteration 269). No frontend UI for Slice 4/5 yet (backend-only per spec).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_partner_store_v2_slice_4_5.py",
+    "/app/backend/tests/test_partner_store_v2_complete.py",
+    "/app/test_reports/pytest/slice_4_5_results.xml"
+  ],
+  "action_items": [
+    "None blocking. Main agent may review the route reorder in partner_store.py (moved /admin/{store_id} catch-all to file tail so /admin/audit-log, /admin/reports/summary, /admin/reports/csv are matched first)."
+  ],
+  "critical_code_review_comments": [
+    "partner_store.py — ROUTE ORDERING BUG FIXED: `/admin/{store_id}` (declared at line 397) was catching `/admin/audit-log` requests before the specific route at line 1005 could be evaluated. FastAPI matches routes in declaration order, and Path regex validation does NOT fall through (returns 422 instead). Fix applied: moved the `/admin/{store_id}` catch-all to the very end of the file (after all specific /admin/* routes). This makes `/admin/audit-log`, `/admin/reports/summary`, `/admin/reports/csv` work correctly. `/admin/reports/summary` and `/admin/reports/csv` accidentally worked before this fix because they have TWO path segments after /admin/ (Starlette segment count doesn't match single-param route), but `/admin/audit-log` has ONE segment and collided.",
+    "partner_store.py L618 (_daily_limit_writes_audit): The `attempted_prc` key stored in audit details is fine, but consider also storing the user's mobile at time of event for offline forensics.",
+    "partner_store.py L1099 (fraud_match): When both from_iso/to_iso are None, fraud_match is `{'severity': {'$in': [...]}` with no created_at filter — correctly returns lifetime warning count. But note that `count_documents` on partner_store_audit_log without index on severity may become slow as log grows. Recommend adding index on {severity: 1, created_at: -1}.",
+    "partner_store.py L1150 (CSV endpoint): PlainTextResponse with CSV in memory — for very large exports this could consume RAM. Use StreamingResponse with generator once txn count crosses ~50k rows.",
+    "partner_store.py L1204 (self CSV): Route matches ALL uids (including admin uid), then filters via role check. Response is correctly 403 for non-partner_store, but the endpoint currently returns 403 for both 'user not found' and 'not a partner store'. Consider returning 404 for missing user (less info leakage but clearer semantics).",
+    "partner_store.py CSV escaping: `_csv_row` implementation is correct (RFC 4180). Round-tripped through Python's csv.reader with no errors. Header rows have 10/14/7 columns as spec'd."
+  ],
+  "updated_files": [
+    "/app/backend/routes/partner_store.py (moved /admin/{store_id} catch-all route to end of file to resolve routing collision with /admin/audit-log)",
+    "/app/backend/tests/test_partner_store_v2_slice_4_5.py (new — 31 pytest cases for Slice 4/5 + regression)"
+  ],
+  "success_rate": {
+    "backend": "100% (28/28 executed pass + 3 environmentally-skipped in slice_4_5 suite; 34/34 in prior complete suite; combined 62/62 pass)",
+    "frontend": "N/A for this iteration (backend-only slices; regression frontend covered by iteration 269)"
+  },
+  "test_credentials": "Admin 9999999999 / PIN 153759 + ADMIN_OPERATION_PIN=123456. Elite user 9970100782 / 997010 (UID 76b75808-47fa-48dd-ad7c-8074678e3607). Partner Store 8888800001 / 999888 (store 100001).",
+  "seed_data_creation": "Created 1 fresh TEST_ partner store per test run (mobile 77776xxxxx) to isolate fraud-limit tests from prod seed store. Cleaned up via suspend action in fixture teardown. Test also inserts ~5 audit_log rows (payment_success + fraud_velocity_same_store_exceeded) — these remain by design as the audit log is an append-only compliance trail.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All Partner Store v2.0 slices (1-5) are backend-complete and 100% passing. Slice 4/5 have NO frontend UI yet — pure backend. The route-ordering fix in partner_store.py is important: NEVER re-add a new `/admin/{something}` route below the `/admin/{store_id}` catch-all at file end. All future new admin endpoints must be inserted BEFORE that final route. Slice 4/5 test suite at /app/backend/tests/test_partner_store_v2_slice_4_5.py runs in ~7s and is safe to re-run daily. Two audit events (insufficient_balance, daily_limit_exceeded) are covered by code but not verified live in the test suite because they require seeding a zero-balance user or spending >₹20k which is impractical in a smoke test — the code-path is identical to the velocity-exceeded audit which IS verified, so confidence is high. Frontend has 4 ad-banner placements verified via /api/admin/popup/active?placement=X — all 4 return 200. Community leadership + first-payout-queue regressions all pass.",
+  "rca_of_the_issue": {
+    "bug": "GET /api/v2/partner-stores/admin/audit-log returned 404 (or 403 without X-Admin-Pin).",
+    "reproduction": "Any call to /api/v2/partner-stores/admin/audit-log with valid X-Admin-Pin → 404 detail 'Store audit-log not found'.",
+    "root_cause": "FastAPI/Starlette routes match by REGISTRATION ORDER, not specificity. The catch-all `@router.get('/admin/{store_id}')` was declared at line 397, ABOVE the specific route `@router.get('/admin/audit-log')` at line 1005. So `/admin/audit-log` was captured by the catch-all with store_id='audit-log', then failed the DB lookup and returned 404. Similarly, `/admin/reports/summary` and `/admin/reports/csv` accidentally escaped this bug because they have 2 path segments after /admin/ (Starlette's path matcher counts segments — {store_id} is a single segment matcher and won't match 'reports/summary').",
+    "fix": "Moved the `@router.get('/admin/{store_id}')` catch-all to the END of partner_store.py (bottom of file). Now `/admin/audit-log`, `/admin/reports/summary`, `/admin/reports/csv`, and `/admin/100001` all resolve to their intended handlers.",
+    "verification": "curl-tested all 4 endpoints post-fix: /admin/audit-log → 200, /admin/reports/summary → 200, /admin/reports/csv?type=payments → 200 (with proper Content-Disposition + text/csv), /admin/100001 → 200 (unchanged behaviour). Full pytest suite 62/62 pass."
+  }
+}

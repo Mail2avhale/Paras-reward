@@ -394,17 +394,9 @@ async def admin_list_partner_stores(
     }
 
 
-@router.get("/admin/{store_id}")
-async def admin_get_partner_store_detail(
-    store_id: str,
-    x_admin_pin: Optional[str] = Header(None, alias="X-Admin-Pin"),
-):
-    _require_admin_pin(x_admin_pin)
-    store = await db.partner_stores.find_one({"store_id": store_id}, {"_id": 0})
-    if not store:
-        raise HTTPException(status_code=404, detail=f"Store {store_id} not found")
-    wallet = await db.partner_store_wallets.find_one({"store_id": store_id}, {"_id": 0}) or {}
-    return {"success": True, "store": store, "wallet": wallet}
+# NOTE: `@router.get("/admin/{store_id}")` catch-all route is declared at the
+# end of this file so that specific admin sub-routes (like /admin/audit-log,
+# /admin/reports/summary, /admin/reports/csv) are matched first.
 
 
 # ═════════════════════════════════════════════════════════════════════
@@ -508,6 +500,30 @@ MAX_USER_DAILY_PRC = 20000.0
 MAX_USER_STORE_DAILY_COUNT = 3
 
 
+async def _audit_log(
+    event_type: str,
+    user_uid: Optional[str] = None,
+    store_id: Optional[str] = None,
+    severity: str = "info",
+    details: Optional[dict] = None,
+) -> None:
+    """Append a row to `partner_store_audit_log` — used for fraud
+    monitoring, admin ops, and compliance trail (Slice 4)."""
+    try:
+        await db.partner_store_audit_log.insert_one({
+            "event_id": str(uuid.uuid4()),
+            "event_type": event_type,
+            "severity": severity,       # info | warning | critical
+            "user_uid": user_uid,
+            "store_id": store_id,
+            "details": details or {},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as _e:
+        import logging as _log
+        _log.warning(f"[audit_log] {event_type}: {_e}")
+
+
 class PartnerStoreLookupRequest(BaseModel):
     mobile: Optional[str] = Field(None, pattern=r"^\d{10}$")
     store_id: Optional[str] = Field(None, pattern=r"^\d{6}$")
@@ -574,6 +590,8 @@ async def pay_partner_store(body: PartnerStorePayRequest):
         raise HTTPException(status_code=400, detail="Cannot pay to your own store")
     balance = float(user.get("prc_balance") or 0)
     if balance < body.prc_amount:
+        await _audit_log("payment_rejected_insufficient_balance", user_uid=body.user_uid, store_id=store_id,
+                         severity="info", details={"attempted_prc": body.prc_amount, "balance": balance})
         raise HTTPException(status_code=400, detail=f"Insufficient PRC balance (have {balance:.2f})")
 
     # 4) Velocity limits — IST day window
@@ -590,6 +608,10 @@ async def pay_partner_store(body: PartnerStorePayRequest):
     daily_agg = await db.partner_store_txns.aggregate(daily_pipe).to_list(length=1)
     daily_spent = daily_agg[0]["total_prc"] if daily_agg else 0.0
     if daily_spent + body.prc_amount > MAX_USER_DAILY_PRC:
+        await _audit_log("fraud_daily_limit_exceeded", user_uid=body.user_uid, store_id=store_id,
+                         severity="warning",
+                         details={"attempted_prc": body.prc_amount, "already_spent_today": daily_spent,
+                                  "cap": MAX_USER_DAILY_PRC})
         raise HTTPException(
             status_code=429,
             detail=f"Daily limit exceeded — you've already paid {daily_spent:.2f} PRC today (cap {MAX_USER_DAILY_PRC:.0f})",
@@ -602,6 +624,10 @@ async def pay_partner_store(body: PartnerStorePayRequest):
         "created_at": {"$gte": day_start_utc_iso},
     })
     if same_store_count >= MAX_USER_STORE_DAILY_COUNT:
+        await _audit_log("fraud_velocity_same_store_exceeded", user_uid=body.user_uid, store_id=store_id,
+                         severity="warning",
+                         details={"already_paid_today_to_store": same_store_count,
+                                  "cap": MAX_USER_STORE_DAILY_COUNT})
         raise HTTPException(
             status_code=429,
             detail=f"You've already made {MAX_USER_STORE_DAILY_COUNT} payments to this store today. Try tomorrow.",
@@ -801,6 +827,12 @@ async def pay_partner_store(body: PartnerStorePayRequest):
         import logging as _log
         _log.warning(f"[PARTNER-STORE] community forum post failed (non-fatal): {_e}")
 
+    # 8) Audit log — successful payment (Slice 4)
+    await _audit_log("payment_success", user_uid=body.user_uid, store_id=store_id,
+                     severity="info",
+                     details={"txn_id": txn_id, "prc_amount": float(body.prc_amount),
+                              "store_name": store["business_name"], "remark": body.remark})
+
     # Drop the txn doc's Mongo _id if attached in-place
     txn_doc.pop("_id", None)
     return {
@@ -956,3 +988,253 @@ async def partner_store_settlement_history(
     docs = docs[:limit]
     next_cursor = docs[-1]["created_at"] if (has_more and docs) else None
     return {"success": True, "requests": docs, "next_cursor": next_cursor, "has_more": has_more}
+
+
+# ═════════════════════════════════════════════════════════════════════
+# SLICE 4 — FRAUD MONITORING + AUDIT LOG (Admin)
+# ═════════════════════════════════════════════════════════════════════
+
+@router.get("/admin/audit-log")
+async def admin_audit_log(
+    x_admin_pin: Optional[str] = Header(None, alias="X-Admin-Pin"),
+    event_type: Optional[str] = Query(None, description="Filter by event_type (fraud_daily_limit_exceeded, fraud_velocity_same_store_exceeded, payment_rejected_insufficient_balance, payment_success)"),
+    severity: Optional[str] = Query(None, description="info | warning | critical"),
+    user_uid: Optional[str] = Query(None),
+    store_id: Optional[str] = Query(None),
+    cursor: Optional[str] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+):
+    """Admin-only audit log query — used by fraud monitoring dashboard."""
+    _require_admin_pin(x_admin_pin)
+
+    query: dict = {}
+    if event_type:
+        query["event_type"] = event_type
+    if severity:
+        query["severity"] = severity
+    if user_uid:
+        query["user_uid"] = user_uid
+    if store_id:
+        query["store_id"] = store_id
+    if cursor:
+        query["created_at"] = {"$lt": cursor}
+
+    docs = await db.partner_store_audit_log.find(query, {"_id": 0}).sort("created_at", -1).limit(limit + 1).to_list(length=limit + 1)
+    has_more = len(docs) > limit
+    docs = docs[:limit]
+    next_cursor = docs[-1]["created_at"] if (has_more and docs) else None
+
+    # Summary aggregate
+    summary_pipe = [{"$group": {"_id": "$event_type", "count": {"$sum": 1}}}]
+    by_event = {row["_id"]: row["count"] async for row in db.partner_store_audit_log.aggregate(summary_pipe)}
+
+    return {
+        "success": True,
+        "events": docs,
+        "next_cursor": next_cursor,
+        "has_more": has_more,
+        "count_by_event": by_event,
+    }
+
+
+# ═════════════════════════════════════════════════════════════════════
+# SLICE 5 — REPORTS + CSV EXPORT
+# ═════════════════════════════════════════════════════════════════════
+
+@router.get("/admin/reports/summary")
+async def admin_reports_summary(
+    x_admin_pin: Optional[str] = Header(None, alias="X-Admin-Pin"),
+    from_iso: Optional[str] = Query(None, alias="from"),
+    to_iso: Optional[str] = Query(None, alias="to"),
+):
+    """
+    Admin dashboard summary: total collection, txn count, unique stores/users,
+    average txn amount, fraud events, settlement stats within the given window.
+    """
+    _require_admin_pin(x_admin_pin)
+
+    match_stage: dict = {}
+    if from_iso or to_iso:
+        match_stage["created_at"] = {}
+        if from_iso:
+            match_stage["created_at"]["$gte"] = from_iso
+        if to_iso:
+            match_stage["created_at"]["$lte"] = to_iso
+
+    # Payment aggregation
+    pay_pipe = []
+    if match_stage:
+        pay_pipe.append({"$match": {**match_stage, "status": "success"}})
+    else:
+        pay_pipe.append({"$match": {"status": "success"}})
+    pay_pipe.append({"$group": {
+        "_id": None,
+        "total_prc": {"$sum": "$prc_amount"},
+        "txn_count": {"$sum": 1},
+        "unique_stores": {"$addToSet": "$store_id"},
+        "unique_users": {"$addToSet": "$user_uid"},
+        "avg_prc": {"$avg": "$prc_amount"},
+    }})
+    pay_res = await db.partner_store_txns.aggregate(pay_pipe).to_list(length=1)
+    pay = pay_res[0] if pay_res else {}
+
+    # Settlement aggregation
+    settle_match: dict = {"source_type": "partner_store"}
+    if match_stage:
+        settle_match["created_at"] = match_stage["created_at"]
+    settle_pipe = [{"$match": settle_match},
+                   {"$group": {"_id": "$status", "sum_prc": {"$sum": "$prc_deducted"}, "sum_inr": {"$sum": "$withdrawal_amount"}, "count": {"$sum": 1}}}]
+    settle_by_status = {row["_id"]: {"count": row["count"], "sum_prc": row["sum_prc"], "sum_inr": row["sum_inr"]}
+                        async for row in db.bank_transfer_requests.aggregate(settle_pipe)}
+
+    # Fraud aggregation
+    fraud_match = dict(match_stage)
+    fraud_match["severity"] = {"$in": ["warning", "critical"]}
+    fraud_count = await db.partner_store_audit_log.count_documents(fraud_match)
+
+    # Store status counts
+    store_status = {row["_id"]: row["count"]
+                    async for row in db.partner_stores.aggregate([{"$group": {"_id": "$verification_status", "count": {"$sum": 1}}}])}
+
+    return {
+        "success": True,
+        "range": {"from": from_iso, "to": to_iso},
+        "payments": {
+            "total_prc": pay.get("total_prc", 0),
+            "txn_count": pay.get("txn_count", 0),
+            "unique_stores": len(pay.get("unique_stores", [])),
+            "unique_users": len(pay.get("unique_users", [])),
+            "avg_prc": round(pay.get("avg_prc") or 0, 2),
+        },
+        "settlements": settle_by_status,
+        "fraud_events": fraud_count,
+        "stores_by_status": store_status,
+    }
+
+
+def _csv_row(cells) -> str:
+    """Escape a CSV cell (quote if contains comma / quote / newline)."""
+    out = []
+    for c in cells:
+        s = "" if c is None else str(c)
+        if any(ch in s for ch in [",", '"', "\n", "\r"]):
+            s = '"' + s.replace('"', '""') + '"'
+        out.append(s)
+    return ",".join(out)
+
+
+@router.get("/admin/reports/csv")
+async def admin_reports_csv(
+    x_admin_pin: Optional[str] = Header(None, alias="X-Admin-Pin"),
+    report_type: str = Query(..., pattern=r"^(payments|settlements|fraud)$", alias="type"),
+    from_iso: Optional[str] = Query(None, alias="from"),
+    to_iso: Optional[str] = Query(None, alias="to"),
+    limit: int = Query(10000, ge=1, le=100000),
+):
+    """
+    Export CSV for admin — three report types:
+      • payments — all user→store payments in window
+      • settlements — all partner-store settlement requests
+      • fraud — audit log events (warning/critical)
+    Streams a plain-text CSV response.
+    """
+    _require_admin_pin(x_admin_pin)
+    from fastapi.responses import PlainTextResponse
+
+    match: dict = {}
+    if from_iso or to_iso:
+        match["created_at"] = {}
+        if from_iso:
+            match["created_at"]["$gte"] = from_iso
+        if to_iso:
+            match["created_at"]["$lte"] = to_iso
+
+    if report_type == "payments":
+        docs = await db.partner_store_txns.find({**match, "status": "success"}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(length=limit)
+        header = ["txn_id", "created_at", "store_id", "store_name", "user_uid", "user_name", "user_mobile", "prc_amount", "remark", "settlement_status"]
+        lines = [_csv_row(header)]
+        for d in docs:
+            lines.append(_csv_row([d.get(k) for k in header]))
+    elif report_type == "settlements":
+        docs = await db.bank_transfer_requests.find({**match, "source_type": "partner_store"}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(length=limit)
+        header = ["request_id", "created_at", "partner_store_id", "user_name", "user_phone", "prc_deducted", "withdrawal_amount", "prc_to_inr_rate", "account_holder_name", "account_number", "ifsc_code", "status", "utr_number", "remark"]
+        lines = [_csv_row(header)]
+        for d in docs:
+            lines.append(_csv_row([d.get(k) for k in header]))
+    else:  # fraud
+        docs = await db.partner_store_audit_log.find({**match, "severity": {"$in": ["warning", "critical"]}}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(length=limit)
+        header = ["event_id", "created_at", "event_type", "severity", "user_uid", "store_id", "details"]
+        lines = [_csv_row(header)]
+        for d in docs:
+            details_str = ""
+            try:
+                import json as _json
+                details_str = _json.dumps(d.get("details") or {})
+            except Exception:
+                details_str = str(d.get("details") or "")
+            lines.append(_csv_row([d.get("event_id"), d.get("created_at"), d.get("event_type"),
+                                   d.get("severity"), d.get("user_uid"), d.get("store_id"), details_str]))
+
+    csv_body = "\n".join(lines) + "\n"
+    filename = f"partner_store_{report_type}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
+    return PlainTextResponse(
+        content=csv_body,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/self/{uid}/report/csv")
+async def store_self_report_csv(
+    uid: str,
+    from_iso: Optional[str] = Query(None, alias="from"),
+    to_iso: Optional[str] = Query(None, alias="to"),
+    limit: int = Query(5000, ge=1, le=50000),
+):
+    """Store's own transaction CSV export — useful for GST filing / accounting."""
+    from fastapi.responses import PlainTextResponse
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "role": 1, "partner_store_id": 1})
+    if not user or user.get("role") != "partner_store":
+        raise HTTPException(status_code=403, detail="Not a partner store account")
+    store_id = user.get("partner_store_id")
+
+    match: dict = {"store_id": store_id, "status": "success"}
+    if from_iso or to_iso:
+        match["created_at"] = {}
+        if from_iso:
+            match["created_at"]["$gte"] = from_iso
+        if to_iso:
+            match["created_at"]["$lte"] = to_iso
+
+    docs = await db.partner_store_txns.find(match, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(length=limit)
+    header = ["txn_id", "created_at", "prc_amount", "user_name", "user_mobile", "remark", "settlement_status"]
+    lines = [_csv_row(header)]
+    for d in docs:
+        lines.append(_csv_row([d.get(k) for k in header]))
+
+    csv_body = "\n".join(lines) + "\n"
+    filename = f"store_{store_id}_txns_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
+    return PlainTextResponse(
+        content=csv_body,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+
+# ═════════════════════════════════════════════════════════════════════
+# CATCH-ALL ADMIN DETAIL ROUTE — MUST BE LAST so specific /admin/*
+# routes (audit-log, reports/summary, reports/csv) match first.
+# ═════════════════════════════════════════════════════════════════════
+
+@router.get("/admin/{store_id}")
+async def admin_get_partner_store_detail(
+    store_id: str,
+    x_admin_pin: Optional[str] = Header(None, alias="X-Admin-Pin"),
+):
+    _require_admin_pin(x_admin_pin)
+    store = await db.partner_stores.find_one({"store_id": store_id}, {"_id": 0})
+    if not store:
+        raise HTTPException(status_code=404, detail=f"Store {store_id} not found")
+    wallet = await db.partner_store_wallets.find_one({"store_id": store_id}, {"_id": 0}) or {}
+    return {"success": True, "store": store, "wallet": wallet}
