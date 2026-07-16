@@ -1048,3 +1048,54 @@ Full rename of Partner Program → Community Leadership Program + Phase C user d
 ### Known Gaps (require user decision)
 1. **FIFO reward-ceiling enforcement** — `POSITION_CONFIG` documents "earliest cap-many count" but `mining_commission.distribute_mining_collect_commission` does NOT filter L1 by created_at order. Currently every valid position holder receives the full 1%. Options: (a) implement per-collect BFS rank lookup, (b) precompute rank at signup, (c) drop the doc claim. Not blocking existing behaviour — pre-existing gap surfaced during Phase C tests.
 2. **`/admin/system-settings` "Leadership Reward Tiers" section** — testing agent's Playwright scan didn't reach the section (may need auth PIN or scroll). Verified manually by main agent via direct file check — rename is in place at L544.
+
+## 2026-02-16 — Paras Reward v2.0 — Partner Store Payment Network — SLICE 1 (Foundation + Login)
+
+**Goal**: Local Partner Store Payment & Settlement Network. Users pay PRC to verified local businesses; admin approves settlement to store's bank account. Coexists with Paras Mall (Q1=a).
+
+### Slice 1 Delivered (Feb 16 2026)
+- **New collections** (`partner_store.py` bootstraps indexes at startup):
+  - `partner_stores` — profile + KYC docs + bank + GPS + verification_status
+  - `partner_store_wallets` — settlement-only wallet per store (`prc_balance`, `lifetime_received_prc`, `pending_settlement_prc`)
+  - `partner_store_txns` — user→store payment log (Slice 2 will insert)
+  - `counters._id='partner_store_id_seq'` — atomic sequential Store ID allocator starting at 100001
+- **Backend endpoints** under `/api/v2/partner-stores`:
+  - `POST /admin/create` — admin onboards new store login + profile (creates linked `users` doc with `role='partner_store'` + `partner_store_id`)
+  - `POST /admin/verify` — verify / reject / suspend a store
+  - `GET /admin/list` — cursor-paginated with status filter + text search
+  - `GET /admin/{store_id}` — full detail + wallet
+  - `GET /self/{uid}` — store's own dashboard payload (profile + wallet + today's collection)
+  - `GET /self/{uid}/transactions` — recent user→store payments
+- **Auth extension**: `User` Pydantic model now includes `partner_store_id`. Login response returns `role: 'partner_store'` + `partner_store_id` → frontend redirects to `/partner-store/dashboard`.
+- **Frontend pages**:
+  - `/admin/partner-stores` (`AdminPartnerStores.js`) — status chip filter, text search, cursor pagination, "New Store" onboarding form (all fields per PRD KYC list), inline verify/suspend/reject actions.
+  - `/partner-store/dashboard` (`PartnerStoreDashboard.js`) — big Store ID card (copyable), 4 stat tiles (Today/Wallet/Pending/Lifetime), verification banner (pending/rejected/suspended states), Settlement Bank recap, Recent Payments list.
+- **Auth-guard redirect** in `App.js:getRedirectPath` — `partner_store` role → `/partner-store/dashboard`.
+- **Admin Settings Hub tile** added: "Partner Stores" (emerald-teal gradient) linking to admin CRUD.
+
+### Design decisions locked in (per user Q&A)
+| Q | Choice | Meaning |
+|---|---|---|
+| Q1 | a | Paras Mall retained alongside Partner Stores |
+| Q2 | e | Same app, `role='partner_store'` — no public registration; admin onboards |
+| Q3 | — | No QR code — only mobile number OR 6-digit Store ID |
+| Q4 | Full Phase 2 | All 5 slices in scope (only Slice 1 delivered) |
+| Q5 | n | Settlement reuses existing `bank_transfer_requests` collection |
+| Q6 | q | 10k+ store scale — cursor pagination, compound + partial + text indexes |
+| Q_A | a1 | Sequential Store IDs starting 100001 |
+| Q_B | b3 | Login = mobile + 6-digit PIN (same as user) |
+| Q_C | c2 | Payment limits ₹5,000/txn · ₹20,000/user/day · 3 payments/user/store/day (Slice 4) |
+| Q_D | d3 | No minimum settlement threshold |
+| Q_E | e1 | PRC→INR settlement uses admin-configured redeem rate |
+
+### Bug fixed in this iteration
+- Double `/api/api/` prefix in frontend axios calls — `API` const already includes `/api`. Fixed 4 call sites.
+
+### Slice 2-5 Backlog
+- **Slice 2** (Payment Engine): user-side "Pay to Partner Store" flow, atomic PRC transfer, txn logging, fraud limits
+- **Slice 3** (Settlement Engine): settlement request → admin approve → bank transfer via existing `bank_transfer_requests`
+- **Slice 4** (Notifications + Search + Fraud): notification templates, rate limits, audit log
+- **Slice 5** (Reports + Polish): daily/weekly/monthly stats, CSV export, performance verify at 10k scale
+
+### Test Credentials
+- Sample store: Store ID `100001`, mobile `8888800001`, PIN `999888` (Sharma Kirana Store)

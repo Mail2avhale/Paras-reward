@@ -581,6 +581,8 @@ const AdminSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkNa
 // AdminPaymentSettings, AdminSystemSettings, AdminWebSettings, AdminSocialMediaSettings, AdminRedeemSettings removed - merged into AdminSettingsHub
 const AdminSettingsHub = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettingsHub"));
 const AdminPartners = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPartners"));
+const AdminPartnerStores = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPartnerStores"));
+const PartnerStoreDashboard = lazy(() => import(/* webpackChunkName: "partner-store" */ "@/pages/PartnerStoreDashboard"));
 const AdminDeviceBinding = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDeviceBinding"));
 const ChangeDevice = lazy(() => import(/* webpackChunkName: "auth" */ "@/pages/ChangeDevice"));
 // AdminPRCRateControl - REMOVED (June 2026, fixed 10 PRC = ₹1)
@@ -683,6 +685,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
       case 'sub_admin':
       case 'manager':  // Manager now goes to admin dashboard with restricted access
         return "/admin";
+      case 'partner_store':
+        return "/partner-store/dashboard";
       // Stockist roles deprecated - redirect to dashboard
       default:
         return "/dashboard";
@@ -874,6 +878,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/video-ads" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminVideoAds user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/settings-hub" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminSettingsHub user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/partners" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminPartners user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/partner-stores" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminPartnerStores user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/partner-store/dashboard" element={user?.role === 'partner_store' ? <Suspense fallback={<LoadingFallback />}><PartnerStoreDashboard user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/login" replace />} />
                 <Route path="/admin/device-binding" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminDeviceBinding user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/prc-rate-control" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/settings" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=payment" replace /> : <Navigate to="/dashboard" />} />

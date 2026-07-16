@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import {
   Settings, CreditCard, Cpu, Globe, Share2, Shield, Video,
   ChevronRight, ArrowLeft, Sparkles, Receipt, Building2, ToggleLeft,
-  Play, Bell, UserX, RefreshCw, Clock, Award
+  Play, Bell, UserX, RefreshCw, Clock, Award, Store
 } from 'lucide-react';
 
 import { API } from "../lib/api";
@@ -115,6 +115,16 @@ const settingsCategories = [
     color: 'from-yellow-500 to-amber-500',
     bgColor: 'bg-yellow-500/10',
     borderColor: 'border-yellow-500/30'
+  },
+  {
+    id: 'partner-stores',
+    label: 'Partner Stores',
+    icon: Store,
+    description: 'Onboard verified local businesses that accept PRC payments. Create store logins, verify KYC, and monitor payment activity.',
+    path: '/admin/partner-stores',
+    color: 'from-emerald-500 to-teal-500',
+    bgColor: 'bg-emerald-500/10',
+    borderColor: 'border-emerald-500/30'
   },
   {
     id: 'device-binding',

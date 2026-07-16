@@ -78,6 +78,7 @@ from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_r
 from routes.bbps_services import router as bbps_router, set_db as set_bbps_db, set_redeem_limit_check as set_bbps_redeem_limit_check, set_subscription_cap_check as set_bbps_sub_cap
 from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check, set_calculate_redeem_limit as set_bank_transfer_calc_limit, set_all_time_redeemed as set_bank_transfer_all_time, set_prc_rate_getter as set_bank_transfer_prc_rate, set_subscription_cap_check as set_bank_transfer_sub_cap
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db
+from routes.partner_store import router as partner_store_router
 from routes.sustainability_burn import set_db as set_sustainability_burn_db, apply_sustainability_burn, reverse_sustainability_burn
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db, set_cache as set_kyc_cache
@@ -3424,6 +3425,11 @@ class User(BaseModel):
     # Referral
     referral_code: str = Field(default_factory=lambda: ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8)))
     referred_by: Optional[str] = None
+
+    # Partner Store link (Paras Reward v2.0 — Feb 2026)
+    # Populated only when role == 'partner_store'. Frontend uses this to
+    # redirect the partner-store login to /partner-store/dashboard.
+    partner_store_id: Optional[str] = None
     
     # Mining
     mining_start_time: Optional[datetime] = None
@@ -37059,6 +37065,9 @@ app.include_router(sub_cap_router)
 set_redeem_v2_sub_cap(check_subscription_redeem_cap)
 set_bbps_sub_cap(check_subscription_redeem_cap)
 set_bank_transfer_sub_cap(check_subscription_redeem_cap)
+
+# Partner Store Payment & Settlement Network — Paras Reward v2.0 (Feb 2026)
+app.include_router(partner_store_router)
 
 # Manual Bank Transfer Router
 set_bank_transfer_db(db)
