@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import SuccessStoryCard from '../components/SuccessStoryCard';
 import TopRedeemersCard from '../components/TopRedeemersCard';
+import AdMobBanner from '../components/AdMobBanner';
 
 import { API } from "../lib/api";
 
@@ -760,17 +761,24 @@ const CommunityPage = ({ user }) => {
         </div>
       ) : (
         <div className="space-y-3">
-          {posts.map(post => (
-            post.category === 'Success Story' ? (
-              <SuccessStoryCard
-                key={post.post_id}
-                post={post}
-                currentUserId={currentUserId}
-                onClick={openPostDetail}
-              />
-            ) : (
-              <PostCard key={post.post_id} post={post} />
-            )
+          {posts.map((post, idx) => (
+            <React.Fragment key={post.post_id}>
+              {post.category === 'Success Story' ? (
+                <SuccessStoryCard
+                  post={post}
+                  currentUserId={currentUserId}
+                  onClick={openPostDetail}
+                />
+              ) : (
+                <PostCard post={post} />
+              )}
+              {/* Native inline banner ad after every 4th post (Feb 2026 — v2.0) */}
+              {(idx + 1) % 4 === 0 && (
+                <div data-testid={`community-inline-ad-${idx}`}>
+                  <AdMobBanner placement="community_feed" />
+                </div>
+              )}
+            </React.Fragment>
           ))}
         </div>
       )}

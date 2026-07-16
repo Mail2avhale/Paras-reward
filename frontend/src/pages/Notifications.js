@@ -8,6 +8,7 @@ import {
   Award, Filter, RefreshCw 
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import AdMobBanner from '@/components/AdMobBanner';
 
 import { API } from "../lib/api";
 
@@ -244,6 +245,11 @@ const Notifications = ({ user }) => {
 
       {/* Notifications List */}
       <div className="px-5">
+        {/* Top banner ad (Feb 2026 — v2.0) */}
+        <div className="mb-3" data-testid="notifications-top-ad-slot">
+          <AdMobBanner placement="notifications" />
+        </div>
+
         {loading && notifications.length === 0 ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map(i => (

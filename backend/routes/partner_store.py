@@ -615,8 +615,28 @@ async def pay_partner_store(body: PartnerStorePayRequest):
 
     debit = await db.users.find_one_and_update(
         {"uid": body.user_uid, "prc_balance": {"$gte": body.prc_amount}},
-        {"$inc": {"prc_balance": -body.prc_amount}, "$set": {"updated_at": now_iso}},
-        projection={"_id": 0, "prc_balance": 1, "name": 1, "mobile": 1},
+        {
+            "$inc": {"prc_balance": -body.prc_amount},
+            "$set": {"updated_at": now_iso},
+            # PRC ledger entry — appears in the user's transaction statement.
+            "$push": {
+                "prc_transactions": {
+                    "type": "partner_store_payment",
+                    "amount": -float(body.prc_amount),
+                    "txn_id": txn_id,
+                    "description": f"Paid to {store['business_name']} (Store {store_id})",
+                    "reference": txn_id,
+                    "timestamp": now_iso,
+                    "service_type": "partner_store_payment",
+                    "metadata": {
+                        "store_id": store_id,
+                        "store_name": store["business_name"],
+                        "remark": body.remark,
+                    },
+                }
+            },
+        },
+        projection={"_id": 0, "prc_balance": 1, "name": 1, "mobile": 1, "city": 1, "state": 1},
         return_document=True,
     )
     if not debit:
@@ -655,9 +675,15 @@ async def pay_partner_store(body: PartnerStorePayRequest):
     try:
         await db.partner_store_txns.insert_one(txn_doc)
     except Exception:
-        # Idempotency collision — refund user AND revert wallet credit
-        # (otherwise the store retains a phantom credit).
-        await db.users.update_one({"uid": body.user_uid}, {"$inc": {"prc_balance": body.prc_amount}})
+        # Idempotency collision — refund user (balance + pop ledger entry)
+        # AND revert wallet credit (otherwise the store retains a phantom credit).
+        await db.users.update_one(
+            {"uid": body.user_uid},
+            {
+                "$inc": {"prc_balance": body.prc_amount},
+                "$pull": {"prc_transactions": {"txn_id": txn_id}},
+            },
+        )
         await db.partner_store_wallets.update_one(
             {"store_id": store_id},
             {"$inc": {
@@ -699,6 +725,81 @@ async def pay_partner_store(body: PartnerStorePayRequest):
             "txn_id": txn_id,
         },
     ])
+
+    # 7) Community Forum post — celebrate the payment with a "Partner
+    # Payment" badge post. Best-effort — never blocks the payment flow.
+    try:
+        payer_name = (debit.get("name") if isinstance(debit, dict) else None) or user.get("name") or "Paras Reward Member"
+        payer_city = (debit or {}).get("city") or user.get("city") or ""
+        payer_state = (debit or {}).get("state") or user.get("state") or ""
+        location = ", ".join([p for p in [str(payer_city).strip(), str(payer_state).strip()] if p]) or "India"
+        # Mask user identity for privacy — first name only + short suffix
+        first_name = str(payer_name).split()[0] if payer_name else "Customer"
+
+        community_post = {
+            "post_id": str(uuid.uuid4()),
+            "user_id": "system",
+            "user_name": "Partner Payment",
+            "user_plan": "admin",
+            "status": "active",
+            "is_helpful": False,
+            "report_count": 0,
+            "author_uid": "system",
+            "author_name": "Partner Payment",
+            "author_role": "admin",
+            "is_admin_post": True,
+            "is_success_story": True,
+            "category": "Partner Payment",
+            "title": f"🏪 {first_name} paid at {store['business_name']}!",
+            "content": "\n".join([
+                f"💳 **{first_name}** from **{location}** just paid **{body.prc_amount:.2f} PRC** at **{store['business_name']}** (Partner Store).",
+                "",
+                f"🏪 Store ID: **{store_id}**"
+                + (f" · {store.get('business_type')}" if store.get("business_type") else ""),
+                f"📍 {store.get('address', '')}",
+                "",
+                "🎯 Use your PRC at verified local Partner Stores — instant, secure, and paperless!",
+            ]),
+            "image_url": None,
+            "images": [],
+            "tags": ["partner_payment", "partner_store", "success", "prc_utilization"],
+            "badge": {
+                "label": "Partner Payment",
+                "icon": "🏪",
+                "color": "emerald",
+            },
+            "metadata": {
+                "service_type": "partner_store_payment",
+                "service_label": "Partner Payment",
+                "service_icon": "🏪",
+                "amount_prc": float(body.prc_amount),
+                "first_name": first_name,
+                "location": location,
+                "city": str(payer_city).strip(),
+                "state": str(payer_state).strip(),
+                "ref_id": f"partner_store_payment_{txn_id}",
+                "txn_id": txn_id,
+                "store_id": store_id,
+                "store_name": store["business_name"],
+                "store_business_type": store.get("business_type"),
+                "user_uid": body.user_uid,
+            },
+            "like_count": 0,
+            "reactions_count": {"celebrate": 0, "love": 0, "fire": 0},
+            "comment_count": 0,
+            "view_count": 0,
+            "bookmark_count": 0,
+            "helpful_count": 0,
+            "is_pinned": False,
+            "is_deleted": False,
+            "is_reported": False,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+        }
+        await db.community_posts.insert_one(community_post)
+    except Exception as _e:
+        import logging as _log
+        _log.warning(f"[PARTNER-STORE] community forum post failed (non-fatal): {_e}")
 
     # Drop the txn doc's Mongo _id if attached in-place
     txn_doc.pop("_id", None)

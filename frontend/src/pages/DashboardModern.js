@@ -21,6 +21,7 @@ import MiningWidget from '@/components/MiningWidget';
 import RechargeCard from '@/components/RechargeCard';
 import RefundBlockerModal from '@/components/RefundBlockerModal';
 import PullToRefresh from '@/components/PullToRefresh';
+import AdMobBanner from '@/components/AdMobBanner';
 
 // Live Date & Time component for dashboard header
 const LiveDateTime = () => {
@@ -1235,6 +1236,11 @@ const DashboardModern = ({ user, onLogout }) => {
 
       {/* AI Smart Tip */}
       <div className="px-5 mb-4">
+      </div>
+
+      {/* Dashboard bottom banner ad (Feb 2026 — v2.0) */}
+      <div className="px-5 mb-4" data-testid="dashboard-bottom-ad-slot">
+        <AdMobBanner placement="dashboard_home" />
       </div>
 
       {/* Rewarded ad widget removed — Google Play Store policy compliance

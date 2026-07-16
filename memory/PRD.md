@@ -1188,3 +1188,36 @@ Show an ad after user completes a payment to a Partner Store.
 - Create/enable a popup with **placement** field set to `partner_store_payment`
 - Only one popup per placement can be enabled at a time
 - Ad instantly appears on the payment-success screen for all subsequent web payments (native app users get AdMob banners instead)
+
+## 2026-02-16 (later) — Banner Ad Placements Expanded (3 new spots)
+
+3 additional strategic banner ad placements added across the app — all use the same `AdMobBanner` dual-mode component (AdMob native on Capacitor + admin popup fallback on web).
+
+### New Placements
+| Placement key | Where | Frequency |
+|---|---|:---:|
+| `dashboard_home` | User dashboard, near bottom above bottom-nav | Every dashboard visit |
+| `community_feed` | Inline between posts in Community feed | After every 4th post (native format) |
+| `notifications` | Top of `/notifications` page | Every visit |
+| `partner_store_payment` | Payment success screen (already delivered) | Every successful payment |
+
+### Registered placements catalog
+Admin can create/enable a popup for any of these 4 placements via `/admin/popup/create` with `placement=<key>` field. Only one enabled popup per placement (scoped disable-others). Web users see the admin popup content; Android app users see real AdMob banners (mediated by the same `AdMobBanner` component's native path).
+
+### Files touched
+- `frontend/src/pages/DashboardModern.js` — imports AdMobBanner + renders `<AdMobBanner placement="dashboard_home"/>` at line ~1241 (data-testid `dashboard-bottom-ad-slot`)
+- `frontend/src/pages/CommunityPage.js` — imports AdMobBanner + inline render between posts (data-testid `community-inline-ad-{idx}`, injected every 4th post)
+- `frontend/src/pages/Notifications.js` — imports AdMobBanner + top-of-list render (data-testid `notifications-top-ad-slot`)
+
+### Testing
+Seeded distinct test popups per placement:
+- `dashboard_home` → "📱 Boost your daily earnings!" — verified on live UI
+- `community_feed` → "🎉 Join the top earners club" — 5 inline slots verified on feed
+- `notifications` → "🔔 Stay ahead with premium features" — top banner verified
+- `partner_store_payment` → "🏪 Save 20%..." — verified on payment success screen (previous iteration)
+
+All ads dismissible; each placement independently manageable; zero cross-placement leaks.
+
+### Backlog
+- 🟡 P2 — Admin popup editor UI: add "Placement" select dropdown (currently admin must POST with `placement` field manually or defaults to `app_startup`)
+- 🟡 P2 — Ad performance analytics (impressions, clicks, dismissals per placement)
