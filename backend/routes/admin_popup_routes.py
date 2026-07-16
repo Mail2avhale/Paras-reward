@@ -141,6 +141,10 @@ class PopupMessageCreate(BaseModel):
     button_link: Optional[str] = None
     message_type: Optional[str] = "info"
     enabled: Optional[bool] = True
+    # Placement scope (Feb 2026, v2.0) — where the popup renders.
+    # 'app_startup' (default, existing behavior) OR 'partner_store_payment'
+    # (shown on the payment-success receipt screen).
+    placement: Optional[str] = "app_startup"
 
 
 class PopupMessageUpdate(BaseModel):
@@ -154,6 +158,7 @@ class PopupMessageUpdate(BaseModel):
     button_link: Optional[str] = None
     message_type: Optional[str] = None
     enabled: Optional[bool] = None
+    placement: Optional[str] = None
 
 
 def _shape_popup(popup: dict) -> dict:
@@ -174,6 +179,7 @@ def _shape_popup(popup: dict) -> dict:
         "button_link": popup.get("button_link"),
         "message_type": popup.get("message_type", "info"),
         "enabled": popup.get("enabled", False),
+        "placement": popup.get("placement", "app_startup"),
         "created_at": popup.get("created_at"),
         "updated_at": popup.get("updated_at"),
     }
@@ -182,12 +188,21 @@ def _shape_popup(popup: dict) -> dict:
 # ================== PUBLIC API (For Users) ==================
 
 @router.get("/active")
-async def get_active_popup():
-    """Return the currently enabled popup for end-users, or `has_popup:
-    False` if no popup is active.
+async def get_active_popup(placement: Optional[str] = None):
+    """Return the currently enabled popup for the given placement.
+    Backwards-compatible: if no placement param → returns 'app_startup' popup
+    (the original single-active-popup behaviour).
     """
     try:
-        popup = await db.popup_messages.find_one({"enabled": True}, {"_id": 0})
+        scope = (placement or "app_startup").strip()
+        query = {"enabled": True}
+        if scope == "app_startup":
+            # Backwards-compat: match popups with placement='app_startup' OR
+            # legacy docs missing the field entirely.
+            query["$or"] = [{"placement": "app_startup"}, {"placement": {"$exists": False}}]
+        else:
+            query["placement"] = scope
+        popup = await db.popup_messages.find_one(query, {"_id": 0})
         if not popup:
             return {"success": True, "data": None, "has_popup": False}
         return {"success": True, "has_popup": True, "data": _shape_popup(popup)}
@@ -232,6 +247,7 @@ def _apply_create_defaults(req: PopupMessageCreate) -> dict:
         "button_link": req.button_link or None,
         "message_type": req.message_type or "info",
         "enabled": bool(req.enabled) if req.enabled is not None else True,
+        "placement": (req.placement or "app_startup").strip(),
         "created_at": now_iso,
         "updated_at": now_iso,
     }
@@ -245,7 +261,16 @@ async def create_popup(req: PopupMessageCreate, request: Request):
     try:
         popup_data = _apply_create_defaults(req)
         if popup_data["enabled"]:
-            await db.popup_messages.update_many({}, {"$set": {"enabled": False}})
+            # Only disable OTHER popups within the same placement scope
+            # so an app_startup popup and a partner_store_payment ad can
+            # both be simultaneously enabled.
+            scope = popup_data.get("placement", "app_startup")
+            scope_query = (
+                {"$or": [{"placement": "app_startup"}, {"placement": {"$exists": False}}]}
+                if scope == "app_startup"
+                else {"placement": scope}
+            )
+            await db.popup_messages.update_many(scope_query, {"$set": {"enabled": False}})
         await db.popup_messages.insert_one(popup_data)
         popup_data.pop("_id", None)
         return {"success": True, "message": "Popup created", "data": _shape_popup(popup_data)}
@@ -284,11 +309,27 @@ async def update_popup(popup_id: str, req: PopupMessageUpdate):
             upd["button_link"] = req.button_link
         if req.message_type is not None:
             upd["message_type"] = req.message_type
+        if req.placement is not None:
+            upd["placement"] = req.placement.strip() or "app_startup"
         if req.enabled is not None:
             upd["enabled"] = req.enabled
             if req.enabled:
+                # Determine the target placement (either from update payload
+                # or the existing DB doc) so we scope disable-others correctly.
+                target_placement = upd.get("placement")
+                if not target_placement:
+                    existing = await db.popup_messages.find_one(
+                        {"popup_id": popup_id}, {"_id": 0, "placement": 1}
+                    )
+                    target_placement = (existing or {}).get("placement") or "app_startup"
+                scope_query = (
+                    {"$or": [{"placement": "app_startup"}, {"placement": {"$exists": False}}]}
+                    if target_placement == "app_startup"
+                    else {"placement": target_placement}
+                )
+                scope_query["popup_id"] = {"$ne": popup_id}
                 await db.popup_messages.update_many(
-                    {"popup_id": {"$ne": popup_id}},
+                    scope_query,
                     {"$set": {"enabled": False}},
                 )
 

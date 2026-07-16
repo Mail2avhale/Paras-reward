@@ -14,6 +14,7 @@ import {
   ArrowLeft, Store, Search, CheckCircle2, ShieldCheck,
   Wallet, Send, RefreshCw,
 } from 'lucide-react';
+import AdMobBanner from '../components/AdMobBanner';
 
 const MAX_TXN_PRC = 5000;
 
@@ -143,6 +144,9 @@ export default function PayPartnerStore({ user }) {
               Done
             </button>
           </div>
+
+          {/* Banner ad shown after payment success (Feb 2026 — v2.0) */}
+          <AdMobBanner placement="partner_store_payment" />
         </div>
       </div>
     );

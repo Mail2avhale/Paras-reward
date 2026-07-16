@@ -19,7 +19,8 @@
   },
   "plugins": {
     "AdMob": {
-      "appId": "ca-app-pub-3556805218952480~1933993140"
+      "appId": "ca-app-pub-3556805218952480~1933993140",
+      "bannerAdUnitId": "ca-app-pub-3556805218952480/9523773390"
     },
     "SplashScreen": {
       "launchShowDuration": 800,

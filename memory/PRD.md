@@ -1139,3 +1139,52 @@ Full rename of Partner Program → Community Leadership Program + Phase C user d
 - 🟡 P2 — Slice 5: Reports + CSV export + 10k-scale performance verification
 - 🟡 P2 — FIFO reward-ceiling enforcement (Community Leadership)
 - 🟡 P2 — Legacy `/api/api/` double-prefix cleanup in other files
+
+## 2026-02-16 (later) — Payment Success Ad Banner (AdMob + Web Fallback)
+
+### Goal
+Show an ad after user completes a payment to a Partner Store.
+
+### Placement chosen: `b + e + g + k` (per user approval)
+- **When**: on the payment-success receipt screen (non-blocking)
+- **Source**: Google AdMob banner on Android app; admin-configured popup ad on web fallback
+- **Frequency**: every successful payment
+- **Dismissible**: yes — X button, immediate close
+
+### Implementation
+1. **AdMob credentials** (real, provided by user):
+   - App ID: `ca-app-pub-3556805218952480~1933993140`
+   - Banner Unit ID: `ca-app-pub-3556805218952480/9523773390`
+2. **capacitor.config.json** — added `bannerAdUnitId` to AdMob plugin config.
+3. **frontend/.env** — new keys `REACT_APP_ADMOB_APP_ID`, `REACT_APP_ADMOB_BANNER_UNIT_ID` (protected keys preserved).
+4. **New component** `/app/frontend/src/components/AdMobBanner.js` — dual-mode:
+   - On Capacitor native (Android): loads `@capacitor-community/admob` (already in package.json v7), calls `AdMob.showBanner()` at BOTTOM_CENTER with ADAPTIVE_BANNER size. Cleanup on unmount via `removeBanner()`.
+   - On web browser: falls back to admin-configured popup ad (queries `/api/admin/popup/active?placement=partner_store_payment`). Renders image + title + HTML body + CTA + dismiss chip.
+5. **Placement scoping in popup system** — added `placement` field to `popup_messages` schema:
+   - Default `'app_startup'` (backward-compat — existing behaviour unchanged)
+   - New scope `'partner_store_payment'` for payment ads
+   - `/api/admin/popup/active?placement=X` returns the enabled popup for that scope
+   - `create`/`update`/`toggle` endpoints scope the "disable others" logic to same placement — app_startup popup and partner_store_payment ad can be simultaneously active
+6. **Injection** — `PayPartnerStore.js` renders `<AdMobBanner placement="partner_store_payment" />` right after the Done/Pay Another buttons on the success screen.
+
+### Files touched
+- `backend/routes/admin_popup_routes.py` — placement field, scoped disable-others, ?placement query param on /active
+- `frontend/capacitor.config.json` — bannerAdUnitId
+- `frontend/.env` — REACT_APP_ADMOB_* keys
+- `frontend/src/components/AdMobBanner.js` — new (dual-mode component)
+- `frontend/src/pages/PayPartnerStore.js` — import + render on success screen
+
+### Testing (curl + Playwright)
+- Seeded ad popup with `placement='partner_store_payment'` directly in DB → `/api/admin/popup/active?placement=partner_store_payment` returned it correctly, `/api/admin/popup/active` (no param) still returns app_startup only.
+- Live E2E: created fresh Elite test user (uid: `test-ad-user-*`, mobile 7777700077, PIN 123456, 1000 PRC), completed payment of 10 PRC to Store 100001 → success screen rendered with receipt + Sponsored ad banner: "Grab 20% cashback on next PRC purchase!" + "Learn More" CTA + X close button. Dismiss verified (count 1→0).
+- Cleanup: removed test-ad-user + test txn from DB.
+
+### Testids
+- `web-fallback-ad`, `web-ad-title`, `web-ad-cta-btn`, `web-ad-dismiss-btn` (web mode)
+- `admob-native-slot`, `admob-dismiss-btn` (Capacitor mode)
+
+### Admin workflow (for setting a new payment ad)
+- Go to `/admin/popup-messages` (existing WYSIWYG editor)
+- Create/enable a popup with **placement** field set to `partner_store_payment`
+- Only one popup per placement can be enabled at a time
+- Ad instantly appears on the payment-success screen for all subsequent web payments (native app users get AdMob banners instead)
