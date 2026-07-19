@@ -19,23 +19,29 @@ def set_db(database):
 
 
 # ── Defaults — bump these whenever you push a new Play Store build ──────────
-# Feb 17 2026 — v1.2.0 (code 12) release with 10-level Community Bonus,
-# Community Leader multipliers, PRC Statement Daily Summary, and Core Team retirement.
-LATEST_VERSION_NAME = "1.2.0"
-LATEST_VERSION_CODE = 20
+# Feb 17 2026 — v1.2.1 hotfix over v1.2.0:
+#   • Removed Dashboard AdMob banner (overlapped bottom nav)
+#   • Added RouteErrorBoundary around /pay-partner-store (fixes blank-screen)
+# v1.2.0 payload: 10-level Community Bonus, Community Leader multipliers,
+# PRC Statement Daily Summary, Core Team retirement.
+LATEST_VERSION_NAME = "1.2.1"
+LATEST_VERSION_CODE = 21
 MINIMUM_SUPPORTED_VERSION_CODE = 1  # below this → force-update
 PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.parasreward.prc"
 
 # Human-readable release notes shown in the in-app "Update Available" banner
 # when no custom notes are stored in Mongo (`app_config.android_app_version`).
 DEFAULT_RELEASE_NOTES = (
-    "What's new in v1.2.0:\n"
+    "What's new in v1.2.1:\n"
+    "• Fixed: Dashboard bottom navigation was blocked by ad banner\n"
+    "• Fixed: 'Pay to Partner Store' occasionally showed a blank screen\n"
+    "\n"
+    "Also includes v1.2.0 features:\n"
     "• 10-Level Community Bonus (max 7.20%) with live level unlocks\n"
     "• Community Leader multipliers — District 1.25x, Regional 1.50x, State 1.75x, National 2.00x\n"
     "• PRC Statement: new Daily Summary view — collapse thousands of rows into per-day cards\n"
     "• Cleaner Community Growth page — no duplicate cards\n"
-    "• Retired legacy Core Team distribution module\n"
-    "• Bug fixes: Admin auto-logout on wrong PIN"
+    "• Retired legacy Core Team distribution module"
 )
 
 

@@ -1517,9 +1517,17 @@ User reported 2 issues after pushing v1.2.0 AAB to Play Store:
   - `/app/frontend/src/App.js` — wrapped the `PayPartnerStore` Suspense in `<RouteErrorBoundary routeName="pay-partner-store">…</RouteErrorBoundary>`. Any render error / chunk failure will now surface an actionable retry screen instead of a blank canvas.
 
 ### Deploy checklist
-1. Rebuild the Android AAB from `/app/frontend/android` (Gradle will use versionCode 20 / versionName 1.2.0 baked earlier).
-2. Upload to Play Console under the same v1.2.0 track (or bump to v1.2.1 if you want a distinct hotfix build).
+1. Rebuild the Android AAB from `/app/frontend/android` — Gradle now uses **versionCode 21 / versionName 1.2.1** (bumped so Play Console will accept the re-upload).
+2. Upload to Play Console (v1.2.1 track).
 3. Verify: install AAB → Dashboard no longer has the bottom banner ad; tap "Pay to Partner Store" → either page loads correctly OR (if lazy chunk truly fails) user sees the Retry screen with a working Retry button.
+
+### Feb 17 2026 (later same day) — versionCode bump to 21 / v1.2.1
+Play Console rejects duplicate versionCode. Bumped all identifiers for the hotfix re-push:
+- `android/app/build.gradle` → **versionCode 21, versionName "1.2.1"** (+ inline changelog notes 29 & 30 for the two hotfixes)
+- `app_version.py` → LATEST_VERSION_NAME "1.2.1", LATEST_VERSION_CODE 21, DEFAULT_RELEASE_NOTES rewritten to lead with the two fixes and reference v1.2.0 payload below
+- `frontend/package.json` → 0.3.1
+- `manifest.json` → 1.2.1
+- DB `app_config.android_app_version` (preview) updated via admin endpoint → verified via `GET /api/app/version-info` returns 1.2.1 / 21
 
 ---
 
