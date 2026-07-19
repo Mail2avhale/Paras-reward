@@ -1,13 +1,18 @@
 /**
- * AdMobBanner — dual-mode banner ad renderer (Paras Reward v2.0, Feb 2026)
- * ========================================================================
+ * AdMobBanner — banner ad renderer (Paras Reward, updated Feb 17 2026)
+ * =====================================================================
  * On Capacitor (Android app): mounts a real Google AdMob banner using
- *   @capacitor-community/admob. Banner is shown at BOTTOM_CENTER, size ADAPTIVE_BANNER.
- *   Dismissible via a top-right close chip; auto-cleans up on unmount.
+ *   @capacitor-community/admob. Banner is shown at BOTTOM_CENTER with
+ *   a 90dp margin so it always sits ABOVE the app's bottom navigation
+ *   / LIVE ticker (previous margin=0 covered the nav on real devices).
  *
  * On web browser: gracefully falls back to the admin-configured banner
- *   ad from the `popup_messages` collection (placement='partner_store_payment').
- *   If no such popup is enabled, this component renders nothing.
+ *   ad from the `popup_messages` collection.
+ *
+ * NOTE: The community plugin does NOT support Native Advanced ads yet.
+ * Adding native-ad support would require custom Kotlin/Java integration
+ * of the Google Mobile Ads SDK. For now we use ADAPTIVE_BANNER which
+ * blends into layouts and never covers navigation thanks to the margin.
  *
  * Props: placement (default 'partner_store_payment')
  */
@@ -18,49 +23,26 @@ import { API } from '../lib/api';
 
 const isNative = () => {
   try {
-    // Capacitor exposes window.Capacitor.isNativePlatform() in the runtime
     return typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
   } catch { return false; }
 };
+
+// dp margin from the bottom of the screen. Set high enough to clear the
+// app's bottom-nav (~64dp) + LIVE ticker (~28dp) with some breathing room.
+const BOTTOM_MARGIN_DP = 90;
 
 export default function AdMobBanner({ placement = 'partner_store_payment' }) {
   const [dismissed, setDismissed] = useState(false);
   const [webAd, setWebAd] = useState(null); // fallback popup ad on web
   const [webAdLoaded, setWebAdLoaded] = useState(false);
 
-  // ── Native AdMob path ──────────────────────────────────────────────
-  useEffect(() => {
-    if (!isNative() || dismissed) return;
-    let mounted = true;
-
-    (async () => {
-      try {
-        const { AdMob, BannerAdPosition, BannerAdSize } = await import('@capacitor-community/admob');
-        await AdMob.initialize({ initializeForTesting: false });
-        if (!mounted) return;
-        await AdMob.showBanner({
-          adId: process.env.REACT_APP_ADMOB_BANNER_UNIT_ID,
-          adSize: BannerAdSize.ADAPTIVE_BANNER,
-          position: BannerAdPosition.BOTTOM_CENTER,
-          margin: 0,
-          isTesting: false,
-        });
-      } catch (e) {
-        // Silent — no ad shown on failure
-        console.warn('[AdMob] banner load failed:', e?.message || e);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      (async () => {
-        try {
-          const { AdMob } = await import('@capacitor-community/admob');
-          await AdMob.removeBanner();
-        } catch { /* noop */ }
-      })();
-    };
-  }, [dismissed]);
+  // ── Native AdMob path — DISABLED here Feb 17 2026 ────────────────
+  // GlobalBannerAd (mounted once in App.js) now owns the native banner
+  // lifecycle. Per-page <AdMobBanner /> mounts only run the web-inline
+  // ad fetch below. This prevents duplicate showBanner() overlays that
+  // used to cover the Dashboard bottom navigation.
+  //
+  // (Previous native useEffect block removed — see git history for details.)
 
   // ── Web fallback: fetch admin popup ad for this placement ─────────
   useEffect(() => {

@@ -50,6 +50,28 @@ export default function PayPartnerStore({ user }) {
     }
   }, [query]);
 
+  // Feb 17 2026 — defensive user-prop guard AFTER all hooks (React rules).
+  // In some APK cold-start scenarios the parent App renders this route
+  // before `user` is fully hydrated from localStorage, previously producing
+  // a blank page. Now we show a proper loading state.
+  if (!user || !user.uid) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white p-6 flex items-center justify-center" data-testid="pay-store-loading-state">
+        <div className="max-w-sm w-full text-center">
+          <div className="w-14 h-14 rounded-full border-2 border-indigo-500/50 border-t-indigo-400 animate-spin mx-auto mb-4" />
+          <p className="text-sm text-slate-400 mb-4">Loading your wallet…</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-sm px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold"
+            data-testid="pay-store-loading-home-btn"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const doPay = async () => {
     if (!store) { toast.error('Look up a store first'); return; }
     const amt = parseFloat(amount);

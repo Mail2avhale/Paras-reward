@@ -24,24 +24,23 @@ def set_db(database):
 #   • Added RouteErrorBoundary around /pay-partner-store (fixes blank-screen)
 # v1.2.0 payload: 10-level Community Bonus, Community Leader multipliers,
 # PRC Statement Daily Summary, Core Team retirement.
-LATEST_VERSION_NAME = "1.2.1"
-LATEST_VERSION_CODE = 21
+LATEST_VERSION_NAME = "1.2.2"
+LATEST_VERSION_CODE = 22
 MINIMUM_SUPPORTED_VERSION_CODE = 1  # below this → force-update
 PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.parasreward.prc"
 
 # Human-readable release notes shown in the in-app "Update Available" banner
 # when no custom notes are stored in Mongo (`app_config.android_app_version`).
 DEFAULT_RELEASE_NOTES = (
-    "What's new in v1.2.1:\n"
-    "• Fixed: Dashboard bottom navigation was blocked by ad banner\n"
-    "• Fixed: 'Pay to Partner Store' occasionally showed a blank screen\n"
+    "What's new in v1.2.2:\n"
+    "• Fixed: Ad banner no longer covers the bottom navigation\n"
+    "• Fixed: 'Pay to Partner Store' shows a loading spinner instead of a blank screen while your wallet loads\n"
     "\n"
-    "Also includes v1.2.0 features:\n"
-    "• 10-Level Community Bonus (max 7.20%) with live level unlocks\n"
+    "Also includes v1.2.0/v1.2.1 features:\n"
+    "• 10-Level Community Bonus (max 7.20%)\n"
     "• Community Leader multipliers — District 1.25x, Regional 1.50x, State 1.75x, National 2.00x\n"
-    "• PRC Statement: new Daily Summary view — collapse thousands of rows into per-day cards\n"
-    "• Cleaner Community Growth page — no duplicate cards\n"
-    "• Retired legacy Core Team distribution module"
+    "• PRC Statement Daily Summary view\n"
+    "• Cleaner Community Growth page"
 )
 
 

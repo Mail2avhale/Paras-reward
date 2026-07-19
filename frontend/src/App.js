@@ -5,6 +5,7 @@ import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
 import PopupMessage from "@/components/PopupMessage";
 import RouteErrorBoundary from "@/components/RouteErrorBoundary";
+import GlobalBannerAd from "@/components/GlobalBannerAd";
 import { toast } from "sonner";
 import { NotificationProvider, useNotification } from "@/context/NotificationContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -710,6 +711,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
       <BrowserRouter>
         <PageTitleUpdater />
         <WebVitalsReporter user={user} />
+        {user && <GlobalBannerAd />}
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
             <Route path="/" element={

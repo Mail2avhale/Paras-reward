@@ -1,0 +1,23 @@
+{
+  "admob_no_native_show_banner_call": true,
+  "dashboard_no_rendered_admob_banner": true,
+  "global_banner_hides_dashboard": true,
+  "global_banner_mounted_after_webvitals_for_user": true,
+  "pay_store_guard_present": true,
+  "pay_store_route_available_in_user_build": false,
+  "pay_store_route_error_boundary_present": true,
+  "pay_store_route_inside_admin_only_block": true,
+  "version_api": {
+    "latest_version_code": 22,
+    "latest_version_name": "1.2.2",
+    "ok": true
+  },
+  "versions_source": {
+    "backend_latest_code_22": true,
+    "backend_latest_name_1_2_2": true,
+    "build_gradle_versionCode_22": true,
+    "build_gradle_versionName_1_2_2": true,
+    "manifest_version_1_2_2": true,
+    "package_version_0_3_2": true
+  }
+}

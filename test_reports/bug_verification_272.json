@@ -1,0 +1,69 @@
+{
+  "verdict": "not_fixed",
+  "user_reported_bug": "अजुनही ॲड मुळे bottom आयकॉन्स hide hotat. Pay to partner app मध्ये blank page not fixed. Dashboard वरून ad remove करून other सर्व pages वरती दाखव native ad place कर.",
+  "summary": "No relevant testing skill found. Focused web/code verification shows Dashboard inline AdMob removal is in place and logged-in web /pay-partner-store renders with lookup form, but the APK blank-page bug is still likely present because /pay-partner-store is declared inside the {!IS_USER_BUILD && AdminLayout} admin-only route block in App.js, so it is omitted from the Android user AAB build.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "App.js /pay-partner-store route",
+        "issue": "The route is nested inside the !IS_USER_BUILD admin-only block. In the Android user build, this route is not registered, matching the user-reported blank page in APK even though it works on the web/admin preview build.",
+        "selector": "Route path=\"/pay-partner-store\"",
+        "priority": "CRITICAL"
+      },
+      {
+        "component": "PayPartnerStore guard through App route",
+        "issue": "The defensive pay-store-loading-state exists in the component source, but direct navigation without a user through App redirects to /login, so that guard state is not reachable through the normal route condition.",
+        "selector": "[data-testid=\"pay-store-loading-state\"]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Android user build Pay to Partner Store",
+        "issue": "Code review proves the PayPartnerStore route is excluded when REACT_APP_BUILD_TYPE=user, so the APK route can still render an empty shell/blank instead of the payment page.",
+        "affected_selectors": [
+          "[data-testid=\"pay-store-page\"]",
+          "[data-testid=\"pay-store-loading-state\"]"
+        ]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/bug_verification_272_checks.py",
+    "/app/test_reports/bug_verification_272_checks_output.json",
+    "/app/test_reports/bug_verification_272_playwright_script.py",
+    "/app/test_reports/bug_verification_272.json",
+    "/app/test_reports/iteration_272.json"
+  ],
+  "action_items": [
+    "Move the /pay-partner-store route out of the {!IS_USER_BUILD && AdminLayout && (...)} block so it is included in the Android user AAB build; keep RouteErrorBoundary and PayPartnerStore user prop wiring.",
+    "Add a user-build route smoke check/build-time test that verifies /pay-partner-store is present when REACT_APP_BUILD_TYPE=user.",
+    "After rebuilding AAB v1.2.2+, verify on a physical Android device that Dashboard has no ad covering bottom nav and Pay to Partner Store opens normally. Native AdMob overlay cannot be verified in this web container."
+  ],
+  "critical_code_review_comments": [
+    "App.js line 892 places <Route path=\"/pay-partner-store\" ...> inside the admin-only {!IS_USER_BUILD && AdminLayout && (...)} block that starts around line 850. This is a direct explanation for 'works on web, blank in APK'.",
+    "DashboardModern.js no longer renders <AdMobBanner placement=\"dashboard_home\" /> and contains the requested removal comment. GlobalBannerAd is mounted after WebVitalsReporter only when user is truthy and hides /dashboard. AdMobBanner.js no longer calls AdMob.showBanner().",
+    "Native Advanced ads are not implemented; GlobalBannerAd uses the Capacitor AdMob adaptive banner with margin 90. This is not MOCKED, but actual device behavior was not testable here."
+  ],
+  "updated_files": [
+    "/app/test_reports/bug_verification_272_checks.py",
+    "/app/test_reports/bug_verification_272_checks_output.json",
+    "/app/test_reports/bug_verification_272_playwright_script.py",
+    "/app/test_reports/bug_verification_272.json",
+    "/app/test_reports/iteration_272.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "60%"
+  },
+  "seed_data_creation": "No seed data created. Logged in with provided regular test user and looked up existing partner store 100001; payment submit was not executed to avoid mutating wallet balance.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Skill lookup was mandatory and returned no relevant testing skill. Web preview checks passed for Dashboard ad DOM absence and logged-in /pay-partner-store form rendering/lookup, version API returned 1.2.2/22, but code review found the Android user-build route omission. Retest after moving the route outside the !IS_USER_BUILD admin block and rebuilding the AAB.",
+  "rca_of_the_issue": "RCA: The Android Play Store build uses REACT_APP_BUILD_TYPE=user. In App.js the /pay-partner-store route is currently declared inside the block guarded by !IS_USER_BUILD && AdminLayout, along with admin routes. Therefore the web preview can render /pay-partner-store, but the APK user build does not register the route, leaving only the shell/top/bottom navigation or a blank page. Dashboard ad overlap appears addressed in source by removing the page-level AdMobBanner and using GlobalBannerAd hide list + 90dp margin, but physical APK overlay verification was not possible in this environment."
+}

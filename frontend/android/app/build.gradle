@@ -134,18 +134,15 @@ android {
         // 28. P0 bugfix — Admin auto-logout on wrong X-Admin-Pin (global
         //     axios interceptor 403 keyword regex tightened).
         //
-        // versionCode 20 → 21 — Feb 17, 2026 hotfix (v1.2.1):
-        // 29. UX — removed the AdMob banner from the Dashboard bottom
-        //     because it overlapped bottom navigation on real devices.
-        //     Ads still shown on Notifications, Community Feed, and
-        //     PayPartnerStore success screens.
-        // 30. Stability — new RouteErrorBoundary component wraps the
-        //     `/pay-partner-store` route. If the lazy chunk fails to load
-        //     in the WebView (silent blank-screen bug reported after
-        //     v1.2.0 push), the user now sees an actionable "Retry" +
-        //     "Go to Home" screen instead of a blank canvas.
-        versionCode 21
-        versionName "1.2.1"
+        // versionCode 21 → 22 — Feb 17, 2026 hotfix over v1.2.1 (v1.2.2):
+        // 31. AdMob banner now uses a GLOBAL mount + 90dp bottom margin.
+        //     Fixes the "banner covers bottom navigation" issue on real
+        //     devices. Banner auto-hides on Dashboard, Login, Admin.
+        // 32. PayPartnerStore — defensive `user` prop guard shows a
+        //     loading spinner instead of a blank page when the auth
+        //     state hasn't hydrated yet (fixes the APK blank-screen).
+        versionCode 22
+        versionName "1.2.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
