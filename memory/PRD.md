@@ -1470,6 +1470,36 @@ The old L1/L2/L3 breakdown card ("Community Levels" heading with "Community Powe
 
 ---
 
+## Feb 17, 2026 — v1.2.0 Release: Version Bump for Play Store / Preview Push
+
+### Change summary
+All version identifiers bumped and aligned across Android build, backend defaults, PWA manifest, and DB. The Android AAB had drifted (was at `versionCode 19 / 1.1.8`) while backend `/api/app/version-info` was reporting stale `1.1.0 / code 11` — now synchronized to `1.2.0 / code 20`.
+
+### Files touched
+- `/app/frontend/android/app/build.gradle` — `versionCode 19 → 20`, `versionName "1.1.8" → "1.2.0"` with detailed release-note comments for the 6 major features of this cycle.
+- `/app/backend/routes/app_version.py` — `LATEST_VERSION_NAME` → "1.2.0", `LATEST_VERSION_CODE` → 20, added `DEFAULT_RELEASE_NOTES` constant, wired it into the endpoint fallback.
+- `/app/frontend/package.json` — internal `0.2.0 → 0.3.0`.
+- `/app/frontend/public/manifest.json` — added `"version": "1.2.0"` (PWA identifier).
+- MongoDB `app_config.android_app_version` doc — updated in preview via `POST /api/app/admin/version-update`.
+
+### Deploy checklist for user (production redeploy)
+1. Trigger Emergent's redeploy — backend + frontend code changes ship automatically.
+2. After deploy, run the same admin call against production once to sync DB doc there (or let the code fallback take over — the hardcoded defaults now say 1.2.0/20 so no manual step strictly required):
+   ```bash
+   curl -X POST https://bugzappers.emergent.host/api/app/admin/version-update \
+     -H "Content-Type: application/json" \
+     -d '{"version_name":"1.2.0","version_code":20,"minimum_supported_code":1,"force_update":false}'
+   ```
+3. For Play Store: build AAB from `/app/frontend/android` — Gradle will pick up `versionCode 20 / versionName 1.2.0` automatically. Upload to Play Console.
+4. Verify: open the app on an old build (< code 20) → the "Update Available" banner should appear with v1.2.0 release notes.
+
+### Verification (preview)
+- `curl /api/app/version-info` returns `latest_version_code: 20`, `latest_version_name: "1.2.0"`, and full release notes.
+- Backend restart clean, no errors.
+- All 6 v1.2.0 features previously verified in this session (10-level bonus, Community Leader multipliers, PRC daily summary, referrals cleanup, Core Team removal, P0 admin logout fix) confirmed working.
+
+---
+
 ## Feb 16, 2026 — Feature: Community Leader Bonus Multiplier & Role Structure
 
 ### Spec (as approved by user)

@@ -19,10 +19,24 @@ def set_db(database):
 
 
 # ── Defaults — bump these whenever you push a new Play Store build ──────────
-LATEST_VERSION_NAME = "1.1.0"
-LATEST_VERSION_CODE = 11
+# Feb 17 2026 — v1.2.0 (code 12) release with 10-level Community Bonus,
+# Community Leader multipliers, PRC Statement Daily Summary, and Core Team retirement.
+LATEST_VERSION_NAME = "1.2.0"
+LATEST_VERSION_CODE = 20
 MINIMUM_SUPPORTED_VERSION_CODE = 1  # below this → force-update
 PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.parasreward.prc"
+
+# Human-readable release notes shown in the in-app "Update Available" banner
+# when no custom notes are stored in Mongo (`app_config.android_app_version`).
+DEFAULT_RELEASE_NOTES = (
+    "What's new in v1.2.0:\n"
+    "• 10-Level Community Bonus (max 7.20%) with live level unlocks\n"
+    "• Community Leader multipliers — District 1.25x, Regional 1.50x, State 1.75x, National 2.00x\n"
+    "• PRC Statement: new Daily Summary view — collapse thousands of rows into per-day cards\n"
+    "• Cleaner Community Growth page — no duplicate cards\n"
+    "• Retired legacy Core Team distribution module\n"
+    "• Bug fixes: Admin auto-logout on wrong PIN"
+)
 
 
 class VersionUpdate(BaseModel):
@@ -50,7 +64,7 @@ async def get_version_info():
         "latest_version_code": int(cfg.get("version_code", LATEST_VERSION_CODE)),
         "minimum_supported_version_code": int(cfg.get("minimum_supported_code", MINIMUM_SUPPORTED_VERSION_CODE)),
         "force_update": bool(cfg.get("force_update", False)),
-        "release_notes": cfg.get("release_notes", "Latest improvements and bug fixes."),
+        "release_notes": cfg.get("release_notes", DEFAULT_RELEASE_NOTES),
         "play_store_url": PLAY_STORE_URL,
     }
 

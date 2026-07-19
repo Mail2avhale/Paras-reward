@@ -114,8 +114,27 @@ android {
         //     with lazy loading + partner badges + WhatsApp nudge button
         //     with pre-filled English reactivation message.
         // 22. BottomNav rename "Invite" → "Community".
-        versionCode 19
-        versionName "1.1.8"
+        //
+        // versionCode 19 → 20 — Feb 17, 2026 release (v1.2.0):
+        // 23. NEW 10-Level Community Bonus (max 7.20%) — decreasing table
+        //     (L1-L3 = 1.0%, L4-L10 stepping down 0.10% each). Level unlocks
+        //     tied to L1 Active Elite direct downline count (10/20/…/70).
+        // 24. Community Leader Bonus Multiplier — District 1.25x, Regional
+        //     1.50x, State 1.75x, National 2.00x. Applied on top of the
+        //     10-level base %. Admin-configurable via /admin/community-leader
+        //     endpoints with sanity clamps [0.5, 10.0].
+        // 25. PRC Statement — new Daily Summary view (default) with tap-to-
+        //     expand day cards. Groups thousands of level-commission rows
+        //     into per-day buckets. Detailed pagination still available.
+        // 26. Referrals page — removed duplicate "Community Growth Bonus 3%"
+        //     card and legacy "Community Levels" L1/L2/L3 tiles; both replaced
+        //     by the new 10-level Level Progression card.
+        // 27. Retired Core Team feature — Pool Wallet, distribution scheduler,
+        //     admin page, dashboard card, badges, ledger type all removed.
+        // 28. P0 bugfix — Admin auto-logout on wrong X-Admin-Pin (global
+        //     axios interceptor 403 keyword regex tightened).
+        versionCode 20
+        versionName "1.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
