@@ -25,7 +25,6 @@ const MENU_TO_PERMISSION = {
   'community-leaders': 'user360',     // Reuses user360 permission
   'partner-stores': 'user360',        // Reuses user360 permission
   'members': 'members',
-  'core-team': 'core-team',
   'failed-transactions': 'failed-transactions',
   'bulk-refund-otp': 'bulk-refund-otp',
   'transaction-manager': 'transaction-manager',
@@ -165,7 +164,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
   // Regular menu items
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
-    { id: 'core-team', label: 'Core Team', icon: Shield, path: '/admin/core-team' },
     { id: 'employees', label: 'Employees', icon: Users, path: '/admin/employees' },
     { id: 'employee-reports', label: 'Employee Reports', icon: FileText, path: '/admin/employees/reports' },
     { id: 'community', label: 'Community Forum', icon: MessageSquare, path: '/admin/community' },
@@ -255,7 +253,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
   const ROUTE_TO_PERMISSION = {
     // General
     '/admin/user360': 'user360',
-    '/admin/core-team': 'core-team',
     '/admin/failed-transactions': 'failed-transactions',
     '/admin/bulk-refund-otp': 'bulk-refund-otp',
     '/admin/transaction-manager': 'transaction-manager',

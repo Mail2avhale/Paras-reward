@@ -900,14 +900,9 @@ async def collect_mining(uid: str, current_user: dict = Depends(_require_authent
             except Exception as commission_err:
                 logging.error(f"[MINING] Referral commission distribution failed: {commission_err}")
 
-        # Pool wallet + employee pool credits are tied to mined volume,
-        # not to whether the user kept their PRC. They run for both tiers.
-        try:
-            from routes.pool_wallet import credit_pool_wallet
-            await credit_pool_wallet(uid, mined_coins, user.get("name", ""))
-        except Exception as pool_err:
-            logging.error(f"[MINING] Pool wallet credit error: {pool_err}")
-        
+        # Pool wallet credit removed Feb 17 2026 — Core Team feature retired.
+        # (Employee pool credit below is unchanged.)
+
         try:
             from routes.employee_management import credit_employee_pool
             await credit_employee_pool(mined_coins, uid, user.get("name", ""))

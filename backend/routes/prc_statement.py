@@ -72,10 +72,12 @@ TYPE_MAP = {
     "mall_booking": "Paras Mall", "paras_mall": "Paras Mall", "mall_book": "Paras Mall",
     "redeem": "Redeem", "retry_debit": "Redeem",
     "dmt_transfer": "Redeem",
-    "core_team_bonus": "Core Team Bonus",
+    # Legacy Core Team bonus rows (feature retired Feb 17 2026) surface as
+    # generic "Legacy Bonus" so historical statements still make sense.
+    "core_team_bonus": "Legacy Bonus",
 }
 
-FILTER_CATEGORIES = ["All", "Reward", "Referral Reward", "Recharge", "Bill Pay", "Redeem", "Bank Redeem", "Voucher Redeem", "Subscription", "Paras Mall", "Refund", "Burn", "Admin", "Core Team Bonus"]
+FILTER_CATEGORIES = ["All", "Reward", "Referral Reward", "Recharge", "Bill Pay", "Redeem", "Bank Redeem", "Voucher Redeem", "Subscription", "Paras Mall", "Refund", "Burn", "Admin"]
 
 
 def classify_type(raw_type: str) -> str:

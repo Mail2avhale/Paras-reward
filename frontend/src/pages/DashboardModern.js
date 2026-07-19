@@ -116,7 +116,7 @@ const DashboardModern = ({ user, onLogout }) => {
     upcomingPlansCount: user?.upcoming_plans_count || 0,
     prcRate: 10,
     categoryLimits: { utility: { remaining: 0 }, shopping: { remaining: 0 }, bank: { remaining: 0 } },
-    poolWallet: { balance: 0, core_team_count: 0, is_core_member: false },
+    poolWallet: { balance: 0, core_team_count: 0, is_core_member: false }, // Feb 17 2026 — retained as inert default so downstream reads never NPE; Core Team feature retired.
   });
 
   // Helper function to get plan display name
@@ -802,93 +802,7 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* Core Team Pool Wallet Card — Only visible to Core Team members */}
-      {stats.poolWallet?.is_core_member && (
-        <div className="px-5 mb-4" data-testid="pool-wallet-card">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="relative rounded-2xl p-5 overflow-hidden"
-            style={{
-              background: 'linear-gradient(135deg, rgba(30,27,75,0.95) 0%, rgba(49,46,129,0.85) 40%, rgba(67,56,202,0.7) 100%)',
-              border: '1px solid rgba(129,140,248,0.25)',
-              boxShadow: '0 8px 32px rgba(67,56,202,0.2), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 1px rgba(99,102,241,0.1)',
-              backdropFilter: 'blur(16px)',
-            }}
-          >
-            {/* Glass reflection overlay */}
-            <div className="absolute inset-0 pointer-events-none" style={{
-              background: 'linear-gradient(160deg, rgba(255,255,255,0.08) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.03) 100%)',
-              borderRadius: 'inherit',
-            }} />
-            {/* Subtle glow orbs */}
-            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-20" style={{
-              background: 'radial-gradient(circle, rgba(129,140,248,0.6) 0%, transparent 70%)',
-            }} />
-            <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full opacity-15" style={{
-              background: 'radial-gradient(circle, rgba(167,139,250,0.5) 0%, transparent 70%)',
-            }} />
-
-            {/* Background geometric pattern — squares, circles, ₹ */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ borderRadius: 'inherit' }}>
-              <div className="absolute" style={{ top: '12%', right: '8%', width: 28, height: 28, border: '1.5px solid rgba(129,140,248,0.15)', borderRadius: 4, transform: 'rotate(15deg)' }} />
-              <div className="absolute" style={{ bottom: '18%', right: '22%', width: 18, height: 18, border: '1.5px solid rgba(167,139,250,0.12)', borderRadius: 3, transform: 'rotate(-20deg)' }} />
-              <div className="absolute" style={{ top: '45%', right: '42%', width: 14, height: 14, background: 'rgba(129,140,248,0.06)', borderRadius: 2, transform: 'rotate(35deg)' }} />
-              <div className="absolute" style={{ top: '8%', left: '35%', width: 22, height: 22, border: '1px solid rgba(99,102,241,0.1)', borderRadius: 3, transform: 'rotate(45deg)' }} />
-              <div className="absolute" style={{ top: '20%', right: '30%', width: 20, height: 20, border: '1.5px solid rgba(167,139,250,0.13)', borderRadius: '50%' }} />
-              <div className="absolute" style={{ bottom: '25%', left: '15%', width: 12, height: 12, background: 'rgba(129,140,248,0.08)', borderRadius: '50%' }} />
-              <div className="absolute" style={{ top: '55%', right: '12%', width: 16, height: 16, border: '1px solid rgba(129,140,248,0.1)', borderRadius: '50%' }} />
-              <div className="absolute" style={{ bottom: '40%', right: '55%', width: 8, height: 8, background: 'rgba(167,139,250,0.1)', borderRadius: '50%' }} />
-              <span className="absolute font-bold select-none" style={{ top: '15%', right: '18%', fontSize: 18, color: 'rgba(129,140,248,0.1)', transform: 'rotate(-10deg)' }}>₹</span>
-              <span className="absolute font-bold select-none" style={{ bottom: '20%', left: '30%', fontSize: 14, color: 'rgba(167,139,250,0.08)', transform: 'rotate(15deg)' }}>₹</span>
-              <span className="absolute font-bold select-none" style={{ top: '40%', right: '50%', fontSize: 22, color: 'rgba(99,102,241,0.07)', transform: 'rotate(5deg)' }}>₹</span>
-              <div className="absolute" style={{ top: '30%', left: '8%', width: 4, height: 4, background: 'rgba(129,140,248,0.15)', borderRadius: '50%' }} />
-              <div className="absolute" style={{ top: '65%', left: '45%', width: 3, height: 3, background: 'rgba(167,139,250,0.12)', borderRadius: '50%' }} />
-              <div className="absolute" style={{ top: '10%', left: '60%', width: 5, height: 5, background: 'rgba(129,140,248,0.1)', borderRadius: '50%' }} />
-            </div>
-
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-bold text-white tracking-wide">Core Team Pool Wallet</p>
-                  <p className="text-[10px] text-indigo-300/60">{stats.poolWallet?.core_team_count || 0} Team Members</p>
-                </div>
-              </div>
-
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-indigo-300/50 text-[10px] uppercase tracking-widest font-medium">Pool Balance</p>
-                  <p className="text-3xl font-black text-white mt-1" style={{ textShadow: '0 2px 8px rgba(129,140,248,0.3)' }}>
-                    {Number(stats.poolWallet?.balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                    <span className="text-sm text-indigo-300/50 ml-1.5 font-medium">PRC</span>
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-indigo-300/50 text-[10px] uppercase tracking-widest font-medium">Total Distributed</p>
-                  <p className="text-lg font-bold text-indigo-300 mt-1">
-                    {Number(stats.poolWallet?.total_distributed || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                    <span className="text-[10px] text-indigo-300/50 ml-1 font-medium">PRC</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Today's Expected PRC */}
-              <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(129,140,248,0.15)' }}>
-                <div className="flex items-center justify-between">
-                  <p className="text-indigo-300/50 text-[10px] uppercase tracking-widest font-medium">Today's Expected</p>
-                  <p className="text-sm font-bold text-green-400">
-                    +{((stats.poolWallet?.core_team_count || 0) > 0
-                      ? Number((stats.poolWallet?.balance || 0) / (stats.poolWallet?.core_team_count || 1)).toLocaleString('en-IN', { maximumFractionDigits: 2 })
-                      : '0')}
-                    <span className="text-[10px] text-green-400/60 ml-1 font-medium">PRC</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      {/* Core Team Pool Wallet Card removed Feb 17 2026 — feature retired. */}
 
       {/* Subscription Info Card - Only for paid subscribers */}
       {['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && (

@@ -114,7 +114,7 @@ from routes.eko_callback import router as eko_callback_router, set_db as set_eko
 from routes.eko_recharge import router as eko_recharge_router, set_db as set_eko_recharge_db, set_recharge_redeem_check, set_recharge_log_transaction, set_recharge_calculate_charges, set_cache as set_eko_recharge_cache
 from routes.growth_economy import router as growth_economy_router, set_db as set_growth_economy_db
 from routes.admin_subscription import router as admin_subscription_router
-from routes.pool_wallet import router as pool_wallet_router, set_db as set_pool_wallet_db, set_cache as set_pool_wallet_cache, distribute_pool_to_core_team, auto_repair_balance_after as pool_auto_repair_balance_after
+# from routes.pool_wallet import ... — REMOVED Feb 17 2026 (Core Team feature retired)
 from routes.employee_management import router as employee_router, set_db as set_employee_db, set_cache as set_employee_cache, distribute_employee_pool
 from routes.employee_reports import router as employee_reports_router, set_db as set_employee_reports_db
 from routes.community import router as community_router, set_db as set_community_db, set_cache as set_community_cache, auto_backfill_success_stories
@@ -8542,23 +8542,8 @@ async def get_user_dashboard_combined(uid: str, request: Request):
             logging.warning(f"[DASHBOARD] Lifetime redeemed calc failed: {e}")
             return 0
 
-    async def _fetch_pool_wallet():
-        try:
-            pool_wallet = await db.pool_wallet.find_one({"wallet_id": "main"}, {"_id": 0, "balance": 1, "total_distributed": 1})
-            pool_balance = round(float(pool_wallet.get("balance", 0)), 4) if pool_wallet else 0
-            pool_total_dist = round(float(pool_wallet.get("total_distributed", 0)), 4) if pool_wallet else 0
-            core_team_count, is_core = await asyncio.gather(
-                db.core_team_members.count_documents({"status": "active"}),
-                db.core_team_members.find_one({"uid": uid, "status": "active"})
-            )
-            return {
-                "balance": pool_balance,
-                "total_distributed": pool_total_dist,
-                "core_team_count": core_team_count,
-                "is_core_member": is_core is not None,
-            }
-        except Exception:
-            return {"balance": 0, "total_distributed": 0, "core_team_count": 0, "is_core_member": False}
+    # _fetch_pool_wallet removed Feb 17 2026 — Core Team feature retired.
+    # Frontend Dashboard receives inert defaults via the response shape.
 
     async def _fetch_upcoming_plan():
         try:
@@ -8588,14 +8573,14 @@ async def get_user_dashboard_combined(uid: str, request: Request):
             print(f"[DASHBOARD] Activity query failed: {e}")
             return []
 
-    prc_rate, pending_refund_count, lifetime_redeemed, pool_wallet_info, upcoming_result, recent_activity = await asyncio.gather(
+    prc_rate, pending_refund_count, lifetime_redeemed, upcoming_result, recent_activity = await asyncio.gather(
         _fetch_prc_rate(),
         _fetch_pending_refund_count(),
         _fetch_lifetime_redeemed(),
-        _fetch_pool_wallet(),
         _fetch_upcoming_plan(),
         _fetch_recent_activity(),
     )
+    pool_wallet_info = {"balance": 0, "total_distributed": 0, "core_team_count": 0, "is_core_member": False}  # Inert default — Core Team retired Feb 17 2026
     upcoming_plan, upcoming_count = upcoming_result
 
     result = {
@@ -22477,14 +22462,7 @@ async def get_user_360_view(query: str, request: Request):
                 )
             except Exception:
                 return None
-        async def _fetch_core_team():
-            try:
-                return await db.core_team_members.find_one(
-                    {"uid": uid, "status": "active"},
-                    {"_id": 0, "member_id": 1, "designation": 1, "added_at": 1}
-                )
-            except Exception:
-                return None
+        # _fetch_core_team removed Feb 17 2026 — Core Team feature retired.
         async def _fetch_employee():
             try:
                 return await db.employees.find_one(
@@ -22495,19 +22473,18 @@ async def get_user_360_view(query: str, request: Request):
                 return None
 
         _tail = await asyncio.gather(
-            _fetch_upcoming(), _fetch_core_team(), _fetch_employee(),
+            _fetch_upcoming(), _fetch_employee(),
             return_exceptions=True,
         )
         up = _tail[0] if not isinstance(_tail[0], Exception) else None
-        ctm = _tail[1] if not isinstance(_tail[1], Exception) else None
-        emp = _tail[2] if not isinstance(_tail[2], Exception) else None
+        emp = _tail[1] if not isinstance(_tail[1], Exception) else None
 
         upcoming_plan = sanitize_mongo_doc(up) if up else None
 
         sanitized_user = sanitize_mongo_doc(user)
         if isinstance(sanitized_user, dict):
             sanitized_user["upcoming_plan"] = upcoming_plan
-            sanitized_user["core_team"] = sanitize_mongo_doc(ctm) if ctm else None
+            # core_team key removed Feb 17 2026 — feature retired.
             sanitized_user["employee"] = sanitize_mongo_doc(emp) if emp else None
         
         response_data = {
@@ -36938,7 +36915,7 @@ set_admin_misc_helpers({'log_admin_action': log_admin_action, 'hash_password': h
 api_router.include_router(admin_misc_router)
 
 api_router.include_router(admin_subscription_router)
-api_router.include_router(pool_wallet_router)
+# pool_wallet_router removed Feb 17 2026 — Core Team feature retired.
 api_router.include_router(employee_router)
 api_router.include_router(employee_reports_router)
 api_router.include_router(community_router)
@@ -37036,8 +37013,7 @@ try:
     api_router.include_router(_dlf_router)
 except Exception as _dlf_err:
     logging.error(f"[STARTUP] downline_live_feed wiring failed: {_dlf_err}")
-set_pool_wallet_db(db)
-set_pool_wallet_cache(cache)
+# set_pool_wallet_db / set_pool_wallet_cache removed Feb 17 2026 — Core Team feature retired.
 set_employee_db(db)
 set_employee_reports_db(db)
 set_employee_cache(cache)
@@ -38169,26 +38145,9 @@ async def startup_db():
         
         # Emergency Auto-Pause Check (REMOVED June 2026 - fixed rate cleanup)
         
-        # Pool Wallet Daily Distribution at midnight
-        async def pool_wallet_daily_distribute():
-            try:
-                result = await distribute_pool_to_core_team(triggered_by="daily_cron")
-                logging.info(f"[POOL WALLET CRON] Distribution result: {result}")
-            except Exception as e:
-                logging.error(f"[POOL WALLET CRON] Distribution error: {e}")
-        
-        scheduler.add_job(
-            pool_wallet_daily_distribute,
-            'cron',
-            hour=18,
-            minute=30,
-            id='pool_wallet_daily_distribute',
-            name='Pool Wallet Daily Distribution (Midnight IST)',
-            replace_existing=True,
-            misfire_grace_time=3600,
-            coalesce=True
-        )
-        
+        # Pool Wallet cron removed Feb 17 2026 — Core Team feature retired.
+        # (`pool_wallet_daily_distribute` scheduler + `distribute_pool_to_core_team` call deleted)
+
         # Employee Pool Daily Distribution (Midnight IST = 18:30 UTC)
         async def employee_pool_daily_distribute():
             try:
@@ -38217,29 +38176,8 @@ async def startup_db():
                 now = datetime.now(timezone.utc)
                 one_day_ago = now - timedelta(hours=24)
                 
-                # Pool Wallet catch-up
-                pool_wallet = await db.pool_wallet.find_one(
-                    {"wallet_id": "main"}, {"_id": 0, "last_distributed": 1, "balance": 1}
-                )
-                if pool_wallet:
-                    last = pool_wallet.get("last_distributed")
-                    balance = float(pool_wallet.get("balance", 0))
-                    needs_run = False
-                    if balance > 0:
-                        if not last:
-                            needs_run = True
-                        else:
-                            try:
-                                last_dt = datetime.fromisoformat(last.replace('Z', '+00:00'))
-                                if last_dt < one_day_ago:
-                                    needs_run = True
-                            except Exception:
-                                needs_run = True
-                    if needs_run:
-                        logging.warning(f"[POOL WALLET CATCH-UP] Last run: {last}, balance: {balance} - running NOW")
-                        result = await distribute_pool_to_core_team(triggered_by="startup_catchup")
-                        logging.info(f"[POOL WALLET CATCH-UP] Result: {result}")
-                
+                # Pool Wallet catch-up removed Feb 17 2026 — Core Team feature retired.
+
                 # Employee Pool catch-up
                 emp_settings = await db.employee_pool_settings.find_one({}, {"_id": 0})
                 if emp_settings:

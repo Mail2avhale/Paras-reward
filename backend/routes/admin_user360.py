@@ -283,17 +283,9 @@ async def get_user_full_360(uid: str):
     except Exception as e:
         logging.warning(f"[USER360] Subscription history error for {uid}: {e}")
     
-    # ========== 6b. CORE TEAM + EMPLOYEE FLAGS (for badges) ==========
-    core_team_data = None
+    # ========== 6b. EMPLOYEE FLAG (for badges) ==========
+    # Core Team fetch removed Feb 17 2026 — feature retired.
     employee_data = None
-    try:
-        ctm = await db.core_team_members.find_one(
-            {"uid": uid, "status": "active"},
-            {"_id": 0, "member_id": 1, "designation": 1, "added_at": 1}
-        )
-        core_team_data = sanitize_doc(ctm) if ctm else None
-    except Exception:
-        core_team_data = None
     try:
         emp = await db.employees.find_one(
             {"user_id": uid, "status": "active"},
@@ -332,7 +324,7 @@ async def get_user_full_360(uid: str):
     
     response = {
         "success": True,
-        "user": {**sanitize_doc(user), "upcoming_plan": upcoming_plan, "core_team": core_team_data, "employee": employee_data},
+        "user": {**sanitize_doc(user), "upcoming_plan": upcoming_plan, "employee": employee_data},
         "stats": stats,
         "redeem_limit": redeem_limit_data,
         "referral": referral_data,

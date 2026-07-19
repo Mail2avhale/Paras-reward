@@ -144,15 +144,7 @@ const UserProfileCard = ({ user, onEditClick }) => {
               {user.kyc_status === 'verified' && (
                 <BadgeCheck className="h-6 w-6 text-green-600" />
               )}
-              {user.core_team && (
-                <span
-                  title={`Core Team${user.core_team?.designation ? ' · ' + user.core_team.designation : ''}${user.core_team?.added_at ? ' · since ' + new Date(user.core_team.added_at).toLocaleDateString() : ''}`}
-                  data-testid="core-team-badge"
-                  className="px-2.5 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-bold rounded-full inline-flex items-center gap-1 shadow-sm"
-                >
-                  <Crown className="h-3.5 w-3.5" /> CORE TEAM
-                </span>
-              )}
+              {/* Core Team badge removed Feb 17 2026 — feature retired. */}
               {user.employee && (
                 <span
                   title={`Employee${user.employee?.designation ? ' · ' + user.employee.designation : ''}${user.employee?.department ? ' · ' + user.employee.department : ''}${user.employee?.employee_id ? ' · ID ' + user.employee.employee_id : ''}`}

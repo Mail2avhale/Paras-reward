@@ -1414,6 +1414,45 @@ Purely client-side aggregation UX toggle on `/prc-statement`. No backend refacto
 
 ---
 
+## Feb 17, 2026 — Core Team Feature: Full Removal (Option C — Reverse + Delete)
+
+### Change
+User requested full retirement of Core Team (`/admin/core-team`, Pool Wallet, Core Team Bonus distribution). Complete removal across backend, frontend, DB, cron, UI badges. Option C for historical PRC: reverse balances then delete ledger rows.
+
+### Backend
+- **Deleted**: `/app/backend/routes/pool_wallet.py` (~558 lines — 9 endpoints + `distribute_pool_to_core_team` + `credit_pool_wallet` + repair/heal utilities).
+- `/app/backend/server.py`: import + `include_router(pool_wallet_router)` + `set_pool_wallet_db/cache` wiring removed; `pool_wallet_daily_distribute` scheduler + startup catch-up removed; `_fetch_pool_wallet()` dropped from dashboard composite (inert defaults returned); `_fetch_core_team()` dropped from admin user-detail composite (`core_team` key removed from response).
+- `/app/backend/routes/mining.py`: `credit_pool_wallet(...)` call removed — mining volume no longer feeds the 1% pool tax.
+- `/app/backend/routes/admin_accounting.py`: `{"id": "core-team"}` removed from permission menu.
+- `/app/backend/routes/admin_user360.py`: core_team fetch + `core_team` response field removed.
+- `/app/backend/routes/prc_statement.py`: `core_team_bonus` type relabelled to `"Legacy Bonus"`; `"Core Team Bonus"` removed from `FILTER_CATEGORIES`.
+
+### Frontend
+- **Deleted**: `/app/frontend/src/pages/AdminCoreTeam.js`.
+- `App.js`: lazy import removed; `/admin/core-team` route now `<Navigate to="/admin/dashboard" replace />`.
+- `AdminLayout.js`: `core-team` removed from `SECTION_TO_PERMISSION`, sidebar menu, and reverse-lookup dict.
+- `DashboardModern.js`: 90-line Pool Wallet Card removed. `poolWallet` inert default kept to prevent NPE on stale API responses.
+- `AdminUser360New.js`: "CORE TEAM" badge and its `user.core_team` conditional removed.
+
+### Database (preview)
+- Preview DB had 0 `core_team_bonus` rows → reversal no-op.
+- Dropped collections: `core_team_members`, `pool_wallet`.
+
+### ⚠️ Production redeploy note
+If production has historical `core_team_bonus` rows, run the reverse+delete+drop script (see chat) once after deploy so balances stay consistent.
+
+### Verification
+- Backend restart clean, no import errors.
+- `/api/pool-wallet/*` → **404**.
+- `/api/community/dashboard/{uid}` → 200 with `level_progression` + `leader_status` intact.
+- `/api/prc-statement/{uid}` filters: no "Core Team Bonus".
+- Admin sidebar HTML audit: word "Core Team" absent.
+- `/admin/core-team` deep link → redirects to `/admin`.
+- Dashboard: `pool-wallet-card` count = 0.
+- Lint: DashboardModern + AdminLayout clean; App.js pre-existing 3 errors unrelated to this cleanup.
+
+---
+
 ## Feb 16, 2026 — Feature: Community Leader Bonus Multiplier & Role Structure
 
 ### Spec (as approved by user)

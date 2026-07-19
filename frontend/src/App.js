@@ -635,7 +635,6 @@ const AdminBankTransfers = IS_USER_BUILD ? null : lazy(() => import(/* webpackCh
 const AdminFirstPayoutQueue = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminFirstPayoutQueue"));
 const AdminRedeemLimits = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminRedeemLimits"));
 const AdminHolidays = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminHolidays"));
-const AdminCoreTeam = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCoreTeam"));
 const AdminEmployees = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminEmployees"));
 const AdminEmployeeReports = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminEmployeeReports"));
 const AdminCommunity = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminCommunity"));
@@ -970,7 +969,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/contact-settings" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminContactSettings user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/vip-verification" element={<Navigate to="/admin/subscriptions" replace />} />
                 <Route path="/admin/subscriptions" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminSubscriptionManagement user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/core-team" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminCoreTeam user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* /admin/core-team removed Feb 17 2026 — Core Team feature retired. Redirect any deep links to /admin/dashboard. */}
+                <Route path="/admin/core-team" element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="/admin/employees" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEmployees user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/employees/reports" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEmployeeReports user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/community" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminCommunity user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
