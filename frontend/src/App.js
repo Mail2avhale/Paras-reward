@@ -888,8 +888,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/settings-hub" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminSettingsHub user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/partners" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPartners user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/partner-stores" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPartnerStores user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/partner-store/dashboard" element={user?.role === 'partner_store' ? <Suspense fallback={<LoadingFallback />}><PartnerStoreDashboard user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/login" replace />} />
-                <Route path="/pay-partner-store" element={user && user.role !== 'partner_store' ? <RouteErrorBoundary routeName="pay-partner-store"><Suspense fallback={<LoadingFallback />}><PayPartnerStore user={user} /></Suspense></RouteErrorBoundary> : <Navigate to="/login" replace />} />
+                {/* /partner-store/dashboard and /pay-partner-store moved OUT of the IS_USER_BUILD block — see below. Feb 17 2026. */}
                 <Route path="/admin/device-binding" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminDeviceBinding user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/prc-rate-control" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/settings" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=payment" replace /> : <Navigate to="/dashboard" />} />
@@ -987,6 +986,24 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
               <Route path="/admin/*" element={<AdminOnWebOnly />} />
             )}
             
+            {/* Partner Store user-facing routes — MUST be outside IS_USER_BUILD
+                block. Fixes APK blank-page bug (Feb 17 2026): before this move,
+                /pay-partner-store was declared inside the admin block, so the
+                Android AAB build stripped it out entirely, showing users a
+                blank shell when they tapped "Pay to Partner Store". */}
+            <Route
+              path="/pay-partner-store"
+              element={user && user.role !== 'partner_store'
+                ? <RouteErrorBoundary routeName="pay-partner-store"><Suspense fallback={<LoadingFallback />}><PayPartnerStore user={user} /></Suspense></RouteErrorBoundary>
+                : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/partner-store/dashboard"
+              element={user?.role === 'partner_store'
+                ? <Suspense fallback={<LoadingFallback />}><PartnerStoreDashboard user={user} onLogout={handleLogout} /></Suspense>
+                : <Navigate to="/login" replace />}
+            />
+
             {/* Redeem PRC routes - DEPRECATED April 2026 */}
             <Route path="/redeem" element={<Navigate to="/dashboard" replace />} />
             <Route path="/withdrawal-history" element={<Navigate to="/dashboard" replace />} />

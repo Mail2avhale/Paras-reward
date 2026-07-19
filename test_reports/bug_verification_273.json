@@ -1,0 +1,49 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "अजुनही ॲड मुळे bottom आयकॉन्स hide hotat. Pay to partner app मध्ये blank page not fixed. Dashboard वरून ad remove करून other सर्व pages वरती दाखव native ad place कर.",
+  "summary": "Focused verification completed. No relevant testing skill found. Code/build checks confirm /pay-partner-store and /partner-store/dashboard are outside the IS_USER_BUILD admin block and present in the user build static bundle. Web preview login succeeded; /pay-partner-store rendered pay-store-page with wallet balance + Step 1 lookup and partner store lookup worked. GlobalBannerAd is mounted once inside BrowserRouter for logged-in users, hides on /dashboard, uses 90dp margin, and per-page native AdMob.showBanner calls were removed. Native APK overlay behavior could not be physically exercised in this cloud preview, but the code path and user-build artifacts match the intended fix.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "/community-feed regression check",
+        "issue": "App.js has /community and /network-feed routes, but no explicit /community-feed route. Browser preview showed nonblank logged-in app shell/content, but if /community-feed is intended as a real page/alias this should be clarified or mapped. This did not affect the reported Pay Partner Store or AdMob fixes.",
+        "affected_selectors": []
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/bug_verification_273_playwright.py",
+    "/app/test_reports/bug_verification_273.json",
+    "/app/test_reports/iteration_273.json"
+  ],
+  "action_items": [
+    "Rebuild the Android AAB v1.2.2/code 22 and perform one physical-device smoke test for Dashboard banner absence and /pay-partner-store rendering, because native APK overlays cannot be directly tested from this environment.",
+    "If /community-feed is an intended supported URL, add an explicit route/redirect; otherwise use /network-feed or /community in regression specs."
+  ],
+  "critical_code_review_comments": [
+    "App.js: old in-admin-block partner store route declarations are gone; line 891 comment notes the move; top-level routes appear after the admin block at lines 989-1005.",
+    "build/static/js contains text matches for pay-partner-store and partner-store/dashboard, proving these routes are compiled into the current user-build artifact.",
+    "PayPartnerStore.js preserves the pay-store-loading-state guard after hooks. App route currently requires a truthy user before rendering PayPartnerStore, but localStorage hydration is synchronous and the original stripped-route APK root cause is fixed.",
+    "GlobalBannerAd.js includes /dashboard in HIDE_ON_PREFIXES and calls AdMob.showBanner with margin: 90 only outside hidden routes. AdMobBanner.js has no native AdMob.showBanner call; DashboardModern.js has no <AdMobBanner placement=\"dashboard_home\" /> render."
+  ],
+  "updated_files": [
+    "/app/test_reports/bug_verification_273_playwright.py",
+    "/app/test_reports/bug_verification_273.json",
+    "/app/test_reports/iteration_273.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "95% (web/code/build verified; native APK physical test not possible here)"
+  },
+  "seed_data_creation": "No seed data created. Used existing test user 9970100782/PIN 997010 and partner store ID 100001.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Newest report is iteration_273. Re-check physical APK after AAB build if device access is available. In preview, login, Dashboard, /pay-partner-store, partner lookup, /notifications, /network-feed, and /referrals Level Progression passed.",
+  "rca_of_the_issue": "Prior APK blank page root cause was /pay-partner-store being declared inside the admin-only !IS_USER_BUILD block, so the user AAB stripped the route. The fix moves partner routes to top-level Routes and keeps a defensive PayPartnerStore loading fallback. Dashboard icon overlap was caused by per-page native banner lifecycle/zero-margin behavior; the fix centralizes native banner handling in GlobalBannerAd, hides it on Dashboard, and uses a 90dp bottom margin elsewhere."
+}
