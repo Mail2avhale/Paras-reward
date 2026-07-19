@@ -259,42 +259,20 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
         </div>
       )}
 
-      {/* ============ SECTION 3: COMMUNITY GROWTH BONUS ============ */}
-      <GlassCard className="p-4" testId="community-growth-bonus-card">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-fuchsia-500/25 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-fuchsia-300" />
-            </div>
-            <div>
-              <h3 className="text-white font-semibold text-sm">Community Growth Bonus</h3>
-              <p className="text-gray-400 text-[10px]">Earn when your community stays active</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wider text-gray-500">Total</p>
-            <p className="text-fuchsia-300 font-bold text-lg tabular-nums">3%</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {['L1', 'L2', 'L3'].map((lvl, i) => (
-            <div key={lvl} className={`bg-black/40 border border-fuchsia-500/20 rounded-xl p-3 text-center`} data-testid={`growth-bonus-${lvl}`}>
-              <p className="text-[10px] text-gray-500 uppercase">{lvl}</p>
-              <p className="text-fuchsia-300 font-bold text-lg tabular-nums">1%</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">{['Direct', '2nd', '3rd'][i]}</p>
-            </div>
-          ))}
-        </div>
-        <button
-          onClick={onOpenLiveFeed}
-          className="w-full mt-3 py-2.5 rounded-lg bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:opacity-90 text-white font-semibold text-sm flex items-center justify-center gap-2 transition"
-          data-testid="view-community-activity-btn"
-        >
-          <Activity className="w-4 h-4" />
-          View Live Community Activity
-          <span>→</span>
-        </button>
-      </GlassCard>
+      {/* ============ SECTION 3: LIVE ACTIVITY CTA ============
+          Feb 17 2026 — Removed the redundant "Community Growth Bonus 3% (L1/L2/L3)"
+          card since the same information (plus 7 more levels) is now shown in the
+          Level Progression card above. The "View Live Community Activity" CTA is
+          kept as a slim standalone action to preserve navigation.  */}
+      <button
+        onClick={onOpenLiveFeed}
+        className="w-full py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:opacity-90 text-white font-semibold text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-fuchsia-500/20"
+        data-testid="view-community-activity-btn"
+      >
+        <Activity className="w-4 h-4" />
+        View Live Community Activity
+        <span>→</span>
+      </button>
 
       {/* ============ SECTION 4: COMMUNITY GOAL ============ */}
       <GlassCard className="p-4" testId="community-goal-card">
