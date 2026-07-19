@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
 import PopupMessage from "@/components/PopupMessage";
+import RouteErrorBoundary from "@/components/RouteErrorBoundary";
 import { toast } from "sonner";
 import { NotificationProvider, useNotification } from "@/context/NotificationContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -886,7 +887,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/partners" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPartners user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/partner-stores" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPartnerStores user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/partner-store/dashboard" element={user?.role === 'partner_store' ? <Suspense fallback={<LoadingFallback />}><PartnerStoreDashboard user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/login" replace />} />
-                <Route path="/pay-partner-store" element={user && user.role !== 'partner_store' ? <Suspense fallback={<LoadingFallback />}><PayPartnerStore user={user} /></Suspense> : <Navigate to="/login" replace />} />
+                <Route path="/pay-partner-store" element={user && user.role !== 'partner_store' ? <RouteErrorBoundary routeName="pay-partner-store"><Suspense fallback={<LoadingFallback />}><PayPartnerStore user={user} /></Suspense></RouteErrorBoundary> : <Navigate to="/login" replace />} />
                 <Route path="/admin/device-binding" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminDeviceBinding user={user} onLogout={handleLogout} /></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/prc-rate-control" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/settings" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=payment" replace /> : <Navigate to="/dashboard" />} />

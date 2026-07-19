@@ -1500,6 +1500,29 @@ All version identifiers bumped and aligned across Android build, backend default
 
 ---
 
+## Feb 17, 2026 — v1.2.0 Post-push APK Hotfix
+
+User reported 2 issues after pushing v1.2.0 AAB to Play Store:
+
+### Issue 1: Test Ad banner overlaying bottom navigation on Dashboard
+- **Root cause**: Native AdMob banner (position BOTTOM_CENTER) drew above the WebView on the primary navigation surface, making the bottom navigation cramped.
+- **Fix** (`/app/frontend/src/pages/DashboardModern.js`): Removed `<AdMobBanner placement="dashboard_home" />` slot from the Dashboard. Ads still shown on Notifications, Community Feed, and PayPartnerStore success screens where they don't block navigation.
+- **Note**: The "Test Ad" text visible in the screenshot is a Google-side indicator (AdMob account/ad-unit still under review). It disappears automatically once AdMob approves — no code fix possible.
+
+### Issue 2: "Pay to Partner Store" opens blank page in APK (works on web)
+- **Symptom**: Route `/pay-partner-store` renders blank in the installed APK; identical URL works in browser view.
+- **Hypothesis**: Lazy chunk (`partner-store.chunk.js`) load failure in WebView OR a native-context runtime error in the component tree; user gets a silent blank screen with no recovery option.
+- **Fix** (defensive):
+  - **NEW** `/app/frontend/src/components/RouteErrorBoundary.js` — class-based error boundary with `Retry` (soft remount via epoch-keyed key) and `Go to Home` buttons. Only shows dev error details in non-production builds.
+  - `/app/frontend/src/App.js` — wrapped the `PayPartnerStore` Suspense in `<RouteErrorBoundary routeName="pay-partner-store">…</RouteErrorBoundary>`. Any render error / chunk failure will now surface an actionable retry screen instead of a blank canvas.
+
+### Deploy checklist
+1. Rebuild the Android AAB from `/app/frontend/android` (Gradle will use versionCode 20 / versionName 1.2.0 baked earlier).
+2. Upload to Play Console under the same v1.2.0 track (or bump to v1.2.1 if you want a distinct hotfix build).
+3. Verify: install AAB → Dashboard no longer has the bottom banner ad; tap "Pay to Partner Store" → either page loads correctly OR (if lazy chunk truly fails) user sees the Retry screen with a working Retry button.
+
+---
+
 ## Feb 16, 2026 — Feature: Community Leader Bonus Multiplier & Role Structure
 
 ### Spec (as approved by user)

@@ -1152,10 +1152,12 @@ const DashboardModern = ({ user, onLogout }) => {
       <div className="px-5 mb-4">
       </div>
 
-      {/* Dashboard bottom banner ad (Feb 2026 — v2.0) */}
-      <div className="px-5 mb-4" data-testid="dashboard-bottom-ad-slot">
-        <AdMobBanner placement="dashboard_home" />
-      </div>
+      {/* Dashboard AdMob banner removed Feb 17 2026 — v1.2.0.
+          User feedback: the native banner (BOTTOM_CENTER) overlapped the
+          bottom navigation on real devices making the primary nav hard to
+          use. Ads are still shown on Notifications, Community Feed, and
+          PayPartnerStore success screens where they don't interfere with
+          navigation. */}
 
       {/* Rewarded ad widget removed — Google Play Store policy compliance
           (incentivised ads not allowed for AdMob rewarded video without
