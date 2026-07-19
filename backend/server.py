@@ -37000,6 +37000,18 @@ try:
 except Exception as _mc_err:
     logging.error(f"[STARTUP] mining_commission wiring failed: {_mc_err}")
 
+# Community Level Progression (10-level bonus system, Feb 2026)
+try:
+    from routes.community_levels import (
+        set_db as _set_cl_db,
+        router as _community_levels_router,
+    )
+    _set_cl_db(db)
+    api_router.include_router(_community_levels_router)
+    logging.info("[STARTUP] community_levels router wired")
+except Exception as _cl_err:
+    logging.error(f"[STARTUP] community_levels wiring failed: {_cl_err}")
+
 # Downline Live Feed (referral-reward feed, Jul 2026)
 try:
     from routes.downline_live_feed import (

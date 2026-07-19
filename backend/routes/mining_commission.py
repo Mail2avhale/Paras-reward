@@ -39,6 +39,15 @@ from typing import Optional
 
 from fastapi import APIRouter
 
+# 10-level Community Bonus table (Feb 16 2026) — used for non-partner-position
+# uplines. Import at module level so it's available to the idempotency
+# count-limit check as well as the main distribution loop.
+from routes.community_levels import (
+    get_max_earnable_level_for_uid,
+    get_level_percent as _cl_level_percent,
+    MAX_LEVEL as _CL_MAX_LEVEL,
+)
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -184,6 +193,7 @@ async def _resolve_referrer(referred_by: str) -> Optional[dict]:
             "membership_type": 1,
             "subscription_expired": 1,
             "referred_by": 1,
+            "referral_code": 1,
             "prc_balance": 1,
             "partner_position": 1,
         },
@@ -241,7 +251,7 @@ async def distribute_mining_collect_commission(
 
     already_distributed = await db.prc_ledger.count_documents(
         {"source_ref": source_ref, "type": "mining_referral_reward"},
-        limit=max_tiers + 1,
+        limit=max(max_tiers, _CL_MAX_LEVEL) + 1,
     )
     if already_distributed > 0:
         logger.info(
@@ -260,10 +270,10 @@ async def distribute_mining_collect_commission(
     current_referred_by = collector.get("referred_by")
     hops = 0
     tier_idx = 0  # index into config["tiers"] (only used for legacy USER-position fallback)
-    # Feb 6 2026 — walk up to the DEEPEST position's max levels (NATIONAL = 7).
-    # Legacy config only fires when tier_idx < max_tiers, but position uplines
-    # can still receive commission at deeper hops.
-    max_walk = max(max_tiers, 7)
+    # Feb 16 2026 — walk up to the deepest possible tier depth. USER position
+    # now uses the 10-level Community Bonus table (up to L10), NATIONAL still
+    # tops out at L7. Take the max of all + legacy config length.
+    max_walk = max(max_tiers, 7, _CL_MAX_LEVEL)
 
     while hops < max_walk and hops < MAX_CHAIN_WALK:
         hops += 1
@@ -324,16 +334,30 @@ async def distribute_mining_collect_commission(
         # Compute this tier's PRC amount.
         if use_position_path:
             tier_percent = position_pct
+            effective_tier_index = hops  # position tier depth = hop distance
         else:
-            # Legacy path: only pay if we still have a tier slot in the admin config.
-            if tier_idx >= max_tiers:
-                # Walked past legacy tier depth AND upline is USER position → stop.
-                # Continue walking in case a deeper upline has a partner position
-                # that grants them commission at this hop.
+            # ── NEW 10-LEVEL COMMUNITY BONUS (Feb 16, 2026) ───────────────
+            # Non-partner-position uplines earn via the progressive 10-level
+            # table. Level number = `hops` (distance from the collector).
+            # An upline earns at hops-th level iff their L1 Active Elite
+            # count entitles them to that depth.
+            try:
+                max_earnable = await get_max_earnable_level_for_uid(
+                    upline_uid, upline.get("referral_code")
+                )
+            except Exception as _lvl_err:
+                logger.warning(f"[MINING-COMMISSION] level lookup failed for {upline_uid}: {_lvl_err}")
+                max_earnable = 3  # safe fallback = L1-L3 always unlocked
+
+            if hops > max_earnable:
+                # Upline not entitled to earn at this depth → skip but keep
+                # walking (in case a deeper upline has enough downlines OR
+                # a partner position).
+                tier_idx += 1
                 current_referred_by = upline.get("referred_by")
                 continue
-            tier_config = tiers[tier_idx]
-            tier_percent = float(tier_config.get("percent", 0))
+            tier_percent = _cl_level_percent(hops)
+            effective_tier_index = hops
         per_tier_amount = round(collected_prc * (tier_percent / 100.0), 6)
         if per_tier_amount <= 0:
             tier_idx += 1
@@ -347,7 +371,7 @@ async def distribute_mining_collect_commission(
             collector_uid=collector_uid,
             collector_name=collector_name,
             collected_prc=collected_prc,
-            tier_index=tier_idx + 1,
+            tier_index=effective_tier_index,
             tier_percent=tier_percent,
             source_ref=source_ref,
             timestamp=ts,
@@ -357,7 +381,7 @@ async def distribute_mining_collect_commission(
                 "uid": upline_uid,
                 "name": recipient_name,
                 "prc": per_tier_amount,
-                "tier": tier_idx + 1,
+                "tier": effective_tier_index,
                 "percent": tier_percent,
             })
             already_paid.add(upline_uid)

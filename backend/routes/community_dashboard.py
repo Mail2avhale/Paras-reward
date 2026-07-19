@@ -384,6 +384,15 @@ async def get_community_dashboard(uid: str, current_user: dict = Depends(get_cur
     goal_target = 1000
     goal_pct = round(min(100.0, total * 100.0 / goal_target), 1)
 
+    # Community Level Progression (10-tier bonus system, Feb 16 2026)
+    try:
+        from routes.community_levels import get_level_progression as _cl_get_progression
+        level_progression = await _cl_get_progression(uid)
+    except Exception as _lvl_err:
+        import logging as _lg
+        _lg.warning(f"[COMMUNITY-DASHBOARD] level_progression fetch failed: {_lvl_err}")
+        level_progression = None
+
     return {
         "success": True,
         "uid": uid,
@@ -431,4 +440,5 @@ async def get_community_dashboard(uid: str, current_user: dict = Depends(get_cur
         "leaderboard": ranks,
         "daily_mission": mission,
         "monthly_challenge": challenge,
+        "level_progression": level_progression,
     }

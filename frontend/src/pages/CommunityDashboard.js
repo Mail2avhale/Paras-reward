@@ -145,7 +145,7 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
 
   const { overview, community_health, community_power, analytics,
     next_milestone, community_goal, redeem_unlock, timeline, badges,
-    leaderboard, daily_mission, monthly_challenge } = data;
+    leaderboard, daily_mission, monthly_challenge, level_progression } = data;
 
   return (
     <div className="space-y-4" data-testid="community-dashboard">
@@ -195,6 +195,9 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
           testId="overview-lifetime-bonus"
         />
       </div>
+
+      {/* ============ SECTION 1B: LEVEL PROGRESSION (10-tier bonus) ============ */}
+      {level_progression && <LevelProgressionCard data={level_progression} />}
 
       {/* ============ SECTION 2: INVITE FRIENDS ============ */}
       <GlassCard className="p-4" testId="invite-friends-card">
@@ -619,3 +622,112 @@ const ShareBtn = ({ Icon, label, onClick, tint, testId }) => (
     <span className="text-[10px] font-semibold">{label}</span>
   </button>
 );
+
+// ==========================================================================
+// LEVEL PROGRESSION — 10-tier Community Bonus display (Feb 16 2026)
+// Shows the user's current earnable level, progress to the next level, and
+// a compact scrollable grid of all 10 levels with unlocked/locked state.
+// ==========================================================================
+const LevelProgressionCard = ({ data }) => {
+  if (!data || !Array.isArray(data.levels)) return null;
+
+  const {
+    current_level: currentLevel,
+    current_percent: currentPct,
+    l1_active_elite_count: activeCount,
+    next_level: nextLevel,
+    levels,
+    elite_active: eliteActive,
+    partner_position_overrides_levels: pposOverride,
+  } = data;
+
+  return (
+    <GlassCard className="p-4" testId="level-progression-card">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3" data-testid="level-progression-header">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
+            <TrendingUp className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-white font-bold text-sm leading-tight">Level Progression</p>
+            <p className="text-[10px] text-gray-400 leading-tight">Community Bonus Levels 1 – 10</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider leading-tight">Your Level</p>
+          <p className="text-white font-black text-xl leading-tight" data-testid="level-current-badge">
+            L{currentLevel}
+            <span className="text-amber-300 text-xs font-bold ml-1">{currentPct.toFixed(1)}%</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Elite status callout */}
+      {!eliteActive && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 mb-3 text-[11px] text-amber-200 flex items-start gap-2" data-testid="level-elite-required">
+          <Zap className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <span>Elite subscription required to receive Community Bonus. Levels are computed but earnings are paused until you activate Elite.</span>
+        </div>
+      )}
+
+      {/* Partner-position override callout */}
+      {pposOverride && (
+        <div className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/5 px-3 py-2 mb-3 text-[11px] text-fuchsia-200 flex items-start gap-2" data-testid="level-pp-override">
+          <Crown className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <span>Your Leadership Position overrides the standard 10-level table. You&apos;re earning via Coordinator rules instead.</span>
+        </div>
+      )}
+
+      {/* Progress-to-next-level bar */}
+      {nextLevel && (
+        <div className="mb-3" data-testid="level-next-progress">
+          <div className="flex justify-between items-baseline mb-1.5">
+            <p className="text-[11px] text-gray-300">
+              Next: <span className="font-bold text-white">L{nextLevel.next_level}</span>
+              <span className="text-amber-300 font-bold ml-1">{nextLevel.next_percent.toFixed(1)}%</span>
+            </p>
+            <p className="text-[10px] text-gray-400 tabular-nums">
+              <span className="text-emerald-300 font-bold" data-testid="level-active-count">{activeCount}</span>
+              <span className="mx-1">/</span>
+              <span>{nextLevel.required_l1_active_elite}</span>
+              <span className="ml-1">active Elite</span>
+            </p>
+          </div>
+          <ProgressBar percent={nextLevel.progress_pct} gradient="from-indigo-400 via-purple-400 to-fuchsia-500" testId="level-next-progress-bar" />
+          <p className="text-[10px] text-gray-400 mt-1">
+            Need <span className="text-white font-bold">{nextLevel.missing_count}</span> more active Elite direct member{nextLevel.missing_count === 1 ? '' : 's'} to unlock L{nextLevel.next_level}.
+          </p>
+        </div>
+      )}
+
+      {/* Levels grid */}
+      <div className="grid grid-cols-5 gap-1.5" data-testid="level-progression-grid">
+        {levels.map((lvl) => {
+          const unlocked = lvl.unlocked;
+          const isCurrent = lvl.is_current;
+          const base = 'rounded-lg px-1.5 py-2 text-center border transition';
+          const state = unlocked
+            ? (isCurrent
+                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 border-white/20 text-white shadow-lg shadow-purple-500/30'
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-100')
+            : 'bg-white/5 border-white/10 text-gray-500';
+          return (
+            <div key={lvl.level} className={`${base} ${state}`} data-testid={`level-tile-${lvl.level}`}>
+              <p className="text-[9px] uppercase tracking-wider opacity-70 leading-tight">L{lvl.level}</p>
+              <p className="font-black text-sm tabular-nums leading-tight">{lvl.percent.toFixed(1)}%</p>
+              <p className="text-[9px] opacity-70 leading-tight mt-0.5">
+                {lvl.required_l1_active_elite === 0 ? 'Free' : `${lvl.required_l1_active_elite}+`}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer explainer */}
+      <p className="text-[10px] text-gray-400 mt-3 leading-relaxed" data-testid="level-progression-help">
+        Each mining collect by your downline pays you a % based on their depth in your network. Bring in more <span className="text-emerald-300 font-semibold">active Elite direct members</span> to unlock deeper levels and higher %.
+      </p>
+    </GlassCard>
+  );
+};

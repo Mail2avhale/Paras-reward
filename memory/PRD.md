@@ -1284,3 +1284,59 @@ Tightened `tokenExpiredKeywords` regex so a 403 only triggers session-expiry log
 - Curl regression: wrong PIN → 403 `Invalid admin operation PIN`; correct PIN 123456 → 200 + assignment succeeds.
 - Playwright E2E: admin login → `/admin/partners` → wrong PIN + `Assign` → URL stays at `/admin/partners`, error toast visible, no logout.
 - No regressions on other admin PIN-gated endpoints (revoke, list, audit, structure-config) — same tightened classifier applies.
+
+---
+
+## Feb 16, 2026 — Feature: 10-Level Community Bonus Progression
+
+### Spec (as approved by user)
+| Level | Community Bonus | Required L1 Active Elite Direct Members |
+|-------|-----------------|------------------------------------------|
+| L1    | 1.0%           | 0                                        |
+| L2    | 1.0%           | 0                                        |
+| L3    | 1.0%           | 0                                        |
+| L4    | 1.5%           | 10                                       |
+| L5    | 2.0%           | 20                                       |
+| L6    | 2.5%           | 30                                       |
+| L7    | 3.0%           | 40                                       |
+| L8    | 3.5%           | 50                                       |
+| L9    | 4.0%           | 60                                       |
+| L10   | 4.5%           | 70                                       |
+
+- **Active Elite** = L1 downline with `subscription_plan/membership_type ∈ {elite,vip,startup,growth,pro}` AND `subscription_expired != True`.
+- Receiver must themselves be Elite Active to actually be credited.
+- Partner Position (District/Regional/State/National Coordinator) coexists — their tier config overrides the 10-level table when set.
+- Auto-migration: level is derived on-the-fly at each collect from the live L1 active elite count. Existing users with 70+ downlines automatically earn L10 without any manual promotion.
+
+### Backend
+- **NEW**: `/app/backend/routes/community_levels.py`
+  - `COMMUNITY_LEVEL_TABLE` constant (10 rows, source of truth)
+  - `get_max_earnable_level(count)` — pure ladder lookup
+  - `get_level_percent(level)` — % lookup
+  - `count_l1_active_elite(uid, referral_code)` — Mongo count
+  - `get_level_progression(uid)` — full report for UI
+  - `get_max_earnable_level_for_uid(uid, referral_code)` — commission-engine hot path
+  - Endpoints: `GET /api/community/level-progression/{uid}`, `GET /api/community/level-table`
+- **CHANGED**: `/app/backend/routes/mining_commission.py`
+  - Import 10-level helpers at module load
+  - Loop walk depth extended from `max(max_tiers, 7)` → `max(max_tiers, 7, 10)` = 10 to cover L10 earners
+  - USER-position uplines (no partner_position) now branch to the 10-level table: compute upline's max_earnable_level from their L1 active elite count, pay `_cl_level_percent(hops)` iff `hops <= max_earnable`; skip otherwise but continue walking.
+  - Idempotency `count_documents` limit bumped to `max(max_tiers, MAX_LEVEL) + 1 = 11` to correctly detect fully-distributed events.
+- **CHANGED**: `/app/backend/routes/community_dashboard.py` — composite `GET /api/community/dashboard/{uid}` now includes a `level_progression` key with the full 10-level report so the UI can render in one round-trip.
+- **CHANGED**: `/app/backend/server.py` — registered new `community_levels` router at startup.
+
+### Frontend
+- **CHANGED**: `/app/frontend/src/pages/CommunityDashboard.js`
+  - NEW `LevelProgressionCard` sub-component (glass style, 10-tile 5×2 grid).
+  - Shows: current L badge with %, Elite-required callout when user is non-Elite, Partner-Position-override callout when applicable, progress-to-next-level bar (X / required, missing count, %), and the full 10 tiles with unlocked/current/locked visual states.
+  - Wired into the main layout right below the Overview cards (Section 1B).
+  - All new elements carry unique `data-testid` (`level-progression-card`, `level-tile-1..10`, `level-current-badge`, `level-active-count`, `level-next-progress-bar`, etc.).
+
+### Verification
+- **Unit ladder test**: 12 boundary counts (0, 5, 10, 19, 20, 29, 30, 45, 50, 65, 70, 150) all return the expected (level, percent) — 12/12 PASS.
+- **API**:
+  - `GET /api/community/level-table` → returns 10 rows with correct % + requirements.
+  - `GET /api/community/level-progression/{uid}` → returns current_level, l1_active_elite_count, next_level target, all 10 levels annotated with unlocked/is_current flags.
+  - `GET /api/community/dashboard/{uid}` → now includes `level_progression` node.
+- **UI (Playwright)**: `/referrals` → Level Progression card visible under Overview; all 8 key data-testids (`level-progression-card`, `-header`, `-current-badge`, `-next-progress`, `-grid`, `level-tile-{1,3,10}`) present; L3 highlighted as current (Elite Test User, 0 direct elite); next-level target L4 @ 1.5% shown with progress bar; all 10 tiles rendered with correct % + requirement labels.
+- **No regressions**: existing mining commission flow still credits USER-position uplines at L1-L3 (1% each) for users with 0 direct elite — matches pre-Feb 16 default (3-tier × 1%).
