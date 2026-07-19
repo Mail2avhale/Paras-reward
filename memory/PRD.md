@@ -1453,6 +1453,23 @@ If production has historical `core_team_bonus` rows, run the reverse+delete+drop
 
 ---
 
+## Feb 17, 2026 — Referrals Page: Removed Legacy "Community Levels" 3-tier Card
+
+### Change
+The old L1/L2/L3 breakdown card ("Community Levels" heading with "Community Power +120%" pill and 3 gradient tiles for Direct Community / Growth Level 2 / Growth Level 3) was still rendering in `/app/frontend/src/pages/ReferralsEnhanced.js`. It duplicated info now shown by the 10-level Level Progression card (from `CommunityDashboard.js`) and used the outdated increasing % scheme.
+
+### File
+- `/app/frontend/src/pages/ReferralsEnhanced.js` — removed the header (`Community Levels` / `Community Power` pill) and the 3-tile grid (lines ~498-559). Preserved the outer `level-breakdown-section` div wrapper so its sibling children (Community Leaders in Your Network, Community Tree, community help callout) render unchanged.
+
+### Verification (Playwright)
+- `referral-level-card-L1/L2/L3` → count 0 (removed)
+- HTML no longer contains the "Community Levels" heading
+- `level-progression-card` → 1 (new 10-level card preserved)
+- `network-tree-section` → 1 (preserved)
+- Visual: old card gone from viewport; new Level Progression + Invite Friends + Live Activity CTA + Community Goal + Community Health flow intact.
+
+---
+
 ## Feb 16, 2026 — Feature: Community Leader Bonus Multiplier & Role Structure
 
 ### Spec (as approved by user)

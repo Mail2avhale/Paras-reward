@@ -490,73 +490,12 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
           </div>
         )}
 
-        {/* L1-L3 Level Breakdown (Feb 2026 — capped from L1-L5 to L1-L3
-            per user feedback: deeper levels contribute negligible boost
-            and clutter the mobile view). */}
+        {/* L1-L3 "Community Levels" card removed Feb 17 2026 — superseded by
+            the new 10-level Level Progression card on the Community Growth
+            (/referrals) page. The wrapper's other children (Community Leaders,
+            Community Tree, etc.) remain untouched. */}
         {levelBreakdown && levelBreakdown.grand_total?.users > 0 && (
           <div className="space-y-3" data-testid="level-breakdown-section">
-            <div className="flex items-center justify-between px-1">
-              <h3 className="text-white font-semibold text-base">Community Levels</h3>
-              <div className="text-right">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Community Power</p>
-                <p className="text-emerald-400 font-bold tabular-nums" data-testid="total-mining-boost">
-                  +{levelBreakdown.total_mining_boost_pct}%
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {['L1', 'L2', 'L3'].map((lvl, idx) => {
-                const data = levelBreakdown.levels?.[lvl] || {};
-                const boost = levelBreakdown.boosts_pct?.[lvl] || 0;
-                const gradients = [
-                  'from-amber-500/20 to-orange-500/10 border-amber-500/40',
-                  'from-blue-500/20 to-cyan-500/10 border-blue-500/40',
-                  'from-purple-500/20 to-pink-500/10 border-purple-500/40',
-                ];
-                const labels = ['Direct Community', 'Growth Level 2', 'Growth Level 3'];
-                return (
-                  <div
-                    key={lvl}
-                    data-testid={`referral-level-card-${lvl}`}
-                    className={`bg-gradient-to-br ${gradients[idx]} border rounded-2xl p-3.5`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider text-gray-400">
-                          {lvl} · {labels[idx]}
-                        </p>
-                        <p className="text-2xl font-bold text-white tabular-nums">
-                          {data.total || 0}
-                        </p>
-                      </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold">
-                        +{boost}%
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                      <div className="bg-black/30 rounded-lg px-2 py-1.5">
-                        <p className="text-gray-500 text-[10px]">Active</p>
-                        <p className="text-emerald-300 font-bold tabular-nums">{data.active || 0}</p>
-                      </div>
-                      <div className="bg-black/30 rounded-lg px-2 py-1.5">
-                        <p className="text-gray-500 text-[10px]">Needs Activity</p>
-                        <p className="text-amber-300 font-bold tabular-nums">{data.inactive || 0}</p>
-                      </div>
-                    </div>
-                    {data.top?.name && (
-                      <div className="mt-2 pt-2 border-t border-white/10 text-[11px]">
-                        <p className="text-gray-400">
-                          🏆 Top Contributor: <span className="text-white font-medium">{data.top.name}</span>
-                          <span className="text-gray-500 ml-1">
-                            ({Math.round(data.top.prc_balance || 0).toLocaleString()} PRC)
-                          </span>
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
 
             {/* Leadership Positions in your network — new Feb 2026 section.
                 Zeros are hidden individually so basic users see a clean
