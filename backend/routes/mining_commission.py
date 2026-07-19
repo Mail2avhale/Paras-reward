@@ -291,34 +291,23 @@ async def distribute_mining_collect_commission(
         upline_is_elite = _is_elite_active(upline)
         eligible = upline_is_elite if elite_only else True
 
-        # ── PARTNER POSITION overlay (Feb 6 2026) ──────────────────────
-        # If this upline has a non-USER partner_position assigned, use the
-        # position config to decide tier depth + commission %. Otherwise
-        # fall back to the legacy `mining_commission_tiers` admin config.
-        # Elite-plan gate applies to BOTH paths per user spec (5b).
+        # ── COMMUNITY LEADER overlay (Feb 16 2026) ─────────────────────
+        # If this upline has a non-USER partner_position AND their downline
+        # structure is valid, apply the Role Multiplier to their base
+        # 10-level Community Bonus. Otherwise fall through to plain 10-level.
+        # Elite-plan gate applies to BOTH paths.
         upline_position = (upline.get("partner_position") or "user").lower().strip()
         use_position_path = upline_position != "user"
+        leader_multiplier = 1.0
         if use_position_path:
             try:
-                from routes.partner_positions import POSITION_CONFIG, is_structure_valid
-                pos_meta = POSITION_CONFIG.get(upline_position, POSITION_CONFIG["user"])
-                position_max_tier = int(pos_meta["levels"])
-                position_pct = float(pos_meta["commission_pct"]) * 100  # convert to percent (0.01 → 1)
-                # Structural bonus-gate (Q2=b): if this upline's own downline
-                # structure does NOT satisfy the tier's requirement, demote
-                # them to USER-tier commission (legacy 3-tier config, 500 cap).
+                from routes.partner_positions import is_structure_valid
+                from routes.community_leader import get_role_multiplier as _cldr_get_mult
                 structure_ok = await is_structure_valid(upline_uid, upline_position)
                 if not structure_ok:
                     use_position_path = False
-                    # If we've walked past the legacy USER tier depth (3), skip.
-                    # The legacy branch below handles this by continuing.
-                elif hops > position_max_tier:
-                    # For position users, `hops` is the effective tier depth
-                    # (1 = direct parent). Skip if we've walked past their
-                    # allowed depth.
-                    tier_idx += 1
-                    current_referred_by = upline.get("referred_by")
-                    continue
+                else:
+                    leader_multiplier = await _cldr_get_mult(upline_position)
             except Exception:
                 use_position_path = False
 
@@ -332,32 +321,24 @@ async def distribute_mining_collect_commission(
                 continue
 
         # Compute this tier's PRC amount.
-        if use_position_path:
-            tier_percent = position_pct
-            effective_tier_index = hops  # position tier depth = hop distance
-        else:
-            # ── NEW 10-LEVEL COMMUNITY BONUS (Feb 16, 2026) ───────────────
-            # Non-partner-position uplines earn via the progressive 10-level
-            # table. Level number = `hops` (distance from the collector).
-            # An upline earns at hops-th level iff their L1 Active Elite
-            # count entitles them to that depth.
-            try:
-                max_earnable = await get_max_earnable_level_for_uid(
-                    upline_uid, upline.get("referral_code")
-                )
-            except Exception as _lvl_err:
-                logger.warning(f"[MINING-COMMISSION] level lookup failed for {upline_uid}: {_lvl_err}")
-                max_earnable = 3  # safe fallback = L1-L3 always unlocked
+        # Both paths derive BASE % from the 10-level table; leader path
+        # multiplies by the role multiplier.
+        try:
+            max_earnable = await get_max_earnable_level_for_uid(
+                upline_uid, upline.get("referral_code")
+            )
+        except Exception as _lvl_err:
+            logger.warning(f"[MINING-COMMISSION] level lookup failed for {upline_uid}: {_lvl_err}")
+            max_earnable = 3  # safe fallback
 
-            if hops > max_earnable:
-                # Upline not entitled to earn at this depth → skip but keep
-                # walking (in case a deeper upline has enough downlines OR
-                # a partner position).
-                tier_idx += 1
-                current_referred_by = upline.get("referred_by")
-                continue
-            tier_percent = _cl_level_percent(hops)
-            effective_tier_index = hops
+        if hops > max_earnable:
+            tier_idx += 1
+            current_referred_by = upline.get("referred_by")
+            continue
+
+        base_pct = _cl_level_percent(hops)
+        tier_percent = round(base_pct * leader_multiplier, 4)
+        effective_tier_index = hops
         per_tier_amount = round(collected_prc * (tier_percent / 100.0), 6)
         if per_tier_amount <= 0:
             tier_idx += 1

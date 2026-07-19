@@ -145,7 +145,8 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
 
   const { overview, community_health, community_power, analytics,
     next_milestone, community_goal, redeem_unlock, timeline, badges,
-    leaderboard, daily_mission, monthly_challenge, level_progression } = data;
+    leaderboard, daily_mission, monthly_challenge, level_progression,
+    leader_status } = data;
 
   return (
     <div className="space-y-4" data-testid="community-dashboard">
@@ -197,7 +198,10 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
       </div>
 
       {/* ============ SECTION 1B: LEVEL PROGRESSION (10-tier bonus) ============ */}
-      {level_progression && <LevelProgressionCard data={level_progression} />}
+      {level_progression && <LevelProgressionCard data={level_progression} leaderStatus={leader_status} />}
+
+      {/* ============ SECTION 1C: COMMUNITY LEADER (multiplier + status) ============ */}
+      {leader_status?.is_leader && <CommunityLeaderCard status={leader_status} />}
 
       {/* ============ SECTION 2: INVITE FRIENDS ============ */}
       <GlassCard className="p-4" testId="invite-friends-card">
@@ -627,8 +631,10 @@ const ShareBtn = ({ Icon, label, onClick, tint, testId }) => (
 // LEVEL PROGRESSION — 10-tier Community Bonus display (Feb 16 2026)
 // Shows the user's current earnable level, progress to the next level, and
 // a compact scrollable grid of all 10 levels with unlocked/locked state.
+// When the user is an approved Community Leader, we also surface the
+// multiplier-boosted effective % alongside the base %.
 // ==========================================================================
-const LevelProgressionCard = ({ data }) => {
+const LevelProgressionCard = ({ data, leaderStatus }) => {
   if (!data || !Array.isArray(data.levels)) return null;
 
   const {
@@ -640,6 +646,10 @@ const LevelProgressionCard = ({ data }) => {
     elite_active: eliteActive,
     partner_position_overrides_levels: pposOverride,
   } = data;
+
+  const multiplier = leaderStatus?.bonus_multiplier || 1.0;
+  const isLeader = !!leaderStatus?.is_leader;
+  const effectivePct = isLeader ? Number((currentPct * multiplier).toFixed(4)) : currentPct;
 
   return (
     <GlassCard className="p-4" testId="level-progression-card">
@@ -660,6 +670,11 @@ const LevelProgressionCard = ({ data }) => {
             L{currentLevel}
             <span className="text-amber-300 text-xs font-bold ml-1">{currentPct.toFixed(1)}%</span>
           </p>
+          {isLeader && multiplier > 1 && (
+            <p className="text-[10px] text-emerald-300 font-semibold leading-tight mt-0.5" data-testid="level-effective-badge">
+              Effective: {effectivePct.toFixed(3)}% <span className="opacity-70">({multiplier}×)</span>
+            </p>
+          )}
         </div>
       </div>
 
@@ -675,7 +690,7 @@ const LevelProgressionCard = ({ data }) => {
       {pposOverride && (
         <div className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/5 px-3 py-2 mb-3 text-[11px] text-fuchsia-200 flex items-start gap-2" data-testid="level-pp-override">
           <Crown className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-          <span>Your Leadership Position overrides the standard 10-level table. You&apos;re earning via Coordinator rules instead.</span>
+          <span>Your Community Leader role boosts every level&apos;s % by {multiplier}× (see card below).</span>
         </div>
       )}
 
@@ -712,10 +727,14 @@ const LevelProgressionCard = ({ data }) => {
                 ? 'bg-gradient-to-br from-indigo-500 to-purple-600 border-white/20 text-white shadow-lg shadow-purple-500/30'
                 : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-100')
             : 'bg-white/5 border-white/10 text-gray-500';
+          const boosted = isLeader && multiplier > 1 ? Number((lvl.percent * multiplier).toFixed(3)) : null;
           return (
             <div key={lvl.level} className={`${base} ${state}`} data-testid={`level-tile-${lvl.level}`}>
               <p className="text-[9px] uppercase tracking-wider opacity-70 leading-tight">L{lvl.level}</p>
               <p className="font-black text-sm tabular-nums leading-tight">{lvl.percent.toFixed(1)}%</p>
+              {boosted !== null && (
+                <p className="text-[9px] font-semibold text-emerald-300 tabular-nums leading-tight">→ {boosted}%</p>
+              )}
               <p className="text-[9px] opacity-70 leading-tight mt-0.5">
                 {lvl.required_l1_active_elite === 0 ? 'Free' : `${lvl.required_l1_active_elite}+`}
               </p>
@@ -727,6 +746,62 @@ const LevelProgressionCard = ({ data }) => {
       {/* Footer explainer */}
       <p className="text-[10px] text-gray-400 mt-3 leading-relaxed" data-testid="level-progression-help">
         Each mining collect by your downline pays you a % based on their depth in your network. Bring in more <span className="text-emerald-300 font-semibold">active Elite direct members</span> to unlock deeper levels and higher %.
+      </p>
+    </GlassCard>
+  );
+};
+
+// ==========================================================================
+// COMMUNITY LEADER CARD — Shown only for approved leaders. Displays role,
+// multiplier, base + effective bonus %, and the ladder toward the top tier.
+// ==========================================================================
+const CommunityLeaderCard = ({ status }) => {
+  if (!status || !status.is_leader) return null;
+  const {
+    role_label,
+    role,
+    bonus_multiplier,
+    base_community_bonus_pct,
+    effective_community_bonus_pct,
+    approved_at,
+  } = status;
+
+  const RoleIcon = role === 'national_partner' ? Crown
+    : role === 'state_partner' ? Star
+    : role === 'regional_state_partner' ? Gem
+    : Award;
+
+  return (
+    <GlassCard className="p-4" testId="community-leader-card">
+      <div className="flex items-start gap-3 mb-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30">
+          <RoleIcon className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] uppercase tracking-widest text-amber-300 font-semibold">Community Leader</p>
+          <p className="text-white font-black text-base leading-tight" data-testid="leader-role-label">{role_label}</p>
+          <p className="text-[10px] text-emerald-300 mt-0.5" data-testid="leader-approved-status">✓ Approved{approved_at ? ` on ${new Date(approved_at).toLocaleDateString()}` : ''}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-[10px] uppercase tracking-wider text-gray-400">Multiplier</p>
+          <p className="text-amber-300 font-black text-2xl leading-tight tabular-nums" data-testid="leader-multiplier">{bonus_multiplier}×</p>
+        </div>
+      </div>
+
+      {/* Bonus breakdown */}
+      <div className="grid grid-cols-2 gap-2 mb-3" data-testid="leader-bonus-breakdown">
+        <div className="rounded-lg bg-white/5 border border-white/10 px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-gray-400">Base Bonus</p>
+          <p className="text-white font-bold text-lg tabular-nums">{Number(base_community_bonus_pct).toFixed(2)}%</p>
+        </div>
+        <div className="rounded-lg bg-gradient-to-br from-amber-500/15 to-orange-500/10 border border-amber-500/30 px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-amber-300">Effective Bonus</p>
+          <p className="text-amber-100 font-black text-lg tabular-nums" data-testid="leader-effective-bonus">{Number(effective_community_bonus_pct).toFixed(3)}%</p>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-gray-400 leading-relaxed" data-testid="leader-formula-hint">
+        <span className="text-amber-300 font-semibold">Formula:</span> Leader Bonus = Base 10-level % × {bonus_multiplier}× multiplier. Applies at every level of your downline as long as your leader status is active.
       </p>
     </GlassCard>
   );

@@ -393,6 +393,15 @@ async def get_community_dashboard(uid: str, current_user: dict = Depends(get_cur
         _lg.warning(f"[COMMUNITY-DASHBOARD] level_progression fetch failed: {_lvl_err}")
         level_progression = None
 
+    # Community Leader status + multiplier (Feb 16 2026)
+    try:
+        from routes.community_leader import get_leader_status as _cldr_get_status
+        leader_status = await _cldr_get_status(uid)
+    except Exception as _cldr_err:
+        import logging as _lg2
+        _lg2.warning(f"[COMMUNITY-DASHBOARD] leader_status fetch failed: {_cldr_err}")
+        leader_status = None
+
     return {
         "success": True,
         "uid": uid,
@@ -441,4 +450,5 @@ async def get_community_dashboard(uid: str, current_user: dict = Depends(get_cur
         "daily_mission": mission,
         "monthly_challenge": challenge,
         "level_progression": level_progression,
+        "leader_status": leader_status,
     }

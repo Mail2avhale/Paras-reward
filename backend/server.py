@@ -37012,6 +37012,20 @@ try:
 except Exception as _cl_err:
     logging.error(f"[STARTUP] community_levels wiring failed: {_cl_err}")
 
+# Community Leader Bonus Multiplier + Status (Feb 16 2026)
+try:
+    from routes.community_leader import (
+        set_db as _set_cldr_db,
+        router as _community_leader_router,
+        admin_router as _community_leader_admin_router,
+    )
+    _set_cldr_db(db)
+    api_router.include_router(_community_leader_router)
+    api_router.include_router(_community_leader_admin_router)
+    logging.info("[STARTUP] community_leader routers wired")
+except Exception as _cldr_err:
+    logging.error(f"[STARTUP] community_leader wiring failed: {_cldr_err}")
+
 # Downline Live Feed (referral-reward feed, Jul 2026)
 try:
     from routes.downline_live_feed import (

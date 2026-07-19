@@ -1340,3 +1340,56 @@ Tightened `tokenExpiredKeywords` regex so a 403 only triggers session-expiry log
   - `GET /api/community/dashboard/{uid}` → now includes `level_progression` node.
 - **UI (Playwright)**: `/referrals` → Level Progression card visible under Overview; all 8 key data-testids (`level-progression-card`, `-header`, `-current-badge`, `-next-progress`, `-grid`, `level-tile-{1,3,10}`) present; L3 highlighted as current (Elite Test User, 0 direct elite); next-level target L4 @ 1.5% shown with progress bar; all 10 tiles rendered with correct % + requirement labels.
 - **No regressions**: existing mining commission flow still credits USER-position uplines at L1-L3 (1% each) for users with 0 direct elite — matches pre-Feb 16 default (3-tier × 1%).
+
+---
+
+## Feb 16, 2026 — Feature: Community Leader Bonus Multiplier & Role Structure
+
+### Spec (as approved by user)
+| Role                            | Multiplier | Requirement (existing partner_positions) |
+|---------------------------------|-----------|-------------------------------------------|
+| Community Member (user)         | 1.00×     | —                                         |
+| District Community Leader       | 1.25×     | admin-approved partner_position           |
+| Regional Community Leader       | 1.50×     | admin-approved partner_position           |
+| State Community Leader          | 1.75×     | admin-approved partner_position           |
+| National Community Leader       | 2.00×     | admin-approved partner_position           |
+
+**Formula**: `Leader Bonus % = user's current 10-level Community Bonus % × Role Multiplier`
+
+Example: base 4.5% (L10) × 1.25 = **5.625%** for a District Leader.
+
+**Approval flow**: unchanged per user decision ("पूर्वीचा जो फ्लो आहे. Admin assign and approve touch राहुदे NO touching") — admin's `POST /api/admin/partners/assign` remains the sole entry point. Assignment is treated as implicit approval.
+
+**Multipliers are admin-configurable** at `/admin/community-leader/multipliers` with sanity clamps [0.5, 10.0] and 5-min in-memory cache.
+
+### Backend
+- **NEW**: `/app/backend/routes/community_leader.py`
+  - `DEFAULT_MULTIPLIERS` constant (1.00 / 1.25 / 1.50 / 1.75 / 2.00) + `ROLE_LABELS` map.
+  - `_load_multipliers()` reads from `app_settings.community_leader_multipliers` (5-min cache, safe fallback to defaults).
+  - `get_role_multiplier(position)` — commission-engine hot path.
+  - Endpoints:
+    - `GET /api/community-leader/status/{uid}` — role, multiplier, base %, effective %, elite active, approval meta
+    - `GET /api/community-leader/dashboard/{uid}` — full leader dashboard: status + structure-toward-next + direct-leader counts + multiplier ladder
+    - `GET /api/community-leader/multiplier-table` — public read-only table
+    - `GET /api/admin/community-leader/multipliers` — admin view (X-Admin-Pin)
+    - `POST /api/admin/community-leader/multipliers` — admin update (X-Admin-Pin)
+    - `POST /api/admin/community-leader/multipliers/reset` — revert to defaults
+- **CHANGED**: `/app/backend/routes/mining_commission.py`
+  - Position path now uses the 10-level base % (via `get_max_earnable_level_for_uid` + `_cl_level_percent`) × role multiplier instead of the old flat 1%. Depth cap removed — leaders can earn up to L10 based on their own downline count.
+  - Structural gate preserved: if `is_structure_valid(upline, position)` fails, the upline drops to plain 10-level path (no multiplier).
+- **CHANGED**: `/app/backend/routes/community_dashboard.py` — composite endpoint now includes a `leader_status` node so the UI renders in a single round-trip.
+- **CHANGED**: `/app/backend/server.py` — wired `community_leader.router` + `community_leader.admin_router`.
+
+### Frontend
+- **CHANGED**: `/app/frontend/src/pages/CommunityDashboard.js`
+  - `LevelProgressionCard` now accepts `leaderStatus` — when the user is an approved leader, each tile shows the base % **plus** the boosted % (e.g., L10 tile: 4.5% → 5.625%), the header shows an "Effective: X% (N×)" line, and a callout links to the leader card below.
+  - NEW `CommunityLeaderCard` — glass card with role icon, role label, approval date, multiplier badge, Base vs Effective bonus tiles, and the formula. Only rendered when `leader_status.is_leader` is true.
+  - Both cards annotated with `data-testid`s: `community-leader-card`, `leader-role-label`, `leader-multiplier`, `leader-effective-bonus`, `leader-bonus-breakdown`, `leader-approved-status`, `leader-formula-hint`, `level-effective-badge`.
+
+### Verification
+- **Multiplier table endpoint**: returns all 5 roles with correct defaults.
+- **Status endpoint (regular user)**: role=user, multiplier=1.0, effective=base.
+- **Status endpoint (assigned National)**: role=national_partner, multiplier=**2.0**, effective=**2.0%** (base 1.0% × 2.0) — verified via admin assign + status call.
+- **Dashboard endpoint**: returns status + structure_toward_next + direct_leader_counts + multiplier_ladder.
+- **UI (Playwright, District Leader test)**: `community-leader-card` visible with all 7 key data-testids present; role="District Community Leader", multiplier="1.25×", effective="1.250%" (base 1.00% × 1.25). Level Progression tiles all show base + boosted %.
+- **Admin flow untouched**: existing `POST /api/admin/partners/assign` continues to work; no new approval endpoints introduced per user request.
