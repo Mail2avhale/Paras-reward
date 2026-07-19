@@ -1343,6 +1343,48 @@ Tightened `tokenExpiredKeywords` regex so a 403 only triggers session-expiry log
 
 ---
 
+## Feb 17, 2026 — Community Bonus Table Rebalance (DECREASING structure)
+
+### Change
+Replaced the previous INCREASING community bonus table with a DECREASING one per revised economics ("चुकून अगोदर जास्त गेला होता").
+
+| Level | Old % (Feb 16) | **New %** | Requirement (unchanged) |
+|-------|----------------|-----------|--------------------------|
+| L1    | 1.0            | **1.00**  | 0                        |
+| L2    | 1.0            | **1.00**  | 0                        |
+| L3    | 1.0            | **1.00**  | 0                        |
+| L4    | 1.5            | **0.90**  | 10                       |
+| L5    | 2.0            | **0.80**  | 20                       |
+| L6    | 2.5            | **0.70**  | 30                       |
+| L7    | 3.0            | **0.60**  | 40                       |
+| L8    | 3.5            | **0.50**  | 50                       |
+| L9    | 4.0            | **0.40**  | 60                       |
+| L10   | 4.5            | **0.30**  | 70                       |
+| **Total max** | 26.5%    | **7.20%** | —                        |
+
+- L1-L3 remain the highest (1.00%), decreasing by 0.10% per level from L4 down to 0.30% at L10.
+- Total max Community Mining Bonus capped at exactly **7.20%**.
+- Thresholds unchanged, so users at existing counts stay at the same level number; only the % they receive is different.
+- Community Leader multipliers (1.25×/1.5×/1.75×/2.0×) still apply ON TOP of these new base %.
+
+### Files touched (single source of truth)
+- `/app/backend/routes/community_levels.py` — `COMMUNITY_LEVEL_TABLE` constant updated + module docstring + `/level-table` notes/response now include `total_max_bonus_pct` field.
+- `/app/backend/tests/test_community_leader_and_levels.py` — expected values updated to the new table + added 7.20% total assertion.
+
+### Automatic propagation (no other files needed)
+- **Commission engine** (`mining_commission.py`) reads `_cl_level_percent(hops)` at runtime → picks up new %s at next collect.
+- **Composite dashboard** (`community_dashboard.py`) fans out to `get_level_progression()` → returns new %s.
+- **Frontend** (`CommunityDashboard.js` → LevelProgressionCard) renders whatever `levels[]` returns → automatically shows new %s.
+- **Community Leader multiplier** (`community_leader.py`) uses `get_level_progression().current_percent` × multiplier → effective % automatically recomputed.
+
+### Verification
+- `GET /api/community/level-table` → 10 rows with correct new %s + `total_max_bonus_pct: 7.20`.
+- `GET /api/community/level-progression/{uid}` → test user still at L3 but now current_percent=1.0 (unchanged for L1-L3), next_percent=0.9 (was 1.5) — new table in effect.
+- **Pytest suite** (`test_community_leader_and_levels.py`): **18/18 PASS** including the new 7.20% total assertion.
+- **Playwright UI**: all 10 tiles render new %s (L1..L3 = 1.0%, L4=0.9%, L5=0.8%, …, L10=0.3%) — 10/10 tiles verified.
+
+---
+
 ## Feb 16, 2026 — Feature: Community Leader Bonus Multiplier & Role Structure
 
 ### Spec (as approved by user)

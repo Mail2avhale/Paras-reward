@@ -1,33 +1,35 @@
 """
 Community Level Progression (Feb 16, 2026)
 ==========================================
-10-level progressive Community Bonus system for USER-tier members (users
+10-level DECREASING Community Bonus system for USER-tier members (users
 without an assigned Partner Position).
 
 Rules
 -----
-1. Levels 1-3: always unlocked (0 requirement), pay 1.0% each.
+1. Levels 1-3: always unlocked (0 requirement), pay 1.00% each — the highest.
 2. Level 4-10: unlock progressively based on number of L1 direct downlines
-   who are ACTIVE ELITE (Elite subscription + not expired).
-     L4  → 10 active elite  → 1.5%
-     L5  → 20              → 2.0%
-     L6  → 30              → 2.5%
-     L7  → 40              → 3.0%
-     L8  → 50              → 3.5%
-     L9  → 60              → 4.0%
-     L10 → 70              → 4.5%
+   who are ACTIVE ELITE (Elite subscription + not expired). From L4 the
+   bonus DECREASES by 0.10% per level, so deeper levels pay less.
+     L4  → 10 active elite  → 0.90%
+     L5  → 20              → 0.80%
+     L6  → 30              → 0.70%
+     L7  → 40              → 0.60%
+     L8  → 50              → 0.50%
+     L9  → 60              → 0.40%
+     L10 → 70              → 0.30%
 3. The user themselves must be Elite Active to RECEIVE any commission
    (enforced in mining_commission.distribute_mining_collect_commission).
 4. Coexists with Partner Positions — if a user has a partner_position other
-   than "user", the Partner Position config takes precedence over this
-   10-level table.
+   than "user", the Community Leader multiplier is applied ON TOP of the
+   base % from this table (see routes/community_leader.py).
+
+Total maximum Community Mining Bonus across all 10 levels = 7.20%.
 
 Auto-migration
 --------------
 No DB migration needed. The current earnable level is derived on-the-fly
-from the live L1 active elite count at each mining collect event. An
-existing Elite user with 70+ downlines automatically earns L10 without
-any manual promotion.
+from the live L1 active elite count at each mining collect event. Any
+change to the level table takes effect immediately at the next collect.
 """
 from __future__ import annotations
 
@@ -50,17 +52,22 @@ def set_db(database) -> None:
 
 
 # --------- LEVEL TABLE (source of truth) ----------
+# Feb 17 2026 — Replaced increasing table (1.0/1.5/2.0/2.5/3.0/3.5/4.0/4.5)
+# with DECREASING table per user's revised bonus economics:
+#   L1..L3 = 1.00% (highest, always unlocked)
+#   L4..L10 decrease by 0.10% per level (0.90 → 0.30)
+# Total across all 10 levels = 7.20% max.
 COMMUNITY_LEVEL_TABLE = [
-    {"level": 1,  "percent": 1.0, "required_l1_active_elite": 0},
-    {"level": 2,  "percent": 1.0, "required_l1_active_elite": 0},
-    {"level": 3,  "percent": 1.0, "required_l1_active_elite": 0},
-    {"level": 4,  "percent": 1.5, "required_l1_active_elite": 10},
-    {"level": 5,  "percent": 2.0, "required_l1_active_elite": 20},
-    {"level": 6,  "percent": 2.5, "required_l1_active_elite": 30},
-    {"level": 7,  "percent": 3.0, "required_l1_active_elite": 40},
-    {"level": 8,  "percent": 3.5, "required_l1_active_elite": 50},
-    {"level": 9,  "percent": 4.0, "required_l1_active_elite": 60},
-    {"level": 10, "percent": 4.5, "required_l1_active_elite": 70},
+    {"level": 1,  "percent": 1.00, "required_l1_active_elite": 0},
+    {"level": 2,  "percent": 1.00, "required_l1_active_elite": 0},
+    {"level": 3,  "percent": 1.00, "required_l1_active_elite": 0},
+    {"level": 4,  "percent": 0.90, "required_l1_active_elite": 10},
+    {"level": 5,  "percent": 0.80, "required_l1_active_elite": 20},
+    {"level": 6,  "percent": 0.70, "required_l1_active_elite": 30},
+    {"level": 7,  "percent": 0.60, "required_l1_active_elite": 40},
+    {"level": 8,  "percent": 0.50, "required_l1_active_elite": 50},
+    {"level": 9,  "percent": 0.40, "required_l1_active_elite": 60},
+    {"level": 10, "percent": 0.30, "required_l1_active_elite": 70},
 ]
 MAX_LEVEL = len(COMMUNITY_LEVEL_TABLE)  # 10
 ELITE_PLANS = ["elite", "vip", "startup", "growth", "pro"]
@@ -202,11 +209,14 @@ async def api_get_level_table():
     return {
         "success": True,
         "max_level": MAX_LEVEL,
+        "total_max_bonus_pct": round(sum(row["percent"] for row in COMMUNITY_LEVEL_TABLE), 2),
         "levels": COMMUNITY_LEVEL_TABLE,
         "notes": [
-            "Levels 1-3 unlocked by default (0 requirement).",
+            "Levels 1-3 unlocked by default (0 requirement) — highest at 1.00% each.",
+            "From L4 the bonus decreases by 0.10% per level down to 0.30% at L10.",
             "Each higher level unlocks when your L1 Active Elite direct downline count reaches the threshold.",
             "You must be Elite Active to receive Community Bonus.",
-            "Partner Position holders (District/Regional/State/National Coordinator) use their own tier config which overrides this table.",
+            "Community Leaders (District/Regional/State/National) get a multiplier applied ON TOP of these base %s (see /api/community-leader/multiplier-table).",
+            "Maximum total Community Mining Bonus across L1-L10 = 7.20%.",
         ],
     }

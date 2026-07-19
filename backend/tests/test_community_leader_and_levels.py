@@ -131,23 +131,27 @@ class TestLevelTable:
     def test_level_table_values(self, s):
         r = s.get(f"{API}/community/level-table", timeout=10)
         assert r.status_code == 200
+        # Feb 17 2026 — DECREASING bonus table (L1-L3 = 1.0%, then -0.10%/level).
         expected = [
-            (1, 1.0, 0),
-            (2, 1.0, 0),
-            (3, 1.0, 0),
-            (4, 1.5, 10),
-            (5, 2.0, 20),
-            (6, 2.5, 30),
-            (7, 3.0, 40),
-            (8, 3.5, 50),
-            (9, 4.0, 60),
-            (10, 4.5, 70),
+            (1,  1.00, 0),
+            (2,  1.00, 0),
+            (3,  1.00, 0),
+            (4,  0.90, 10),
+            (5,  0.80, 20),
+            (6,  0.70, 30),
+            (7,  0.60, 40),
+            (8,  0.50, 50),
+            (9,  0.40, 60),
+            (10, 0.30, 70),
         ]
         levels = r.json()["levels"]
         for (lvl, pct, req), row in zip(expected, levels):
             assert row["level"] == lvl
             assert row["percent"] == pct
             assert row["required_l1_active_elite"] == req
+        # Total must equal 7.20% cap
+        total = round(sum(r["percent"] for r in levels), 2)
+        assert total == 7.20, f"expected total 7.20%, got {total}%"
 
 
 # ============================================================
