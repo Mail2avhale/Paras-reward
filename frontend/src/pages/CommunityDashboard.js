@@ -17,9 +17,11 @@ import { QRCodeCanvas } from 'qrcode.react';
 import {
   Users, Zap, Heart, Target, Trophy, Sparkles, Flame, Star, Crown, Gem,
   Rocket, Copy, Check, MessageCircle, Send, Share2, QrCode, X,
-  TrendingUp, Award, Calendar, Timer, Activity,
+  TrendingUp, Award, Calendar, Timer, Activity, Gauge,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 // ---- Small primitives ---------------------------------------------------
 
@@ -122,6 +124,25 @@ const buildShare = (referralLink, name) => ({
 export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [capStatus, setCapStatus] = useState(null);
+
+  // Fetch monthly reward-ceiling status once per dashboard mount.
+  // Independent from the composite /community/dashboard endpoint so
+  // slower aggregations don't block the top of the page.
+  useEffect(() => {
+    const uid = user?.uid || data?.user?.uid;
+    if (!uid) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API}/api/community/monthly-cap-status/${uid}`);
+        if (!r.ok) return;
+        const j = await r.json();
+        if (!cancelled) setCapStatus(j);
+      } catch { /* swallow — non-critical widget */ }
+    })();
+    return () => { cancelled = true; };
+  }, [user, data]);
 
   const referralLink = useMemo(() => {
     const code = user?.referral_code || data?.user?.referral_code || '';
@@ -202,6 +223,9 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
 
       {/* ============ SECTION 1C: COMMUNITY LEADER (multiplier + status) ============ */}
       {leader_status?.is_leader && <CommunityLeaderCard status={leader_status} />}
+
+      {/* ============ SECTION 1D: MONTHLY REWARD CEILING (FIFO cap) ============ */}
+      {capStatus && <MonthlyCapCard cap={capStatus} />}
 
       {/* ============ SECTION 2: INVITE FRIENDS ============ */}
       <GlassCard className="p-4" testId="invite-friends-card">
@@ -781,6 +805,119 @@ const CommunityLeaderCard = ({ status }) => {
       <p className="text-[10px] text-gray-400 leading-relaxed" data-testid="leader-formula-hint">
         <span className="text-amber-300 font-semibold">Formula:</span> Leader Bonus = Base 10-level % × {bonus_multiplier}× multiplier. Applies at every level of your downline as long as your leader status is active.
       </p>
+    </GlassCard>
+  );
+};
+
+// ==========================================================================
+// MONTHLY CAP CEILING CARD — Shows current usage vs role cap for the month.
+// When capped, further reward credits are silently skipped until the 1st of
+// the next month (UTC). Displays a live countdown to reset.
+// ==========================================================================
+const MonthlyCapCard = ({ cap }) => {
+  const {
+    role_label,
+    cap_inr,
+    used_inr,
+    remaining_inr,
+    used_pct,
+    capped,
+    seconds_to_reset,
+  } = cap || {};
+
+  const [count, setCount] = useState(Number(seconds_to_reset) || 0);
+  useEffect(() => {
+    setCount(Number(seconds_to_reset) || 0);
+    const id = setInterval(() => setCount((c) => (c > 0 ? c - 1 : 0)), 1000);
+    return () => clearInterval(id);
+  }, [seconds_to_reset]);
+
+  const fmt = (secs) => {
+    if (!secs || secs <= 0) return '0d 0h 0m';
+    const d = Math.floor(secs / 86400);
+    const h = Math.floor((secs % 86400) / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    return `${d}d ${h}h ${m}m`;
+  };
+
+  const pct = Math.min(100, Number(used_pct || 0));
+  const barGradient = capped
+    ? 'from-rose-500 via-red-500 to-orange-500'
+    : pct >= 80
+      ? 'from-amber-400 via-orange-400 to-red-500'
+      : 'from-emerald-400 via-cyan-400 to-blue-500';
+
+  return (
+    <GlassCard className="p-4" testId="monthly-cap-card">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+            capped
+              ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-lg shadow-rose-500/30'
+              : 'bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-blue-500/30'
+          }`}>
+            <Gauge className="w-4 h-4 text-white" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-widest text-cyan-300 font-semibold">Monthly Reward Ceiling</p>
+            <p className="text-white font-bold text-sm leading-tight truncate" data-testid="cap-role-label">
+              {role_label} <span className="text-gray-400 text-[11px] font-normal">tier</span>
+            </p>
+          </div>
+        </div>
+        <div className="text-right shrink-0 ml-2">
+          <p className="text-[10px] uppercase tracking-wider text-gray-400 leading-tight">Cap</p>
+          <p className="text-cyan-100 font-black text-base leading-tight tabular-nums" data-testid="cap-total-inr">
+            ₹{Number(cap_inr || 0).toLocaleString('en-IN')}
+          </p>
+        </div>
+      </div>
+
+      {/* Used vs Remaining */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="rounded-lg bg-white/5 border border-white/10 px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-gray-400">Used This Month</p>
+          <p className="text-white font-bold text-lg tabular-nums" data-testid="cap-used-inr">
+            ₹{Number(used_inr || 0).toLocaleString('en-IN')}
+          </p>
+        </div>
+        <div className={`rounded-lg border px-3 py-2 ${
+          capped
+            ? 'bg-rose-500/10 border-rose-500/30'
+            : 'bg-emerald-500/10 border-emerald-500/30'
+        }`}>
+          <p className={`text-[10px] uppercase tracking-wider ${capped ? 'text-rose-300' : 'text-emerald-300'}`}>Remaining</p>
+          <p className={`font-black text-lg tabular-nums ${capped ? 'text-rose-100' : 'text-emerald-100'}`} data-testid="cap-remaining-inr">
+            ₹{Number(remaining_inr || 0).toLocaleString('en-IN')}
+          </p>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mb-2">
+        <div className="flex justify-between items-baseline mb-1">
+          <p className="text-[11px] text-gray-300">
+            <span className="tabular-nums font-bold text-white" data-testid="cap-used-pct">{pct.toFixed(1)}%</span> of monthly ceiling used
+          </p>
+          {capped && (
+            <p className="text-[10px] font-bold uppercase tracking-widest text-rose-300" data-testid="cap-status-flag">
+              Ceiling reached
+            </p>
+          )}
+        </div>
+        <ProgressBar percent={pct} gradient={barGradient} testId="cap-progress-bar" />
+      </div>
+
+      {/* Countdown to reset */}
+      <div className="flex items-center justify-between text-[10px] text-gray-400 mt-2">
+        <span className="flex items-center gap-1">
+          <Timer className="w-3 h-3" />
+          Resets in <span className="text-white font-semibold tabular-nums" data-testid="cap-reset-countdown">{fmt(count)}</span>
+        </span>
+        {capped && (
+          <span className="text-rose-300 text-[10px]">Further credits paused until reset.</span>
+        )}
+      </div>
     </GlassCard>
   );
 };

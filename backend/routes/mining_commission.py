@@ -346,6 +346,31 @@ async def distribute_mining_collect_commission(
             continue
 
         recipient_name = _display_name(upline)
+
+        # ── MONTHLY REWARD CEILING (Feb 20 2026 — Q2=a silent skip) ─────
+        # Enforce role-based monthly cap. If crediting this commission
+        # would push the recipient over their calendar-month cap, SKIP
+        # silently — no ledger row, no balance change, no roll-up.
+        try:
+            from routes.community_reward_caps import can_credit as _cap_can_credit
+            allowed, cap_prc, used_prc = await _cap_can_credit(
+                upline_uid, upline_position, per_tier_amount
+            )
+        except Exception as _cap_err:
+            logger.warning(f"[MINING-COMMISSION] cap check failed for {upline_uid}: {_cap_err}")
+            allowed, cap_prc, used_prc = True, 0.0, 0.0
+
+        if not allowed:
+            logger.info(
+                f"[MINING-COMMISSION] Skipped {per_tier_amount:.4f} PRC to "
+                f"{upline_uid} (role={upline_position}) — monthly cap reached "
+                f"({used_prc:.2f} / {cap_prc:.2f} PRC used)"
+            )
+            already_paid.add(upline_uid)
+            tier_idx += 1
+            current_referred_by = upline.get("referred_by")
+            continue
+
         credited = await _credit_commission(
             recipient_uid=upline_uid,
             amount=per_tier_amount,

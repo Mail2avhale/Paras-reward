@@ -1,0 +1,51 @@
+{
+  "summary": "Verified FIFO Monthly Reward Ceiling backend (9 new tests) + same-or-higher partner-position structure validation (34 regression tests still pass) + frontend Monthly Reward Ceiling widget on /referrals. All 43 tests pass, all 8 required data-testids render with correct data.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_reward_caps_and_structure.py",
+    "/app/backend/tests/test_community_leader_and_levels.py",
+    "/app/backend/tests/test_community_leadership_phaseC.py",
+    "/app/test_reports/pytest/reward_caps_results.xml",
+    "/app/test_reports/pytest/community_regression.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "mining_commission.py: cap check via can_credit() is correctly placed BEFORE _credit_commission — on failure it sets already_paid + continues chain-walk without ledger write, matching Q2=a silent-skip spec (lines 350-372).",
+    "community_reward_caps.py: cap check reads prc_ledger with $or on both `timestamp` and `created_at` — good defensive coverage for mixed writer formats.",
+    "get_month_earned_prc returns 0.0 on Mongo errors (lenient). Acceptable per code comment but flagged: a transient Mongo issue could allow one extra credit past cap before the next event tightens it again. Low risk given cap is checked per-event.",
+    "5-min in-process cache _CFG_CACHE in community_reward_caps is NOT invalidated across multiple uvicorn workers. In a multi-worker deployment, admin config changes could take up to 5 min to propagate on non-updating workers. Acceptable for MVP but worth noting.",
+    "partner_positions._positions_ge is a pure helper; hierarchy order verified by test_positions_ge_hierarchy. Existing 34 regression tests still all pass including hierarchy validation tests.",
+    "Frontend MonthlyCapCard is optional-render (only when API returns success). Correctly no-ops on fetch failure, preserving graceful degradation."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (9/9 new + 34/34 regression)", "frontend": "100% (8/8 required testids)"},
+  "seed_data_creation": "None — used existing test user 76b75808-47fa-48dd-ad7c-8074678e3607 (Elite/cash).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Feature complete and validated. Cap-enforcement path is triggered only when a downline actually collects mining while an upline has month-to-date earnings near cap — end-to-end 'silent skip' behaviour was NOT stress-tested with a live over-cap scenario (would need seeding prc_ledger with ~cap-value credits or manipulating admin caps to a tiny number). If regression risk grows, add an E2E test that (a) sets state_partner cap to 1 INR via admin, (b) triggers a mining_collect on a downline of a state_partner user, and (c) asserts no ledger row was written for that upline for that source_ref.",
+  "verified_endpoints": [
+    "GET /api/community/monthly-cap-config -> 200 (5 roles, prc_per_inr=10, correct defaults)",
+    "GET /api/community/monthly-cap-status/{uid} -> 200 with all required fields; unknown uid -> 404",
+    "GET /api/admin/community-caps/config without bearer -> 401",
+    "GET /api/admin/community-caps/config with valid bearer + X-Admin-Pin=123456 -> 200 (effective_inr + defaults_inr)",
+    "POST /api/admin/community-caps/config updates single role and preserves others; verified via public config",
+    "POST /api/admin/community-caps/config/reset restores defaults",
+    "GET /api/admin/community-caps/config with X-Admin-Pin=000000 -> 403",
+    "GET /api/admin/community-caps/audit -> 200 with users[] array containing uid/role/earned_prc/cap_prc/used_pct/capped",
+    "GET /api/community-leader/dashboard/{uid} -> 200 (structure validation regression clean)"
+  ],
+  "frontend_verified": {
+    "route": "/referrals",
+    "testids_present": ["monthly-cap-card","cap-role-label","cap-total-inr","cap-used-inr","cap-remaining-inr","cap-used-pct","cap-progress-bar","cap-reset-countdown"],
+    "dom_order": "level-progression-card -> monthly-cap-card -> invite-friends-card (CommunityLeaderCard skipped — user not a leader, which is expected)",
+    "sample_values": {"role_label": "Community Member", "cap_inr": "₹1,00,000", "used_inr": "₹0", "remaining_inr": "₹1,00,000", "used_pct": "0.0%", "countdown": "12d 8h 59m"}
+  }
+}

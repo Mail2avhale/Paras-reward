@@ -37006,6 +37006,25 @@ try:
 except Exception as _cldr_err:
     logging.error(f"[STARTUP] community_leader wiring failed: {_cldr_err}")
 
+# Community Reward Caps — Monthly FIFO Ceiling (Feb 20 2026)
+try:
+    from routes.community_reward_caps import (
+        set_db as _set_crc_db,
+        set_cache as _set_crc_cache,
+        router as _crc_router,
+        admin_router as _crc_admin_router,
+    )
+    _set_crc_db(db)
+    try:
+        _set_crc_cache(cache)
+    except Exception:
+        pass
+    api_router.include_router(_crc_router)
+    api_router.include_router(_crc_admin_router)
+    logging.info("[STARTUP] community_reward_caps routers wired")
+except Exception as _crc_err:
+    logging.error(f"[STARTUP] community_reward_caps wiring failed: {_crc_err}")
+
 # Downline Live Feed (referral-reward feed, Jul 2026)
 try:
     from routes.downline_live_feed import (

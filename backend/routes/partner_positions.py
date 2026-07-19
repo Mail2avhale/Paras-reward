@@ -88,6 +88,34 @@ _VALID_CHILD_TYPES = {
     "national_partner",
 }
 
+# Position hierarchy (lowest → highest). Feb 20 2026 — used by
+# `_positions_ge()` so structure validation counts children whose
+# `partner_position` is SAME OR HIGHER than the required child type
+# (e.g. a NATIONAL child STILL counts toward a NATIONAL's 5-STATE
+# requirement). Per user's Feb 20 remark: "same or higher position
+# assign झाली तरी चालेल".
+POSITION_ORDER = [
+    "user",
+    "district_partner",
+    "regional_state_partner",
+    "state_partner",
+    "national_partner",
+]
+
+
+def _positions_ge(child_type: str) -> list[str]:
+    """Return partner_position values that are SAME-OR-HIGHER than
+    `child_type` in the leadership hierarchy. Used by structure
+    validation so a promoted downline never breaks its parent's count.
+
+    `elite_user` is a LEAF (non-partner) requirement handled separately
+    — this helper is called only for partner-tier child_types.
+    """
+    if child_type not in POSITION_ORDER:
+        return [child_type]
+    idx = POSITION_ORDER.index(child_type)
+    return POSITION_ORDER[idx:]
+
 
 # In-memory TTL cache — 5-minute expiry per user's Q4=c choice.
 # Key: f"{uid}:{position}"  Value: (expiry_epoch, is_valid_bool)
@@ -246,17 +274,21 @@ async def _count_l1_health_active(uid: str, referral_code: Optional[str]) -> int
 
 
 async def _fetch_l1_partner_children(uid: str, referral_code: Optional[str], child_position: str) -> list:
-    """L1 direct downlines whose `partner_position` == `child_position`.
-    Projection returns only what recursive validation needs.
+    """L1 direct downlines whose `partner_position` is SAME OR HIGHER than
+    `child_position`. Feb 20 2026 — relaxed from strict equality per user's
+    "same or higher position assign झाली तरी चालेल" rule. Projection also
+    returns `partner_position` so recursive validation can validate each
+    child against their OWN position (not the parent's required child_type).
     """
     if db is None:
         return []
     tokens = [uid]
     if referral_code:
         tokens.append(referral_code)
+    allowed_positions = _positions_ge(child_position)
     return await db.users.find(
-        {"referred_by": {"$in": tokens}, "partner_position": child_position},
-        {"_id": 0, "uid": 1, "referral_code": 1},
+        {"referred_by": {"$in": tokens}, "partner_position": {"$in": allowed_positions}},
+        {"_id": 0, "uid": 1, "referral_code": 1, "partner_position": 1},
     ).to_list(20000)
 
 
@@ -342,18 +374,21 @@ async def is_structure_valid(uid: str, position: str) -> bool:
             return result
 
         # RECURSIVE path — count L1 children with the required partner
-        # position AND whose OWN structure is individually valid.
+        # position OR HIGHER (Feb 20 2026), AND whose OWN structure is
+        # individually valid for THEIR OWN position (a promoted NATIONAL
+        # downline is validated against national_partner's requirement,
+        # not against the parent's required child_type).
         children = await _fetch_l1_partner_children(uid, referral_code, child_type)
         if len(children) < min_count:
             # Not enough matching children even before recursing.
             _cache_set(key, False)
             return False
 
-        # Parallel-fanout: check all children concurrently. First `min_count`
-        # valid ones are all we need, but gather() runs them in parallel so
-        # the total wall-time = max(child) not sum(child).
+        # Parallel-fanout: check all children concurrently. Each child is
+        # validated against their OWN partner_position so a higher-rank
+        # downline is measured by their own tier's requirement.
         results = await _aio.gather(
-            *[is_structure_valid(c["uid"], child_type) for c in children]
+            *[is_structure_valid(c["uid"], c.get("partner_position") or child_type) for c in children]
         )
         valid = sum(1 for ok in results if ok)
         met = valid >= min_count
@@ -405,11 +440,13 @@ async def get_structure_report(uid: str, position: str) -> dict:
             "structure_met": current >= min_count,
         }
 
-    # Higher-tier: raw match count + parallel validity of each child
+    # Higher-tier: raw match count + parallel validity of each child.
+    # Feb 20 2026 — each child validated against THEIR OWN position so
+    # promoted (same-or-higher) downlines still count correctly.
     matched = await _fetch_l1_partner_children(uid, referral_code, child_type)
     if matched:
         valid_flags = await _aio.gather(
-            *[is_structure_valid(u["uid"], child_type) for u in matched]
+            *[is_structure_valid(u["uid"], u.get("partner_position") or child_type) for u in matched]
         )
         current = sum(1 for v in valid_flags if v)
     else:
