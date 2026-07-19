@@ -553,9 +553,27 @@ async def register_user(request: Request):
 
 @router.get("/check-auth-type")
 async def check_auth_type(identifier: str):
-    """Check if user should use PIN or Password login"""
+    """Check if user should use PIN or Password login.
+
+    Feb 17 2026 — Added 60-second cache. This endpoint is called on every
+    login-form focus and blocks the "Verifying..." UI step. Production
+    was seeing 0.7s → 4.6s → 0.7s variance from cold DB queries. Caching
+    by normalized identifier collapses repeated login attempts down to a
+    single DB round-trip per minute per user.
+    """
     normalized_identifier = identifier.lower().strip()
-    
+
+    # Fast path — process-local cache (motor connection pool already benefits
+    # from Mongo's cursor caching but the query still costs a round-trip).
+    cache_key = f"check_auth_type:{normalized_identifier}"
+    try:
+        from utils.cache_manager import cache as _cache
+        cached = await _cache.get(cache_key)
+        if cached is not None:
+            return cached
+    except Exception:
+        _cache = None  # noqa: F841 — fall through to DB path
+
     user = await db.users.find_one({
         "$or": [
             {"email": {"$regex": f"^{normalized_identifier}$", "$options": "i"}},
@@ -563,14 +581,21 @@ async def check_auth_type(identifier: str):
             {"uid": normalized_identifier}
         ]
     }, {"_id": 0, "pin_migrated": 1, "email": 1})
-    
+
     if not user:
-        return {"auth_type": "pin", "user_exists": False}
-    
-    if user.get("pin_migrated", False):
-        return {"auth_type": "pin", "user_exists": True}
+        response = {"auth_type": "pin", "user_exists": False}
+    elif user.get("pin_migrated", False):
+        response = {"auth_type": "pin", "user_exists": True}
     else:
-        return {"auth_type": "password", "user_exists": True, "needs_migration": True}
+        response = {"auth_type": "password", "user_exists": True, "needs_migration": True}
+
+    # Cache negative + positive responses (60s). Login flow tolerance is high.
+    try:
+        from utils.cache_manager import cache as _cache
+        await _cache.set(cache_key, response, ttl=60)
+    except Exception:
+        pass
+    return response
 
 
 # ========== PIN MANAGEMENT ==========

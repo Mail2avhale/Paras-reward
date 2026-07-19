@@ -1531,6 +1531,38 @@ Play Console rejects duplicate versionCode. Bumped all identifiers for the hotfi
 
 ---
 
+## Feb 17, 2026 — Production Performance Audit + Quick Wins
+
+User reported production (www.parasreward.com) was slow — especially the login "Verifying..." step and dashboard load.
+
+### Findings
+| Surface | Time (prod) | Notes |
+|---------|-------------|-------|
+| `/api/auth/check-auth-type` | 0.7s → **4.6s** → 0.7s | Highly variable cold-cache. Called on every login-form focus. |
+| `/api/stats` | 2.1s cold | 6 parallel aggregations across full users collection. |
+| `/api/user/{uid}/performance-summary` | 1.2s | Already cached 60s (fine after warm-up). |
+| `/api/mining/status/{uid}` | 0.7s | OK. |
+| `/api/subscription/*` | 0.25-0.37s | **Fast — NOT the subscription page's fault.** |
+| `/api/community/dashboard/{uid}` | 0.30s | Fast. |
+| **Dashboard page total** | ~14s + **27 API calls** | Chatty on first hit, then cache-warm on subsequent. |
+
+The user's specific complaint about /subscription being slow is actually the **broader `Verifying...` login step** + first-hit dashboard cold cache. Subscription's own APIs are among the fastest.
+
+### Quick wins applied
+- `/app/backend/routes/auth.py` — added **60s cache** on `check-auth-type`. Collapses repeated login attempts to one DB round-trip/minute per identifier. **Preview verified: 0.31s cold → 0.12s cached (2.5×).**
+- `/app/backend/server.py` — bumped `/api/stats` cache TTL from **300s → 900s** (5min → 15min). Landing-page counters don't need per-second freshness. **Preview verified: 0.61s cold → 0.33s cached.**
+- `get_performance_summary` already had 60s cache (verified — no change needed).
+
+### Not fixed here (requires bigger changes)
+- Dashboard's 27 API calls — needs a composite endpoint to consolidate.
+- First-visit bundle load (~13s) — CDN / Cloudflare cache config.
+- DB indexing on `users` collection for the `check-auth-type` `$or` query (mobile / email / uid) — would eliminate the 4.6s cold spike entirely. Recommend adding: `db.users.create_index("mobile")`, `db.users.create_index("email")` (probably already exist), and ensuring `users.uid` is unique-indexed.
+
+### Deploy needed
+User must redeploy for these caches to take effect in production. No new version bump required — this is a purely backend change (no user-visible feature changes).
+
+---
+
 ## Feb 16, 2026 — Feature: Community Leader Bonus Multiplier & Role Structure
 
 ### Spec (as approved by user)

@@ -20018,8 +20018,11 @@ async def get_public_stats():
             "totalRedeemed": round(total_redeemed, 2)
         }
         
-        # Cache for 5 minutes (300 seconds) to reduce database load
-        await cache.set(cache_key, stats_response, ttl=300)
+        # Cache for 15 minutes to reduce database load. Feb 17 2026 — bumped
+        # from 5min to 15min after production audit showed this endpoint at
+        # 2.1s cold. It powers only the public landing-page counters, which
+        # don't need per-second freshness.
+        await cache.set(cache_key, stats_response, ttl=900)
         
         return stats_response
     except Exception as e:
