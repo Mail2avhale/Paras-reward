@@ -3,6 +3,35 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 20, 2026 — FIFO Monthly Reward Ceiling + Same-or-Higher Structure Validation)
+- ✅ **Monthly Reward Ceiling (FIFO cap) — revenue-leak fix (P1)**:
+  - **Cap table** (INR/month → PRC via fixed 10 PRC = ₹1):
+    - Community Member (`user`): ₹1,00,000 → 10,00,000 PRC
+    - District Community Leader: ₹3,00,000 → 30,00,000 PRC
+    - Regional Community Leader: ₹4,00,000 → 40,00,000 PRC
+    - State Community Leader: ₹5,00,000 → 50,00,000 PRC
+    - National Community Leader: ₹10,00,000 → 1,00,00,000 PRC
+  - **Behaviour** per user's decisions (Feb 20):
+    - Q1=b: cap TRACKS all earning-type ledger credits combined (mining_referral_reward + mining_collect + ad_reward + referral_joined + subscription_referral_reward + quantum_voucher_bonus + community_bonus + leadership_reward)
+    - Q2=a: SILENT SKIP — when a commission credit would push the recipient over their cap, the credit is NOT written to prc_ledger and does NOT roll up to next upline (revenue saved in treasury)
+    - Q3=a: cap resets on the 1st of every UTC calendar month at 00:00
+  - **NEW module**: `/app/backend/routes/community_reward_caps.py` (450 lines)
+    - Public endpoints: `GET /api/community/monthly-cap-status/{uid}`, `GET /api/community/monthly-cap-config`
+    - Admin endpoints (X-Admin-Pin + Bearer): `GET/POST /api/admin/community-caps/config`, `POST .../config/reset`, `GET .../audit`
+    - Cache: 5-min in-process cache for cap config; invalidated on admin update
+    - Helper API: `can_credit(uid, position, amount)` used inline by mining_commission.py
+  - **Integrated** in `/app/backend/routes/mining_commission.py:distribute_mining_collect_commission` — checks `can_credit()` before `_credit_commission()`; on cap-hit, adds to already_paid and continues chain-walk (silent skip, no roll-up).
+  - **Testing**: 9/9 E2E API tests PASS + 34/34 existing regression tests PASS.
+- ✅ **Same-or-Higher Partner Position Structure Validation** (per user's Feb 20 remark):
+  - **File**: `/app/backend/routes/partner_positions.py`
+  - Added `POSITION_ORDER = ["user", "district_partner", "regional_state_partner", "state_partner", "national_partner"]` and pure helper `_positions_ge(child_type)` returning all positions ≥ child_type in hierarchy.
+  - `_fetch_l1_partner_children` now uses `partner_position IN [child, higher_1, higher_2, ...]` (was strict equality) and returns each child's `partner_position` in the projection.
+  - `is_structure_valid` and `get_structure_report` recursions now validate each child against THEIR OWN partner_position (not the parent's required child_type), so a promoted NATIONAL child in a NATIONAL leader's 5-STATE requirement is validated as a NATIONAL (not double-checked as a STATE).
+  - **Effect**: A NATIONAL leader whose 5 STATE downlines include one that got promoted to NATIONAL — the parent NATIONAL's structure remains VALID.
+- ✅ **Frontend widget**: `MonthlyCapCard` on Community Dashboard (`/app/frontend/src/pages/CommunityDashboard.js`) — shows role label, cap ₹, used ₹, remaining ₹, used %, capped flag, live countdown to next reset. All 8 required data-testids present (`monthly-cap-card`, `cap-role-label`, `cap-total-inr`, `cap-used-inr`, `cap-remaining-inr`, `cap-used-pct`, `cap-progress-bar`, `cap-reset-countdown`). Rendered only when API returns success (graceful degradation).
+- ✅ **New tests**: `/app/backend/tests/test_reward_caps_and_structure.py` — 9 tests covering default cap table, month-earned sum, can_credit boundary conditions, admin GET/POST/RESET, wrong-pin 403, no-bearer 401, audit endpoint, hierarchy helper (all PASS).
+- ✅ **Testing**: testing_agent_v3_fork report iteration_274.json — 100% success (9/9 new backend + 34/34 regression + 8/8 frontend testids); no action items.
+
 ## Architecture
 - **Frontend**: React (CRA) + Tailwind + shadcn/ui — split into User & Admin builds via `REACT_APP_BUILD_TYPE`
 - **Backend**: FastAPI (Python) + MongoDB
