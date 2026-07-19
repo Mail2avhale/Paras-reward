@@ -1385,6 +1385,35 @@ Replaced the previous INCREASING community bonus table with a DECREASING one per
 
 ---
 
+## Feb 17, 2026 — PRC Statement: Daily-Summary View (Option B — Frontend-only aggregation)
+
+### Problem
+With the new 10-level Community Bonus, a single mining collect by a downline can create up to 10 rows in the receiver's PRC ledger. Elite users with 100+ daily active mining downlines will accumulate thousands of rows/day making the PRC Statement page unreadable.
+
+### Solution (chosen by user: Option B)
+Purely client-side aggregation UX toggle on `/prc-statement`. No backend refactor, no DB migration — existing paginated rows are grouped by calendar day on the client with tap-to-expand.
+
+### Change
+- **File**: `/app/frontend/src/pages/PRCStatement.js`
+- Added `viewMode` state (`daily` default | `detailed`) + toggle chip UI at top of the ledger area.
+- Added `dayKey(iso)` + `humanDay(key)` helpers producing labels like `Today · 17 Feb 2026`, `Yesterday · 16 Feb 2026`, `Mon · 06 Jul 2026`.
+- Added `dailyGroups` `useMemo` — groups entries by day and computes `credit`, `debit`, `community_bonus_count`, `community_bonus_prc` per bucket.
+- In `daily` mode, `LIMIT` bumped to 200 so 5-15 days visible per fetch.
+- New render section `daily-summary-view` renders one collapsible `Card` per day. Header shows day label, txn count, community-bonus pill, and net PRC (green/red). Tap → expands to inline detail rows.
+- Detailed table + mobile cards + pagination are gated behind `viewMode === 'detailed'`.
+
+### Verification (Playwright, mobile 420×900)
+- `view-mode-toggle`, `view-mode-daily`, `view-mode-detailed`, `daily-summary-view` — all present.
+- Real fetch: **27 daily buckets** created from 200 txns (a 7× reduction in visible rows).
+- Tap first day → expanded to 5 individual entries (each with TypeBadge, formatDate, credit/debit/balance).
+- Switch to Detailed → `daily-summary-view` count=0, `mobile-cards` count=1 (original detailed layout intact).
+
+### Design notes / next candidates
+- Backend row-bundling (Option A from the discussion) is still on the table if scale grows further — this Option B is a UI-only fix and DB still accumulates 10× rows.
+- Optional: for the /community-activity live-feed page, apply the same aggregation pattern to reduce noise there too (Option C).
+
+---
+
 ## Feb 16, 2026 — Feature: Community Leader Bonus Multiplier & Role Structure
 
 ### Spec (as approved by user)

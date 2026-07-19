@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, Wallet, ChevronLeft, ChevronRight, Filter, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Wallet, ChevronLeft, ChevronRight, Filter, ArrowUpDown, ChevronDown, ChevronUp, CalendarDays, ListChecks } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 
@@ -42,6 +42,29 @@ const formatDate = (iso) => {
   return `${day} ${mon} ${h}:${m}`;
 };
 
+// Feb 17 2026 — Day-level bucket key so that a single mining collect event
+// spawning 10 commission rows (one per level) rolls up neatly.
+const dayKey = (iso) => {
+  if (!iso) return 'unknown';
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const humanDay = (key) => {
+  if (!key || key === 'unknown') return 'Unknown';
+  const [y, m, d] = key.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const today = new Date();
+  const yest = new Date();
+  yest.setDate(today.getDate() - 1);
+  const sameYMD = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const base = `${String(d).padStart(2,'0')} ${months[m - 1]} ${y}`;
+  if (sameYMD(date, today)) return `Today · ${base}`;
+  if (sameYMD(date, yest))  return `Yesterday · ${base}`;
+  const weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  return `${weekdays[date.getDay()]} · ${base}`;
+};
+
 const formatPRC = (val) => {
   if (!val || val === 0) return '–';
   return val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -54,7 +77,12 @@ export default function PRCStatement({ user }) {
   const [page, setPage] = useState(1);
   const [filterType, setFilterType] = useState('All');
   const [sortOrder, setSortOrder] = useState('desc');
-  const LIMIT = 20;
+  // Feb 17 2026 — Daily-summary vs detailed view. Default: 'daily' so a user
+  // with 100+ downlines earning 10-level commission every day doesn't get
+  // buried in thousands of rows. Detailed remains one tap away.
+  const [viewMode, setViewMode] = useState('daily');
+  const [expandedDays, setExpandedDays] = useState({}); // { 'YYYY-MM-DD': true }
+  const LIMIT = viewMode === 'daily' ? 200 : 20;
 
   const fetchStatement = useCallback(async () => {
     if (!user?.uid) return;
@@ -68,7 +96,7 @@ export default function PRCStatement({ user }) {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, page, filterType, sortOrder]);
+  }, [user?.uid, page, filterType, sortOrder, LIMIT]);
 
   useEffect(() => { fetchStatement(); }, [fetchStatement]);
 
@@ -76,6 +104,31 @@ export default function PRCStatement({ user }) {
   const entries = data?.entries || [];
   const pagination = data?.pagination || {};
   const filters = data?.filters || [];
+
+  // Client-side day-grouping for the Daily Summary view. Preserves the
+  // fetched sort order (desc/asc).
+  const dailyGroups = useMemo(() => {
+    const bucket = new Map();
+    for (const e of entries) {
+      const key = dayKey(e.date);
+      if (!bucket.has(key)) {
+        bucket.set(key, { key, entries: [], credit: 0, debit: 0, community_bonus_count: 0, community_bonus_prc: 0 });
+      }
+      const g = bucket.get(key);
+      g.entries.push(e);
+      g.credit += Number(e.credit) || 0;
+      g.debit += Number(e.debit) || 0;
+      // Detect community mining commission rows — narration hint or type.
+      const isCommunityBonus = (e.type === 'Referral Reward') || /community|referral|mining[- ]reward|level [0-9]|L[0-9]{1,2}/i.test(e.narration || '');
+      if (isCommunityBonus) {
+        g.community_bonus_count += 1;
+        g.community_bonus_prc += Number(e.credit) || 0;
+      }
+    }
+    return Array.from(bucket.values());
+  }, [entries]);
+
+  const toggleDay = (key) => setExpandedDays(prev => ({ ...prev, [key]: !prev[key] }));
 
   return (
     <div className="min-h-screen bg-slate-950" data-testid="prc-statement-page">
@@ -115,6 +168,32 @@ export default function PRCStatement({ user }) {
           </Card>
         </div>
 
+        {/* View Mode Toggle — Daily Summary | Detailed (Feb 17 2026) */}
+        <div className="flex items-center gap-2" data-testid="view-mode-toggle">
+          <button
+            onClick={() => { setViewMode('daily'); setPage(1); }}
+            data-testid="view-mode-daily"
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+              viewMode === 'daily'
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5" /> Daily Summary
+          </button>
+          <button
+            onClick={() => { setViewMode('detailed'); setPage(1); }}
+            data-testid="view-mode-detailed"
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+              viewMode === 'detailed'
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+            }`}
+          >
+            <ListChecks className="w-3.5 h-3.5" /> Detailed
+          </button>
+        </div>
+
         {/* Filters */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" data-testid="filter-section">
           <Filter className="w-4 h-4 text-slate-500 flex-shrink-0" />
@@ -142,7 +221,83 @@ export default function PRCStatement({ user }) {
           </button>
         </div>
 
-        {/* Ledger Table — Desktop */}
+        {/* ============ DAILY SUMMARY VIEW (Feb 17 2026) ============ */}
+        {viewMode === 'daily' && (
+          <div className="space-y-2" data-testid="daily-summary-view">
+            {loading ? (
+              <div className="text-center py-8 text-slate-500">Loading...</div>
+            ) : dailyGroups.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">No transactions found</div>
+            ) : dailyGroups.map((g) => {
+              const net = g.credit - g.debit;
+              const isOpen = !!expandedDays[g.key];
+              return (
+                <Card key={g.key} className="bg-slate-900 border-slate-700/50 overflow-hidden" data-testid={`daily-row-${g.key}`}>
+                  {/* Day header (tap to expand) */}
+                  <button
+                    onClick={() => toggleDay(g.key)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-slate-800/50 transition"
+                    data-testid={`daily-toggle-${g.key}`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isOpen ? <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />}
+                      <div className="text-left min-w-0">
+                        <p className="text-white font-semibold text-sm leading-tight truncate">{humanDay(g.key)}</p>
+                        <p className="text-slate-500 text-[10px] leading-tight mt-0.5">
+                          <span className="tabular-nums">{g.entries.length}</span> txn{g.entries.length === 1 ? '' : 's'}
+                          {g.community_bonus_count > 0 && (
+                            <span className="ml-2 px-1.5 py-0.5 rounded bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30 text-[9px] font-semibold">
+                              🎯 {g.community_bonus_count} community
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0 ml-2">
+                      <p className={`font-mono font-bold text-sm tabular-nums leading-tight ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`} data-testid={`daily-net-${g.key}`}>
+                        {net >= 0 ? '+' : ''}{formatPRC(Math.abs(net))} PRC
+                      </p>
+                      <p className="text-[10px] text-slate-500 leading-tight tabular-nums">
+                        <span className="text-emerald-500">+{formatPRC(g.credit)}</span>
+                        {g.debit > 0 && <> · <span className="text-red-500">-{formatPRC(g.debit)}</span></>}
+                      </p>
+                    </div>
+                  </button>
+                  {/* Expanded detail rows */}
+                  {isOpen && (
+                    <div className="border-t border-slate-800 divide-y divide-slate-800/60" data-testid={`daily-expand-${g.key}`}>
+                      {g.entries.map((e, i) => (
+                        <div key={e.txn_id || i} className="px-3 py-2 hover:bg-slate-800/40" data-testid={`daily-entry-${g.key}-${i}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <TypeBadge type={e.type} />
+                              <span className="text-slate-500 text-[10px] whitespace-nowrap">{formatDate(e.date)}</span>
+                            </div>
+                            <span className="text-blue-300 font-mono text-[10px] font-medium shrink-0 ml-2">{formatPRC(e.balance)}</span>
+                          </div>
+                          <p className="text-slate-300 text-[11px] mb-1 truncate">{e.narration}</p>
+                          <div className="flex gap-3 text-[11px] font-mono">
+                            {e.credit > 0 && <span className="text-emerald-400">+ {formatPRC(e.credit)} CR</span>}
+                            {e.debit  > 0 && <span className="text-red-400">- {formatPRC(e.debit)} DR</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+            {/* Info hint */}
+            {!loading && dailyGroups.length > 0 && (
+              <p className="text-center text-[10px] text-slate-500 pt-2" data-testid="daily-hint">
+                Showing {entries.length} recent txns grouped by day. Tap a day to see individual rows. Switch to <b>Detailed</b> for full pagination.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Ledger Table — Desktop (Detailed view only) */}
+        {viewMode === 'detailed' && (
         <div className="hidden md:block" data-testid="desktop-table">
           <Card className="bg-slate-900 border-slate-700 overflow-hidden">
             <table className="w-full text-sm">
@@ -175,8 +330,10 @@ export default function PRCStatement({ user }) {
             </table>
           </Card>
         </div>
+        )}
 
-        {/* Ledger Cards — Mobile */}
+        {/* Ledger Cards — Mobile (Detailed view only) */}
+        {viewMode === 'detailed' && (
         <div className="md:hidden space-y-2" data-testid="mobile-cards">
           {loading ? (
             <div className="text-center py-8 text-slate-500">Loading...</div>
@@ -203,9 +360,10 @@ export default function PRCStatement({ user }) {
             </Card>
           ))}
         </div>
+        )}
 
-        {/* Pagination */}
-        {pagination.total_pages > 1 && (
+        {/* Pagination (Detailed view only — Daily view fetches larger batches) */}
+        {viewMode === 'detailed' && pagination.total_pages > 1 && (
           <div className="flex items-center justify-between pt-2" data-testid="pagination">
             <Button
               size="sm"
