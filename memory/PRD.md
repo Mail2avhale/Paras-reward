@@ -3,6 +3,18 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 20, 2026 — Admin Popup Placement Dropdown)
+- ✅ **Placement Selector** in AdminPopupMessages editor (`/app/frontend/src/pages/Admin/AdminPopupMessages.js`):
+  - New `PLACEMENT_OPTIONS` table with 7 surfaces: `app_startup` (default), `dashboard_home`, `main_mining_collect`, `mall_collect`, `partner_store_payment`, `community_feed`, `notifications`.
+  - `emptyForm.placement` = `'app_startup'`; `handleEdit` pre-fills the current placement of the popup being edited.
+  - New `<Select>` with data-testid `admin-popup-placement-select`, per-option testids `admin-popup-placement-option-{value}`, and helper text (`admin-popup-placement-hint`) explaining the "one enabled popup per placement" rule.
+  - Popup list card now shows a `📍 placement label` badge (`admin-popup-placement-badge-{popup_id}`) so admins can see at a glance which surface each popup targets.
+- Backend (`/app/backend/routes/admin_popup_routes.py`) already supported the `placement` field end-to-end — no backend changes required. Verified via curl:
+  - `POST /api/admin/popup/create` with `placement="community_feed"` → persisted.
+  - `GET /api/admin/popup/all` → returns `placement` for every popup including seed data.
+  - Auto-disable-siblings logic scopes to the placement.
+- Screenshot verified: dropdown renders, hint visible, 6 existing popups display placement badges.
+
 ## Implemented (Feb 20, 2026 — FIFO Monthly Reward Ceiling + Same-or-Higher Structure Validation)
 - ✅ **Monthly Reward Ceiling (FIFO cap) — revenue-leak fix (P1)**:
   - **Cap table** (INR/month → PRC via fixed 10 PRC = ₹1):

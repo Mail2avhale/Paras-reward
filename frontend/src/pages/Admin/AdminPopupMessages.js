@@ -37,8 +37,21 @@ const emptyForm = {
   youtube_url: '',
   cta_buttons: [{ text: 'Close', link: '', style: 'primary' }],
   message_type: 'info',
+  placement: 'app_startup',
   enabled: true,
 };
+
+// Popup surfaces available across the app. Keep the `value` strings in
+// sync with the AdMobBanner + PopupMessage fetchers that consume them.
+const PLACEMENT_OPTIONS = [
+  { value: 'app_startup',           label: 'App Startup (Global)',          hint: 'Shown once when the app opens' },
+  { value: 'dashboard_home',        label: 'Dashboard / Home',              hint: 'Main dashboard landing' },
+  { value: 'main_mining_collect',   label: 'Mining Widget',                 hint: 'Above/below mining button' },
+  { value: 'mall_collect',          label: 'Paras Mall',                    hint: 'Inside Mall bookings' },
+  { value: 'partner_store_payment', label: 'Pay to Partner Store',          hint: 'Partner-store checkout page' },
+  { value: 'community_feed',        label: 'Community Feed',                hint: 'Community/forum page' },
+  { value: 'notifications',         label: 'Notifications',                 hint: 'Notifications inbox' },
+];
 
 const AdminPopupMessages = ({ user }) => {
   const [popups, setPopups] = useState([]);
@@ -127,6 +140,7 @@ const AdminPopupMessages = ({ user }) => {
         ? p.cta_buttons
         : [{ text: p.button_text || 'Close', link: p.button_link || '', style: 'primary' }],
       message_type: p.message_type || 'info',
+      placement: p.placement || 'app_startup',
       enabled: p.enabled,
     });
     setShowForm(true);
@@ -246,6 +260,37 @@ const AdminPopupMessages = ({ user }) => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Placement — controls WHERE this popup appears in the app.
+                  Only one popup per placement can be enabled at a time; the
+                  backend auto-disables sibling popups within the same scope
+                  when this one is enabled. (Feb 20 2026 P2) */}
+              <div>
+                <Label>Placement *</Label>
+                <Select
+                  value={formData.placement}
+                  onValueChange={(v) => setFormData({ ...formData, placement: v })}
+                >
+                  <SelectTrigger data-testid="admin-popup-placement-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLACEMENT_OPTIONS.map((opt) => (
+                      <SelectItem
+                        key={opt.value}
+                        value={opt.value}
+                        data-testid={`admin-popup-placement-option-${opt.value}`}
+                      >
+                        <span className="font-medium">{opt.label}</span>
+                        <span className="text-xs text-slate-500 ml-2">— {opt.hint}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-slate-500 mt-1" data-testid="admin-popup-placement-hint">
+                  Only ONE popup per placement can be enabled at a time — enabling this popup will auto-disable any other popup targeting the same surface.
+                </p>
               </div>
 
               <div>
@@ -465,6 +510,18 @@ const AdminPopupMessages = ({ user }) => {
                         {p.cta_buttons?.length > 1 && (
                           <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700">{p.cta_buttons.length} CTAs</span>
                         )}
+                        {(() => {
+                          const opt = PLACEMENT_OPTIONS.find((o) => o.value === (p.placement || 'app_startup'));
+                          return (
+                            <span
+                              className="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200"
+                              data-testid={`admin-popup-placement-badge-${p.popup_id}`}
+                              title={opt?.hint || ''}
+                            >
+                              📍 {opt?.label || p.placement || 'app_startup'}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <h3 className="font-semibold text-slate-800">{p.title}</h3>
                       <p className="text-slate-500 text-sm mt-1 line-clamp-2">{p.message}</p>
