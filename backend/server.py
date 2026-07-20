@@ -37025,6 +37025,14 @@ try:
 except Exception as _crc_err:
     logging.error(f"[STARTUP] community_reward_caps wiring failed: {_crc_err}")
 
+# Cache Health monitoring (Feb 20 2026 — Redis resilience)
+try:
+    from routes.cache_health import router as _cache_health_router
+    api_router.include_router(_cache_health_router)
+    logging.info("[STARTUP] cache_health router wired")
+except Exception as _cache_hz_err:
+    logging.error(f"[STARTUP] cache_health wiring failed: {_cache_hz_err}")
+
 # Downline Live Feed (referral-reward feed, Jul 2026)
 try:
     from routes.downline_live_feed import (

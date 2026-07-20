@@ -1,11 +1,25 @@
 """
 Cache Manager for Paras Rewards Platform
 Implements Redis caching with Upstash Redis (HTTP-based) support
-Includes fallback to local Redis and in-memory cache
+Includes fallback to local Redis and in-memory cache.
+
+Feb 20 2026 — Hardened for Redis unavailability:
+  • Per-op timeouts (asyncio.wait_for) so a hung Redis never blocks a request
+  • Circuit breaker — after N consecutive failures, Redis is skipped for
+    a cooling-off period; requests go straight to the caller's Mongo path.
+  • Metrics counters (hits/misses/errors/timeouts/circuit-opens) exposed
+    via get_stats() and a new /api/admin/cache/health endpoint (server.py).
+  • MongoDB remains the source of truth — cache failures NEVER fail a
+    request. All public methods return neutral values (None / False) on
+    Redis error, so callers using the standard
+    "cached = await cache.get(k); if not cached: fetch_from_mongo(); cache.set(k, v)"
+    pattern automatically fall through to Mongo.
 """
 
+import asyncio
 import os
 import json
+import time as _time
 from datetime import datetime, timezone
 from typing import Optional, Any, Callable
 from functools import wraps
@@ -19,6 +33,20 @@ if _cache_env.exists():
 
 # Environment prefix for cache keys to prevent cross-environment pollution
 CACHE_ENV_PREFIX = os.getenv('CACHE_ENV_PREFIX', 'preview')
+
+# ── Redis resilience knobs (env-overridable, sensible defaults) ──────
+# Per-op timeout — Upstash HTTP calls in a healthy state complete in ~30ms;
+# 500ms is 15× that (very tolerant) yet still fast enough that a stuck
+# call can never dominate a user's response time. Adjust via env if
+# your latency profile is different.
+REDIS_OP_TIMEOUT_MS = int(os.getenv('REDIS_OP_TIMEOUT_MS', '500'))
+# Circuit breaker: open after N consecutive failures (any kind) inside
+# a rolling window, stay open for RECOVERY_SEC before probing again.
+REDIS_CB_FAILURE_THRESHOLD = int(os.getenv('REDIS_CB_FAILURE_THRESHOLD', '5'))
+REDIS_CB_RECOVERY_SEC = int(os.getenv('REDIS_CB_RECOVERY_SEC', '60'))
+# Time window (sec) inside which we count consecutive failures. Older
+# failures decay so a slow-drip failure doesn't accidentally open us up.
+REDIS_CB_FAILURE_WINDOW_SEC = int(os.getenv('REDIS_CB_FAILURE_WINDOW_SEC', '30'))
 
 # Try to import upstash-redis first (HTTP-based, works everywhere)
 UPSTASH_AVAILABLE = False
@@ -42,12 +70,80 @@ _memory_cache = {}
 _cache_expiry = {}
 
 
+# ─── Circuit Breaker (module-level, shared across CacheManager methods) ──
+class _RedisCircuitBreaker:
+    """Tiny circuit breaker for Redis operations.
+
+    States: closed (normal) → open (skip Redis) → half-open (probe once).
+    Trip criteria: >= threshold failures inside a rolling window.
+    """
+    def __init__(self, threshold: int, recovery_sec: int, window_sec: int):
+        self.threshold = threshold
+        self.recovery_sec = recovery_sec
+        self.window_sec = window_sec
+        self._failures = []           # list of epoch timestamps
+        self._opened_at = 0.0         # 0 = closed
+        # Metrics
+        self.total_opens = 0
+        self.total_probes = 0
+        self.total_recoveries = 0
+
+    def is_open(self) -> bool:
+        """Return True when Redis should be SKIPPED. Auto-probes after
+        recovery_sec elapses (half-open state).
+        """
+        if self._opened_at == 0:
+            return False
+        elapsed = _time.time() - self._opened_at
+        if elapsed >= self.recovery_sec:
+            # Half-open: allow ONE probe (return False just this time).
+            self._opened_at = 0
+            self._failures = []
+            self.total_probes += 1
+            return False
+        return True
+
+    def record_success(self) -> None:
+        if self._failures or self._opened_at:
+            self.total_recoveries += 1
+        self._failures = []
+        self._opened_at = 0
+
+    def record_failure(self) -> None:
+        now = _time.time()
+        # Drop failures older than the rolling window
+        self._failures = [t for t in self._failures if now - t <= self.window_sec]
+        self._failures.append(now)
+        if len(self._failures) >= self.threshold and self._opened_at == 0:
+            self._opened_at = now
+            self.total_opens += 1
+
+    def snapshot(self) -> dict:
+        state = "open" if self._opened_at else "closed"
+        return {
+            "state": state,
+            "failures_in_window": len(self._failures),
+            "threshold": self.threshold,
+            "recovery_sec": self.recovery_sec,
+            "reopens_in_sec": max(0, int(self.recovery_sec - (_time.time() - self._opened_at))) if self._opened_at else 0,
+            "total_opens": self.total_opens,
+            "total_probes": self.total_probes,
+            "total_recoveries": self.total_recoveries,
+        }
+
+
 class CacheManager:
     """
     Unified cache manager supporting:
     1. Upstash Redis (HTTP-based, cloud hosted) - PREFERRED
     2. Local Redis (TCP-based)
     3. In-memory fallback
+
+    Feb 20 2026: every Redis op is wrapped with `asyncio.wait_for()` +
+    a circuit breaker. If Redis is unavailable / slow / erroring, the
+    method returns a NEUTRAL value (None for get, False for set/delete,
+    0 for incr) and the caller falls through to MongoDB — cache failures
+    NEVER surface as user-visible errors.
     """
     
     def __init__(self):
@@ -56,6 +152,62 @@ class CacheManager:
         self.use_upstash = False
         self.default_ttl = 300  # 5 minutes default
         self.connection_type = "none"
+        # Resilience state
+        self._op_timeout = REDIS_OP_TIMEOUT_MS / 1000.0
+        self._breaker = _RedisCircuitBreaker(
+            threshold=REDIS_CB_FAILURE_THRESHOLD,
+            recovery_sec=REDIS_CB_RECOVERY_SEC,
+            window_sec=REDIS_CB_FAILURE_WINDOW_SEC,
+        )
+        # Metrics counters — cheap enough to always keep on.
+        self._m_hits = 0
+        self._m_misses = 0
+        self._m_errors = 0
+        self._m_timeouts = 0
+        self._m_circuit_skips = 0
+        self._m_mongo_fallbacks = 0   # incremented by cache misses & errors
+        self._m_sets_ok = 0
+        self._m_sets_fail = 0
+        self._m_deletes_ok = 0
+        self._m_deletes_fail = 0
+
+    # ─── internal helpers ────────────────────────────────────────────
+    def _redis_ready(self) -> bool:
+        """True iff Redis is configured, healthy, and circuit is closed."""
+        if not (self.use_redis and self.redis_client):
+            return False
+        if self._breaker.is_open():
+            self._m_circuit_skips += 1
+            return False
+        return True
+
+    async def _redis_call(self, coro):
+        """Run a Redis coroutine under timeout + circuit-breaker. Returns
+        (True, result) on success or (False, None) on any failure. Never
+        raises — Mongo fallback is the caller's responsibility.
+        """
+        try:
+            result = await asyncio.wait_for(coro, timeout=self._op_timeout)
+            self._breaker.record_success()
+            return True, result
+        except asyncio.TimeoutError:
+            self._m_timeouts += 1
+            self._m_errors += 1
+            self._breaker.record_failure()
+            # Best-effort log — never crash on logging.
+            try:
+                print(f"⚠️ Cache timeout after {self._op_timeout*1000:.0f}ms — falling back to Mongo")
+            except Exception:
+                pass
+            return False, None
+        except Exception as e:
+            self._m_errors += 1
+            self._breaker.record_failure()
+            try:
+                print(f"⚠️ Cache Redis error: {e} — falling back to Mongo")
+            except Exception:
+                pass
+            return False, None
         
     async def initialize(self):
         """Initialize Redis connection - tries Upstash first, then local Redis, then in-memory"""
@@ -67,12 +219,13 @@ class CacheManager:
         if UPSTASH_AVAILABLE and upstash_url and upstash_token:
             try:
                 self.redis_client = UpstashRedis(url=upstash_url, token=upstash_token)
-                # Test connection
-                await self.redis_client.ping()
+                # Test connection under a bounded timeout so a stuck ping
+                # doesn't hold up server startup.
+                await asyncio.wait_for(self.redis_client.ping(), timeout=max(self._op_timeout, 2.0))
                 self.use_redis = True
                 self.use_upstash = True
                 self.connection_type = "upstash"
-                print(f"✅ Upstash Redis connected successfully")
+                print(f"✅ Upstash Redis connected successfully (op timeout={self._op_timeout*1000:.0f}ms)")
                 return
             except Exception as e:
                 print(f"⚠️ Upstash Redis connection failed: {e}")
@@ -84,202 +237,274 @@ class CacheManager:
                 self.redis_client = redis.from_url(
                     redis_url,
                     encoding="utf-8",
-                    decode_responses=True
+                    decode_responses=True,
+                    socket_timeout=self._op_timeout,
+                    socket_connect_timeout=self._op_timeout,
                 )
-                await self.redis_client.ping()
+                await asyncio.wait_for(self.redis_client.ping(), timeout=max(self._op_timeout, 2.0))
                 self.use_redis = True
                 self.use_upstash = False
                 self.connection_type = "local_redis"
-                print(f"✅ Local Redis connected: {redis_url}")
+                print(f"✅ Local Redis connected: {redis_url} (op timeout={self._op_timeout*1000:.0f}ms)")
                 return
             except Exception as e:
                 print(f"⚠️ Redis connection failed: {e}")
         
         # 3. Fall back to in-memory cache
-        print("📦 Falling back to in-memory cache")
+        print("📦 Falling back to in-memory cache (Redis unavailable)")
         self.use_redis = False
         self.use_upstash = False
         self.connection_type = "in_memory"
     
     async def get(self, key: str) -> Optional[Any]:
-        """Get value from cache with environment prefix"""
-        # Add environment prefix to prevent cross-environment cache pollution
+        """Get value from cache with environment prefix.
+
+        Returns None on:
+          • cache miss  • Redis error / timeout  • circuit-open skip
+          • malformed JSON
+        The caller MUST treat None as "not cached — fetch from Mongo".
+        """
         prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
-        try:
-            if self.use_redis and self.redis_client:
-                value = await self.redis_client.get(prefixed_key)
-                if value:
-                    # Upstash returns string, local redis with decode_responses also returns string
-                    if isinstance(value, str):
-                        try:
-                            return json.loads(value)
-                        except json.JSONDecodeError:
-                            return value
+        if self._redis_ready():
+            ok, value = await self._redis_call(self.redis_client.get(prefixed_key))
+            if not ok:
+                # Timeout / error already counted; treat as miss so caller hits Mongo.
+                self._m_mongo_fallbacks += 1
+                return None
+            if value is None:
+                self._m_misses += 1
+                return None
+            # Decode
+            if isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                    self._m_hits += 1
+                    return parsed
+                except json.JSONDecodeError:
+                    self._m_hits += 1
                     return value
-            else:
-                # In-memory fallback
-                if prefixed_key in _memory_cache:
-                    expiry = _cache_expiry.get(prefixed_key)
-                    if expiry and datetime.now(timezone.utc).timestamp() > expiry:
-                        del _memory_cache[prefixed_key]
-                        del _cache_expiry[prefixed_key]
-                        return None
-                    return _memory_cache.get(prefixed_key)
-        except Exception as e:
-            print(f"Cache get error: {e}")
+            self._m_hits += 1
+            return value
+        # In-memory fallback path (Redis never configured, or circuit open)
+        if prefixed_key in _memory_cache:
+            expiry = _cache_expiry.get(prefixed_key)
+            if expiry and datetime.now(timezone.utc).timestamp() > expiry:
+                _memory_cache.pop(prefixed_key, None)
+                _cache_expiry.pop(prefixed_key, None)
+                self._m_misses += 1
+                return None
+            self._m_hits += 1
+            return _memory_cache.get(prefixed_key)
+        self._m_misses += 1
+        # Bump fallback counter only when Redis WOULD have been the primary
+        # (i.e., configured but currently unhealthy). Otherwise it's just
+        # a plain in-memory miss.
+        if self.use_redis:
+            self._m_mongo_fallbacks += 1
         return None
     
     async def set(self, key: str, value: Any, ttl: int = None) -> bool:
-        """Set value in cache with optional TTL (seconds) and environment prefix"""
-        # Add environment prefix to prevent cross-environment cache pollution
+        """Set value in cache. Returns False on Redis failure but NEVER
+        raises — the caller's user-facing operation succeeds regardless.
+        """
         prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
         ttl = ttl or self.default_ttl
         try:
             json_value = json.dumps(value, default=str)
-            
-            if self.use_redis and self.redis_client:
-                if self.use_upstash:
-                    # Upstash uses setex method
-                    await self.redis_client.setex(prefixed_key, ttl, json_value)
-                else:
-                    # Local redis
-                    await self.redis_client.setex(prefixed_key, ttl, json_value)
-            else:
-                # In-memory fallback
-                _memory_cache[key] = value
-                _cache_expiry[key] = datetime.now(timezone.utc).timestamp() + ttl
-            return True
         except Exception as e:
-            print(f"Cache set error: {e}")
+            self._m_sets_fail += 1
+            try:
+                print(f"⚠️ Cache set JSON encode error: {e}")
+            except Exception:
+                pass
             return False
+
+        if self._redis_ready():
+            ok, _ = await self._redis_call(self.redis_client.setex(prefixed_key, ttl, json_value))
+            if ok:
+                self._m_sets_ok += 1
+                return True
+            self._m_sets_fail += 1
+            # Also mirror into memory so subsequent gets in this process
+            # can still hit — prevents a Redis outage from also killing
+            # local hot paths.
+            _memory_cache[prefixed_key] = value
+            _cache_expiry[prefixed_key] = datetime.now(timezone.utc).timestamp() + ttl
+            return False
+        # In-memory only
+        _memory_cache[prefixed_key] = value
+        _cache_expiry[prefixed_key] = datetime.now(timezone.utc).timestamp() + ttl
+        self._m_sets_ok += 1
+        return True
     
     async def delete(self, key: str) -> bool:
-        """Delete key from cache with environment prefix"""
+        """Delete key from cache with environment prefix. Never raises."""
         prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
-        try:
-            if self.use_redis and self.redis_client:
-                await self.redis_client.delete(prefixed_key)
-            else:
-                _memory_cache.pop(prefixed_key, None)
-                _cache_expiry.pop(prefixed_key, None)
-            return True
-        except Exception as e:
-            print(f"Cache delete error: {e}")
+        _memory_cache.pop(prefixed_key, None)
+        _cache_expiry.pop(prefixed_key, None)
+        if self._redis_ready():
+            ok, _ = await self._redis_call(self.redis_client.delete(prefixed_key))
+            if ok:
+                self._m_deletes_ok += 1
+                return True
+            self._m_deletes_fail += 1
             return False
+        self._m_deletes_ok += 1
+        return True
     
     async def delete_pattern(self, pattern: str) -> int:
-        """Delete all keys matching pattern with environment prefix"""
+        """Delete all keys matching pattern with environment prefix. Never raises."""
         prefixed_pattern = f"{CACHE_ENV_PREFIX}:{pattern}"
+        # Always clean in-memory first
         try:
-            if self.use_redis and self.redis_client:
-                if self.use_upstash:
-                    # Upstash doesn't support SCAN, so we need to track keys differently
-                    # For now, just delete the exact pattern key
-                    await self.redis_client.delete(prefixed_pattern)
-                    return 1
-                else:
-                    # Local redis supports scan_iter
-                    keys = []
-                    async for key in self.redis_client.scan_iter(match=prefixed_pattern):
-                        keys.append(key)
-                    if keys:
-                        await self.redis_client.delete(*keys)
-                    return len(keys)
-            else:
-                # In-memory fallback
-                import fnmatch
-                keys_to_delete = [k for k in _memory_cache.keys() if fnmatch.fnmatch(k, prefixed_pattern)]
-                for k in keys_to_delete:
-                    _memory_cache.pop(k, None)
-                    _cache_expiry.pop(k, None)
-                return len(keys_to_delete)
-        except Exception as e:
-            print(f"Cache delete pattern error: {e}")
-            return 0
+            import fnmatch
+            mem_hits = [k for k in list(_memory_cache.keys()) if fnmatch.fnmatch(k, prefixed_pattern)]
+            for k in mem_hits:
+                _memory_cache.pop(k, None)
+                _cache_expiry.pop(k, None)
+        except Exception:
+            mem_hits = []
+
+        if self._redis_ready():
+            if self.use_upstash:
+                # Upstash doesn't support SCAN — fall back to exact-key delete
+                ok, _ = await self._redis_call(self.redis_client.delete(prefixed_pattern))
+                if ok:
+                    self._m_deletes_ok += 1
+                    return 1 + len(mem_hits)
+                self._m_deletes_fail += 1
+                return len(mem_hits)
+            # Local redis — use scan_iter (also under timeout)
+            try:
+                keys = []
+                async def _scan():
+                    async for k in self.redis_client.scan_iter(match=prefixed_pattern):
+                        keys.append(k)
+                        if len(keys) >= 1000:  # cap defensive
+                            break
+                    return keys
+                ok, collected = await self._redis_call(_scan())
+                if ok and collected:
+                    ok2, _ = await self._redis_call(self.redis_client.delete(*collected))
+                    if ok2:
+                        self._m_deletes_ok += 1
+                        return len(collected) + len(mem_hits)
+                self._m_deletes_fail += 1
+                return len(mem_hits)
+            except Exception:
+                self._m_deletes_fail += 1
+                return len(mem_hits)
+        return len(mem_hits)
     
     async def flush_all(self) -> bool:
-        """Clear all cache"""
-        try:
-            if self.use_redis and self.redis_client:
-                if self.use_upstash:
-                    # Upstash: Use FLUSHDB command
-                    await self.redis_client.flushdb()
-                else:
-                    await self.redis_client.flushdb()
-            else:
-                _memory_cache.clear()
-                _cache_expiry.clear()
-            return True
-        except Exception as e:
-            print(f"Cache flush error: {e}")
-            return False
+        """Clear all cache. Never raises."""
+        _memory_cache.clear()
+        _cache_expiry.clear()
+        if self._redis_ready():
+            ok, _ = await self._redis_call(self.redis_client.flushdb())
+            return bool(ok)
+        return True
     
     async def incr(self, key: str, amount: int = 1) -> int:
-        """Increment a counter atomically"""
+        """Increment a counter atomically. Never raises. Falls back to
+        in-memory counter on Redis failure — NOTE: this fallback is NOT
+        distributed-safe. Callers that require strict atomicity across
+        workers (e.g. rate limiter) should treat 0 as "unknown".
+        """
+        if self._redis_ready():
+            ok, val = await self._redis_call(self.redis_client.incrby(key, amount))
+            if ok:
+                try:
+                    return int(val or 0)
+                except (TypeError, ValueError):
+                    return 0
+            # fall through to in-memory
+        current = _memory_cache.get(key, 0)
         try:
-            if self.use_redis and self.redis_client:
-                if self.use_upstash:
-                    return await self.redis_client.incrby(key, amount)
-                else:
-                    return await self.redis_client.incrby(key, amount)
-            else:
-                # In-memory fallback
-                current = _memory_cache.get(key, 0)
-                new_value = int(current) + amount
-                _memory_cache[key] = new_value
-                return new_value
-        except Exception as e:
-            print(f"Cache incr error: {e}")
-            return 0
+            new_value = int(current) + amount
+        except (TypeError, ValueError):
+            new_value = amount
+        _memory_cache[key] = new_value
+        return new_value
     
     async def expire(self, key: str, ttl: int) -> bool:
-        """Set expiration on a key"""
-        try:
-            if self.use_redis and self.redis_client:
-                await self.redis_client.expire(key, ttl)
-            else:
-                # In-memory fallback
-                if key in _memory_cache:
-                    _cache_expiry[key] = datetime.now(timezone.utc).timestamp() + ttl
-            return True
-        except Exception as e:
-            print(f"Cache expire error: {e}")
-            return False
+        """Set expiration on a key. Never raises."""
+        if self._redis_ready():
+            ok, _ = await self._redis_call(self.redis_client.expire(key, ttl))
+            if ok:
+                return True
+        if key in _memory_cache:
+            _cache_expiry[key] = datetime.now(timezone.utc).timestamp() + ttl
+        return True
     
     async def get_stats(self) -> dict:
-        """Get cache statistics"""
+        """Return live cache stats + resilience telemetry.
+
+        Includes hit/miss/error counters and circuit-breaker snapshot so
+        the admin dashboard can spot Redis health issues at a glance.
+        """
+        base = {
+            "connection_type": self.connection_type,
+            "use_redis": self.use_redis,
+            "use_upstash": self.use_upstash,
+            "op_timeout_ms": int(self._op_timeout * 1000),
+            "circuit_breaker": self._breaker.snapshot(),
+            "counters": {
+                "hits": self._m_hits,
+                "misses": self._m_misses,
+                "errors": self._m_errors,
+                "timeouts": self._m_timeouts,
+                "circuit_skips": self._m_circuit_skips,
+                "mongo_fallbacks": self._m_mongo_fallbacks,
+                "sets_ok": self._m_sets_ok,
+                "sets_fail": self._m_sets_fail,
+                "deletes_ok": self._m_deletes_ok,
+                "deletes_fail": self._m_deletes_fail,
+            },
+        }
+        total_reads = self._m_hits + self._m_misses
+        base["hit_rate_pct"] = round((self._m_hits / total_reads) * 100.0, 2) if total_reads else 0.0
         try:
-            if self.use_redis and self.redis_client:
+            if self.use_redis and self.redis_client and not self._breaker.is_open():
                 if self.use_upstash:
-                    # Upstash provides limited info
-                    return {
-                        "type": "upstash_redis",
-                        "connected": True,
-                        "connection_type": self.connection_type,
-                        "keys": "N/A (Upstash)",
-                        "memory_used": "N/A (Upstash managed)"
-                    }
+                    base["type"] = "upstash_redis"
+                    base["connected"] = True
+                    base["keys"] = "N/A (Upstash)"
+                    base["memory_used"] = "N/A (Upstash managed)"
                 else:
-                    info = await self.redis_client.info("memory")
-                    keys_count = await self.redis_client.dbsize()
-                    return {
-                        "type": "local_redis",
-                        "connected": True,
-                        "connection_type": self.connection_type,
-                        "keys": keys_count,
-                        "memory_used": info.get("used_memory_human", "N/A"),
-                        "memory_peak": info.get("used_memory_peak_human", "N/A")
-                    }
+                    ok_info, info = await self._redis_call(self.redis_client.info("memory"))
+                    ok_size, keys_count = await self._redis_call(self.redis_client.dbsize())
+                    base["type"] = "local_redis"
+                    base["connected"] = bool(ok_info)
+                    base["keys"] = keys_count if ok_size else "unknown"
+                    if ok_info and isinstance(info, dict):
+                        base["memory_used"] = info.get("used_memory_human", "N/A")
+                        base["memory_peak"] = info.get("used_memory_peak_human", "N/A")
             else:
-                return {
-                    "type": "in_memory",
-                    "connected": True,
-                    "connection_type": self.connection_type,
-                    "keys": len(_memory_cache),
-                    "memory_used": "N/A"
-                }
+                base["type"] = "in_memory"
+                base["connected"] = True
+                base["keys"] = len(_memory_cache)
+                base["memory_used"] = "N/A"
         except Exception as e:
-            return {"type": "unknown", "connected": False, "error": str(e)}
+            base["type"] = "unknown"
+            base["connected"] = False
+            base["error"] = str(e)
+        return base
+
+    def reset_counters(self) -> None:
+        """Zero out all metric counters (admin op). Leaves cache data
+        intact. Useful for baselining after a deploy or incident.
+        """
+        self._m_hits = 0
+        self._m_misses = 0
+        self._m_errors = 0
+        self._m_timeouts = 0
+        self._m_circuit_skips = 0
+        self._m_mongo_fallbacks = 0
+        self._m_sets_ok = 0
+        self._m_sets_fail = 0
+        self._m_deletes_ok = 0
+        self._m_deletes_fail = 0
 
 
 # Global cache instance

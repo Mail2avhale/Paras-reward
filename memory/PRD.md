@@ -3,6 +3,28 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 20, 2026 — Redis Resilience: MongoDB Fallback for ALL Cache Ops)
+- ✅ **Every Redis operation wrapped with per-op timeout** (default `500ms`, env-tunable via `REDIS_OP_TIMEOUT_MS`). A hung/slow Upstash Redis can NEVER hold up a user request longer than this — the call times out, the caller sees `None`, and falls through to MongoDB.
+- ✅ **Circuit breaker** (`REDIS_CB_FAILURE_THRESHOLD=5`, `REDIS_CB_RECOVERY_SEC=60`, `REDIS_CB_FAILURE_WINDOW_SEC=30`) — after 5 consecutive Redis failures within 30s, the manager stops calling Redis entirely for 60s. All requests go straight to MongoDB with 0 Redis latency added.
+- ✅ **Neutral-value contract** — `get()` returns `None`, `set()`/`delete()`/`expire()` return `False`, `incr()` returns in-memory fallback on any Redis error. Callers using the standard `cached = await cache.get(k); if not cached: fetch_from_mongo()` pattern automatically continue working.
+- ✅ **In-memory mirror on set-failure** — when Upstash `SET` fails, the value is still stored in the local process dict so subsequent gets in the same process hit warm data (defence-in-depth against network flapping).
+- ✅ **Bounded startup ping** — `initialize()` also uses `asyncio.wait_for()` so a hung Upstash on boot doesn't hold up server startup.
+- ✅ **Metrics + telemetry** — new counters (`hits`, `misses`, `errors`, `timeouts`, `circuit_skips`, `mongo_fallbacks`, `sets_ok`, `sets_fail`, `deletes_ok`, `deletes_fail`) exposed via `GET /api/admin/cache/health`.
+- ✅ **Admin cache endpoints** (`/app/backend/routes/cache_health.py`):
+  - `GET /api/admin/cache/health` — full snapshot (connection type, hit rate, error rate, circuit state, op timeout).
+  - `POST /api/admin/cache/reset-counters` — zero out metrics without touching data.
+  - `POST /api/admin/cache/flush` — flush ALL cached data (Redis + in-memory).
+- ✅ **11 new unit tests** in `/app/backend/tests/test_cache_fallback.py` — all PASS:
+  - Circuit breaker opens after threshold, auto-recovers after cooling-off, resets on success.
+  - `get()` returns `None` within op-timeout on hang (verified `<1s` for a 100ms timeout).
+  - `get()` returns `None` on crash (never raises).
+  - `set()`/`delete()` return `False` on crash (never raises).
+  - Once circuit opens, subsequent calls SKIP Redis entirely (verified <0.5s vs 5s hanging client).
+  - Hit/miss counters accurate; `reset_counters()` clears metrics without wiping data.
+  - Pure in-memory mode functions correctly with no Redis at all.
+- ✅ **Live production-config verified** on preview: Upstash connected, op_timeout=500ms, circuit closed, ~50% hit rate on a warm cache read.
+- **Files touched**: `/app/backend/cache_manager.py` (major hardening), `/app/backend/routes/cache_health.py` (NEW), `/app/backend/server.py` (wire router), `/app/backend/tests/test_cache_fallback.py` (NEW).
+
 ## Implemented (Feb 20, 2026 — Admin Popup Placement Dropdown)
 - ✅ **Placement Selector** in AdminPopupMessages editor (`/app/frontend/src/pages/Admin/AdminPopupMessages.js`):
   - New `PLACEMENT_OPTIONS` table with 7 surfaces: `app_startup` (default), `dashboard_home`, `main_mining_collect`, `mall_collect`, `partner_store_payment`, `community_feed`, `notifications`.
