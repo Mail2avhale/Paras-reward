@@ -19,28 +19,40 @@ def set_db(database):
 
 
 # ── Defaults — bump these whenever you push a new Play Store build ──────────
-# Feb 17 2026 — v1.2.1 hotfix over v1.2.0:
-#   • Removed Dashboard AdMob banner (overlapped bottom nav)
-#   • Added RouteErrorBoundary around /pay-partner-store (fixes blank-screen)
-# v1.2.0 payload: 10-level Community Bonus, Community Leader multipliers,
-# PRC Statement Daily Summary, Core Team retirement.
-LATEST_VERSION_NAME = "1.2.2"
-LATEST_VERSION_CODE = 22
+# Feb 20 2026 — v1.2.3 release over v1.2.2:
+#   • R8 FULL MODE enabled (Play Console recommendation) — ~20-30% smaller
+#     AAB, ~15% lower cold-start memory. Aggressive whole-program
+#     optimization + method inlining + class merging + dead-code
+#     elimination on top of the shrinking/obfuscation that were already on.
+#   • FIFO Monthly Reward Ceiling — per-role monthly caps on all
+#     community-bonus earnings (User ₹1L / District ₹3L / Regional ₹4L /
+#     State ₹5L / National ₹10L). Silent-skip on cap-hit.
+#   • Same-or-higher partner_position structure validation — promoted
+#     downlines still count toward parent's structure requirement.
+#   • Admin Popup Placement Dropdown — 7 targeting surfaces.
+#   • Redis-to-Mongo cache resilience — 500ms per-op timeout + circuit
+#     breaker. Users no longer see the intermittent 30s "Verifying…"
+#     hang when Upstash Redis flakes.
+# v1.2.2 payload (Feb 17): AdMob global banner + PayPartnerStore blank fix.
+LATEST_VERSION_NAME = "1.2.3"
+LATEST_VERSION_CODE = 23
 MINIMUM_SUPPORTED_VERSION_CODE = 1  # below this → force-update
 PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.parasreward.prc"
 
 # Human-readable release notes shown in the in-app "Update Available" banner
 # when no custom notes are stored in Mongo (`app_config.android_app_version`).
 DEFAULT_RELEASE_NOTES = (
-    "What's new in v1.2.2:\n"
-    "• Fixed: Ad banner no longer covers the bottom navigation\n"
-    "• Fixed: 'Pay to Partner Store' shows a loading spinner instead of a blank screen while your wallet loads\n"
+    "What's new in v1.2.3:\n"
+    "• Faster app launch and lower memory usage (R8 Full Mode)\n"
+    "• Monthly Reward Ceiling — see how much of your monthly community bonus is left on the Referrals page\n"
+    "• Admin: choose exactly WHERE each popup message appears (7 surfaces)\n"
+    "• Behind the scenes: cache resilience — no more slow \"Verifying…\" waits when the cache layer hiccups\n"
     "\n"
-    "Also includes v1.2.0/v1.2.1 features:\n"
+    "Also includes v1.2.0/1.2.1/1.2.2 features:\n"
     "• 10-Level Community Bonus (max 7.20%)\n"
-    "• Community Leader multipliers — District 1.25x, Regional 1.50x, State 1.75x, National 2.00x\n"
+    "• Community Leader multipliers — District 1.25x → National 2.00x\n"
     "• PRC Statement Daily Summary view\n"
-    "• Cleaner Community Growth page"
+    "• Fixed: Ad banner no longer covers the bottom navigation"
 )
 
 

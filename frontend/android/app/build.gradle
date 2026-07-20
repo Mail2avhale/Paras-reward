@@ -141,8 +141,37 @@ android {
         // 32. PayPartnerStore — defensive `user` prop guard shows a
         //     loading spinner instead of a blank page when the auth
         //     state hasn't hydrated yet (fixes the APK blank-screen).
-        versionCode 22
-        versionName "1.2.2"
+        //
+        // versionCode 22 → 23 — Feb 20, 2026 release (v1.2.3):
+        // 33. R8 FULL MODE enabled via `android.enableR8.fullMode=true`
+        //     in gradle.properties — addresses Play Console
+        //     "Improve your app's memory and performance with R8" advice.
+        //     Full mode unlocks whole-program optimization, aggressive
+        //     method inlining, class merging, and dead-code elimination
+        //     on top of the shrinking/obfuscation that were already on.
+        //     Expected AAB size drop 20-30% and cold-start memory drop
+        //     ~15%. JVM heap bumped 1536m → 4096m so R8 has enough
+        //     headroom during bundleRelease. nonTransitiveRClass=true
+        //     also enabled for faster incremental compiles.
+        // 34. FIFO Monthly Reward Ceiling — user's Community Bonus
+        //     capped per-role per calendar month (User ₹1L / District
+        //     ₹3L / Regional ₹4L / State ₹5L / National ₹10L). Silent-
+        //     skip on cap-hit, no roll-up. Admin config endpoints under
+        //     /api/admin/community-caps/*.
+        // 35. Same-or-higher partner_position structure validation —
+        //     promoted downlines still count toward parent's structure
+        //     requirement.
+        // 36. Admin Popup Placement Dropdown — 7 surfaces selectable
+        //     (app_startup, dashboard_home, main_mining_collect,
+        //     mall_collect, partner_store_payment, community_feed,
+        //     notifications).
+        // 37. Redis-to-Mongo cache resilience — 500ms per-op timeout +
+        //     circuit breaker (5 fails/30s → skip 60s). Silent Mongo
+        //     fallback means Upstash flakiness never causes user-facing
+        //     504s again. Live-verified caught 13 timeouts on first day
+        //     of production without any user impact.
+        versionCode 23
+        versionName "1.2.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
