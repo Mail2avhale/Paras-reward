@@ -1,0 +1,59 @@
+{
+  "verdict": "not_fixed",
+  "user_reported_bug": "अँप मध्ये view Live community activities या button वरती क्लिक केल्यावरती पण rewarded intestile ad show hot नाही",
+  "summary": "No relevant testing skill found. Focused UI verification on preview confirmed the reported symptom still reproduces: clicking View Live Community Activity navigates to /referrals/live-feed, but the +5 bonus PRC Rewarded Interstitial modal does not appear. Direct URL negative case correctly did not show the modal.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "DownlineLiveFeed / RewardedInterstitialTrigger",
+        "issue": "After clicking data-testid='view-community-activity-btn', the app navigates to /referrals/live-feed but data-testid='rewarded-interstitial-watch-btn' never appears; '+5 bonus PRC' modal is not visible.",
+        "selector": "[data-testid='rewarded-interstitial-watch-btn']",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "ReferralsEnhanced openLiveFeed sessionStorage handoff to DownlineLiveFeed rewarded modal",
+        "issue": "Instrumented sessionStorage showed pending_rewarded_ad is set on /referrals and removed on /referrals/live-feed, but the modal still does not render. Explicitly pre-seeding pending_rewarded_ad before direct /referrals/live-feed also removed the flag without opening the modal.",
+        "affected_selectors": [
+          "[data-testid='view-community-activity-btn']",
+          "[data-testid='downline-live-feed-page']",
+          "[data-testid='rewarded-interstitial-watch-btn']",
+          "[data-testid='rewarded-interstitial-skip-btn']"
+        ]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/rewarded_interstitial_verification_275.py",
+    "/app/test_reports/bug_verification_275.json",
+    "/app/test_reports/iteration_275.json"
+  ],
+  "action_items": [
+    "Make DownlineLiveFeed's pending_rewarded_ad effect StrictMode/development-safe. Do not remove the sessionStorage flag before the delayed rewardedAd.open() can survive the effect cleanup; remove it after the modal is actually opened, or open synchronously and then clear safely.",
+    "Retest the full CTA flow including No thanks dismissal, Watch & Earn web toast, and reload no-refire after the modal is visible. These positive modal actions could not be completed because the modal never appeared."
+  ],
+  "critical_code_review_comments": [
+    "Likely RCA: React StrictMode in preview double-invokes effects. DownlineLiveFeed useEffect reads and removes pending_rewarded_ad, schedules a 350ms timer, then StrictMode cleanup clears that timer before it fires; the second effect run sees the flag already removed and returns, so rewardedAd.open() never runs.",
+    "ReferralsEnhanced correctly sets pending_rewarded_ad before navigate(), and CommunityDashboard CTA is wired to onOpenLiveFeed. The failure is on the destination effect lifecycle/timer/flag clearing behavior."
+  ],
+  "updated_files": [
+    "/app/test_reports/rewarded_interstitial_verification_275.py",
+    "/app/test_reports/bug_verification_275.json",
+    "/app/test_reports/iteration_275.json"
+  ],
+  "success_rate": {
+    "backend": "N/A - frontend-only bug verification",
+    "frontend": "33%"
+  },
+  "seed_data_creation": "No seed data created. Review-request credential 9696969696/969696 was not usable in preview, so the primary user from /app/memory/test_credentials.md (9970100782/997010) was used to verify the same referrals CTA flow.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Skill lookup returned no relevant testing skill. Browser evidence: direct /referrals/live-feed with no flag produced modal_count=0 (pass). Main CTA flow produced sessionStorage ops set on /referrals and remove on /referrals/live-feed, URL changed to /referrals/live-feed, but modal_count=0 and '+5 bonus PRC' text absent. Explicit pre-seeded flag on /referrals/live-feed also resulted in flag_after=null and modal_count=0.",
+  "rca_of_the_issue": "Reproduction: login, go to /referrals, click data-testid='view-community-activity-btn'. Expected rewarded interstitial +5 PRC opt-in modal on /referrals/live-feed. Actual: destination page loads with live feed content but no rewarded modal. Probable mitigation: move sessionStorage removal into the timer after rewardedAd.open(), or otherwise guard the effect so React StrictMode cleanup cannot consume the flag and cancel the only timer."
+}

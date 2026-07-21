@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Gift, RefreshCw, Clock } from 'lucide-react';
 import { API } from '../lib/api';
+import { useRewardedInterstitial } from '@/components/RewardedInterstitialTrigger';
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -33,6 +34,37 @@ const DownlineLiveFeed = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [windowHours, setWindowHours] = useState(24);
   const [summary, setSummary] = useState(null);  // 4-bucket earnings tiles
+
+  // Feb 20 2026 — Rewarded Interstitial "Watch to earn +5 PRC" opt-in.
+  // Triggered by the sessionStorage flag set on ReferralsEnhanced before
+  // it navigated here. Firing the modal ON THE DESTINATION page (not the
+  // source) ensures the modal element survives the route change — the
+  // earlier implementation opened the modal on the source page which
+  // then unmounted immediately, so users never saw the prompt.
+  const rewardedAd = useRewardedInterstitial();
+  useEffect(() => {
+    let raw;
+    try {
+      raw = sessionStorage.getItem('pending_rewarded_ad');
+    } catch { return; /* private-mode: skip */ }
+    if (!raw) return;
+    let payload = null;
+    try { payload = JSON.parse(raw); } catch { /* corrupt */ }
+    // Always clear the flag so it never fires twice on this page.
+    try { sessionStorage.removeItem('pending_rewarded_ad'); } catch { /* noop */ }
+    if (!payload || payload.placement !== 'live_feed') return;
+    // Guard: only honour a flag set in the last 60s, so a stale flag
+    // (user hit browser back, then re-entered from a bookmark much
+    // later) doesn't unexpectedly fire the ad.
+    if (Date.now() - Number(payload.at || 0) > 60_000) return;
+    // Small delay so the page paints first — smoother UX than the
+    // modal blocking the very first frame.
+    const t = setTimeout(() => {
+      try { rewardedAd.open({ bonusPrc: Number(payload.bonusPrc) || 5 }); }
+      catch { /* non-fatal */ }
+    }, 350);
+    return () => clearTimeout(t);
+  }, []); // fire once on mount
 
   const fetchFeed = useCallback(async () => {
     if (!user?.uid) return;
@@ -70,6 +102,9 @@ const DownlineLiveFeed = ({ user }) => {
       style={{ fontFamily: '"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' }}
       data-testid="downline-live-feed-page"
     >
+      {/* Rewarded Interstitial "+5 PRC" opt-in modal — fires once on
+          arrival if a pending flag was set by the source page. */}
+      {rewardedAd.element}
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-5 py-4 flex items-center gap-3">

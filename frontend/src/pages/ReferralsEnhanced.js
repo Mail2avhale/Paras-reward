@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { useRewardedInterstitial } from '@/components/RewardedInterstitialTrigger';
+// Feb 20 2026 — rewarded-ad prompt now fires from the destination page
+// (DownlineLiveFeed) via a sessionStorage flag; import removed from here.
 import CommunityDashboard from './CommunityDashboard';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -37,12 +38,23 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
   // Rewarded Interstitial trigger — fires when user opens Live Feed so we
   // offer a "+5 PRC bonus for watching an ad" opt-in. Non-gating: user
   // reaches the Live Feed regardless (compliant with Google AdMob policy).
-  const rewardedAd = useRewardedInterstitial();
+  //
+  // Feb 20 2026 FIX (rewarded-interstitial-not-showing bug):
+  // Previously the modal was opened here THEN we called navigate() to
+  // /referrals/live-feed. Since the modal element was mounted inside
+  // this component (line ~248 `{rewardedAd.element}`), the navigation
+  // unmounted the modal instantly — user never saw the prompt. Fix:
+  // set a sessionStorage flag before navigating; the destination page
+  // (DownlineLiveFeed) reads the flag on mount and fires the modal
+  // there, where it survives.
   const openLiveFeed = () => {
-    // Fire-and-forget ad prompt, then navigate immediately. The modal
-    // renders on TOP of the destination page, so it still counts as a
-    // rewarded moment tied to this action.
-    try { rewardedAd.open({ bonusPrc: 5 }); } catch { /* non-fatal */ }
+    try {
+      sessionStorage.setItem('pending_rewarded_ad', JSON.stringify({
+        placement: 'live_feed',
+        bonusPrc: 5,
+        at: Date.now(),
+      }));
+    } catch { /* private-browsing / storage full — non-fatal, just skip the prompt */ }
     navigate('/referrals/live-feed');
   };
   const [submittingClaim, setSubmittingClaim] = useState(false);
@@ -244,8 +256,6 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] pb-24">
-      {/* Rewarded Interstitial modal — opens from openLiveFeed() */}
-      {rewardedAd.element}
       {/* Header */}
       <div className="sticky top-0 bg-[#0a0a0f]/95 backdrop-blur-lg border-b border-gray-800/50 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
