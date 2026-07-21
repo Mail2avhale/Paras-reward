@@ -67,6 +67,17 @@ function scheduleAdMobInit() {
   const kick = async () => {
     try {
       const { AdMob } = await import('@capacitor-community/admob');
+      // ────────────────────────────────────────────────────────────
+      // PRODUCTION-ONLY AdMob initialization (Feb 20 2026).
+      // • initializeForTesting: false   → Do NOT serve test ads
+      // • testingDevices:      []       → Empty list — no test devices
+      // • No `setTestDeviceIds` anywhere in the codebase (audited)
+      // • No Google test ad unit IDs (`ca-app-pub-3940...`) used
+      // Real ad unit IDs come from process.env.REACT_APP_ADMOB_*
+      // Native side (AppOpenAdPlugin.java) also explicitly calls
+      // MobileAds.setRequestConfiguration() with an empty test-device
+      // list, which OVERRIDES any device-level auto-test flag.
+      // ────────────────────────────────────────────────────────────
       await AdMob.initialize({
         requestTrackingAuthorization: true,
         testingDevices: [],

@@ -20,8 +20,10 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.RequestConfiguration;
 import com.google.android.gms.ads.appopen.AppOpenAd;
 
+import java.util.Collections;
 import java.util.Date;
 
 /**
@@ -79,6 +81,27 @@ public class AppOpenAdPlugin extends Plugin {
             } catch (Exception e) {
                 Log.w(LOG_TAG, "MobileAds.initialize threw: " + e.getMessage());
             }
+
+            // Feb 20 2026 — PRODUCTION-ONLY ENFORCEMENT.
+            // Explicitly set RequestConfiguration with an EMPTY testDeviceIds
+            // list. This tells Google's Mobile Ads SDK: "This process serves
+            // NO test devices." If a device was previously auto-flagged as
+            // a test device (e.g., from an old debug/sideloaded build), this
+            // call OVERRIDES that flag for the current session.
+            //
+            // Note: This is NOT the same as `setTestDeviceIds([realDeviceId])`
+            // which WOULD force test ads — that call is intentionally NOT
+            // used anywhere in this codebase per production requirements.
+            try {
+                RequestConfiguration prodConfig = new RequestConfiguration.Builder()
+                        .setTestDeviceIds(Collections.emptyList())
+                        .build();
+                MobileAds.setRequestConfiguration(prodConfig);
+                Log.d(LOG_TAG, "PRODUCTION AdMob RequestConfiguration applied — no test devices");
+            } catch (Exception e) {
+                Log.w(LOG_TAG, "setRequestConfiguration threw: " + e.getMessage());
+            }
+
             // Pre-load first ad
             loadAd();
 

@@ -194,8 +194,18 @@ android {
         //     hook so navigation is deferred until the modal is
         //     dismissed — prevents the source-unmount race that broke
         //     the Live Feed modal earlier.
-        versionCode 24
-        versionName "1.2.4"
+        // versionCode 24 → 25 — Feb 20, 2026 defensive patch (v1.2.5):
+        // 41. Explicit production-only AdMob enforcement — native side
+        //     now calls MobileAds.setRequestConfiguration() with an
+        //     empty testDeviceIds list at initialize time. This
+        //     OVERRIDES any device-level auto-test flag Google's SDK
+        //     may have set from a previous debug/sideload of this app,
+        //     forcing real ads even on developer devices. Also added
+        //     "PRODUCTION-ONLY" doc-comments in useAdMob.js and
+        //     GlobalBannerAd.js confirming zero test-device
+        //     configuration anywhere in the codebase.
+        versionCode 25
+        versionName "1.2.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

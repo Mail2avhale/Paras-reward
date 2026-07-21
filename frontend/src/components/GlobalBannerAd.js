@@ -70,6 +70,12 @@ export default function GlobalBannerAd() {
         const admobMod = await import('@capacitor-community/admob');
         const { AdMob, BannerAdPosition, BannerAdSize } = admobMod;
         // Init is idempotent — safe to call repeatedly.
+        // ─── PRODUCTION-ONLY (Feb 20 2026) ───
+        // initializeForTesting:false and isTesting:false on every ad
+        // request. No test device IDs, no Google test ad units. The
+        // ad ID comes from process.env.REACT_APP_ADMOB_MREC_UNIT_ID
+        // (or the BANNER unit as fallback) — both real production IDs
+        // for publisher ca-app-pub-3556805218952480.
         await AdMob.initialize({ initializeForTesting: false }).catch(() => {});
 
         if (cancelled) return;
