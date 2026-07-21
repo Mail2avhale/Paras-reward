@@ -5,7 +5,7 @@
  * Step 2: enter PRC amount + optional remark → confirm
  * Step 3: server atomic PRC transfer → success screen
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import {
   Wallet, Send, RefreshCw,
 } from 'lucide-react';
 import AdMobBanner from '../components/AdMobBanner';
+import { useRewardedInterstitial } from '@/components/RewardedInterstitialTrigger';
 
 const MAX_TXN_PRC = 5000;
 
@@ -27,6 +28,17 @@ export default function PayPartnerStore({ user }) {
   const [lookingUp, setLookingUp] = useState(false);
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState(null);
+
+  // Feb 20 2026 — Rewarded Interstitial "+15 PRC" opt-in fires ONCE
+  // when the success screen mounts (i.e. after a successful payment).
+  // No navigation happens here — user stays on the success screen and
+  // can dismiss the modal at will, so no onClose defer is needed.
+  const rewardedAd = useRewardedInterstitial();
+  useEffect(() => {
+    if (!success) return;
+    try { rewardedAd.open({ bonusPrc: 15 }); }
+    catch { /* non-fatal — modal simply doesn't appear */ }
+  }, [success]); // Only re-fire on success transition; rewardedAd hook identity is stable.
 
   const doLookup = useCallback(async () => {
     const q = query.trim();
@@ -115,6 +127,10 @@ export default function PayPartnerStore({ user }) {
     const t = success.txn;
     return (
       <div className="min-h-screen bg-slate-950 text-white p-4" data-testid="pay-store-success-screen">
+        {/* Rewarded Interstitial "+15 PRC" opt-in — mounts here so the
+            modal Portal has a stable parent while the user is on the
+            success screen. Fired once from the useEffect above. */}
+        {rewardedAd.element}
         <div className="max-w-md mx-auto pt-8">
           <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500 mx-auto grid place-items-center mb-6">
             <CheckCircle2 className="w-10 h-10 text-emerald-400" />

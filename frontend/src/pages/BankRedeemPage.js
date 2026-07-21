@@ -366,15 +366,19 @@ const BankRedeemPage = ({ user: initialUser }) => {
         setAgreedToPolicy(false);
         
         // Post-action Rewarded Interstitial (opt-in bonus). Fires BEFORE
-        // the redirect so users see the offer while still on this screen.
-        // Skipping does NOT affect the bank transfer.
-        rewardedAd.open({ bonusPrc: 5 });
-
-        // Redirect to dashboard after successful submission — bumped to
-        // 4.5s so the ad prompt has time to appear + be interacted with.
-        setTimeout(() => {
+        // the redirect. Feb 20 2026 — bonus bumped 5 → 25 PRC (higher-
+        // value action deserves richer reward). Navigation deferred via
+        // onClose callback so the modal survives dismissal.
+        try {
+          rewardedAd.open({
+            bonusPrc: 25,
+            onClose: () => { try { navigate('/dashboard'); } catch { /* noop */ } },
+          });
+        } catch {
+          // Fallback: modal failed → navigate immediately.
           navigate('/dashboard');
-        }, 4500);
+        }
+        // No setTimeout redirect anymore — the modal's onClose handles it.
       }
     } catch (error) {
       const msg = error.response?.data?.detail || 'Failed to submit request';

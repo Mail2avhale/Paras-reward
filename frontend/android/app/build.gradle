@@ -185,6 +185,15 @@ android {
         //     Separate ad unit ID from standard banner for cleaner
         //     AdMob reporting. Standard adaptive banner continues on
         //     all other pages.
+        // 40. Rewarded Interstitial ad now fires on 3 more high-value
+        //     flows (Feb 20 late — same v1.2.4 payload):
+        //     • After successful KYC document submission → +10 PRC
+        //     • After successful Bank redeem submission → +25 PRC (up from +5)
+        //     • On the Pay to Partner Store success screen → +15 PRC
+        //     All three use the new `onClose` callback on the rewarded
+        //     hook so navigation is deferred until the modal is
+        //     dismissed — prevents the source-unmount race that broke
+        //     the Live Feed modal earlier.
         versionCode 24
         versionName "1.2.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

@@ -170,18 +170,32 @@ const RewardedInterstitialModal = ({ open, bonusPrc, onClose, onCredited }) => {
  * Hook that returns:
  *   • `element` — <RewardedInterstitialModal /> — render this once at the
  *      page root.
- *   • `open({ bonusPrc, placement })` — trigger the modal after a
- *      successful primary action.
+ *   • `open({ bonusPrc, placement, onClose })` — trigger the modal after
+ *      a successful primary action. If `onClose` is provided, it fires
+ *      AFTER the modal is dismissed / the ad completes — use this to
+ *      defer any navigation until the modal has finished (otherwise
+ *      navigating unmounts the source component and the modal along
+ *      with its state).
  */
 export function useRewardedInterstitial() {
-  const [state, setState] = useState({ open: false, bonusPrc: 5 });
+  const [state, setState] = useState({ open: false, bonusPrc: 5, onCloseCb: null });
 
-  const open = useCallback(({ bonusPrc = 5 } = {}) => {
-    setState({ open: true, bonusPrc });
+  const open = useCallback(({ bonusPrc = 5, onClose: onCloseCb = null } = {}) => {
+    setState({ open: true, bonusPrc, onCloseCb });
   }, []);
 
   const close = useCallback(() => {
-    setState((s) => ({ ...s, open: false }));
+    setState((s) => {
+      // Fire the caller-supplied onClose AFTER we commit the state
+      // update so the modal has already visually disappeared. Wrap in
+      // Promise.resolve so any thrown callback never crashes React.
+      if (s.onCloseCb) {
+        Promise.resolve().then(() => {
+          try { s.onCloseCb(); } catch { /* non-fatal */ }
+        });
+      }
+      return { open: false, bonusPrc: s.bonusPrc, onCloseCb: null };
+    });
   }, []);
 
   const element = (

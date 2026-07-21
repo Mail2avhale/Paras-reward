@@ -13,6 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import AdvancedDocumentUpload from '@/components/AdvancedDocumentUpload';
 import AutoKYCVerification from '@/components/AutoKYCVerification';
 import { formatAadhaar, formatPAN, validateAadhaar, validatePAN } from '@/utils/indianValidation';
+import { useRewardedInterstitial } from '@/components/RewardedInterstitialTrigger';
 
 import { API } from "../lib/api";
 
@@ -235,6 +236,12 @@ const MyKYCDocuments = ({ user, onUpdate }) => {
 const KYCVerification = ({ user }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
+
+  // Feb 20 2026 — Rewarded Interstitial "+10 PRC" opt-in fired after a
+  // successful KYC document submission. Same StrictMode-safe pattern
+  // used by BankRedeem/PayPartnerStore — modal element rendered inline
+  // via {rewardedAd.element} at the bottom of the return tree.
+  const rewardedAd = useRewardedInterstitial();
   
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
@@ -374,7 +381,19 @@ const KYCVerification = ({ user }) => {
           toast.success('✅ KYC Documents Submitted Successfully!\n\nYour verification will be completed within 1-3 business days. You will receive a notification once approved.', {
             duration: 6000,
           });
-          navigate('/profile');
+          // Fire the +10 PRC rewarded-ad opt-in modal. Navigation to
+          // /profile is DEFERRED to the modal's onClose callback so the
+          // source component (this KYC page) stays mounted while the
+          // modal is open — otherwise the modal would unmount with us.
+          try {
+            rewardedAd.open({
+              bonusPrc: 10,
+              onClose: () => { try { navigate('/profile'); } catch { /* noop */ } },
+            });
+          } catch {
+            // Rewarded modal failed to open — fall back to immediate navigation.
+            navigate('/profile');
+          }
           return; // Success, exit
           
         } catch (err) {
@@ -511,6 +530,11 @@ const KYCVerification = ({ user }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24 pt-16">
+      {/* Rewarded Interstitial "+10 PRC" modal — fires from handleSubmit
+          after a successful KYC document submission. Modal renders here
+          (Portal to body) so it survives until user dismisses; navigate
+          to /profile is deferred to the modal's onClose callback. */}
+      {rewardedAd.element}
       {/* Header - with safe area padding */}
       <div className="px-5 pb-4 pt-4">
         <div className="flex items-center justify-between">
