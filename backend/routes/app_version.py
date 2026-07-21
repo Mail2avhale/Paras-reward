@@ -42,15 +42,16 @@ PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.parasreward.
 # Human-readable release notes shown in the in-app "Update Available" banner
 # when no custom notes are stored in Mongo (`app_config.android_app_version`).
 DEFAULT_RELEASE_NOTES = (
-    "What's new in v1.2.3:\n"
-    "• Faster app launch and lower memory usage (R8 Full Mode)\n"
-    "• Monthly Reward Ceiling — see how much of your monthly community bonus is left on the Referrals page\n"
-    "• Admin: choose exactly WHERE each popup message appears (7 surfaces)\n"
-    "• Behind the scenes: cache resilience — no more slow \"Verifying…\" waits when the cache layer hiccups\n"
+    "What's new in v1.2.4:\n"
+    "• Bigger rewards! Watch a short ad after KYC (+10 PRC), Redeem to Bank (+25 PRC), or Pay to Partner Store (+15 PRC)\n"
+    "• Fixed: 'View Live Community Activity' now correctly shows the bonus-ad offer\n"
+    "• New: Native-style 300×250 ads on Community Live Feed & Notifications (better content fit)\n"
+    "• Behind the scenes: R8 Full Mode enabled — faster app launch, lower memory use\n"
     "\n"
-    "Also includes v1.2.0/1.2.1/1.2.2 features:\n"
+    "Also includes v1.2.0/1.2.1/1.2.2/1.2.3 features:\n"
     "• 10-Level Community Bonus (max 7.20%)\n"
-    "• Community Leader multipliers — District 1.25x → National 2.00x\n"
+    "• Community Leader multipliers — District 1.25× → National 2.00×\n"
+    "• Monthly Reward Ceiling display on Community page\n"
     "• PRC Statement Daily Summary view\n"
     "• Fixed: Ad banner no longer covers the bottom navigation"
 )
