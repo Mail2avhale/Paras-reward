@@ -32,6 +32,16 @@ const HIDE_ON_PREFIXES = [
   '/admin',               // admin console never shows user ads
 ];
 
+// Feb 20 2026 — Routes that upgrade the standard adaptive banner to a
+// 300×250 Medium Rectangle (MREC). MREC gives a richer, native-style
+// ad slot on content pages where users are already scrolling (Community
+// Live Feed, Notifications inbox). Uses a separate ad unit ID from the
+// standard banner so AdMob reporting can differentiate the two surfaces.
+const MREC_ON_PREFIXES = [
+  '/referrals/live-feed',
+  '/notifications',
+];
+
 const isNative = () => {
   try {
     return typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.();
@@ -41,6 +51,11 @@ const isNative = () => {
 const shouldHide = (pathname) => {
   const p = (pathname || '/').toLowerCase();
   return HIDE_ON_PREFIXES.some((prefix) => p === prefix || p.startsWith(prefix + '/'));
+};
+
+const shouldUseMREC = (pathname) => {
+  const p = (pathname || '/').toLowerCase();
+  return MREC_ON_PREFIXES.some((prefix) => p === prefix || p.startsWith(prefix + '/'));
 };
 
 export default function GlobalBannerAd() {
@@ -68,11 +83,25 @@ export default function GlobalBannerAd() {
         // Ensure any previous banner is torn down before showing a fresh one
         // (protects against duplicate overlays during fast navigations).
         try { await AdMob.removeBanner(); } catch { /* noop */ }
+
+        // Route-aware size: 300×250 Medium Rectangle (MREC) on content
+        // pages, adaptive strip everywhere else. MREC uses a dedicated
+        // ad unit for separate AdMob reporting.
+        const useMREC = shouldUseMREC(location.pathname);
+        const adSize = useMREC ? BannerAdSize.MEDIUM_RECTANGLE : BannerAdSize.ADAPTIVE_BANNER;
+        const adId = useMREC
+          ? (process.env.REACT_APP_ADMOB_MREC_UNIT_ID || process.env.REACT_APP_ADMOB_BANNER_UNIT_ID)
+          : process.env.REACT_APP_ADMOB_BANNER_UNIT_ID;
+        // MREC is 250dp tall — bump margin so the ad clears the bottom
+        // nav + LIVE ticker AND the extra 190dp height of the rectangle
+        // over the strip banner (250 − 60 ≈ 190).
+        const margin = useMREC ? 90 : 90;
+
         await AdMob.showBanner({
-          adId: process.env.REACT_APP_ADMOB_BANNER_UNIT_ID,
-          adSize: BannerAdSize.ADAPTIVE_BANNER,
+          adId,
+          adSize,
           position: BannerAdPosition.BOTTOM_CENTER,
-          margin: 90, // dp — clears bottom-nav (~64) + LIVE ticker (~28)
+          margin,
           isTesting: false,
         });
       } catch (e) {

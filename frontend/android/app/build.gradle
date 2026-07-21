@@ -170,8 +170,23 @@ android {
         //     fallback means Upstash flakiness never causes user-facing
         //     504s again. Live-verified caught 13 timeouts on first day
         //     of production without any user impact.
-        versionCode 23
-        versionName "1.2.3"
+        // versionCode 22 → 23 — Feb 20, 2026 release (v1.2.3):
+        // ... (see history above)
+        //
+        // versionCode 23 → 24 — Feb 20, 2026 patch (v1.2.4):
+        // 38. Rewarded Interstitial bug fix — "View Live Community
+        //     Activity" button now correctly shows the +5 PRC opt-in
+        //     modal. Root cause: React StrictMode was killing a
+        //     setTimeout in the effect cleanup so the modal never
+        //     rendered. Fix: synchronous fire + useRef guard +
+        //     sessionStorage handoff between source/destination pages.
+        // 39. MREC (Medium Rectangle 300×250) native-style banner ad
+        //     added on Community Live Feed + Notifications inbox.
+        //     Separate ad unit ID from standard banner for cleaner
+        //     AdMob reporting. Standard adaptive banner continues on
+        //     all other pages.
+        versionCode 24
+        versionName "1.2.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

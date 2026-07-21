@@ -34,8 +34,8 @@ def set_db(database):
 #     breaker. Users no longer see the intermittent 30s "Verifying…"
 #     hang when Upstash Redis flakes.
 # v1.2.2 payload (Feb 17): AdMob global banner + PayPartnerStore blank fix.
-LATEST_VERSION_NAME = "1.2.3"
-LATEST_VERSION_CODE = 23
+LATEST_VERSION_NAME = "1.2.4"
+LATEST_VERSION_CODE = 24
 MINIMUM_SUPPORTED_VERSION_CODE = 1  # below this → force-update
 PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.parasreward.prc"
 
