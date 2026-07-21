@@ -209,18 +209,17 @@ android {
         //     Upstash Redis flakiness. Cold-launch could take 20-24s
         //     because /api/app/version-info hit Mongo directly on every
         //     poll AND cache.get() didn't consult the in-process memory
-        //     mirror when Redis read timed out. Two fixes:
-        //     • cache_manager.set() now ALWAYS mirrors to in-process
-        //       memory (not only on Redis-write failure) — so a
-        //       subsequent get() during Redis flakiness returns the
-        //       hot value in µs.
-        //     • cache_manager.get() now consults the memory mirror as
-        //       a second-level fallback BEFORE returning None to the
-        //       caller. Combined this drops p99 login-flow latency
-        //       from 20s → sub-second even during a full Upstash outage.
-        //     • /api/app/version-info now has a 60s in-process cache
-        //       and a 1.5s bounded Mongo lookup timeout. Prevents any
-        //       single slow query from stalling app launch.
+        //     mirror when Redis read timed out.
+        // 43. Login flow hardened against slow Mongo:
+        //     • fraud_detector.check_ip_login_limit() now uses a 30s
+        //       per-IP in-process cache + 3s bounded count_documents,
+        //       fail-open on timeout. Previously an unindexed count
+        //       on `login_attempts` stalled every login for 15+ sec.
+        //     • Two-level cache — cache.set() always mirrors to
+        //       memory, cache.get() checks mirror on Redis fail/timeout.
+        //     • /api/app/version-info: 60s in-process cache + 1.5s
+        //       bounded Mongo lookup timeout. Login flow can no
+        //       longer stall on Upstash or Mongo pressure.
         versionCode 26
         versionName "1.2.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

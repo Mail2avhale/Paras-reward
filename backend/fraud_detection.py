@@ -4,9 +4,16 @@ Fraud Detection & Prevention System
 Free, built-in fraud detection for Paras Reward Platform
 """
 
+import asyncio
+import time as _time
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Tuple
 import hashlib
+
+# ── In-process per-IP cache for the login-limit check (Feb 20 2026) ───
+# Prevents an unindexed / slow count_documents on `login_attempts` from
+# repeatedly stalling every login attempt from the same IP. 30s TTL.
+_IP_LOGIN_LIMIT_CACHE: Dict[str, Dict] = {}
 
 # ========== FRAUD RISK LEVELS ==========
 RISK_LOW = "low"
@@ -80,31 +87,69 @@ class FraudDetector:
         return True, "ok"
     
     async def check_ip_login_limit(self, ip_address: str) -> Tuple[bool, str]:
-        """Check if IP has too many failed login attempts - RELAXED for shared networks"""
+        """Check if IP has too many failed login attempts - RELAXED for shared networks.
+
+        Feb 20 2026 — Hardened for slow-Mongo path.
+        Previously an unindexed / slow count_documents on `login_attempts`
+        could take 15+ seconds during Mongo pressure, stalling every
+        login. Now:
+          • Result is cached per-IP for 30s (in-process — no Redis dep)
+          • count_documents is bounded with asyncio.wait_for(3s)
+          • On timeout / DB error → FAIL OPEN (allow login) rather than
+            block legitimate users; the per-user rate-limiter still
+            catches actual brute force.
+        """
         if not ip_address:
             return True, "ok"
-        
+
         # Skip check for common/shared IPs or if IP is localhost
         if ip_address in ["127.0.0.1", "localhost", "::1"]:
             return True, "ok"
-        
+
+        # ── Fast path: in-process cache (30s TTL per IP) ────────────
+        cached = _IP_LOGIN_LIMIT_CACHE.get(ip_address)
+        now_ts = _time.time()
+        if cached and cached["expiry"] > now_ts:
+            return cached["allowed"], cached["msg"]
+
         one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
-        
-        # Count ONLY failed attempts from this IP (not successful ones)
-        failed_attempts = await self.db.login_attempts.count_documents({
-            "ip_address": ip_address,
-            "success": False,
-            "timestamp": {"$gte": one_hour_ago}
-        })
-        
+
+        # ── Bounded Mongo lookup — never stalls login ───────────────
+        try:
+            failed_attempts = await asyncio.wait_for(
+                self.db.login_attempts.count_documents({
+                    "ip_address": ip_address,
+                    "success": False,
+                    "timestamp": {"$gte": one_hour_ago},
+                }),
+                timeout=3.0,
+            )
+        except (asyncio.TimeoutError, Exception) as _err:
+            # Fail-open: don't block legit users when the DB is slow.
+            # Per-user rate limiter (check_login_rate_limit) still catches
+            # actual brute-force patterns.
+            _IP_LOGIN_LIMIT_CACHE[ip_address] = {
+                "allowed": True, "msg": "ok",
+                "expiry": now_ts + 30,   # short cache so we probe again soon
+            }
+            return True, "ok"
+
         # VERY HIGH threshold (100) - IP blocking should be extremely rare
         # because shared networks (offices, homes, colleges) can have many users
         # Individual user lockout handles most security cases
-        ip_limit = 100  # Was 50, increased to reduce false positives on shared networks
-        
+        ip_limit = 100
+
         if failed_attempts >= ip_limit:
+            _IP_LOGIN_LIMIT_CACHE[ip_address] = {
+                "allowed": False,
+                "msg": "🔒 Network temporarily blocked due to unusual activity. Please try after 1 hour or use mobile data.",
+                "expiry": now_ts + 30,
+            }
             return False, "🔒 Network temporarily blocked due to unusual activity. Please try after 1 hour or use mobile data."
-        
+
+        _IP_LOGIN_LIMIT_CACHE[ip_address] = {
+            "allowed": True, "msg": "ok", "expiry": now_ts + 30,
+        }
         return True, "ok"
     
     # ========== DEVICE FINGERPRINT CHECKS ==========
