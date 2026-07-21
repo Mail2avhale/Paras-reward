@@ -37724,6 +37724,48 @@ async def initialize_database_indexes():
         print("✅ Performance critical indexes ready")
     except Exception as e:
         print(f"⚠️  Performance indexes: {e}")
+
+    # ==================== LOGIN ATTEMPTS INDEXES ====================
+    # Feb 20 2026 — fixes the 15s login stall reported on production.
+    # `fraud_detector.check_ip_login_limit()` runs a count on
+    # login_attempts filtered by ip_address+success+timestamp. Without a
+    # compound index Mongo does a COLLSCAN on the whole collection which
+    # grows with every login attempt (~10k+ docs) → 3-15s per login.
+    try:
+        existing_indexes = await db.login_attempts.index_information()
+
+        def _has_key_pattern(pattern):
+            """True iff any existing index has this exact key sequence."""
+            return any(
+                info.get("key") == pattern for info in existing_indexes.values()
+            )
+
+        # Compound index that supports the hot fraud-detector query.
+        if not _has_key_pattern([("ip_address", 1), ("success", 1), ("timestamp", -1)]):
+            await db.login_attempts.create_index(
+                [("ip_address", 1), ("success", 1), ("timestamp", -1)],
+                name="ip_success_timestamp",
+                background=True,
+            )
+            print("✅ Created login_attempts compound index (ip+success+timestamp)")
+
+        # Identifier-based lookups (user-lockout / per-user rate limit).
+        # Only create if equivalent doesn't already exist under a different
+        # name (avoids IndexOptionsConflict warnings).
+        if not (
+            _has_key_pattern([("identifier", 1), ("timestamp", -1)]) or
+            _has_key_pattern([("identifier", 1), ("timestamp", 1)])
+        ):
+            await db.login_attempts.create_index(
+                [("identifier", 1), ("timestamp", -1)],
+                name="identifier_timestamp",
+                background=True,
+            )
+            print("✅ Created login_attempts (identifier+timestamp) index")
+
+        print("✅ Login attempts indexes ready")
+    except Exception as e:
+        print(f"⚠️  login_attempts indexes: {e}")
     
     # ==================== TRANSACTIONS INDEXES ====================
     try:
@@ -37994,6 +38036,28 @@ async def _background_db_init():
 
     print("Background DB init complete!")
 
+async def daily_login_attempts_cleanup_task():
+    """Feb 20 2026 — Purge login_attempts entries older than 30 days.
+
+    Runs once per pod every 24h. Prevents the collection from growing
+    unbounded and slowing the fraud-detector count_documents query
+    that used to stall login by 15+ seconds. Since `timestamp` is
+    stored as an ISO string (not a BSON Date), Mongo's TTL index
+    cannot cover this — hence the explicit sweep.
+    """
+    import asyncio
+    while True:
+        try:
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+            res = await db.login_attempts.delete_many({"timestamp": {"$lt": cutoff}})
+            if res.deleted_count:
+                logging.info(f"[LOGIN-ATTEMPTS-CLEANUP] Purged {res.deleted_count} old login_attempts")
+        except Exception as e:
+            logging.error(f"[LOGIN-ATTEMPTS-CLEANUP] error: {e}", exc_info=True)
+        await asyncio.sleep(24 * 60 * 60)  # 24 hours
+
+
+
 @app.on_event("startup")
 async def startup_db():
     """Initialize database - NON-BLOCKING so server starts immediately"""
@@ -38042,6 +38106,15 @@ async def startup_db():
         print("🔓 Daily PRC auto-unlock task scheduled (24h interval)")
     except Exception as e:
         print(f"⚠️ PRC auto-unlock scheduler start failed (non-critical): {e}")
+
+    # Daily login_attempts cleanup — Feb 20 2026. Purges rows older
+    # than 30 days so the fraud detector's per-IP count remains fast
+    # even under sustained login-attempt volume.
+    try:
+        asyncio.create_task(daily_login_attempts_cleanup_task())
+        print("🧽 Daily login_attempts cleanup task scheduled (24h interval)")
+    except Exception as e:
+        print(f"⚠️ login_attempts cleanup scheduler start failed (non-critical): {e}")
 
     
     # Start scheduler for automated tasks
