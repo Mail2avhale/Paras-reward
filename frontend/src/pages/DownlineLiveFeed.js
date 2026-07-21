@@ -5,7 +5,7 @@
  * Polls /api/referrals/live-feed/{uid} every 30s so new referral rewards
  * surface without the user needing to refresh manually.
  */
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Gift, RefreshCw, Clock } from 'lucide-react';
@@ -41,30 +41,32 @@ const DownlineLiveFeed = ({ user }) => {
   // source) ensures the modal element survives the route change — the
   // earlier implementation opened the modal on the source page which
   // then unmounted immediately, so users never saw the prompt.
+  //
+  // StrictMode-safe: fires SYNCHRONOUSLY in the effect body (no
+  // setTimeout — StrictMode cleanup was killing the deferred call in
+  // dev). A useRef guard also protects against the second invocation
+  // in dev/StrictMode from double-firing.
   const rewardedAd = useRewardedInterstitial();
+  const adFiredRef = useRef(false);
   useEffect(() => {
-    let raw;
-    try {
-      raw = sessionStorage.getItem('pending_rewarded_ad');
-    } catch { return; /* private-mode: skip */ }
+    if (adFiredRef.current) return;                 // already fired this mount
+    let raw = null;
+    try { raw = sessionStorage.getItem('pending_rewarded_ad'); }
+    catch { return; /* private-mode / storage unavailable */ }
     if (!raw) return;
     let payload = null;
-    try { payload = JSON.parse(raw); } catch { /* corrupt */ }
-    // Always clear the flag so it never fires twice on this page.
+    try { payload = JSON.parse(raw); } catch { /* corrupt, skip */ }
+    // Clear immediately so a reload / back-nav can't re-fire the prompt.
     try { sessionStorage.removeItem('pending_rewarded_ad'); } catch { /* noop */ }
     if (!payload || payload.placement !== 'live_feed') return;
-    // Guard: only honour a flag set in the last 60s, so a stale flag
-    // (user hit browser back, then re-entered from a bookmark much
-    // later) doesn't unexpectedly fire the ad.
+    // Only honour a flag set within the last 60s — protects against
+    // stale flags from an abandoned session (user hit Back, opened a
+    // bookmark hours later, etc.).
     if (Date.now() - Number(payload.at || 0) > 60_000) return;
-    // Small delay so the page paints first — smoother UX than the
-    // modal blocking the very first frame.
-    const t = setTimeout(() => {
-      try { rewardedAd.open({ bonusPrc: Number(payload.bonusPrc) || 5 }); }
-      catch { /* non-fatal */ }
-    }, 350);
-    return () => clearTimeout(t);
-  }, []); // fire once on mount
+    adFiredRef.current = true;
+    try { rewardedAd.open({ bonusPrc: Number(payload.bonusPrc) || 5 }); }
+    catch { /* non-fatal */ }
+  }, [rewardedAd]);
 
   const fetchFeed = useCallback(async () => {
     if (!user?.uid) return;

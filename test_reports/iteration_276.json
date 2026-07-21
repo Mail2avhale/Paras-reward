@@ -1,0 +1,37 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "अँप मध्ये view Live community activities या button वरती क्लिक केल्यावरती पण rewarded intestile ad show hot नाही",
+  "summary": "No relevant testing skill found. Verified the focused mobile-web UI flow on the preview URL: logged in as 9970100782, opened /referrals, clicked data-testid=view-community-activity-btn, confirmed navigation to /referrals/live-feed and the +5 bonus PRC rewarded interstitial modal appeared with watch/skip buttons. Verified No thanks closes the modal while staying on live-feed, reload does not re-open it, and direct URL navigation without the session flag does not show it.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/rewarded_interstitial_verification_276.py",
+    "/app/test_reports/bug_verification_276.json",
+    "/app/test_reports/iteration_276.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "DownlineLiveFeed.js now reads pending_rewarded_ad, removes it before opening, and calls rewardedAd.open() synchronously with a useRef guard; this matches the intended StrictMode-safe fix and was confirmed in runtime UI testing."
+  ],
+  "updated_files": [
+    "/app/test_reports/rewarded_interstitial_verification_276.py",
+    "/app/test_reports/bug_verification_276.json",
+    "/app/test_reports/iteration_276.json"
+  ],
+  "success_rate": {
+    "backend": "N/A - frontend-only bug verification",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use mobile viewport. PIN fields use data-testid login-pin-0 through login-pin-5, not login-pin-input-*. The focused pass was: login -> /referrals -> click view-community-activity-btn -> modal visible on /referrals/live-feed -> skip closes -> reload/direct URL do not show modal.",
+  "rca_of_the_issue": "Previous RCA was a StrictMode cleanup race killing a delayed setTimeout before rewardedAd.open(). The current fix removes the timeout, opens synchronously on DownlineLiveFeed mount, clears sessionStorage before opening, and guards with useRef. Runtime evidence confirms the modal now appears after the CTA and remains one-shot."
+}
