@@ -263,18 +263,50 @@ class CacheManager:
           • cache miss  • Redis error / timeout  • circuit-open skip
           • malformed JSON
         The caller MUST treat None as "not cached — fetch from Mongo".
+
+        Feb 20 2026 — Two-level fallback: when Redis fails/times-out we
+        ALSO check the in-process `_memory_cache` mirror (populated by
+        every successful set-that-failed-Redis and every set-in-memory-
+        only run). This means a spike-driven Upstash outage does NOT
+        force every single request to re-run its heavy Mongo path —
+        after one successful cache-set, the value stays hot in memory
+        for the remainder of the TTL.
         """
         prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
+
+        def _read_memory_mirror():
+            """Second-level fallback — pull from the process dict."""
+            if prefixed_key not in _memory_cache:
+                return None
+            expiry = _cache_expiry.get(prefixed_key)
+            if expiry and datetime.now(timezone.utc).timestamp() > expiry:
+                _memory_cache.pop(prefixed_key, None)
+                _cache_expiry.pop(prefixed_key, None)
+                return None
+            return _memory_cache.get(prefixed_key)
+
         if self._redis_ready():
             ok, value = await self._redis_call(self.redis_client.get(prefixed_key))
             if not ok:
-                # Timeout / error already counted; treat as miss so caller hits Mongo.
+                # Redis errored/timed out. Try memory mirror BEFORE
+                # forcing the caller to hit Mongo — this is the whole
+                # point of the two-level cache.
+                mem = _read_memory_mirror()
+                if mem is not None:
+                    self._m_hits += 1
+                    return mem
                 self._m_mongo_fallbacks += 1
                 return None
             if value is None:
+                # Genuine Redis miss — still check in-memory mirror for
+                # a value that Redis-SET-failed on a previous request.
+                mem = _read_memory_mirror()
+                if mem is not None:
+                    self._m_hits += 1
+                    return mem
                 self._m_misses += 1
                 return None
-            # Decode
+            # Redis hit — decode
             if isinstance(value, str):
                 try:
                     parsed = json.loads(value)
@@ -285,27 +317,26 @@ class CacheManager:
                     return value
             self._m_hits += 1
             return value
-        # In-memory fallback path (Redis never configured, or circuit open)
-        if prefixed_key in _memory_cache:
-            expiry = _cache_expiry.get(prefixed_key)
-            if expiry and datetime.now(timezone.utc).timestamp() > expiry:
-                _memory_cache.pop(prefixed_key, None)
-                _cache_expiry.pop(prefixed_key, None)
-                self._m_misses += 1
-                return None
+        # In-memory-only path (Redis never configured, or circuit open)
+        mem = _read_memory_mirror()
+        if mem is not None:
             self._m_hits += 1
-            return _memory_cache.get(prefixed_key)
+            return mem
         self._m_misses += 1
-        # Bump fallback counter only when Redis WOULD have been the primary
-        # (i.e., configured but currently unhealthy). Otherwise it's just
-        # a plain in-memory miss.
         if self.use_redis:
+            # Redis was configured but currently unhealthy — count the
+            # forced Mongo fallback.
             self._m_mongo_fallbacks += 1
         return None
     
     async def set(self, key: str, value: Any, ttl: int = None) -> bool:
         """Set value in cache. Returns False on Redis failure but NEVER
         raises — the caller's user-facing operation succeeds regardless.
+
+        Feb 20 2026 — ALWAYS mirror to in-process memory (not only on
+        Redis failure) so a subsequent GET can fall back to memory if
+        Redis times out. This is what makes the two-level cache
+        actually effective under intermittent Upstash flakiness.
         """
         prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
         ttl = ttl or self.default_ttl
@@ -319,21 +350,18 @@ class CacheManager:
                 pass
             return False
 
+        # ALWAYS mirror to memory so a subsequent Redis GET timeout
+        # can transparently fall through to a fresh in-process value.
+        _memory_cache[prefixed_key] = value
+        _cache_expiry[prefixed_key] = datetime.now(timezone.utc).timestamp() + ttl
+
         if self._redis_ready():
             ok, _ = await self._redis_call(self.redis_client.setex(prefixed_key, ttl, json_value))
             if ok:
                 self._m_sets_ok += 1
                 return True
             self._m_sets_fail += 1
-            # Also mirror into memory so subsequent gets in this process
-            # can still hit — prevents a Redis outage from also killing
-            # local hot paths.
-            _memory_cache[prefixed_key] = value
-            _cache_expiry[prefixed_key] = datetime.now(timezone.utc).timestamp() + ttl
             return False
-        # In-memory only
-        _memory_cache[prefixed_key] = value
-        _cache_expiry[prefixed_key] = datetime.now(timezone.utc).timestamp() + ttl
         self._m_sets_ok += 1
         return True
     

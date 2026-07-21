@@ -3,7 +3,14 @@
 The latest version is stored as a single document in `app_config` collection
 (key: "android_app_version"). Admins can update via a future admin endpoint,
 or directly in MongoDB. Falls back to hardcoded defaults if absent.
+
+Feb 20 2026 — Added a 60s in-process cache. This endpoint is polled on
+EVERY app launch — Upstash flakiness was making cold calls take 20+ sec
+which stalled the login flow. In-process cache means after ONE Mongo hit
+per pod every 60s, all subsequent launches complete in microseconds.
 """
+import asyncio
+import time as _time
 from fastapi import APIRouter
 from typing import Optional
 from pydantic import BaseModel
@@ -16,6 +23,16 @@ db = None
 def set_db(database):
     global db
     db = database
+
+
+# ── In-process cache (pod-local, no Redis dependency) ───────────────────
+# 60s TTL — version-info rarely changes; even 5min would be fine, but
+# 60s keeps admin edits visible fast enough for QA.
+_VER_CACHE = {"value": None, "expiry": 0}
+_VER_CACHE_TTL_SEC = 60
+# Bounded Mongo timeout so a slow query never stalls the login flow —
+# fall back to hard-coded defaults if the query doesn't return quickly.
+_MONGO_LOOKUP_TIMEOUT_SEC = 1.5
 
 
 # ── Defaults — bump these whenever you push a new Play Store build ──────────
@@ -34,8 +51,8 @@ def set_db(database):
 #     breaker. Users no longer see the intermittent 30s "Verifying…"
 #     hang when Upstash Redis flakes.
 # v1.2.2 payload (Feb 17): AdMob global banner + PayPartnerStore blank fix.
-LATEST_VERSION_NAME = "1.2.5"
-LATEST_VERSION_CODE = 25
+LATEST_VERSION_NAME = "1.2.6"
+LATEST_VERSION_CODE = 26
 MINIMUM_SUPPORTED_VERSION_CODE = 1  # below this → force-update
 PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.parasreward.prc"
 
@@ -70,13 +87,23 @@ async def get_version_info():
     """Returns latest version info. The Capacitor app polls this on launch
     and shows an in-app banner if its installed versionCode < latest.
     """
+    now = _time.time()
+    # Serve from in-process cache when hot.
+    if _VER_CACHE["value"] is not None and _VER_CACHE["expiry"] > now:
+        return _VER_CACHE["value"]
+
     doc = None
-    try:
-        doc = await db.app_config.find_one({"key": "android_app_version"})
-    except Exception:
-        pass
+    if db is not None:
+        try:
+            # Bounded lookup — a slow Mongo query never stalls login.
+            doc = await asyncio.wait_for(
+                db.app_config.find_one({"key": "android_app_version"}),
+                timeout=_MONGO_LOOKUP_TIMEOUT_SEC,
+            )
+        except (asyncio.TimeoutError, Exception):
+            doc = None
     cfg = doc or {}
-    return {
+    payload = {
         "platform": "android",
         "latest_version_name": cfg.get("version_name", LATEST_VERSION_NAME),
         "latest_version_code": int(cfg.get("version_code", LATEST_VERSION_CODE)),
@@ -85,6 +112,9 @@ async def get_version_info():
         "release_notes": cfg.get("release_notes", DEFAULT_RELEASE_NOTES),
         "play_store_url": PLAY_STORE_URL,
     }
+    _VER_CACHE["value"] = payload
+    _VER_CACHE["expiry"] = now + _VER_CACHE_TTL_SEC
+    return payload
 
 
 @router.post("/admin/version-update")
@@ -102,4 +132,8 @@ async def admin_update_version(body: VersionUpdate):
         "force_update": body.force_update or False,
     }
     await db.app_config.update_one({"key": "android_app_version"}, {"$set": update_doc}, upsert=True)
+    # Invalidate the in-process cache so the next /version-info poll
+    # picks up the change immediately (instead of after ~60s).
+    _VER_CACHE["value"] = None
+    _VER_CACHE["expiry"] = 0
     return {"success": True, "version": update_doc}
