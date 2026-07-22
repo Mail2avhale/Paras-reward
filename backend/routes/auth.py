@@ -782,7 +782,17 @@ async def login(request: Request):
     
     # PARALLEL: Run fraud check and rate limit check together
     ip_check_task = fraud_detector.check_ip_login_limit(real_ip)
-    db_lock_task = check_login_rate_limit_db(db, identifier)
+    # Feb 21 2026 — Bounded timeout on DB lockout check. Previously an
+    # unindexed/slow Mongo query here could stall login for 30s+. On timeout
+    # we FAIL OPEN (allow login through); the in-memory rate-limiter still
+    # catches actual brute force. Same pattern as fraud_detector.
+    async def _bounded_db_lock():
+        try:
+            return await asyncio.wait_for(check_login_rate_limit_db(db, identifier), timeout=3.0)
+        except (asyncio.TimeoutError, Exception) as _err:
+            logging.warning(f"[LOGIN DEBUG] DB lockout check timed out — allowing: {_err}")
+            return True, 0, ""
+    db_lock_task = _bounded_db_lock()
     
     # In-memory rate limit (sync, fast)
     allowed, locked_seconds, attempts_left, lockout_message = check_login_rate_limit(identifier)
@@ -802,37 +812,53 @@ async def login(request: Request):
         raise HTTPException(status_code=429, detail=db_lockout_msg)
     
     normalized_identifier = identifier.lower().strip() if '@' in identifier else identifier.strip()
-    
-    # OPTIMIZED: Use exact index-backed lookup first (99%+ of emails are
-    # stored lowercase by signup). Regex fallback only if exact miss.
-    # This avoids a full collection scan that was timing out periodically.
-    user = await db.users.find_one(
-        {"email": normalized_identifier},
-        {"_id": 0, "profile_picture": 0}
-    )
-    # Case-insensitive fallback (uses COLLSCAN but rarely needed)
-    if not user and '@' in identifier:
-        user = await db.users.find_one(
-            {"email": {"$regex": f"^{re.escape(normalized_identifier)}$", "$options": "i"}},
+
+    # Feb 21 2026 — Bounded user lookup. Wrap the fallback chain in a single
+    # wait_for so a hung Mongo query can NEVER stall the login endpoint past
+    # 5 seconds. On timeout we return 503-style behaviour so the client can
+    # retry rather than block the browser event loop for 30s+ waiting on the
+    # Emergent gateway timeout.
+    async def _find_user_chain():
+        u = await db.users.find_one(
+            {"email": normalized_identifier},
             {"_id": 0, "profile_picture": 0}
         )
-    
-    if not user:
-        user = await db.users.find_one(
-            {"phone": identifier},
-            {"_id": 0, "profile_picture": 0}
+        # Case-insensitive fallback (uses COLLSCAN but rarely needed)
+        if not u and '@' in identifier:
+            u = await db.users.find_one(
+                {"email": {"$regex": f"^{re.escape(normalized_identifier)}$", "$options": "i"}},
+                {"_id": 0, "profile_picture": 0}
+            )
+        if not u:
+            u = await db.users.find_one(
+                {"mobile": identifier},
+                {"_id": 0, "profile_picture": 0}
+            )
+        if not u:
+            u = await db.users.find_one(
+                {"phone": identifier},
+                {"_id": 0, "profile_picture": 0}
+            )
+        if not u:
+            u = await db.users.find_one(
+                {"uid": identifier},
+                {"_id": 0, "profile_picture": 0}
+            )
+        return u
+
+    try:
+        user = await asyncio.wait_for(_find_user_chain(), timeout=5.0)
+    except asyncio.TimeoutError:
+        logging.error(f"[LOGIN DEBUG] User lookup exceeded 5s for {identifier} — returning 503")
+        raise HTTPException(
+            status_code=503,
+            detail="Login service temporarily busy. Please try again in a few seconds."
         )
-    
-    if not user:
-        user = await db.users.find_one(
-            {"mobile": identifier},
-            {"_id": 0, "profile_picture": 0}
-        )
-    
-    if not user:
-        user = await db.users.find_one(
-            {"uid": identifier},
-            {"_id": 0, "profile_picture": 0}
+    except Exception as _lookup_err:
+        logging.error(f"[LOGIN DEBUG] User lookup failed for {identifier}: {_lookup_err}")
+        raise HTTPException(
+            status_code=503,
+            detail="Login service temporarily unavailable. Please try again."
         )
     
     if not user:

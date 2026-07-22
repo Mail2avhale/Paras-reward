@@ -37533,7 +37533,23 @@ async def initialize_database_indexes():
             print("✅ Mobile index already exists (sparse)")
     except Exception as e:
         print(f"⚠️  Mobile index setup: {e}")
-    
+
+    # Phone index (LEGACY field) — sparse to allow nulls.
+    # Feb 21 2026 — Production login was timing out (30s+) because the
+    # /api/auth/login flow does a `find_one({phone: identifier})` fallback
+    # BEFORE `find_one({mobile: identifier})`. On production with 10k+ users
+    # this triggered a full COLLSCAN. Adding a sparse index makes the
+    # legacy-phone lookup O(log n) even for tiny result sets.
+    try:
+        existing_indexes = await db.users.index_information()
+        if "phone_1" not in existing_indexes:
+            await db.users.create_index("phone", sparse=True)
+            print("✅ Created sparse phone index (fixes login 30s timeout on prod)")
+        else:
+            print("✅ Phone index already exists (sparse)")
+    except Exception as e:
+        print(f"⚠️  Phone index setup: {e}")
+
     # Aadhaar number index - partial index to allow null/empty values, unique for actual values
     try:
         existing_indexes = await db.users.index_information()

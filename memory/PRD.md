@@ -3,6 +3,28 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 21, 2026 — Login 30s Timeout Fix + Android API 36 Bump)
+- 🐛 **P0 production login hang RCA**: `/api/auth/login` was returning 504 gateway timeouts on production (`https://bugzappers.emergent.host`) after ~30s. Non-existent-user attempts and wrong-PIN attempts BOTH hung. TTFB was <150ms so the request reached the backend fast, but the DB call chain stalled.
+- **Root cause identified via `db.command('explain')`**: `find_one({phone: identifier})` in the login flow was doing a **COLLSCAN** on the `users` collection (no `phone_1` index existed). On preview with 46 users this took 0ms — on production with thousands of users it took 30s+, triggering the Emergent gateway timeout.
+- 🛡️ **Fixes applied (multi-layer defence)**:
+  1. **NEW sparse `phone_1` index** on `users` (`/app/backend/server.py:ensure_indexes`). Log confirms `✅ Created sparse phone index (fixes login 30s timeout on prod)`. COLLSCAN → IXSCAN verified via `db.command('explain')`.
+  2. **Login user-lookup reordered** in `/app/backend/routes/auth.py` — `email → mobile → phone → uid` (was `email → phone → mobile → uid`). Since 44/46 users have `mobile` set and only 2 have legacy `phone`, this puts the indexed common path first.
+  3. **Bounded timeout on `check_login_rate_limit_db`**: `asyncio.wait_for(..., timeout=3.0)` with fail-open on timeout (in-memory rate-limiter still catches actual brute force). Previously an unindexed sequential 3-lookup chain could stall.
+  4. **Bounded timeout on user-lookup chain**: entire `_find_user_chain()` wrapped in `asyncio.wait_for(..., timeout=5.0)` — on timeout returns `503 "Login service temporarily busy. Please try again in a few seconds."` instead of 30s hang. Client can retry immediately rather than waiting 30s.
+- **Preview verification post-fix**:
+  - Successful login: **0.41–0.61s** (was 0.57s before, no regression)
+  - Non-existent user: **98–104ms** (was 0.5s, faster with new mobile-first order)
+  - Wrong PIN (bcrypt path): **447ms** (unchanged, healthy)
+  - Explain query on `find_one({phone: ...})`: `stage=FETCH, input=IXSCAN` ✅
+- **Production impact after deploy**: existing container will run new `ensure_indexes()` on startup → `phone_1` created → login stops hanging. Even if index creation is briefly delayed, the 3s + 5s asyncio timeouts prevent any query from stalling >5s.
+
+## Implemented (Feb 21, 2026 — Google Play API 36 Compliance)
+- 🚨 **Google Play Console notice**: "Your app is affected by Google Play's target API level requirements. Update your app to target Android 16 (API level 36) by Aug 31 2026." App was at API 35.
+- ✅ **Bumped in `/app/frontend/android/variables.gradle`**: `compileSdkVersion 35 → 36`, `targetSdkVersion 35 → 36`.
+- ✅ **Bumped in `/app/frontend/android/app/build.gradle`**: `versionCode 26 → 27`, `versionName "1.2.6" → "1.2.7"`.
+- ✅ **CI workflow updated** (`.github/workflows/build-android.yml`): `Setup Android SDK` step now installs `platforms;android-36 build-tools;36.0.0` alongside the existing android-35/35.0.0 (fallback preserved).
+- **Next Action (User)**: push code → GitHub Actions builds signed AAB → upload to Play Console. Meets Aug 31 2026 deadline.
+
 ## Implemented (Feb 20, 2026 — Redis Resilience: MongoDB Fallback for ALL Cache Ops)
 - ✅ **Every Redis operation wrapped with per-op timeout** (default `500ms`, env-tunable via `REDIS_OP_TIMEOUT_MS`). A hung/slow Upstash Redis can NEVER hold up a user request longer than this — the call times out, the caller sees `None`, and falls through to MongoDB.
 - ✅ **Circuit breaker** (`REDIS_CB_FAILURE_THRESHOLD=5`, `REDIS_CB_RECOVERY_SEC=60`, `REDIS_CB_FAILURE_WINDOW_SEC=30`) — after 5 consecutive Redis failures within 30s, the manager stops calling Redis entirely for 60s. All requests go straight to MongoDB with 0 Redis latency added.

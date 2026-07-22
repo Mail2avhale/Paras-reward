@@ -220,8 +220,20 @@ android {
         //     • /api/app/version-info: 60s in-process cache + 1.5s
         //       bounded Mongo lookup timeout. Login flow can no
         //       longer stall on Upstash or Mongo pressure.
-        versionCode 26
-        versionName "1.2.6"
+        // versionCode 26 → 27 — Feb 21, 2026 (v1.2.7) — Google Play API 36:
+        // 44. Android target/compile SDK bumped 35 → 36 (Android 16) to
+        //     comply with Google Play's Aug 31 2026 target API level
+        //     requirement notice. CI workflow updated to install
+        //     android-36 platform + build-tools;36.0.0.
+        // 45. Backend login-slowness hardening: users.phone_1 sparse index
+        //     (was COLLSCAN causing 30s+ prod timeouts on legacy phone
+        //     lookups). Login flow reordered to check `mobile` before
+        //     `phone`. `check_login_rate_limit_db` and user lookup chain
+        //     both wrapped in asyncio.wait_for(3s)/wait_for(5s) so a hung
+        //     Mongo query can NEVER stall login past 5s — returns 503
+        //     "please try again" instead of the 30s gateway timeout.
+        versionCode 27
+        versionName "1.2.7"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
