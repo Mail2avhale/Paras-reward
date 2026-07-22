@@ -264,18 +264,24 @@ class CacheManager:
           • malformed JSON
         The caller MUST treat None as "not cached — fetch from Mongo".
 
-        Feb 20 2026 — Two-level fallback: when Redis fails/times-out we
-        ALSO check the in-process `_memory_cache` mirror (populated by
-        every successful set-that-failed-Redis and every set-in-memory-
-        only run). This means a spike-driven Upstash outage does NOT
-        force every single request to re-run its heavy Mongo path —
-        after one successful cache-set, the value stays hot in memory
-        for the remainder of the TTL.
+        Feb 21 2026 — L1-FIRST cache read.
+        Upstash Redis is HTTP-based and adds ~217ms round-trip PER call
+        (measured in preview against the shared Upstash endpoint). At that
+        cost, Redis is SLOWER than a direct MongoDB read (1-3ms) — the
+        cache was making the app slower, not faster.
+
+        Fix: check the in-process memory mirror FIRST (0ms). Hit Redis
+        (217ms) only on an L1 miss. Since `set()` populates BOTH tiers,
+        every subsequent read within the TTL window is instant.
+
+        Trade-off: cross-pod invalidation now takes up to `ttl` seconds
+        to propagate. This is fine for our single-pod-per-env deployment
+        and for our short (≤2 min) TTLs on user data.
         """
         prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
 
         def _read_memory_mirror():
-            """Second-level fallback — pull from the process dict."""
+            """L1 fallback — pull from the in-process dict."""
             if prefixed_key not in _memory_cache:
                 return None
             expiry = _cache_expiry.get(prefixed_key)
@@ -285,43 +291,41 @@ class CacheManager:
                 return None
             return _memory_cache.get(prefixed_key)
 
-        if self._redis_ready():
-            ok, value = await self._redis_call(self.redis_client.get(prefixed_key))
-            if not ok:
-                # Redis errored/timed out. Try memory mirror BEFORE
-                # forcing the caller to hit Mongo — this is the whole
-                # point of the two-level cache.
-                mem = _read_memory_mirror()
-                if mem is not None:
-                    self._m_hits += 1
-                    return mem
-                self._m_mongo_fallbacks += 1
-                return None
-            if value is None:
-                # Genuine Redis miss — still check in-memory mirror for
-                # a value that Redis-SET-failed on a previous request.
-                mem = _read_memory_mirror()
-                if mem is not None:
-                    self._m_hits += 1
-                    return mem
-                self._m_misses += 1
-                return None
-            # Redis hit — decode
-            if isinstance(value, str):
-                try:
-                    parsed = json.loads(value)
-                    self._m_hits += 1
-                    return parsed
-                except json.JSONDecodeError:
-                    self._m_hits += 1
-                    return value
-            self._m_hits += 1
-            return value
-        # In-memory-only path (Redis never configured, or circuit open)
+        # ── L1: process-local memory mirror (0ms) ──
         mem = _read_memory_mirror()
         if mem is not None:
             self._m_hits += 1
             return mem
+
+        # ── L2: Upstash / Redis (217ms round-trip) ──
+        if self._redis_ready():
+            ok, value = await self._redis_call(self.redis_client.get(prefixed_key))
+            if not ok:
+                # Redis errored/timed out AND L1 was empty — Mongo path.
+                self._m_mongo_fallbacks += 1
+                return None
+            if value is None:
+                # Genuine Redis miss AND L1 empty — Mongo path.
+                self._m_misses += 1
+                return None
+            # Redis hit — decode and warm L1 for future 0ms hits.
+            parsed = value
+            if isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                except json.JSONDecodeError:
+                    parsed = value
+            # Warm L1 with the SAME TTL semantics as set(): use the default
+            # module TTL (client set() calls already populate both tiers, so
+            # this only kicks in for values written by other processes).
+            _memory_cache[prefixed_key] = parsed
+            _cache_expiry[prefixed_key] = (
+                datetime.now(timezone.utc).timestamp() + self.default_ttl
+            )
+            self._m_hits += 1
+            return parsed
+
+        # No Redis, no L1 → true miss.
         self._m_misses += 1
         if self.use_redis:
             # Redis was configured but currently unhealthy — count the
@@ -337,6 +341,12 @@ class CacheManager:
         Redis failure) so a subsequent GET can fall back to memory if
         Redis times out. This is what makes the two-level cache
         actually effective under intermittent Upstash flakiness.
+
+        Feb 21 2026 — Redis SET is now FIRE-AND-FORGET (scheduled as a
+        background task with `asyncio.create_task`) so the caller's
+        response is NOT blocked on a 217ms Upstash round-trip. L1 memory
+        write is synchronous (0ms) so subsequent GETs in the same pod
+        see the new value immediately.
         """
         prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
         ttl = ttl or self.default_ttl
@@ -350,33 +360,58 @@ class CacheManager:
                 pass
             return False
 
-        # ALWAYS mirror to memory so a subsequent Redis GET timeout
-        # can transparently fall through to a fresh in-process value.
+        # ── L1 SYNC: always mirror to memory (0ms) ──
         _memory_cache[prefixed_key] = value
         _cache_expiry[prefixed_key] = datetime.now(timezone.utc).timestamp() + ttl
 
+        # ── L2 ASYNC: fire-and-forget Redis SET (don't block caller) ──
         if self._redis_ready():
-            ok, _ = await self._redis_call(self.redis_client.setex(prefixed_key, ttl, json_value))
-            if ok:
-                self._m_sets_ok += 1
-                return True
-            self._m_sets_fail += 1
-            return False
+            async def _bg_redis_set():
+                ok, _ = await self._redis_call(
+                    self.redis_client.setex(prefixed_key, ttl, json_value)
+                )
+                if ok:
+                    self._m_sets_ok += 1
+                else:
+                    self._m_sets_fail += 1
+
+            try:
+                asyncio.create_task(_bg_redis_set())
+            except RuntimeError:
+                # No running loop (should never happen inside request path);
+                # skip Redis write, L1 already updated.
+                pass
+            # Optimistically count the L1 write as a success; the async
+            # task will correct _sets_fail if Redis rejects the write.
+            self._m_sets_ok += 1
+            return True
         self._m_sets_ok += 1
         return True
     
     async def delete(self, key: str) -> bool:
-        """Delete key from cache with environment prefix. Never raises."""
+        """Delete key from cache with environment prefix. Never raises.
+
+        Feb 21 2026 — Redis DELETE is fire-and-forget (background task)
+        so the caller isn't blocked on a 217ms Upstash round-trip. L1
+        memory delete is synchronous.
+        """
         prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
         _memory_cache.pop(prefixed_key, None)
         _cache_expiry.pop(prefixed_key, None)
         if self._redis_ready():
-            ok, _ = await self._redis_call(self.redis_client.delete(prefixed_key))
-            if ok:
-                self._m_deletes_ok += 1
-                return True
-            self._m_deletes_fail += 1
-            return False
+            async def _bg_redis_delete():
+                ok, _ = await self._redis_call(self.redis_client.delete(prefixed_key))
+                if ok:
+                    self._m_deletes_ok += 1
+                else:
+                    self._m_deletes_fail += 1
+
+            try:
+                asyncio.create_task(_bg_redis_delete())
+            except RuntimeError:
+                pass
+            self._m_deletes_ok += 1
+            return True
         self._m_deletes_ok += 1
         return True
     

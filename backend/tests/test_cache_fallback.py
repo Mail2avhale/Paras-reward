@@ -134,26 +134,48 @@ async def test_get_returns_none_on_crash():
 
 # ────────────────────────────────────────────────────────────────
 # 3) set() / delete() never raise on Redis failure
+#    Feb 21 2026 — set()/delete() are now FIRE-AND-FORGET for the Redis
+#    (L2) tier: the L1 memory write is synchronous and the return value
+#    reflects the L1 write success, NOT the Redis outcome. This gives
+#    callers a ~217ms latency win per operation because we no longer
+#    wait on the Upstash HTTP round-trip. The background task still
+#    increments _m_sets_fail / _m_deletes_fail when Redis errors,
+#    which is what we assert below.
 # ────────────────────────────────────────────────────────────────
 @pytest.mark.asyncio
-async def test_set_returns_false_on_crash_but_never_raises():
+async def test_set_writes_l1_and_fires_l2_even_when_redis_crashes():
     mgr = CacheManager()
     mgr.redis_client = _CrashingRedis()
     mgr.use_redis = True
     mgr.use_upstash = True
+    # set() returns True optimistically because L1 succeeded.
     ok = await mgr.set("k", {"x": 1}, ttl=60)
-    assert ok is False
+    assert ok is True
+    # L1 has the value — GET returns it without touching (dead) Redis.
+    got = await mgr.get("k")
+    assert got == {"x": 1}
+    # Give the fire-and-forget background task a moment to run and
+    # record the Redis failure counter.
+    await asyncio.sleep(0.1)
     assert mgr._m_sets_fail >= 1
 
 
 @pytest.mark.asyncio
-async def test_delete_returns_false_on_crash_but_never_raises():
+async def test_delete_removes_l1_and_fires_l2_even_when_redis_crashes():
     mgr = CacheManager()
     mgr.redis_client = _CrashingRedis()
     mgr.use_redis = True
     mgr.use_upstash = True
+    # Seed L1 first
+    await mgr.set("k", {"x": 1}, ttl=60)
+    # delete() returns True optimistically (L1 delete succeeded).
     ok = await mgr.delete("k")
-    assert ok is False
+    assert ok is True
+    # L1 no longer has the value.
+    got = await mgr.get("k")
+    assert got is None
+    # Background task should have recorded the Redis delete failure.
+    await asyncio.sleep(0.1)
     assert mgr._m_deletes_fail >= 1
 
 

@@ -3,7 +3,28 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
-## Implemented (Feb 21, 2026 — Login 30s Timeout Fix + Android API 36 Bump)
+## Implemented (Feb 21, 2026 — App Loading Speed Fix + Upstash Redis Bottleneck RCA)
+- 🐛 **P0 user report**: "App अजून slow आहे" post the Feb 21 login-timeout fix.
+- 🚨 **RCA**: Live Redis latency measurement showed **Upstash Redis takes 217ms PER operation** (HTTP-based REST API, not TCP). MongoDB queries on the same pod take **0.6-1.1ms**. The cache was **200× SLOWER than the underlying DB it was supposed to protect**. Every hot endpoint (`/api/user/{uid}`, mining status, dashboard) was paying 2× 217ms = **434ms of cache overhead per request** — cache was making the app slower, not faster.
+- 📊 **Measured before/after on preview**:
+  - `/api/user/{uid}`: **718ms → 85ms** (8.5× faster)
+  - `/api/mining/status/{uid}`: **566ms → 99ms** (5.7× faster)
+  - `/api/user/{uid}/dashboard`: 317ms cold → **121ms warm**
+  - App boot flow total: ~2000ms → **~470ms** (~4× faster app open)
+- 🛡️ **Fixes in `/app/backend/cache_manager.py`**:
+  1. **L1-first read in `cache.get()`**: check the in-process `_memory_cache` mirror FIRST (0ms). Hit Redis (L2) only on L1 miss. Redis miss then warms L1 for future 0ms reads. Trade-off: cross-pod invalidation delayed up to TTL — safe for our single-pod-per-env deployment and ≤2 min TTLs.
+  2. **Fire-and-forget L2 writes** in `cache.set()` and `cache.delete()`: L1 memory write is synchronous, Redis write is scheduled as `asyncio.create_task` so the caller's response returns in ~0ms instead of waiting the 217ms Upstash round-trip. No caller in the codebase depends on the `set()`/`delete()` return value being tied to Redis success (verified via `grep`).
+- 🧪 **Verification**:
+  - Direct L1 hit measurement: 0.00ms (was 217ms)
+  - L2 hit (cross-pod path, L1 empty) still works: 218ms + warms L1
+  - Genuine miss (L1 empty + L2 empty): 218ms — one Redis GET then Mongo fallback
+  - 11/11 `test_cache_fallback.py` PASS (test updated to reflect fire-and-forget semantics)
+  - 4/4 `test_cache_two_level_fallback.py` PASS
+  - 5/5 `test_sustainability_burn.py` PASS (regression clean)
+  - Login speed regression check: 0.37-0.53s (same as before)
+- **Android bump**: versionCode 27→28, versionName 1.2.7→1.2.8 to make the perf win obvious in Play Console release notes.
+
+
 - 🐛 **P0 production login hang RCA**: `/api/auth/login` was returning 504 gateway timeouts on production (`https://bugzappers.emergent.host`) after ~30s. Non-existent-user attempts and wrong-PIN attempts BOTH hung. TTFB was <150ms so the request reached the backend fast, but the DB call chain stalled.
 - **Root cause identified via `db.command('explain')`**: `find_one({phone: identifier})` in the login flow was doing a **COLLSCAN** on the `users` collection (no `phone_1` index existed). On preview with 46 users this took 0ms — on production with thousands of users it took 30s+, triggering the Emergent gateway timeout.
 - 🛡️ **Fixes applied (multi-layer defence)**:
