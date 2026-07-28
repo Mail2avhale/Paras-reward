@@ -3,7 +3,22 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
-## Implemented (Feb 21, 2026 — App Loading Speed Fix + Upstash Redis Bottleneck RCA)
+## Implemented (Feb 22, 2026 — Login "Temporarily Busy" 503 UX Fix)
+- 🐛 **User report** (with production screenshot): red banner "Login service temporarily busy. Please try again in a few seconds." shown to real users on v1.2.8 Android app on production.
+- 🔍 **RCA**: This exact error string was hardcoded in the Feb 21 5s `asyncio.wait_for(_find_user_chain(), timeout=5.0)` wrapper on `/api/auth/login`. Production Mongo round-trips were spiking to 5-8s (measured 8s on wrong-PIN path, 12s on 503 path) because the Feb 21 **cache L1-first + fire-and-forget** fix was in preview but NOT yet deployed — Upstash HTTP round-trips were still adding 217ms per cache op, exhausting the 5s user-lookup budget under load.
+- 🛡️ **Fix in `/app/backend/routes/auth.py`**:
+  1. Timeout **5s → 10s** on `_find_user_chain` (doubled safety margin).
+  2. **ONE retry** on timeout with fresh Mongo connection before returning 503 → effective grace window is now **up to 20s**.
+  3. **Enhanced logging**: `_find_user_chain` now returns `(user, via)` where `via` is the resolved query path (`email_exact` / `email_regex` / `mobile` / `phone` / `uid_or_notfound_XXms`); any lookup >2s logs a `[LOGIN DEBUG] Slow user lookup Xms via=Y` warning so we can pinpoint the slow path in production.
+  4. **Retry-friendly error message**: "Login is slow right now. Please try again in a moment." (better UX than "temporarily busy").
+- ✅ **Verification**:
+  - Preview login: 0.41-0.67s (no regression)
+  - Wrong-PIN path: 0.4-0.5s (no regression)
+  - 15/15 cache_fallback + two_level_fallback tests PASS
+- ⚠️ **Real root fix still pending deploy**: The Feb 21 L1-first cache change in `/app/backend/cache_manager.py` — once THAT lands on production, cache ops drop 217ms → 0ms and the timeout wrapper won't trigger. This v1.2.9 change is defensive layering on top.
+- **Android bump**: v1.2.8 → **v1.2.9** (versionCode 28 → 29).
+
+
 - 🐛 **P0 user report**: "App अजून slow आहे" post the Feb 21 login-timeout fix.
 - 🚨 **RCA**: Live Redis latency measurement showed **Upstash Redis takes 217ms PER operation** (HTTP-based REST API, not TCP). MongoDB queries on the same pod take **0.6-1.1ms**. The cache was **200× SLOWER than the underlying DB it was supposed to protect**. Every hot endpoint (`/api/user/{uid}`, mining status, dashboard) was paying 2× 217ms = **434ms of cache overhead per request** — cache was making the app slower, not faster.
 - 📊 **Measured before/after on preview**:

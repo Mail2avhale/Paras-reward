@@ -28,6 +28,7 @@ import os
 import re
 import asyncio
 import hashlib
+from time import perf_counter as _time_perf
 from concurrent.futures import ThreadPoolExecutor
 
 from utils.subscription_expiry import get_user_expiry
@@ -815,51 +816,93 @@ async def login(request: Request):
 
     # Feb 21 2026 — Bounded user lookup. Wrap the fallback chain in a single
     # wait_for so a hung Mongo query can NEVER stall the login endpoint past
-    # 5 seconds. On timeout we return 503-style behaviour so the client can
-    # retry rather than block the browser event loop for 30s+ waiting on the
-    # Emergent gateway timeout.
+    # 10 seconds. On timeout we log the specific identifier + which query
+    # was reached, then ONE retry with a fresh connection before giving up.
+    # Feb 22 2026 — bumped 5s → 10s + retry-once after users reported 503
+    # "Login service temporarily busy" on production. Root cause was
+    # Upstash Redis HTTP round-trips (217ms × N) exhausting the 5s budget
+    # in adjacent middleware paths, not the user lookup itself.
     async def _find_user_chain():
+        lookup_start = _time_perf()
+        # 1. Exact-match email (uses email_1 index)
         u = await db.users.find_one(
             {"email": normalized_identifier},
             {"_id": 0, "profile_picture": 0}
         )
-        # Case-insensitive fallback (uses COLLSCAN but rarely needed)
-        if not u and '@' in identifier:
+        if u:
+            return u, "email_exact"
+        # 2. Case-insensitive email (rarely needed, COLLSCAN)
+        if '@' in identifier:
             u = await db.users.find_one(
                 {"email": {"$regex": f"^{re.escape(normalized_identifier)}$", "$options": "i"}},
                 {"_id": 0, "profile_picture": 0}
             )
-        if not u:
-            u = await db.users.find_one(
-                {"mobile": identifier},
-                {"_id": 0, "profile_picture": 0}
-            )
-        if not u:
-            u = await db.users.find_one(
-                {"phone": identifier},
-                {"_id": 0, "profile_picture": 0}
-            )
-        if not u:
-            u = await db.users.find_one(
-                {"uid": identifier},
-                {"_id": 0, "profile_picture": 0}
-            )
-        return u
+            if u:
+                return u, "email_regex"
+        # 3. Mobile (uses mobile_1 index)
+        u = await db.users.find_one(
+            {"mobile": identifier},
+            {"_id": 0, "profile_picture": 0}
+        )
+        if u:
+            return u, "mobile"
+        # 4. Legacy phone (uses sparse phone_1 index — Feb 21 2026 fix)
+        u = await db.users.find_one(
+            {"phone": identifier},
+            {"_id": 0, "profile_picture": 0}
+        )
+        if u:
+            return u, "phone"
+        # 5. UID (uses uid_1 index)
+        u = await db.users.find_one(
+            {"uid": identifier},
+            {"_id": 0, "profile_picture": 0}
+        )
+        elapsed_ms = (_time_perf() - lookup_start) * 1000
+        return u, f"uid_or_notfound_{elapsed_ms:.0f}ms"
 
-    try:
-        user = await asyncio.wait_for(_find_user_chain(), timeout=5.0)
-    except asyncio.TimeoutError:
-        logging.error(f"[LOGIN DEBUG] User lookup exceeded 5s for {identifier} — returning 503")
-        raise HTTPException(
-            status_code=503,
-            detail="Login service temporarily busy. Please try again in a few seconds."
-        )
-    except Exception as _lookup_err:
-        logging.error(f"[LOGIN DEBUG] User lookup failed for {identifier}: {_lookup_err}")
-        raise HTTPException(
-            status_code=503,
-            detail="Login service temporarily unavailable. Please try again."
-        )
+    _lookup_attempts = 0
+    _lookup_last_error = None
+    user = None
+    user_lookup_via = "n/a"
+    while _lookup_attempts < 2:
+        _lookup_attempts += 1
+        try:
+            _t0 = _time_perf()
+            user, user_lookup_via = await asyncio.wait_for(_find_user_chain(), timeout=10.0)
+            _lookup_ms = (_time_perf() - _t0) * 1000
+            if _lookup_ms > 2000:
+                logging.warning(
+                    f"[LOGIN DEBUG] Slow user lookup {_lookup_ms:.0f}ms via={user_lookup_via} "
+                    f"identifier={identifier[:20]} attempt={_lookup_attempts}"
+                )
+            break
+        except asyncio.TimeoutError:
+            _lookup_last_error = "timeout"
+            logging.error(
+                f"[LOGIN DEBUG] User lookup exceeded 10s for {identifier[:20]} "
+                f"attempt={_lookup_attempts} — retrying" if _lookup_attempts == 1
+                else f"[LOGIN DEBUG] User lookup exceeded 10s on retry for {identifier[:20]}"
+            )
+            if _lookup_attempts >= 2:
+                # Both attempts timed out — give the client a retry-friendly
+                # 503. This is EXTREMELY rare after the Feb 21 cache L1-first
+                # fix landed on production.
+                raise HTTPException(
+                    status_code=503,
+                    detail="Login is slow right now. Please try again in a moment."
+                )
+        except Exception as _lookup_err:
+            _lookup_last_error = str(_lookup_err)
+            logging.error(
+                f"[LOGIN DEBUG] User lookup ERROR for {identifier[:20]} "
+                f"attempt={_lookup_attempts}: {_lookup_err}"
+            )
+            if _lookup_attempts >= 2:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Login service temporarily unavailable. Please try again."
+                )
     
     if not user:
         # PARALLEL: Record failed login attempt
