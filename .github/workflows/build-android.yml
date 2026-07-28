@@ -176,15 +176,46 @@ jobs:
           git push origin HEAD:main
 
       # ── 8. BUILD SIGNED AAB ────────────────────────────────────────────────
-      - name: Regenerate Gradle wrapper jar (in case missing in repo)
+      - name: Ensure Gradle wrapper is usable
         working-directory: frontend/android
         run: |
+          # The wrapper.jar IS committed to the repo. If for some reason it
+          # went missing (broken checkout / clean step / stray .gitignore),
+          # regenerate it — but DO NOT call the `wrapper` task, which
+          # internally does an HTTP HEAD "validate distribution URL" step
+          # that has failed intermittently on GitHub runners (Feb 22 2026
+          # AAB build broke exactly at this line: "Test of distribution
+          # url https://services.gradle.org/distributions/gradle-8.10.2-all.zip failed").
+          # Instead we copy the wrapper.jar shipped inside the downloaded
+          # Gradle distribution — that binary is identical to what the
+          # `wrapper` task would emit, and copying it bypasses the flaky
+          # network validation entirely.
           if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "gradle-wrapper.jar missing — downloading from official Gradle distribution"
+            echo "gradle-wrapper.jar missing — restoring from official Gradle bin distribution"
             GRADLE_VERSION=8.10.2
-            curl -sSL -o /tmp/gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
+            for attempt in 1 2 3; do
+              if curl --fail --silent --show-error --location \
+                  --retry 3 --retry-delay 5 --max-time 300 \
+                  --output /tmp/gradle.zip \
+                  "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"; then
+                echo "✓ Downloaded gradle-${GRADLE_VERSION}-bin.zip (attempt $attempt)"
+                break
+              fi
+              echo "✗ Download attempt $attempt failed — retrying in 10s"
+              sleep 10
+            done
             unzip -q /tmp/gradle.zip -d /tmp/
-            /tmp/gradle-${GRADLE_VERSION}/bin/gradle wrapper --gradle-version ${GRADLE_VERSION} --distribution-type all
+            mkdir -p gradle/wrapper
+            cp "/tmp/gradle-${GRADLE_VERSION}/lib/plugins/gradle-wrapper-main-${GRADLE_VERSION}.jar" \
+               gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+            cp "/tmp/gradle-${GRADLE_VERSION}/bin/../lib/gradle-wrapper-${GRADLE_VERSION}.jar" \
+               gradle/wrapper/gradle-wrapper.jar 2>/dev/null || {
+                 echo "::warning::Could not find gradle-wrapper JAR inside distribution — falling back to gradle wrapper task with --no-configuration-cache"
+                 /tmp/gradle-${GRADLE_VERSION}/bin/gradle wrapper \
+                   --gradle-version ${GRADLE_VERSION} \
+                   --distribution-type bin \
+                   --no-configuration-cache
+               }
           fi
           ls -la gradle/wrapper/
 

@@ -3,7 +3,19 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
-## Implemented (Feb 22, 2026 — Ad UX Cleanup: Remove Native Banner)
+## Implemented (Feb 22, 2026 — GitHub Actions AAB Build Failure Fix)
+- 🐛 **User report**: `.github/workflows/build-android.yml` failed at `:wrapper` task with `Test of distribution url https://services.gradle.org/distributions/gradle-8.10.2-all.zip failed`. Blocking v1.3.0 AAB release.
+- 🔍 **RCA**: Two-part cause:
+  1. **`gradle-wrapper.jar` was NOT tracked in git** — `git ls-files` returned only `gradle-wrapper.properties`. The file existed locally (Aug 2024) but had never been `git add`ed, so every fresh CI checkout was missing it. The workflow's fallback block then ran `gradle wrapper --gradle-version 8.10.2 --distribution-type all` which internally does an HTTP HEAD validation of the distribution URL — that HEAD call is what failed intermittently on GitHub runners.
+  2. **`validateDistributionUrl=true`** in `gradle-wrapper.properties` was making the wrapper task defensively re-verify the URL, amplifying the failure surface.
+- 🛡️ **Fixes applied**:
+  1. `git add -f frontend/android/gradle/wrapper/gradle-wrapper.jar` — the 63 KB wrapper JAR (SHA-256 `a8451eed…46e4`, valid PK ZIP magic) is now staged for commit. Future CI clones will have it.
+  2. `gradle-wrapper.properties` — `distributionUrl` switched to `-bin.zip` (smaller, doesn't include Gradle docs/sources), `validateDistributionUrl=false`, `networkTimeout=60000` (was 10 s).
+  3. CI workflow hardened (`.github/workflows/build-android.yml:178-217`): the "just in case wrapper.jar is missing" fallback now (a) uses `curl --retry 3 --retry-delay 5 --max-time 300` with 3 outer retries for the bin.zip download, (b) copies the wrapper JAR **directly out of** the downloaded Gradle distribution (`lib/plugins/gradle-wrapper-main-*.jar` or `lib/gradle-wrapper-*.jar`) instead of running the flaky `wrapper` task, (c) only falls back to the `wrapper` task with `--no-configuration-cache` if neither JAR path matched.
+- **Effect**: Next GitHub Actions run for v1.3.0 will find the wrapper JAR in the checkout, skip the fallback entirely, and go straight to `./gradlew bundleRelease`. Even if a future checkout drops the JAR, the hardened bootstrap has 3 layers of resilience.
+- **No app code changes needed** — this is a CI-only fix. Android versionCode/versionName unchanged at 30 / 1.3.0.
+
+
 - 🎯 **User request**: "जिथे टेस्ट ad दिसतंय ते सर्व remove करून टाक. काहीच फायदा-उपयोग नाही. फक्त Collection वरचा rewarded ad ला हात नको. View Live Community Activity button वर पण rewarded ad show कर."
 - 🗑️ **Removed**: `<GlobalBannerAd />` mount + import from `/app/frontend/src/App.js`. This was the ONLY source of native Google AdMob banner impressions; Google's SDK was serving "TEST AD" placeholders on many production devices due to device-fingerprint auto-testing (documented in the prior fork's Feb 20 investigation — `RequestConfiguration.Builder().setTestDeviceIds(Collections.emptyList())` couldn't override Google's auto-test behaviour). Result: zero revenue AND poor UX. Now cleanly gone.
 - ✅ **Preserved (intentionally NOT touched)**:
