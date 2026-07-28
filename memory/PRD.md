@@ -3,7 +3,19 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
-## Implemented (Feb 22, 2026 — Login "Temporarily Busy" 503 UX Fix)
+## Implemented (Feb 22, 2026 — Ad UX Cleanup: Remove Native Banner)
+- 🎯 **User request**: "जिथे टेस्ट ad दिसतंय ते सर्व remove करून टाक. काहीच फायदा-उपयोग नाही. फक्त Collection वरचा rewarded ad ला हात नको. View Live Community Activity button वर पण rewarded ad show कर."
+- 🗑️ **Removed**: `<GlobalBannerAd />` mount + import from `/app/frontend/src/App.js`. This was the ONLY source of native Google AdMob banner impressions; Google's SDK was serving "TEST AD" placeholders on many production devices due to device-fingerprint auto-testing (documented in the prior fork's Feb 20 investigation — `RequestConfiguration.Builder().setTestDeviceIds(Collections.emptyList())` couldn't override Google's auto-test behaviour). Result: zero revenue AND poor UX. Now cleanly gone.
+- ✅ **Preserved (intentionally NOT touched)**:
+  - `ParasMall.js` rewarded interstitial (Collection screen) — `useRewardedInterstitial` hook, `rewardedAd.open({ bonusPrc: 10 })` on booking success.
+  - `BankRedeemPage.js` rewarded interstitial.
+  - `PayPartnerStore.js` rewarded interstitial.
+  - Admin-controlled per-page popup banner (`<AdMobBanner placement="…" />`) on Notifications / PayPartnerStore / CommunityFeed — these render admin-configured `popup_messages`, NOT native AdMob, so no test-ad risk.
+- ✅ **Verified**: "View Live Community Activity" button rewarded interstitial ALREADY WORKS via the Feb 20 sessionStorage → `DownlineLiveFeed` mount-time flow. `ReferralsEnhanced.openLiveFeed()` sets `pending_rewarded_ad = { placement: 'live_feed', bonusPrc: 5 }` in sessionStorage, then navigates. `DownlineLiveFeed` reads + clears the flag on mount and calls `rewardedAd.open()`. StrictMode-safe via `useRef` guard, 60s freshness window. No new code needed there.
+- 🧪 **Regression check**: Home page loads clean (screenshot confirmed no banner selectors present, no "test ad" text on DOM). Preview login unaffected.
+- **Android bump**: v1.2.9 → **v1.3.0** (versionCode 29 → 30).
+
+
 - 🐛 **User report** (with production screenshot): red banner "Login service temporarily busy. Please try again in a few seconds." shown to real users on v1.2.8 Android app on production.
 - 🔍 **RCA**: This exact error string was hardcoded in the Feb 21 5s `asyncio.wait_for(_find_user_chain(), timeout=5.0)` wrapper on `/api/auth/login`. Production Mongo round-trips were spiking to 5-8s (measured 8s on wrong-PIN path, 12s on 503 path) because the Feb 21 **cache L1-first + fire-and-forget** fix was in preview but NOT yet deployed — Upstash HTTP round-trips were still adding 217ms per cache op, exhausting the 5s user-lookup budget under load.
 - 🛡️ **Fix in `/app/backend/routes/auth.py`**:

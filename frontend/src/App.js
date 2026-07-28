@@ -5,7 +5,7 @@ import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
 import PopupMessage from "@/components/PopupMessage";
 import RouteErrorBoundary from "@/components/RouteErrorBoundary";
-import GlobalBannerAd from "@/components/GlobalBannerAd";
+// GlobalBannerAd import removed Feb 22 2026 — mount site removed below.
 import { toast } from "sonner";
 import { NotificationProvider, useNotification } from "@/context/NotificationContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -711,7 +711,12 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
       <BrowserRouter>
         <PageTitleUpdater />
         <WebVitalsReporter user={user} />
-        {user && <GlobalBannerAd />}
+        {/* Feb 22 2026 — GlobalBannerAd (native AdMob banner) removed.
+            User confirmed the banner had no measurable revenue benefit
+            and Google was serving "TEST AD" placeholders on many
+            production devices due to device-fingerprint auto-testing
+            (see prior fork's investigation). Only rewarded interstitials
+            remain, which the user explicitly asked to keep. */}
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
             <Route path="/" element={

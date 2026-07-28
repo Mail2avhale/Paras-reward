@@ -220,26 +220,19 @@ android {
         //     • /api/app/version-info: 60s in-process cache + 1.5s
         //       bounded Mongo lookup timeout. Login flow can no
         //       longer stall on Upstash or Mongo pressure.
-        // versionCode 28 → 29 — Feb 22, 2026 (v1.2.9) — Login Timeout UX Fix:
-        // 47. User reported the red "Login service temporarily busy" banner
-        //     on production after v1.2.8 deploy. Root cause: the Feb 21
-        //     bounded-user-lookup wrapper was set to 5s, but production DB
-        //     round-trips can spike to 5-8s under Upstash cache pressure
-        //     (the Feb 21 L1-first cache fix eliminates this but was NOT
-        //     yet deployed when the report came in). Fix:
-        //       • Bump user-lookup wait_for 5s → 10s
-        //       • Add ONE retry-on-timeout with fresh Mongo connection
-        //         before returning 503 (up to 20s effective grace window)
-        //       • Log which specific query path resolved the user
-        //         (email_exact / email_regex / mobile / phone / uid) +
-        //         elapsed time so future >2s spikes are visible in logs
-        //       • Retry-friendly error message "Login is slow right now.
-        //         Please try again in a moment." instead of "temporarily
-        //         busy"
-        //     Cache L1-first + fire-and-forget writes (from Feb 21) still
-        //     need to land on production to fully fix root cause.
-        versionCode 29
-        versionName "1.2.9"
+        // versionCode 29 → 30 — Feb 22, 2026 (v1.3.0) — Ad UX Cleanup:
+        // 48. Removed the global native AdMob banner (`<GlobalBannerAd />`)
+        //     from App.js. User confirmed banner had zero measurable revenue
+        //     and Google was serving "TEST AD" placeholders on many
+        //     production devices due to device-fingerprint auto-testing.
+        //     Only rewarded interstitials remain (Collection, BankRedeem,
+        //     PayPartnerStore, LiveCommunityActivity) — those are opt-in,
+        //     the user explicitly asked to keep them.
+        // 49. Verified: "View Live Community Activity" button already fires
+        //     a rewarded interstitial via the sessionStorage → DownlineLive
+        //     Feed pattern (Feb 20 fix). No new code needed there.
+        versionCode 30
+        versionName "1.3.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
