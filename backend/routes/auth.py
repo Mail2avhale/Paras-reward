@@ -814,24 +814,44 @@ async def login(request: Request):
     
     normalized_identifier = identifier.lower().strip() if '@' in identifier else identifier.strip()
 
-    # Feb 21 2026 — Bounded user lookup. Wrap the fallback chain in a single
-    # wait_for so a hung Mongo query can NEVER stall the login endpoint past
-    # 10 seconds. On timeout we log the specific identifier + which query
-    # was reached, then ONE retry with a fresh connection before giving up.
-    # Feb 22 2026 — bumped 5s → 10s + retry-once after users reported 503
-    # "Login service temporarily busy" on production. Root cause was
-    # Upstash Redis HTTP round-trips (217ms × N) exhausting the 5s budget
-    # in adjacent middleware paths, not the user lookup itself.
+    # Feb 22 2026 — Production MongoDB was clocking ~9 seconds per uncached
+    # find_one (confirmed via direct measurement: /api/admin/popup/active
+    # took 9.4s — a single find_one hit). At that latency our 4-query
+    # sequential fallback chain (email → mobile → phone → uid) became
+    # 36s+ per login. Union-into-one $or query so we pay one round-trip
+    # regardless of which field carries the identifier. MongoDB's query
+    # planner does an index-union across email_1 / mobile_1 / phone_1 /
+    # uid_1 — each branch stays IXSCAN, and the union completes in the
+    # slowest-single-branch time instead of the sum.
     async def _find_user_chain():
         lookup_start = _time_perf()
-        # 1. Exact-match email (uses email_1 index)
+        # For emails we normalise to lowercase (registration always stores
+        # lowercase); for phone-style identifiers we use the raw string.
+        or_clauses = [
+            {"mobile": identifier},
+            {"phone": identifier},
+            {"uid": identifier},
+        ]
+        if '@' in identifier:
+            or_clauses.insert(0, {"email": normalized_identifier})
         u = await db.users.find_one(
-            {"email": normalized_identifier},
-            {"_id": 0, "profile_picture": 0}
+            {"$or": or_clauses},
+            {"_id": 0, "profile_picture": 0},
         )
         if u:
-            return u, "email_exact"
-        # 2. Case-insensitive email (rarely needed, COLLSCAN)
+            elapsed_ms = (_time_perf() - lookup_start) * 1000
+            # Report which field matched so slow-path logs stay useful.
+            matched = "unknown"
+            if u.get("email", "").lower() == normalized_identifier:
+                matched = "email"
+            elif u.get("mobile") == identifier:
+                matched = "mobile"
+            elif u.get("phone") == identifier:
+                matched = "phone"
+            elif u.get("uid") == identifier:
+                matched = "uid"
+            return u, f"{matched}_{elapsed_ms:.0f}ms"
+        # Case-insensitive email fallback (rarely needed, COLLSCAN).
         if '@' in identifier:
             u = await db.users.find_one(
                 {"email": {"$regex": f"^{re.escape(normalized_identifier)}$", "$options": "i"}},
@@ -839,27 +859,8 @@ async def login(request: Request):
             )
             if u:
                 return u, "email_regex"
-        # 3. Mobile (uses mobile_1 index)
-        u = await db.users.find_one(
-            {"mobile": identifier},
-            {"_id": 0, "profile_picture": 0}
-        )
-        if u:
-            return u, "mobile"
-        # 4. Legacy phone (uses sparse phone_1 index — Feb 21 2026 fix)
-        u = await db.users.find_one(
-            {"phone": identifier},
-            {"_id": 0, "profile_picture": 0}
-        )
-        if u:
-            return u, "phone"
-        # 5. UID (uses uid_1 index)
-        u = await db.users.find_one(
-            {"uid": identifier},
-            {"_id": 0, "profile_picture": 0}
-        )
         elapsed_ms = (_time_perf() - lookup_start) * 1000
-        return u, f"uid_or_notfound_{elapsed_ms:.0f}ms"
+        return None, f"not_found_{elapsed_ms:.0f}ms"
 
     _lookup_attempts = 0
     _lookup_last_error = None

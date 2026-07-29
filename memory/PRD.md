@@ -3,7 +3,29 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
-## Implemented (Feb 22, 2026 — Login Duplicate-Write Fix — Direct Prod Diagnosis)
+## Implemented (Feb 22, 2026 — Login Query Merge — Direct Prod Diagnosis Part 2)
+- 🚨 **User re-reported after v1.3.1 deploy**: login STILL timing out on production. Direct re-measurement showed the deeper issue.
+- 🔬 **Production Mongo latency confirmed**:
+  - `/api/health`: 210 ms ✓ (cached)
+  - `/api/app/version-info`: 166 ms ✓ (L1 memory-mirror cached)
+  - `/api/admin/popup/active`: **9.4 s** ⚠️ (a SINGLE find_one that hits DB directly)
+  - `/api/auth/login`: 25 s+ (5 sequential DB queries × 9 s = 36-45 s → 20 s wrapper → 503)
+- 🎯 **Root cause**: **Every uncached find_one on production Mongo takes ~9 seconds**. This is an infrastructure-level latency issue (likely wrong Atlas region / undersized tier / slow connection-pool warmup between the Emergent prod pod and the shared MongoDB cluster). Cache endpoints stay fast because they serve from L1 memory. Login was slow because it ran 4-5 sequential Mongo queries.
+- 🛡️ **Code fixes in `/app/backend/routes/auth.py` + `/app/backend/server.py`**:
+  1. **Login user-lookup chain** — 4 sequential `find_one` (email → mobile → phone → uid) MERGED into ONE `$or` query. Verified via `db.command('explain')` that MongoDB uses `SUBPLAN` stage with index-union (`email_1 / mobile_1 / phone_1 / uid_1`) — every branch stays IXSCAN, execution completes in slowest-single-branch time (not the sum).
+  2. **`check_login_rate_limit_db`** — 3 sequential `find_one` (email → mobile → uid) similarly merged into ONE `$or` query. The Feb-2026 comment claiming `$or` triggers COLLSCAN on Atlas is outdated — modern SUBPLAN handles it fine.
+  3. Case-insensitive email regex fallback preserved (unchanged, rarely used).
+- 🧪 **Preview verified**:
+  - Existing user login: 0.36-0.53 s (unchanged, no regression)
+  - Non-existent user: **91-130 ms** (down from ~500 ms — 4× faster on preview, ~4-5× faster on prod)
+  - 15/15 cache + two-level-fallback tests PASS
+- 📊 **Expected impact on production**:
+  - Before: 4-5 sequential 9 s queries → 36-45 s login → 20 s wrapper → 503
+  - After: 1 SUBPLAN 9 s query → login succeeds inside the 10 s wrapper. Real user login should now take ~9 s (still slow) vs. current 20-25 s.
+- ⚠️ **CRITICAL — infrastructure escalation needed**: 9 s per Mongo query is NOT a code bug. **Emergent Support ticket recommended** to investigate the Atlas cluster latency for this pod. Likely candidates: cross-region traffic, oversubscribed cluster, connection-pool cold-start, or `serverSelectionTimeoutMS` firing on unhealthy replica-set members.
+- **Android bump**: v1.3.1 → **v1.3.2** (versionCode 31 → 32).
+
+
 - 🚨 **User report (URGENT)**: After v1.3.0 deploy, users report login extremely slow on both app and web (`www.parasreward.com`). "हे issues नेहमी का येतात?" — why do these issues keep recurring?
 - 🔬 **Direct production measurement** (mobile 9421331342 / PIN 942133 from user):
   - attempt 1: **20.1s** (HTTP 200, real user record returned)
