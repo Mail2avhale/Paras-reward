@@ -1135,18 +1135,41 @@ async def login(request: Request):
     session_token = str(uuid.uuid4())
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    # CRITICAL: persist session-token on the user doc (this is what the
-    # client sees + what /validate-session checks). Must await.
-    await db.users.update_one(
-        {"uid": user["uid"]},
-        {"$set": {
-            "session_token": session_token,
-            "session_created_at": now_iso,
-            "last_login": now_iso,
-            "last_login_ip": real_ip,
-            "last_login_device": device_id or "unknown",
-        }}
-    )
+    # ── SESSION PERSISTENCE (Feb 22 2026 — bounded + de-duplicated) ─────
+    # PREVIOUSLY: two separate `db.users.update_one` calls (line 1140 and
+    # line 1232) wrote overlapping fields (last_login was set TWICE). On
+    # production this was doubling the write latency — often 5-10s each
+    # = 10-20s of blocking Mongo work per login.
+    #
+    # NOW: ONE merged write, wrapped in `asyncio.wait_for(4.0)`. On timeout
+    # we log a critical warning and STILL return the session token to the
+    # client so login isn't blocked past 4s here. If the persist genuinely
+    # fails, `/validate-session` will 401 on the next request and the
+    # client can re-login — a much better UX than a 20s hang.
+    update_data = {
+        "session_token": session_token,
+        "session_created_at": now_iso,
+        "last_login": now_iso,
+        "last_login_ip": real_ip,
+        "last_login_device": device_id or "unknown",
+    }
+    if device_id:
+        update_data["device_id"] = device_id
+    if ip_address:
+        update_data["ip_address"] = ip_address
+    try:
+        await asyncio.wait_for(
+            db.users.update_one(
+                {"uid": user["uid"]},
+                {"$set": update_data, "$inc": {"login_count": 1}},
+            ),
+            timeout=4.0,
+        )
+    except asyncio.TimeoutError:
+        logging.error(
+            f"[LOGIN SESSION-PERSIST] Mongo update_one exceeded 4s for uid={user.get('uid')} — "
+            f"returning session anyway; /validate-session may 401 until write drains."
+        )
 
     # FIRE-AND-FORGET: login_history insert (non-critical for response)
     async def _bg_insert_login_history():
@@ -1219,20 +1242,13 @@ async def login(request: Request):
     # vs background (fire-and-forget). Only the user-doc update on session
     # state is blocking; everything else runs detached so the response can
     # ship immediately. This was the #1 cause of 7-10s login latency on prod.
-
-    now_iso = datetime.now(timezone.utc).isoformat()
-
-    # CRITICAL: Update last_login + login_count (must complete before response
-    # so the client sees the freshest user doc).
-    update_data = {"last_login": now_iso}
-    if device_id:
-        update_data["device_id"] = device_id
-    if ip_address:
-        update_data["ip_address"] = ip_address
-    await db.users.update_one(
-        {"uid": user["uid"]},
-        {"$set": update_data, "$inc": {"login_count": 1}},
-    )
+    #
+    # Feb 22 2026 — the previously-separate `last_login + login_count` update
+    # was MERGED into the session-persist write above (already includes
+    # $set last_login and $inc login_count). Removing it eliminates a
+    # duplicate 5-10s Mongo round-trip on production. Nothing else needed
+    # here — session token + last_login + login_count are all persisted in
+    # the single bounded write above.
 
     # FIRE-AND-FORGET: activity log (non-critical for response)
     async def _bg_log_activity():

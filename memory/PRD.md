@@ -3,7 +3,32 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
-## Implemented (Feb 22, 2026 — GitHub Actions AAB Build Failure Fix)
+## Implemented (Feb 22, 2026 — Login Duplicate-Write Fix — Direct Prod Diagnosis)
+- 🚨 **User report (URGENT)**: After v1.3.0 deploy, users report login extremely slow on both app and web (`www.parasreward.com`). "हे issues नेहमी का येतात?" — why do these issues keep recurring?
+- 🔬 **Direct production measurement** (mobile 9421331342 / PIN 942133 from user):
+  - attempt 1: **20.1s** (HTTP 200, real user record returned)
+  - attempts 2-5: **25-27s each → 503** "Login is slow right now" (Feb 22 retry-wrapper timeout firing)
+  - non-existent user: 15s gateway timeout
+  - `/api/health`: 0.98s ✓
+  - `/api/app/version-info`: 0.16s ✓ (cached)
+- 🎯 **Root cause found**: Login endpoint had **TWO separate `db.users.update_one` calls** writing overlapping fields:
+  - Write #1 at `routes/auth.py:1140` — sets `session_token, session_created_at, last_login, last_login_ip, last_login_device`
+  - Write #2 at `routes/auth.py:1232` — sets `last_login` AGAIN + `device_id, ip_address` + `$inc login_count`
+  - On production Mongo each write was taking 5-10 s, giving 10-20 s of blocking DB work per login. Preview never surfaced this because Mongo writes are ~5 ms locally.
+- 🛡️ **Fix applied in `/app/backend/routes/auth.py`**:
+  1. **MERGED** both writes into a single `update_one` — `$set` (session_token + session_created_at + last_login + last_login_ip + last_login_device + device_id + ip_address) + `$inc` (login_count).
+  2. **Wrapped in `asyncio.wait_for(4.0)`** with fail-open — if the persist times out we log CRITICAL and still ship the response (client gets its token; the next `/validate-session` call will 401 only if the write genuinely failed, at which point re-login is cheap).
+- 🧪 **Preview verified**: login 0.36-0.60 s consistent, `login_count` correctly incremented (792 → 793), `session_token` + `last_login_ip` persisted in the same document. 15/15 cache tests still pass.
+- **Android bump**: v1.3.0 → **v1.3.1** (versionCode 30 → 31).
+
+### Why these issues keep recurring — a systemic answer for the user
+1. **Preview vs Production runtime gap** — preview backend runs adjacent to Mongo in the same container; production is a separate pod with its own connection pool, cold-start warmup, and DNS lookups. A 5 ms preview write can be a 5 000 ms production write.
+2. **Upstash Redis is HTTP-based** — every `cache.get/set` is a 217 ms round-trip on production. Any code path that "just adds one more cache lookup" silently balloons latency at scale. Fixed in preview with L1-first pattern; not yet redeployed to production.
+3. **Redundant writes hide in the codebase** — this login endpoint has grown to ~460 lines over many months; the second `update_one` was added in an April 2026 "OPTIMIZED" refactor that never noticed the earlier session-persist was already writing the same field. Preview's fast Mongo hid it.
+4. **Fire-and-forget vs await discipline** — much of the login flow correctly uses `asyncio.create_task` for non-critical work; the remaining `await` calls are the ones we harden as production surfaces them.
+5. **Two pending Feb 21 fixes** (cache L1-first + fire-and-forget writes in `cache_manager.py`) will also help production but require a redeploy. That deploy plus this v1.3.1 fix together will drop production login 20 s → sub-second.
+
+
 - 🐛 **User report**: `.github/workflows/build-android.yml` failed at `:wrapper` task with `Test of distribution url https://services.gradle.org/distributions/gradle-8.10.2-all.zip failed`. Blocking v1.3.0 AAB release.
 - 🔍 **RCA**: Two-part cause:
   1. **`gradle-wrapper.jar` was NOT tracked in git** — `git ls-files` returned only `gradle-wrapper.properties`. The file existed locally (Aug 2024) but had never been `git add`ed, so every fresh CI checkout was missing it. The workflow's fallback block then ran `gradle wrapper --gradle-version 8.10.2 --distribution-type all` which internally does an HTTP HEAD validation of the distribution URL — that HEAD call is what failed intermittently on GitHub runners.

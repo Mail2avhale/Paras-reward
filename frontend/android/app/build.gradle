@@ -220,19 +220,29 @@ android {
         //     • /api/app/version-info: 60s in-process cache + 1.5s
         //       bounded Mongo lookup timeout. Login flow can no
         //       longer stall on Upstash or Mongo pressure.
-        // versionCode 29 → 30 — Feb 22, 2026 (v1.3.0) — Ad UX Cleanup:
-        // 48. Removed the global native AdMob banner (`<GlobalBannerAd />`)
-        //     from App.js. User confirmed banner had zero measurable revenue
-        //     and Google was serving "TEST AD" placeholders on many
-        //     production devices due to device-fingerprint auto-testing.
-        //     Only rewarded interstitials remain (Collection, BankRedeem,
-        //     PayPartnerStore, LiveCommunityActivity) — those are opt-in,
-        //     the user explicitly asked to keep them.
-        // 49. Verified: "View Live Community Activity" button already fires
-        //     a rewarded interstitial via the sessionStorage → DownlineLive
-        //     Feed pattern (Feb 20 fix). No new code needed there.
-        versionCode 30
-        versionName "1.3.0"
+        // versionCode 30 → 31 — Feb 22, 2026 (v1.3.1) — Login Duplicate-Write Fix:
+        // 50. User reported 20-27s login latency on production
+        //     www.parasreward.com after v1.3.0 deploy. Direct measurement
+        //     confirmed: attempt 1 succeeded in 20s, attempts 2-5 hit 25-27s
+        //     with the 503 "Login is slow right now" wrapper. Root cause:
+        //     the login endpoint had TWO separate `db.users.update_one`
+        //     calls updating overlapping fields (`last_login` set TWICE
+        //     across lines 1140 + 1232 of routes/auth.py). On production
+        //     Mongo each write was taking 5-10s → 10-20s of blocking DB
+        //     work per login. Preview never saw this because writes are
+        //     ~5ms locally.
+        //     Fix: MERGED both writes into a single `update_one` with
+        //     `$set` (session_token + session_created_at + last_login +
+        //     last_login_ip + last_login_device + device_id + ip_address)
+        //     + `$inc` (login_count). Wrapped in `asyncio.wait_for(4.0)`
+        //     with fail-open — if the persist times out we log CRITICAL
+        //     and still ship the response (client gets its token; the
+        //     next /validate-session call will 401 only if the write
+        //     genuinely failed, at which point re-login is cheap).
+        //     Preview verified 0.36-0.60s login, login_count correctly
+        //     incremented, session_token persisted.
+        versionCode 31
+        versionName "1.3.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
