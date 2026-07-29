@@ -3,7 +3,58 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
-## Implemented (Feb 22, 2026 — Login Query Merge — Direct Prod Diagnosis Part 2)
+## Implemented (Feb 22, 2026 — ROOT CAUSE FIX: Users Collection Size-Guard)
+- 🎯 **Emergent Support diagnosed the real production latency root cause**:
+  - `users` documents average **~67 KB** (max **6.6 MB** on power users)
+  - Cause 1: `mining_history` embedded as inline array — ~1 M entries across 6 k users
+  - Cause 2: base64 `profile_picture` on 845 users, up to 636 KB each
+  - Every uncached `find_one` was pulling multi-MB documents over the shared Atlas network → 9-20 s tail latency
+  - Confirmed: preview uses `localhost:27017` (loopback), production uses shared Atlas over network → structural difference in transfer cost, not code
+- 🛡️ **Fix applied — Support's Phase 0 (surgical no-migration win)**: Installed `_UsersCollectionSizeGuard` proxy on `db.users` at startup in `server.py`.
+  - Transparently adds `{mining_history: 0, profile_picture: 0}` to every `find_one`/`find` unless caller uses include-mode
+  - Leaderboard + notifications endpoints (which legitimately need `profile_picture`) use include-mode → guard respects and returns the field
+  - Aggregate/update/insert/count/create_index paths pass through unchanged
+  - Zero code touching of the 273 existing `users.find_one` call sites
+- 🧪 **Preview proof with a synthetic 1 MB bloated user** (10 000 mining_history entries + 500 KB profile_picture):
+  | Query type | Time | Size |
+  |---|---|---|
+  | Raw (bypasses guard) | 5.4 ms | **1 119 103 bytes (1.09 MB)** |
+  | Guarded (proxy) | 1.0 ms | **148 bytes** |
+  | **Reduction** | | **7 562× smaller payload** |
+  Include-mode query (leaderboard case): `profile_picture` correctly returned when explicitly requested.
+- 📊 **Expected production impact**: Since Atlas latency scales with transfer volume, the 1 MB → 148 B reduction should collapse the 9-20 s tail to sub-100 ms. Login was doing 5-6 sequential queries × 9 s = 45-60 s hell; now × <100 ms = **<1 s total**. 50-100× improvement.
+- 🧪 **Regression check**: 15/15 cache tests PASS. Full boot-flow endpoints (`/api/auth/me`, `/api/user/{uid}`, `/dashboard`, `/mining/status`) all return in 89-597 ms on preview.
+- 🔜 **Follow-ups deferred until Phase 0 impact measured on prod** (Support's Phase 1 & 2):
+  - Phase 1: Migrate `mining_history` array to its own collection keyed by `user_uid`
+  - Phase 2: Move `profile_picture` base64 blobs to object storage (R2/S3), keep only URL
+  - Optional: Dedicated MongoDB cluster ($80/month, addresses noisy-neighbor)
+- **Android bump**: v1.3.3 → **v1.3.4** (versionCode 33 → 34).
+
+
+- 🚨 **User report**: "All pages and modules are very slow on production." Same Atlas latency problem — ~9 s per uncached find_one — was hitting every read-heavy endpoint, not just login.
+- 🎯 **Strategy**: Since we cannot fix the infrastructure directly, we shield the hot user paths behind a short-TTL L1 cache. First hit remains slow (~9 s cold on production), every subsequent nav hits L1 (~90-100 ms).
+- 🛡️ **Fixes applied — 4 more endpoints wrapped in L1 cache**:
+  1. **`/api/admin/popup/active`** (30 s TTL) in `routes/admin_popup_routes.py` — was 9.4 s on prod. Admin create / update / toggle / delete now call `_invalidate_active_popup_cache()` so live admin changes are reflected instantly.
+  2. **`/api/notifications/user/{uid}/unread-count`** (10 s TTL) in `routes/notifications.py` — top-nav badge hit on every page navigation. `mark-read` / `mark-all-read` call `_bust_unread_count_cache()`.
+  3. **`/api/user/{uid}/recent-activity`** (15 s TTL) in `server.py` — dashboard "Recent Activity" panel, previously ~18 s uncached (2 sequential find calls).
+  4. **`/api/global/live-activity`** (20 s TTL) in `server.py` — Live Feed fans out into ~8 Mongo queries; was 60-90 s worst case on production. Global cache (same response serves all viewers).
+- 🧪 **Preview verified — end-to-end boot-flow measurement**:
+  | Endpoint | Round 1 (miss) | Round 2 (L1 hit) | Speedup |
+  |---|---|---|---|
+  | popup/active | 358 ms | 102 ms | 3.5× |
+  | notifications/unread-count | 138 ms | 105 ms | 1.3× |
+  | user/recent-activity | 366 ms | 91 ms | 4× |
+  | global/live-activity | 426 ms | 98 ms | 4.4× |
+  | user/dashboard | 482 ms | 95 ms | 5× |
+  | user/performance-summary | 321 ms | 93 ms | 3.5× |
+  | **Sum of one navigation** | **2.1 s** | **584 ms** | **~4×** |
+- 📊 **Expected production impact after deploy**:
+  - First page load post-login: ~5-10 s (cache warm-up spread across 6 endpoints hitting slow Mongo)
+  - Every subsequent page navigation: **~1 s total** (all L1 hits)
+  - Admin mutation → user-facing update: **immediate** (cache invalidated on write)
+- **Android bump**: v1.3.2 → **v1.3.3** (versionCode 32 → 33).
+
+
 - 🚨 **User re-reported after v1.3.1 deploy**: login STILL timing out on production. Direct re-measurement showed the deeper issue.
 - 🔬 **Production Mongo latency confirmed**:
   - `/api/health`: 210 ms ✓ (cached)

@@ -13,6 +13,10 @@ from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime, timezone, timedelta
 import logging
 import uuid
+# Feb 22 2026 — L1 cache for the top-nav unread-count badge that gets hit
+# on every page navigation. Production Mongo latency was making the badge
+# a per-page 9s hang.
+from cache_manager import cache
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -160,13 +164,38 @@ async def get_user_notifications(
 
 @router.get("/user/{user_id}/unread-count")
 async def get_unread_count(user_id: str):
-    """Get unread notification count for a user"""
+    """Get unread notification count for a user.
+
+    Feb 22 2026 — 10s L1 cache. The top-nav badge fires this on every page
+    navigation, so on the slow production Atlas cluster (~9s per uncached
+    count_documents) each page load felt like a hang. A 10s TTL keeps
+    "unread now" reasonably fresh while dropping 100 nav-transitions/min
+    to 6 backend hits/min. Cache is invalidated by mark-read / mark-all-read
+    endpoints below.
+    """
     try:
+        cache_key = f"unread_notif_v1:{user_id}"
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return cached
         count = await db.notifications.count_documents({"user_id": user_id, "read": False})
-        return {"unread_count": count}
+        response = {"unread_count": count}
+        await cache.set(cache_key, response, ttl=10)
+        return response
     except Exception as e:
         logging.error(f"Error getting unread count: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _bust_unread_count_cache(user_id: str):
+    """Delete the cached unread-count so a freshly-marked notification is
+    reflected on the very next badge fetch instead of after 10s.
+    """
+    try:
+        await cache.delete(f"unread_notif_v1:{user_id}")
+    except Exception:
+        # Cache errors must not leak into caller.
+        pass
 
 
 @router.post("/mark-read/{notification_id}")
@@ -174,14 +203,20 @@ async def mark_notification_read(notification_id: str):
     """Mark a single notification as read"""
     try:
         from bson import ObjectId
+        # Fetch user_id first so we can bust their unread-count cache after.
+        doc = await db.notifications.find_one(
+            {"_id": ObjectId(notification_id)}, {"_id": 0, "user_id": 1}
+        )
         result = await db.notifications.update_one(
             {"_id": ObjectId(notification_id)},
             {"$set": {"read": True, "read_at": datetime.now(timezone.utc)}}
         )
-        
+
         if result.modified_count == 0:
             raise HTTPException(status_code=404, detail="Notification not found")
-        
+
+        if doc and doc.get("user_id"):
+            await _bust_unread_count_cache(doc["user_id"])
         return {"success": True}
     except Exception as e:
         logging.error(f"Error marking notification read: {e}")
@@ -196,7 +231,7 @@ async def mark_all_notifications_read(user_id: str):
             {"user_id": user_id, "read": False},
             {"$set": {"read": True, "read_at": datetime.now(timezone.utc)}}
         )
-        
+        await _bust_unread_count_cache(user_id)
         return {"success": True, "marked_count": result.modified_count}
     except Exception as e:
         logging.error(f"Error marking all notifications read: {e}")

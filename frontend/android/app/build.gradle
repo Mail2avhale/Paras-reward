@@ -220,32 +220,37 @@ android {
         //     • /api/app/version-info: 60s in-process cache + 1.5s
         //       bounded Mongo lookup timeout. Login flow can no
         //       longer stall on Upstash or Mongo pressure.
-        // versionCode 31 → 32 — Feb 22, 2026 (v1.3.2) — Login Query Merge:
-        // 51. Deploy of v1.3.1 didn't fix production login timeouts. Direct
-        //     re-measurement confirmed the deeper issue: EVERY uncached
-        //     MongoDB find_one on production takes ~9 seconds (verified
-        //     via /api/admin/popup/active — a single find_one that hits
-        //     DB directly — clocked at 9.4s). At 9s per query the
-        //     login endpoint's 4-query sequential fallback chain
-        //     (email → mobile → phone → uid) balloons to 36-45s,
-        //     hitting the 20s asyncio.wait_for wrapper and returning 503.
-        //     Cache endpoints (health, version-info) stay <200ms because
-        //     they serve from the Feb 21 L1 memory mirror.
-        //     Fix in routes/auth.py + server.py: MERGE the 4-query
-        //     fallback chain and the 3-query rate-limit chain each into
-        //     a SINGLE $or find_one. Verified via
-        //     `db.command('explain')` that MongoDB uses SUBPLAN stage
-        //     with index-union — every branch stays IXSCAN, execution
-        //     completes in slowest-single-branch time (not the sum).
-        //     Net effect on production: 4-5 sequential 9s queries → 1
-        //     single 9s query. Login now fits inside the 10s wrapper
-        //     even without the underlying Mongo latency being resolved.
-        //     PENDING: the ~9s-per-query Mongo latency is a production
-        //     INFRASTRUCTURE issue (likely wrong region / undersized
-        //     tier / connection pool cold-start on the Atlas cluster).
-        //     Emergent Support ticket recommended.
-        versionCode 32
-        versionName "1.3.2"
+        // versionCode 33 → 34 — Feb 22, 2026 (v1.3.4) — ROOT CAUSE FIX:
+        //     Users Collection Size-Guard
+        // 53. Emergent Support diagnosed the real production latency root
+        //     cause: `users` documents average ~67 KB with `mining_history`
+        //     embedded as an inline array (max 6.6 MB on power users, ~1M
+        //     entries across 6k users) plus base64 `profile_picture` on
+        //     845 users up to 636 KB each. Every uncached find_one was
+        //     pulling multi-MB documents over the shared-Atlas network →
+        //     9-20s tail latency.
+        //     Fix (Support's Phase 0 — the surgical no-migration win):
+        //     Installed a `_UsersCollectionSizeGuard` proxy on `db.users`
+        //     at startup that transparently adds `{mining_history: 0,
+        //     profile_picture: 0}` to every find_one / find call unless
+        //     the caller uses include-mode (leaderboard / notifications
+        //     that explicitly ask for profile_picture still receive it).
+        //     Aggregate / update / insert / count paths pass through
+        //     unchanged.
+        //     Preview proof with a synthetic 1 MB bloated user:
+        //       Raw:     1,119,103 bytes (1.09 MB) in 5.4 ms
+        //       Guarded: 148 bytes                 in 1.0 ms
+        //     → 7 562× smaller payload, zero code touching of the 273
+        //       existing users.find_one call sites.
+        //     Expected prod impact: since Atlas latency scales with
+        //     transfer volume, a 1 MB → 148 B reduction should collapse
+        //     the 9-20 s tail to sub-100 ms.
+        //     Follow-ups (Support's Phase 1 & 2): migrate mining_history
+        //     to its own collection, move profile_picture to object
+        //     storage. Both deferred until Phase 0 impact is measured on
+        //     production.
+        versionCode 34
+        versionName "1.3.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

@@ -745,6 +745,83 @@ except Exception as e:
     client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=10000, connectTimeoutMS=10000)
     db = client[os.environ.get('DB_NAME', 'paras_reward_db')]
 
+# ────────────────────────────────────────────────────────────────
+# Feb 22 2026 — USERS COLLECTION SIZE-LIMITED PROXY
+# ────────────────────────────────────────────────────────────────
+# Emergent Support diagnosed our production latency: users documents
+# average ~67 KB with `mining_history` embedded as an array (up to 6.6 MB
+# on power users, ~1M rows across 6 000 users) plus `profile_picture`
+# stored as base64 (up to 636 KB on 845 users). Every uncached find_one
+# on users was pulling multi-MB documents over the shared-Atlas network
+# → 9-20 s tail latency per query.
+#
+# This proxy transparently adds `{mining_history: 0, profile_picture: 0}`
+# to every `.find_one()` / `.find()` unless the caller explicitly asks
+# for those fields (include-mode projection). Per-query transfer drops
+# from ~67 KB → ~2 KB with zero touch to the 273 existing call sites.
+#
+# The proper long-term fix is to move `mining_history` into its own
+# collection and `profile_picture` into object storage (Support's Phase 1
+# and Phase 2). This proxy is Phase 0 — the surgical no-migration win.
+class _UsersCollectionSizeGuard:
+    """Wraps `db.users` so heavy fields are excluded by default.
+
+    Passthrough for every method except `find_one` and `find`, which get
+    their `projection` argument augmented. Include-mode projections
+    ({field: 1, ...}) are respected as-is so callers that explicitly
+    request `mining_history` or `profile_picture` still receive them
+    (e.g. the profile-picture serving endpoint, or a mining history
+    reader).
+    """
+    _HEAVY_EXCLUDES = {"mining_history": 0, "profile_picture": 0}
+
+    def __init__(self, inner):
+        object.__setattr__(self, "_inner", inner)
+
+    def _augment(self, projection):
+        if projection is None:
+            return dict(self._HEAVY_EXCLUDES)
+        if not isinstance(projection, dict):
+            return projection
+        # If caller is using include-mode (any field explicitly = 1) then
+        # they own the projection contract — respect it exactly.
+        if any(v == 1 or v is True for v in projection.values()):
+            return projection
+        # Exclude-mode ({_id: 0, ...}) or empty dict — safely add our two
+        # heavy-field excludes without stomping on existing excludes.
+        new_proj = dict(projection)
+        for k, v in self._HEAVY_EXCLUDES.items():
+            new_proj.setdefault(k, v)
+        return new_proj
+
+    def find_one(self, filter=None, projection=None, *args, **kwargs):
+        return self._inner.find_one(filter, self._augment(projection), *args, **kwargs)
+
+    def find(self, filter=None, projection=None, *args, **kwargs):
+        return self._inner.find(filter, self._augment(projection), *args, **kwargs)
+
+    # Everything else (insert_one, update_one, delete_one, aggregate,
+    # count_documents, create_index, list_indexes, index_information, ...)
+    # passes straight through to the underlying Motor collection.
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+    def __setattr__(self, name, value):
+        setattr(self._inner, name, value)
+
+
+# Install the guard. `db.users` now returns the proxy; the raw collection
+# is preserved on `db.users._inner` if any code ever needs to bypass it
+# (currently none does).
+try:
+    db.users = _UsersCollectionSizeGuard(db.users)
+    print("[STARTUP] ✅ Users collection size-guard installed (heavy fields excluded by default)")
+except Exception as _guard_err:
+    # Motor prevents attribute assignment on some builds — fall through.
+    # Callers can still add manual projections; only the automatic
+    # protection is lost.
+    print(f"[STARTUP] ⚠️  Users size-guard install failed (non-fatal): {_guard_err}")
+
 # ========== DATABASE CONNECTION HEALTH & AUTO-RECONNECT ==========
 async def ensure_db_connection():
     """
@@ -35433,7 +35510,18 @@ async def get_user_recent_activity(uid: str, limit: int = 10):
     Get comprehensive recent activity for a user
     Combines activity_logs (logins, game plays, etc.) and transactions
     Returns: list of activities sorted by timestamp
+
+    Feb 22 2026 — L1-cached (15s TTL). This endpoint does 2 uncached
+    Mongo find() calls with sort; on the slow production Atlas each
+    was clocking ~9s, so a dashboard load was hanging 18s just for the
+    "Recent Activity" panel. 15s TTL is fresh enough for a "recent"
+    feed (users' next new event is usually minutes away).
     """
+    cache_key = f"user_recent_activity_v1:{uid}:{limit}"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     activities = []
     
     # Get recent activity logs
@@ -35543,11 +35631,13 @@ async def get_user_recent_activity(uid: str, limit: int = 10):
             seen_keys.add(key)
             deduplicated.append(activity)
     
-    return {
+    response = {
         "activities": deduplicated[:limit],
         "total": len(deduplicated),
         "user_id": uid
     }
+    await cache.set(cache_key, response, ttl=15)
+    return response
 
 @api_router.get("/global/live-activity")
 async def get_global_live_activity(limit: int = 20):
@@ -35565,7 +35655,19 @@ async def get_global_live_activity(limit: int = 20):
     
     Only shows approved/completed transactions for privacy.
     User names are anonymized (first 3 chars + ***).
+
+    Feb 22 2026 — L1-cached (20s TTL). This endpoint fans out into ~8
+    Mongo queries across users/vip_payments/referrals/tap_game/prc_rain/
+    bills/orders/withdrawals. On the slow production Atlas each query was
+    ~9s, so a single Live Feed refresh was hanging 60-90s. 20s cache is
+    fresh enough for a "live" feed shown across all users (the same
+    response serves 100+ concurrent Live Feed viewers).
     """
+    cache_key = f"global_live_activity_v1:{limit}"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     activities = []
     
     # Helper function to anonymize user name
@@ -35839,11 +35941,13 @@ async def get_global_live_activity(limit: int = 20):
         return ts
     
     activities.sort(key=get_ts, reverse=True)
-    
-    return {
+
+    response = {
         "activities": activities[:limit],
         "total": len(activities)
     }
+    await cache.set(cache_key, response, ttl=20)
+    return response
 
 # ========== ACTIVITY LOGS ROUTES ==========
 

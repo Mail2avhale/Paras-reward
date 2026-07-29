@@ -22,6 +22,10 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+# Feb 22 2026 — L1-first cache to keep the "9.4s find_one on production
+# Atlas" from hanging every app-boot popup fetch. See get_active_popup().
+from cache_manager import cache
+
 router = APIRouter(prefix="/admin/popup", tags=["Admin - Popup Messages"])
 
 # Public router — served under /api (no /admin prefix) so browser <img>
@@ -192,9 +196,22 @@ async def get_active_popup(placement: Optional[str] = None):
     """Return the currently enabled popup for the given placement.
     Backwards-compatible: if no placement param → returns 'app_startup' popup
     (the original single-active-popup behaviour).
+
+    Feb 22 2026 — L1-cached (30s TTL). Direct production measurement showed
+    the raw find_one taking ~9.4s on the Atlas cluster, which turned every
+    app-boot / page navigation into a >9s hang. Popups change at admin
+    speed (minutes), so a 30s cache is fine and yields ~0ms on hot path.
+    Cache is invalidated by admin create/update/delete/toggle endpoints
+    below via `_invalidate_active_popup_cache()`.
     """
     try:
         scope = (placement or "app_startup").strip()
+        cache_key = f"popup_active_v1:{scope}"
+        # L1-first fast path
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         query = {"enabled": True}
         if scope == "app_startup":
             # Backwards-compat: match popups with placement='app_startup' OR
@@ -204,11 +221,28 @@ async def get_active_popup(placement: Optional[str] = None):
             query["placement"] = scope
         popup = await db.popup_messages.find_one(query, {"_id": 0})
         if not popup:
-            return {"success": True, "data": None, "has_popup": False}
-        return {"success": True, "has_popup": True, "data": _shape_popup(popup)}
+            response = {"success": True, "data": None, "has_popup": False}
+        else:
+            response = {"success": True, "has_popup": True, "data": _shape_popup(popup)}
+        # Fire-and-forget SET (populates L1 + writes L2 in background)
+        await cache.set(cache_key, response, ttl=30)
+        return response
     except Exception as e:
         logging.error(f"[POPUP] Get active error: {e}")
         return {"success": False, "message": str(e)}
+
+
+async def _invalidate_active_popup_cache(placements: Optional[list] = None):
+    """Bust the L1/L2 cache for one or more placements. Called by admin
+    mutating endpoints so freshly-toggled popups appear immediately.
+    """
+    scopes = placements or ["app_startup"]
+    for s in scopes:
+        try:
+            await cache.delete(f"popup_active_v1:{s}")
+        except Exception:
+            # Cache errors must never fail admin mutations.
+            pass
 
 
 # ================== ADMIN APIs ==================
@@ -273,6 +307,8 @@ async def create_popup(req: PopupMessageCreate, request: Request):
             await db.popup_messages.update_many(scope_query, {"$set": {"enabled": False}})
         await db.popup_messages.insert_one(popup_data)
         popup_data.pop("_id", None)
+        # Bust the active-popup cache so admins see their change instantly.
+        await _invalidate_active_popup_cache([popup_data.get("placement", "app_startup")])
         return {"success": True, "message": "Popup created", "data": _shape_popup(popup_data)}
     except Exception as e:
         logging.error(f"[POPUP] Create error: {e}")
@@ -336,6 +372,17 @@ async def update_popup(popup_id: str, req: PopupMessageUpdate):
         result = await db.popup_messages.update_one({"popup_id": popup_id}, {"$set": upd})
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Popup not found")
+        # Invalidate both the previous and the new placement (they may differ
+        # if this update changed the `placement` field).
+        placements_to_bust = set()
+        if req.placement is not None:
+            placements_to_bust.add(req.placement.strip() or "app_startup")
+        # Also invalidate the doc's current placement (looked up cheaply above).
+        existing_for_bust = await db.popup_messages.find_one(
+            {"popup_id": popup_id}, {"_id": 0, "placement": 1}
+        )
+        placements_to_bust.add((existing_for_bust or {}).get("placement") or "app_startup")
+        await _invalidate_active_popup_cache(list(placements_to_bust))
         return {"success": True, "message": "Popup updated"}
     except HTTPException:
         raise
@@ -365,6 +412,7 @@ async def toggle_popup(popup_id: str):
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }},
         )
+        await _invalidate_active_popup_cache([popup.get("placement", "app_startup")])
         return {"success": True, "message": f"Popup {'enabled' if new_status else 'disabled'}", "enabled": new_status}
     except HTTPException:
         raise
@@ -377,9 +425,14 @@ async def toggle_popup(popup_id: str):
 async def delete_popup(popup_id: str):
     """Permanently remove the popup document."""
     try:
+        # Look up placement first so we can invalidate the right scope after.
+        doc = await db.popup_messages.find_one(
+            {"popup_id": popup_id}, {"_id": 0, "placement": 1}
+        )
         result = await db.popup_messages.delete_one({"popup_id": popup_id})
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Popup not found")
+        await _invalidate_active_popup_cache([(doc or {}).get("placement", "app_startup")])
         return {"success": True, "message": "Popup deleted"}
     except HTTPException:
         raise
