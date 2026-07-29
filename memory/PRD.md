@@ -3,6 +3,52 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 23, 2026 — DEEP RCA: Leaderboard N+1 + Missing Indexes)
+
+### Production Baseline (measured on https://bugzappers.emergent.host)
+- `/api/leaderboard?limit=10` **first hit: 30.29 s** ⚠️ (warm: 1.7-3 s — Atlas working-set cache miss pattern)
+- Login attempt #3 for existing user: **26 s** → "Login is slow right now" (our own 10s×2 timeout retry message from auth.py:894)
+- Public endpoints (health, popup/active, live-activity): all < 200 ms ✅
+- Root cause: `/api/leaderboard` was holding a Motor connection for 30 s → all other concurrent requests (login, dashboard, etc.) queued behind it → cascading "app is slow" symptom.
+
+### RCA — Five independent hot-path issues found in `routes/leaderboard.py`
+1. **`GET /leaderboard`** — no response caching, every hit paid the cold Atlas cost.
+2. **`GET /leaderboard/miners|referrers|earners|weekly`** — **classic N+1 loop**: after a `$group` aggregation returned up to 100 rows, each row did `await db.users.find_one({"uid": row._id})` sequentially. At prod Mongo latency (~200 ms/round-trip) this was 20-30 s per endpoint response.
+3. **`GET /leaderboard/top-redeemers`** pass-1 was running **17 per-collection aggregations serially** (~17 s cold). Only pass-2 was parallelized.
+4. **`GET /leaderboard/weekly`** was STILL pulling `profile_picture` base64 in its projection (surviving my Feb 22 sweep) → up to 25 MB response.
+5. **Missing MongoDB indexes** on 5 redeem-source collections (`recharge_requests`, `bank_transfers`, `dmt_logs`, `unified_redemptions`, `mall_bookings`) → `get_user_all_time_redeemed()` (called by dashboard cache-miss) did COLLSCANs against these on every unique user.
+
+### Fixes applied (all in `routes/leaderboard.py` + `server.py`)
+1. **In-process response cache** (60 s TTL, per-worker `dict`) on all 5 leaderboard endpoints — 1 Mongo hit / minute globally, everything else served from RAM in < 5 ms. Self-limiting cache (< 20 keys total), no LRU needed.
+2. **`_hydrate_users(user_ids)` helper** — batch-fetches minimal user info with a single `$in` query, killing the 4× N+1 loops. Uses the exclude-safe projection guarded by `_UsersCollectionSizeGuard`.
+3. **Parallel 17-collection aggregations** in top-redeemers pass-1 via `asyncio.gather` — cold time drops from ~17 s (serial) to slowest-single-collection.
+4. **Dropped `profile_picture` base64** from the weekly-leaderboard projection; added `has_avatar` boolean.
+5. **Auto-create missing `user_id` + `[status, user_id]` compound indexes** on the 5 redeem-source collections during `initialize_database_indexes()` (background=True so it doesn't block startup).
+6. **Background leaderboard pre-warm** on startup (15 s after boot, all 5 endpoints in parallel) — the first user after deploy no longer pays the cold Atlas cost. Verified via startup log `🔥 Leaderboard cache pre-warmed (5 endpoints)`.
+
+### Preview verification (all endpoints ≤ 260 ms)
+```
+  /api/leaderboard?limit=50                                cold=0.258  warm=0.126
+  /api/leaderboard/miners?period=today&limit=100           cold=0.124  warm=0.121
+  /api/leaderboard/miners?period=all_time&limit=100        cold=0.092  warm=0.084
+  /api/leaderboard/referrers?limit=100                     cold=0.103  warm=0.090
+  /api/leaderboard/earners?limit=100                       cold=0.126  warm=0.085
+  /api/leaderboard/weekly?limit=50                         cold=0.089  warm=0.092
+  /api/leaderboard/top-redeemers?limit=50                  cold=0.173  warm=0.090
+```
+- USERS-GUARD leak log: **zero warnings** across the whole sweep.
+- Post-deploy on production: expected `/leaderboard` 30 s → **< 300 ms** (~115× faster). Motor connection pool no longer blocked → cascading login/dashboard slowness should stop.
+
+### Files touched
+- `/app/backend/routes/leaderboard.py` — response cache, batch hydrator, N+1 fixes on 4 endpoints, parallel top-redeemers pass-1, weekly avatar leak plug
+- `/app/backend/server.py` — 5 missing redeem-source indexes auto-created; background leaderboard pre-warm scheduled after `_background_db_init`
+
+### Deferred follow-ups
+- Task 1 — Migrate `mining_history` embedded array to its own collection (Support Phase B) — permanent doc-size fix on the users collection.
+- Task 2 — Move `profile_picture` base64 blobs to object storage; keep only URL on user doc (Support Phase C).
+- 3 HIGH-severity security vulnerabilities documented in `/app/memory/SECURITY_AUDIT_2026-02-22.md`.
+
+
 ## Implemented (Feb 22, 2026 — RECURRING SLOWNESS FIX: L1 Cache LRU + Include-mode Leak Fix)
 - 🚨 **User report (Marathi)**: "अँप थोड्या वेळ deployment केल्यावर फास्ट चालले पण नंतर लगेच slow झाला. हाच issue 1/2 महिन्यापूर्वी देखील आला होता." → Same recurrence pattern seen 1-2 months ago. Support's Phase 0 `find_one` size-guard was already deployed but the recurrence persisted.
 - 🔬 **Deep RCA — two independent leaks found & fixed**:

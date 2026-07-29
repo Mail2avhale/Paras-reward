@@ -38104,7 +38104,31 @@ async def initialize_database_indexes():
         await db.manager_actions.create_index("timestamp")
     except Exception as e:
         print(f"⚠️  Manager actions indexes: {e}")
-    
+
+    # ── Redeem-source collections `user_id` indexes ────────────────
+    # Feb 23 2026: `get_user_all_time_redeemed()` scans 17 collections
+    # keyed on user_id per user. Missing indexes on these caused every
+    # dashboard cache-miss to do multi-collection COLLSCANs (up to 100 K
+    # docs each) → 20-30 s Motor pool holds → cascading login/dashboard
+    # slowdowns. These 5 previously lacked a user_id index.
+    for _coll in ("recharge_requests", "bank_transfers", "dmt_logs",
+                  "unified_redemptions", "mall_bookings"):
+        try:
+            await db[_coll].create_index("user_id", background=True)
+        except Exception as _e:
+            print(f"⚠️  {_coll}.user_id index: {_e}")
+    # Also ensure `status` compound indexes on the same set so the
+    # aggregation match stage in top-redeemers pass-1 is index-backed
+    # (avoids scanning the full collection for status filter).
+    for _coll in ("recharge_requests", "bank_transfers", "dmt_logs",
+                  "unified_redemptions", "mall_bookings"):
+        try:
+            await db[_coll].create_index([("status", 1), ("user_id", 1)],
+                                         background=True)
+        except Exception as _e:
+            print(f"⚠️  {_coll} status/user_id index: {_e}")
+    print("✅ Redeem-source `user_id` indexes ensured")
+
     print("✅ Database indexes initialization complete")
 
 async def _background_db_init():
@@ -38192,6 +38216,35 @@ async def _background_db_init():
         print("Pool Wallet balance_after auto-repair scheduled")
     except Exception as e:
         print(f"Pool balance_after repair (non-critical): {e}")
+
+    # Feb 23 2026 — Warm the leaderboard cache in the background so the
+    # first user request after deploy doesn't pay the cold Atlas cost.
+    # Prod baseline was 30 s for a cold /leaderboard hit; this shifts
+    # that cost into a background task with no user-visible latency.
+    try:
+        import asyncio
+        async def _warm_leaderboards():
+            try:
+                await asyncio.sleep(15)  # let DB pool settle first
+                from routes.leaderboard import (
+                    get_leaderboard, get_top_miners, get_top_referrers,
+                    get_top_earners, get_weekly_leaderboard,
+                )
+                # Fire all 5 in parallel — each has its own in-process cache
+                await asyncio.gather(
+                    get_leaderboard(limit=50),
+                    get_top_miners(period="all_time", limit=100),
+                    get_top_referrers(limit=100),
+                    get_top_earners(limit=100),
+                    get_weekly_leaderboard(limit=50),
+                    return_exceptions=True,
+                )
+                print("🔥 Leaderboard cache pre-warmed (5 endpoints)")
+            except Exception as _warm_err:
+                print(f"⚠️  Leaderboard pre-warm failed (non-critical): {_warm_err}")
+        asyncio.create_task(_warm_leaderboards())
+    except Exception as e:
+        print(f"⚠️  Leaderboard pre-warm scheduling failed (non-critical): {e}")
 
     print("Background DB init complete!")
 
