@@ -961,7 +961,11 @@ async def get_nearby_users(uid: str, limit: int = 20):
         return {
             "uid": user["uid"],
             "name": user.get("name", "User"),
-            "avatar": user.get("avatar") or user.get("profile_picture"),
+            # `avatar` is a light URL/emoji field; `profile_picture` (base64)
+            # is intentionally NOT included here — clients fetch it via the
+            # dedicated /api/user/{uid}/profile-picture endpoint on demand.
+            "avatar": user.get("avatar") or user.get("profile_picture_url"),
+            "has_avatar": bool(user.get("avatar") or user.get("has_profile_picture") or user.get("profile_picture_url")),
             "city": user.get("city", ""),
             "state": user.get("state", ""),
             "subscription_plan": user.get("subscription_plan", "explorer"),
@@ -985,7 +989,8 @@ async def get_nearby_users(uid: str, limit: int = 20):
                 "is_public": {"$ne": False}
             },
             {
-                "_id": 0, "uid": 1, "name": 1, "avatar": 1, "profile_picture": 1,
+                "_id": 0, "uid": 1, "name": 1, "avatar": 1,
+                "has_profile_picture": 1, "profile_picture_url": 1,
                 "city": 1, "state": 1, "subscription_plan": 1, "kyc_verified": 1, "allow_messages": 1
             }
         ).limit(limit).to_list(limit)
@@ -1010,7 +1015,8 @@ async def get_nearby_users(uid: str, limit: int = 20):
                 "is_public": {"$ne": False}
             },
             {
-                "_id": 0, "uid": 1, "name": 1, "avatar": 1, "profile_picture": 1,
+                "_id": 0, "uid": 1, "name": 1, "avatar": 1,
+                "has_profile_picture": 1, "profile_picture_url": 1,
                 "city": 1, "state": 1, "subscription_plan": 1, "kyc_verified": 1, "allow_messages": 1
             }
         ).limit(limit - len(nearby_users)).to_list(limit - len(nearby_users))

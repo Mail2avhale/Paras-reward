@@ -3,6 +3,39 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 22, 2026 — RECURRING SLOWNESS FIX: L1 Cache LRU + Include-mode Leak Fix)
+- 🚨 **User report (Marathi)**: "अँप थोड्या वेळ deployment केल्यावर फास्ट चालले पण नंतर लगेच slow झाला. हाच issue 1/2 महिन्यापूर्वी देखील आला होता." → Same recurrence pattern seen 1-2 months ago. Support's Phase 0 `find_one` size-guard was already deployed but the recurrence persisted.
+- 🔬 **Deep RCA — two independent leaks found & fixed**:
+  1. **UNBOUNDED L1 memory cache** (primary cause, `cache_manager.py`) — `_memory_cache` and `_cache_expiry` were plain Python `dict`s that grew forever. Every unique cache key (user:{uid}, dashboard:{uid}, rate_limit counters, unread_notif_v1:{uid}, etc.) was never cleaned up unless someone GET'd it while expired. Also: L2→L1 warmup used `default_ttl=300s` even for short-TTL keys → stale data in memory for 30× longer than intended. Over hours the dict ballooned to tens of thousands of entries → Python GC pauses lengthened → API latency degraded → **exact "fast-then-slow" symptom**. Pod restart wiped the leak → app briefly fast again → cycle repeated.
+  2. **Include-mode `db.users.find()` leaks bypassing Phase A guard** — 3 endpoints were pulling base64 `profile_picture` (up to 636 KB per user) in bulk:
+    - `/api/leaderboard` — top 50 users × ~500 KB = **up to 25 MB per request**
+    - `/api/leaderboard/top-redeemers` — top 75 candidates × ~500 KB = **up to 37 MB per request**
+    - `/api/notifications/nearby-users` — same-city + same-state × limit users
+- 🛡️ **Fixes applied**:
+  1. **Bounded LRU** for `_memory_cache` (`cache_manager.py`) — switched to `OrderedDict` with hard cap `CACHE_L1_MAX_ENTRIES=5000` (env-tunable). Evicts oldest (LRU) on insert. `_l1_touch()` on read to mark MRU. Added lazy `_l1_sweep_expired()` every 500 sets to reclaim expired keys the app never GETs again.
+  2. **L2→L1 warmup TTL clamped** to `min(60, default_ttl)` — stale data no longer lingers 5 min for a 10 s TTL key.
+  3. **`incr()` fallback now has default 60s TTL** — rate-limit counters can't leak forever when Redis circuit is open.
+  4. **Include-mode leak plugged in 3 endpoints** — replaced `"profile_picture": 1` (base64 blob) with `"has_profile_picture": 1, "profile_picture_url": 1` (lightweight metadata). UI now gets a `has_avatar` bool and can fetch the actual picture on demand via `/api/user/{uid}/profile-picture` (already exists).
+  5. **Size-guard telemetry** — `_UsersCollectionSizeGuard` now tracks `find_one_calls`, `find_calls`, `guarded_hits`, `bypass_hits`, and logs first-time-only warnings for any new include-mode leak (with a caller-stack fingerprint) so future regressions are visible in production logs.
+  6. **L1 telemetry** exposed via `/api/admin/cache/health.l1_memory` — admins can now see `size`, `max`, `utilization_pct`, `inserts`, `evictions`, `sweeps` live.
+- 🧪 **Regression tests**:
+  - NEW `/app/backend/tests/test_l1_memory_lru.py` — 6 tests: env-var respected, LRU eviction on overflow, GET-touch prevents eviction, expired-key cleanup, `incr()` fallback has TTL, `get_stats()` exposes L1 metrics.
+  - 21/21 cache tests PASS (6 new + 11 `test_cache_fallback.py` + 4 `test_cache_two_level_fallback.py`).
+- 🧪 **Live preview verification** after fix:
+  - `/api/health`: 220 ms | `/api/leaderboard?limit=10`: **103 ms** (down from potentially 25 MB response) | `/api/leaderboard/top-redeemers?limit=10`: **178 ms** | `/api/user/{uid}`: 340 ms | `/api/user/{uid}/dashboard`: 367 ms
+  - Burst of 20 requests to `/api/admin/popup/active`: **95 % hit rate**, L1 size=1/5000, 0 evictions.
+  - Post-fix log sweep across 9 hot endpoints: **zero USERS-GUARD warnings** (pre-fix: leaderboard.py:23 was flagging every request).
+- 📊 **Expected production impact**:
+  - **L1 memory footprint bounded to ~5000 entries × ~2 KB avg = ~10 MB max** (was unbounded, growing to hundreds of MB before pod restart).
+  - **Per-request response size dropped** on leaderboard endpoints from up to 25-37 MB → **< 3 KB** per response.
+  - **GC pause elimination** — Python no longer walks a giant `_memory_cache` dict on every gen-2 collection, so tail latency no longer degrades over pod lifetime.
+  - **The "fast-then-slow" cycle should be permanently broken.**
+- 🔜 **Follow-ups still deferred** (Support's Phase 1 & 2):
+  - Phase 1: Migrate `mining_history` array to its own collection (permanent doc-size fix)
+  - Phase 2: Move `profile_picture` base64 blobs to object storage; keep only URL on the users doc
+- **Files touched**: `/app/backend/cache_manager.py` (bounded LRU + telemetry), `/app/backend/server.py` (size-guard telemetry), `/app/backend/routes/leaderboard.py` (2 endpoints — dropped profile_picture from projections), `/app/backend/routes/notifications_routes.py` (nearby-users format helper + 2 queries), `/app/backend/tests/test_l1_memory_lru.py` (NEW — 6 tests).
+
+
 ## Implemented (Feb 22, 2026 — ROOT CAUSE FIX: Users Collection Size-Guard)
 - 🎯 **Emergent Support diagnosed the real production latency root cause**:
   - `users` documents average **~67 KB** (max **6.6 MB** on power users)

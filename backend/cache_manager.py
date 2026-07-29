@@ -65,9 +65,73 @@ try:
 except ImportError:
     pass
 
-# In-memory cache fallback
-_memory_cache = {}
-_cache_expiry = {}
+# ── L1 In-memory cache — bounded LRU (Feb 22 2026) ─────────────────
+# CRITICAL FIX: previously `_memory_cache` was an unbounded dict which
+# leaked forever. Every unique cache key (user:{uid}, dashboard:{uid},
+# unread_notif_v1:{uid}, rate_limit:{uid}:{endpoint}, etc.) piled up in
+# process RAM until the pod was restarted — matching the user's report
+# that "app is fast after deploy but slows down after some time".
+# We now use an OrderedDict with a hard cap; oldest entries are evicted
+# on insert (LRU). Callers that miss L1 simply fall through to Redis /
+# Mongo — no correctness impact, only a one-time re-fetch cost.
+from collections import OrderedDict
+
+# Configurable via env; default 5000 entries is plenty for our peak
+# ~6k active users × ~7 key patterns while keeping RSS growth bounded.
+L1_MAX_ENTRIES = int(os.getenv('CACHE_L1_MAX_ENTRIES', '5000'))
+
+_memory_cache: "OrderedDict[str, Any]" = OrderedDict()
+_cache_expiry: dict = {}
+# Sweep frequency — every N sets we do a quick expired-key scan (lazy
+# background cleanup so keys that are never GET'd again don't linger).
+_L1_SWEEP_EVERY_N_SETS = 500
+_l1_stats = {"inserts": 0, "evictions": 0, "sweeps": 0, "expired_swept": 0}
+
+
+def _l1_touch(key: str) -> None:
+    """Move `key` to the MRU end (LRU bookkeeping)."""
+    try:
+        _memory_cache.move_to_end(key)
+    except KeyError:
+        pass
+
+
+def _l1_put(key: str, value: Any, ttl_seconds: Optional[float] = None) -> None:
+    """Insert or refresh a key, respecting the max size (evict oldest)."""
+    if key in _memory_cache:
+        _memory_cache[key] = value
+        _memory_cache.move_to_end(key)
+    else:
+        _memory_cache[key] = value
+        _l1_stats["inserts"] += 1
+        # Evict oldest until we're under the cap
+        while len(_memory_cache) > L1_MAX_ENTRIES:
+            try:
+                old_k, _old_v = _memory_cache.popitem(last=False)
+                _cache_expiry.pop(old_k, None)
+                _l1_stats["evictions"] += 1
+            except KeyError:
+                break
+    if ttl_seconds is not None:
+        _cache_expiry[key] = datetime.now(timezone.utc).timestamp() + ttl_seconds
+
+    # Probabilistic lazy sweep of expired keys — cheap when list is
+    # short, throttled so hot paths don't pay for it.
+    if _l1_stats["inserts"] % _L1_SWEEP_EVERY_N_SETS == 0:
+        _l1_sweep_expired()
+
+
+def _l1_sweep_expired() -> None:
+    """Prune keys whose expiry has already passed. Cheap O(N) but
+    called only every _L1_SWEEP_EVERY_N_SETS inserts.
+    """
+    _l1_stats["sweeps"] += 1
+    now_ts = datetime.now(timezone.utc).timestamp()
+    to_drop = [k for k, exp in _cache_expiry.items() if exp and now_ts > exp]
+    for k in to_drop:
+        _memory_cache.pop(k, None)
+        _cache_expiry.pop(k, None)
+        _l1_stats["expired_swept"] += 1
 
 
 # ─── Circuit Breaker (module-level, shared across CacheManager methods) ──
@@ -281,7 +345,7 @@ class CacheManager:
         prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
 
         def _read_memory_mirror():
-            """L1 fallback — pull from the in-process dict."""
+            """L1 fallback — pull from the in-process dict (LRU-aware)."""
             if prefixed_key not in _memory_cache:
                 return None
             expiry = _cache_expiry.get(prefixed_key)
@@ -289,6 +353,8 @@ class CacheManager:
                 _memory_cache.pop(prefixed_key, None)
                 _cache_expiry.pop(prefixed_key, None)
                 return None
+            # Touch — mark as recently used so it survives future evictions.
+            _l1_touch(prefixed_key)
             return _memory_cache.get(prefixed_key)
 
         # ── L1: process-local memory mirror (0ms) ──
@@ -315,13 +381,12 @@ class CacheManager:
                     parsed = json.loads(value)
                 except json.JSONDecodeError:
                     parsed = value
-            # Warm L1 with the SAME TTL semantics as set(): use the default
-            # module TTL (client set() calls already populate both tiers, so
-            # this only kicks in for values written by other processes).
-            _memory_cache[prefixed_key] = parsed
-            _cache_expiry[prefixed_key] = (
-                datetime.now(timezone.utc).timestamp() + self.default_ttl
-            )
+            # Warm L1 with a SHORT TTL — we don't know the caller's
+            # original TTL (that lives on the Redis key itself), so use
+            # a tight 60s ceiling to keep L1 fresh AND bounded. Falls
+            # back to Redis / Mongo after 60s, which is negligible cost
+            # for a caller that already accepted a Redis round-trip.
+            _l1_put(prefixed_key, parsed, ttl_seconds=min(60.0, self.default_ttl))
             self._m_hits += 1
             return parsed
 
@@ -360,9 +425,8 @@ class CacheManager:
                 pass
             return False
 
-        # ── L1 SYNC: always mirror to memory (0ms) ──
-        _memory_cache[prefixed_key] = value
-        _cache_expiry[prefixed_key] = datetime.now(timezone.utc).timestamp() + ttl
+        # ── L1 SYNC: always mirror to memory (0ms, LRU-bounded) ──
+        _l1_put(prefixed_key, value, ttl_seconds=ttl)
 
         # ── L2 ASYNC: fire-and-forget Redis SET (don't block caller) ──
         if self._redis_ready():
@@ -473,6 +537,9 @@ class CacheManager:
         in-memory counter on Redis failure — NOTE: this fallback is NOT
         distributed-safe. Callers that require strict atomicity across
         workers (e.g. rate limiter) should treat 0 as "unknown".
+
+        Feb 22 2026: in-memory fallback now uses the bounded LRU (with a
+        60s default expiry so orphaned counters never leak).
         """
         if self._redis_ready():
             ok, val = await self._redis_call(self.redis_client.incrby(key, amount))
@@ -487,7 +554,14 @@ class CacheManager:
             new_value = int(current) + amount
         except (TypeError, ValueError):
             new_value = amount
-        _memory_cache[key] = new_value
+        # Give orphaned rate-limit counters a default 60s TTL so they
+        # don't accumulate forever when Redis is unavailable.
+        existing_ttl = _cache_expiry.get(key)
+        if existing_ttl:
+            ttl_remaining = max(0.0, existing_ttl - datetime.now(timezone.utc).timestamp())
+        else:
+            ttl_remaining = 60.0
+        _l1_put(key, new_value, ttl_seconds=ttl_remaining)
         return new_value
     
     async def expire(self, key: str, ttl: int) -> bool:
@@ -512,6 +586,15 @@ class CacheManager:
             "use_upstash": self.use_upstash,
             "op_timeout_ms": int(self._op_timeout * 1000),
             "circuit_breaker": self._breaker.snapshot(),
+            "l1_memory": {
+                "size": len(_memory_cache),
+                "max": L1_MAX_ENTRIES,
+                "utilization_pct": round((len(_memory_cache) / L1_MAX_ENTRIES) * 100.0, 2) if L1_MAX_ENTRIES else 0.0,
+                "inserts": _l1_stats["inserts"],
+                "evictions": _l1_stats["evictions"],
+                "sweeps": _l1_stats["sweeps"],
+                "expired_swept": _l1_stats["expired_swept"],
+            },
             "counters": {
                 "hits": self._m_hits,
                 "misses": self._m_misses,

@@ -772,33 +772,74 @@ class _UsersCollectionSizeGuard:
     request `mining_history` or `profile_picture` still receive them
     (e.g. the profile-picture serving endpoint, or a mining history
     reader).
+
+    Feb 22 2026: added telemetry counters (bypass_hits) so we can see if
+    a runaway include-mode caller is pulling multi-MB documents. Also
+    logs the first include-mode leak per unique code path (via stack
+    fingerprint) so it's easy to spot in production logs.
     """
     _HEAVY_EXCLUDES = {"mining_history": 0, "profile_picture": 0}
 
     def __init__(self, inner):
         object.__setattr__(self, "_inner", inner)
+        object.__setattr__(self, "_stats", {
+            "find_one_calls": 0,
+            "find_calls": 0,
+            "bypass_hits": 0,
+            "guarded_hits": 0,
+        })
+        object.__setattr__(self, "_leak_fingerprints", set())
 
-    def _augment(self, projection):
+    def _log_leak_once(self, method: str, projection: dict) -> None:
+        """First-time-only warning when include-mode pulls heavy fields.
+        Uses a stack fingerprint so hot paths don't spam the log.
+        """
+        heavy_leaks = [k for k in self._HEAVY_EXCLUDES if projection.get(k) in (1, True)]
+        if not heavy_leaks:
+            return
+        try:
+            import traceback
+            # Take the 2 frames just above our proxy for a compact fingerprint.
+            stack = traceback.extract_stack(limit=6)[:-2]
+            fp = "|".join(f"{f.filename.split('/')[-1]}:{f.lineno}" for f in stack[-3:])
+            key = (method, fp, tuple(sorted(heavy_leaks)))
+            if key not in self._leak_fingerprints:
+                self._leak_fingerprints.add(key)
+                self._stats["bypass_hits"] += 1
+                print(f"[USERS-GUARD] ⚠️ heavy-field include-mode leak via {method} — fields={heavy_leaks} caller={fp}")
+        except Exception:
+            pass
+
+    def _augment(self, projection, method_name: str = ""):
         if projection is None:
+            self._stats["guarded_hits"] += 1
             return dict(self._HEAVY_EXCLUDES)
         if not isinstance(projection, dict):
             return projection
         # If caller is using include-mode (any field explicitly = 1) then
         # they own the projection contract — respect it exactly.
         if any(v == 1 or v is True for v in projection.values()):
+            self._log_leak_once(method_name, projection)
             return projection
         # Exclude-mode ({_id: 0, ...}) or empty dict — safely add our two
         # heavy-field excludes without stomping on existing excludes.
         new_proj = dict(projection)
         for k, v in self._HEAVY_EXCLUDES.items():
             new_proj.setdefault(k, v)
+        self._stats["guarded_hits"] += 1
         return new_proj
 
     def find_one(self, filter=None, projection=None, *args, **kwargs):
-        return self._inner.find_one(filter, self._augment(projection), *args, **kwargs)
+        self._stats["find_one_calls"] += 1
+        return self._inner.find_one(filter, self._augment(projection, "find_one"), *args, **kwargs)
 
     def find(self, filter=None, projection=None, *args, **kwargs):
-        return self._inner.find(filter, self._augment(projection), *args, **kwargs)
+        self._stats["find_calls"] += 1
+        return self._inner.find(filter, self._augment(projection, "find"), *args, **kwargs)
+
+    def guard_stats(self):
+        """Public snapshot of the size-guard counters (for /admin/cache/health)."""
+        return dict(self._stats)
 
     # Everything else (insert_one, update_one, delete_one, aggregate,
     # count_documents, create_index, list_indexes, index_information, ...)

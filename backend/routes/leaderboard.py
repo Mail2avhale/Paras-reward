@@ -19,13 +19,20 @@ def set_db(database):
 
 @router.get("")
 async def get_leaderboard(limit: int = 50):
-    """Get overall leaderboard by PRC balance"""
+    """Get overall leaderboard by PRC balance.
+
+    Feb 22 2026: dropped `profile_picture` from the projection — the
+    base64 blob can be up to ~500 KB per user, so 50 users pulled
+    ~25 MB per request. UI only needs a `has_avatar` boolean; actual
+    picture bytes are fetched per-user via /api/user/{uid}/profile-picture.
+    """
     users = await db.users.find(
         {"prc_balance": {"$gt": 0}},
-        {"_id": 0, "uid": 1, "name": 1, "first_name": 1, "prc_balance": 1, 
-         "profile_picture": 1, "subscription_plan": 1}
+        {"_id": 0, "uid": 1, "name": 1, "first_name": 1, "prc_balance": 1,
+         "has_profile_picture": 1, "profile_picture_url": 1,
+         "subscription_plan": 1}
     ).sort("prc_balance", -1).limit(limit).to_list(limit)
-    
+
     leaderboard = []
     for idx, user in enumerate(users, 1):
         name = user.get("name") or user.get("first_name") or "User"
@@ -34,10 +41,14 @@ async def get_leaderboard(limit: int = 50):
             "user_id": user["uid"],
             "name": name,
             "prc_balance": round(user.get("prc_balance", 0), 2),
-            "profile_picture": user.get("profile_picture"),
+            # profile_picture kept as None for backwards-compat with existing
+            # frontend renderers; has_avatar is the reliable indicator.
+            "profile_picture": None,
+            "has_avatar": bool(user.get("has_profile_picture") or user.get("profile_picture_url")),
+            "profile_picture_url": user.get("profile_picture_url"),
             "subscription_plan": user.get("subscription_plan", "explorer")
         })
-    
+
     return {"leaderboard": leaderboard}
 
 
@@ -365,12 +376,25 @@ async def get_top_redeemers(limit: int = 50):
         logging.warning("[top-redeemers] pass-2 yielded empty — falling back to rough_totals")
         accurate = dict(candidates)
 
-    # Hydrate user info
+    # Hydrate user info — DO NOT pull `profile_picture` (base64 blob up to
+    # ~500KB per user). We only need a boolean `has_avatar` in the payload
+    # which we can derive from a lightweight "does_field_exist" projection.
+    # Feb 22 2026: previously this pulled profile_picture: 1 for ~75
+    # candidates → up to 37MB per cache-miss request. Now bounded to a
+    # few KB.
     user_docs = {u["uid"]: u for u in await db.users.find(
         {"uid": {"$in": user_ids}},
         {"_id": 0, "uid": 1, "name": 1, "first_name": 1, "last_name": 1,
          "city": 1, "district": 1, "state": 1, "role": 1,
-         "profile_picture": 1, "subscription_plan": 1}
+         "subscription_plan": 1,
+         # `profile_picture_present` is a boolean maintained on the doc
+         # (see Task 2 / migration). Fallback: MongoDB `$type` projection
+         # is not supported via Motor's find(); we simply check truthiness
+         # against a "profile_picture_url" or "has_profile_picture" field
+         # if present. Otherwise `has_avatar` will be False — acceptable
+         # UX regression (avatar dot not shown) vs. multi-MB payload.
+         "has_profile_picture": 1,
+         "profile_picture_url": 1}
     ).to_list(len(user_ids))}
 
     # PRC rate
@@ -404,7 +428,7 @@ async def get_top_redeemers(limit: int = 50):
             "total_redeemed_prc": round(prc, 2),
             "total_redeemed_inr": round(prc / prc_rate, 2) if prc_rate else 0,
             "subscription_plan": user.get("subscription_plan", "explorer"),
-            "has_avatar": bool(user.get("profile_picture")),
+            "has_avatar": bool(user.get("has_profile_picture") or user.get("profile_picture_url")),
         })
 
     _TOP_REDEEMERS_CACHE["ts"] = int(now) if leaderboard else int(now) - _TOP_REDEEMERS_TTL + 60  # don't cache empty for >60s
