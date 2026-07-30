@@ -5027,9 +5027,16 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
 # In-memory TTL cache for lifetime-redeemed totals (per user).
 # Populated by get_user_all_time_redeemed() only when called with debug=False.
 # Invalidated manually on service debits (see invalidate_lifetime_cache).
+#
+# Feb 23 2026 (Layer 2 denormalization) — also mirrors the total to the
+# user doc as `total_redeemed_prc` + `total_redeemed_computed_at` so a
+# cold worker doesn't have to re-scan 17 collections on the first request.
+# Cache miss cost was p95=13 s on /performance-summary; with the mirror
+# on the user doc it drops to a single find_one (< 10 ms typical).
 # ----------------------------------------------------------------------
 _REDEEMED_TOTAL_CACHE: dict = {}  # uid -> (ts_seconds, float_prc)
-_REDEEMED_TOTAL_CACHE_TTL: float = 60.0  # seconds
+_REDEEMED_TOTAL_CACHE_TTL: float = 300.0  # 5 min — bumped from 60 s
+_REDEEMED_MIRROR_MAX_AGE_S: float = 300.0  # trust the users-doc mirror if computed_at < 5 min ago
 
 def invalidate_lifetime_cache(user_id: str | None = None):
     """Call after any service-collection write that changes lifetime spend.
@@ -5037,6 +5044,10 @@ def invalidate_lifetime_cache(user_id: str | None = None):
     Also invalidates the endpoint-level Redis/in-memory caches for
     `performance-summary` and `redeem-limit` so freshly-mutated balances
     propagate to the user's dashboard within the same request cycle.
+
+    Feb 23 2026 (Layer 2) — Also invalidates the users-doc `total_redeemed_*`
+    mirror so the next reader recomputes from the canonical 17 collections
+    (fire-and-forget so the caller doesn't wait on the round-trip).
     """
     if user_id:
         _REDEEMED_TOTAL_CACHE.pop(user_id, None)
@@ -5052,6 +5063,17 @@ def invalidate_lifetime_cache(user_id: str | None = None):
                     loop.create_task(cache.delete(f"user:dashboard:{user_id}"))
             except Exception:
                 pass
+        # Invalidate the persistent users-doc mirror too.
+        try:
+            import asyncio as _asyncio2
+            loop2 = _asyncio2.get_event_loop()
+            if loop2.is_running():
+                loop2.create_task(db.users.update_one(
+                    {"uid": user_id},
+                    {"$unset": {"total_redeemed_computed_at": ""}},
+                ))
+        except Exception:
+            pass
     else:
         _REDEEMED_TOTAL_CACHE.clear()
 
@@ -5094,6 +5116,33 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
                      if now - ts >= _REDEEMED_TOTAL_CACHE_TTL]
             for k in stale:
                 _REDEEMED_TOTAL_CACHE.pop(k, None)
+
+        # Layer 2 denormalization — check the users-doc mirror before doing
+        # the expensive 17-collection scan. If the mirror exists and was
+        # computed within _REDEEMED_MIRROR_MAX_AGE_S, use it.
+        try:
+            mirror_doc = await db.users.find_one(
+                {"uid": user_id},
+                {"_id": 0, "total_redeemed_prc": 1, "total_redeemed_computed_at": 1}
+            )
+            if mirror_doc and mirror_doc.get("total_redeemed_computed_at"):
+                from datetime import datetime as _dt2, timezone as _tz2
+                _computed_at = mirror_doc["total_redeemed_computed_at"]
+                if isinstance(_computed_at, str):
+                    _computed_dt = _dt2.fromisoformat(_computed_at.replace("Z", "+00:00"))
+                else:
+                    _computed_dt = _computed_at
+                if _computed_dt.tzinfo is None:
+                    _computed_dt = _computed_dt.replace(tzinfo=_tz2.utc)
+                _age_s = (_dt2.now(_tz2.utc) - _computed_dt).total_seconds()
+                if _age_s <= _REDEEMED_MIRROR_MAX_AGE_S:
+                    mirror_val = float(mirror_doc.get("total_redeemed_prc") or 0.0)
+                    _REDEEMED_TOTAL_CACHE[user_id] = (now, mirror_val)
+                    return mirror_val
+        except Exception:
+            # Mirror read is a best-effort optimization; fall through to
+            # the canonical 17-collection scan if anything goes wrong.
+            pass
 
     SUCCESS_STATUSES = [
         "completed", "COMPLETED", "Completed",
@@ -5390,6 +5439,24 @@ async def get_user_all_time_redeemed(user_id: str, debug: bool = False):
         import time as _t
         _REDEEMED_TOTAL_CACHE[user_id] = (_t.time(), total)
     except Exception:
+        pass
+
+    # Layer 2 denormalization — persist to the users-doc mirror so a
+    # cold worker doesn't have to redo the 17-collection scan. Best-effort
+    # background write so we don't block the response.
+    try:
+        import asyncio as _aio_mirror
+        from datetime import datetime as _dt_mirror, timezone as _tz_mirror
+        _computed_iso = _dt_mirror.now(_tz_mirror.utc).isoformat()
+        _aio_mirror.create_task(db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "total_redeemed_prc": round(float(total), 2),
+                "total_redeemed_computed_at": _computed_iso,
+            }},
+        ))
+    except Exception:
+        # Mirror write is optional — never fail the read path over it.
         pass
     return total
 

@@ -163,6 +163,30 @@ const AdminObservability = () => {
     }
   };
 
+  const handleBackfillTotalRedeemed = async () => {
+    if (!window.confirm(
+      'Layer 2 backfill: precompute `total_redeemed_prc` mirror for every paid user.\n\n'
+      + 'This scans up to 5000 users. Takes ~1-3 minutes on production. Safe to re-run.\n\n'
+      + 'Continue?'
+    )) return;
+    try {
+      toast.info('Backfill started — this may take a couple of minutes...');
+      const res = await axios.post(
+        `${API}/admin/observability/repair/backfill-total-redeemed?batch=100&max_users=5000`,
+        {},
+        { timeout: 300000 }
+      );
+      const d = res.data || {};
+      toast.success(
+        `Processed ${d.processed_users || 0}, computed ${d.computed_now || 0}, `
+        + `skipped-fresh ${d.skipped_already_fresh || 0}, failed ${d.failed || 0}`
+      );
+    } catch (err) {
+      toast.error('Backfill failed — check console');
+      console.error(err);
+    }
+  };
+
   // Users doc size distribution — the KPI dashboard for Data Design Refactor
   const usersMax = histogram?.totals?.max_bytes || 0;
   const usersAvg = histogram?.totals?.avg_bytes || 0;
@@ -227,6 +251,15 @@ const AdminObservability = () => {
             data-testid="obs-repair-sub-flag-btn"
           >
             Repair sub-expired flag
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleBackfillTotalRedeemed}
+            className="bg-purple-600 hover:bg-purple-700"
+            data-testid="obs-backfill-total-redeemed-btn"
+          >
+            Backfill total_redeemed
           </Button>
         </div>
       </div>

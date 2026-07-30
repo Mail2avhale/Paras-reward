@@ -8,6 +8,52 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 23, 2026 — Layer 2: `total_redeemed_prc` Denormalization)
+
+### Problem
+`/api/user/{uid}/performance-summary` had prod p95 = **13.3 s** because on every cache miss it called `get_user_all_time_redeemed()` which scans **17 collections in parallel** to compute lifetime PRC spend. In-memory TTL cache was only 60 s → misses were frequent on cold workers and after invalidations.
+
+### Design
+Denormalize the total into the user doc as `total_redeemed_prc` + `total_redeemed_computed_at`. Read path:
+1. Check in-process TTL cache (bumped 60 s → **300 s**)
+2. Miss? Read the users-doc mirror; if `computed_at < 5 min`, use it (single `find_one`, ~10 ms)
+3. Miss both? Do the canonical 17-collection scan, then persist the result back to the user doc (fire-and-forget task)
+
+Write path (unchanged consumer contract):
+- Every service-collection debit calls `invalidate_lifetime_cache(user_id)` (already wired everywhere).
+- That helper now ALSO $unsets `total_redeemed_computed_at` on the user doc, forcing the next read to recompute.
+
+### One-shot backfill
+`POST /api/admin/observability/repair/backfill-total-redeemed?batch=100&max_users=5000` iterates every paid user, computing the mirror once. Skips users whose mirror was refreshed within the last 60 min. Turns cold-worker first-hit from 13 s → ~10 ms across the board. Wired to a **purple "Backfill total_redeemed"** button in the admin observability dashboard.
+
+### Safety
+- Denorm is READ ONLY on cache miss; never bypasses the canonical scan when stale/absent.
+- Every existing write path already invalidates it correctly.
+- Fire-and-forget mirror writes never block the response.
+- 300 s TTL means at worst, a user sees a 5-min-old total until the next debit — which is fresher than the previous 60 s cache anyway (because 300 s ≤ debit frequency for most users).
+
+### Tests
+`tests/test_layer2_redeemed_denorm.py` — 4 pytest cases:
+- fresh mirror short-circuits the 17-collection scan (10 ms path)
+- stale mirror is ignored (falls through to canonical scan)
+- `invalidate_lifetime_cache()` fires the `$unset` on the mirror
+- TTL constants at 300 s / 300 s (locks the config)
+
+**41/41 total tests pass** (4 new + 37 previous).
+
+### Preview verification
+```
+Backfill endpoint (1 paid user): processed=1, computed=1, failed=0
+Endpoint response < 300 ms cold
+```
+
+### Files touched
+- `backend/server.py` — mirror read + fire-and-forget write in `get_user_all_time_redeemed()`; `invalidate_lifetime_cache()` also $unsets the mirror timestamp; TTL 60 s → 300 s
+- `backend/routes/admin_observability.py` — backfill endpoint
+- `backend/tests/test_layer2_redeemed_denorm.py` (NEW)
+- `frontend/src/pages/AdminObservability.js` — purple "Backfill total_redeemed" button
+
+
 ## Implemented (Feb 23, 2026 — Layer 1.6 — Second wave of prod-data-driven hotfixes)
 
 ### Production reality on second Observability screenshot

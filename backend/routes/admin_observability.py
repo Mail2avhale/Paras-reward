@@ -346,3 +346,77 @@ async def repair_subscription_expired_flag(request: Request, dry_run: bool = Tru
         "healed_users": 0 if dry_run else len(candidates),
         "sample": candidates[:10],  # preview so admin sees who was affected
     }
+
+
+@router.post("/repair/backfill-total-redeemed")
+async def backfill_total_redeemed(request: Request, batch: int = 100, max_users: int = 5000):
+    """Layer 2 (Feb 23 2026) — one-shot backfill of `total_redeemed_prc`
+    on every user doc.
+
+    Reason: the mirror is populated on-demand as users hit performance
+    endpoints. On a cold worker, the FIRST hit still pays the 13-second
+    17-collection scan. Pre-warming the mirror for every user turns the
+    first hit into a single find_one (< 10 ms).
+
+    Scans `batch` users at a time, ordered by `_id`. Safe to re-run.
+    Skips users whose mirror was computed within the last 60 min.
+    Uses `background=True` semantics — call this from admin dashboard
+    once after deploy; each subsequent call resumes where the last left off.
+    """
+    _require_admin(request)
+    if _db is None:
+        raise HTTPException(status_code=500, detail="DB not attached")
+
+    from server import get_user_all_time_redeemed
+    from datetime import datetime, timezone, timedelta
+
+    processed = 0
+    skipped_fresh = 0
+    computed = 0
+    failed = 0
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=60)
+
+    async for u in _db.users.find(
+        {"subscription_plan": {"$nin": ["explorer", "free", "", None]}},
+        {"_id": 0, "uid": 1, "total_redeemed_computed_at": 1},
+    ).limit(max_users):
+        processed += 1
+        if processed % batch == 0:
+            # Yield so we don't monopolize the event loop
+            import asyncio as _aio_bf
+            await _aio_bf.sleep(0)
+
+        uid = u.get("uid")
+        if not uid:
+            continue
+
+        # Skip if mirror already fresh
+        computed_at = u.get("total_redeemed_computed_at")
+        if computed_at:
+            try:
+                if isinstance(computed_at, str):
+                    dt = datetime.fromisoformat(computed_at.replace("Z", "+00:00"))
+                else:
+                    dt = computed_at
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                if dt > cutoff:
+                    skipped_fresh += 1
+                    continue
+            except Exception:
+                pass
+
+        try:
+            await get_user_all_time_redeemed(uid, debug=False)
+            computed += 1
+        except Exception:
+            failed += 1
+
+    return {
+        "success": True,
+        "processed_users": processed,
+        "computed_now": computed,
+        "skipped_already_fresh": skipped_fresh,
+        "failed": failed,
+        "next_step": "Re-run to continue if processed_users == max_users",
+    }
