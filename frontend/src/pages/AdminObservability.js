@@ -137,6 +137,32 @@ const AdminObservability = () => {
     }
   };
 
+  const handleRepairSubscriptionFlag = async () => {
+    // Two-step flow: dry-run first, then confirm before writing.
+    try {
+      const dry = await axios.post(
+        `${API}/admin/observability/repair/subscription-expired-flag?dry_run=true`
+      );
+      const n = dry.data?.matched_users || 0;
+      if (n === 0) {
+        toast.success('No stale-flag users found — everyone is clean');
+        return;
+      }
+      if (!window.confirm(
+        `${n} user(s) have subscription_expired=True but are actually ACTIVE.\n\n`
+        + 'Sample: ' + (dry.data?.sample || []).slice(0, 3).map(u => u.email || u.mobile || u.uid).join(', ')
+        + '\n\nRepair them now?'
+      )) return;
+      const res = await axios.post(
+        `${API}/admin/observability/repair/subscription-expired-flag?dry_run=false`
+      );
+      toast.success(`Repaired ${res.data?.healed_users || 0} users`);
+    } catch (err) {
+      toast.error('Repair failed — check console');
+      console.error(err);
+    }
+  };
+
   // Users doc size distribution — the KPI dashboard for Data Design Refactor
   const usersMax = histogram?.totals?.max_bytes || 0;
   const usersAvg = histogram?.totals?.avg_bytes || 0;
@@ -192,6 +218,15 @@ const AdminObservability = () => {
             data-testid="obs-reset-btn"
           >
             Reset stats
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleRepairSubscriptionFlag}
+            className="bg-orange-600 hover:bg-orange-700"
+            data-testid="obs-repair-sub-flag-btn"
+          >
+            Repair sub-expired flag
           </Button>
         </div>
       </div>

@@ -281,3 +281,68 @@ async def reset(request: Request):
     _require_admin(request)
     reset_stats()
     return {"success": True, "message": "Observability stats reset"}
+
+
+@router.post("/repair/subscription-expired-flag")
+async def repair_subscription_expired_flag(request: Request, dry_run: bool = True):
+    """One-shot bulk-heal for users whose `subscription_expired` mirror
+    flag got stuck at True while their canonical plan+expiry says active.
+
+    Root cause (Feb 23 2026): Razorpay auto-sync path (server.py auto_sync)
+    activated the subscription but forgot to reset the mirror flag.
+    Bug caught via user ashataipawar6@gmail.com — Elite active on home
+    page but Mall said "subscription expired".
+
+    Query: `subscription_expired: True` AND `subscription_plan ∉ free`
+    AND `subscription_expiry` in the future.
+
+    Set `dry_run=false` to actually write the fix.
+    """
+    _require_admin(request)
+    if _db is None:
+        raise HTTPException(status_code=500, detail="DB not attached")
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+
+    # Match candidates whose expiry (stored as ISO string OR datetime) is
+    # in the future. Mongo lets $gte compare same-typed values only, so we
+    # match string-vs-string and datetime-vs-datetime as $or branches.
+    match = {
+        "subscription_expired": True,
+        "subscription_plan": {"$nin": ["explorer", "free", "", None]},
+        "$or": [
+            {"subscription_expiry": {"$gte": now_iso}},
+            {"subscription_expiry": {"$gte": now}},
+        ],
+    }
+
+    candidates = []
+    async for u in _db.users.find(
+        match,
+        {"_id": 0, "uid": 1, "email": 1, "mobile": 1, "name": 1,
+         "subscription_plan": 1, "subscription_expiry": 1,
+         "subscription_expired": 1},
+    ).limit(500):
+        candidates.append(u)
+
+    if not dry_run and candidates:
+        uids = [c["uid"] for c in candidates if c.get("uid")]
+        if uids:
+            await _db.users.update_many(
+                {"uid": {"$in": uids}},
+                {"$set": {
+                    "subscription_expired": False,
+                    "subscription_expired_at": None,
+                    "subscription_status": "active",
+                }},
+            )
+
+    return {
+        "success": True,
+        "dry_run": dry_run,
+        "matched_users": len(candidates),
+        "healed_users": 0 if dry_run else len(candidates),
+        "sample": candidates[:10],  # preview so admin sees who was affected
+    }

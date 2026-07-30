@@ -8,6 +8,66 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Bug Fix (Feb 23, 2026 — Mall subscription-expired ghost bug)
+
+### User report
+> `ashataipawar6@gmail.com` — Elite subscription active on home page
+> (expires 24 Aug 2026, 26 days left) BUT Mall shows "Your subscription
+> has expired. Renew to resume Mall product mining."
+
+### Root cause
+`users` collection has TWO parallel signals for subscription state:
+1. **Canonical**: `subscription_plan` (paid?) + `subscription_expiry` (in future?)
+2. **Mirror flag**: `subscription_expired: bool` — set by cron sweeper.
+
+The Razorpay auto-sync path (`server.py` `auto_sync_razorpay_payments`,
+runs every 1 min) activated the subscription (set plan=elite, expiry=+28d,
+status=active) but **DID NOT reset the stale `subscription_expired: True`
+mirror flag** left over from the previous expiry sweep.
+- Home page uses canonical signals → shows Active ✅
+- Mall used the mirror flag → shows Expired ❌
+
+### Fix — three parts
+
+1. **Mall gate self-heals stale flag** (`routes/paras_mall.py`) — canonical
+   truth (`plan + expiry`) is checked FIRST. If canonical says active, the
+   stale `subscription_expired` flag is silently corrected in Mongo via a
+   background task, and the mall serves the user normally. Any other write
+   path that forgot to reset the flag is forgiven the moment the user
+   visits the mall.
+
+2. **Razorpay auto-sync path patched** (`server.py` line 2680) — the
+   `$set` update now explicitly includes `subscription_expired: False`
+   and `subscription_expired_at: None` so future renewals never leave a
+   stale flag behind.
+
+3. **Bulk-heal admin endpoint** (`POST /api/admin/observability/repair/subscription-expired-flag`)
+   — `dry_run=true` first previews all affected users; `dry_run=false`
+   writes the fix in one shot. Wired to a bright orange **"Repair
+   sub-expired flag"** button in the admin observability dashboard.
+   Admin can click once to heal every user with the same bug in
+   production immediately.
+
+4. **Shared helper** (`utils/subscription_status.py`) — `is_active_subscription()`
+   / `is_stale_expired_flag()` / `self_heal_if_stale()`. Every future read
+   path should use these instead of checking `user["subscription_expired"]`
+   directly. Prevents this class of bug from recurring.
+
+### Tests
+- `tests/test_subscription_status_helper.py` — 9 pytest cases covering
+  active/expired/free plans, stale-flag detection, self-heal writes,
+  self-heal skips healthy user, self-heal skips genuinely-expired user.
+- **9/9 pass** + all previous 28 tests still green (**37 total**).
+
+### Files touched
+- `backend/routes/paras_mall.py` — mall gate canonical-first + self-heal
+- `backend/server.py` — Razorpay auto-sync path resets mirror flag
+- `backend/utils/subscription_status.py` (NEW) — shared helper
+- `backend/routes/admin_observability.py` — bulk-heal endpoint
+- `backend/tests/test_subscription_status_helper.py` (NEW) — 9 tests
+- `frontend/src/pages/AdminObservability.js` — "Repair sub-expired flag" button
+
+
 ## Implemented (Feb 23, 2026 — Layer 1.5 Emergency Prod Hotfixes — data-driven)
 
 ### Production reality unlocked by user's Layer 0 screenshot

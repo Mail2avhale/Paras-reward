@@ -2673,6 +2673,14 @@ async def auto_sync_razorpay_payments():
                                     "subscription_expiry": expiry_date.isoformat(),
                                     "membership_type": "vip",
                                     "subscription_status": "active",
+                                    # Feb 23 2026 — MUST reset the stale
+                                    # `subscription_expired` mirror flag
+                                    # here or previously-expired users who
+                                    # renew get stuck in mall/mining "expired"
+                                    # gate. This was the root cause of
+                                    # ashataipawar6@gmail.com's mall bug.
+                                    "subscription_expired": False,
+                                    "subscription_expired_at": None,
                                     "last_payment_id": payment_id,
                                     "last_payment_date": now,
                                     "previous_plan": old_plan,

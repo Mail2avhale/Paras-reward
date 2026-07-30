@@ -294,14 +294,53 @@ async def assert_active_subscription_for_mining(user_id: str) -> None:
             ),
         )
 
-    # Hard-flag from cron sweeper (server.py expiry job)
+    # Canonical truth = (subscription_plan is paid) AND (expiry > now).
+    # We compute this FIRST so the mirror `subscription_expired` flag
+    # cannot override a genuinely-active plan (data-integrity bug seen
+    # in prod Feb 23 2026 — Razorpay auto-sync path activated the plan
+    # but forgot to reset the stale `subscription_expired: True` flag,
+    # causing the mall to block Elite users who had just renewed).
+    expiry = get_user_expiry(user)
+    canonical_active = False
+    if expiry:
+        try:
+            if expiry >= now_utc():
+                canonical_active = True
+        except Exception:
+            canonical_active = False
+
+    if canonical_active:
+        # Self-heal: if the mirror flag is stuck at True, correct it in
+        # the background so subsequent reads don't loop through this
+        # branch. Any other write path that forgot to reset the flag is
+        # forgiven by this healer.
+        if user.get("subscription_expired") is True:
+            try:
+                import asyncio as _aio
+                _aio.create_task(db.users.update_one(
+                    {"uid": user_id},
+                    {"$set": {
+                        "subscription_expired": False,
+                        "subscription_expired_at": None,
+                        "subscription_status": "active",
+                    }},
+                ))
+                logging.info(
+                    f"[MALL-GATE] Self-healed stale subscription_expired=True "
+                    f"for {user_id} (plan={plan}, expiry={expiry.isoformat() if expiry else '?'})"
+                )
+            except Exception as _heal_err:
+                logging.warning(f"[MALL-GATE] Self-heal write failed: {_heal_err}")
+        return  # ✅ user IS active — proceed with mining
+
+    # Hard-flag from cron sweeper (server.py expiry job) — only trust
+    # this AFTER we've confirmed the canonical truth is expired too.
     if user.get("subscription_expired") is True:
         raise HTTPException(
             status_code=403,
             detail="Your subscription has expired. Renew to resume Mall product mining.",
         )
 
-    expiry = get_user_expiry(user)
     if expiry:
         try:
             now = now_utc()
@@ -318,7 +357,6 @@ async def assert_active_subscription_for_mining(user_id: str) -> None:
             raise
         except Exception:
             # Don't block on a stray parse error — fail open for paid users
-            import logging
             logging.exception(f"[mall-mining-gate] expiry parse error for {user_id}")
 
 
