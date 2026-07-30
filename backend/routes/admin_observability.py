@@ -1,0 +1,283 @@
+"""
+Admin Observability Endpoints — Layer 0 dashboard data source
+==============================================================
+
+Exposes read-only telemetry so admins can spot production regressions
+without needing shell access. All endpoints admin-gated via JWT role.
+
+Endpoints:
+  GET  /api/admin/observability/summary       — one-glance app health
+  GET  /api/admin/observability/endpoints     — per-endpoint p95 / p99 / count
+  GET  /api/admin/observability/slow-requests — recent slow-request buffer
+  GET  /api/admin/observability/db-health     — Motor pool + Mongo ping
+  GET  /api/admin/observability/cache-health  — L1 + L2 cache stats
+  GET  /api/admin/observability/collection-sizes — top-N largest collections
+  GET  /api/admin/observability/users-doc-histogram — users doc size distribution
+  POST /api/admin/observability/reset         — reset stats (does NOT clear slow buffer)
+
+Every endpoint is read-only + safe to hit repeatedly.
+"""
+from __future__ import annotations
+
+import os
+import time
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends, Request
+import jwt
+
+from middleware.observability import (
+    get_recent_slow_requests,
+    get_endpoint_stats,
+    get_global_summary,
+    reset_stats,
+)
+
+router = APIRouter(prefix="/admin/observability", tags=["Admin - Observability"])
+
+# Set by server.py during startup
+_db = None
+_cache = None
+_client = None  # Motor AsyncIOMotorClient
+
+def set_db(database, cache_manager=None, motor_client=None):
+    global _db, _cache, _client
+    _db = database
+    _cache = cache_manager
+    _client = motor_client
+
+
+# ── Auth ─────────────────────────────────────────────────────────────
+_JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "")
+_JWT_ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
+
+
+def _require_admin(request: Request):
+    """Reuse the same JWT verification the rest of the app uses."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    token = auth.replace("Bearer ", "")
+    try:
+        payload = jwt.decode(token, _JWT_SECRET_KEY, algorithms=[_JWT_ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    role = payload.get("role", "user")
+    if role not in ("admin", "sub_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    return payload
+
+
+@router.get("/summary")
+async def summary(request: Request):
+    """One-glance app-wide health snapshot."""
+    _require_admin(request)
+    return {"success": True, "data": get_global_summary()}
+
+
+@router.get("/endpoints")
+async def endpoints(request: Request, top_n: int = 25, sort_by: str = "p95_ms"):
+    """Per-endpoint p50/p95/p99 latency. Default sort by p95 (worst first)."""
+    _require_admin(request)
+    return {
+        "success": True,
+        "sort_by": sort_by,
+        "top_n": top_n,
+        "endpoints": get_endpoint_stats(top_n=top_n, sort_by=sort_by),
+    }
+
+
+@router.get("/slow-requests")
+async def slow_requests(request: Request, limit: int = 100):
+    """Buffer of the most recent slow requests (> SLOW_REQUEST_THRESHOLD_MS)."""
+    _require_admin(request)
+    return {"success": True, "requests": get_recent_slow_requests(limit=limit)}
+
+
+@router.get("/db-health")
+async def db_health(request: Request):
+    """Motor pool + Mongo server ping.
+
+    Reports: pool sizes, current in-use connections, Mongo ping latency.
+    """
+    _require_admin(request)
+    result = {"success": True}
+
+    # Ping timing
+    if _db is not None:
+        t0 = time.perf_counter()
+        try:
+            await _db.command("ping")
+            result["ping_ok"] = True
+            result["ping_ms"] = round((time.perf_counter() - t0) * 1000, 1)
+        except Exception as e:
+            result["ping_ok"] = False
+            result["ping_error"] = str(e)[:200]
+
+    # Motor pool telemetry (best-effort — motor doesn't expose a formal API,
+    # so we probe for whichever attribute is available in the installed version).
+    if _client is not None:
+        pool_info = {}
+        try:
+            # Motor 3.x: use the pymongo sync client's topology
+            delegate = getattr(_client, "delegate", None) or _client
+            topology = getattr(delegate, "_topology", None)
+            if topology is not None:
+                server_stats = []
+                for server in getattr(topology, "_servers", {}).values():
+                    pool = getattr(server, "pool", None)
+                    if pool is None:
+                        continue
+                    opts = getattr(pool, "opts", None)
+                    server_stats.append({
+                        "address": str(server.description.address),
+                        "in_use_sockets": len(getattr(pool, "sockets", []) or []),
+                        "max_pool_size": getattr(opts, "max_pool_size", None),
+                        "min_pool_size": getattr(opts, "min_pool_size", None),
+                    })
+                pool_info["servers"] = server_stats
+            # PyMongo public API: `nodes`
+            nodes = getattr(_client, "nodes", None)
+            if nodes is not None:
+                pool_info["nodes"] = [f"{h}:{p}" for h, p in list(nodes)[:10]]
+            result["motor_pool"] = pool_info
+        except Exception as e:
+            result["motor_pool_error"] = str(e)[:200]
+
+    # Users size-guard telemetry (installed at server.py startup)
+    try:
+        users_coll = _db.users if _db is not None else None
+        # Our guard wraps the real Motor collection — pull its `_stats` if present.
+        guard_stats = getattr(users_coll, "guard_stats", None)
+        if callable(guard_stats):
+            result["users_size_guard"] = guard_stats()
+    except Exception as _e:
+        result["users_size_guard_error"] = str(_e)[:120]
+
+    return result
+
+
+@router.get("/cache-health")
+async def cache_health(request: Request):
+    """L1 + L2 cache telemetry (proxied from CacheManager.get_stats)."""
+    _require_admin(request)
+    if _cache is None:
+        return {"success": False, "error": "cache manager not attached"}
+    try:
+        stats = await _cache.get_stats()
+    except Exception as e:
+        return {"success": False, "error": str(e)[:200]}
+    return {"success": True, "data": stats}
+
+
+@router.get("/collection-sizes")
+async def collection_sizes(request: Request, top_n: int = 15):
+    """Top-N largest collections by storageSize (data on disk)."""
+    _require_admin(request)
+    if _db is None:
+        raise HTTPException(status_code=500, detail="DB not attached")
+    names = await _db.list_collection_names()
+    sizes = []
+    for n in names:
+        try:
+            s = await _db.command("collStats", n)
+            sizes.append({
+                "collection": n,
+                "count": s.get("count", 0),
+                "avg_obj_size_bytes": s.get("avgObjSize", 0),
+                "data_size_bytes": s.get("size", 0),
+                "storage_size_bytes": s.get("storageSize", 0),
+                "total_index_size_bytes": s.get("totalIndexSize", 0),
+                "nindexes": s.get("nindexes", 0),
+            })
+        except Exception:
+            continue
+    sizes.sort(key=lambda x: x["storage_size_bytes"], reverse=True)
+    return {"success": True, "collections": sizes[:top_n]}
+
+
+@router.get("/users-doc-histogram")
+async def users_doc_histogram(request: Request):
+    """Distribution of users doc sizes — critical for the Data Design Refactor.
+
+    Buckets: < 2 KB, 2-5, 5-10, 10-50, 50-100, > 100 KB.
+    Also reports avg / p95 / p99 / max.
+    """
+    _require_admin(request)
+    if _db is None:
+        raise HTTPException(status_code=500, detail="DB not attached")
+
+    # $bsonSize is O(N) but fine for ≤ 1 M docs. For truly huge datasets
+    # switch to a sampled approach.
+    pipeline = [
+        {"$project": {"_id": 0, "size": {"$bsonSize": "$$ROOT"}}},
+        {"$bucket": {
+            "groupBy": "$size",
+            "boundaries": [0, 2048, 5120, 10240, 51200, 102400, 1048576, 10485760],
+            "default": "10MB+",
+            "output": {"count": {"$sum": 1}, "avg": {"$avg": "$size"}},
+        }},
+    ]
+
+    buckets = []
+    try:
+        async for row in _db.users.aggregate(pipeline, allowDiskUse=True):
+            buckets.append(row)
+    except Exception as e:
+        return {"success": False, "error": str(e)[:300]}
+
+    # Also get overall percentiles via a second aggregation (fast: 1 pass).
+    total_stats = None
+    try:
+        pipe2 = [
+            {"$project": {"_id": 0, "size": {"$bsonSize": "$$ROOT"}}},
+            {"$group": {
+                "_id": None,
+                "count": {"$sum": 1},
+                "avg": {"$avg": "$size"},
+                "max": {"$max": "$size"},
+                "min": {"$min": "$size"},
+            }},
+        ]
+        async for r in _db.users.aggregate(pipe2, allowDiskUse=True):
+            total_stats = r
+    except Exception:
+        pass
+
+    bucket_labels = {
+        0: "< 2 KB",
+        2048: "2-5 KB",
+        5120: "5-10 KB",
+        10240: "10-50 KB",
+        51200: "50-100 KB",
+        102400: "100 KB - 1 MB",
+        1048576: "1-10 MB",
+    }
+    named = []
+    for b in buckets:
+        boundary = b.get("_id")
+        named.append({
+            "range": bucket_labels.get(boundary, str(boundary)),
+            "boundary_low_bytes": boundary if isinstance(boundary, int) else None,
+            "count": b.get("count", 0),
+            "avg_bytes": round(b.get("avg", 0), 0),
+        })
+
+    result = {"success": True, "buckets": named}
+    if total_stats:
+        result["totals"] = {
+            "count": total_stats.get("count", 0),
+            "avg_bytes": round(total_stats.get("avg", 0), 0),
+            "min_bytes": total_stats.get("min", 0),
+            "max_bytes": total_stats.get("max", 0),
+        }
+    return result
+
+
+@router.post("/reset")
+async def reset(request: Request):
+    """Clear per-endpoint stats and global counters (slow-request buffer preserved)."""
+    _require_admin(request)
+    reset_stats()
+    return {"success": True, "message": "Observability stats reset"}

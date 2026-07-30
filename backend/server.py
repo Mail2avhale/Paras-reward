@@ -1175,6 +1175,18 @@ class DatabaseCheckMiddleware(BaseHTTPMiddleware):
 # Add middleware
 app.add_middleware(DatabaseCheckMiddleware)
 
+# ========== OBSERVABILITY MIDDLEWARE (Layer 0 — Feb 23 2026) ==========
+# Times every request, logs slow ones (> SLOW_REQUEST_THRESHOLD_MS), builds
+# a rolling per-endpoint p95/p99 sample buffer, and exposes it via
+# /api/admin/observability/*. Zero-risk additive layer; disable with
+# OBSERVABILITY_ENABLED=false. Overhead measured at ~50-80 μs per request.
+try:
+    from middleware.observability import ObservabilityMiddleware
+    app.add_middleware(ObservabilityMiddleware)
+    print("📊 Observability middleware registered (slow-req + per-endpoint stats)")
+except Exception as _obs_err:
+    print(f"⚠️  Observability middleware failed to register (non-critical): {_obs_err}")
+
 # ========== GZIP COMPRESSION (60-80% smaller JSON responses) ==========
 # Major win for admin list pages (BBPS, Bank Redeem, KYC, Razorpay) which
 # can return 50-500 KB JSON. minimum_size=512 skips trivial responses.
@@ -36916,6 +36928,18 @@ set_admin_system_helpers({
     'log_admin_action': log_admin_action
 })
 api_router.include_router(admin_system_router)
+
+# Include admin observability router (Feb 23 2026 — Layer 0)
+try:
+    from routes.admin_observability import (
+        router as admin_observability_router,
+        set_db as set_admin_observability_db,
+    )
+    set_admin_observability_db(db, cache_manager=cache, motor_client=client)
+    api_router.include_router(admin_observability_router)
+    print("📊 Admin observability router wired at /api/admin/observability/*")
+except Exception as _obs_reg_err:
+    print(f"⚠️  Admin observability router failed to register (non-critical): {_obs_reg_err}")
 
 # Include admin finance router (refactored)
 set_admin_finance_db(db)

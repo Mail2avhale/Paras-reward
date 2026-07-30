@@ -3,6 +3,69 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Data Design Refactor — 7-Layer Safe Plan (Feb 23 2026 — approved by user)
+
+**Objectives**: users doc < 5 KB avg · remove growing arrays · login < 500 ms · scale to millions.
+
+**Execution order (approved)**: Layer 0 → 1 → 2 → 3 → 4 → 5 → 6, sequential, one layer per checkpoint.
+
+| Layer | Description | Status |
+|-------|-------------|--------|
+| 0 | Observability — slow-req logger, per-endpoint p95, doc-size histogram | ✅ **DONE Feb 23** |
+| 1 | Zero-risk code-only wins (pool tuning, projection sweep, N+1 sweep) | ⏳ next |
+| 2 | Read-path acceleration (denormalized totals, materialized views) | ⏳ |
+| 3 | Bounded embed pattern (last N in user, archive in own collection) | ⏳ |
+| 4 | Full extract of `mining_history`, `prc_transactions`, `profile_picture` | ⏳ |
+| 5 | Login-specific < 500 ms (minimal projection, bcrypt audit) | ⏳ |
+| 6 | Scale-ready architecture (event sourcing, read replicas, sharding) | ⏳ |
+
+
+## Implemented (Feb 23, 2026 — Layer 0 Observability shipped)
+
+**Purpose**: give production a live X-ray so the *next* regression is visible in seconds, not diagnosed via curl after user reports.
+
+### What shipped
+- **`middleware/observability.py`** — new lightweight `ObservabilityMiddleware`:
+  - Times every request (`X-Response-Time-ms` header set on responses)
+  - Rolling per-endpoint sample buffer (500 samples/endpoint) → p50/p95/p99/max
+  - Rolling slow-request buffer (last 200 requests > 2000 ms — env-tunable via `SLOW_REQUEST_THRESHOLD_MS`)
+  - Structured log line for every slow request: `[SLOW-REQ] {ms} status={} {method} {path} uid={} ip={}`
+  - Global tallies: total requests, slow_rate_pct, 5xx / 4xx counts
+  - Zero-config disable via `OBSERVABILITY_ENABLED=false` env var
+- **`routes/admin_observability.py`** — 7 admin-only read endpoints:
+  - `GET /api/admin/observability/summary` — one-glance health
+  - `GET /api/admin/observability/endpoints?top_n=25&sort_by=p95_ms` — worst-p95 first
+  - `GET /api/admin/observability/slow-requests?limit=100` — recent slow-req buffer
+  - `GET /api/admin/observability/db-health` — Mongo ping + Motor pool + users size-guard stats
+  - `GET /api/admin/observability/cache-health` — L1/L2/circuit-breaker snapshot
+  - `GET /api/admin/observability/collection-sizes?top_n=15` — Mongo storage top-N
+  - `GET /api/admin/observability/users-doc-histogram` — bucketed users-doc size distribution (critical for Data Design Refactor tracking)
+  - `POST /api/admin/observability/reset` — reset per-endpoint counters (slow buffer preserved)
+- Middleware wired at `server.py:1183`; router mounted at `/api/admin/observability/*`.
+- **Overhead measured**: ~50-80 μs per request; regression test asserts < 1.5 ms budget across 500 iters.
+
+### Tests
+- `tests/test_observability_middleware.py` — 7 pytest cases:
+  - fast request not flagged, slow request captured, buffer bounded, p50/p95/p99 computed, 5xx counted, `reset_stats` preserves slow buffer, < 1.5ms overhead budget.
+- **7/7 new + 21/21 existing cache tests still pass** (28 total).
+
+### Live preview verification
+Sample after 21 requests:
+```
+requests_total=21  slow_requests=0  errors_5xx=0
+Top by p95: /api/global/live-activity 361ms → /api/admin/popup/active 267ms
+           /api/auth/login 157ms → /api/leaderboard 7.7ms
+DB ping: 0.6ms  |  Motor pool: 0 in-use / 200 max
+users_size_guard: 3 find_one calls, 0 heavy-field bypasses
+users_doc_histogram: 43 users < 2 KB, 2 users 5-10 KB, 1 user 10-50 KB (max=14 KB)
+```
+
+### Why Layer 0 first
+- **0-risk** — pure additive logging, no data touch, no schema change, no cutover.
+- Answers "what is *actually* slow on prod?" *before* we design further refactor phases → prevents optimizing the wrong thing.
+- **Users doc histogram** endpoint IS the KPI dashboard for Layers 3-4 progress (target: 100 % of users < 5 KB).
+
+
 ## Implemented (Feb 23, 2026 — DEEP RCA: Leaderboard N+1 + Missing Indexes)
 
 ### Production Baseline (measured on https://bugzappers.emergent.host)
