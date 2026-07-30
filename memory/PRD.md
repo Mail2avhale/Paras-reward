@@ -20,11 +20,11 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 | 6 | Scale-ready architecture (event sourcing, read replicas, sharding) | ⏳ |
 
 
-## Implemented (Feb 23, 2026 — Layer 0 Observability shipped)
+## Implemented (Feb 23, 2026 — Layer 0 Observability + Admin Dashboard UI)
 
 **Purpose**: give production a live X-ray so the *next* regression is visible in seconds, not diagnosed via curl after user reports.
 
-### What shipped
+### What shipped (backend)
 - **`middleware/observability.py`** — new lightweight `ObservabilityMiddleware`:
   - Times every request (`X-Response-Time-ms` header set on responses)
   - Rolling per-endpoint sample buffer (500 samples/endpoint) → p50/p95/p99/max
@@ -44,26 +44,38 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 - Middleware wired at `server.py:1183`; router mounted at `/api/admin/observability/*`.
 - **Overhead measured**: ~50-80 μs per request; regression test asserts < 1.5 ms budget across 500 iters.
 
+### What shipped (frontend — Admin UI)
+- **`pages/AdminObservability.js`** — clean React dashboard at `/admin/observability` — non-technical admin can now see everything in one click, no curl / token / JSON parsing needed. Includes:
+  - 4 top-line summary cards (requests, slow, 5xx, endpoints tracked) with color-coded tones
+  - **Users Doc Size Distribution** — target-progress bar toward < 5 KB avg, avg/max/total callouts, per-bucket count bars (green if < 5 KB, yellow if 5-50 KB, red if > 50 KB). **This is THE KPI panel for the whole Data Design Refactor.**
+  - DB Health card — ping, pool in-use/max, users size-guard bypass counter
+  - Cache Health card — L1 utilization, evictions, hit/miss counters, circuit state
+  - Slowest endpoints table — worst-p95 first with color-coded p50/p95/p99/max
+  - Recent slow requests table — timestamp, path, elapsed, uid, ip
+  - Top collections by storage — surfaces collection bloat
+  - Auto-refresh toggle (15 s poll), manual refresh, reset-stats button
+- Route wired at `App.js:877`; sidebar nav link **"📊 Observability"** added in `AdminLayout.js` under System Settings section.
+
 ### Tests
 - `tests/test_observability_middleware.py` — 7 pytest cases:
   - fast request not flagged, slow request captured, buffer bounded, p50/p95/p99 computed, 5xx counted, `reset_stats` preserves slow buffer, < 1.5ms overhead budget.
-- **7/7 new + 21/21 existing cache tests still pass** (28 total).
+- **28/28 total tests pass** (7 new + 21 existing cache/lru).
 
 ### Live preview verification
-Sample after 21 requests:
+Screenshot at `/admin/observability` shows:
 ```
-requests_total=21  slow_requests=0  errors_5xx=0
-Top by p95: /api/global/live-activity 361ms → /api/admin/popup/active 267ms
-           /api/auth/login 157ms → /api/leaderboard 7.7ms
-DB ping: 0.6ms  |  Motor pool: 0 in-use / 200 max
-users_size_guard: 3 find_one calls, 0 heavy-field bypasses
-users_doc_histogram: 43 users < 2 KB, 2 users 5-10 KB, 1 user 10-50 KB (max=14 KB)
+Total requests=69, slow=0, 5xx=0, 24 endpoints tracked
+Users doc: avg=1.2 KB (target 5 KB — On Target 76% headroom), max=13.7 KB
+  43 users < 2 KB  |  2 users 5-10 KB  |  1 user 10-50 KB
+DB ping=2ms, Motor pool 0/200 in-use
+Users guard: 11 find_one + 0 find calls, 0 bypasses
+Cache: L1 6/5000 (0.12%), 0 evictions, 14 hits / 8 misses, circuit closed
 ```
 
 ### Why Layer 0 first
 - **0-risk** — pure additive logging, no data touch, no schema change, no cutover.
 - Answers "what is *actually* slow on prod?" *before* we design further refactor phases → prevents optimizing the wrong thing.
-- **Users doc histogram** endpoint IS the KPI dashboard for Layers 3-4 progress (target: 100 % of users < 5 KB).
+- **Users doc histogram** panel IS the KPI dashboard for Layers 3-4 progress (target: 100 % of users < 5 KB).
 
 
 ## Implemented (Feb 23, 2026 — DEEP RCA: Leaderboard N+1 + Missing Indexes)

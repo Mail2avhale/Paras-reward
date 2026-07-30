@@ -73,6 +73,7 @@ const MENU_TO_PERMISSION = {
   'economy-settings': 'economy-settings',
   'data-backup': 'data-backup',
   'health-check': 'health-check',
+  'observability': 'health-check',  // reuses health-check permission
 };
 
 const AdminLayout = ({ children, user, onLogout }) => {
@@ -235,6 +236,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/admin/data-backup' },
         { id: 'health-check', label: 'Pre-Deploy Health Check', icon: Activity, path: '/admin/health-check', highlight: true },
         { id: 'web-vitals', label: 'Web Vitals (RUM)', icon: Activity, path: '/admin/web-vitals', highlight: true },
+        { id: 'observability', label: '📊 Observability', icon: Activity, path: '/admin/observability', highlight: true },
       ]
     },
     settings: {
@@ -306,6 +308,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/data-backup': 'data-backup',
     '/admin/health-check': 'health-check',
     '/admin/web-vitals': 'health-check',
+    '/admin/observability': 'observability',
   };
 
   useEffect(() => {

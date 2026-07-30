@@ -550,6 +550,7 @@ const MyReports = lazy(() => import("@/pages/MyReports"));
 // This reduces initial bundle size for regular users by ~30%
 // ADMIN PAGES - Only loaded if NOT user build (excluded from Play Store AAB)
 const AdminDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDashboard"));
+const AdminObservability = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminObservability"));
 // AdminDashboardModern removed - not in use
 const AdminAnalytics = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAnalytics"));
 const AdminPRCAnalytics = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCAnalytics"));
@@ -875,6 +876,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                   ) : <Navigate to="/dashboard" />}
                 />
                 <Route path="/admin" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminDashboard user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/observability" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminObservability user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/dashboard" element={canAccessAdmin(user) ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/users" element={<Navigate to="/admin/user-360" replace />} />
                 <Route path="/admin/analytics" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminAnalytics user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
