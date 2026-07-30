@@ -8,6 +8,29 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Feature (Feb 23, 2026 — Admin Paras Mall Bookings UX polish)
+
+### User asks (from mobile screenshot)
+1. **Pending Delivery** sub-tab as default with fulfilled bookings sorted "first fulfilled on top" (FIFO)
+2. Display **user email** alongside mobile in USER column
+3. **Per-field copy buttons** for every important field (name, mobile, email, delivery name, delivery mobile, street, PIN)
+
+### Delivered
+- **Default tab**: `pending_delivery` was already default (line 75 useState); confirmed on screenshot
+- **FIFO sort**: `pendingDeliveryBookings` now `.sort()`s ascending on `fulfilled_at || created_at` — the booking that got fulfilled first is on top so admin dispatches in the order they qualified
+- **Email display**: Backend `admin_list_bookings` now projects `email` from users collection and includes it in each booking payload as `user_email`. Frontend renders "✉ {email}" (truncated to 140 px) below mobile
+- **Copy buttons** — 7 new copy targets (each with `Copy` lucide icon + tooltip + data-testid):
+  - USER column: name, mobile, email
+  - ADDRESS column: delivery name, delivery mobile, street, PIN code (plus existing "Copy full address")
+
+### Files touched
+- `backend/routes/paras_mall.py` — email projection + `user_email` field in `admin_list_bookings`
+- `frontend/src/pages/Admin/AdminParasMall.js` — FIFO sort, email row, 7 per-field copy buttons
+
+### Verified via preview screenshot at `/admin/mall` → Bookings → All Bookings
+All 3 features live and rendering correctly.
+
+
 ## Implemented (Feb 23, 2026 — Layer 2: `total_redeemed_prc` Denormalization)
 
 ### Problem

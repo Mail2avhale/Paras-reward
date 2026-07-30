@@ -88,7 +88,13 @@ const AdminParasMall = () => {
   useEffect(() => { setBookingsPage(1); }, [bookingsTab]);
 
   // Derived booking lists
-  const pendingDeliveryBookings = bookings.filter((b) => b.status === 'fulfilled');
+  // Feb 23 2026 — Pending Delivery is a FIFO queue: oldest fulfilled_at
+  // first so admins dispatch in the order bookings became eligible.
+  // Falls back to created_at asc if fulfilled_at is missing.
+  const _fifoSortKey = (b) => b.fulfilled_at || b.created_at || '';
+  const pendingDeliveryBookings = bookings
+    .filter((b) => b.status === 'fulfilled')
+    .sort((a, b) => (_fifoSortKey(a) < _fifoSortKey(b) ? -1 : _fifoSortKey(a) > _fifoSortKey(b) ? 1 : 0));
   const deliveredBookings = bookings.filter((b) => b.status === 'delivered');
   const visibleBookings =
     bookingsTab === 'pending_delivery'
@@ -414,24 +420,73 @@ const AdminParasMall = () => {
                 return (
                 <tr key={b.booking_id} className="border-t border-slate-100 align-top" data-testid={`admin-mall-booking-${b.booking_id}`}>
                   <td className="p-3" data-testid={`admin-mall-booking-user-${b.booking_id}`}>
-                    <div className="font-semibold text-slate-800 text-xs">{b.user_name || 'Unknown'}</div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-semibold text-slate-800 text-xs">{b.user_name || 'Unknown'}</span>
+                      {b.user_name && b.user_name !== 'Unknown' && (
+                        <button
+                          type="button"
+                          onClick={() => copyText(b.user_name, 'Name')}
+                          className="text-slate-300 hover:text-blue-600 shrink-0"
+                          title="Copy name"
+                          data-testid={`admin-mall-booking-copy-name-${b.booking_id}`}
+                        >
+                          <Copy className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+                    </div>
                     {b.user_mobile && (
-                      <div className="text-[10px] text-slate-500 font-mono">{b.user_mobile}</div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-[10px] text-slate-500 font-mono">📞 {b.user_mobile}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyText(b.user_mobile, 'Mobile')}
+                          className="text-slate-300 hover:text-blue-600 shrink-0"
+                          title="Copy mobile"
+                          data-testid={`admin-mall-booking-copy-mobile-${b.booking_id}`}
+                        >
+                          <Copy className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
                     )}
-                    <div className="text-[9px] text-slate-400 font-mono">{b.user_id?.slice(0, 8)}…</div>
+                    {b.user_email && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-[10px] text-slate-500 font-mono truncate max-w-[140px]" title={b.user_email}>✉ {b.user_email}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyText(b.user_email, 'Email')}
+                          className="text-slate-300 hover:text-blue-600 shrink-0"
+                          title="Copy email"
+                          data-testid={`admin-mall-booking-copy-email-${b.booking_id}`}
+                        >
+                          <Copy className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    )}
+                    <div className="text-[9px] text-slate-400 font-mono mt-0.5">{b.user_id?.slice(0, 8)}…</div>
                   </td>
                   <td className="p-3">{b.product_name}</td>
                   <td className="p-3" data-testid={`admin-mall-booking-address-${b.booking_id}`}>
                     {hasAddress ? (
-                      <div className="text-[11px] text-slate-700 leading-snug space-y-0.5 max-w-[260px]">
+                      <div className="text-[11px] text-slate-700 leading-snug space-y-0.5 max-w-[280px]">
                         <div className="flex items-start justify-between gap-2">
-                          <div className="font-semibold text-slate-800 flex items-center gap-1">
+                          <div className="font-semibold text-slate-800 flex items-center gap-1 min-w-0">
                             <MapPin className="w-3 h-3 text-blue-600 shrink-0" />
                             <span className="truncate">{d.name || '—'}</span>
+                            {d.name && (
+                              <button
+                                type="button"
+                                onClick={() => copyText(d.name, 'Delivery name')}
+                                className="text-slate-300 hover:text-blue-600 shrink-0"
+                                title="Copy delivery name"
+                                data-testid={`admin-mall-booking-copy-delivname-${b.booking_id}`}
+                              >
+                                <Copy className="w-2.5 h-2.5" />
+                              </button>
+                            )}
                           </div>
                           <button
                             type="button"
-                            onClick={() => copyText(fullAddress, 'Address')}
+                            onClick={() => copyText(fullAddress, 'Full address')}
                             className="text-slate-400 hover:text-blue-600 shrink-0"
                             title="Copy full address"
                             data-testid={`admin-mall-booking-copy-${b.booking_id}`}
@@ -440,14 +495,49 @@ const AdminParasMall = () => {
                           </button>
                         </div>
                         {d.mobile && (
-                          <div className="text-slate-500 font-mono text-[10px]">📞 {d.mobile}</div>
+                          <div className="flex items-center gap-1 text-slate-500 font-mono text-[10px]">
+                            <span>📞 {d.mobile}</span>
+                            <button
+                              type="button"
+                              onClick={() => copyText(d.mobile, 'Delivery mobile')}
+                              className="text-slate-300 hover:text-blue-600 shrink-0"
+                              title="Copy delivery mobile"
+                              data-testid={`admin-mall-booking-copy-delivmobile-${b.booking_id}`}
+                            >
+                              <Copy className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
                         )}
-                        <div className="text-slate-700">{d.address_line}</div>
+                        <div className="flex items-start gap-1 text-slate-700">
+                          <span>{d.address_line}</span>
+                          {d.address_line && (
+                            <button
+                              type="button"
+                              onClick={() => copyText(d.address_line, 'Street address')}
+                              className="text-slate-300 hover:text-blue-600 shrink-0 mt-0.5"
+                              title="Copy street address"
+                              data-testid={`admin-mall-booking-copy-street-${b.booking_id}`}
+                            >
+                              <Copy className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                        </div>
                         {d.landmark && (
                           <div className="text-slate-500 text-[10px]">Landmark: {d.landmark}</div>
                         )}
-                        <div className="text-slate-600 text-[10px]">
-                          {[d.city, d.state].filter(Boolean).join(', ')} <span className="font-bold text-slate-800">{d.pin_code}</span>
+                        <div className="flex items-center gap-1 text-slate-600 text-[10px]">
+                          <span>{[d.city, d.state].filter(Boolean).join(', ')} <span className="font-bold text-slate-800">{d.pin_code}</span></span>
+                          {d.pin_code && (
+                            <button
+                              type="button"
+                              onClick={() => copyText(String(d.pin_code), 'PIN code')}
+                              className="text-slate-300 hover:text-blue-600 shrink-0"
+                              title="Copy PIN code"
+                              data-testid={`admin-mall-booking-copy-pin-${b.booking_id}`}
+                            >
+                              <Copy className="w-2.5 h-2.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ) : (
