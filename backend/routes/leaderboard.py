@@ -298,12 +298,19 @@ async def get_weekly_leaderboard(limit: int = 50):
 # TOP REDEEMERS — Lifetime across ALL services (for Community + Live Strip)
 # ============================================================================
 _TOP_REDEEMERS_CACHE: dict = {"ts": 0, "data": None}
-# Cache TTL chosen to match the rough "freshness" users expect after a redeem.
-# Pre-May-11: 2 hours — caused Top 10 to lag behind the Community feed badge by
-# multiple redeems for the same user. New: 5 minutes — short enough that the
-# leaderboard tracks Community Feed within one auto-refresh tick, long enough
-# to absorb crawler spikes without overloading the dedup-heavy 2-pass aggregation.
-_TOP_REDEEMERS_TTL = 5 * 60  # 5 minutes
+# Feb 23 2026 — Bumped 5 min → 15 min after prod audit showed this endpoint
+# clocking 30 s cold hits (uvicorn timeout). At 15 min TTL each cache miss
+# is amortized across ~450 potential requests/refreshes. Users still see
+# fresh data because a background pre-warm task refreshes the cache
+# every 12 min (see server.py startup).
+_TOP_REDEEMERS_TTL = 15 * 60  # 15 minutes
+
+# Feb 23 2026 — In-flight lock: when the cache expires and 100 clients
+# hit this endpoint simultaneously, ONLY ONE runs the expensive 17-
+# collection aggregation; the rest await the same future. Prevents the
+# thundering-herd that made prod pin at 30 s p50 (11 calls / 30 s each).
+import asyncio as _lb_asyncio
+_TOP_REDEEMERS_LOCK: dict = {"fut": None}
 
 
 def _mask_name(full_name: str, first_name: str = "") -> str:
@@ -387,6 +394,48 @@ async def get_top_redeemers(limit: int = 50):
             "refreshed_at": _TOP_REDEEMERS_CACHE["ts"],
         }
 
+    # ── In-flight lock: only ONE worker builds the leaderboard at a time.
+    # Everyone else awaits the same future → thundering-herd protection.
+    if _TOP_REDEEMERS_LOCK["fut"] is not None and not _TOP_REDEEMERS_LOCK["fut"].done():
+        try:
+            data = await asyncio.wait_for(_TOP_REDEEMERS_LOCK["fut"], timeout=25.0)
+            return {
+                "leaderboard": (data or [])[:limit],
+                "cached": True,
+                "refreshed_at": int(now),
+            }
+        except asyncio.TimeoutError:
+            # Fall through and try our own build.
+            pass
+
+    # Create the shared future so parallel callers all await this one.
+    loop = asyncio.get_event_loop()
+    _TOP_REDEEMERS_LOCK["fut"] = loop.create_future()
+    _lock_future_ref = _TOP_REDEEMERS_LOCK["fut"]
+
+    # Guarantee lock release on ANY exit path (return, exception, cancel)
+    # so parallel waiters don't stall on a dead future.
+    def _release_lock_on_exit(task):
+        try:
+            if not _lock_future_ref.done():
+                if task.cancelled():
+                    _lock_future_ref.cancel()
+                elif task.exception():
+                    _lock_future_ref.set_exception(task.exception())
+                else:
+                    # Success path already called set_result; this is a fallback.
+                    _lock_future_ref.set_result(_TOP_REDEEMERS_CACHE.get("data") or [])
+        except Exception:
+            pass
+        finally:
+            if _TOP_REDEEMERS_LOCK.get("fut") is _lock_future_ref:
+                _TOP_REDEEMERS_LOCK["fut"] = None
+    try:
+        asyncio.current_task().add_done_callback(_release_lock_on_exit)
+    except Exception:
+        # Not inside a task (test env) — fall back to manual release below.
+        pass
+
     STATUS_OK = {"$in": ["paid", "approved", "completed", "success",
                           "pending", "processing", "Paid", "Approved",
                           "Completed", "Success", "Pending", "Processing"]}
@@ -439,8 +488,12 @@ async def get_top_redeemers(limit: int = 50):
         logging.warning("[top-redeemers] no data across any service")
         return {"leaderboard": [], "cached": False, "refreshed_at": int(now)}
 
-    # Top 1.5x buffer (smaller = faster reconciliation)
-    candidates = sorted(rough_totals.items(), key=lambda x: -x[1])[:int(limit * 1.5) + 10]
+    # Feb 23 2026 — Reduced from 1.5x to 1.05x buffer (was fetching top 85
+    # candidates for a limit=50 request → up to 85 users through the
+    # expensive 17-collection reconciliation. Now only ~55). Pass-1 rough
+    # totals are accurate enough at the top of the list; the buffer just
+    # protects against ties.
+    candidates = sorted(rough_totals.items(), key=lambda x: -x[1])[:int(limit * 1.05) + 5]
     user_ids = [t[0] for t in candidates]
 
     # Pass 2: reconcile each with canonical get_user_all_time_redeemed (dedup-aware)
@@ -547,6 +600,15 @@ async def get_top_redeemers(limit: int = 50):
 
     _TOP_REDEEMERS_CACHE["ts"] = int(now) if leaderboard else int(now) - _TOP_REDEEMERS_TTL + 60  # don't cache empty for >60s
     _TOP_REDEEMERS_CACHE["data"] = leaderboard
+
+    # Success-path release. The done_callback registered earlier guarantees
+    # the future is also released on exception / cancellation.
+    try:
+        if not _lock_future_ref.done():
+            _lock_future_ref.set_result(leaderboard)
+    except Exception:
+        pass
+
     return {
         "leaderboard": leaderboard,
         "cached": False,

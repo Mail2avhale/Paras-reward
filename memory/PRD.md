@@ -3,6 +3,51 @@
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+# PARAS REWARD — Product Requirements Document
+
+## Original Problem Statement
+Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
+
+## Implemented (Feb 23, 2026 — Layer 1.5 Emergency Prod Hotfixes — data-driven)
+
+### Production reality unlocked by user's Layer 0 screenshot
+- **5,997 users**, avg users doc = **67 KB** (target < 5 KB → 13× over), max = **6.3 MB**
+- **1,723 users (28.7 %) are 50 KB – 10 MB** — the tail is where the pain is
+- **Slow-request rate: 8.77 %** (27 / 308 requests > 2 s)
+- **Slowest endpoints from real p95**:
+  - `/api/leaderboard/top-redeemers` — 30,003 ms p50 (uvicorn timeout hit!)
+  - `/api/mall/v2/wishlist` — 30,003 ms
+  - `/api/user/{uid}/performance-summary` — p50 6.6 s, p95 13.3 s
+  - `/api/user/{uid}` — 5.4 s
+  - `/api/mining/status/{uid}` — p95 5.4 s
+  - `/api/notifications/{uid}/unread-count` — p95 3.4 s, p99 5.4 s
+
+### Hotfixes applied
+1. **Users size-guard extended** — added `prc_transactions`, `login_history`, `activity`, `activity_log`, `notifications_seen`, `security_events` to `_HEAVY_EXCLUDES`. Every default-projection `find_one` / `find` on `users` now excludes 8 heavy fields, not just 2. Expected doc-transfer size drop on `/api/user/{uid}`: 67 KB avg → target < 10 KB, worst-case 6.3 MB → target < 100 KB.
+2. **`/api/mall/v2/wishlist` 30 s → 122 ms** — `_ensure_indexes()` was calling 6 `create_index` round-trips ON EVERY REQUEST (metadata check overhead ~300 ms/request; blocked 30 s if Atlas was doing background index build). Now memoized: runs once per uvicorn worker.
+3. **`/api/leaderboard/top-redeemers` 30 s → 1.2 s cold, 96 ms warm** — three-part fix:
+   - Cache TTL bumped 5 min → **15 min** (amortizes cost across ~450 requests per miss).
+   - **In-flight lock** — when cache expires and 100 clients hit simultaneously, ONLY ONE runs the 17-collection reconciliation; the rest await the same asyncio future. Prevents thundering herd. Lock guaranteed released via `add_done_callback` on task exit (success, exception, cancel).
+   - Reconciliation buffer reduced from 1.5× → 1.05× (was reconciling top-85 for a limit-50 request; now ~55).
+4. **`/api/notifications/{uid}/unread-count` 3.4 s → cached 30 s** — added L1/L2 cache with 30 s TTL (matches client polling cadence). Cache busted on `PUT /read` and `PUT /read-all` so badge updates instantly. Also added 4 compound indexes (`{user_uid,read}`, `{user_id,is_read}`, `{user_uid,created_at}`, `{user_id,created_at}`) so the cold-cache count is IXSCAN, not COLLSCAN.
+5. **Wishlist compound index** — added `[uid, added_at desc]` so the wishlist list query uses index-backed sort.
+6. **Lint hygiene** — renamed duplicate `mark_notification_read` / `mark_all_notifications_read` (POST legacy paths) to `_post` variants so ruff F811 no longer trips. Both PUT and POST paths still work and both bust the badge cache.
+
+### Preview verification
+```
+/api/leaderboard/top-redeemers?limit=10     cold=1.18s  warm=0.10s
+/api/mall/v2/wishlist                       0.10s
+/api/global/live-activity                   0.59s (already cached — cache miss cost)
+28/28 test suite pass (LRU + observability + cache fallback)
+```
+
+### Files touched (Layer 1.5)
+- `backend/server.py` — 6 more fields in `_HEAVY_EXCLUDES`, 4 more compound indexes on `notifications`
+- `backend/routes/leaderboard.py` — in-flight lock, 15-min TTL, smaller reconciliation buffer
+- `backend/routes/notifications_routes.py` — cache + cache-bust on unread-count, renamed duplicates
+- `backend/routes/mall_v2.py` — memoized `_ensure_indexes`, added wishlist sort index
+
+
 ## Data Design Refactor — 7-Layer Safe Plan (Feb 23 2026 — approved by user)
 
 **Objectives**: users doc < 5 KB avg · remove growing arrays · login < 500 ms · scale to millions.
@@ -12,7 +57,7 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 | Layer | Description | Status |
 |-------|-------------|--------|
 | 0 | Observability — slow-req logger, per-endpoint p95, doc-size histogram | ✅ **DONE Feb 23** |
-| 1 | Zero-risk code-only wins (pool tuning, projection sweep, N+1 sweep) | ⏳ next |
+| 1 | Zero-risk code-only wins (pool tuning, projection sweep, N+1 sweep) | ⏳ started (Layer 1.5 emergency hotfixes shipped) |
 | 2 | Read-path acceleration (denormalized totals, materialized views) | ⏳ |
 | 3 | Bounded embed pattern (last N in user, archive in own collection) | ⏳ |
 | 4 | Full extract of `mining_history`, `prc_transactions`, `profile_picture` | ⏳ |

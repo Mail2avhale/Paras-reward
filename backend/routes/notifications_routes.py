@@ -112,12 +112,34 @@ async def get_notifications(
 
 @router.get("/{uid}/unread-count")
 async def get_notification_unread_count(uid: str):
-    """Get unread notification count (tolerates legacy user_id-only docs)."""
+    """Get unread notification count (tolerates legacy user_id-only docs).
+
+    Feb 23 2026 — Added 30 s cache. This endpoint was #7 on the prod
+    slow-endpoint list (p95=3.4 s, p99=5.4 s) because it does a
+    count_documents with double-nested $or ({user_uid|user_id} × {read|is_read})
+    which cannot use a simple index. Also many client apps poll it every
+    30 s per user. Result: hundreds of COLLSCAN-ish counts per minute.
+    30 s TTL keeps the badge "stale by at most one refresh tick" which is
+    already the client's polling cadence.
+    """
+    cache_key = f"notif_unread:{uid}"
+    try:
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return cached
+    except Exception:
+        pass
+
     owner_clause = {"$or": [{"user_uid": uid}, {"user_id": uid}]}
     count = await db.notifications.count_documents({
         "$and": [owner_clause, {"$or": [{"read": False}, {"is_read": False}]}]
     })
-    return {"unread_count": count}
+    payload = {"unread_count": count}
+    try:
+        await cache.set(cache_key, payload, ttl=30)
+    except Exception:
+        pass
+    return payload
 
 
 @router.put("/{notification_id}/read")
@@ -127,10 +149,25 @@ async def mark_notification_read(notification_id: str):
         {"notification_id": notification_id},
         {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
     )
-    
+
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Notification not found")
-    
+
+    # Bust the unread-count cache for this notification's owner so the
+    # badge updates on the very next client refresh (not 30 s later).
+    try:
+        # We need the owner uid — do a lightweight lookup.
+        n = await db.notifications.find_one(
+            {"notification_id": notification_id},
+            {"_id": 0, "user_uid": 1, "user_id": 1}
+        )
+        if n:
+            owner = n.get("user_uid") or n.get("user_id")
+            if owner:
+                await cache.delete(f"notif_unread:{owner}")
+    except Exception:
+        pass
+
     return {"success": True, "message": "Notification marked as read"}
 
 
@@ -150,6 +187,12 @@ async def mark_all_notifications_read(uid: str):
             "read_at": datetime.now(timezone.utc).isoformat(),
         }}
     )
+
+    # Bust the badge cache so the client sees 0 immediately.
+    try:
+        await cache.delete(f"notif_unread:{uid}")
+    except Exception:
+        pass
 
     return {"success": True, "marked_count": result.modified_count}
 
@@ -2197,26 +2240,30 @@ async def get_unread_count(user_id: str):
     return {"unread_count": count}
 
 @router.post("/{notification_id}/mark-read")
-async def mark_notification_read(notification_id: str):
-    """Mark a single notification as read"""
+async def mark_notification_read_post(notification_id: str):
+    """Mark a single notification as read (POST variant — legacy path)."""
     result = await db.notifications.update_one(
         {"notification_id": notification_id},
         {"$set": {"is_read": True}}
     )
-    
+
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Notification not found")
-    
+
     return {"message": "Notification marked as read"}
 
 @router.post("/{user_id}/mark-all-read")
-async def mark_all_notifications_read(user_id: str):
-    """Mark all user notifications as read"""
+async def mark_all_notifications_read_post(user_id: str):
+    """Mark all user notifications as read (POST variant — legacy path)."""
     result = await db.notifications.update_many(
         {"user_id": user_id, "is_read": False},
         {"$set": {"is_read": True}}
     )
-    
+    # Bust the unread badge cache — matches the PUT variant above.
+    try:
+        await cache.delete(f"notif_unread:{user_id}")
+    except Exception:
+        pass
     return {
         "message": "All notifications marked as read",
         "count": result.modified_count

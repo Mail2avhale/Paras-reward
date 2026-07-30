@@ -778,7 +778,28 @@ class _UsersCollectionSizeGuard:
     logs the first include-mode leak per unique code path (via stack
     fingerprint) so it's easy to spot in production logs.
     """
-    _HEAVY_EXCLUDES = {"mining_history": 0, "profile_picture": 0}
+    _HEAVY_EXCLUDES = {
+        "mining_history": 0,
+        "profile_picture": 0,
+        # Feb 23 2026 — added after prod audit showed avg users doc = 67 KB
+        # (target < 5 KB). `prc_transactions` is another unbounded append-only
+        # array that grows with every credit / debit. On preview it was
+        # already 5.4 KB avg → on prod it's a primary contributor to the
+        # 50 KB - 6 MB tail of the doc-size distribution.
+        "prc_transactions": 0,
+        # `login_history` — some legacy accounts have hundreds of entries
+        # embedded in the user doc. Never needed on the read path.
+        "login_history": 0,
+        # `activity` / `activity_log` — old telemetry arrays.
+        "activity": 0,
+        "activity_log": 0,
+        # `notifications_seen` — bookkeeping array of seen-notification IDs
+        # that can grow to thousands of entries per active user.
+        "notifications_seen": 0,
+        # `security_events` — legacy embedded audit log; canonical version
+        # lives in the `security_audit_log` collection now.
+        "security_events": 0,
+    }
 
     def __init__(self, inner):
         object.__setattr__(self, "_inner", inner)
@@ -38152,6 +38173,29 @@ async def initialize_database_indexes():
         except Exception as _e:
             print(f"⚠️  {_coll} status/user_id index: {_e}")
     print("✅ Redeem-source `user_id` indexes ensured")
+
+    # ── Notifications compound indexes ─────────────────────────────
+    # Feb 23 2026: `/api/notifications/{uid}/unread-count` was #7 slowest
+    # endpoint on prod (p95=3.4s, p99=5.4s). The query has nested $or on
+    # both {user_uid|user_id} and {read|is_read}. Two compound indexes
+    # cover the two owner-key variants and let Mongo use an IXSCAN.
+    try:
+        await db.notifications.create_index(
+            [("user_uid", 1), ("read", 1)], background=True,
+        )
+        await db.notifications.create_index(
+            [("user_id", 1), ("is_read", 1)], background=True,
+        )
+        # Also list-view sort key
+        await db.notifications.create_index(
+            [("user_uid", 1), ("created_at", -1)], background=True,
+        )
+        await db.notifications.create_index(
+            [("user_id", 1), ("created_at", -1)], background=True,
+        )
+        print("✅ Notifications compound indexes ensured")
+    except Exception as _e:
+        print(f"⚠️  Notifications indexes: {_e}")
 
     print("✅ Database indexes initialization complete")
 

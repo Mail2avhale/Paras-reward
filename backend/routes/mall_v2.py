@@ -64,15 +64,33 @@ def _iso(dt):
     return dt.isoformat()
 
 
+_indexes_ensured = False
+
+
 async def _ensure_indexes():
+    """Idempotent + memoized — runs ONCE per uvicorn worker.
+
+    Feb 23 2026 — Was called on every mall_v2 endpoint hit → 6 round-trips
+    to Atlas per request (300 ms+ overhead) and, worse, blocked the whole
+    request for up to 30 s when Atlas was doing a background reindex.
+    """
+    global _indexes_ensured
+    if _indexes_ensured:
+        return
     try:
         await db.mall_wishlist.create_index([("uid", 1), ("product_id", 1)], unique=True)
+        # Support the wishlist listing which sorts by added_at desc
+        await db.mall_wishlist.create_index([("uid", 1), ("added_at", -1)])
         await db.mall_recently_viewed.create_index([("uid", 1), ("product_id", 1)], unique=True)
         await db.mall_recently_viewed.create_index([("uid", 1), ("viewed_at", -1)])
         await db.mall_product_reviews.create_index([("product_id", 1), ("created_at", -1)])
         await db.mall_product_reviews.create_index([("uid", 1), ("product_id", 1)], unique=True)
         await db.mall_categories.create_index("slug", unique=True)
+        await db.mall_products.create_index("product_id", unique=True)
+        _indexes_ensured = True
     except Exception:
+        # First request after boot may race with another worker — that's fine,
+        # we'll simply retry on the next call.
         pass
 
 
