@@ -8,6 +8,53 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 23, 2026 — Layer 1.6 — Second wave of prod-data-driven hotfixes)
+
+### Production reality on second Observability screenshot
+- Uptime 17 min, 4,536 requests
+- **1,466 slow (32.32 %)** ← was 8.77 % — REGRESSION in 5xx cascade
+- **958 5xx errors (21.12 %)** ← huge
+- **Slowest endpoints — all 30 s hard-timeouts** from `DatabaseCheckMiddleware.wait_for(30.0)`:
+  - `/api/mall/v2/wishlist` — 788 calls / **767 5xx (97 % failure!)**
+  - `/api/mall/v2/featured` — 35 calls / **35 5xx (100 %)**
+  - `POST /api/mall/v2/track-view/{product_id}` — 19 / 19 (100 %)
+  - `/api/mall/v2/saver-progress` — 31 / 31 (100 %)
+  - `/api/mall/my-bookings/{user_id}` — 115 calls / 11 5xx (N×3 loop)
+  - `/api/mining/status/{uid}` — 343 / 41
+  - `/api/user/{uid}` — 28 / 4
+
+### Root causes identified
+1. **`mall_v2.py` was creating its OWN Motor client** (line 50) with NO connection options → Motor defaults kicked in: `serverSelectionTimeoutMS=30 s`, `socketTimeoutMS=None` (infinite!), `maxPoolSize=100`. Any cold Atlas hit could hang > 30 s → hit our `DatabaseCheckMiddleware.wait_for(30 s)` → uvicorn 5xx.
+2. **`_ensure_indexes` thundering herd** — on cold start, 100+ concurrent requests all entered `_ensure_indexes()` (which had only a boolean flag, no async lock). Each fired 8 `create_index` calls to Atlas simultaneously → pool starved → 30 s timeouts across the entire mall_v2 surface.
+3. **`/mall/v2/featured` had NO index** on `[active, featured, featured_sort]` — COLLSCAN every hit.
+4. **`server.py` main client had `socketTimeoutMS=45 s`** — a runaway query could hold a Motor connection for 45 s → pool starvation cascading to unrelated endpoints.
+5. **`/mall/my-bookings` had N×3 loop** — `maybe_lapse_or_renew_session` + `compute_session_accumulated` + `get_daily_rate_for_booking` for every booking (up to 200).
+
+### Fixes applied
+1. **`mall_v2.py` Motor client tightened** — added `serverSelectionTimeoutMS=10 s`, `connectTimeoutMS=10 s`, `socketTimeoutMS=15 s`, `waitQueueTimeoutMS=8 s`, `maxPoolSize=50` (smaller — this client only serves mall_v2). Mirrors main `server.py` client.
+2. **`_ensure_indexes` now uses `asyncio.Lock`** — concurrent cold-start requests wait for ONE builder; everyone else awaits the flag flip. All `create_index` calls also have explicit `background=True`.
+3. **`/mall/v2/featured` compound index** added: `[active, featured, featured_sort]` + `[active, view_count desc]`. Now IXSCAN.
+4. **`server.py` main client `socketTimeoutMS=45 s → 15 s`** and `waitQueueTimeoutMS=10 s → 8 s`. Fails fast so pool recovers before cascade.
+5. **Response caching added** on the three worst offenders (short TTL, per-worker in-process dict):
+   - `/mall/v2/wishlist` — 10 s TTL, busts on toggle
+   - `/mall/v2/featured` — 60 s TTL (identical payload for all users)
+   - `/mall/my-bookings/{user_id}` — 6 s TTL (client polls every 10-15 s so this catches the burst without staleness)
+6. **`paras_mall.py` set_db()` extended** — cache manager now injected so `/my-bookings` can use it.
+
+### Preview verification
+```
+/mall/v2/wishlist            cold=203 ms  warm=131 ms
+/mall/v2/featured            cold=105 ms  warm=123 ms
+/mall/my-bookings/{uid}      cold=335 ms  warm=142 ms
+37/37 tests pass (LRU + observability + cache + sub_status)
+```
+
+### Files touched (Layer 1.6)
+- `backend/routes/mall_v2.py` — tightened Motor client, added asyncio.Lock to `_ensure_indexes`, added compound indexes for /featured, response cache for /wishlist + /featured
+- `backend/routes/paras_mall.py` — response cache for /my-bookings, cache-manager injection via `set_db(cache_manager=...)`
+- `backend/server.py` — main Motor client socketTimeoutMS 45→15 s, waitQueue 10→8 s; `set_paras_mall_db()` now injects cache
+
+
 ## Bug Fix (Feb 23, 2026 — Mall subscription-expired ghost bug)
 
 ### User report

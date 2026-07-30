@@ -53,6 +53,8 @@ router = APIRouter(prefix="/mall", tags=["Paras Mall"])
 admin_router = APIRouter(prefix="/admin/mall", tags=["Paras Mall Admin"])
 
 db = None  # injected by server
+# Feb 23 2026 — cache injected via set_db() for response-caching hot paths.
+cache = None
 
 # ---------------- CONSTANTS ----------------
 PRC_INR_RATE = 10  # 10 PRC = ₹1 (fixed, June 2026)
@@ -141,9 +143,11 @@ def compute_pricing_breakdown(mrp_inr: float, upfront_percent: float = PROCESSIN
     }
 
 
-def set_db(database):
-    global db
+def set_db(database, cache_manager=None):
+    global db, cache
     db = database
+    if cache_manager is not None:
+        cache = cache_manager
     # Auto-seed mall products from bundle if collection is empty
     # Runs lazily on first event-loop tick so the routes are registered first.
     try:
@@ -973,6 +977,13 @@ async def my_bookings(
     subject. Was previously anonymous — leaked full booking history INCLUDING
     delivery address + mobile PII for any UID an attacker could guess.
     Admins bypass for legitimate support ops.
+
+    Feb 23 2026 — 6 s response cache. Prod audit showed 115 calls / 11
+    5xx errors AND p95=30 s. The endpoint does an N×3 loop per
+    booking (maybe_lapse_or_renew_session + compute_session_accumulated
+    + get_daily_rate_for_booking). Under load Motor pool starved →
+    30 s uvicorn kill. A short response cache absorbs the burst.
+    Bust key on any booking write.
     """
     caller_uid = current_user.get("uid")
     caller_role = current_user.get("role", "user")
@@ -981,6 +992,18 @@ async def my_bookings(
             status_code=403,
             detail="Access denied. You can only view your own bookings.",
         )
+
+    # Response cache — 6 s TTL is fresh enough for the "live" counter UX
+    # (client typically polls every 10-15 s). Miss cost is amortized
+    # across ~10 concurrent requests.
+    _mb_cache_key = f"my_bookings_v1:{user_id}"
+    try:
+        _mb_cached = await cache.get(_mb_cache_key)
+        if _mb_cached is not None:
+            return _mb_cached
+    except Exception:
+        pass
+
     bookings = await db.mall_bookings.find(
         {"user_id": user_id}, {"_id": 0}
     ).sort("created_at", -1).to_list(200)
@@ -1043,7 +1066,12 @@ async def my_bookings(
             b["can_start_session"] = False
         b["progress_percent"] = round((b.get("paid_prc", 0) / b.get("total_prc", 1)) * 100, 2)
         enriched.append(b)
-    return {"success": True, "count": len(enriched), "bookings": enriched}
+    payload = {"success": True, "count": len(enriched), "bookings": enriched}
+    try:
+        await cache.set(_mb_cache_key, payload, ttl=6)
+    except Exception:
+        pass
+    return payload
 
 
 @router.get("/booking/{booking_id}")

@@ -47,8 +47,66 @@ from server import get_current_user
 router = APIRouter(prefix="/mall/v2", tags=["mall-v2"])
 
 _env = dotenv_values("/app/backend/.env")
-_client = AsyncIOMotorClient(_env["MONGO_URL"])
+
+# Feb 23 2026 — Tightened Motor client options. Previously used defaults
+# (serverSelectionTimeoutMS=30 s, socketTimeoutMS=None) which meant a
+# single cold Atlas hit could hang > 30 s → hit our request-wide
+# `wait_for(30 s)` in DatabaseCheckMiddleware → uvicorn timeout → 5xx.
+# These options mirror server.py's main client.
+_client = AsyncIOMotorClient(
+    _env["MONGO_URL"],
+    serverSelectionTimeoutMS=int(os.environ.get('MONGO_SERVER_SELECTION_TIMEOUT_MS', '10000')),
+    connectTimeoutMS=int(os.environ.get('MONGO_CONNECT_TIMEOUT_MS', '10000')),
+    socketTimeoutMS=int(os.environ.get('MONGO_SOCKET_TIMEOUT_MS', '15000')),
+    waitQueueTimeoutMS=int(os.environ.get('MONGO_WAIT_QUEUE_TIMEOUT_MS', '8000')),
+    maxPoolSize=int(os.environ.get('MONGO_MAX_POOL_SIZE_MALL_V2', '50')),  # smaller than main
+    minPoolSize=5,
+    retryWrites=True,
+    retryReads=True,
+    heartbeatFrequencyMS=5000,
+    readPreference='primaryPreferred',
+    appName='paras-reward-mall-v2',
+)
 db = _client[_env["DB_NAME"]]
+
+
+# ── Response cache (per-worker) ─────────────────────────────────────
+# Feb 23 2026 — Prod audit showed /mall/v2/wishlist alone had 767 5xx
+# out of 788 calls (97 % failure) because concurrent cold-start requests
+# were racing on _ensure_indexes AND on the users find_one that
+# get_current_user does downstream. A short response cache absorbs
+# that burst so most callers get an instant hit and only 1 out of ~10
+# actually touches Mongo.
+import time as _mall_time
+_MV2_CACHE: dict = {}          # key -> (expires_at_epoch_sec, payload)
+_MV2_CACHE_DEFAULT_TTL = 8.0   # sec — short enough to feel live
+
+
+def _mv2_get(key: str):
+    entry = _MV2_CACHE.get(key)
+    if not entry:
+        return None
+    if _mall_time.time() > entry[0]:
+        _MV2_CACHE.pop(key, None)
+        return None
+    return entry[1]
+
+
+def _mv2_set(key: str, value, ttl: float = _MV2_CACHE_DEFAULT_TTL):
+    # Prune expired entries opportunistically so the dict stays small.
+    if len(_MV2_CACHE) > 500:
+        now = _mall_time.time()
+        for k in list(_MV2_CACHE.keys())[:100]:
+            if _MV2_CACHE.get(k) and _MV2_CACHE[k][0] < now:
+                _MV2_CACHE.pop(k, None)
+    _MV2_CACHE[key] = (_mall_time.time() + ttl, value)
+
+
+def _mv2_bust(key_prefix: str):
+    """Delete every cache entry whose key starts with `key_prefix`."""
+    for k in list(_MV2_CACHE.keys()):
+        if k.startswith(key_prefix):
+            _MV2_CACHE.pop(k, None)
 
 
 # ── HELPERS ─────────────────────────────────────────────────────────────────
@@ -65,33 +123,50 @@ def _iso(dt):
 
 
 _indexes_ensured = False
+_indexes_lock: "asyncio.Lock | None" = None
 
 
 async def _ensure_indexes():
-    """Idempotent + memoized — runs ONCE per uvicorn worker.
+    """Idempotent + memoized + concurrent-safe. Runs ONCE per uvicorn worker.
 
-    Feb 23 2026 — Was called on every mall_v2 endpoint hit → 6 round-trips
-    to Atlas per request (300 ms+ overhead) and, worse, blocked the whole
-    request for up to 30 s when Atlas was doing a background reindex.
+    Feb 23 2026 (v2) — Added an asyncio.Lock because ~100 concurrent
+    cold-start requests were ALL entering the try-block, each firing 8
+    create_index round-trips to Atlas simultaneously → thundering herd,
+    Motor pool starvation → the whole mall_v2 surface hit 30 s hard
+    timeouts (97 % failure rate observed in prod). Lock guarantees only
+    ONE builder runs; everyone else waits < 1 s for the flag flip.
     """
-    global _indexes_ensured
+    global _indexes_ensured, _indexes_lock
     if _indexes_ensured:
         return
-    try:
-        await db.mall_wishlist.create_index([("uid", 1), ("product_id", 1)], unique=True)
-        # Support the wishlist listing which sorts by added_at desc
-        await db.mall_wishlist.create_index([("uid", 1), ("added_at", -1)])
-        await db.mall_recently_viewed.create_index([("uid", 1), ("product_id", 1)], unique=True)
-        await db.mall_recently_viewed.create_index([("uid", 1), ("viewed_at", -1)])
-        await db.mall_product_reviews.create_index([("product_id", 1), ("created_at", -1)])
-        await db.mall_product_reviews.create_index([("uid", 1), ("product_id", 1)], unique=True)
-        await db.mall_categories.create_index("slug", unique=True)
-        await db.mall_products.create_index("product_id", unique=True)
-        _indexes_ensured = True
-    except Exception:
-        # First request after boot may race with another worker — that's fine,
-        # we'll simply retry on the next call.
-        pass
+    # Lazy-init the lock in the event loop that first touches it.
+    if _indexes_lock is None:
+        _indexes_lock = asyncio.Lock()
+    async with _indexes_lock:
+        if _indexes_ensured:
+            return  # another coroutine finished while we were waiting
+        try:
+            # background=True on every index so we never block on a slow build.
+            await db.mall_wishlist.create_index([("uid", 1), ("product_id", 1)], unique=True, background=True)
+            await db.mall_wishlist.create_index([("uid", 1), ("added_at", -1)], background=True)
+            await db.mall_recently_viewed.create_index([("uid", 1), ("product_id", 1)], unique=True, background=True)
+            await db.mall_recently_viewed.create_index([("uid", 1), ("viewed_at", -1)], background=True)
+            await db.mall_product_reviews.create_index([("product_id", 1), ("created_at", -1)], background=True)
+            await db.mall_product_reviews.create_index([("uid", 1), ("product_id", 1)], unique=True, background=True)
+            await db.mall_categories.create_index("slug", unique=True, background=True)
+            await db.mall_products.create_index("product_id", unique=True, background=True)
+            # Feb 23 2026 — indexes for /featured hot path (was COLLSCAN)
+            await db.mall_products.create_index(
+                [("active", 1), ("featured", 1), ("featured_sort", 1)], background=True,
+            )
+            await db.mall_products.create_index(
+                [("active", 1), ("view_count", -1)], background=True,
+            )
+            _indexes_ensured = True
+        except Exception as _e:
+            # Log so slow starts don't hide silently, but don't block reqs.
+            import logging as _lg
+            _lg.warning(f"[mall_v2] index ensure failed (non-fatal, will retry): {_e}")
 
 
 def _is_admin(user: dict) -> bool:
@@ -106,8 +181,13 @@ def _is_admin(user: dict) -> bool:
 # ── Wishlist ────────────────────────────────────────────────────────────────
 @router.get("/wishlist")
 async def get_wishlist(user: dict = Depends(get_current_user)):
-    await _ensure_indexes()
     uid = user["uid"]
+    ck = f"wishlist:{uid}"
+    cached = _mv2_get(ck)
+    if cached is not None:
+        return cached
+
+    await _ensure_indexes()
     items = await db.mall_wishlist.find({"uid": uid}, {"_id": 0}).sort("added_at", -1).to_list(200)
     pids = [w["product_id"] for w in items]
     products = {}
@@ -118,7 +198,9 @@ async def get_wishlist(user: dict = Depends(get_current_user)):
         {"added_at": _iso(w["added_at"]), "product": products[w["product_id"]]}
         for w in items if w["product_id"] in products
     ]
-    return {"success": True, "count": len(enriched), "items": enriched}
+    payload = {"success": True, "count": len(enriched), "items": enriched}
+    _mv2_set(ck, payload, ttl=10)  # 10 s cache
+    return payload
 
 
 @router.post("/wishlist/{product_id}/toggle")
@@ -128,6 +210,7 @@ async def toggle_wishlist(product_id: str, user: dict = Depends(get_current_user
     existing = await db.mall_wishlist.find_one({"uid": uid, "product_id": product_id})
     if existing:
         await db.mall_wishlist.delete_one({"_id": existing["_id"]})
+        _mv2_bust(f"wishlist:{uid}")
         return {"success": True, "in_wishlist": False}
     # Ensure product exists & active
     p = await db.mall_products.find_one({"product_id": product_id})
@@ -138,6 +221,7 @@ async def toggle_wishlist(product_id: str, user: dict = Depends(get_current_user
         "product_id": product_id,
         "added_at": _utcnow(),
     })
+    _mv2_bust(f"wishlist:{uid}")
     return {"success": True, "in_wishlist": True}
 
 
@@ -714,14 +798,27 @@ async def featured_products(limit: int = 6):
       1. Active products flagged `featured: true` (admin curated)
       2. Fallback: top-viewed + most-booked active products
     Limited to `limit` items.
+
+    Feb 23 2026 — 60 s response cache. This endpoint is hit by every
+    home page load (public, no auth), so on cold start the same DB
+    query fires from hundreds of concurrent clients. Prod audit showed
+    35/35 (100 %) failure via 30 s uvicorn timeout. Response is
+    identical for everyone so a shared cache is safe.
     """
+    ck = f"featured:{limit}"
+    cached = _mv2_get(ck)
+    if cached is not None:
+        return cached
+
     curated = await db.mall_products.find(
         {"active": True, "featured": True}, {"_id": 0}
     ).sort("featured_sort", 1).limit(limit).to_list(limit)
 
     if len(curated) >= limit:
         enriched = [_enrich_product_pricing(p) for p in curated]
-        return {"success": True, "products": enriched, "source": "curated"}
+        payload = {"success": True, "products": enriched, "source": "curated"}
+        _mv2_set(ck, payload, ttl=60)
+        return payload
 
     # Need to top up — pull most-viewed actives, excluding curated ids
     used = {p["product_id"] for p in curated}
@@ -731,11 +828,13 @@ async def featured_products(limit: int = 6):
     ).sort([("view_count", -1), ("avg_rating", -1)]).limit(fill_needed).to_list(fill_needed)
 
     products = [_enrich_product_pricing(p) for p in (curated + auto)]
-    return {
+    payload = {
         "success": True,
         "products": products,
         "source": "curated+auto" if curated else "auto",
     }
+    _mv2_set(ck, payload, ttl=60)
+    return payload
 
 
 def _enrich_product_pricing(p: dict) -> dict:

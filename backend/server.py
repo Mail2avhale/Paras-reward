@@ -712,8 +712,15 @@ is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 connection_options = {
     'serverSelectionTimeoutMS': int(os.environ.get('MONGO_SERVER_SELECTION_TIMEOUT_MS', '10000')),
     'connectTimeoutMS': int(os.environ.get('MONGO_CONNECT_TIMEOUT_MS', '10000')),
-    'socketTimeoutMS': int(os.environ.get('MONGO_SOCKET_TIMEOUT_MS', '45000')),
-    'waitQueueTimeoutMS': int(os.environ.get('MONGO_WAIT_QUEUE_TIMEOUT_MS', '10000')),
+    # Feb 23 2026 — tightened socketTimeoutMS from 45 s → 15 s. No legit
+    # Mongo operation should ever take > 15 s on Atlas. Was letting a
+    # runaway query hold a Motor connection for 45 s → pool starvation →
+    # 30 s DatabaseCheckMiddleware hard-timeout cascade seen in prod.
+    'socketTimeoutMS': int(os.environ.get('MONGO_SOCKET_TIMEOUT_MS', '15000')),
+    # Feb 23 2026 — tightened from 10 s → 8 s so callers fail fast when
+    # the pool is saturated (instead of stacking wait-queue requests that
+    # will all hit the middleware timeout together).
+    'waitQueueTimeoutMS': int(os.environ.get('MONGO_WAIT_QUEUE_TIMEOUT_MS', '8000')),
     'maxPoolSize': int(os.environ.get('MONGO_MAX_POOL_SIZE', '200')),
     'minPoolSize': int(os.environ.get('MONGO_MIN_POOL_SIZE', '20')),
     'retryWrites': True,
@@ -37384,7 +37391,7 @@ set_admin_prc_balance_db(db)
 api_router.include_router(admin_prc_balance_router)
 
 # Paras Mall (Reward Shopping)
-set_paras_mall_db(db)
+set_paras_mall_db(db, cache_manager=cache)
 set_app_version_db(db)
 api_router.include_router(paras_mall_router)
 api_router.include_router(paras_mall_admin_router)
