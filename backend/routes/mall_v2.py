@@ -135,6 +135,18 @@ async def _ensure_indexes():
     Motor pool starvation → the whole mall_v2 surface hit 30 s hard
     timeouts (97 % failure rate observed in prod). Lock guarantees only
     ONE builder runs; everyone else waits < 1 s for the flag flip.
+
+    Feb 25 2026 (v3) — Layer 1.8 hotfix: `_indexes_ensured = True` now
+    lives in a `finally` block. Previously, if ANY single `create_index`
+    raised (Atlas rate limit, network blip, permission error), the flag
+    stayed False forever and every subsequent request re-entered the
+    lock+retry loop, re-hammering Atlas → the mall_v2/wishlist p95 spike
+    of 30 s and 880-call storms observed in production. Now the flag is
+    set even on partial failure so the retry never repeats; the missing
+    indexes just log a warning and heal on the next worker restart.
+    Additionally each `create_index` is wrapped in `asyncio.wait_for` so
+    a single slow builder can't monopolise the lock for the entire
+    30 s window.
     """
     global _indexes_ensured, _indexes_lock
     if _indexes_ensured:
@@ -145,28 +157,35 @@ async def _ensure_indexes():
     async with _indexes_lock:
         if _indexes_ensured:
             return  # another coroutine finished while we were waiting
+        # Each single create_index is capped at 3 s so we can't be
+        # trapped in the lock for the full request timeout.
+        async def _create(coll, keys, **kw):
+            try:
+                await asyncio.wait_for(coll.create_index(keys, **kw), timeout=3.0)
+            except Exception as _e:
+                import logging as _lg
+                _lg.warning(f"[mall_v2] create_index({keys}) skipped: {_e}")
         try:
             # background=True on every index so we never block on a slow build.
-            await db.mall_wishlist.create_index([("uid", 1), ("product_id", 1)], unique=True, background=True)
-            await db.mall_wishlist.create_index([("uid", 1), ("added_at", -1)], background=True)
-            await db.mall_recently_viewed.create_index([("uid", 1), ("product_id", 1)], unique=True, background=True)
-            await db.mall_recently_viewed.create_index([("uid", 1), ("viewed_at", -1)], background=True)
-            await db.mall_product_reviews.create_index([("product_id", 1), ("created_at", -1)], background=True)
-            await db.mall_product_reviews.create_index([("uid", 1), ("product_id", 1)], unique=True, background=True)
-            await db.mall_categories.create_index("slug", unique=True, background=True)
-            await db.mall_products.create_index("product_id", unique=True, background=True)
+            await _create(db.mall_wishlist, [("uid", 1), ("product_id", 1)], unique=True, background=True)
+            await _create(db.mall_wishlist, [("uid", 1), ("added_at", -1)], background=True)
+            await _create(db.mall_recently_viewed, [("uid", 1), ("product_id", 1)], unique=True, background=True)
+            await _create(db.mall_recently_viewed, [("uid", 1), ("viewed_at", -1)], background=True)
+            await _create(db.mall_product_reviews, [("product_id", 1), ("created_at", -1)], background=True)
+            await _create(db.mall_product_reviews, [("uid", 1), ("product_id", 1)], unique=True, background=True)
+            await _create(db.mall_categories, "slug", unique=True, background=True)
+            await _create(db.mall_products, "product_id", unique=True, background=True)
             # Feb 23 2026 — indexes for /featured hot path (was COLLSCAN)
-            await db.mall_products.create_index(
+            await _create(db.mall_products,
                 [("active", 1), ("featured", 1), ("featured_sort", 1)], background=True,
             )
-            await db.mall_products.create_index(
+            await _create(db.mall_products,
                 [("active", 1), ("view_count", -1)], background=True,
             )
+        finally:
+            # Feb 25 2026 — always mark done so we NEVER loop the whole
+            # index batch. Missing indexes heal on the next worker.
             _indexes_ensured = True
-        except Exception as _e:
-            # Log so slow starts don't hide silently, but don't block reqs.
-            import logging as _lg
-            _lg.warning(f"[mall_v2] index ensure failed (non-fatal, will retry): {_e}")
 
 
 def _is_admin(user: dict) -> bool:
@@ -187,18 +206,36 @@ async def get_wishlist(user: dict = Depends(get_current_user)):
     if cached is not None:
         return cached
 
-    await _ensure_indexes()
-    items = await db.mall_wishlist.find({"uid": uid}, {"_id": 0}).sort("added_at", -1).to_list(200)
-    pids = [w["product_id"] for w in items]
-    products = {}
-    if pids:
-        async for p in db.mall_products.find({"product_id": {"$in": pids}}, {"_id": 0}):
-            products[p["product_id"]] = p
-    enriched = [
-        {"added_at": _iso(w["added_at"]), "product": products[w["product_id"]]}
-        for w in items if w["product_id"] in products
-    ]
-    payload = {"success": True, "count": len(enriched), "items": enriched}
+    # Feb 25 2026 — hard per-request wall so a single slow Motor call
+    # can't burn a 30 s uvicorn slot (was p95 30003 ms on prod). If we
+    # can't compute the wishlist in 4 s we serve an empty payload; the
+    # user's next call retries with fresh cache.
+    async def _compute():
+        await _ensure_indexes()
+        items = await db.mall_wishlist.find(
+            {"uid": uid}, {"_id": 0}
+        ).sort("added_at", -1).limit(200).to_list(200)
+        pids = [w["product_id"] for w in items]
+        products = {}
+        if pids:
+            async for p in db.mall_products.find(
+                {"product_id": {"$in": pids}}, {"_id": 0}
+            ):
+                products[p["product_id"]] = p
+        enriched = [
+            {"added_at": _iso(w["added_at"]), "product": products[w["product_id"]]}
+            for w in items if w["product_id"] in products
+        ]
+        return {"success": True, "count": len(enriched), "items": enriched}
+
+    try:
+        payload = await asyncio.wait_for(_compute(), timeout=4.0)
+    except asyncio.TimeoutError:
+        # Degrade gracefully — return empty so client stops retrying.
+        # Short TTL so we heal quickly when DB recovers.
+        payload = {"success": True, "count": 0, "items": [], "degraded": True}
+        _mv2_set(ck, payload, ttl=2)
+        return payload
     _mv2_set(ck, payload, ttl=10)  # 10 s cache
     return payload
 
@@ -228,20 +265,35 @@ async def toggle_wishlist(product_id: str, user: dict = Depends(get_current_user
 # ── Recently Viewed ─────────────────────────────────────────────────────────
 @router.post("/track-view/{product_id}")
 async def track_product_view(product_id: str, user: dict = Depends(get_current_user)):
-    await _ensure_indexes()
+    """Fire-and-forget view tracker.
+
+    Feb 25 2026 — Wrapped in `asyncio.wait_for(..., 3s)` so Motor
+    pool starvation can't burn a 30 s uvicorn slot (was p50 30 s on
+    prod). We return `{success: True}` even on timeout because the
+    caller doesn't need the write to complete synchronously.
+    """
     uid = user["uid"]
     now = _utcnow()
-    # Upsert so the same (uid, product) doesn't clutter — just bump viewed_at.
-    await db.mall_recently_viewed.update_one(
-        {"uid": uid, "product_id": product_id},
-        {"$set": {"viewed_at": now}, "$setOnInsert": {"first_viewed_at": now}},
-        upsert=True,
-    )
-    # Bump global view counter on the product
-    await db.mall_products.update_one(
-        {"product_id": product_id},
-        {"$inc": {"view_count": 1}},
-    )
+
+    async def _write():
+        await _ensure_indexes()
+        # Upsert so the same (uid, product) doesn't clutter — just bump viewed_at.
+        await db.mall_recently_viewed.update_one(
+            {"uid": uid, "product_id": product_id},
+            {"$set": {"viewed_at": now}, "$setOnInsert": {"first_viewed_at": now}},
+            upsert=True,
+        )
+        # Bump global view counter on the product
+        await db.mall_products.update_one(
+            {"product_id": product_id},
+            {"$inc": {"view_count": 1}},
+        )
+
+    try:
+        await asyncio.wait_for(_write(), timeout=3.0)
+    except asyncio.TimeoutError:
+        # Not a user-facing failure — the write is best-effort.
+        return {"success": True, "degraded": True}
     return {"success": True}
 
 

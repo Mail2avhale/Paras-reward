@@ -8,6 +8,33 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 25, 2026 — Layer 1.8: `/mall/v2/wishlist` doom-loop hotfix)
+
+### Prod symptoms fixed (from second observability screenshot)
+- 24.01 % slow / 23.63 % 5xx on 4,003 requests in 14 min uptime.
+- `/api/mall/v2/wishlist` p50=30003 ms across 880 calls (97 % 504 rate; one IP was hammering the endpoint 60 times in 30 seconds, all timing out).
+- `/api/mall/v2/track-view/{product_id}` p50=30002 ms across 20 calls.
+
+### Root cause
+`_ensure_indexes()` in `routes/mall_v2.py` only set `_indexes_ensured = True` INSIDE the try-block after all 10 `create_index` calls succeeded. If ANY one raised (Atlas rate-limit, network blip, permission drift), the flag stayed False FOREVER and every subsequent request re-entered the lock, retried the whole batch, hammered Atlas — thundering herd → Motor pool starvation → 30 s uvicorn timeouts on the entire mall_v2 surface.
+
+### Fix
+- Moved `_indexes_ensured = True` into a `finally` block so we NEVER loop the batch again (per-worker one-shot).
+- Wrapped each `create_index` in `asyncio.wait_for(..., 3s)` so one slow builder can't monopolise the lock for 30 s.
+- Wrapped `get_wishlist` DB work in `asyncio.wait_for(..., 4s)` — on timeout returns `{success: true, count: 0, items: [], degraded: true}` with 2 s cache so healthy DB conditions recover fast.
+- Wrapped `track_product_view` DB work in `asyncio.wait_for(..., 3s)` — returns `{success: true, degraded: true}` on timeout (fire-and-forget).
+
+### Preview verification
+- 20 parallel wishlist calls all return HTTP 200 in **350-420 ms** (vs 30 000 ms on prod). Total wall-time 465 ms.
+
+### Tests
+- 4 source-code contract tests in `/app/backend/tests/test_mall_v2_wishlist_hotfix.py` — lock the `finally` block, `wait_for` wrapper on `create_index`, and the endpoint-level timeouts. All pass.
+- Regression: 57/57 pass across L1-L3 test suite.
+
+### Deploy note
+This fix is the second half of the "prod slowness" root cause. The first half was Layer 3 (users doc bloat). The user still needs to click the red **"Bound user arrays (L3)"** button on `/admin/observability` once on production to shrink the 6,100 user docs from 66 KB avg → <5 KB avg.
+
+
 ## Implemented (Feb 24, 2026 — Layer 3: Bounded embed for `mining_history` + `prc_transactions`)
 
 ### Prod symptoms fixed
