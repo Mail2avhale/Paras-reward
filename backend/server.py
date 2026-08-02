@@ -250,30 +250,75 @@ def verify_token(token: str, token_type: str = "access") -> dict:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    """Get current user from JWT token"""
+    """Get current user from JWT token.
+
+    Feb 23 2026 (Layer 1.7) — heavily optimized after prod audit showed
+    this dep runs on every authenticated request (100 K+ per hour) with
+    TWO Mongo round-trips each. Optimizations:
+      1. In-process TTL cache keyed by (uid, token_id) — 60 s TTL.
+         Turns 100 K auth checks/hr into ~1 K Mongo hits (99 % cache).
+      2. Skip the `admin_sessions` lookup entirely for non-admin roles.
+         Only admins have session-revocation semantics; regular users
+         don't need a session-active check on every request.
+      3. Cache invalidation is caller responsibility on logout (see
+         `invalidate_auth_cache(uid)` helper below).
+    """
     if not credentials:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     payload = verify_token(credentials.credentials)
     uid = payload.get("uid")
     if not uid:
         raise HTTPException(status_code=401, detail="Invalid token payload")
-    
+
+    token_id = payload.get("token_id") or ""
+    cache_key = (uid, token_id)
+    # L1 in-process cache — 60 s TTL. Redis is optional and often flapping
+    # on prod (95 circuit re-opens observed) so we stay in-process only.
+    now = time.time()
+    cached = _AUTH_USER_CACHE.get(cache_key)
+    if cached is not None and (now - cached[0]) < _AUTH_USER_CACHE_TTL:
+        return cached[1]
+
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0})
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
-    
-    # Check if session is still valid (not logged out)
-    active_session = await db.admin_sessions.find_one({
-        "uid": uid,
-        "token_id": payload.get("token_id"),
-        "is_active": True
-    })
-    
-    if user.get("role") in ["admin", "sub_admin"] and not active_session:
-        raise HTTPException(status_code=401, detail="Session expired or logged out")
-    
+
+    # Session-active check is only meaningful for privileged roles.
+    if user.get("role") in ("admin", "sub_admin"):
+        active_session = await db.admin_sessions.find_one({
+            "uid": uid,
+            "token_id": token_id,
+            "is_active": True,
+        })
+        if not active_session:
+            raise HTTPException(status_code=401, detail="Session expired or logged out")
+
+    # Cache write. Bound the dict at 20 K entries so it can't grow
+    # unbounded on token churn (each unique token creates one entry).
+    if len(_AUTH_USER_CACHE) >= 20000:
+        # Evict the ~100 oldest entries in one sweep (cheap).
+        to_drop = sorted(_AUTH_USER_CACHE.items(), key=lambda kv: kv[1][0])[:100]
+        for k, _ in to_drop:
+            _AUTH_USER_CACHE.pop(k, None)
+    _AUTH_USER_CACHE[cache_key] = (now, user)
+
     return user
+
+
+# Auth cache — see `get_current_user` above.
+_AUTH_USER_CACHE: dict = {}          # (uid, token_id) -> (ts_sec, user_dict)
+_AUTH_USER_CACHE_TTL: float = 60.0   # 60 s — matches Mongo session refresh cadence
+
+
+def invalidate_auth_cache(uid: str, token_id: str | None = None) -> None:
+    """Call on logout / role change to purge the JWT->user mapping."""
+    if token_id is not None:
+        _AUTH_USER_CACHE.pop((uid, token_id), None)
+        return
+    # Purge every entry belonging to this uid.
+    for k in [k for k in _AUTH_USER_CACHE.keys() if k[0] == uid]:
+        _AUTH_USER_CACHE.pop(k, None)
 
 async def get_current_admin(user: dict = Depends(get_current_user)) -> dict:
     """Verify current user is admin"""

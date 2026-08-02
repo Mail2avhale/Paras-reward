@@ -1,0 +1,38 @@
+{
+  "summary": "Layer 1.7 auth-cache verification. 6/6 unit tests pass. 7/8 e2e tests pass against preview URL. Cache-hit latency drop confirmed (640ms → 59ms → 50ms). Wishlist (was 30s timeout in prod) now 80ms. Featured 72ms. db-health surfaces auth_cache block. However, ONE CRITICAL BUG: /api/auth/logout does NOT invalidate the auth cache in production because a DUPLICATE logout endpoint in server.py:1883 shadows the fixed one in routes/auth.py:2191. Result: a revoked JWT continues to serve cached credentials for up to 60s AND admin_sessions.is_active is never flipped to False.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/auth/logout",
+        "issue": "Duplicate route: server.py:1883 (@api_router.post('/auth/logout')) shadows routes/auth.py:2191 which contains the invalidate_auth_cache(uid, token_id) call. FastAPI picks the first-registered route (server.py). The server.py version reads uid from request body, returns 'UID required' or JSON-parse error on empty body, and does NOT call invalidate_auth_cache NOR set admin_sessions.is_active=False. Verified end-to-end: after POST /api/auth/logout with valid Bearer token but no body, response was {'success':false,'message':'Expecting value: line 1 column 1 (char 0)'} and the SAME JWT still returned 200 on GET /api/user/{uid}. This means the Layer 1.7 logout-invalidation is a no-op in production.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_layer17_auth_cache.py",
+    "/app/backend/tests/test_layer17_auth_cache_e2e.py"
+  ],
+  "action_items": [
+    "Remove or disable the duplicate /api/auth/logout in /app/backend/server.py lines 1883-1903 (or make it delegate to routes/auth.py logout). The header-based logout in routes/auth.py must be the sole handler so invalidate_auth_cache(uid, token_id) actually runs and admin_sessions.is_active gets flipped.",
+    "After the dedup, re-run tests/test_layer17_auth_cache_e2e.py::test_logout_invalidates_cache to confirm 401 after logout.",
+    "Verify frontend logout call — since server.py version expects {uid: ...} in body and routes/auth.py version reads from Authorization header, whichever is kept must match what the frontend sends today."
+  ],
+  "critical_code_review_comments": [
+    "Two /api/auth/logout endpoints registered on the same app — this is a latent bug independent of Layer 1.7 (silently the header-based revocation logic never ran).",
+    "The routes/auth.py logout swallows all exceptions with a bare `except Exception: pass` and still returns 200 — makes debugging hard. Consider logging.",
+    "get_current_user cache is per-process; in a multi-worker deployment, logout on worker A does not evict on worker B until 60s TTL. Acceptable given short TTL but worth documenting."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_layer17_auth_cache_e2e.py (new)"
+  ],
+  "success_rate": {"backend": "93%", "frontend": "n/a"},
+  "test_credentials": "admin mobile=9999999999 pin=153759 (works, returns access_token)",
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Layer 1.7 cache-hit path (60s TTL, non-admin skip admin_sessions) is working perfectly on preview URL — 640ms→59ms latency drop for /api/user/{uid} on same JWT. Wishlist and featured are both <100ms now. The single remaining blocker is duplicate logout endpoint in server.py:1883 shadowing the fixed one in routes/auth.py:2191. Once main agent removes the duplicate, re-run test_logout_invalidates_cache which currently fails asserting 401 after logout.",
+  "rca of the issue": "Two @router.post handlers registered for /api/auth/logout. Route in server.py (@api_router.post('/auth/logout') at line 1883) registers BEFORE the auth_router (routes/auth.py imported later). FastAPI resolves to the first-matching route → server.py version runs. That version predates Layer 1.7 and: (1) requires JSON body with uid, (2) only unsets session_token/session_created_at on users doc, (3) never touches admin_sessions.is_active, (4) never calls invalidate_auth_cache. Mitigation: delete server.py:1883-1903 or convert it into a thin proxy that reads uid from Authorization header (via verify_token) and reuses routes/auth.py logic."
+}

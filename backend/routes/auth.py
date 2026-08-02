@@ -2206,6 +2206,16 @@ async def logout(request: Request):
             {"uid": uid, "token_id": token_id},
             {"$set": {"is_active": False, "logged_out_at": datetime.now(timezone.utc).isoformat()}}
         )
+
+        # Feb 23 2026 (Layer 1.7) — bust the in-process auth cache so
+        # this JWT can't be used to satisfy any subsequent get_current_user
+        # cache hit. Without this, an admin who logs out could still be
+        # served for up to 60 s from cached credentials.
+        try:
+            from server import invalidate_auth_cache
+            invalidate_auth_cache(uid, token_id)
+        except Exception:
+            pass
         
         real_ip = request.client.host if request.client else "unknown"
         if log_admin_action:

@@ -155,6 +155,18 @@ async def db_health(request: Request):
     except Exception as _e:
         result["users_size_guard_error"] = str(_e)[:120]
 
+    # Feb 23 2026 (Layer 1.7) — Auth cache telemetry. Cache hit rate is
+    # the biggest lever on prod Mongo load (2 queries per authenticated
+    # request without this cache).
+    try:
+        from server import _AUTH_USER_CACHE, _AUTH_USER_CACHE_TTL
+        result["auth_cache"] = {
+            "size": len(_AUTH_USER_CACHE),
+            "ttl_seconds": _AUTH_USER_CACHE_TTL,
+        }
+    except Exception:
+        pass
+
     return result
 
 
