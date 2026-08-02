@@ -1,0 +1,44 @@
+{
+  "summary": "Re-verified Layer 1.7 logout invalidation after main agent renamed the duplicate /api/auth/logout in server.py to /api/auth/logout-legacy-body. Canonical logout in routes/auth.py:2191 is now the sole handler and is confirmed to (a) flip admin_sessions.is_active=False and (b) call server.invalidate_auth_cache(uid, token_id). All 9/9 e2e tests pass against preview URL. The previous test failure was a test-selector issue: it validated against /api/user/{uid} which bypasses server.get_current_user (does inline jwt.decode), so admin_sessions/cache checks never apply. Test now targets /api/mall/v2/wishlist which routes through server.get_current_user — 401 'Session expired or logged out' returned after logout as expected. Also added coverage for /api/auth/logout-legacy-body (200 OK with body).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/user/{uid} (server.py:8927) and GET /api/admin/observability/* (routes/admin_observability.py:_require_admin)",
+        "issue": "These endpoints do their OWN inline jwt.decode and do NOT check admin_sessions.is_active. Result: a logged-out JWT continues to return 200 on these endpoints until natural token expiry. Independent of Layer 1.7 but material: the /api/user/{uid} bypass leaves a session-revocation gap for the primary user-details endpoint. Recommend routing these through server.get_current_user (or the session-checking dep) so revoked tokens are honored uniformly."
+      },
+      {
+        "endpoint": "routes/users.py get_current_user",
+        "issue": "routes/users.py imports get_current_user from /app/backend/middleware/auth.py — a SECOND implementation that does not consult the auth-cache, admin_sessions, or invalidate_auth_cache. Two get_current_user implementations in the codebase (middleware/auth.py + server.py) produces subtle security drift: /api/users/{uid} accepts a logged-out JWT. Suggest consolidating on server.get_current_user."
+      },
+      {
+        "endpoint": "POST /api/auth/logout (routes/auth.py:2191)",
+        "issue": "Bare `except Exception: pass` swallows all errors and still returns 200 'Logged out successfully' — makes silent failures of invalidate_auth_cache import undetectable. Add logging.warning inside except."
+      }
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_layer17_auth_cache_e2e.py",
+    "/app/test_reports/pytest/iteration_280_e2e.xml"
+  ],
+  "action_items": [
+    "Layer 1.7 logout invalidation is FIXED for all routes going through server.get_current_user (mall_v2, admin_unified_spend, referral, mining, prc_lock, notifications, paras_mall). No further action for the original bug.",
+    "(Separate, non-Layer-1.7): /api/user/{uid} at server.py:8927 uses inline jwt.decode and never checks admin_sessions.is_active — logged-out JWT still returns 200. Fix by using Depends(get_current_user) instead of inline decode.",
+    "(Separate): /api/admin/observability/_require_admin also uses inline jwt.decode — same session-revocation gap. Route through get_current_admin.",
+    "(Separate): routes/users.py uses middleware/auth.py:get_current_user (a different, older implementation with no session/cache check). Consolidate on server.get_current_user."
+  ],
+  "critical_code_review_comments": [
+    "TWO get_current_user implementations exist (server.py L245 + middleware/auth.py L25). The middleware one has NONE of the Layer 1.7 semantics (no cache, no admin_sessions check). Any router importing from middleware/auth.py silently misses session-revocation. This is a security-relevant divergence that needs to be reconciled — routes/users.py currently uses the wrong one.",
+    "Multiple endpoints re-implement JWT decoding inline (server.py:8927, admin_observability._require_admin, routes/auth.py:723) instead of relying on the shared dependency. Any future auth policy change (session revocation, MFA, IP checks, etc.) has to be applied in N places.",
+    "logout handler's bare except swallows the invalidate_auth_cache ImportError silently — a package-restructure could break invalidation without any log signal. Log the exception."
+  ],
+  "updated_files": ["/app/backend/tests/test_layer17_auth_cache_e2e.py"],
+  "success_rate": {"backend": "100% (9/9 e2e)", "frontend": "n/a"},
+  "test_credentials": "admin mobile=9999999999 pin=153759 (works, returns access_token)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Layer 1.7 auth-cache + logout invalidation is confirmed working end-to-end for the canonical get_current_user path (server.py). Verified by db-side inspection of admin_sessions doc (is_active=False, logged_out_at set after logout) and by observing 401 'Session expired or logged out' on /api/mall/v2/wishlist immediately after logout using the same JWT. Legacy /api/auth/logout-legacy-body still functional. Separate pre-existing gaps documented in backend_issues.minor — recommend a follow-up cleanup ticket to consolidate get_current_user implementations.",
+  "rca of the issue": "Original Layer 1.7 blocker (duplicate /api/auth/logout in server.py shadowing routes/auth.py) is fully resolved. The server.py copy is now at /api/auth/logout-legacy-body and includes invalidate_auth_cache(uid) as belt-and-suspenders. The previous test failure re-observed in this iteration was NOT a regression — it was a test-target mismatch: the assertion used /api/user/{uid} which uses inline jwt.decode (server.py:8927) and never consults admin_sessions or the auth cache. Switching the assertion to /api/mall/v2/wishlist (which uses server.get_current_user) confirms 401 after logout. Also verified directly in MongoDB: admin_sessions doc for the logged-out token has is_active=False + logged_out_at timestamp."
+}

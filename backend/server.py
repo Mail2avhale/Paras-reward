@@ -1880,23 +1880,41 @@ async def validate_session(request: Request):
         logging.error(f"Session validation error: {str(e)}")
         return {"valid": False, "reason": "validation_error"}
 
-@api_router.post("/auth/logout")
-async def logout_user(request: Request):
-    """
-    Logout user - clear session token
+@api_router.post("/auth/logout-legacy-body")
+async def logout_user_legacy_body(request: Request):
+    """DEPRECATED (Feb 23 2026): Legacy body-based logout kept only as a
+    fallback route that clients migrating from the old contract can call.
+
+    The canonical logout is in `routes/auth.py` @auth_router.post("/logout")
+    — it reads the Bearer token from the Authorization header, flips
+    admin_sessions.is_active=False, AND busts the in-process auth cache
+    via invalidate_auth_cache(uid, token_id) so a revoked JWT cannot
+    serve cached credentials.
+
+    A previous copy of this endpoint at `/api/auth/logout` (this same
+    file, this same function) was shadowing the routes/auth.py logout in
+    FastAPI's route table → the fix in Layer 1.7 was a silent no-op.
+    Removed by renaming the URL suffix. Clients using the old contract
+    should switch to the canonical `/api/auth/logout`.
     """
     try:
         data = await request.json()
         uid = data.get("uid")
-        
+
         if uid:
             # Clear session token
             await db.users.update_one(
                 {"uid": uid},
                 {"$unset": {"session_token": "", "session_created_at": ""}}
             )
+            # Also purge the in-process auth cache for this uid so cached
+            # creds (up to 60 s TTL) can't be reused.
+            try:
+                invalidate_auth_cache(uid)
+            except Exception:
+                pass
             return {"success": True, "message": "Logged out successfully"}
-        
+
         return {"success": False, "message": "UID required"}
     except Exception as e:
         logging.error(f"Logout error: {str(e)}")

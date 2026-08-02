@@ -112,7 +112,19 @@ def test_observability_summary_still_works(session, admin_login):
 
 
 def test_logout_invalidates_cache(session):
-    """After logout the same JWT MUST be rejected (401)."""
+    """After logout, the same JWT MUST be rejected (401) on any endpoint
+    that goes through server.get_current_user (the one Layer 1.7 touches).
+
+    We validate via /api/mall/v2/wishlist which imports get_current_user
+    from server.py — this endpoint benefits from both the auth-cache
+    invalidation and the admin_sessions.is_active flip inside logout.
+
+    NOTE: /api/user/{uid} (server.py:8927) and /api/admin/observability/*
+    endpoints do their OWN inline jwt.decode and do NOT check
+    admin_sessions.is_active, so they will continue accepting a logged-out
+    JWT until natural expiry. That is a *separate* security gap tracked
+    outside Layer 1.7.
+    """
     # Fresh login so we can safely burn this token.
     r = session.post(f"{BASE_URL}/api/auth/login",
                      json={"mobile": ADMIN_MOBILE, "pin": ADMIN_PIN}, timeout=15)
@@ -122,18 +134,37 @@ def test_logout_invalidates_cache(session):
     uid = (data.get("user") or {}).get("uid") or data.get("uid") or (data.get("data") or {}).get("user", {}).get("uid")
     assert token and uid
 
-    # Prime cache with two calls.
-    r1 = session.get(f"{BASE_URL}/api/user/{uid}", headers=_auth(token), timeout=15)
+    # Prime cache with two calls to an endpoint that uses server.get_current_user.
+    r1 = session.get(f"{BASE_URL}/api/mall/v2/wishlist", headers=_auth(token), timeout=15)
     assert r1.status_code == 200
-    r2 = session.get(f"{BASE_URL}/api/user/{uid}", headers=_auth(token), timeout=15)
+    r2 = session.get(f"{BASE_URL}/api/mall/v2/wishlist", headers=_auth(token), timeout=15)
     assert r2.status_code == 200
 
-    # Logout.
+    # Logout — canonical handler in routes/auth.py should:
+    #   1) flip admin_sessions.is_active=False for (uid, token_id)
+    #   2) call server.invalidate_auth_cache(uid, token_id)
     r_logout = session.post(f"{BASE_URL}/api/auth/logout", headers=_auth(token), timeout=15)
     print(f"[logout] status={r_logout.status_code} body={r_logout.text[:200]}")
     assert r_logout.status_code in (200, 204)
+    assert "Logged out" in r_logout.text or "logged out" in r_logout.text.lower()
 
     # Same JWT after logout — must be 401.
-    r_after = session.get(f"{BASE_URL}/api/user/{uid}", headers=_auth(token), timeout=15)
-    print(f"[after logout] status={r_after.status_code}")
+    r_after = session.get(f"{BASE_URL}/api/mall/v2/wishlist", headers=_auth(token), timeout=15)
+    print(f"[after logout] status={r_after.status_code} body={r_after.text[:200]}")
     assert r_after.status_code == 401, f"expected 401 after logout, got {r_after.status_code}: {r_after.text[:200]}"
+
+
+def test_legacy_body_logout_still_works(session):
+    """The renamed legacy endpoint /api/auth/logout-legacy-body must still
+    accept {uid: ...} in the body and return a success response."""
+    r = session.post(f"{BASE_URL}/api/auth/login",
+                     json={"mobile": ADMIN_MOBILE, "pin": ADMIN_PIN}, timeout=15)
+    assert r.status_code == 200
+    data = r.json()
+    uid = (data.get("user") or {}).get("uid") or data.get("uid")
+    assert uid
+
+    rl = session.post(f"{BASE_URL}/api/auth/logout-legacy-body",
+                      json={"uid": uid}, timeout=15)
+    print(f"[legacy-logout] status={rl.status_code} body={rl.text[:200]}")
+    assert rl.status_code == 200, rl.text[:200]
