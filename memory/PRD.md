@@ -8,6 +8,51 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 23, 2026 — Layer 1.7: `get_current_user` auth cache + non-admin skip)
+
+### Prod screenshot symptoms (second observability screenshot after Layer 2 deploy)
+- 268,620 requests in 21 h, **26.23 % slow, 25.94 % 5xx**
+- **Redis circuit OPEN with 95 re-opens** — Upstash flapping, L2 cache dead
+- `/api/mall/v2/wishlist` — **48,220 / 48,260 = 99.9 % failure**
+- Same IP hammering wishlist every 30 s (client retry loop on 504 timeouts)
+
+### Root cause
+`get_current_user()` — the FastAPI dependency on every authenticated endpoint — was doing **TWO Mongo round-trips per request**:
+1. `db.users.find_one(uid)` — pulls the user doc (up to 20+ KB even after size-guard)
+2. `db.admin_sessions.find_one({uid, token_id, is_active})` — session check that was running for EVERY user despite only being meaningful for `admin`/`sub_admin` roles (99 % of traffic wastes this query)
+
+At 268 K requests × 2 Mongo hits, this alone caused the pool starvation → cascading 30 s timeouts → 504s at the ingress.
+
+### Fix
+1. **In-process TTL cache** `_AUTH_USER_CACHE` keyed by `(uid, token_id)` with 60 s TTL. Same JWT twice = 0 Mongo queries on the 2nd call.
+2. **Skip `admin_sessions` lookup for non-admin roles** — saves 50 % of auth-related Mongo queries.
+3. **`invalidate_auth_cache(uid, token_id)`** helper called from `/api/auth/logout` so revoked JWTs cannot serve cached credentials.
+4. **Removed duplicate route** — a previously-shadowing `/api/auth/logout` in `server.py:1883` was preventing the fixed logout from running. Renamed to `/api/auth/logout-legacy-body` and also wired `invalidate_auth_cache(uid)` there as belt-and-suspenders.
+5. **Auth-cache telemetry** surfaced via `/api/admin/observability/db-health.auth_cache` (size + ttl_seconds).
+
+### Testing agent verification (`iteration_280.json` — 100 % pass)
+- 9/9 e2e tests pass
+- Cache-hit latency confirmed: **640 ms → 59 ms → 50 ms** (same JWT, three consecutive calls)
+- `/api/mall/v2/wishlist` prod behavior: **30 s timeout → 80 ms**
+- `/api/mall/v2/featured` prod behavior: **30 s timeout → 72 ms**
+- Logout → same JWT → 401 "Session expired or logged out" ✅ (revocation works end-to-end)
+- `retest_needed: False`
+
+### Follow-up (non-blocking, minor findings from testing agent)
+- Consolidate the two `get_current_user()` implementations (server.py vs middleware/auth.py) — routes/users.py currently uses the middleware version which bypasses the cache + session check.
+- Add `logging.warning` inside `routes/auth.py:logout`'s bare `except`.
+- `/api/user/{uid}` uses inline JWT decode — bypasses cache/session check.
+
+### Files touched
+- `backend/server.py` — new `get_current_user` with cache + skip logic + `invalidate_auth_cache()` helper + `_AUTH_USER_CACHE`; renamed duplicate logout to `/api/auth/logout-legacy-body`
+- `backend/routes/auth.py` — canonical logout now calls `invalidate_auth_cache(uid, token_id)`
+- `backend/routes/admin_observability.py` — `db-health` surfaces `auth_cache` block
+- `backend/tests/test_layer17_auth_cache.py` (NEW) — 6 unit tests
+- `backend/tests/test_layer17_auth_cache_e2e.py` (created by testing agent) — 9 e2e tests
+
+**47 tests + 9 e2e tests pass. Ready to deploy.**
+
+
 ## Feature (Feb 23, 2026 — Admin Paras Mall Bookings UX polish)
 
 ### User asks (from mobile screenshot)
