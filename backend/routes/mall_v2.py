@@ -423,39 +423,72 @@ async def list_categories():
 # ── PRC Saver Progress ─────────────────────────────────────────────────────
 @router.get("/saver-progress")
 async def saver_progress(user: dict = Depends(get_current_user)):
-    """Return cheapest-affordable + next-target product for a motivating saver widget."""
+    """Return cheapest-affordable + next-target product for a motivating saver widget.
+
+    Feb 25 2026 — Layer 1.8 hotfix: this endpoint was hitting p50=10 255 ms
+    on prod (103 calls, 100 % 500 rate) because (a) it read the entire
+    500-doc mall_products list on every call with no cache, and (b) had
+    no timeout guard so Motor pool starvation propagated. Added:
+      * 30 s cached products list (shared across all users)
+      * `asyncio.wait_for(4s)` hard wall with graceful degraded payload
+    """
     uid = user["uid"]
-    u = await db.users.find_one({"uid": uid}, {"_id": 0, "prc_balance": 1})
-    balance = float(u.get("prc_balance", 0) or 0) if u else 0.0
-    # Lazy import to avoid circular: get upfront_prc compute
-    from routes.paras_mall import compute_upfront_prc
-    # Pull active products sorted by upfront PRC ASC
-    products = await db.mall_products.find({"active": True}, {"_id": 0}).to_list(500)
-    if not products:
-        return {"success": True, "balance": balance, "next_product": None, "affordable_count": 0}
-    enriched = sorted(
-        [{**p, "upfront_prc": compute_upfront_prc(p["mrp_inr"])} for p in products],
-        key=lambda x: x["upfront_prc"],
-    )
-    affordable = [p for p in enriched if p["upfront_prc"] <= balance]
-    unaffordable = [p for p in enriched if p["upfront_prc"] > balance]
-    next_product = unaffordable[0] if unaffordable else None
-    progress = None
-    if next_product:
-        needed = next_product["upfront_prc"]
-        progress = {
-            "product": next_product,
-            "needed": needed,
-            "have": balance,
-            "remaining": max(0, round(needed - balance, 2)),
-            "percent": min(100, round((balance / needed) * 100, 1)) if needed > 0 else 0,
+
+    async def _compute():
+        u = await db.users.find_one({"uid": uid}, {"_id": 0, "prc_balance": 1})
+        balance = float(u.get("prc_balance", 0) or 0) if u else 0.0
+        # Lazy import to avoid circular: get upfront_prc compute
+        from routes.paras_mall import compute_upfront_prc
+        # Products list is identical for every user — cache the enriched
+        # list globally so the sort+scan only fires once every 30 s.
+        pk = "saver:products_enriched"
+        enriched = _mv2_get(pk)
+        if enriched is None:
+            products = await db.mall_products.find(
+                {"active": True}, {"_id": 0}
+            ).to_list(500)
+            if not products:
+                _mv2_set(pk, [], ttl=30)
+                enriched = []
+            else:
+                enriched = sorted(
+                    [{**p, "upfront_prc": compute_upfront_prc(p["mrp_inr"])} for p in products],
+                    key=lambda x: x["upfront_prc"],
+                )
+                _mv2_set(pk, enriched, ttl=30)
+        if not enriched:
+            return {"success": True, "balance": balance, "next_product": None, "affordable_count": 0}
+        affordable = [p for p in enriched if p["upfront_prc"] <= balance]
+        unaffordable = [p for p in enriched if p["upfront_prc"] > balance]
+        next_product = unaffordable[0] if unaffordable else None
+        progress = None
+        if next_product:
+            needed = next_product["upfront_prc"]
+            progress = {
+                "product": next_product,
+                "needed": needed,
+                "have": balance,
+                "remaining": max(0, round(needed - balance, 2)),
+                "percent": min(100, round((balance / needed) * 100, 1)) if needed > 0 else 0,
+            }
+        return {
+            "success": True,
+            "balance": balance,
+            "affordable_count": len(affordable),
+            "next_target": progress,
         }
-    return {
-        "success": True,
-        "balance": balance,
-        "affordable_count": len(affordable),
-        "next_target": progress,
-    }
+
+    try:
+        return await asyncio.wait_for(_compute(), timeout=4.0)
+    except asyncio.TimeoutError:
+        # Degrade gracefully — no crash, no 30 s uvicorn burn.
+        return {
+            "success": True,
+            "balance": 0.0,
+            "affordable_count": 0,
+            "next_target": None,
+            "degraded": True,
+        }
 
 
 # ── Booking Tracking Timeline ──────────────────────────────────────────────
@@ -856,37 +889,48 @@ async def featured_products(limit: int = 6):
     query fires from hundreds of concurrent clients. Prod audit showed
     35/35 (100 %) failure via 30 s uvicorn timeout. Response is
     identical for everyone so a shared cache is safe.
+
+    Feb 25 2026 (Layer 1.8) — added `asyncio.wait_for(4s)` wall. When
+    Motor pool is starved, the endpoint no longer burns full uvicorn
+    slot; it serves a stale-empty degraded response (10-s TTL) so
+    healthy DB recovers fast.
     """
     ck = f"featured:{limit}"
     cached = _mv2_get(ck)
     if cached is not None:
         return cached
 
-    curated = await db.mall_products.find(
-        {"active": True, "featured": True}, {"_id": 0}
-    ).sort("featured_sort", 1).limit(limit).to_list(limit)
+    async def _compute():
+        curated = await db.mall_products.find(
+            {"active": True, "featured": True}, {"_id": 0}
+        ).sort("featured_sort", 1).limit(limit).to_list(limit)
 
-    if len(curated) >= limit:
-        enriched = [_enrich_product_pricing(p) for p in curated]
-        payload = {"success": True, "products": enriched, "source": "curated"}
+        if len(curated) >= limit:
+            enriched = [_enrich_product_pricing(p) for p in curated]
+            return {"success": True, "products": enriched, "source": "curated"}
+
+        # Need to top up — pull most-viewed actives, excluding curated ids
+        used = {p["product_id"] for p in curated}
+        fill_needed = limit - len(curated)
+        auto = await db.mall_products.find(
+            {"active": True, "product_id": {"$nin": list(used)}}, {"_id": 0}
+        ).sort([("view_count", -1), ("avg_rating", -1)]).limit(fill_needed).to_list(fill_needed)
+
+        products = [_enrich_product_pricing(p) for p in (curated + auto)]
+        return {
+            "success": True,
+            "products": products,
+            "source": "curated+auto" if curated else "auto",
+        }
+
+    try:
+        payload = await asyncio.wait_for(_compute(), timeout=4.0)
         _mv2_set(ck, payload, ttl=60)
         return payload
-
-    # Need to top up — pull most-viewed actives, excluding curated ids
-    used = {p["product_id"] for p in curated}
-    fill_needed = limit - len(curated)
-    auto = await db.mall_products.find(
-        {"active": True, "product_id": {"$nin": list(used)}}, {"_id": 0}
-    ).sort([("view_count", -1), ("avg_rating", -1)]).limit(fill_needed).to_list(fill_needed)
-
-    products = [_enrich_product_pricing(p) for p in (curated + auto)]
-    payload = {
-        "success": True,
-        "products": products,
-        "source": "curated+auto" if curated else "auto",
-    }
-    _mv2_set(ck, payload, ttl=60)
-    return payload
+    except asyncio.TimeoutError:
+        payload = {"success": True, "products": [], "source": "degraded", "degraded": True}
+        _mv2_set(ck, payload, ttl=10)  # short TTL — heal fast
+        return payload
 
 
 def _enrich_product_pricing(p: dict) -> dict:
@@ -912,69 +956,94 @@ async def mining_preview(product_id: str, user: dict = Depends(get_current_user)
       - PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
       - daily_rate     = max(50, N × PRC_per_user(N))
       - N (cap)        = user's 6-tier referral network cap
+
+    Feb 25 2026 (Layer 1.8) — wrapped in `asyncio.wait_for(4s)` +
+    5 s response cache. Was p50=10 172 ms on prod (6 calls, 100 % 500).
     """
-    p = await db.mall_products.find_one({"product_id": product_id}, {"_id": 0})
-    if not p:
-        raise HTTPException(404, "Product not found")
+    # Per-user + per-product cache — 5 s TTL because the estimate
+    # rarely changes between rapid product-detail page visits.
+    ck = f"mining_preview:{user['uid']}:{product_id}"
+    cached = _mv2_get(ck)
+    if cached is not None:
+        return cached
 
-    # Pricing breakdown (mirrors paras_mall.compute_pricing_breakdown)
-    from routes.paras_mall import compute_pricing_breakdown, get_user_network_cap, MIN_DAILY_RATE_PRC
-    import math
+    async def _compute():
+        p = await db.mall_products.find_one({"product_id": product_id}, {"_id": 0})
+        if not p:
+            raise HTTPException(404, "Product not found")
 
-    breakdown = compute_pricing_breakdown(p.get("mrp_inr", 0))
-    total_prc = breakdown["total_prc"]
-    upfront_prc = breakdown["upfront_prc"]
-    # V2 pricing: processing fee is a SEPARATE entry charge — the user mines
-    # the FULL total_prc, not (total_prc - upfront_prc).
-    remaining_prc = total_prc
+        # Pricing breakdown (mirrors paras_mall.compute_pricing_breakdown)
+        from routes.paras_mall import compute_pricing_breakdown, get_user_network_cap, MIN_DAILY_RATE_PRC
+        import math
 
-    user_cap = await get_user_network_cap(user["uid"])
+        breakdown = compute_pricing_breakdown(p.get("mrp_inr", 0))
+        total_prc = breakdown["total_prc"]
+        upfront_prc = breakdown["upfront_prc"]
+        # V2 pricing: processing fee is a SEPARATE entry charge — the user mines
+        # the FULL total_prc, not (total_prc - upfront_prc).
+        remaining_prc = total_prc
 
-    # Estimate using N = min(active_after_position, user_cap). Since we haven't
-    # booked yet, assume the user lands AT the latest position → N ≈ 0
-    # initially, but as more bookings come in BEHIND them they earn more.
-    # For a realistic preview we project N at three tiers (low/mid/high) so
-    # the user understands the range.
-    def daily_rate(N: int) -> float:
-        if N <= 0:
-            return float(MIN_DAILY_RATE_PRC)
-        prc_per = max(2.5, 5.0 * (21.0 - math.log2(N)) / 14.0)
-        return max(float(MIN_DAILY_RATE_PRC), N * prc_per)
+        user_cap = await get_user_network_cap(user["uid"])
 
-    low_N = max(0, min(50, user_cap))
-    mid_N = max(0, min(user_cap // 3, user_cap))
-    high_N = user_cap
+        # Estimate using N = min(active_after_position, user_cap). Since we haven't
+        # booked yet, assume the user lands AT the latest position → N ≈ 0
+        # initially, but as more bookings come in BEHIND them they earn more.
+        # For a realistic preview we project N at three tiers (low/mid/high) so
+        # the user understands the range.
+        def daily_rate(N: int) -> float:
+            if N <= 0:
+                return float(MIN_DAILY_RATE_PRC)
+            prc_per = max(2.5, 5.0 * (21.0 - math.log2(N)) / 14.0)
+            return max(float(MIN_DAILY_RATE_PRC), N * prc_per)
 
-    low_rate = daily_rate(low_N)
-    mid_rate = daily_rate(mid_N)
-    high_rate = daily_rate(high_N)
+        low_N = max(0, min(50, user_cap))
+        mid_N = max(0, min(user_cap // 3, user_cap))
+        high_N = user_cap
 
-    def days_for(rate):
-        if rate <= 0 or remaining_prc <= 0:
-            return 0
-        return int((remaining_prc + rate - 1) / rate)
+        low_rate = daily_rate(low_N)
+        mid_rate = daily_rate(mid_N)
+        high_rate = daily_rate(high_N)
 
-    return {
-        "success": True,
-        "product_id": product_id,
-        "user_network_cap": user_cap,
-        "pricing": {
-            "mrp_inr": breakdown["mrp_inr"],
-            "total_inr": breakdown["total_inr"],
-            "upfront_prc": upfront_prc,
-            "total_prc": total_prc,
-            "remaining_prc": remaining_prc,
-        },
-        "estimates": {
-            "slow":  {"daily_prc": round(low_rate, 0),  "days_to_complete": days_for(low_rate)},
-            "typical": {"daily_prc": round(mid_rate, 0), "days_to_complete": days_for(mid_rate)},
-            "fast":  {"daily_prc": round(high_rate, 0), "days_to_complete": days_for(high_rate)},
-        },
-        "hint": (
-            "Live estimate based on your referral tier. Daily rate goes UP as "
-            "more users book products positioned after yours."
-        ),
-    }
+        def days_for(rate):
+            if rate <= 0 or remaining_prc <= 0:
+                return 0
+            return int((remaining_prc + rate - 1) / rate)
+
+        return {
+            "success": True,
+            "product_id": product_id,
+            "user_network_cap": user_cap,
+            "pricing": {
+                "mrp_inr": breakdown["mrp_inr"],
+                "total_inr": breakdown["total_inr"],
+                "upfront_prc": upfront_prc,
+                "total_prc": total_prc,
+                "remaining_prc": remaining_prc,
+            },
+            "estimates": {
+                "slow":  {"daily_prc": round(low_rate, 0),  "days_to_complete": days_for(low_rate)},
+                "typical": {"daily_prc": round(mid_rate, 0), "days_to_complete": days_for(mid_rate)},
+                "fast":  {"daily_prc": round(high_rate, 0), "days_to_complete": days_for(high_rate)},
+            },
+            "hint": (
+                "Live estimate based on your referral tier. Daily rate goes UP as "
+                "more users book products positioned after yours."
+            ),
+        }
+
+    try:
+        payload = await asyncio.wait_for(_compute(), timeout=4.0)
+        _mv2_set(ck, payload, ttl=5)
+        return payload
+    except asyncio.TimeoutError:
+        return {
+            "success": True,
+            "product_id": product_id,
+            "user_network_cap": 0,
+            "pricing": None,
+            "estimates": None,
+            "degraded": True,
+        }
 
 
 # ── AI Generate Full Product (Nano Banana Text via Gemini) ─────────────────

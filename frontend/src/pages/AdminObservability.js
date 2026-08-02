@@ -197,7 +197,7 @@ const AdminObservability = () => {
     try {
       toast.info('Bounding user arrays — this may take a minute...');
       const res = await axios.post(
-        `${API}/admin/observability/repair/bound-user-arrays?batch=100&max_users=2000`,
+        `${API}/admin/observability/repair/bound-user-arrays?batch=100&max_users=10000`,
         {},
         { timeout: 300000 }
       );
@@ -211,6 +211,39 @@ const AdminObservability = () => {
       fetchAll();
     } catch (err) {
       toast.error('Bound-user-arrays failed — check console');
+      console.error(err);
+    }
+  };
+
+  const handleShowBloatFields = async () => {
+    // Diagnostic: fetch top-N largest user docs with per-field byte sizes.
+    // Shows in a browser alert since the page doesn't have a modal
+    // component wired up — good enough for admin diagnostic use.
+    try {
+      const res = await axios.get(
+        `${API}/admin/observability/users-bloat-fields?top_n=5`,
+        { timeout: 15000 }
+      );
+      const users = res.data?.users || [];
+      if (users.length === 0) {
+        toast.info('No users returned — all under threshold.');
+        return;
+      }
+      const lines = users.map(u => {
+        const top = (u.top_fields || []).slice(0, 6)
+          .map(f => `  ${f.field} → ${f.bytes.toLocaleString()} B${f.shape ? ` (${f.shape})` : ''}`)
+          .join('\n');
+        return `${u.uid}  total=${(u.total_bytes || 0).toLocaleString()} B\n${top}`;
+      });
+      // Log full data for copy-paste + alert summary
+      console.log('[users-bloat-fields] full response:', res.data);
+      window.alert(
+        'Top 5 largest user docs — biggest fields:\n\n'
+        + lines.join('\n\n')
+        + '\n\n(Full response logged to browser console.)'
+      );
+    } catch (err) {
+      toast.error('Bloat-fields diagnostic failed — check console');
       console.error(err);
     }
   };
@@ -297,6 +330,15 @@ const AdminObservability = () => {
             data-testid="obs-bound-user-arrays-btn"
           >
             Bound user arrays (L3)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleShowBloatFields}
+            className="border-red-300 text-red-700 hover:bg-red-50"
+            data-testid="obs-show-bloat-fields-btn"
+          >
+            Show bloat fields
           </Button>
         </div>
       </div>

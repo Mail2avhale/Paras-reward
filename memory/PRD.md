@@ -8,6 +8,30 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 25, 2026 — Layer 1.8b: propagate wait_for guard to remaining mall_v2 endpoints)
+
+### Prod symptoms fixed (from third deploy screenshot)
+- 5xx rate dropped from 23.63 % → 1.55 % ✅ (L1.8 wishlist fix landed)
+- Slow rate dropped from 24.01 % → 12.25 % — but 3 mall_v2 endpoints were still hot: `/saver-progress` p50=10 255 ms, `/featured` p50=10 240 ms, `/mining-preview` p50=10 172 ms. These were burning full Motor pool slots and pushing wishlist into its own 4-second wait_for wall (screenshot showed 40+ wishlist calls all returning at exactly 4006 ms — the degraded fallback).
+
+### Root cause
+Only `get_wishlist` + `track_product_view` got the `asyncio.wait_for` wrapper in L1.8. Every other mall_v2 endpoint (`saver_progress`, `featured_products`, `mining_preview`) still ran without a timeout guard. When Motor pool got saturated by a burst on any one of them, ALL of them piled up, including wishlist — which then hit its wait_for and served degraded payloads to real users.
+
+### Fix
+- `saver_progress` — added 30 s shared-products cache + `asyncio.wait_for(4s)` + degraded fallback. (Was reading 500 mall_products from DB on every call, uncached.)
+- `featured_products` — added `asyncio.wait_for(4s)` inside the existing 60 s cache. On timeout, cache degraded payload for 10 s so it heals fast.
+- `mining_preview` — added `asyncio.wait_for(4s)` + 5 s per-user per-product cache + degraded fallback.
+
+### Diagnostic
+- **NEW** `GET /api/admin/observability/users-bloat-fields?top_n=5` — returns per-field BSON byte sizes for the top-N largest user docs. Points at which field is still bloating a doc (screenshot showed 790 users at 100 KB - 1 MB after L3 — need to identify the culprit field beyond `mining_history` + `prc_transactions`).
+- **NEW** "Show bloat fields" button on `/admin/observability` (calls the diagnostic and shows top-6 fields per top-5 user in an alert).
+- L3 button default `max_users` bumped from 2000 → 10 000 so ONE click on prod covers all 6100 users.
+
+### Preview verification
+- 48 parallel mixed calls (wishlist × 12 + saver × 12 + featured × 12 + mining-preview × 12) all complete in **1.2 s total wall-time**. Worst individual call: 1.14 s. No Motor pool starvation.
+- All existing 57 unit / regression tests pass.
+
+
 ## Implemented (Feb 25, 2026 — Layer 1.8: `/mall/v2/wishlist` doom-loop hotfix)
 
 ### Prod symptoms fixed (from second observability screenshot)

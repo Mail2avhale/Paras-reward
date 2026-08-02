@@ -287,6 +287,81 @@ async def users_doc_histogram(request: Request):
     return result
 
 
+@router.get("/users-bloat-fields")
+async def users_bloat_fields(request: Request, top_n: int = 5):
+    """Field-size breakdown for the top-N largest user docs.
+
+    Diagnostic endpoint (Feb 25 2026) — after L3 the users doc is
+    supposed to be < 5 KB avg, but 790 users still sit at 100 KB - 1 MB
+    on prod. This endpoint pinpoints WHICH field is bloating them so we
+    know what to target in L4.
+
+    Returns per-user list of every top-level field with its BSON size
+    (bytes) and value shape (array length / string length). Sorted
+    descending by bytes so the culprit shows up first.
+    """
+    _require_admin(request)
+    if _db is None:
+        raise HTTPException(status_code=500, detail="DB not attached")
+
+    top_n = max(1, min(top_n, 20))
+
+    # 1) find top-N largest user docs by bsonSize
+    largest = []
+    async for r in _db.users.aggregate([
+        {"$project": {"uid": 1, "size_bytes": {"$bsonSize": "$$ROOT"}}},
+        {"$sort": {"size_bytes": -1}},
+        {"$limit": top_n},
+    ], allowDiskUse=True):
+        largest.append(r)
+
+    # 2) fetch each doc in full and compute per-field bsonSize
+    import bson
+    from bson import BSON, ObjectId  # noqa: F401
+
+    out = []
+    for entry in largest:
+        uid = entry.get("uid")
+        if not uid:
+            continue
+        try:
+            doc = await _db.users.find_one({"uid": uid})
+        except Exception as exc:
+            out.append({"uid": uid, "error": str(exc)[:120]})
+            continue
+        if not doc:
+            continue
+
+        # BSON size of `{field: value}` gives per-field byte cost.
+        # Includes ~5 bytes overhead per field name — good enough for
+        # diagnosis.
+        rows = []
+        for k, v in doc.items():
+            try:
+                b = len(bson.BSON.encode({k: v}))
+            except Exception:
+                # Sometimes values (ObjectId, datetime) aren't encodable
+                # directly outside a doc — approximate with repr length.
+                b = len(str(v))
+            shape = None
+            if isinstance(v, list):
+                shape = f"array[{len(v)}]"
+            elif isinstance(v, str):
+                shape = f"str({len(v)} chars)"
+            elif isinstance(v, dict):
+                shape = f"dict({len(v)} keys)"
+            rows.append({"field": k, "bytes": b, "shape": shape})
+        rows.sort(key=lambda r: r["bytes"], reverse=True)
+
+        out.append({
+            "uid": uid,
+            "total_bytes": entry.get("size_bytes"),
+            "top_fields": rows[:12],  # top 12 fields per user
+        })
+
+    return {"success": True, "top_n": top_n, "users": out}
+
+
 @router.post("/reset")
 async def reset(request: Request):
     """Clear per-endpoint stats and global counters (slow-request buffer preserved)."""
@@ -436,7 +511,7 @@ async def backfill_total_redeemed(request: Request, batch: int = 100, max_users:
 
 @router.post("/repair/bound-user-arrays")
 async def bound_user_arrays_endpoint(
-    request: Request, batch: int = 100, max_users: int = 2000
+    request: Request, batch: int = 100, max_users: int = 10000
 ):
     """Layer 3 (Feb 24 2026) — one-shot migration that permanently
     shrinks user docs to < 5 KB.
@@ -473,7 +548,7 @@ async def bound_user_arrays_endpoint(
     result = await bound_all_users(
         db=_db,
         batch=max(1, min(batch, 500)),
-        max_users=max(1, min(max_users, 5000)),
+        max_users=max(1, min(max_users, 20000)),
     )
 
     return {"success": True, **result}
