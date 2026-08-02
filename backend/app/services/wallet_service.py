@@ -100,13 +100,19 @@ class WalletService:
                 {"uid": user_id},
                 {
                     "$set": {"prc_balance": balance_after},
+                    # Layer 3 (Feb 24 2026) — bounded embed: keep only the
+                    # last 20 `prc_transactions` in the user doc. Full
+                    # history is preserved in `db.ledger` below.
                     "$push": {
                         "prc_transactions": {
-                            "type": txn_type,
-                            "amount": amount,
-                            "txn_id": txn_id,
-                            "description": description,
-                            "timestamp": datetime.now(timezone.utc).isoformat()
+                            "$each": [{
+                                "type": txn_type,
+                                "amount": amount,
+                                "txn_id": txn_id,
+                                "description": description,
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            }],
+                            "$slice": -20
                         }
                     }
                 }
@@ -207,13 +213,19 @@ class WalletService:
                 {"uid": user_id},
                 {
                     "$set": {"prc_balance": balance_after},
+                    # Layer 3 (Feb 24 2026) — bounded embed: keep only the
+                    # last 20 `prc_transactions` in the user doc. Full
+                    # history is preserved in `db.ledger` below.
                     "$push": {
                         "prc_transactions": {
-                            "type": txn_type,
-                            "amount": -amount,
-                            "txn_id": txn_id,
-                            "description": description,
-                            "timestamp": datetime.now(timezone.utc).isoformat()
+                            "$each": [{
+                                "type": txn_type,
+                                "amount": -amount,
+                                "txn_id": txn_id,
+                                "description": description,
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            }],
+                            "$slice": -20
                         }
                     }
                 }

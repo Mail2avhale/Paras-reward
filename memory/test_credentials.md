@@ -8,6 +8,7 @@
 
 ## PRC Test User
 - Mobile: 9421331342
+- PIN: (unknown — set via admin reset if needed)
 - UID: 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21
 - Plan: Elite (prc - payment method deprecated)
 

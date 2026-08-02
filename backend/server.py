@@ -35110,15 +35110,27 @@ async def get_users_at_risk_of_burn():
     warning_threshold = now - timedelta(hours=36)  # 36 hours old = 12 hours to burn
     
     # FIX: Use to_list() instead of async for to prevent cursor leak
+    # Layer 3 (Feb 24 2026) — read from `mining_history_archive` since the
+    # field is no longer embedded on user docs.
     free_users_at_risk = []
     free_users_list = await db.users.find({
         "membership_type": {"$ne": "vip"},
-        "mining_history": {"$exists": True}
     }).limit(50).to_list(length=50)
     
     for user in free_users_list:
         at_risk_prc = 0
-        for entry in user.get("mining_history", []):
+        # Prefer embedded (backward compat for un-migrated users), fall
+        # back to archive collection.
+        history = user.get("mining_history") or []
+        if not history:
+            try:
+                history = await db.mining_history_archive.find(
+                    {"user_id": user.get("uid")},
+                    {"_id": 0, "amount": 1, "timestamp": 1, "burned": 1},
+                ).limit(500).to_list(500)
+            except Exception:
+                history = []
+        for entry in history:
             if not entry.get("burned", False):
                 try:
                     mining_time = datetime.fromisoformat(entry.get("timestamp", "").replace('Z', '+00:00'))
@@ -38356,6 +38368,14 @@ async def _background_db_init():
         print("✅ Database indexes initialized")
     except Exception as e:
         print(f"⚠️ Database indexes (non-critical): {e}")
+    # Layer 3 (Feb 24 2026) — ensure mining_history_archive indexes for
+    # fast per-user reads after migration.
+    try:
+        from utils.bound_user_arrays import ensure_archive_indexes
+        await ensure_archive_indexes(db)
+        print("✅ Layer 3: mining_history_archive indexes ensured")
+    except Exception as e:
+        print(f"⚠️ Layer 3 archive indexes (non-critical): {e}")
     try:
         video_ads_count = await db.video_ads.count_documents({})
         if video_ads_count == 0:

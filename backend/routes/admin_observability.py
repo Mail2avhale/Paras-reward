@@ -432,3 +432,48 @@ async def backfill_total_redeemed(request: Request, batch: int = 100, max_users:
         "failed": failed,
         "next_step": "Re-run to continue if processed_users == max_users",
     }
+
+
+@router.post("/repair/bound-user-arrays")
+async def bound_user_arrays_endpoint(
+    request: Request, batch: int = 100, max_users: int = 2000
+):
+    """Layer 3 (Feb 24 2026) — one-shot migration that permanently
+    shrinks user docs to < 5 KB.
+
+    For every user whose doc still contains legacy embedded arrays:
+
+    1. Archives all `mining_history` entries to a separate
+       `mining_history_archive` collection keyed by `user_id` (so nothing
+       is lost) and `$unset`s the field. `mining_history` is a DEAD
+       legacy array — current code writes mining events to
+       `db.transactions` + `db.prc_ledger`, so removing it is safe.
+
+    2. Slices `prc_transactions` embed to the last 20 items. Full ledger
+       history is preserved in `db.ledger` + `db.prc_ledger`. Every
+       future write path (`WalletService`, `WalletServiceV2`) has been
+       patched to `$push {$each: [...], $slice: -20}` so the array can
+       never grow past 20 again.
+
+    Safe to re-run — idempotent, skips users with nothing to trim.
+    Batched — yields to event loop every `batch` users.
+    """
+    _require_admin(request)
+    if _db is None:
+        raise HTTPException(status_code=500, detail="DB not attached")
+
+    from utils.bound_user_arrays import (
+        bound_all_users,
+        ensure_archive_indexes,
+    )
+
+    # Ensure the archive collection has its indexes before we bulk-insert.
+    await ensure_archive_indexes(_db)
+
+    result = await bound_all_users(
+        db=_db,
+        batch=max(1, min(batch, 500)),
+        max_users=max(1, min(max_users, 5000)),
+    )
+
+    return {"success": True, **result}

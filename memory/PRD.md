@@ -8,6 +8,30 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 24, 2026 — Layer 3: Bounded embed for `mining_history` + `prc_transactions`)
+
+### Prod symptoms fixed
+- `users` avg doc size 67 KB (max 6.6 MB) → **1.1 KB avg / 8.1 KB max on preview** ✅ (target <5 KB met with 78% headroom).
+- Root cause of connection-pool starvation + 30 s API timeouts on production.
+
+### What shipped
+- **NEW** `/app/backend/utils/bound_user_arrays.py` — idempotent, batched migration helper. `PRC_TRANSACTIONS_EMBED_LIMIT = 20`. Archives `mining_history` to new `mining_history_archive` collection (keyed by `user_id`), $unsets the field from users doc. Slices `prc_transactions` embed to last 20 items (full ledger preserved in `db.ledger` + `db.prc_ledger`).
+- **Wallet write paths patched**: `wallet_service.py` (credit L103, debit L210) + `wallet_service_v2.py` (debit L130, credit L268) — all `$push` operations now use `{$each: [entry], $slice: -20}`. Contract locked by 2 source-code test assertions in `test_layer3_bounded_arrays.py`.
+- **NEW admin endpoint** `POST /api/admin/observability/repair/bound-user-arrays?batch=100&max_users=2000` — gated by `_require_admin`, batched with `asyncio.sleep(0)` yield every N users, idempotent. Returns `{processed_users, updated_users, mining_history_entries_archived, prc_transactions_entries_trimmed, failed}`.
+- **Startup hook** in `server.py:_background_db_init` ensures `mining_history_archive` indexes (`user_id_1`, `user_id_1_timestamp_-1`) at boot.
+- **Read-path fallbacks** in `admin_accounting.py` (3 sites: L1541, L1938, L2199) + `server.py` users-at-risk endpoint (L35113) — read from `mining_history_archive` when embed is gone.
+- **Frontend UI**: new red "Bound user arrays (L3)" button on `/admin/observability` with `data-testid="obs-bound-user-arrays-btn"`.
+
+### Tests
+- 10 new unit + source-contract tests in `/app/backend/tests/test_layer3_bounded_arrays.py` — all pass.
+- 10 new E2E tests in `/app/backend/tests/test_layer3_bound_user_arrays_e2e.py` (written by testing_agent_v3) — all pass.
+- Regression: 53/53 pass across L1-L2 test suite.
+- Preview run: histogram avg_bytes = 1,139 (< 5 KB target); 0 users with `mining_history` field; prc_transactions max = 20; archive count = 9 rows with proper schema.
+
+### Auth enforcement verified
+- 401 without token; 403 with non-admin token; 200 with admin token. Re-run returns 0 processed (idempotent).
+
+
 ## Implemented (Feb 23, 2026 — Layer 1.7: `get_current_user` auth cache + non-admin skip)
 
 ### Prod screenshot symptoms (second observability screenshot after Layer 2 deploy)

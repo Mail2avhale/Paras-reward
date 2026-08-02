@@ -1535,12 +1535,16 @@ async def get_live_platform_stats():
             if wallet_earned:
                 today_prc_earned = round(wallet_earned[0].get("total", 0), 2)
         
-        # Also aggregate from user mining_history for today
+        # Also aggregate from `mining_history_archive` for today
+        # (Layer 3 Feb 24 2026 — the field used to be embedded on user
+        # docs; migrated to its own collection). Only fires if the two
+        # canonical sources above returned 0 — this is a legacy fallback
+        # that gets progressively less useful as new events land in
+        # `transactions` / `wallet_transactions`.
         if today_prc_earned == 0:
-            mining_today = await db.users.aggregate([
-                {"$unwind": {"path": "$mining_history", "preserveNullAndEmptyArrays": False}},
-                {"$match": {"mining_history.timestamp": {"$gte": today_start.isoformat()}}},
-                {"$group": {"_id": None, "total": {"$sum": "$mining_history.amount"}}}
+            mining_today = await db.mining_history_archive.aggregate([
+                {"$match": {"timestamp": {"$gte": today_start.isoformat()}}},
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
             ]).to_list(1)
             if mining_today:
                 today_prc_earned = round(mining_today[0].get("total", 0), 2)
@@ -1936,7 +1940,18 @@ async def get_user_insights(uid: str):
         mining_active = user.get("mining_active", False)
         
         # Calculate today's and yesterday's earnings from mining history
-        mining_history = user.get("mining_history", [])
+        # (Layer 3 Feb 24 2026 — reads from `mining_history_archive` if
+        # user doc no longer embeds the field. Falls back to the embed
+        # for users not yet migrated.)
+        mining_history = user.get("mining_history") or []
+        if not mining_history:
+            try:
+                mining_history = await db.mining_history_archive.find(
+                    {"user_id": user.get("uid")},
+                    {"_id": 0, "amount": 1, "timestamp": 1},
+                ).sort("timestamp", -1).limit(500).to_list(500)
+            except Exception:
+                mining_history = []
         today_earned = 0
         yesterday_earned = 0
         
@@ -2196,7 +2211,17 @@ async def get_user_statement(uid: str, request: Request, format: str = "csv", pe
         }).sort("created_at", -1).to_list(1000)
         
         # Also check mining history
-        mining_history = user.get("mining_history", [])
+        # (Layer 3 Feb 24 2026 — reads from `mining_history_archive` if
+        # user doc no longer embeds the field.)
+        mining_history = user.get("mining_history") or []
+        if not mining_history:
+            try:
+                mining_history = await db.mining_history_archive.find(
+                    {"user_id": uid},
+                    {"_id": 0, "amount": 1, "timestamp": 1},
+                ).sort("timestamp", -1).limit(1000).to_list(1000)
+            except Exception:
+                mining_history = []
         
         if format == "csv":
             # Generate CSV

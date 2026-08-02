@@ -127,14 +127,20 @@ class WalletServiceV2:
                 {"uid": user_id, "prc_balance": {"$gte": amount if check_balance else -float('inf')}},
                 {
                     "$set": {"prc_balance": balance_after},
+                    # Layer 3 (Feb 24 2026) — bounded embed: keep only
+                    # the last 20 items. Full history preserved in
+                    # `db.ledger` + `db.prc_ledger` below.
                     "$push": {
                         "prc_transactions": {
-                            "type": txn_type,
-                            "amount": -amount,
-                            "txn_id": txn_id,
-                            "description": description,
-                            "reference": reference,
-                            "timestamp": timestamp
+                            "$each": [{
+                                "type": txn_type,
+                                "amount": -amount,
+                                "txn_id": txn_id,
+                                "description": description,
+                                "reference": reference,
+                                "timestamp": timestamp
+                            }],
+                            "$slice": -20
                         }
                     }
                 },
@@ -265,14 +271,20 @@ class WalletServiceV2:
                 {"uid": user_id},
                 {
                     "$set": {"prc_balance": balance_after},
+                    # Layer 3 (Feb 24 2026) — bounded embed: keep only
+                    # the last 20 items. Full history preserved in
+                    # `db.ledger` + `db.prc_ledger` below.
                     "$push": {
                         "prc_transactions": {
-                            "type": txn_type,
-                            "amount": amount,
-                            "txn_id": txn_id,
-                            "description": description,
-                            "reference": reference,
-                            "timestamp": timestamp
+                            "$each": [{
+                                "type": txn_type,
+                                "amount": amount,
+                                "txn_id": txn_id,
+                                "description": description,
+                                "reference": reference,
+                                "timestamp": timestamp
+                            }],
+                            "$slice": -20
                         }
                     }
                 },

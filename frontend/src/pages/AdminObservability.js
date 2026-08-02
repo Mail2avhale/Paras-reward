@@ -187,6 +187,34 @@ const AdminObservability = () => {
     }
   };
 
+  const handleBoundUserArrays = async () => {
+    if (!window.confirm(
+      'Layer 3 migration: archive `mining_history` and slice `prc_transactions` embed to 20 items.\n\n'
+      + 'Runs in batches of up to 2000 users at a time. Safe to re-run — idempotent.\n\n'
+      + 'This is the permanent fix for the 67 KB avg user-doc bloat.\n\n'
+      + 'Continue?'
+    )) return;
+    try {
+      toast.info('Bounding user arrays — this may take a minute...');
+      const res = await axios.post(
+        `${API}/admin/observability/repair/bound-user-arrays?batch=100&max_users=2000`,
+        {},
+        { timeout: 300000 }
+      );
+      const d = res.data || {};
+      toast.success(
+        `Processed ${d.processed_users || 0} users · updated ${d.updated_users || 0} · `
+        + `archived ${d.mining_history_entries_archived || 0} mining_history rows · `
+        + `trimmed ${d.prc_transactions_entries_trimmed || 0} prc_transactions items`
+      );
+      // Refresh histogram to visualize the doc-size improvement
+      fetchAll();
+    } catch (err) {
+      toast.error('Bound-user-arrays failed — check console');
+      console.error(err);
+    }
+  };
+
   // Users doc size distribution — the KPI dashboard for Data Design Refactor
   const usersMax = histogram?.totals?.max_bytes || 0;
   const usersAvg = histogram?.totals?.avg_bytes || 0;
@@ -260,6 +288,15 @@ const AdminObservability = () => {
             data-testid="obs-backfill-total-redeemed-btn"
           >
             Backfill total_redeemed
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleBoundUserArrays}
+            className="bg-red-600 hover:bg-red-700"
+            data-testid="obs-bound-user-arrays-btn"
+          >
+            Bound user arrays (L3)
           </Button>
         </div>
       </div>
