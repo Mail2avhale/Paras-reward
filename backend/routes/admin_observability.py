@@ -291,10 +291,21 @@ async def users_doc_histogram(request: Request):
 async def users_bloat_fields(request: Request, top_n: int = 5):
     """Field-size breakdown for the top-N largest user docs.
 
-    Diagnostic endpoint (Feb 25 2026) — after L3 the users doc is
-    supposed to be < 5 KB avg, but 790 users still sit at 100 KB - 1 MB
-    on prod. This endpoint pinpoints WHICH field is bloating them so we
-    know what to target in L4.
+    Diagnostic endpoint (Feb 25 2026, hardened Feb 26 2026) — after L3
+    the users doc is supposed to be < 5 KB avg, but 790 users still sit
+    at 100 KB - 1 MB on prod. This endpoint pinpoints WHICH field is
+    bloating them so we know what to target in L4.
+
+    Feb 26 2026 fix — MUST bypass the `UsersCollectionGuard` proxy that
+    auto-strips 7 heavy fields (mining_history, profile_picture,
+    prc_transactions, login_history, activity, activity_log,
+    notifications_seen, security_events) so we can actually SEE what's
+    bloating the doc. Previously the endpoint saw the stripped 700 B
+    doc and reported "no bloat" while the raw doc was 640 KB.
+
+    Uses server-side aggregation with `$bsonSize` per field so field
+    sizes are computed by MongoDB itself (guard proxy only intercepts
+    `find_one`/`find`, not `aggregate`).
 
     Returns per-user list of every top-level field with its BSON size
     (bytes) and value shape (array length / string length). Sorted
@@ -306,57 +317,69 @@ async def users_bloat_fields(request: Request, top_n: int = 5):
 
     top_n = max(1, min(top_n, 20))
 
-    # 1) find top-N largest user docs by bsonSize
-    largest = []
-    async for r in _db.users.aggregate([
-        {"$project": {"uid": 1, "size_bytes": {"$bsonSize": "$$ROOT"}}},
+    # Server-side aggregation: for the top-N largest docs, compute
+    # per-field bsonSize using $objectToArray. Bypasses the guard proxy
+    # since we call `aggregate()`, not `find_one()`.
+    pipeline = [
+        # Rank all users by total doc size, keep only the top N.
+        {"$project": {
+            "uid": 1,
+            "size_bytes": {"$bsonSize": "$$ROOT"},
+            "root": "$$ROOT",
+        }},
         {"$sort": {"size_bytes": -1}},
         {"$limit": top_n},
-    ], allowDiskUse=True):
-        largest.append(r)
 
-    # 2) fetch each doc in full and compute per-field bsonSize
-    import bson
-    from bson import BSON, ObjectId  # noqa: F401
+        # Break the doc into an array of {k, v} entries, then compute
+        # bsonSize({k: v}) per entry — that's the field's actual on-disk
+        # cost (name + type + value + BSON overhead).
+        {"$project": {
+            "uid": 1,
+            "size_bytes": 1,
+            "fields": {
+                "$map": {
+                    "input": {"$objectToArray": "$root"},
+                    "as": "kv",
+                    "in": {
+                        "field": "$$kv.k",
+                        # Build a single-key doc {kv.k: kv.v} at query
+                        # time via $arrayToObject so we can compute its
+                        # BSON byte-size in one expression.
+                        "bytes": {
+                            "$bsonSize": {
+                                "$arrayToObject": [[{"k": "$$kv.k", "v": "$$kv.v"}]]
+                            }
+                        },
+                        "shape": {
+                            "$switch": {
+                                "branches": [
+                                    {"case": {"$isArray": "$$kv.v"},
+                                     "then": {"$concat": ["array[", {"$toString": {"$size": "$$kv.v"}}, "]"]}},
+                                    {"case": {"$eq": [{"$type": "$$kv.v"}, "string"]},
+                                     "then": {"$concat": ["str(", {"$toString": {"$strLenBytes": {"$ifNull": ["$$kv.v", ""]}}}, " chars)"]}},
+                                    {"case": {"$eq": [{"$type": "$$kv.v"}, "object"]},
+                                     "then": "dict"},
+                                    {"case": {"$eq": [{"$type": "$$kv.v"}, "binData"]},
+                                     "then": "bin"},
+                                ],
+                                "default": None,
+                            }
+                        },
+                    },
+                }
+            },
+        }},
+    ]
 
     out = []
-    for entry in largest:
-        uid = entry.get("uid")
-        if not uid:
-            continue
-        try:
-            doc = await _db.users.find_one({"uid": uid})
-        except Exception as exc:
-            out.append({"uid": uid, "error": str(exc)[:120]})
-            continue
-        if not doc:
-            continue
-
-        # BSON size of `{field: value}` gives per-field byte cost.
-        # Includes ~5 bytes overhead per field name — good enough for
-        # diagnosis.
-        rows = []
-        for k, v in doc.items():
-            try:
-                b = len(bson.BSON.encode({k: v}))
-            except Exception:
-                # Sometimes values (ObjectId, datetime) aren't encodable
-                # directly outside a doc — approximate with repr length.
-                b = len(str(v))
-            shape = None
-            if isinstance(v, list):
-                shape = f"array[{len(v)}]"
-            elif isinstance(v, str):
-                shape = f"str({len(v)} chars)"
-            elif isinstance(v, dict):
-                shape = f"dict({len(v)} keys)"
-            rows.append({"field": k, "bytes": b, "shape": shape})
-        rows.sort(key=lambda r: r["bytes"], reverse=True)
-
+    async for entry in _db.users.aggregate(pipeline, allowDiskUse=True):
+        fields = entry.get("fields", []) or []
+        # Sort per-user by bytes descending so the fattest field is first.
+        fields.sort(key=lambda r: r.get("bytes", 0), reverse=True)
         out.append({
-            "uid": uid,
+            "uid": entry.get("uid"),
             "total_bytes": entry.get("size_bytes"),
-            "top_fields": rows[:12],  # top 12 fields per user
+            "top_fields": fields[:15],  # top 15 fields per user
         })
 
     return {"success": True, "top_n": top_n, "users": out}
