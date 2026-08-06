@@ -249,8 +249,32 @@ android {
         //     to its own collection, move profile_picture to object
         //     storage. Both deferred until Phase 0 impact is measured on
         //     production.
-        versionCode 34
-        versionName "1.3.4"
+        // versionCode 34 → 35 — Feb 25, 2026 (v1.3.5) — Play Console
+        //     "1 action recommended" hardening pass.
+        // 54. proguard-rules.pro expanded from 74 → ~180 lines. All the
+        //     items Play Console flagged on the old v1.3.0 release were
+        //     already fixed in v1.2.3 (minifyEnabled, shrinkResources,
+        //     R8 full mode, obfuscation). This pass strengthens the
+        //     "keep" ruleset so obfuscation is safe across every SDK
+        //     the app actually pulls:
+        //     - Firebase (@capacitor-firebase/app + push/analytics/etc)
+        //     - Google Play Services base infra (Tasks / Auth / Common)
+        //     - Google AdMob Mobile Ads SDK (24.7.0) — already covered,
+        //       but re-checked for internal.ads reflection paths.
+        //     - Google Play Install Referrer 2.2 (reflection-only API)
+        //     - Google Play In-App Review
+        //     - AndroidX Biometric (@aparajita/capacitor-biometric-auth)
+        //     - Kotlin coroutines (kotlinx.coroutines.internal reflection)
+        //     - Gson @SerializedName annotation preservation
+        //     - Retrofit Call/Response allowobfuscation shims
+        //     - javax.annotation dontwarn (generated code)
+        //     - Serializable / Parcelable safety
+        //     - Every @capawesome / @aparajita / ee.forgr Capacitor plugin
+        //     Together these prevent the classic release-only NoClassDef /
+        //     NoSuchMethod crashes without loosening R8's optimization.
+        //     Play Console recommendation should fully clear on this AAB.
+        versionCode 35
+        versionName "1.3.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
