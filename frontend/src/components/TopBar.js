@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Menu } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Search, Bell, Menu, ChevronLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Sidebar from '@/components/Sidebar';
 import NotificationCenter from '@/components/NotificationCenter';
@@ -10,8 +10,20 @@ import axios from 'axios';
 import { API } from "../lib/api";
 const LOGO_URL = "/paras-logo.png";
 
+// Routes that live in the BottomNav — no back button needed on these
+// (they ARE the root destinations). Everything else gets a chevron.
+const TAB_ROOT_PATHS = new Set([
+  '/dashboard',
+  '/referrals',
+  '/mall',
+  '/community',
+  '/profile',
+  '/profile-advanced',
+]);
+
 const TopBar = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
@@ -71,6 +83,21 @@ const TopBar = ({ user, onLogout }) => {
     }
   };
 
+  // Feb 25 2026 — Back button. Hidden on the 5 BottomNav root tabs
+  // (they ARE the destinations, so back-out doesn't make sense). Uses
+  // history.back() when there's a prior entry, else falls back to
+  // /dashboard so a fresh deep-link never dead-ends the user.
+  const showBackBtn = !TAB_ROOT_PATHS.has(location.pathname);
+  const handleBack = () => {
+    // window.history.length starts at 1 on a fresh tab. If it's > 1
+    // there IS a prior entry, so navigate(-1) is safe.
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   return (
     <>
       <div
@@ -79,6 +106,21 @@ const TopBar = ({ user, onLogout }) => {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          {/* Back button — Feb 25 2026. Hidden on the 5 tab-root pages
+              (dashboard / referrals / mall / community / profile) since
+              those are BottomNav destinations. Renders on every other
+              user page for easy one-tap navigation. */}
+          {showBackBtn && (
+            <button
+              onClick={handleBack}
+              data-testid="topbar-back-btn"
+              aria-label="Go back"
+              className="mr-1 -ml-1 p-2 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors flex-shrink-0"
+            >
+              <ChevronLeft className="h-5 w-5 text-gray-700" />
+            </button>
+          )}
+
           {/* Logo */}
           <div 
             className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
