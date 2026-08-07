@@ -248,6 +248,34 @@ const AdminObservability = () => {
     }
   };
 
+  const handleMigrateProfilePictures = async () => {
+    if (!window.confirm(
+      'Layer 4 migration: move `profile_picture` base64 blobs into a '
+      + 'separate `user_profile_pictures` collection.\n\n'
+      + 'This drops the users doc size by up to 600 KB per user with a picture. '
+      + 'Runs in batches of 2000. Safe to re-run — idempotent.\n\n'
+      + 'Continue?'
+    )) return;
+    try {
+      toast.info('Migrating profile pictures — this may take a couple of minutes...');
+      const res = await axios.post(
+        `${API}/admin/observability/repair/migrate-profile-pictures?batch=50&max_users=10000`,
+        {},
+        { timeout: 600000 }
+      );
+      const d = res.data || {};
+      const mb = ((d.total_bytes_reclaimed || 0) / (1024 * 1024)).toFixed(1);
+      toast.success(
+        `Processed ${d.processed_users || 0} · migrated ${d.migrated_users || 0} · `
+        + `already-done ${d.already_migrated || 0} · reclaimed ${mb} MB`
+      );
+      fetchAll();
+    } catch (err) {
+      toast.error('Migrate-profile-pictures failed — check console');
+      console.error(err);
+    }
+  };
+
   // Users doc size distribution — the KPI dashboard for Data Design Refactor
   const usersMax = histogram?.totals?.max_bytes || 0;
   const usersAvg = histogram?.totals?.avg_bytes || 0;
@@ -339,6 +367,15 @@ const AdminObservability = () => {
             data-testid="obs-show-bloat-fields-btn"
           >
             Show bloat fields
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleMigrateProfilePictures}
+            className="bg-orange-600 hover:bg-orange-700"
+            data-testid="obs-migrate-profile-pictures-btn"
+          >
+            Migrate profile pics (L4)
           </Button>
         </div>
       </div>

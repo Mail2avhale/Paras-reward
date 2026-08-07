@@ -8,6 +8,37 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 26, 2026 — Layer 4: profile-picture off-load — quick MongoDB fix)
+
+### Prod diagnosis (from admin dashboard bloat-fields alert)
+Top 3 largest user docs on prod (all 500-620 KB):
+- `c470d361...` 642,866 B → `profile_picture` **636,090 B** (99 % of doc)
+- `9ca91832...` 623,808 B → `profile_picture` **614,578 B**
+- `dfebcc3c...` 531,109 B → `profile_picture` **523,522 B**
+
+`profile_picture` was storing base64 data URLs inline (~600 KB per user). 790 users had one → ~475 MB of image bytes in the `users` collection alone. This was the *only* remaining significant bloat source after Layer 3.
+
+### What shipped
+- **NEW collection** `user_profile_pictures` with schema `{uid, image_data, updated_at}` + unique `uid_1` index. Startup hook in `server.py:_background_db_init` ensures the index at boot.
+- **NEW helper** `/app/backend/utils/profile_picture_store.py` — `set_picture()`, `get_picture()`, `delete_picture()`, `migrate_all()`, `ensure_indexes()`. Idempotent. Zero-downtime: `get_picture()` reads from the new store first, falls back to the legacy embed for un-migrated users.
+- **Rewired write paths** in `routes/users.py`:
+  - `POST /api/user/{uid}/upload-profile-picture` → `set_picture()` (upsert new coll + $unset legacy embed).
+  - `DELETE /api/user/{uid}/profile-picture` → `delete_picture()` (delete from both stores).
+  - `GET /api/users/{uid}/profile-picture` → `get_picture()` (new coll first).
+- **NEW admin endpoint** `POST /admin/observability/repair/migrate-profile-pictures?batch=50&max_users=10000` — gated by `_require_admin`. Idempotent. Returns `total_bytes_reclaimed` so the drop is measurable.
+- **NEW orange button** on `/admin/observability` — "Migrate profile pics (L4)" — one-click migration for the 790 users.
+
+### Preview verification
+Test user was seeded with 50 KB base64 blob. Migration reclaimed 50,023 bytes; user doc shrunk from 56 KB → 6.7 KB. Read endpoint still returns the same 50,023-char data URL post-migration (backward-compat fallback verified). `profile_picture` field completely $unset. `has_profile_picture: true` flag set on user doc so lists can skip the round-trip when there's no picture.
+
+### Tests
+- 11 new tests in `/app/backend/tests/test_layer4_profile_picture_offload.py` covering write/read/delete/migration paths + 3 source-code contract tests locking the users.py imports. All pass.
+- Full regression: **68/68 pass** across L1-L4.
+
+### Expected prod impact
+On the 790 users at 100 KB - 1 MB: each will drop by ~500-600 KB, pulling users-doc avg from **39.4 KB → ~5-8 KB** and shrinking the users collection storage from ~240 MB → ~30 MB. Combined with L3 this completes the "users doc <5 KB avg" target from the original refactor plan.
+
+
 ## Implemented (Feb 25, 2026 — Layer 1.8b: propagate wait_for guard to remaining mall_v2 endpoints)
 
 ### Prod symptoms fixed (from third deploy screenshot)

@@ -90,16 +90,23 @@ async def get_user(uid: str, current_user: dict = Depends(get_current_user)):
 
 @router.get("/users/{uid}/profile-picture")
 async def get_user_profile_picture(uid: str, current_user: dict = Depends(get_current_user)):
-    """Get user's profile picture separately - to avoid loading large base64 in main requests (auth required: self or admin)"""
+    """Get user's profile picture separately - to avoid loading large base64 in main requests (auth required: self or admin).
+
+    Feb 26 2026 (Layer 4) — reads from `user_profile_pictures`
+    collection first (post-migration), falls back to the embedded field
+    for un-migrated users so this endpoint never breaks during the
+    migration window.
+    """
     await verify_user_access(uid, current_user)
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "profile_picture": 1, "name": 1})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    return {
-        "profile_picture": user.get("profile_picture"),
-        "has_picture": user.get("profile_picture") is not None
-    }
+    from utils.profile_picture_store import get_picture
+    picture = await get_picture(db, uid)
+    if picture is None:
+        # Preserve original response shape even when the user has no pic.
+        user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return {"profile_picture": None, "has_picture": False}
+    return {"profile_picture": picture, "has_picture": True}
 
 
 @router.get("/users/children/{uid}")
@@ -245,31 +252,31 @@ async def update_profile(uid: str, request: Request, current_user: dict = Depend
 
 @router.post("/user/{uid}/upload-profile-picture")
 async def upload_profile_picture(uid: str, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    """Upload profile picture (stores as base64) (auth required: self or admin)"""
+    """Upload profile picture (stores as base64) (auth required: self or admin).
+
+    Feb 26 2026 (Layer 4) — writes to `user_profile_pictures` collection
+    instead of embedding on the user doc. Preserves the base64 data-URL
+    contract for the frontend but keeps user docs under 5 KB.
+    """
     await verify_user_access(uid, current_user)
-    user = await db.users.find_one({"uid": uid})
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "uid": 1})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
-    
+
     content = await file.read()
-    
+
     if len(content) > 5 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image size must be less than 5MB")
-    
+
     base64_image = base64.b64encode(content).decode('utf-8')
     image_data_url = f"data:{file.content_type};base64,{base64_image}"
-    
-    await db.users.update_one(
-        {"uid": uid},
-        {"$set": {
-            "profile_picture": image_data_url,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }}
-    )
-    
+
+    from utils.profile_picture_store import set_picture
+    await set_picture(db, uid, image_data_url)
+
     return {
         "message": "Profile picture uploaded successfully",
         "profile_picture": image_data_url[:100] + "..."
@@ -278,20 +285,19 @@ async def upload_profile_picture(uid: str, file: UploadFile = File(...), current
 
 @router.delete("/user/{uid}/profile-picture")
 async def delete_profile_picture(uid: str, current_user: dict = Depends(get_current_user)):
-    """Delete profile picture (auth required: self or admin)"""
+    """Delete profile picture (auth required: self or admin).
+
+    Feb 26 2026 (Layer 4) — removes from `user_profile_pictures`
+    collection AND clears the legacy embedded field.
+    """
     await verify_user_access(uid, current_user)
-    user = await db.users.find_one({"uid": uid})
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "uid": 1})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    await db.users.update_one(
-        {"uid": uid},
-        {"$set": {
-            "profile_picture": None,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }}
-    )
-    
+
+    from utils.profile_picture_store import delete_picture
+    await delete_picture(db, uid)
+
     return {"message": "Profile picture deleted successfully"}
 
 

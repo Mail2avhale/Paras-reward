@@ -38376,6 +38376,14 @@ async def _background_db_init():
         print("✅ Layer 3: mining_history_archive indexes ensured")
     except Exception as e:
         print(f"⚠️ Layer 3 archive indexes (non-critical): {e}")
+    # Layer 4 (Feb 26 2026) — ensure user_profile_pictures index for
+    # profile-picture off-load.
+    try:
+        from utils.profile_picture_store import ensure_indexes as ensure_pp_indexes
+        await ensure_pp_indexes(db)
+        print("✅ Layer 4: user_profile_pictures index ensured")
+    except Exception as e:
+        print(f"⚠️ Layer 4 indexes (non-critical): {e}")
     try:
         video_ads_count = await db.video_ads.count_documents({})
         if video_ads_count == 0:

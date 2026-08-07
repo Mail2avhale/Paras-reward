@@ -575,3 +575,35 @@ async def bound_user_arrays_endpoint(
     )
 
     return {"success": True, **result}
+
+
+@router.post("/repair/migrate-profile-pictures")
+async def migrate_profile_pictures_endpoint(
+    request: Request, batch: int = 50, max_users: int = 2000
+):
+    """Layer 4 (Feb 26 2026) — one-shot migration that moves base64
+    `profile_picture` blobs out of the users doc into a dedicated
+    `user_profile_pictures` collection.
+
+    Prod audit revealed 790 users still at 100 KB - 1 MB after Layer 3,
+    with `profile_picture` (base64 data URL) contributing 500-620 KB per
+    user. This endpoint moves that field to its own collection keyed by
+    uid, sets `has_profile_picture: True` on the user doc, and $unsets
+    the embedded field. Idempotent — safe to re-run.
+
+    Response includes `total_bytes_reclaimed` so you can watch the
+    users-doc-histogram avg drop after the migration.
+    """
+    _require_admin(request)
+    if _db is None:
+        raise HTTPException(status_code=500, detail="DB not attached")
+
+    from utils.profile_picture_store import migrate_all
+
+    result = await migrate_all(
+        db=_db,
+        batch=max(1, min(batch, 500)),
+        max_users=max(1, min(max_users, 20000)),
+    )
+
+    return {"success": True, **result}
