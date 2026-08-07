@@ -74,6 +74,24 @@ class _FakeCollection:
                 return types.SimpleNamespace(matched_count=1, modified_count=1)
         return types.SimpleNamespace(matched_count=0, modified_count=0)
 
+    async def bulk_write(self, operations, ordered=True):
+        # Enough for our tests — apply each UpdateOne op via the same
+        # in-memory update_one path.
+        matched = modified = 0
+        for op in operations:
+            # Duck-type: pymongo `UpdateOne` exposes `._filter` and `._doc`.
+            filt = getattr(op, "_filter", None)
+            update = getattr(op, "_doc", None)
+            if filt is None or update is None:
+                continue
+            r = await self.update_one(filt, update)
+            matched += r.matched_count
+            modified += r.modified_count
+        return types.SimpleNamespace(
+            matched_count=matched, modified_count=modified,
+            inserted_count=0, upserted_count=0, deleted_count=0,
+        )
+
     def find(self, filt=None, projection=None):
         docs = list(self.docs) if not filt else [
             d for d in self.docs if self._match(d, filt)

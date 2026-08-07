@@ -8,6 +8,30 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Fixed (Feb 27, 2026 — P1 reconcile-auth-hashes timeout hotfix)
+
+### Prod symptom
+"Recent slow requests" panel on the dashboard: `POST /api/admin/observability/repair/reconcile-auth-hashes` — **30001 ms, 504** — Kubernetes ingress cut the request at the 30 s cap. 6,198 users × ~5 ms per sequential `update_one` = ~30 s. Migration DIDN'T complete on prod.
+
+### Fix
+Rewrote `reconcile_auth_hashes()` to use `pymongo.UpdateOne` + `db.users.bulk_write(ops, ordered=False)` instead of a per-user `update_one` loop. Bulk writes send 100 ops per network round-trip → ~100× speedup. Preview verification: 26 users reconciled in **112 ms** (was likely ~130 ms sequential). On prod's 6,198 users this drops from ~30 s → **~1-2 s**, well under the ingress cap.
+
+### Tests
+- Added `bulk_write` support to the fake Motor collection in `tests/test_auth_hash_consolidation.py` so the runtime-fault-injection reconcile tests still pass.
+- 16/16 pass. Full regression 58/58 pass.
+
+### Prod diagnostic wins (from screenshot)
+- Slow rate 11.92 % → **3.47 %** ✅ (3.4× improvement)
+- Wishlist no longer appears in slow endpoints list — L1.8c cache TTL bump landed
+- 5xx rate maintained at **0 %** ✅
+- Users doc avg stable at **4.9 KB** (target < 5 KB)
+
+### Still slow on prod (candidates for next pass)
+- `POST /api/mining/collect/{uid}` — 18 calls, p50 = 2975 ms, p95 = 5713 ms — user-facing pain when tapping "Collect mining reward". Likely fix: move commission-distribution + employee_pool + cache.delete side effects to `asyncio.create_task()` so response returns immediately after the DB write.
+- `GET /api/kyc/stats` — 4247 ms (1 call) — admin-only, likely wrap in `wait_for(3s)`.
+- `GET /api/user/{user_id}/performance-summary` — 59 calls, p50 = 1316 ms, p95 = 4169 ms — regressed slightly, worth investigating.
+
+
 ## Implemented (Feb 27, 2026 — P1 Security Fix: Auth-hash divergence bug)
 
 ### Vulnerability
