@@ -276,6 +276,35 @@ const AdminObservability = () => {
     }
   };
 
+  const handleReconcileAuthHashes = async () => {
+    if (!window.confirm(
+      'P1 security fix: reconcile divergent auth-hash fields.\n\n'
+      + 'Ensures every user has the same bcrypt hash across all 4 fields '
+      + '(password, password_hash, pin_hash, hashed_pin) so a stale hash '
+      + 'from a legacy field can NEVER validate a login after a password reset.\n\n'
+      + 'Safe to re-run. Idempotent. No re-hashing — we only copy the '
+      + "authoritative bcrypt value to sibling fields.\n\n"
+      + 'Continue?'
+    )) return;
+    try {
+      toast.info('Reconciling auth hashes — this may take a minute...');
+      const res = await axios.post(
+        `${API}/admin/observability/repair/reconcile-auth-hashes?batch=100&max_users=10000`,
+        {},
+        { timeout: 300000 }
+      );
+      const d = res.data || {};
+      toast.success(
+        `Processed ${d.processed_users || 0} · reconciled ${d.reconciled_users || 0} · `
+        + `already-consistent ${d.already_consistent || 0} · no-hash ${d.no_hash_at_all || 0}`
+      );
+      fetchAll();
+    } catch (err) {
+      toast.error('Reconcile-auth-hashes failed — check console');
+      console.error(err);
+    }
+  };
+
   // Users doc size distribution — the KPI dashboard for Data Design Refactor
   const usersMax = histogram?.totals?.max_bytes || 0;
   const usersAvg = histogram?.totals?.avg_bytes || 0;
@@ -376,6 +405,15 @@ const AdminObservability = () => {
             data-testid="obs-migrate-profile-pictures-btn"
           >
             Migrate profile pics (L4)
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleReconcileAuthHashes}
+            className="bg-yellow-600 hover:bg-yellow-700"
+            data-testid="obs-reconcile-auth-hashes-btn"
+          >
+            Reconcile auth hashes (P1 sec)
           </Button>
         </div>
       </div>

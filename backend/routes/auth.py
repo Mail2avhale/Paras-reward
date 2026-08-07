@@ -2096,12 +2096,20 @@ async def reset_password(reset_token: str, new_password: str):
         expiry = datetime.fromisoformat(user["reset_token_expiry"])
         if datetime.now(timezone.utc) > expiry:
             raise HTTPException(status_code=400, detail="Reset token expired")
-    
-    await db.users.update_one(
-        {"uid": user["uid"]},
-        {"$set": {"password_hash": hash_password(new_password), "reset_token": None, "reset_token_expiry": None}}
+
+    # Feb 27 2026 (P1 security fix) — write the new hash to ALL four
+    # auth-hash fields so the login fallback chain (pin_hash → hashed_pin
+    # → password_hash → password) can NEVER validate a stale credential.
+    # Previously this only updated `password_hash`, leaving the old
+    # value in `pin_hash` — attacker with old PIN kept logging in.
+    from utils.auth_hash_consolidation import write_auth_hash
+    await write_auth_hash(
+        db,
+        user["uid"],
+        hash_password(new_password),
+        extra_set={"reset_token": None, "reset_token_expiry": None},
     )
-    
+
     return {"message": "Password reset successful"}
 
 
@@ -2109,16 +2117,24 @@ async def reset_password(reset_token: str, new_password: str):
 async def change_password(uid: str, old_password: str, new_password: str):
     """Change password for logged in user"""
     user = await db.users.find_one({"uid": uid})
-    
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    if user.get("password_hash"):
-        if not verify_password(old_password, user["password_hash"]):
-            raise HTTPException(status_code=401, detail="Current password is incorrect")
-    
-    await db.users.update_one({"uid": uid}, {"$set": {"password_hash": hash_password(new_password)}})
-    
+
+    # Verify old_password against the AUTHORITATIVE hash — same pick
+    # order the reconciler uses. Falls back through legacy fields so
+    # users mid-migration can still change their password.
+    from utils.auth_hash_consolidation import pick_authoritative_hash, write_auth_hash
+    current_hash = pick_authoritative_hash(user)
+    if not current_hash:
+        raise HTTPException(status_code=400, detail="No password set for this user")
+    if not verify_password(old_password, current_hash):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+    # Feb 27 2026 (P1 security fix) — same divergence-safe write as
+    # `reset-password` above. All 4 fields get the new hash together.
+    await write_auth_hash(db, uid, hash_password(new_password))
+
     return {"message": "Password changed successfully"}
 
 
@@ -2308,13 +2324,17 @@ async def reset_password_recovery(request: Request):
             pass
     
     hashed_password = hash_password(new_password)
-    
+
+    # Feb 27 2026 (P1 security fix) — write to ALL four auth-hash fields
+    # via the consolidator so legacy `pin_hash`/`hashed_pin` values can't
+    # keep validating the OLD password. Previously this only updated
+    # `password_hash` + `password`, leaving pin_hash stale.
+    from utils.auth_hash_consolidation import write_auth_hash
+    await write_auth_hash(db, user["uid"], hashed_password)
+    # Additionally clear reset tokens (write_auth_hash doesn't $unset).
     await db.users.update_one(
         {"_id": user["_id"]},
-        {
-            "$set": {"password_hash": hashed_password, "password": hashed_password},
-            "$unset": {"reset_token": "", "reset_token_expiry": ""}
-        }
+        {"$unset": {"reset_token": "", "reset_token_expiry": ""}},
     )
-    
+
     return {"success": True, "message": "Password reset successfully"}

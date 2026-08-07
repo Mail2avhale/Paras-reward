@@ -25179,33 +25179,30 @@ async def user_360_quick_action(request: Request):
         if not temp_password:
             # Generate a random temporary password
             temp_password = f"Temp{uuid.uuid4().hex[:6].upper()}"
-        
+
         # Hash the temporary password using pwd_context
         hashed_password = pwd_context.hash(temp_password)
-        
-        # Check if user is PIN-migrated
-        is_pin_user = user.get("pin_migrated", False)
-        
-        update_fields = {
-            "password": hashed_password,
-            "password_hash": hashed_password,
-            "password_reset_required": True,
-            "password_reset_at": now.isoformat(),
-            "password_reset_by": admin_id,
-            "failed_login_attempts": 0,
-            "locked_until": None,
-            "updated_at": now.isoformat()
-        }
-        
-        # If PIN user, also update PIN hash (password and PIN should be same for consistency)
-        if is_pin_user:
-            update_fields["pin_hash"] = hashed_password
-            update_fields["failed_pin_attempts"] = 0
-            update_fields["pin_locked_until"] = None
-        
-        await db.users.update_one(
-            {"uid": user_id},
-            {"$set": update_fields}
+
+        # Feb 27 2026 (P1 security fix) — route through consolidator so
+        # every one of {password, password_hash, pin_hash, hashed_pin}
+        # gets the same new hash. Previously this only touched password
+        # + password_hash + (pin_hash if pin_migrated), leaving
+        # `hashed_pin` stale and allowing old PIN logins.
+        from utils.auth_hash_consolidation import write_auth_hash
+        await write_auth_hash(
+            db,
+            user_id,
+            hashed_password,
+            extra_set={
+                "password_reset_required": True,
+                "password_reset_at": now.isoformat(),
+                "password_reset_by": admin_id,
+                "failed_login_attempts": 0,
+                "locked_until": None,
+                "failed_pin_attempts": 0,
+                "pin_locked_until": None,
+                "updated_at": now.isoformat(),
+            },
         )
         
         if is_pin_user:
@@ -27774,14 +27771,17 @@ async def reset_password_with_verification(request: PasswordRecoveryResetRequest
     
     # Update password
     new_hash = hash_password(new_password)
-    await db.users.update_one(
-        {"uid": user["uid"]},
-        {"$set": {
-            "password_hash": new_hash,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }}
+    # Feb 27 2026 (P1 security fix) — route through consolidator so ALL
+    # 4 hash fields get the new value together. Previously only
+    # `password_hash` was updated, leaving legacy fields stale.
+    from utils.auth_hash_consolidation import write_auth_hash
+    await write_auth_hash(
+        db,
+        user["uid"],
+        new_hash,
+        extra_set={"updated_at": datetime.now(timezone.utc).isoformat()},
     )
-    
+
     return {"message": "Password reset successful"}
 
 

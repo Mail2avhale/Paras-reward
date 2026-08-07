@@ -8,6 +8,42 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 27, 2026 — P1 Security Fix: Auth-hash divergence bug)
+
+### Vulnerability
+Login (`routes/auth.py:929`) iterates a 4-field fallback chain:
+```python
+_PASSWORD_FIELDS = ("pin_hash", "hashed_pin", "password_hash", "password")
+```
+ANY match → valid login. But four password-set flows (`reset-password`, `change-password`, admin `reset_password` action, `password-recovery/reset`) only updated `password_hash`, leaving stale hashes in the other three fields. Result: **an attacker with the OLD PIN could keep logging in AFTER a "successful" password reset** because the login fallback still validated against the un-updated `pin_hash`.
+
+### What shipped
+- **NEW** `/app/backend/utils/auth_hash_consolidation.py` (183 lines) with:
+  - `AUTH_HASH_FIELDS` tuple — single source of truth for the 4 field names.
+  - `write_auth_hash(db, uid, new_hash, extra_set)` — atomic write of the new hash to ALL 4 fields plus optional `extra_set` merge.
+  - `pick_authoritative_hash(user)` — canonical read (prefer `password_hash` ↴ `password` ↴ `pin_hash` ↴ `hashed_pin`) with bcrypt-shape validation.
+  - `reconcile_auth_hashes(db, batch, max_users)` — idempotent batched migration that walks every user, picks the authoritative hash, and copies it to all sibling fields.
+- **4 write paths patched** to route through `write_auth_hash()`:
+  - `routes/auth.py:reset_password` (`/api/auth/reset-password`)
+  - `routes/auth.py:change_password` (`/api/auth/change-password`) — also switched verify to `pick_authoritative_hash()` so users mid-migration can still change their password.
+  - `routes/auth.py:reset_password_recovery` (`/api/auth/password-recovery/reset`)
+  - `server.py:admin_user_action("reset_password")` — admin quick-reset now covers all 4 fields (previously left `hashed_pin` stale even when it did update `pin_hash`).
+  - `server.py:reset_password_with_verification` (`/api/auth/reset-password-verify`).
+- **NEW admin endpoint** `POST /api/admin/observability/repair/reconcile-auth-hashes` — gated by `_require_admin`, batched, idempotent.
+- **NEW yellow button** on `/admin/observability` — "Reconcile auth hashes (P1 sec)".
+
+### Preview verification
+- 26 users reconciled in one shot. Field consistency check: all 26 users show `unique_values=1` across the 4 fields. **0 divergent users.**
+- Login test (`admin@test.com / 153759`) still succeeds → backward compat preserved.
+- Re-run: 0 reconciled, 26 already-consistent → idempotency proven.
+- 16 new unit tests + 4 source-code contract tests. All 58 tests in the auth/L1-L4 suite pass.
+
+### Deploy + prod action
+1. **Redeploy** so the 4 patched write paths + reconcile endpoint reach prod.
+2. On `/admin/observability` click the yellow **"Reconcile auth hashes (P1 sec)"** button ONCE. All 6,198 users' hash fields will be unified in ~30 s. Any stale credentials from old resets are neutralised.
+3. From that moment on, no reset/change flow can ever leave divergent hashes again — the write paths are locked.
+
+
 ## Implemented (Feb 27, 2026 — Layer 1.8c: extend degraded cache TTLs to absorb mobile retry storms)
 
 ### Prod diagnosis (from fourth deploy screenshot)

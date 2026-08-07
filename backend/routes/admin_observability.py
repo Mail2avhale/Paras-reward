@@ -607,3 +607,33 @@ async def migrate_profile_pictures_endpoint(
     )
 
     return {"success": True, **result}
+
+
+@router.post("/repair/reconcile-auth-hashes")
+async def reconcile_auth_hashes_endpoint(
+    request: Request, batch: int = 100, max_users: int = 10000
+):
+    """P1 security-fix migration (Feb 27 2026) — reconcile divergent
+    auth-hash fields on all users.
+
+    Ensures every one of the 4 hash fields (`password`, `password_hash`,
+    `pin_hash`, `hashed_pin`) holds the same authoritative bcrypt value
+    per user. Without this, the login fallback chain can validate a
+    stale hash left behind by a password-reset flow that only touched
+    `password_hash` — attacker with OLD PIN keeps logging in.
+
+    Safe to re-run — idempotent, batched with async yields every N users.
+    """
+    _require_admin(request)
+    if _db is None:
+        raise HTTPException(status_code=500, detail="DB not attached")
+
+    from utils.auth_hash_consolidation import reconcile_auth_hashes
+
+    result = await reconcile_auth_hashes(
+        db=_db,
+        batch=max(1, min(batch, 500)),
+        max_users=max(1, min(max_users, 20000)),
+    )
+
+    return {"success": True, **result}
