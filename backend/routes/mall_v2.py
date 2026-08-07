@@ -229,14 +229,18 @@ async def get_wishlist(user: dict = Depends(get_current_user)):
         return {"success": True, "count": len(enriched), "items": enriched}
 
     try:
-        payload = await asyncio.wait_for(_compute(), timeout=4.0)
+        payload = await asyncio.wait_for(_compute(), timeout=3.0)
     except asyncio.TimeoutError:
         # Degrade gracefully — return empty so client stops retrying.
-        # Short TTL so we heal quickly when DB recovers.
+        # Feb 27 2026 — bumped TTL 2s → 60s. Prod audit showed the 2 s
+        # window let the mobile app's retry loop hammer the 4 s wall
+        # ~828 times in 32 s (99% of wishlist traffic). A 60 s degraded
+        # cache absorbs the retry storm; healthy DB recovers on the
+        # next natural refresh.
         payload = {"success": True, "count": 0, "items": [], "degraded": True}
-        _mv2_set(ck, payload, ttl=2)
+        _mv2_set(ck, payload, ttl=60)
         return payload
-    _mv2_set(ck, payload, ttl=10)  # 10 s cache
+    _mv2_set(ck, payload, ttl=30)  # 30 s success cache — was 10 s
     return payload
 
 
@@ -430,9 +434,16 @@ async def saver_progress(user: dict = Depends(get_current_user)):
     500-doc mall_products list on every call with no cache, and (b) had
     no timeout guard so Motor pool starvation propagated. Added:
       * 30 s cached products list (shared across all users)
-      * `asyncio.wait_for(4s)` hard wall with graceful degraded payload
+      * `asyncio.wait_for(3s)` hard wall with graceful degraded payload
+      * 60 s degraded / 30 s success per-user cache (Feb 27 2026 —
+        prod audit showed the client retry loop was re-hitting the
+        wall every 2 s on the previous short TTL)
     """
     uid = user["uid"]
+    ck = f"saver:progress:{uid}"
+    cached = _mv2_get(ck)
+    if cached is not None:
+        return cached
 
     async def _compute():
         u = await db.users.find_one({"uid": uid}, {"_id": 0, "prc_balance": 1})
@@ -479,16 +490,22 @@ async def saver_progress(user: dict = Depends(get_current_user)):
         }
 
     try:
-        return await asyncio.wait_for(_compute(), timeout=4.0)
+        result = await asyncio.wait_for(_compute(), timeout=3.0)
+        _mv2_set(ck, result, ttl=30)  # 30 s per-user success cache
+        return result
     except asyncio.TimeoutError:
-        # Degrade gracefully — no crash, no 30 s uvicorn burn.
-        return {
+        # Feb 27 2026 — bumped TTL 0→60s so client retries can't re-hit
+        # the wait_for wall repeatedly. Cache the empty progress so the
+        # mobile widget doesn't flash empty on healthy DB recovery.
+        degraded = {
             "success": True,
             "balance": 0.0,
             "affordable_count": 0,
             "next_target": None,
             "degraded": True,
         }
+        _mv2_set(ck, degraded, ttl=60)
+        return degraded
 
 
 # ── Booking Tracking Timeline ──────────────────────────────────────────────
@@ -924,12 +941,16 @@ async def featured_products(limit: int = 6):
         }
 
     try:
-        payload = await asyncio.wait_for(_compute(), timeout=4.0)
+        payload = await asyncio.wait_for(_compute(), timeout=3.0)
         _mv2_set(ck, payload, ttl=60)
         return payload
     except asyncio.TimeoutError:
+        # Feb 27 2026 — bumped degraded TTL 10s → 90s. featured is
+        # public + hit by every home load, so the retry storm potential
+        # is huge. 90 s absorbs it while still recovering within 2 min
+        # of healthy DB.
         payload = {"success": True, "products": [], "source": "degraded", "degraded": True}
-        _mv2_set(ck, payload, ttl=10)  # short TTL — heal fast
+        _mv2_set(ck, payload, ttl=90)
         return payload
 
 
@@ -1032,11 +1053,12 @@ async def mining_preview(product_id: str, user: dict = Depends(get_current_user)
         }
 
     try:
-        payload = await asyncio.wait_for(_compute(), timeout=4.0)
-        _mv2_set(ck, payload, ttl=5)
+        payload = await asyncio.wait_for(_compute(), timeout=3.0)
+        _mv2_set(ck, payload, ttl=30)
         return payload
     except asyncio.TimeoutError:
-        return {
+        # Feb 27 2026 — cache degraded 60 s so client retries don't loop.
+        degraded = {
             "success": True,
             "product_id": product_id,
             "user_network_cap": 0,
@@ -1044,6 +1066,8 @@ async def mining_preview(product_id: str, user: dict = Depends(get_current_user)
             "estimates": None,
             "degraded": True,
         }
+        _mv2_set(ck, degraded, ttl=60)
+        return degraded
 
 
 # ── AI Generate Full Product (Nano Banana Text via Gemini) ─────────────────

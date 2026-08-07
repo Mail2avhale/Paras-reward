@@ -8,6 +8,23 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 27, 2026 — Layer 1.8c: extend degraded cache TTLs to absorb mobile retry storms)
+
+### Prod diagnosis (from fourth deploy screenshot)
+**HUGE win on doc bloat**: users avg 39.4 KB → **4.7 KB** ✅ (target <5 KB **ACHIEVED**), max 924 KB → **11.8 KB**, 100 KB-1 MB bucket **eliminated**, 5xx rate **0 %** ✅. L3 + L4 both landed on prod successfully.
+
+**Remaining pain**: `/api/mall/v2/wishlist` still showed 828 calls all at *exactly* 4004-4045 ms — 99 % of wishlist traffic hitting the `wait_for(4s)` degraded fallback. Screenshot showed same IP (152.59.103.59) hammering the endpoint 14+ times in 32 s. Same pattern on saver-progress (27 × 4008), featured (24 × 4007), track-view (29 × 3007). The 2 s degraded cache TTL let the mobile client's retry loop repeatedly re-hit the wall.
+
+### Fix
+Bumped degraded cache TTLs from 2 s → 60 s (wishlist / saver / mining-preview) and 10 s → 90 s (featured). Also added per-user cache to `saver_progress` (was uncached at endpoint level — first hit always went through). Dropped wait_for wall 4 s → 3 s so wasted wall-clock drops 25 %.
+
+### Preview verification
+32 mixed parallel calls (wishlist × 8 + saver × 8 + featured × 8 + mining-preview × 8) complete in **895 ms total wall-time**, worst individual **667 ms**. All 42 test suite calls still pass.
+
+### Expected prod impact
+Each mobile client now hits the degraded wall AT MOST once per 60 s per endpoint (vs every 2 s previously). If prod has ~100 concurrent mobile users retrying, that's a **30× reduction** in wasted Motor slots per minute. The 828 wishlist calls in 32 s should drop to ~50 in the next 32 s window on the same load pattern.
+
+
 ## Implemented (Feb 26, 2026 — Layer 4: profile-picture off-load — quick MongoDB fix)
 
 ### Prod diagnosis (from admin dashboard bloat-fields alert)
