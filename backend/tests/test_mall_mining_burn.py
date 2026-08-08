@@ -44,6 +44,7 @@ async def run():
     from routes.paras_mall import (
         compute_session_accumulated,
         SECONDS_PER_DAY,
+        SESSION_LAPSE_SECONDS,
         get_user_network_cap,
     )
     import routes.paras_mall as pm
@@ -87,31 +88,32 @@ async def run():
         f"acc={acc_fresh:.4f} PRC, elapsed={elapsed_fresh}s",
     )
 
-    # Test 2 — session at 12h → accumulated > 0 (still active)
+    # Test 2 — session at 4h → accumulated > 0 (still active in 8h window)
     booking_12h = dict(booking)
     booking_12h["session_start"] = (
-        datetime.now(timezone.utc) - timedelta(hours=12)
+        datetime.now(timezone.utc) - timedelta(hours=4)
     ).isoformat()
     acc_12h, elapsed_12h = await compute_session_accumulated(
         booking_12h, user_cap=user_cap
     )
     check(
-        "T2: Half-way (12h) session still mines PRC",
-        acc_12h > 0 and elapsed_12h < SECONDS_PER_DAY,
+        "T2: Half-way (4h) session still mines PRC",
+        acc_12h > 0 and elapsed_12h < SESSION_LAPSE_SECONDS,
         f"acc={acc_12h:.4f} PRC, elapsed={elapsed_12h}s",
     )
 
-    # Test 3 — session at exactly 24h → LAPSED, accumulated = 0
+    # Test 3 — session at exactly 8h+1s → LAPSED, accumulated = 0
+    # (Feb 27 2026 — window shortened from 24h to 8h.)
     booking_24h = dict(booking)
     booking_24h["session_start"] = (
-        datetime.now(timezone.utc) - timedelta(hours=24, seconds=1)
+        datetime.now(timezone.utc) - timedelta(hours=8, seconds=1)
     ).isoformat()
     acc_24h, elapsed_24h = await compute_session_accumulated(
         booking_24h, user_cap=user_cap
     )
     check(
-        "T3: 24h+ session LAPSES (accumulated = 0)",
-        acc_24h == 0.0 and elapsed_24h >= SECONDS_PER_DAY,
+        "T3: 8h+ session LAPSES (accumulated = 0)",
+        acc_24h == 0.0 and elapsed_24h >= SESSION_LAPSE_SECONDS,
         f"acc={acc_24h}, elapsed={elapsed_24h}s (must be 0)",
     )
 

@@ -62,8 +62,19 @@ BASE_DAILY_RATE_PRC = 4  # Legacy — kept for back-compat; new formula uses MIN
 MIN_DAILY_RATE_PRC = 50  # Floor: ≥ 50 PRC/day per booking (Feb 2026 formula)
 UPFRONT_PERCENT = 0.10  # 10% of MRP
 UPFRONT_MIN_INR = 1000  # Or ₹1000 minimum, whichever is higher
-SESSION_DURATION_HOURS = 24  # Each booking session
-SECONDS_PER_DAY = 86400
+# Feb 27 2026 — session shortened 24h → 8h. Per-second rate STAYS the
+# same (denominator = SECONDS_PER_DAY = 86400 = 24h), only the LAPSE
+# window shrinks. Users check in 3× more often; a diligent user's total
+# daily earnings are unchanged. See PRD entry "Feb 27 2026 — Mall
+# session 24h → 8h" for the design rationale.
+SESSION_DURATION_HOURS = 8
+SECONDS_PER_DAY = 86400  # per-second denominator — DO NOT change
+SESSION_LAPSE_SECONDS = SESSION_DURATION_HOURS * 3600  # 28 800 s = 8 h
+# Feb 27 2026 — Global hard cap on N (downstream bookings) used by the
+# mall-mining formula. Replaces the tier-based user_cap (800-8000) which
+# let VIP users mine at 12-16× the rate of Explorer users. 500 is the
+# new equalizer — regardless of plan, N tops out at 500.
+GLOBAL_MALL_N_CAP = 500
 COLLECT_TO_START_COOLDOWN_SECONDS = 60  # Mirror of main mining: after a user
 # collects their accumulated PRC for a product booking, they must wait 60
 # seconds before manually starting a fresh mining session. This drives in-app
@@ -379,28 +390,35 @@ async def get_user_network_cap(user_id: str) -> int:
 
 
 async def get_daily_rate_for_booking(booking_position: int, user_cap: Optional[int] = None) -> float:
-    """PARAS MALL Network Rate Formula (Feb 2026 — Capped)
-    ====================================================
+    """PARAS MALL Network Rate Formula (Feb 27 2026 — Global-cap edition)
+    ====================================================================
     Same shape as Main Mining: daily_rate = N × PRC_per_user(N)
     where:
       N_raw = active bookings positioned AFTER this booking (status="mining")
-      N     = min(N_raw, user_cap)         ← Anti-inflation: caps at booking owner's
-                                             6-tier referral cap (800-8000, same as
-                                             main mining)
+      N     = min(N_raw, GLOBAL_MALL_N_CAP)   ← Feb 27 2026: global hard
+                                                 cap of 500. Replaces the
+                                                 tier-based user_cap which
+                                                 let VIP users mine 12-16×
+                                                 faster than Explorer.
       PRC_per_user(N) = max(2.5, 5 × (21 - log₂(N)) / 14)
       daily_rate      = max(MIN_DAILY_RATE_PRC, N × PRC_per_user(N))
 
     Floor of 50 PRC/day so a booking with N=0 still earns something
     (otherwise newest bookings would stall until someone books below).
 
-    `user_cap=None` skips the cap (used only for legacy/admin reporting paths).
-    All production endpoints MUST pass user_cap.
+    `user_cap` is retained on the signature for backward-compat with all
+    existing call-sites, but is no longer the binding constraint —
+    GLOBAL_MALL_N_CAP (500) is always ≤ any tier's user_cap.
     """
     N_raw = await db.mall_bookings.count_documents({
         "position": {"$gt": booking_position},
         "status": "mining",
     })
-    N = min(N_raw, user_cap) if user_cap is not None else N_raw
+    # Feb 27 2026 — apply the global hard cap. user_cap kept as a
+    # secondary defensive check so it can't loosen the global.
+    N = min(N_raw, GLOBAL_MALL_N_CAP)
+    if user_cap is not None:
+        N = min(N, user_cap)
     if N <= 0:
         return float(MIN_DAILY_RATE_PRC)
     prc_per_user = max(2.5, 5.0 * (21.0 - math.log2(N)) / 14.0)
@@ -411,13 +429,16 @@ async def get_daily_rate_for_booking(booking_position: int, user_cap: Optional[i
 async def compute_session_accumulated(booking: dict, user_cap: Optional[int] = None) -> tuple[float, int]:
     """Return (accumulated_prc_this_session, seconds_elapsed).
 
-    LAPSE/BURN RULE (Feb 2026 — matches main-dashboard mining expiry semantics):
+    LAPSE/BURN RULE (Feb 27 2026 — 8 h window):
     ------------------------------------------------------------------------
-    If the user fails to click "Collect" within 24 hours of session start,
-    the ENTIRE session accumulation LAPSES to 0. Points are burned — user
-    must start a fresh session to mine again. This enforces daily check-in
-    gamification and prevents idle sessions from silently banking 24h worth
-    of PRC forever.
+    If the user fails to click "Collect" within SESSION_LAPSE_SECONDS
+    (8 h) of session start, the ENTIRE session accumulation LAPSES to 0.
+    Points are burned — user must start a fresh session to mine again.
+
+    Per-second rate is UNCHANGED (`daily_rate / SECONDS_PER_DAY`, i.e.
+    `/86400`). Max per session = daily_rate × 8/24 = 1/3 of the old 24 h
+    cap. A diligent user doing 3 sessions/day earns the same total as
+    before — the change is purely engagement (3× more collect events).
 
     `user_cap` is the booking owner's network cap (Feb 2026 anti-inflation).
     Callers should compute it once per request and pass through to avoid
@@ -432,17 +453,19 @@ async def compute_session_accumulated(booking: dict, user_cap: Optional[int] = N
     elapsed = (now - session_start).total_seconds()
     if elapsed < 0:
         return (0.0, 0)
-    # LAPSE: if the 24h window has elapsed without a collect, burn all points.
-    if elapsed >= SECONDS_PER_DAY:
+    # LAPSE: 8 h window without a collect → burn all accumulated PRC.
+    if elapsed >= SESSION_LAPSE_SECONDS:
         return (0.0, int(elapsed))
     rate_per_day = await get_daily_rate_for_booking(booking["position"], user_cap)
+    # Per-second denominator stays at SECONDS_PER_DAY (86400) so the
+    # rate itself is unchanged — only the LAPSE ceiling shrinks.
     accumulated = (rate_per_day / SECONDS_PER_DAY) * elapsed
     return (round(accumulated, 6), int(elapsed))
 
 
 async def maybe_lapse_or_renew_session(booking: dict) -> dict:
     """No-op (legacy). With manual Start Session flow, sessions never auto-renew.
-    Accumulated PRC is naturally capped at 24h in compute_session_accumulated().
+    Accumulated PRC is naturally capped at 8h in compute_session_accumulated().
     Kept for compatibility with existing call-sites.
     """
     return booking
@@ -1024,7 +1047,7 @@ async def my_bookings(
             # compute_session_accumulated) and the user must click Collect
             # before starting a fresh session. This prevents the UI counter
             # from ticking forever on stale sessions.
-            session_expired = bool(session_start) and elapsed >= SECONDS_PER_DAY
+            session_expired = bool(session_start) and elapsed >= SESSION_LAPSE_SECONDS
             session_active = bool(session_start) and not session_expired
             rate_per_day = await get_daily_rate_for_booking(b["position"], user_cap=user_cap)
             # Cooldown countdown — only when session is paused after a collect
@@ -1038,7 +1061,7 @@ async def my_bookings(
             b["session_expired"] = session_expired
             b["session_accumulated_prc"] = accumulated
             b["session_elapsed_seconds"] = elapsed
-            b["session_remaining_seconds"] = max(0, SECONDS_PER_DAY - elapsed) if session_active else 0
+            b["session_remaining_seconds"] = max(0, SESSION_LAPSE_SECONDS - elapsed) if session_active else 0
             b["daily_rate_prc"] = rate_per_day
             b["per_second_prc"] = round(rate_per_day / SECONDS_PER_DAY, 6) if session_active else 0
             b["per_hour_prc"] = round(rate_per_day / 24, 4)
@@ -1087,7 +1110,7 @@ async def get_booking(booking_id: str):
         accumulated, elapsed = await compute_session_accumulated(b, user_cap=user_cap)
         # 24h expiry gate — mirrors the /my-bookings enrichment. Prevents the
         # UI counter from running forever on a stale session.
-        session_expired = bool(session_start) and elapsed >= SECONDS_PER_DAY
+        session_expired = bool(session_start) and elapsed >= SESSION_LAPSE_SECONDS
         session_active = bool(session_start) and not session_expired
         rate_per_day = await get_daily_rate_for_booking(b["position"], user_cap=user_cap)
         now = now_utc()
@@ -1099,7 +1122,7 @@ async def get_booking(booking_id: str):
         b["session_expired"] = session_expired
         b["session_accumulated_prc"] = accumulated
         b["session_elapsed_seconds"] = elapsed
-        b["session_remaining_seconds"] = max(0, SECONDS_PER_DAY - elapsed) if session_active else 0
+        b["session_remaining_seconds"] = max(0, SESSION_LAPSE_SECONDS - elapsed) if session_active else 0
         b["daily_rate_prc"] = rate_per_day
         b["per_second_prc"] = round(rate_per_day / SECONDS_PER_DAY, 6) if session_active else 0
         b["per_hour_prc"] = round(rate_per_day / 24, 4)
@@ -1135,7 +1158,7 @@ async def collect_booking(booking_id: str, body: CollectBookingRequest):
 
     # LAPSE detection: if 24h elapsed, all accumulated PRC has burned. Clear
     # the session so the user can immediately start a fresh one.
-    if elapsed >= SECONDS_PER_DAY and b.get("session_start"):
+    if elapsed >= SESSION_LAPSE_SECONDS and b.get("session_start"):
         await db.mall_bookings.update_one(
             {"booking_id": booking_id},
             {"$set": {
@@ -1226,7 +1249,7 @@ async def start_booking_session(booking_id: str, body: StartSessionRequest):
         existing_start = parse_iso(b.get("session_start"))
         if existing_start:
             existing_elapsed = (now_utc() - existing_start).total_seconds()
-            if existing_elapsed >= SECONDS_PER_DAY:
+            if existing_elapsed >= SESSION_LAPSE_SECONDS:
                 await db.mall_bookings.update_one(
                     {"booking_id": booking_id},
                     {"$set": {
@@ -1273,7 +1296,7 @@ async def start_booking_session(booking_id: str, body: StartSessionRequest):
         "success": True,
         "already_active": False,
         "session_start": now.isoformat(),
-        "session_duration_seconds": SECONDS_PER_DAY,
+        "session_duration_seconds": SESSION_LAPSE_SECONDS,
     }
 
 

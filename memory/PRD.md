@@ -8,6 +8,37 @@ Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product 
 ## Original Problem Statement
 Build "PARAS MALL" gamified reward shopping destination with bug fixes (Product syncing, "Used PRC" ledger counting, Community forum posts, Monotonic booking counters, 1% Sustainability Burn), Delivery Address collection, direct Admin Image Upload with auto-crop, Native Android App build via Capacitor + AdMob, and automated CI/CD pipeline using GitHub Actions to build the signed AAB file automatically on code push.
 
+## Implemented (Feb 27, 2026 — Mall product mining: 24h → 8h session + global N cap = 500)
+
+### What changed
+User-requested economy tuning on `/api/paras-mall/*` — the mall-product mining flow (NOT main dashboard mining, which stays at 24h).
+
+**1. Session LAPSE window: 24h → 8h**
+- `SESSION_DURATION_HOURS: 24 → 8`
+- New constant `SESSION_LAPSE_SECONDS = 8 × 3600 = 28 800`
+- Per-second rate UNCHANGED (`daily_rate / SECONDS_PER_DAY` — denominator stays 86400). Option A behavior — same total daily earnings for a diligent user, just 3× more collect events.
+- Max PRC per session = old 24h daily_rate × 8/24 = 1/3rd
+- All 6 LAPSE checks + 2 remaining-seconds calcs across `paras_mall.py` swapped from `SECONDS_PER_DAY` to `SESSION_LAPSE_SECONDS`
+- `start-session` endpoint now returns `session_duration_seconds: 28800` (was 86400) so the frontend timer stays honest
+- Frontend `ParasMallBookings.js` progress-bar constant + "24 hours" LAPSE banner text updated to 8h
+
+**2. Global N cap = 500 (replaces tier-based user_cap 800-8000)**
+- New constant `GLOBAL_MALL_N_CAP = 500`
+- `get_daily_rate_for_booking()` now clamps `N = min(N_raw, GLOBAL_MALL_N_CAP)` FIRST, then optionally by user_cap (defensive, no longer binding since 500 ≤ any tier's cap)
+- **Effect**: VIP and Explorer users hit the same 500-user ceiling → equalises mining rate across plans, kills the 12-16× inflation on VIP tier
+
+### Preview verification
+- 6 new contract tests in `/app/backend/tests/test_mall_mining_formula.py` lock the constants + N-cap logic + Option A ratio (28800/86400 ≈ 1/3). All pass.
+- Updated `test_mall_mining_burn.py` E2E script — T2 changed to "4h still active", T3 "8h+1s LAPSED". Verified against new constants.
+- Full regression: **53/53 tests pass** across formula + auth + L1-L4 suite.
+- Session start-session endpoint smoke-tested — no 500s.
+
+### Prod impact
+- Newest bookings still earn floor 50 PRC/day (unchanged).
+- Any booking that used to earn `daily_rate` at N=1000-8000 now earns the equivalent of N=500 (about 30-70% haircut for VIP users). Explorer/Startup users are UNAFFECTED (they were already capped ≤ their tier cap ≤ 500 was above them).
+- PRC supply on production expected to drop by ~40-60% from mall mining (based on N distribution). Kills the tier-based inflation on VIP wallets.
+
+
 ## Fixed (Feb 27, 2026 — P1 reconcile-auth-hashes timeout hotfix)
 
 ### Prod symptom

@@ -173,9 +173,12 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
   };
 
   const progress = booking.progress_percent || 0;
-  // Session progress: 24h cycle (86400 sec). 0% at session start, 100% at reset.
-  const sessionElapsed = Math.max(0, 86400 - (liveRemaining || 0));
-  const sessionProgress = sessionActive ? Math.min(100, (sessionElapsed / 86400) * 100) : 0;
+  // Feb 27 2026 — session shortened 24h → 8h (28 800 s). Per-second
+  // rate is unchanged; only the LAPSE window shrinks. Users collect
+  // 3× more often for the same total daily earnings.
+  const SESSION_LENGTH_SEC = 28800;
+  const sessionElapsed = Math.max(0, SESSION_LENGTH_SEC - (liveRemaining || 0));
+  const sessionProgress = sessionActive ? Math.min(100, (sessionElapsed / SESSION_LENGTH_SEC) * 100) : 0;
 
   return (
     <motion.div
@@ -412,7 +415,7 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
                   Session Expired - Points Lapsed
                 </p>
                 <p className="text-[11px] text-rose-300/80 mt-0.5">
-                  You didn&apos;t collect within 24 hours. All accumulated PRC has burned. Start a new session below.
+                  You didn&apos;t collect within 8 hours. All accumulated PRC has burned. Start a new session below.
                 </p>
               </div>
             </div>
