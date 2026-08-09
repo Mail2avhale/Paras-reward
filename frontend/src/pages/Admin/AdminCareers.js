@@ -6,7 +6,8 @@ import {
   Loader2, X, Eye, Power, PowerOff, Search, Filter, RefreshCw,
   MessageSquare, Mail, Phone, Calendar, Building2, Clock,
   CheckCircle, XCircle, UserCheck, LayoutGrid, ArrowRight,
-  ClipboardList, Video, FileSignature, UserPlus, Send
+  ClipboardList, Video, FileSignature, UserPlus, Send,
+  Check, CalendarDays, Coffee, ListChecks, FileBadge
 } from 'lucide-react';
 
 import { API } from "../../lib/api";
@@ -103,6 +104,13 @@ const AdminCareers = () => {
   // Phase C: Employees
   const [employees, setEmployees] = useState([]);
 
+  // Phase D: Attendance & Leaves
+  const [attendance, setAttendance] = useState({ roster: [], by_status: {}, total: 0 });
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [leaves, setLeaves] = useState([]);
+  const [leaveStatusFilter, setLeaveStatusFilter] = useState('requested');
+  const [employeeToolModal, setEmployeeToolModal] = useState(null); // { employee, kind: 'onboarding'|'letters' }
+
   // Application quick-actions (Phase B/C/Employee)
   const [actionModal, setActionModal] = useState(null); // { kind: 'test'|'interview'|'offer'|'convert', app }
   const newJobForm = {
@@ -187,6 +195,25 @@ const AdminCareers = () => {
     if (activeTab === 'tests') fetchTests();
     if (activeTab === 'employees') fetchEmployees();
   }, [activeTab, fetchTests, fetchEmployees]);
+
+  // Phase D: Attendance + Leaves fetchers
+  const fetchAttendance = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/public/attendance/roster?date=${attendanceDate}`);
+      setAttendance(res.data || { roster: [], by_status: {}, total: 0 });
+    } catch { /* silent */ }
+  }, [attendanceDate]);
+  const fetchLeaves = useCallback(async () => {
+    try {
+      const params = leaveStatusFilter ? `?status=${leaveStatusFilter}` : '';
+      const res = await axios.get(`${API}/public/leaves${params}`);
+      setLeaves(res.data?.leaves || []);
+    } catch { /* silent */ }
+  }, [leaveStatusFilter]);
+  useEffect(() => {
+    if (activeTab === 'attendance') fetchAttendance();
+    if (activeTab === 'leaves') fetchLeaves();
+  }, [activeTab, fetchAttendance, fetchLeaves]);
 
   /* Job Actions */
   const openCreateModal = () => {
@@ -350,7 +377,9 @@ const AdminCareers = () => {
             { id: 'applications', label: 'Applications', icon: Users },
             { id: 'kanban', label: 'Pipeline', icon: LayoutGrid },
             { id: 'tests', label: 'Tests', icon: ClipboardList },
-            { id: 'employees', label: 'Employees', icon: UserCheck }
+            { id: 'employees', label: 'Employees', icon: UserCheck },
+            { id: 'attendance', label: 'Attendance', icon: CalendarDays },
+            { id: 'leaves', label: 'Leaves', icon: Coffee }
           ].map(t => (
             <button
               key={t.id}
@@ -403,7 +432,27 @@ const AdminCareers = () => {
             }} />
           )}
           {activeTab === 'employees' && (
-            <EmployeesTab employees={employees} />
+            <EmployeesTab employees={employees} onOpenTool={(employee, kind) => setEmployeeToolModal({ employee, kind })} />
+          )}
+          {activeTab === 'attendance' && (
+            <AttendanceTab
+              attendance={attendance}
+              date={attendanceDate}
+              setDate={setAttendanceDate}
+              employees={employees}
+              onEmployeesRefresh={fetchEmployees}
+              onRefresh={fetchAttendance}
+              adminId={adminId}
+            />
+          )}
+          {activeTab === 'leaves' && (
+            <LeavesTab
+              leaves={leaves}
+              status={leaveStatusFilter}
+              setStatus={setLeaveStatusFilter}
+              onRefresh={fetchLeaves}
+              adminId={adminId}
+            />
           )}
         </div>
       </div>
@@ -446,6 +495,16 @@ const AdminCareers = () => {
           onClose={() => setActionModal(null)}
           onDone={() => { setActionModal(null); fetchApplications(); if (activeTab === 'kanban') fetchKanban(); if (activeTab === 'employees') fetchEmployees(); }}
           onNeedTests={fetchTests}
+        />
+      )}
+
+      {/* Phase D: Employee tools modal (Onboarding checklist + Letters) */}
+      {employeeToolModal && (
+        <EmployeeToolModal
+          employee={employeeToolModal.employee}
+          initialTab={employeeToolModal.kind}
+          adminId={adminId}
+          onClose={() => setEmployeeToolModal(null)}
         />
       )}
     </div>
@@ -985,7 +1044,7 @@ const TestsTab = ({ tests, onCreate, onDelete }) => (
 );
 
 /* ========== Phase D skeleton: Employees Tab ========== */
-const EmployeesTab = ({ employees }) => (
+const EmployeesTab = ({ employees, onOpenTool }) => (
   <div>
     <p className="text-sm text-slate-500 mb-3">Total: <span className="font-semibold text-slate-900">{employees.length}</span> employees</p>
     {employees.length === 0 ? (
@@ -1002,6 +1061,7 @@ const EmployeesTab = ({ employees }) => (
               <th className="px-3 py-2 text-left">Hiring Type</th>
               <th className="px-3 py-2 text-left">Joining Date</th>
               <th className="px-3 py-2 text-left">Status</th>
+              <th className="px-3 py-2 text-right">Tools</th>
             </tr>
           </thead>
           <tbody>
@@ -1015,6 +1075,14 @@ const EmployeesTab = ({ employees }) => (
                 <td className="px-3 py-2 text-slate-700">{e.joining_date?.slice(0, 10)}</td>
                 <td className="px-3 py-2">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${e.status === 'active' ? 'bg-emerald-500/20 text-emerald-700' : 'bg-slate-300 text-slate-700'}`}>{e.status}</span>
+                </td>
+                <td className="px-3 py-2 text-right whitespace-nowrap">
+                  <button onClick={() => onOpenTool && onOpenTool(e, 'onboarding')} className="inline-flex items-center gap-1 px-2 py-1 text-xs text-indigo-700 bg-indigo-500/10 hover:bg-indigo-500/20 rounded" data-testid={`emp-onboarding-${e.employee_id}`}>
+                    <ListChecks className="w-3.5 h-3.5" /> Onboarding
+                  </button>
+                  <button onClick={() => onOpenTool && onOpenTool(e, 'letters')} className="ml-1 inline-flex items-center gap-1 px-2 py-1 text-xs text-emerald-700 bg-emerald-500/10 hover:bg-emerald-500/20 rounded" data-testid={`emp-letters-${e.employee_id}`}>
+                    <FileBadge className="w-3.5 h-3.5" /> Letters
+                  </button>
                 </td>
               </tr>
             ))}
@@ -1236,6 +1304,356 @@ const QuickActionModal = ({ kind, app, tests, adminId, onClose, onDone, onNeedTe
           <button onClick={submit} disabled={saving} className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm disabled:opacity-50" data-testid="qa-submit-btn">
             {saving ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Confirm'}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ========== Phase D: Attendance Tab ========== */
+const AttendanceTab = ({ attendance, date, setDate, employees, onEmployeesRefresh, onRefresh, adminId }) => {
+  const [markOpen, setMarkOpen] = useState(false);
+  useEffect(() => { if (employees.length === 0) onEmployeesRefresh && onEmployeesRefresh(); }, [employees.length, onEmployeesRefresh]);
+
+  const by = attendance.by_status || {};
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <input type="date" value={date} onChange={e => setDate(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" data-testid="attendance-date" />
+        <button onClick={onRefresh} className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm text-slate-700" data-testid="attendance-refresh"><RefreshCw className="w-4 h-4" /> Refresh</button>
+        <button onClick={() => setMarkOpen(true)} className="ml-auto flex items-center gap-1 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm" data-testid="attendance-mark-btn"><Plus className="w-4 h-4" /> Mark Attendance</button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+        {[
+          ['present', 'bg-emerald-500/20 text-emerald-700'],
+          ['absent', 'bg-red-500/20 text-red-700'],
+          ['half_day', 'bg-amber-500/20 text-amber-700'],
+          ['wfh', 'bg-blue-500/20 text-blue-700'],
+          ['leave', 'bg-purple-500/20 text-purple-700'],
+        ].map(([s, c]) => (
+          <div key={s} className={`p-3 rounded-lg ${c}`} data-testid={`att-count-${s}`}>
+            <p className="text-[10px] uppercase font-semibold">{s.replace('_', ' ')}</p>
+            <p className="text-lg font-bold">{by[s] || 0}</p>
+          </div>
+        ))}
+      </div>
+      {attendance.total === 0 ? (
+        <div className="text-center py-8 text-slate-500 text-sm" data-testid="attendance-empty">No attendance recorded for {date}.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" data-testid="attendance-table">
+            <thead className="bg-slate-100 text-slate-700">
+              <tr>
+                <th className="px-3 py-2 text-left">Employee</th>
+                <th className="px-3 py-2 text-left">Department</th>
+                <th className="px-3 py-2 text-left">Location</th>
+                <th className="px-3 py-2 text-left">Status</th>
+                <th className="px-3 py-2 text-left">Check-in</th>
+                <th className="px-3 py-2 text-left">Check-out</th>
+                <th className="px-3 py-2 text-left">Hours</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attendance.roster.map(r => (
+                <tr key={r.attendance_id || (r.employee_id + r.date)} className="border-b border-slate-200 hover:bg-slate-50" data-testid={`att-row-${r.employee_id}`}>
+                  <td className="px-3 py-2 font-medium text-slate-900">{r.employee_name}<br /><span className="text-[11px] text-slate-500 font-mono">{r.employee_id}</span></td>
+                  <td className="px-3 py-2 text-slate-700">{r.department || '—'}</td>
+                  <td className="px-3 py-2 text-slate-700">{r.district || '—'}</td>
+                  <td className="px-3 py-2"><span className="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-800 uppercase">{r.status}</span></td>
+                  <td className="px-3 py-2 text-slate-700">{r.check_in || '—'}</td>
+                  <td className="px-3 py-2 text-slate-700">{r.check_out || '—'}</td>
+                  <td className="px-3 py-2 text-slate-700">{r.hours_worked ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {markOpen && (
+        <MarkAttendanceModal date={date} employees={employees} adminId={adminId} onClose={() => setMarkOpen(false)} onSaved={() => { setMarkOpen(false); onRefresh(); }} />
+      )}
+    </div>
+  );
+};
+
+const MarkAttendanceModal = ({ date, employees, adminId, onClose, onSaved }) => {
+  const [form, setForm] = useState({ employee_id: '', status: 'present', check_in: '09:00', check_out: '18:00', notes: '' });
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    if (!form.employee_id) return toast.error('Select an employee');
+    setSaving(true);
+    try {
+      await axios.post(`${API}/public/attendance/mark`, { ...form, date, admin_id: adminId });
+      toast.success('Attendance saved');
+      onSaved();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl max-w-md w-full p-4" onClick={e => e.stopPropagation()} data-testid="mark-attendance-modal">
+        <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-slate-900">Mark Attendance — {date}</h3><button onClick={onClose} className="text-slate-500"><X className="w-5 h-5" /></button></div>
+        <div className="space-y-3">
+          <select value={form.employee_id} onChange={e => setForm(f => ({ ...f, employee_id: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="mark-att-employee">
+            <option value="">Select employee…</option>
+            {employees.map(e => <option key={e.employee_id} value={e.employee_id}>{e.name} ({e.employee_id})</option>)}
+          </select>
+          <div className="grid grid-cols-3 gap-2">
+            <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="mark-att-status">
+              {['present', 'absent', 'half_day', 'wfh', 'leave'].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <input type="time" value={form.check_in} onChange={e => setForm(f => ({ ...f, check_in: e.target.value }))} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="mark-att-checkin" />
+            <input type="time" value={form.check_out} onChange={e => setForm(f => ({ ...f, check_out: e.target.value }))} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="mark-att-checkout" />
+          </div>
+          <input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="mark-att-notes" />
+          <div className="flex justify-end gap-2">
+            <button onClick={onClose} className="px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">Cancel</button>
+            <button onClick={save} disabled={saving} className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm" data-testid="mark-att-save">{saving ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Save'}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ========== Phase D: Leaves Tab ========== */
+const LeavesTab = ({ leaves, status, setStatus, onRefresh, adminId }) => {
+  const [busy, setBusy] = useState(null);
+  const decide = async (leave_id, action) => {
+    const comment = action === 'reject' ? (window.prompt('Reason for rejection?') || '') : '';
+    setBusy(leave_id);
+    try {
+      await axios.post(`${API}/public/leaves/${leave_id}/decision`, { action, approver: adminId, comment });
+      toast.success(`Leave ${action}d`);
+      onRefresh();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+    finally { setBusy(null); }
+  };
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-4">
+        <select value={status} onChange={e => setStatus(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" data-testid="leaves-status-filter">
+          <option value="">All</option>
+          {['requested', 'approved', 'rejected', 'cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <button onClick={onRefresh} className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm text-slate-700" data-testid="leaves-refresh"><RefreshCw className="w-4 h-4" /> Refresh</button>
+        <p className="ml-auto text-sm text-slate-500">Total: <span className="font-semibold text-slate-900">{leaves.length}</span></p>
+      </div>
+      {leaves.length === 0 ? (
+        <div className="text-center py-10 text-slate-500 text-sm" data-testid="leaves-empty">No leaves found for this filter.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" data-testid="leaves-table">
+            <thead className="bg-slate-100 text-slate-700">
+              <tr>
+                <th className="px-3 py-2 text-left">Leave ID</th>
+                <th className="px-3 py-2 text-left">Employee</th>
+                <th className="px-3 py-2 text-left">Type</th>
+                <th className="px-3 py-2 text-left">Dates</th>
+                <th className="px-3 py-2 text-left">Days</th>
+                <th className="px-3 py-2 text-left">Reason</th>
+                <th className="px-3 py-2 text-left">Status</th>
+                <th className="px-3 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaves.map(l => (
+                <tr key={l.leave_id} className="border-b border-slate-200 hover:bg-slate-50" data-testid={`leave-row-${l.leave_id}`}>
+                  <td className="px-3 py-2 text-xs font-mono text-slate-500">{l.leave_id}</td>
+                  <td className="px-3 py-2 font-medium text-slate-900">{l.employee_name}<br /><span className="text-[11px] text-slate-500 font-mono">{l.employee_id}</span></td>
+                  <td className="px-3 py-2 text-slate-700 uppercase">{l.leave_type}</td>
+                  <td className="px-3 py-2 text-slate-700">{l.from_date} → {l.to_date}</td>
+                  <td className="px-3 py-2 text-slate-700">{l.days}</td>
+                  <td className="px-3 py-2 text-slate-700 truncate max-w-[200px]">{l.reason || '—'}</td>
+                  <td className="px-3 py-2"><span className={`px-2 py-0.5 rounded text-[11px] uppercase font-semibold ${l.status === 'approved' ? 'bg-emerald-500/20 text-emerald-700' : l.status === 'rejected' ? 'bg-red-500/20 text-red-700' : l.status === 'cancelled' ? 'bg-slate-300 text-slate-700' : 'bg-amber-500/20 text-amber-700'}`}>{l.status}</span></td>
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                    {l.status === 'requested' && (
+                      <>
+                        <button disabled={busy === l.leave_id} onClick={() => decide(l.leave_id, 'approve')} className="inline-flex items-center gap-1 px-2 py-1 text-xs text-emerald-700 bg-emerald-500/10 hover:bg-emerald-500/20 rounded disabled:opacity-50" data-testid={`leave-approve-${l.leave_id}`}><Check className="w-3.5 h-3.5" /> Approve</button>
+                        <button disabled={busy === l.leave_id} onClick={() => decide(l.leave_id, 'reject')} className="ml-1 inline-flex items-center gap-1 px-2 py-1 text-xs text-red-700 bg-red-500/10 hover:bg-red-500/20 rounded disabled:opacity-50" data-testid={`leave-reject-${l.leave_id}`}><X className="w-3.5 h-3.5" /> Reject</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ========== Phase D: Employee Tools (Onboarding checklist + Letters) ========== */
+const EmployeeToolModal = ({ employee, initialTab, adminId, onClose }) => {
+  const [tab, setTab] = useState(initialTab || 'onboarding');
+  const [onboarding, setOnboarding] = useState(null);
+  const [letters, setLetters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showLetterForm, setShowLetterForm] = useState(false);
+
+  const loadOnboarding = useCallback(async () => {
+    try {
+      const r = await axios.get(`${API}/public/employees/${employee.employee_id}/onboarding`);
+      setOnboarding(r.data.onboarding);
+    } catch { setOnboarding(null); }
+  }, [employee.employee_id]);
+
+  const loadLetters = useCallback(async () => {
+    try {
+      const r = await axios.get(`${API}/public/employees/${employee.employee_id}/letters`);
+      setLetters(r.data.letters || []);
+    } catch { setLetters([]); }
+  }, [employee.employee_id]);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([loadOnboarding(), loadLetters()]).finally(() => setLoading(false));
+  }, [loadOnboarding, loadLetters]);
+
+  const initOnboarding = async () => {
+    try {
+      await axios.post(`${API}/public/employees/${employee.employee_id}/onboarding/init`, { admin_id: adminId });
+      toast.success('Onboarding initialised');
+      loadOnboarding();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+  };
+  const toggleTask = async (task_id, done) => {
+    try {
+      await axios.patch(`${API}/public/employees/${employee.employee_id}/onboarding/${task_id}`, { done, admin_id: adminId });
+      loadOnboarding();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()} data-testid="employee-tool-modal">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+          <div><h3 className="font-bold text-slate-900">{employee.name}</h3><p className="text-xs text-slate-500 font-mono">{employee.employee_id} • {employee.designation}</p></div>
+          <button onClick={onClose} className="text-slate-500"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-lg mx-4 mt-4">
+          {[['onboarding', 'Onboarding', ListChecks], ['letters', 'HR Letters', FileBadge]].map(([id, label, Icon]) => (
+            <button key={id} onClick={() => setTab(id)} className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-md text-xs font-medium ${tab === id ? 'bg-white shadow text-slate-900' : 'text-slate-600 hover:text-slate-900'}`} data-testid={`emp-tool-tab-${id}`}>
+              <Icon className="w-4 h-4" /> {label}
+            </button>
+          ))}
+        </div>
+        <div className="p-4 overflow-y-auto flex-1">
+          {loading ? <Loader2 className="w-6 h-6 animate-spin text-slate-400 mx-auto" /> : (
+            <>
+              {tab === 'onboarding' && (
+                <div>
+                  {!onboarding ? (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-slate-500 mb-3">No onboarding checklist yet.</p>
+                      <button onClick={initOnboarding} className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm" data-testid="onboarding-init-btn">Initialise Checklist</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm text-slate-700">Progress: <span className="font-semibold text-slate-900">{onboarding.progress?.done}/{onboarding.progress?.total}</span> ({onboarding.progress?.percent}%)</p>
+                        {onboarding.completed_at && <span className="text-xs text-emerald-600 font-medium">Completed</span>}
+                      </div>
+                      <div className="space-y-1.5">
+                        {onboarding.tasks.map(t => (
+                          <label key={t.task_id} className="flex items-center gap-2 p-2 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer" data-testid={`onb-task-${t.task_id}`}>
+                            <input type="checkbox" checked={t.done} onChange={e => toggleTask(t.task_id, e.target.checked)} data-testid={`onb-chk-${t.task_id}`} />
+                            <span className={`text-sm ${t.done ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{t.title}</span>
+                            {t.done_at && <span className="ml-auto text-[10px] text-slate-400">{t.done_at.slice(0, 10)}</span>}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {tab === 'letters' && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm text-slate-500">Issued Letters: <span className="font-semibold text-slate-900">{letters.length}</span></p>
+                    <button onClick={() => setShowLetterForm(true)} className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs" data-testid="generate-letter-btn"><Plus className="w-3.5 h-3.5" /> Generate Letter</button>
+                  </div>
+                  {letters.length === 0 ? (
+                    <p className="text-center py-6 text-slate-500 text-sm">No letters issued yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {letters.map(l => (
+                        <div key={l.letter_id} className="flex items-center gap-2 p-2 border border-slate-200 rounded-lg" data-testid={`letter-row-${l.letter_id}`}>
+                          <FileBadge className="w-4 h-4 text-slate-500" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-900 capitalize">{l.kind} Letter</p>
+                            <p className="text-[11px] text-slate-500 font-mono">{l.letter_id} • Issued {l.issued_at?.slice(0, 10)}</p>
+                          </div>
+                          <a href={`${API}/public/employees/${employee.employee_id}/letters/${l.letter_id}/pdf`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2 py-1 text-xs text-slate-700 bg-slate-100 hover:bg-slate-200 rounded" data-testid={`download-letter-${l.letter_id}`}>
+                            <Download className="w-3.5 h-3.5" /> PDF
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {showLetterForm && (
+                    <GenerateLetterForm employee={employee} adminId={adminId} onClose={() => setShowLetterForm(false)} onDone={() => { setShowLetterForm(false); loadLetters(); }} />
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const GenerateLetterForm = ({ employee, adminId, onClose, onDone }) => {
+  const [kind, setKind] = useState('appointment');
+  const [payload, setPayload] = useState({});
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    setSaving(true);
+    try {
+      const clean = {};
+      Object.keys(payload).forEach(k => { const v = payload[k]; if (v !== '' && v != null) clean[k] = (['previous_ctc', 'new_ctc'].includes(k) ? Number(v) : v); });
+      await axios.post(`${API}/public/employees/${employee.employee_id}/letters/generate`, { kind, payload: clean, admin_id: adminId });
+      toast.success('Letter generated');
+      onDone();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl max-w-lg w-full p-4" onClick={e => e.stopPropagation()} data-testid="letter-form-modal">
+        <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-slate-900">Generate Letter</h3><button onClick={onClose} className="text-slate-500"><X className="w-5 h-5" /></button></div>
+        <div className="space-y-3">
+          <select value={kind} onChange={e => { setKind(e.target.value); setPayload({}); }} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="letter-kind">
+            {['appointment', 'confirmation', 'increment', 'promotion', 'experience'].map(k => <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>)}
+          </select>
+          {kind === 'confirmation' && (
+            <input value={payload.confirmation_date || ''} onChange={e => setPayload(p => ({ ...p, confirmation_date: e.target.value }))} placeholder="Confirmation date (e.g. 01 March 2026)" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="letter-confirmation-date" />
+          )}
+          {kind === 'increment' && (
+            <div className="grid grid-cols-3 gap-2">
+              <input type="number" value={payload.previous_ctc || ''} onChange={e => setPayload(p => ({ ...p, previous_ctc: e.target.value }))} placeholder="Previous CTC" className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="letter-prev-ctc" />
+              <input type="number" value={payload.new_ctc || ''} onChange={e => setPayload(p => ({ ...p, new_ctc: e.target.value }))} placeholder="New CTC" className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="letter-new-ctc" />
+              <input value={payload.effective_from || ''} onChange={e => setPayload(p => ({ ...p, effective_from: e.target.value }))} placeholder="Effective from" className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="letter-effective" />
+            </div>
+          )}
+          {kind === 'promotion' && (
+            <div className="grid grid-cols-2 gap-2">
+              <input value={payload.new_designation || ''} onChange={e => setPayload(p => ({ ...p, new_designation: e.target.value }))} placeholder="New designation" className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="letter-new-desig" />
+              <input type="number" value={payload.new_ctc || ''} onChange={e => setPayload(p => ({ ...p, new_ctc: e.target.value }))} placeholder="New CTC (optional)" className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="letter-promo-ctc" />
+              <input value={payload.new_department || ''} onChange={e => setPayload(p => ({ ...p, new_department: e.target.value }))} placeholder="New department (optional)" className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="letter-new-dept" />
+              <input value={payload.effective_from || ''} onChange={e => setPayload(p => ({ ...p, effective_from: e.target.value }))} placeholder="Effective from" className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="letter-promo-eff" />
+            </div>
+          )}
+          {kind === 'experience' && (
+            <input value={payload.relieving_date || ''} onChange={e => setPayload(p => ({ ...p, relieving_date: e.target.value }))} placeholder="Relieving date (e.g. 30 April 2027)" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" data-testid="letter-relieving-date" />
+          )}
+          {kind === 'appointment' && <p className="text-xs text-slate-500">Uses accepted offer + employee profile. No extra input needed.</p>}
+          <div className="flex justify-end gap-2">
+            <button onClick={onClose} className="px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">Cancel</button>
+            <button onClick={save} disabled={saving} className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm" data-testid="letter-save-btn">{saving ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Generate PDF'}</button>
+          </div>
         </div>
       </div>
     </div>
