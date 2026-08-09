@@ -183,6 +183,10 @@ const AdminCareers = () => {
     window.open(`${API}/public/careers/applications/${app_id}/resume`, '_blank');
   };
 
+  const downloadDocument = (app_id, kind) => {
+    window.open(`${API}/public/careers/applications/${app_id}/document/${kind}`, '_blank');
+  };
+
   /* Filtered lists */
   const filteredJobs = jobs.filter(j => {
     if (filterActive === 'active' && !j.is_active) return false;
@@ -301,6 +305,7 @@ const AdminCareers = () => {
           onUpdateStatus={updateAppStatus}
           onAddNote={addNote}
           onDownloadResume={() => downloadResume(viewApp.application_id)}
+          onDownloadDocument={(kind) => downloadDocument(viewApp.application_id, kind)}
         />
       )}
     </div>
@@ -491,8 +496,13 @@ const JobModal = ({ form, setForm, meta, editJob, onSave, onClose }) => (
   </div>
 );
 
-const ApplicationModal = ({ app, onClose, onUpdateStatus, onAddNote, onDownloadResume }) => {
+const ApplicationModal = ({ app, onClose, onUpdateStatus, onAddNote, onDownloadResume, onDownloadDocument }) => {
   const [note, setNote] = useState('');
+  const hasAadhaar = !!app.aadhaar_path;
+  const hasPan = !!app.pan_path;
+  const hasMarksheet = !!app.marksheet_path;
+  const education = Array.isArray(app.education) ? app.education : [];
+  const workHistory = Array.isArray(app.work_history) ? app.work_history : [];
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white border border-slate-200 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
@@ -513,6 +523,61 @@ const ApplicationModal = ({ app, onClose, onUpdateStatus, onAddNote, onDownloadR
             <div>
               <p className="text-xs text-slate-500 mb-1">Cover Letter</p>
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-700 whitespace-pre-wrap">{app.cover_letter}</div>
+            </div>
+          )}
+
+          {/* Phase 3 extended — Supporting Docs quick download */}
+          {(hasAadhaar || hasPan || hasMarksheet) && (
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Supporting Documents</p>
+              <div className="flex flex-wrap gap-2">
+                {hasAadhaar && (
+                  <button onClick={() => onDownloadDocument && onDownloadDocument('aadhaar')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-xs text-slate-700" data-testid="download-aadhaar-btn">
+                    <Download className="w-3.5 h-3.5" /> Aadhaar
+                  </button>
+                )}
+                {hasPan && (
+                  <button onClick={() => onDownloadDocument && onDownloadDocument('pan')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-xs text-slate-700" data-testid="download-pan-btn">
+                    <Download className="w-3.5 h-3.5" /> PAN
+                  </button>
+                )}
+                {hasMarksheet && (
+                  <button onClick={() => onDownloadDocument && onDownloadDocument('marksheet')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-xs text-slate-700" data-testid="download-marksheet-btn">
+                    <Download className="w-3.5 h-3.5" /> Marksheet
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Phase 3 extended — Education */}
+          {education.length > 0 && (
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Education</p>
+              <div className="space-y-2">
+                {education.map((e, i) => (
+                  <div key={i} className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-700">
+                    <p className="font-semibold text-slate-900">{e.degree || '—'} <span className="font-normal text-slate-500">• {e.institution || '—'}</span></p>
+                    <p className="text-slate-500">Year: {e.year || '—'} • Marks: {e.marks || '—'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Phase 3 extended — Work History */}
+          {workHistory.length > 0 && (
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Work Experience</p>
+              <div className="space-y-2">
+                {workHistory.map((w, i) => (
+                  <div key={i} className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-700">
+                    <p className="font-semibold text-slate-900">{w.role || '—'} <span className="font-normal text-slate-500">@ {w.company || '—'}</span></p>
+                    <p className="text-slate-500">{w.from || '—'} → {w.to || '—'}</p>
+                    {w.description && <p className="text-slate-700 mt-1 whitespace-pre-wrap">{w.description}</p>}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

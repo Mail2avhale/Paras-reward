@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   Briefcase, MapPin, Clock, ChevronRight, Search, Upload,
   Building2, Users, Heart, Star, Zap, BookOpen, Award,
-  Loader2, X, CheckCircle, ArrowLeft
+  Loader2, X, CheckCircle, ArrowLeft, Plus, Trash2, FileText
 } from 'lucide-react';
 import { HiringBadge } from '../components/HiringBadge';
 
@@ -48,6 +48,15 @@ const CareersPage = () => {
     name: '', email: '', phone: '', experience_years: 0, cover_letter: '', linkedin: ''
   });
   const [resume, setResume] = useState(null);
+  // Phase 3 extended — optional supporting documents & structured history
+  const [aadhaar, setAadhaar] = useState(null);
+  const [pan, setPan] = useState(null);
+  const [marksheet, setMarksheet] = useState(null);
+  const [education, setEducation] = useState([{ degree: '', institution: '', year: '', marks: '' }]);
+  const [workHistory, setWorkHistory] = useState([{ company: '', role: '', from: '', to: '', description: '' }]);
+  const aadhaarRef = useRef(null);
+  const panRef = useRef(null);
+  const marksheetRef = useRef(null);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -75,6 +84,16 @@ const CareersPage = () => {
       toast.error('Please fill name, email, phone and upload resume');
       return;
     }
+    // Guard: each supporting doc must be under 5MB
+    const oversize = [
+      aadhaar && aadhaar.size > 5 * 1024 * 1024 && 'Aadhaar',
+      pan && pan.size > 5 * 1024 * 1024 && 'PAN',
+      marksheet && marksheet.size > 5 * 1024 * 1024 && 'Marksheet',
+    ].filter(Boolean);
+    if (oversize.length) {
+      toast.error(`${oversize.join(', ')} must be under 5MB each`);
+      return;
+    }
     setApplying(true);
     try {
       const fd = new FormData();
@@ -86,6 +105,14 @@ const CareersPage = () => {
       fd.append('cover_letter', form.cover_letter);
       fd.append('linkedin', form.linkedin);
       fd.append('resume', resume);
+      if (aadhaar) fd.append('aadhaar', aadhaar);
+      if (pan) fd.append('pan', pan);
+      if (marksheet) fd.append('marksheet', marksheet);
+      // Strip empty rows before sending
+      const eduClean = education.filter(e => e.degree || e.institution || e.year || e.marks);
+      const workClean = workHistory.filter(w => w.company || w.role || w.from || w.to || w.description);
+      fd.append('education_json', JSON.stringify(eduClean));
+      fd.append('work_history_json', JSON.stringify(workClean));
 
       const res = await axios.post(`${API}/public/careers/apply`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -97,6 +124,14 @@ const CareersPage = () => {
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed to submit'); }
     finally { setApplying(false); }
   };
+
+  // Education / Work-history row helpers
+  const addEduRow = () => setEducation(rows => [...rows, { degree: '', institution: '', year: '', marks: '' }]);
+  const removeEduRow = (i) => setEducation(rows => rows.length > 1 ? rows.filter((_, idx) => idx !== i) : rows);
+  const updateEduRow = (i, key, val) => setEducation(rows => rows.map((r, idx) => idx === i ? { ...r, [key]: val } : r));
+  const addWorkRow = () => setWorkHistory(rows => [...rows, { company: '', role: '', from: '', to: '', description: '' }]);
+  const removeWorkRow = (i) => setWorkHistory(rows => rows.length > 1 ? rows.filter((_, idx) => idx !== i) : rows);
+  const updateWorkRow = (i, key, val) => setWorkHistory(rows => rows.map((r, idx) => idx === i ? { ...r, [key]: val } : r));
 
   const departments = ['All', ...new Set(jobs.map(j => j.department).filter(Boolean))];
   const locations = ['All', ...new Set(jobs.map(j => j.location).filter(Boolean))];
@@ -212,6 +247,101 @@ const CareersPage = () => {
                     {resume ? resume.name : 'Click to upload resume'}
                   </button>
                 </div>
+
+                {/* Phase 3 extended — Supporting Documents (all optional) */}
+                <div className="md:col-span-2 mt-2 pt-4 border-t border-slate-200">
+                  <p className="text-sm font-semibold text-slate-900 mb-1">Supporting Documents <span className="text-xs font-normal text-slate-500">(optional, max 5MB each)</span></p>
+                  <p className="text-xs text-slate-500 mb-3">Upload Aadhaar, PAN and latest Marksheet as PDF or image (JPG/PNG).</p>
+                </div>
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {[
+                    { key: 'aadhaar', label: 'Aadhaar Card', value: aadhaar, setValue: setAadhaar, ref: aadhaarRef },
+                    { key: 'pan', label: 'PAN Card', value: pan, setValue: setPan, ref: panRef },
+                    { key: 'marksheet', label: 'Marksheet', value: marksheet, setValue: setMarksheet, ref: marksheetRef },
+                  ].map(doc => (
+                    <div key={doc.key}>
+                      <label className="text-xs text-slate-500 mb-1 block">{doc.label}</label>
+                      <input type="file" ref={doc.ref} accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={e => doc.setValue(e.target.files?.[0] || null)} data-testid={`upload-${doc.key}-input`} />
+                      <button
+                        type="button"
+                        onClick={() => doc.ref.current?.click()}
+                        className="w-full px-3 py-3 border-2 border-dashed border-slate-300 rounded-lg text-xs text-slate-500 hover:border-blue-400 hover:text-blue-500 transition-colors flex items-center justify-center gap-2 text-center"
+                        data-testid={`upload-${doc.key}-btn`}
+                      >
+                        <FileText className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{doc.value ? doc.value.name : `Upload ${doc.label}`}</span>
+                      </button>
+                      {doc.value && (
+                        <button
+                          type="button"
+                          onClick={() => doc.setValue(null)}
+                          className="mt-1 text-[11px] text-slate-500 hover:text-red-500 flex items-center gap-1"
+                          data-testid={`clear-${doc.key}-btn`}
+                        >
+                          <Trash2 className="w-3 h-3" /> Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Phase 3 extended — Education History */}
+                <div className="md:col-span-2 mt-2 pt-4 border-t border-slate-200" data-testid="education-section">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Education</p>
+                      <p className="text-xs text-slate-500">Add your qualifications (most recent first)</p>
+                    </div>
+                    <button type="button" onClick={addEduRow} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg" data-testid="add-education-btn">
+                      <Plus className="w-3.5 h-3.5" /> Add
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {education.map((row, i) => (
+                      <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200" data-testid={`education-row-${i}`}>
+                        <input type="text" value={row.degree} onChange={e => updateEduRow(i, 'degree', e.target.value)} className="md:col-span-3 px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-sm text-slate-900" placeholder="Degree (e.g., B.Tech CSE)" data-testid={`edu-degree-${i}`} />
+                        <input type="text" value={row.institution} onChange={e => updateEduRow(i, 'institution', e.target.value)} className="md:col-span-4 px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-sm text-slate-900" placeholder="Institution" data-testid={`edu-institution-${i}`} />
+                        <input type="text" value={row.year} onChange={e => updateEduRow(i, 'year', e.target.value)} className="md:col-span-2 px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-sm text-slate-900" placeholder="Year" data-testid={`edu-year-${i}`} />
+                        <input type="text" value={row.marks} onChange={e => updateEduRow(i, 'marks', e.target.value)} className="md:col-span-2 px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-sm text-slate-900" placeholder="Marks / CGPA" data-testid={`edu-marks-${i}`} />
+                        <button type="button" onClick={() => removeEduRow(i)} disabled={education.length <= 1} className="md:col-span-1 flex items-center justify-center py-2 text-slate-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed" data-testid={`remove-education-${i}`}>
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Phase 3 extended — Work History */}
+                <div className="md:col-span-2 mt-2 pt-4 border-t border-slate-200" data-testid="work-history-section">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Work Experience</p>
+                      <p className="text-xs text-slate-500">Freshers can leave this empty</p>
+                    </div>
+                    <button type="button" onClick={addWorkRow} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg" data-testid="add-work-btn">
+                      <Plus className="w-3.5 h-3.5" /> Add
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {workHistory.map((row, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2" data-testid={`work-row-${i}`}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <input type="text" value={row.company} onChange={e => updateWorkRow(i, 'company', e.target.value)} className="px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-sm text-slate-900" placeholder="Company" data-testid={`work-company-${i}`} />
+                          <input type="text" value={row.role} onChange={e => updateWorkRow(i, 'role', e.target.value)} className="px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-sm text-slate-900" placeholder="Role / Designation" data-testid={`work-role-${i}`} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <input type="text" value={row.from} onChange={e => updateWorkRow(i, 'from', e.target.value)} className="px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-sm text-slate-900" placeholder="From (MM/YYYY)" data-testid={`work-from-${i}`} />
+                          <input type="text" value={row.to} onChange={e => updateWorkRow(i, 'to', e.target.value)} className="px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-sm text-slate-900" placeholder="To (MM/YYYY or Present)" data-testid={`work-to-${i}`} />
+                          <button type="button" onClick={() => removeWorkRow(i)} disabled={workHistory.length <= 1} className="flex items-center justify-center py-2 text-slate-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed" data-testid={`remove-work-${i}`}>
+                            <Trash2 className="w-4 h-4" /> <span className="ml-1 text-xs">Remove</span>
+                          </button>
+                        </div>
+                        <textarea value={row.description} onChange={e => updateWorkRow(i, 'description', e.target.value)} rows={2} className="w-full px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-sm text-slate-900 resize-none" placeholder="Brief description of responsibilities & achievements" data-testid={`work-description-${i}`} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
               </div>
               <button onClick={handleApply} disabled={applying} className="mt-4 w-full py-3 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 disabled:opacity-50" data-testid="submit-application">
                 {applying ? <Loader2 className="w-5 h-5 animate-spin inline" /> : 'Submit Application'}

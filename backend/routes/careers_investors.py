@@ -339,6 +339,45 @@ async def download_resume(app_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== Phase 3 extended document downloads ====================
+
+_SUPPORTING_DOC_KINDS = {"aadhaar", "pan", "marksheet"}
+
+
+@router.get("/careers/applications/{app_id}/document/{kind}")
+async def download_supporting_document(app_id: str, kind: str):
+    """Admin: download an Aadhaar / PAN / Marksheet file uploaded during application.
+
+    Kind must be one of ``aadhaar``, ``pan``, ``marksheet``. Files are stored on
+    disk during ``apply_for_job`` (see ``_save_supporting``) — this endpoint
+    streams them back with an inferred media type from the extension.
+    """
+    if kind not in _SUPPORTING_DOC_KINDS:
+        raise HTTPException(status_code=400, detail=f"Invalid document kind. Use one of: {sorted(_SUPPORTING_DOC_KINDS)}")
+
+    try:
+        app = await db.job_applications.find_one({"application_id": app_id})
+        if not app:
+            raise HTTPException(status_code=404, detail="Application not found")
+
+        path = app.get(f"{kind}_path")
+        if not path or not os.path.exists(path):
+            raise HTTPException(status_code=404, detail=f"{kind.title()} document not uploaded for this application")
+
+        ext = os.path.splitext(path)[1].lower().lstrip(".") or "pdf"
+        media = {
+            "pdf": "application/pdf",
+            "jpg": "image/jpeg", "jpeg": "image/jpeg",
+            "png": "image/png", "webp": "image/webp",
+        }.get(ext, "application/octet-stream")
+
+        return FileResponse(path, filename=f"{app_id}-{kind}.{ext}", media_type=media)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== CAREER: APPLICATION STATUS CHECK (Public) ====================
 
 @router.get("/careers/check-status")
