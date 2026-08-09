@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'sonner';
 import {
   ArrowLeft, Briefcase, CheckCircle2, Circle, Clock, FileText,
   Video, MapPin, Download, ExternalLink, AlertCircle, Loader2,
   ClipboardList, FileSignature, GraduationCap, Building2, ListChecks,
-  User,
+  User, Share2, Copy, MessageCircle,
 } from 'lucide-react';
 import { API } from '../lib/api';
 
@@ -97,6 +98,9 @@ const CandidatePortal = () => {
             <span className="text-sm font-medium text-slate-800">{formatStatus(application.status)}</span>
           </div>
         </div>
+
+        {/* Referral share — help a friend apply too */}
+        <ReferralShareCard application={application} />
 
         {/* Timeline strip */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm" data-testid="portal-timeline">
@@ -267,6 +271,74 @@ const CandidatePortal = () => {
     </div>
   );
 };
+
+
+const ReferralShareCard = ({ application }) => {
+  const [expanded, setExpanded] = useState(false);
+  const jobKey = application.job_code || application.job_id || '';
+  const shareUrl = jobKey
+    ? `${window.location.origin}/careers?job=${encodeURIComponent(jobKey)}&ref=${encodeURIComponent(application.application_id)}`
+    : `${window.location.origin}/careers`;
+  const shareText = `I just applied for ${application.job_title} at Paras Reward Technologies — think you'd be a great fit too! Check it out: ${shareUrl}`;
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Link copied!');
+    } catch {
+      toast.error('Copy failed — long-press the link to copy');
+    }
+  };
+  const openWhatsApp = () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer');
+  };
+  const nativeShare = async () => {
+    try {
+      await navigator.share({ title: `Job opening: ${application.job_title}`, text: shareText, url: shareUrl });
+    } catch { /* user cancelled or unsupported */ }
+  };
+  const hasNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  return (
+    <div className="bg-gradient-to-br from-blue-50 to-emerald-50 border border-blue-200 rounded-2xl p-4 shadow-sm" data-testid="portal-referral-card">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-lg bg-white/70 flex items-center justify-center shrink-0">
+          <Share2 className="w-5 h-5 text-blue-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-900">Know someone who&apos;d love this role?</p>
+          <p className="text-xs text-slate-600 mt-0.5">Share this opening with a friend — they can apply in one tap.</p>
+        </div>
+        {!expanded && (
+          <button onClick={() => setExpanded(true)} className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium whitespace-nowrap shrink-0" data-testid="portal-share-toggle">
+            Share
+          </button>
+        )}
+      </div>
+      {expanded && (
+        <div className="mt-3 pt-3 border-t border-blue-200 space-y-2" data-testid="portal-share-panel">
+          <div className="flex items-center gap-2 p-2 bg-white/70 rounded-lg">
+            <span className="flex-1 text-[11px] font-mono text-slate-600 truncate">{shareUrl}</span>
+            <button onClick={copyLink} className="p-1.5 text-slate-700 hover:bg-slate-100 rounded" data-testid="portal-share-copy">
+              <Copy className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={openWhatsApp} className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium flex items-center justify-center gap-1.5" data-testid="portal-share-whatsapp">
+              <MessageCircle className="w-4 h-4" /> Share on WhatsApp
+            </button>
+            {hasNativeShare && (
+              <button onClick={nativeShare} className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center justify-center gap-1.5" data-testid="portal-share-native">
+                <Share2 className="w-4 h-4" /> More
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 const Section = ({ title, icon: Icon, testid, children }) => (
   <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm" data-testid={testid}>

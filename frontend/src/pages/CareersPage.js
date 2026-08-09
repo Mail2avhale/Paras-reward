@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
@@ -69,6 +70,24 @@ const CareersPage = () => {
   }, []);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
+
+  // Referral share links: /careers?job=PR-JOB-YYYY-#### (or job_id) opens the
+  // target job directly and pre-selects 'Employee Referral' as the source.
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const jobParam = searchParams.get('job');
+    const refParam = searchParams.get('ref');
+    if (refParam) {
+      setForm(f => ({ ...f, recruitment_source: 'Employee Referral' }));
+    }
+    if (jobParam && jobs.length > 0 && !selectedJob) {
+      const match = jobs.find(j => j.job_code === jobParam || j.job_id === jobParam || j.slug === jobParam);
+      if (match) {
+        setSelectedJob(match);
+        setShowApply(true);
+      }
+    }
+  }, [searchParams, jobs, selectedJob]);
 
   const checkApplicationStatus = async () => {
     if (!statusEmail) { toast.error('Enter your email'); return; }

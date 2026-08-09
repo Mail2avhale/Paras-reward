@@ -1,3 +1,36 @@
+## Implemented (Feb 27, 2026 — Candidate Portal Referral Share)
+
+### Frontend — inline referral share card
+- **New `ReferralShareCard`** in `CandidatePortal.jsx` (rendered right below the header, above the timeline).
+- Collapsed state: friendly prompt + single **"Share"** button.
+- Expanded state:
+  - Share URL preview (copy-paste-friendly monospace)
+  - **Copy Link** button (uses `navigator.clipboard.writeText` + toast confirmation)
+  - **Share on WhatsApp** button (opens `https://wa.me/?text=…` with pre-filled friendly message)
+  - **Native "More"** button (opens `navigator.share` when the browser supports it — mobile-first)
+- **Share URL format**: `${origin}/careers?job=${job_code}&ref=${application_id}` (no backend changes required — frontend consumes the query params).
+
+### Frontend — CareersPage deep-link support
+- `/careers?job=PR-JOB-YYYY-####&ref=PR-HR-YYYY-#####` now:
+  - Auto-selects the target job and opens the apply modal immediately
+  - Pre-fills `recruitment_source = 'Employee Referral'` in the application form
+  - Uses `useSearchParams()` from `react-router-dom`; matches on `job_code` OR `job_id` OR `slug` for robustness
+
+### Testing
+- `backend/tests/test_referral_share.py` — 2 pytest scenarios:
+  - Applying via a `job_code` URL with `Employee Referral` source persists correctly (job_code resolves to job_id server-side)
+  - Portal endpoint exposes `job_code` needed by frontend to build the share URL
+- `backend/tests/test_candidate_portal.py` — still 4/4 pass, unchanged
+- **Total: 6/6 portal-related pytest pass**
+- Frontend smoke verified: card renders, expand/collapse works, WhatsApp button targets the correct wa.me URL, copy button triggers clipboard API + toast
+
+### Files touched
+- `frontend/src/pages/CandidatePortal.jsx` — added `ReferralShareCard` component + toast import + Share2/Copy/MessageCircle icons
+- `frontend/src/pages/CareersPage.js` — added `useSearchParams` deep-link auto-selection + referral source pre-fill
+- **NEW** `backend/tests/test_referral_share.py`
+
+
+
 ## Implemented (Feb 27, 2026 — Public Candidate Portal)
 
 ### Backend — Unified read-only hydration endpoint
