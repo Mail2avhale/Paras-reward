@@ -1,0 +1,34 @@
+{
+  "summary": "Phase F (Targets/Appraisals/Incentives) + Phase G (RBAC/Audit/Notification Templates) — Backend 8/8 pytest scenarios pass in test_careers_phase_fg.py. Full careers regression suite: 47/47 passed. Frontend /admin/careers → System tab verified end-to-end: Audit pane lists 92 entries with filters + refresh; RBAC pane shows all 7 role cards with permission pills, bind/unbind flow succeeds and creates audit rows (rbac.bind/rbac.unbind); Templates pane loads 5 seeded templates, new-template modal opens, preview renders {var} substitution correctly leaving unknown vars verbatim. No regressions detected in earlier tabs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Template modal preview", "issue": "template-preview-btn calls POST /notifications/render with only {key, channel, context}, so preview renders the SAVED template on the server, not the live subject/body being edited in the modal. For a brand-new template that isn't saved yet, preview shows the current stored template under that key (or default seed), not the user's draft.", "affected_selectors": ["template-preview-btn", "template-preview-output"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_careers_phase_fg.py",
+    "/app/test_reports/pytest/phase_fg_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL/MINOR: Consider making template-preview-btn either (a) call a client-side substitution using form.subject/form.body instead of hitting /notifications/render, or (b) add an override-body/subject payload to the render endpoint so users can preview their unsaved draft.",
+    "Documentation nit: the review request listed role slugs (superadmin, hr_recruiter, manager, finance, auditor) that don't match the actual seeded 7 roles (super_admin, hr_admin, recruiter, department_head, district_manager, employee, candidate). Backend + UI both use the actual set correctly; only the review request text was mislabeled."
+  ],
+  "critical_code_review_comments": [
+    "AdminCareers.js is 1975 lines — well beyond the 700-line guideline. Should be split into per-tab modules (JobsTab, ApplicationsTab, PipelineTab, TestsTab, EmployeesTab, AttendanceTab, LeavesTab, SystemTab + subcomponents) for maintainability.",
+    "Template preview UX inconsistency (see integration_issues)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (47/47 careers suite, 8/8 Phase FG)", "frontend": "100% for System tab flows"},
+  "test_credentials": "admin@test.com / PIN 153759 (verified working)",
+  "seed_data_creation": "test_careers_phase_fg.py seeds a fresh employee per test via /careers/jobs/create → /careers/apply → /offers/generate → /offers/respond → /employees/from-application. UI test also created RBAC binding testuser_ui@test.com=employee (still present in bindings table).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase F + G contracts are green on both backend and frontend. If new phases add write endpoints, ensure they also call utils.audit_log.log_action for auditability. Roles are seeded static; adding new roles requires updating backend/routes/careers_phase_g.py CANONICAL_ROLES + frontend role card grid. Template modal preview limitation noted but non-blocking.",
+  "rca of the issue": "No blocking issues found. Minor UX note: template preview renders saved server template, not live modal edits."
+}
