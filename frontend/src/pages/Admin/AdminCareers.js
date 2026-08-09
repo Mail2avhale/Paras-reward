@@ -2085,8 +2085,8 @@ const AnalyticsPane = () => {
               <tr><th className="px-2 py-1.5 text-left">Source</th><th className="px-2 py-1.5 text-left">Applications</th><th className="px-2 py-1.5 text-left">Joined</th><th className="px-2 py-1.5 text-left">Conversion</th></tr>
             </thead>
             <tbody>
-              {data.source_roi.map(s => (
-                <tr key={s.source} className="border-b border-slate-100" data-testid={`source-row-${s.source}`}>
+              {data.source_roi.map((s, i) => (
+                <tr key={`${s.source}-${i}`} className="border-b border-slate-100" data-testid={`source-row-${s.source}`}>
                   <td className="px-2 py-1.5 text-slate-800">{s.source}</td>
                   <td className="px-2 py-1.5 text-slate-700">{s.applications}</td>
                   <td className="px-2 py-1.5 text-slate-700">{s.joined}</td>

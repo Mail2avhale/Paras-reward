@@ -169,7 +169,7 @@ def test_hr_dashboard_reflects_new_activity():
     # Seed a fresh application through joined so it counts
     before = requests.get(f"{API}/api/public/reports/hr-dashboard", timeout=60).json()
     # source_roi should now include LinkedIn from seeded employee
-    src_found = next((s for s in before["source_roi"] if s["source"] == "LinkedIn"), None)
+    src_found = next((s for s in before["source_roi"] if s["source"].lower() == "linkedin"), None)
     assert src_found is not None
     assert src_found["applications"] >= 1
 

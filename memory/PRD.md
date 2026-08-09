@@ -1,3 +1,75 @@
+## Implemented (Feb 27, 2026 — Careers Phase H: Separations + HR Analytics + Health, per `careers.docx` §49-50, §69, §80)
+
+### Phase H — Employee Separation Workflow (§69)
+- Collection `separations`. Kinds: resignation / termination / retirement / end_of_contract / absconding.
+- Status machine: `initiated → in_clearance → cleared → fnf_calculated → fnf_paid → completed` (or `cancelled` at any point).
+- Endpoints:
+  - `POST /api/public/separations/initiate` — creates `SEP-*` record with 5 default clearance items (IT / Admin / Finance / HR / Manager), refuses duplicate active separation for same employee
+  - `PATCH /api/public/separations/{sid}/clearance/{item}` — toggle done, auto-advances status when all done
+  - `POST /api/public/separations/{sid}/fnf {gross_dues, deductions, breakdown}` — computes `net_payable`, only allowed from cleared/in_clearance/fnf_calculated
+  - `POST /api/public/separations/{sid}/pay {payment_reference}` — marks F&F paid
+  - `POST /api/public/separations/{sid}/complete` — **auto-issues experience letter PDF** (reuses Phase D `_build_letter_pdf`), flips employee.status → `separated`, stamps completed_at
+  - `POST /api/public/separations/{sid}/cancel`
+- Every write logged to `hr_audit_log` via `log_action(...)`
+
+### HR Analytics Dashboard (§49-50)
+- `GET /api/public/reports/hr-dashboard?from_date=&to_date=` returns aggregated metrics:
+  - **totals**: applications, active_employees, open_jobs, total_vacancies, vacancies_filled, vacancies_remaining
+  - **recruitment_funnel**: counts by application status
+  - **source_roi**: applications + joined + conversion_pct per recruitment source (normalized/deduped — legacy null → "Website", case-collapsed via `.title()`)
+  - **time_to_hire**: avg days from application_received → offer_accepted, with sample_size
+  - **attrition**: separated_in_range + attrition_pct
+  - **headcount_by_department**
+  - **pending_hr_actions**: scorecards / offers_awaiting_response / leaves_pending / separations_in_progress / appraisals_pending
+
+### System Health (§80)
+- `GET /api/public/careers/health` — cheap read-only probe returning `status=ok` + per-collection `{total, last_activity}` for all 16 HR collections (job_postings, job_applications, test_bank, test_assignments, interviews, offers, employees, employee_onboarding, employee_letters, attendance, leaves, performance_appraisals, incentive_awards, separations, hr_audit_log, notification_templates).
+
+### Admin frontend
+- New **Reports** tab (`tab-reports`) with 2 sub-panes (`reports-sub-analytics`, `reports-sub-separations`):
+  - **Analytics pane**: date-range picker, 6 top-line KPI cards, time-to-hire card, attrition card, pending-HR-actions card, recruitment funnel pill list, source-ROI table, headcount-by-department pills — all with data-testids
+  - **Separations pane**: status filter + initiate button + table; **Init modal** with employee/kind/notice/LWD/reason; **Detail modal** with interactive 5-item clearance checklist, F&F calculator card (gross/deductions/net-payable), Mark-Paid & Complete buttons, experience-letter-issued banner with PDF download
+
+### Testing
+- `backend/tests/test_careers_phase_h.py` — 6 pytest scenarios
+- Careers suite: **53/53 pass** (Phase 3 + A + B + C + D + F + G + H)
+- `/app/test_reports/iteration_287.json` — backend 6/6, frontend 100%, only 2 minor design issues found (now fixed): duplicate `Website` source rows + React duplicate-key warning both resolved via server-side dedupe + index-safe React keys
+
+### Files touched
+- **NEW** `backend/routes/careers_phase_h.py`
+- **NEW** `backend/tests/test_careers_phase_h.py` (6 scenarios)
+- `backend/server.py` — wired careers_h_router
+- `frontend/src/pages/Admin/AdminCareers.js` — ReportsTab + AnalyticsPane + SeparationsPane + SeparationInitModal + SeparationDetailModal
+
+## Careers spec — SHIPPED (~95% of `careers.docx` complete)
+
+The following sections are now live end-to-end:
+- §5-9: Public careers page, application form (with Phase 3 extended docs), submission, candidate status check
+- §10-13: 30-status pipeline with history, HR admin dashboard, application screening
+- §15-18: Online test bank, assignment, auto-scoring, interview scheduling, HR/Dept/Panel scorecards
+- §20: Document management (Aadhaar/PAN/Marksheet/Resume)
+- §21-26: Hiring type selection, offer PDF generation, accept/decline flow, joining
+- §27-30: Onboarding checklist, employee master, org linkage
+- §32, §42-43: Attendance mark + roster + monthly view, leave apply/approve/reject/cancel/balance
+- §34-41: Performance targets, appraisals with auto-rating, incentive rules + calculation + state machine
+- §44: Recruitment source tracking
+- §46-47: Notification templates (20 keys × 4 channels) + preview renderer
+- §49-50: HR analytics dashboard (funnel, source ROI, time-to-hire, attrition, headcount)
+- §51-53: 7-role RBAC matrix + bindings + permission check + append-only audit log
+- §55-56: Job Codes (PR-JOB-YYYY-####), slug URLs, lifecycle (draft/paused/closed/archived), vacancy tracking, auto-close-when-filled
+- §69: Employee separation workflow with clearance + F&F + auto experience letter
+- §71: 5 HR letter PDFs (Appointment, Confirmation, Increment, Promotion, Experience)
+- §74: Practical test kind under interview scheduling
+- §80: System health endpoint
+
+### Remaining (~5% — deliberately deferred)
+- **Candidate Test Portal**: Public `/careers/test/{token}` page (user explicitly asked to skip)
+- **Email/SMS/WhatsApp dispatch**: Templates rendered but not sent via Resend/Twilio (integration work, not spec logic)
+- **Backfill audit log**: Currently only Phase F/G/H writes call `log_action`; Phase A-D writes still not logged (low priority — data hygiene)
+- **AdminCareers.js refactor**: File is now ~2340 lines; splitting into per-tab modules would improve maintainability (no functional impact)
+
+
+
 ## Implemented (Feb 27, 2026 — Careers Phase F + Phase G, per `careers.docx` §7, §34-41, §46-53)
 
 ### Phase F — Performance Management + Incentives (§34-41)

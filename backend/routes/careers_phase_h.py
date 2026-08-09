@@ -344,12 +344,24 @@ async def hr_dashboard(from_date: Optional[str] = None, to_date: Optional[str] =
             "joined": {"$sum": {"$cond": [{"$eq": ["$status", "joined"]}, 1, 0]}},
         }},
     ])
-    sources = []
+    # Normalise + dedupe: strip/title-case source names so 'website' & ' Website '
+    # collapse into one row. Legacy applications with a NULL source count as
+    # 'Website' (the default in the apply endpoint).
+    source_totals: dict = {}
     async for r in src_cursor:
-        apps = r["applications"]
-        joined = r["joined"]
+        raw = (r.get("_id") or "Website")
+        key = str(raw).strip().title()
+        if not key:
+            key = "Website"
+        agg = source_totals.setdefault(key, {"applications": 0, "joined": 0})
+        agg["applications"] += r["applications"]
+        agg["joined"] += r["joined"]
+    sources = []
+    for key, agg in source_totals.items():
+        apps = agg["applications"]
+        joined = agg["joined"]
         sources.append({
-            "source": r["_id"] or "Website",
+            "source": key,
             "applications": apps,
             "joined": joined,
             "conversion_pct": round((joined / apps * 100), 2) if apps else 0.0,
