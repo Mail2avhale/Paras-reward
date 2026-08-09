@@ -1,3 +1,54 @@
+## Implemented (Feb 27, 2026 — Careers Phase A: Recruitment Core, per `careers.docx` §8/§10/§12/§44/§55/§56)
+
+### Spec-compliant identifiers (§8, §55)
+- **Application ID**: `PR-HR-YYYY-#####` — year-scoped 5-digit sequential counter, atomic via `db.id_counters` (`$inc + upsert`).
+- **Job Code**: `PR-JOB-YYYY-####` — year-scoped 4-digit sequential.
+- **Slug**: kebab-case, auto-unique-suffixed. Public detail served at `GET /public/careers/jobs/by-slug/{slug}`. Apply endpoint accepts either `job_id`, `job_code`, or `slug`.
+
+### 30-status pipeline (§10) with history logging
+- `APPLICATION_STATUSES = [application_received, under_screening, shortlisted, test_assigned, test_completed, test_failed, hr_interview_scheduled, hr_interview_completed, department_interview_scheduled, department_interview_completed, management_review, selected, waitlisted, documents_requested, documents_under_verification, documents_verified, documents_rejected, offer_generated, offer_sent, offer_accepted, offer_declined, joining_scheduled, joined, internship, trainee, probation, regular_employee, rejected, application_withdrawn, application_closed]`.
+- Legacy statuses (`new`, `reviewed`, `interview`, `hired`) aliased server-side to canonical names — no breaking change for old records.
+- `PUT /careers/applications/{id}/status` validates + appends `{from, to, by, at, comment}` to `status_history[]`; auto-increments `shortlisted_count` / `selected_count` / `joined_count` on the parent job.
+
+### Job lifecycle (§55)
+- `job_status ∈ [draft, scheduled, published, paused, closing_soon, closed, archived]`. Public listing hides non-published + expired-deadline jobs.
+- New actions endpoint: `POST /careers/jobs/{id}/lifecycle {action: publish|unpublish|pause|reopen|close|archive}`.
+- Duplicate: `POST /careers/jobs/{id}/duplicate` → new draft with fresh code+slug and `(Copy)` suffix.
+- `auto_close_when_filled` + `vacancy_count` (§56): when a job's `joined_count ≥ vacancy_count`, the job auto-closes and blocks further applications with HTTP 400. Deadline enforcement also HTTP 400.
+
+### Recruitment source tracking (§44)
+- 10 sources: `Website, LinkedIn, Facebook, Instagram, WhatsApp, Telegram, College, Employee Referral, Job Portal, Other`.
+- Public apply form has a "How did you hear about us?" dropdown; value persists on the application.
+
+### Kanban recruitment pipeline (§12)
+- `GET /careers/kanban?job_id=…` groups applications into 30 status columns.
+- New admin tab **Pipeline** with 30-column board, per-card "Move to…" quick-transition select, and status-color coding.
+- Application detail modal upgraded: 30-status "Move to…" select + collapsible status_history timeline with `from → to • by • at` entries.
+
+### Testing
+- `/app/backend/tests/test_careers_phase_a.py` — 10 pytest scenarios (all pass).
+- `/app/test_reports/iteration_283.json` — backend 100%, frontend 100%, no issues.
+- Full careers regression: **36/36 pass** (mall mining + auth consolidation + Phase 3 extended + Phase A).
+
+### Files touched
+- `backend/routes/careers_investors.py` — heavy refactor
+- `backend/utils/id_counters.py` — NEW
+- `backend/tests/test_careers_phase_a.py` — NEW (10 scenarios)
+- `backend/tests/test_careers_phase3_extended.py` — updated assertion (PR-HR- prefix)
+- `frontend/src/pages/Admin/AdminCareers.js` — Pipeline tab + KanbanTab + status_history + 30-status colors
+- `frontend/src/pages/CareersPage.js` — recruitment_source dropdown
+
+### Careers roadmap remaining (per `careers.docx`, ~75% still to build)
+- **Phase B — Online Tests + Interview Panel** (§15, §16-18, §74): test bank, per-role assignment, auto-scoring, scorecards, panel invitations.
+- **Phase C — Hiring decision + Offer PDF** (§21-26, §71 partial): hiring type flow (Fresher/Trainee/Direct/Probation), offer PDF templates + accept/decline, joining schedule.
+- **Phase D — Employee Master + Onboarding** (§27-30, §71 rest): `PR-EMP-#####` IDs, org hierarchy, district team mgmt, onboarding checklist, letters (Appointment/Confirmation/Increment/Promotion/Experience).
+- **Phase E — Attendance + Leave + Daily Reports** (§32, §42-43).
+- **Phase F — Performance + Increment + Promotion + Incentive** (§34-41).
+- **Phase G — RBAC + Audit + Notifications + Analytics** (§46-53, §49-50, §7 role matrix).
+- **Phase H — Separation + Reports + Final QA per §80** (§69).
+
+
+
 ## Implemented (Feb 27, 2026 — P0 Careers Phase 3 Extended: multi-doc apply form + admin downloads)
 
 ### What shipped
