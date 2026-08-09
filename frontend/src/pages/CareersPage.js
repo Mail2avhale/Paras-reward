@@ -38,6 +38,7 @@ const CareersPage = () => {
   const [showApply, setShowApply] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [appliedId, setAppliedId] = useState('');
   const [showStatusCheck, setShowStatusCheck] = useState(false);
   const [statusEmail, setStatusEmail] = useState('');
   const [statusResults, setStatusResults] = useState(null);
@@ -120,6 +121,7 @@ const CareersPage = () => {
       });
       if (res.data?.success) {
         setApplied(true);
+        setAppliedId(res.data.application_id);
         toast.success('Application submitted!');
       }
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed to submit'); }
@@ -365,10 +367,19 @@ const CareersPage = () => {
 
           {/* Success State */}
           {applied && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 text-center">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 text-center" data-testid="applied-success">
               <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
               <h2 className="text-xl font-bold text-slate-900 mb-2">Application Submitted!</h2>
-              <p className="text-slate-600">Thank you for your interest. Our team will review your application and get back to you soon.</p>
+              <p className="text-slate-600 mb-1">Thank you for your interest. Our team will review your application and get back to you soon.</p>
+              {appliedId && (
+                <>
+                  <p className="text-sm text-slate-500 mb-4">Your Application ID: <span className="font-mono font-semibold text-slate-800">{appliedId}</span></p>
+                  <a href={`/candidate/${appliedId}`} className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-medium" data-testid="open-candidate-portal">
+                    Track My Application →
+                  </a>
+                  <p className="text-xs text-slate-400 mt-3">Bookmark <span className="font-mono">/candidate/{appliedId}</span> to check your status anytime.</p>
+                </>
+              )}
             </div>
           )}
         </div>

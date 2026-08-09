@@ -1,3 +1,51 @@
+## Implemented (Feb 27, 2026 — Public Candidate Portal)
+
+### Backend — Unified read-only hydration endpoint
+- **`GET /api/public/candidate/{application_id}`** — one-shot bundle returning:
+  - `application` snapshot (id, name, email, job_title, job_code, status, status_history, source, `supporting_docs` as booleans only)
+  - `timeline` — 5 milestones (Applied → Assessment → Interview → Offer → Joined) with `done` + `active` flags derived from status + child records
+  - `actions` — dynamic "next steps" cards (test to take, upcoming interview meet link, offer awaiting response) with hours-left countdowns
+  - `assessments` — redacted (never leaks `correct_index` or per-question breakdown)
+  - `interviews` — meet link only visible when `status='scheduled'`
+  - `offers` — with candidate-facing `pdf_url` + `respond_url` (only when status ∈ {generated, sent})
+  - `employee` + `onboarding` (task progress %) + `letters` (post-joining docs)
+- **Zero-leak redaction**: no FS paths, no internal admin metadata, only booleans + candidate URLs
+
+### Frontend — Two new public pages
+- **`/candidate/:appId`** — `CandidatePortal.jsx`:
+  - Personal header with hi-name + application ID + current status pill
+  - Interactive 5-step timeline with done (emerald) / active (blue-ring) / pending states
+  - Priority-sorted action cards (Take Test / Join Meeting / Review Offer) with countdown
+  - Collapsible sections: Assessments, Interviews, Offer letters (with PDF + respond CTAs), Welcome Aboard (post-joining) with onboarding progress bar + issued letters
+  - Full status history disclosure
+- **`/candidate/offer/:token`** — `CandidateOfferRespond.jsx`:
+  - Standalone accept/decline page linked from portal
+  - Compensation summary + Download PDF button
+  - Accept (one-click) / Decline (with reason textarea) with double-confirmation guard
+  - Already-responded state displays confirmation banner
+
+### Careers apply-success upgrade
+- Post-submission page now shows the fresh Application ID + a **"Track My Application"** CTA linking directly to `/candidate/{id}` — no more email hunt for candidates
+- Bookmark hint copy for future access
+
+### Testing
+- `backend/tests/test_candidate_portal.py` — 4 pytest scenarios (all pass): shape contract, offer-stage reflection, redaction guard, 404 handling
+- Frontend smoke verified: portal renders cleanly for a joined candidate, all 5 timeline dots emerald, error boundary works on invalid IDs
+
+### Files touched
+- **NEW** `backend/routes/candidate_portal.py` (unified hydration)
+- **NEW** `backend/tests/test_candidate_portal.py` (4 scenarios)
+- **NEW** `frontend/src/pages/CandidatePortal.jsx` (main portal)
+- **NEW** `frontend/src/pages/CandidateOfferRespond.jsx` (offer accept/decline)
+- `backend/server.py` — wired candidate_portal router
+- `frontend/src/App.js` — 2 new lazy routes
+- `frontend/src/pages/CareersPage.js` — applied-success now shows Track button
+
+### Careers spec status: ~97% shipped
+Only remaining items: email/SMS dispatch (integration work, not spec logic) + Phase A-D audit backfill (data hygiene, low priority).
+
+
+
 ## Refactored (Feb 27, 2026 — AdminCareers.js split into per-tab modules)
 
 ### What changed
