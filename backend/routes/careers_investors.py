@@ -166,9 +166,17 @@ async def apply_for_job(
     experience_years: int = Form(0),
     cover_letter: str = Form(""),
     linkedin: str = Form(""),
-    resume: UploadFile = File(...)
+    resume: UploadFile = File(...),
+    # Phase 3 extended (Feb 27 2026) — optional supporting documents
+    # and structured education / work history. All fields are optional
+    # so existing simple applications keep working unchanged.
+    aadhaar: Optional[UploadFile] = File(None),
+    pan: Optional[UploadFile] = File(None),
+    marksheet: Optional[UploadFile] = File(None),
+    education_json: str = Form("[]"),        # JSON list of {degree, institution, year, marks}
+    work_history_json: str = Form("[]"),     # JSON list of {company, role, from, to, description}
 ):
-    """Public: Apply for a job with resume upload."""
+    """Public: Apply for a job with resume + optional supporting docs."""
     try:
         job = await db.job_postings.find_one({"job_id": job_id, "is_active": True})
         if not job:
@@ -194,6 +202,40 @@ async def apply_for_job(
         with open(filepath, "wb") as f:
             f.write(contents)
 
+        # Supporting-doc helper — each doc is optional, capped at 5 MB.
+        async def _save_supporting(up: Optional[UploadFile], kind: str) -> Optional[str]:
+            if up is None or not up.filename:
+                return None
+            data = await up.read()
+            if len(data) > 5 * 1024 * 1024:
+                raise HTTPException(status_code=400, detail=f"{kind} must be under 5MB")
+            docs_dir = "/app/backend/uploads/documents"
+            os.makedirs(docs_dir, exist_ok=True)
+            ext2 = up.filename.split(".")[-1] if "." in up.filename else "pdf"
+            fpath = os.path.join(docs_dir, f"{app_id}-{kind}.{ext2}")
+            with open(fpath, "wb") as f:
+                f.write(data)
+            return fpath
+
+        aadhaar_path = await _save_supporting(aadhaar, "aadhaar")
+        pan_path = await _save_supporting(pan, "pan")
+        marksheet_path = await _save_supporting(marksheet, "marksheet")
+
+        # Parse structured lists — accept malformed JSON gracefully.
+        import json as _json
+        try:
+            education = _json.loads(education_json) if education_json else []
+            if not isinstance(education, list):
+                education = []
+        except Exception:
+            education = []
+        try:
+            work_history = _json.loads(work_history_json) if work_history_json else []
+            if not isinstance(work_history, list):
+                work_history = []
+        except Exception:
+            work_history = []
+
         now = datetime.now(timezone.utc).isoformat()
         application = {
             "application_id": app_id,
@@ -207,6 +249,12 @@ async def apply_for_job(
             "linkedin": linkedin,
             "resume_path": filepath,
             "resume_filename": resume.filename,
+            # Phase 3 extended — supporting docs + structured history
+            "aadhaar_path": aadhaar_path,
+            "pan_path": pan_path,
+            "marksheet_path": marksheet_path,
+            "education": education,
+            "work_history": work_history,
             "status": "new",  # new, reviewed, shortlisted, interview, hired, rejected
             "created_at": now
         }
