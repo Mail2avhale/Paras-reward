@@ -1,0 +1,29 @@
+{
+  "summary": "Phase H (Separations + HR Analytics + Health) end-to-end verification. Backend: 6/6 pytest scenarios pass. Frontend: Reports tab renders with both sub-panes, all 6 KPI cards populated with real data (288 applications, 133 active employees, 257 open jobs, 875 vacancies, 11 filled, 864 remaining), time-to-hire (0d, sample 155), attrition (2.21%, separated 3), pending-actions (5 keys), funnel, source ROI table, headcount by department. Separations pane lists 9 rows (mix of FNF_CALCULATED / CANCELLED / COMPLETED). Init modal opens with employee/kind/notice/LWD/reason fields. Detail modal opens with 5 clearance items (it/admin/finance/hr/manager), F&F card showing gross ₹10,000, deductions ₹0, net payable ₹10,000, Mark as Paid + Complete Separation buttons. All required data-testids present.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Reports → HR Analytics → Recruitment Source ROI", "issues": ["Duplicate 'Website' source row appears twice (Website 253→155, Website 12→0). Backend /reports/hr-dashboard is not deduplicating source_roi entries — likely caused by case/whitespace mismatch in recruitment_source values across seeded data. Consider normalising source names (lower/trim) before aggregation."]},
+      {"screen": "Reports tab", "issues": ["React warning: 'Encountered two children with the same key' emitted twice on mount. Root cause: source_roi array contains duplicate 'Website' keyed rows. Fix backend dedupe or use index-based keys in AnalyticsPane source_roi map."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_careers_phase_h.py", "/app/test_reports/pytest/pytest_phase_h.xml"],
+  "action_items": [
+    "Backend: normalise/dedupe recruitment_source aggregation in GET /api/public/reports/hr-dashboard (currently returns 'Website' twice with different casing/whitespace).",
+    "Frontend: guard against duplicate keys in AnalyticsPane source_roi rendering (either use index or backend fix)."
+  ],
+  "critical_code_review_comments": [
+    "AdminCareers.js is 2339 lines — well past the 700-line guideline. Split into per-tab child components (already partially done inline: ReportsTab/AnalyticsPane/SeparationsPane/SeparationInitModal/SeparationDetailModal) but move into /pages/Admin/AdminCareers/ subfolder.",
+    "SeparationDetailModal outer onClick={onClose} correctly stops propagation on inner div; verified working."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin@test.com / mobile 9999999999 / PIN 153759 (2-step PIN grid — 6 boxes maxlength=1)",
+  "seed_data_creation": "test_careers_phase_h.py auto-seeds one employee per test via _seed_employee() using job create → apply → offer generate/accept → employees/from-application.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Login flow: fill single input with '9999999999', click Sign In, then type PIN '153759' digit-by-digit into 6 maxlength=1 boxes (auto-advances). No 2nd Sign In click needed — form auto-submits when 6th digit entered. Reports tab lazy-fetches on activation; default date range is Jan 1 → today. Duplicate 'Website' source row in source_roi is a data-quality issue not blocking — fix in backend aggregation.",
+  "rca of the issue": "N/A — no blocking bugs. Only minor cosmetic duplicate-key warning caused by source_roi returning two 'Website' entries; fix is backend-side normalisation."
+}
