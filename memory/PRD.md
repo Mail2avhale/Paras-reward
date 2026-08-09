@@ -1,3 +1,64 @@
+## Implemented (Feb 27, 2026 — Careers Phase B + Phase C + Employee Master Skeleton, per `careers.docx` §15-18, §21-26, §28, §71, §74)
+
+### Phase B — Online Tests + Interviews + Scorecards (§15, §16-18, §74)
+- **Test Bank collection** `test_bank`: reusable question sets per department/role with `total_marks`, `passing_marks`, `duration_minutes`, `negative_marking`, `is_active`. Endpoints:
+  - `POST /api/public/tests` — create (admin)
+  - `GET /api/public/tests` — list (with `?active_only=true`)
+  - `GET /api/public/tests/{id}` — fetch (strips `correct_index` unless `?include_answers=true`)
+  - `PUT /api/public/tests/{id}` — update
+  - `DELETE /api/public/tests/{id}` — delete
+- **Test assignment + attempt** collection `test_assignments`:
+  - `POST /api/public/tests/assign` → creates a single-use token, deadline, auto-flips application to `test_assigned`
+  - `GET /api/public/tests/attempt/{token}` — candidate fetch, auto-flips `pending → in_progress`, refuses if deadline passed
+  - `POST /api/public/tests/attempt/submit` — auto-scores (with optional negative marking), computes percentage vs `passing_marks`, auto-flips app to `test_completed` (pass) or `test_failed` (fail), stores full per-question breakdown; second submit rejected
+  - `GET /api/public/tests/assignments` — admin list, filterable by application
+- **Interview scheduler** collection `interviews`:
+  - `POST /api/public/interviews/schedule` — kind ∈ `{hr, department, panel, practical}`, mode ∈ `{online, offline}`, panelists, meet_link. Auto-flips app to `hr_interview_scheduled` / `department_interview_scheduled` accordingly
+  - `POST /api/public/interviews/{id}/scorecard` — appends reviewer scorecard, computes per-card average from ratings dict, aggregates `overall_avg` across all panellists, auto-flips app to `*_completed`
+  - `GET /api/public/interviews` (list) + `GET /api/public/interviews/{id}` (detail w/ overall_avg)
+
+### Phase C — Offer Management + PDF + Accept/Decline (§21-26, §71)
+- Collection `offers` with 5-state lifecycle: `generated → sent → accepted/declined/withdrawn`
+- `POST /api/public/offers/generate` — validates `hiring_type ∈ {Fresher / Trainee, Internship, Direct Hire, Probation, Contract}`, generates a real **PDF offer letter** using `reportlab` (SimpleDocTemplate + custom styling — company header, compensation table, probation clause, T&C, HR signature block), returns `token` for candidate response
+- `GET /api/public/offers/{id}/pdf` — streams the generated PDF (rebuilds lazily if file missing)
+- `POST /api/public/offers/{id}/send` — marks offer sent, flips app to `offer_sent` (email delivery deferred to Phase G)
+- `GET /api/public/offers/respond/{token}` — candidate fetches offer via token
+- `POST /api/public/offers/respond` — accept → app flows `offer_accepted` then auto-forwards to `joining_scheduled`; decline → app flows `offer_declined` with optional reason; second respond rejected
+- `GET /api/public/offers` list
+
+### Employee Master skeleton (§28, Phase D foundation)
+- Collection `employees` with `PR-EMP-#####` sequential IDs via `utils.id_counters.next_employee_id`
+- `POST /api/public/employees/from-application` — **idempotent**: creates employee record using accepted-offer details (falls back to any offer if none accepted), moves app to `joined` if not already. Returns `already_exists=true` on second call
+- `GET /api/public/employees?status=&department=` — list
+- `GET /api/public/employees/{employee_id}` — detail
+
+### Admin frontend
+- Two new tabs in `/admin/careers`: **Tests** (`tab-tests`) and **Employees** (`tab-employees`)
+- `TestBankModal` — dynamic multi-question test builder (title/dept/duration/pass %, add/remove questions, radio-select correct answer, per-question marks, multi-option support)
+- `QuickActionModal` — 4-in-1 modal for **Assign Test / Schedule Interview / Generate Offer / Convert to Employee** launched from the ApplicationModal via 4 new HR-action buttons (`hr-action-assign-test`, `hr-action-schedule-interview`, `hr-action-generate-offer`, `hr-action-convert-employee`)
+- `EmployeesTab` — read-only master employee list
+
+### Testing
+- `backend/tests/test_careers_phase_bc.py` — 8 pytest scenarios (all pass)
+- Full careers suite: **44/44 pass** (Phase 3 ext + A + B + C + Employee + mall + auth)
+- `/app/test_reports/iteration_284.json` — backend 100%, frontend 100%, zero critical/minor issues
+
+### Files touched
+- **NEW** `backend/routes/careers_phase_b.py` (test bank + interviews)
+- **NEW** `backend/routes/careers_phase_c.py` (offers + PDF + employee master)
+- **NEW** `backend/tests/test_careers_phase_bc.py` (8 scenarios)
+- `backend/server.py` — wired 2 new routers
+- `frontend/src/pages/Admin/AdminCareers.js` — Tests & Employees tabs, TestBankModal, QuickActionModal, HR action buttons
+
+### Careers roadmap remaining (~55-60% of `careers.docx` still to build)
+- **Phase D — Employee Master expansion + Onboarding** (§27-30): onboarding checklist, org hierarchy, district team management, Appointment / Confirmation / Increment / Promotion / Experience PDF letters (§71)
+- **Phase E — Attendance + Leave + Daily Reports** (§32, §42-43)
+- **Phase F — Performance + Increment + Promotion + Incentive** (§34-41)
+- **Phase G — RBAC + Audit + Notifications + Analytics** (§46-53, §49-50)
+- **Phase H — Separation + Reports + Final QA per §80** (§69)
+
+
+
 ## Implemented (Feb 27, 2026 — Careers Phase A: Recruitment Core, per `careers.docx` §8/§10/§12/§44/§55/§56)
 
 ### Spec-compliant identifiers (§8, §55)
