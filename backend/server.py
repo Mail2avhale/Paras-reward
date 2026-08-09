@@ -119,6 +119,8 @@ from routes.employee_management import router as employee_router, set_db as set_
 from routes.employee_reports import router as employee_reports_router, set_db as set_employee_reports_db
 from routes.community import router as community_router, set_db as set_community_db, set_cache as set_community_cache, auto_backfill_success_stories
 from routes.careers_investors import router as public_pages_router, set_db as set_public_pages_db
+from routes.careers_phase_b import router as careers_b_router, set_db as set_careers_b_db
+from routes.careers_phase_c import router as careers_c_router, set_db as set_careers_c_db
 from routes.social_profile import router as social_profile_router, set_db as set_social_profile_db
 from routes.live_ticker import router as live_ticker_router, set_db as set_live_ticker_db, set_cache as set_live_ticker_cache
 
@@ -37268,6 +37270,8 @@ api_router.include_router(employee_router)
 api_router.include_router(employee_reports_router)
 api_router.include_router(community_router)
 api_router.include_router(public_pages_router)
+api_router.include_router(careers_b_router)
+api_router.include_router(careers_c_router)
 # Social Profile Router (Phase 1 refactor - extracted from server.py April 2026)
 set_social_profile_db(db)
 api_router.include_router(social_profile_router)
@@ -37408,6 +37412,8 @@ set_community_prc_rate_getter(get_dynamic_prc_rate)
 from routes.community_moderation import set_db as set_community_moderation_db
 set_community_moderation_db(db)
 set_public_pages_db(db)
+set_careers_b_db(db)
+set_careers_c_db(db)
 
 # Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
 # set_eko_db(db)
