@@ -45,7 +45,7 @@ const CareersPage = () => {
   const fileRef = useRef(null);
 
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', experience_years: 0, cover_letter: '', linkedin: ''
+    name: '', email: '', phone: '', experience_years: 0, cover_letter: '', linkedin: '', recruitment_source: 'Website'
   });
   const [resume, setResume] = useState(null);
   // Phase 3 extended — optional supporting documents & structured history
@@ -105,6 +105,7 @@ const CareersPage = () => {
       fd.append('cover_letter', form.cover_letter);
       fd.append('linkedin', form.linkedin);
       fd.append('resume', resume);
+      fd.append('recruitment_source', form.recruitment_source || 'Website');
       if (aadhaar) fd.append('aadhaar', aadhaar);
       if (pan) fd.append('pan', pan);
       if (marksheet) fd.append('marksheet', marksheet);
@@ -234,6 +235,19 @@ const CareersPage = () => {
                 <div className="md:col-span-2">
                   <label className="text-xs text-slate-500 mb-1 block">LinkedIn Profile</label>
                   <input type="url" value={form.linkedin} onChange={e => setForm(p => ({ ...p, linkedin: e.target.value }))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" placeholder="https://linkedin.com/in/yourprofile" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs text-slate-500 mb-1 block">How did you hear about us?</label>
+                  <select
+                    value={form.recruitment_source}
+                    onChange={e => setForm(p => ({ ...p, recruitment_source: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white"
+                    data-testid="apply-source"
+                  >
+                    {['Website', 'LinkedIn', 'Facebook', 'Instagram', 'WhatsApp', 'Telegram', 'College', 'Employee Referral', 'Job Portal', 'Other'].map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="md:col-span-2">
                   <label className="text-xs text-slate-500 mb-1 block">Cover Letter</label>

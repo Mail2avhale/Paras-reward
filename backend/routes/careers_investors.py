@@ -10,10 +10,14 @@ import logging
 import uuid
 import os
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+
+from utils.id_counters import (
+    next_application_id, next_job_code, slugify, unique_slug,
+)
 
 router = APIRouter(prefix="/public", tags=["Public Pages"])
 
@@ -32,6 +36,59 @@ JOB_DEPARTMENTS = [
     "Technology", "Marketing", "Sales", "Operations",
     "Finance", "Human Resources", "Customer Support",
     "Business Development", "Design", "Management"
+]
+
+# ==================== Phase A: 30-status pipeline (spec §10) ====================
+APPLICATION_STATUSES: List[str] = [
+    "application_received",       # 1
+    "under_screening",             # 2
+    "shortlisted",                 # 3
+    "test_assigned",               # 4
+    "test_completed",              # 5
+    "test_failed",                 # 6
+    "hr_interview_scheduled",      # 7
+    "hr_interview_completed",      # 8
+    "department_interview_scheduled",   # 9
+    "department_interview_completed",   # 10
+    "management_review",           # 11
+    "selected",                    # 12
+    "waitlisted",                  # 13
+    "documents_requested",         # 14
+    "documents_under_verification",  # 15
+    "documents_verified",          # 16
+    "documents_rejected",          # 17
+    "offer_generated",             # 18
+    "offer_sent",                  # 19
+    "offer_accepted",              # 20
+    "offer_declined",              # 21
+    "joining_scheduled",           # 22
+    "joined",                      # 23
+    "internship",                  # 24
+    "trainee",                     # 25
+    "probation",                   # 26
+    "regular_employee",            # 27
+    "rejected",                    # 28
+    "application_withdrawn",       # 29
+    "application_closed",          # 30
+]
+# Legacy statuses kept for backwards-compat with existing records
+_LEGACY_STATUSES = ["new", "reviewed", "interview", "hired"]
+_STATUS_ALIAS = {
+    "new": "application_received",
+    "reviewed": "under_screening",
+    "interview": "hr_interview_scheduled",
+    "hired": "joined",
+}
+ALL_ACCEPTED_STATUSES = APPLICATION_STATUSES + _LEGACY_STATUSES
+
+# Job lifecycle states (spec §55)
+JOB_STATUSES = ["draft", "scheduled", "published", "paused", "closing_soon", "closed", "archived"]
+
+# Recruitment sources (spec §44)
+RECRUITMENT_SOURCES = [
+    "Website", "LinkedIn", "Facebook", "Instagram",
+    "WhatsApp", "Telegram", "College", "Employee Referral",
+    "Job Portal", "Other",
 ]
 
 
@@ -58,34 +115,61 @@ class JobPostingRequest(BaseModel):
     benefits: str = ""
     is_active: bool = True
     admin_id: str = ""
+    # Phase A additions (spec §55, §56)
+    vacancy_count: int = 1
+    application_deadline: Optional[str] = None  # ISO date string
+    auto_close_when_filled: bool = False
+    work_mode: Optional[str] = None  # Office / Field / WFH / Hybrid
+    hiring_type: Optional[List[str]] = None  # spec §21 — configurable list
+    qualification: Optional[str] = None
+    skills: Optional[str] = None
 
 
 @router.post("/careers/jobs/create")
 async def create_job(data: JobPostingRequest):
     try:
         now = datetime.now(timezone.utc).isoformat()
+        # Phase A: legacy uuid job_id kept for backwards-compat with old
+        # references + admin URLs; the spec-facing identifier is job_code.
         job_id = f"JOB-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+        job_code = await next_job_code(db)
+        slug = await unique_slug(db, slugify(data.title))
+        job_status = "published" if data.is_active else "draft"
 
         job = {
             "job_id": job_id,
+            "job_code": job_code,
+            "slug": slug,
             "title": data.title,
             "department": data.department,
             "location": data.location,
             "job_type": data.job_type,
+            "work_mode": data.work_mode or data.job_type,
+            "hiring_type": data.hiring_type or [],
             "experience_min": data.experience_min,
             "experience_max": data.experience_max,
             "salary_min": data.salary_min,
             "salary_max": data.salary_max,
             "show_salary": data.show_salary,
+            "qualification": data.qualification or "",
+            "skills": data.skills or "",
             "description": data.description,
             "requirements": data.requirements,
             "responsibilities": data.responsibilities,
             "benefits": data.benefits,
             "is_active": data.is_active,
+            "job_status": job_status,
+            "vacancy_count": max(1, int(data.vacancy_count or 1)),
+            "application_deadline": data.application_deadline,
+            "auto_close_when_filled": bool(data.auto_close_when_filled),
             "application_count": 0,
+            "shortlisted_count": 0,
+            "selected_count": 0,
+            "joined_count": 0,
             "created_by": data.admin_id,
             "created_at": now,
-            "updated_at": now
+            "updated_at": now,
+            "published_at": now if data.is_active else None,
         }
 
         await db.job_postings.insert_one(job)
@@ -128,9 +212,26 @@ async def delete_job(job_id: str):
 
 @router.get("/careers/jobs")
 async def list_jobs(active_only: bool = True):
-    """Public: Get all active job postings."""
+    """Public: Get all job postings. When ``active_only`` (default), only jobs
+    with ``job_status='published'`` (or legacy ``is_active=True`` for
+    unmigrated records) and non-expired deadline are returned.
+    """
     try:
-        query = {"is_active": True} if active_only else {}
+        now_iso = datetime.now(timezone.utc).isoformat()
+        if active_only:
+            query = {
+                "$and": [
+                    {"$or": [{"job_status": "published"}, {"job_status": {"$exists": False}, "is_active": True}]},
+                    {"$or": [
+                        {"application_deadline": None},
+                        {"application_deadline": {"$exists": False}},
+                        {"application_deadline": ""},
+                        {"application_deadline": {"$gte": now_iso}},
+                    ]},
+                ]
+            }
+        else:
+            query = {}
         jobs = await db.job_postings.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
         return {"jobs": jobs, "total": len(jobs)}
     except Exception as e:
@@ -152,7 +253,171 @@ async def get_job_detail(job_id: str):
 
 @router.get("/careers/meta")
 async def get_career_meta():
-    return {"departments": JOB_DEPARTMENTS, "job_types": JOB_TYPES, "company": COMPANY}
+    return {
+        "departments": JOB_DEPARTMENTS,
+        "job_types": JOB_TYPES,
+        "company": COMPANY,
+        # Phase A additions (spec §10, §21, §44, §55)
+        "application_statuses": APPLICATION_STATUSES,
+        "job_statuses": JOB_STATUSES,
+        "recruitment_sources": RECRUITMENT_SOURCES,
+        "hiring_types": ["Fresher / Trainee", "Internship", "Experienced", "Direct Hire", "Probation", "Contract"],
+        "work_modes": ["Office", "Field", "Work From Home", "Hybrid"],
+        "employment_types": ["Full Time", "Part Time", "Internship", "Trainee", "Contract"],
+        "experience_ranges": ["Fresher", "0-1 Year", "1-3 Years", "3-5 Years", "5+ Years", "Any Experience"],
+        "qualifications": ["10th Pass", "12th Pass", "Undergraduate", "Graduate", "Post Graduate", "Diploma", "Any Qualification"],
+    }
+
+
+# ==================== Phase A: Job lifecycle actions (spec §55) ====================
+
+@router.post("/careers/jobs/{job_id}/lifecycle")
+async def job_lifecycle_action(job_id: str, request: Request):
+    """Admin: change a job posting's lifecycle status.
+
+    ``action`` in body must be one of: publish, unpublish, pause, reopen,
+    close, archive. This is a thin wrapper around a well-defined state
+    machine so the admin UI doesn't have to guess ``job_status`` values.
+    """
+    try:
+        data = await request.json()
+        action = (data.get("action") or "").strip().lower()
+
+        state_map = {
+            "publish": {"job_status": "published", "is_active": True},
+            "unpublish": {"job_status": "draft", "is_active": False},
+            "pause": {"job_status": "paused", "is_active": False},
+            "reopen": {"job_status": "published", "is_active": True},
+            "close": {"job_status": "closed", "is_active": False},
+            "archive": {"job_status": "archived", "is_active": False},
+        }
+        if action not in state_map:
+            raise HTTPException(status_code=400, detail=f"Invalid action. Use one of: {sorted(state_map.keys())}")
+
+        now = datetime.now(timezone.utc).isoformat()
+        set_ops = dict(state_map[action])
+        set_ops["updated_at"] = now
+        if action == "publish" or action == "reopen":
+            set_ops["published_at"] = now
+        if action == "close":
+            set_ops["closed_at"] = now
+        if action == "archive":
+            set_ops["archived_at"] = now
+
+        result = await db.job_postings.update_one({"job_id": job_id}, {"$set": set_ops})
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Job not found")
+        return {"success": True, "action": action, "job_status": set_ops["job_status"]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/careers/jobs/{job_id}/duplicate")
+async def duplicate_job(job_id: str, request: Request):
+    """Admin: create a new draft job from an existing one (spec §55 Duplicate)."""
+    try:
+        source = await db.job_postings.find_one({"job_id": job_id})
+        if not source:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        data = await request.json() if request.headers.get("content-length") else {}
+        admin_id = (data.get("admin_id") or "") if isinstance(data, dict) else ""
+
+        now = datetime.now(timezone.utc).isoformat()
+        new_job_id = f"JOB-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+        new_job_code = await next_job_code(db)
+        base_slug = slugify((source.get("title") or "job") + "-copy")
+        new_slug = await unique_slug(db, base_slug)
+
+        clone = {k: v for k, v in source.items() if k not in ("_id", "job_id", "job_code", "slug", "created_at", "updated_at", "published_at", "closed_at", "archived_at", "application_count", "shortlisted_count", "selected_count", "joined_count")}
+        clone.update({
+            "job_id": new_job_id,
+            "job_code": new_job_code,
+            "slug": new_slug,
+            "title": clone.get("title", "Untitled") + " (Copy)",
+            "is_active": False,
+            "job_status": "draft",
+            "application_count": 0,
+            "shortlisted_count": 0,
+            "selected_count": 0,
+            "joined_count": 0,
+            "created_by": admin_id or clone.get("created_by", ""),
+            "created_at": now,
+            "updated_at": now,
+            "published_at": None,
+        })
+
+        await db.job_postings.insert_one(clone)
+        clone.pop("_id", None)
+        return {"success": True, "message": "Job duplicated (draft)", "job": clone}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Phase A: Kanban view (spec §12) ====================
+
+@router.get("/careers/kanban")
+async def recruitment_kanban(job_id: Optional[str] = None):
+    """Admin: return applications grouped by the 30 spec statuses.
+
+    Optional ``job_id`` filter narrows the board to a single job. The public
+    admin UI consumes this to render the recruitment pipeline.
+    """
+    try:
+        query = {}
+        if job_id:
+            query["job_id"] = job_id
+
+        apps = await db.job_applications.find(
+            query,
+            {
+                "_id": 0,
+                "application_id": 1, "name": 1, "email": 1, "phone": 1,
+                "job_id": 1, "job_code": 1, "job_title": 1,
+                "status": 1, "experience_years": 1,
+                "recruitment_source": 1, "created_at": 1, "updated_at": 1,
+            },
+        ).sort("created_at", -1).to_list(2000)
+
+        # Bucket by canonical status; alias legacy → canonical for display
+        columns = {s: [] for s in APPLICATION_STATUSES}
+        for a in apps:
+            canonical = _STATUS_ALIAS.get(a.get("status"), a.get("status"))
+            if canonical not in columns:
+                canonical = "application_received"
+            a["status"] = canonical
+            columns[canonical].append(a)
+
+        # Emit an ordered list for stable frontend rendering
+        board = [{
+            "status": s,
+            "label": s.replace("_", " ").title(),
+            "count": len(columns[s]),
+            "applications": columns[s],
+        } for s in APPLICATION_STATUSES]
+
+        return {"board": board, "total_applications": len(apps)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Phase A: Public job detail by slug (spec §55) ====================
+
+@router.get("/careers/jobs/by-slug/{slug}")
+async def get_job_by_slug(slug: str):
+    try:
+        job = await db.job_postings.find_one({"slug": slug}, {"_id": 0})
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        return {"job": job}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ==================== CAREER: APPLICATIONS ====================
@@ -175,15 +440,47 @@ async def apply_for_job(
     marksheet: Optional[UploadFile] = File(None),
     education_json: str = Form("[]"),        # JSON list of {degree, institution, year, marks}
     work_history_json: str = Form("[]"),     # JSON list of {company, role, from, to, description}
+    # Phase A additions (spec §44 recruitment source)
+    recruitment_source: str = Form("Website"),
 ):
     """Public: Apply for a job with resume + optional supporting docs."""
     try:
-        job = await db.job_postings.find_one({"job_id": job_id, "is_active": True})
+        # Job lookup: accept either legacy job_id, new job_code, or slug so
+        # both old and new frontends keep working.
+        job = await db.job_postings.find_one({
+            "$or": [
+                {"job_id": job_id},
+                {"job_code": job_id},
+                {"slug": job_id},
+            ]
+        })
         if not job:
-            raise HTTPException(status_code=404, detail="Job not found or no longer active")
+            raise HTTPException(status_code=404, detail="Job not found")
 
+        # Spec §55/§56: gate applications by lifecycle status + deadline + vacancy
+        job_status = job.get("job_status") or ("published" if job.get("is_active") else "draft")
+        if job_status in {"draft", "paused", "closed", "archived"}:
+            raise HTTPException(status_code=400, detail=f"This job is no longer accepting applications (status: {job_status})")
+
+        deadline = job.get("application_deadline")
+        if deadline:
+            try:
+                dt = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) > dt:
+                    raise HTTPException(status_code=400, detail="Application deadline has passed")
+            except HTTPException:
+                raise
+            except Exception:
+                pass  # malformed deadline stored — ignore rather than block
+
+        if job.get("auto_close_when_filled") and job.get("joined_count", 0) >= job.get("vacancy_count", 0):
+            raise HTTPException(status_code=400, detail="All vacancies for this position have been filled")
+
+        email_norm = email.lower().strip()
         # Check duplicate
-        existing = await db.job_applications.find_one({"job_id": job_id, "email": email})
+        existing = await db.job_applications.find_one({"job_id": job.get("job_id"), "email": email_norm})
         if existing:
             raise HTTPException(status_code=400, detail="You have already applied for this position")
 
@@ -195,7 +492,8 @@ async def apply_for_job(
         upload_dir = "/app/backend/uploads/resumes"
         os.makedirs(upload_dir, exist_ok=True)
         ext = resume.filename.split(".")[-1] if "." in resume.filename else "pdf"
-        app_id = f"APP-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{str(uuid.uuid4())[:6].upper()}"
+        # Phase A: spec-compliant sequential Application ID (spec §8)
+        app_id = await next_application_id(db)
         filename = f"{app_id}.{ext}"
         filepath = os.path.join(upload_dir, filename)
 
@@ -237,12 +535,20 @@ async def apply_for_job(
             work_history = []
 
         now = datetime.now(timezone.utc).isoformat()
+        # Normalise source
+        rsource = (recruitment_source or "Website").strip()
+        if rsource not in RECRUITMENT_SOURCES:
+            rsource = "Other"
+
+        initial_status = "application_received"
         application = {
             "application_id": app_id,
-            "job_id": job_id,
+            "job_id": job.get("job_id"),
+            "job_code": job.get("job_code"),
+            "job_slug": job.get("slug"),
             "job_title": job.get("title", ""),
             "name": name,
-            "email": email,
+            "email": email_norm,
             "phone": phone,
             "experience_years": experience_years,
             "cover_letter": cover_letter,
@@ -255,14 +561,24 @@ async def apply_for_job(
             "marksheet_path": marksheet_path,
             "education": education,
             "work_history": work_history,
-            "status": "new",  # new, reviewed, shortlisted, interview, hired, rejected
-            "created_at": now
+            # Phase A: spec-compliant status + history + source
+            "status": initial_status,
+            "status_history": [{
+                "from": None,
+                "to": initial_status,
+                "by": "system",
+                "at": now,
+                "comment": "Application submitted",
+            }],
+            "recruitment_source": rsource,
+            "created_at": now,
+            "updated_at": now,
         }
 
         await db.job_applications.insert_one(application)
-        await db.job_postings.update_one({"job_id": job_id}, {"$inc": {"application_count": 1}})
+        await db.job_postings.update_one({"job_id": job.get("job_id")}, {"$inc": {"application_count": 1}})
 
-        return {"success": True, "message": "Application submitted successfully!", "application_id": app_id}
+        return {"success": True, "message": "Application submitted successfully!", "application_id": app_id, "job_code": job.get("job_code")}
     except HTTPException:
         raise
     except Exception as e:
@@ -301,18 +617,64 @@ async def list_applications(job_id: Optional[str] = None, status: Optional[str] 
 async def update_application_status(app_id: str, request: Request):
     try:
         data = await request.json()
-        new_status = data.get("status")
-        valid = ["new", "reviewed", "shortlisted", "interview", "hired", "rejected"]
-        if new_status not in valid:
-            raise HTTPException(status_code=400, detail=f"Invalid status. Use: {valid}")
+        raw_status = (data.get("status") or "").strip()
+        # Normalize legacy status aliases to spec-compliant names
+        new_status = _STATUS_ALIAS.get(raw_status, raw_status)
+        admin_id = data.get("admin_id", "admin")
+        comment = data.get("comment", "")
 
-        result = await db.job_applications.update_one(
-            {"application_id": app_id},
-            {"$set": {"status": new_status, "updated_at": datetime.now(timezone.utc).isoformat()}}
-        )
-        if result.matched_count == 0:
+        if new_status not in ALL_ACCEPTED_STATUSES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status. Use one of the 30 spec-compliant statuses: {APPLICATION_STATUSES}"
+            )
+
+        app = await db.job_applications.find_one({"application_id": app_id})
+        if not app:
             raise HTTPException(status_code=404, detail="Application not found")
-        return {"success": True, "message": f"Status updated to {new_status}"}
+
+        prev = app.get("status")
+        now = datetime.now(timezone.utc).isoformat()
+        history_entry = {
+            "from": prev,
+            "to": new_status,
+            "by": admin_id,
+            "at": now,
+            "comment": comment,
+        }
+
+        await db.job_applications.update_one(
+            {"application_id": app_id},
+            {
+                "$set": {"status": new_status, "updated_at": now},
+                "$push": {"status_history": history_entry},
+            },
+        )
+
+        # Phase A: mirror aggregate counters on the parent job posting so the
+        # public/admin UI can display accurate funnel data without a full scan.
+        job_updates = {}
+        if new_status == "shortlisted" and prev != "shortlisted":
+            job_updates["shortlisted_count"] = 1
+        if new_status == "selected" and prev != "selected":
+            job_updates["selected_count"] = 1
+        if new_status == "joined" and prev != "joined":
+            job_updates["joined_count"] = 1
+        if job_updates and app.get("job_id"):
+            await db.job_postings.update_one(
+                {"job_id": app["job_id"]},
+                {"$inc": job_updates},
+            )
+            # Auto-close job when vacancies filled (spec §55 auto_close_when_filled)
+            if "joined_count" in job_updates:
+                job = await db.job_postings.find_one({"job_id": app["job_id"]})
+                if job and job.get("auto_close_when_filled") and job.get("joined_count", 0) >= job.get("vacancy_count", 0):
+                    await db.job_postings.update_one(
+                        {"job_id": app["job_id"]},
+                        {"$set": {"job_status": "closed", "is_active": False, "closed_at": now}},
+                    )
+
+        return {"success": True, "message": f"Status updated to {new_status}", "status": new_status}
     except HTTPException:
         raise
     except Exception as e:

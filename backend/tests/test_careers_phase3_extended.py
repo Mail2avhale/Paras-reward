@@ -60,7 +60,8 @@ def test_apply_with_all_documents_and_lists(job_id):
     body = r.json()
     assert body["success"] is True
     app_id = body["application_id"]
-    assert app_id.startswith("APP-")
+    # Phase A: spec-compliant sequential IDs — PR-HR-YYYY-#####
+    assert app_id.startswith("PR-HR-")
 
     # Resume download
     r2 = requests.get(f"{API}/public/careers/applications/{app_id}/resume", timeout=30)

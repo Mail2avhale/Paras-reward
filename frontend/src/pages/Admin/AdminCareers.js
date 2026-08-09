@@ -5,19 +5,68 @@ import {
   Briefcase, Plus, Edit2, Trash2, Users, FileText, Download,
   Loader2, X, Eye, Power, PowerOff, Search, Filter, RefreshCw,
   MessageSquare, Mail, Phone, Calendar, Building2, Clock,
-  CheckCircle, XCircle, UserCheck
+  CheckCircle, XCircle, UserCheck, LayoutGrid, ArrowRight
 } from 'lucide-react';
 
 import { API } from "../../lib/api";
 
+// Phase A: 30-status color map (spec §10). Legacy statuses aliased for
+// backwards compat so existing applications still render nicely.
 const STATUS_COLORS = {
+  // Legacy aliases (mapped server-side to canonical names)
   new: 'bg-blue-500/20 text-blue-600',
   reviewed: 'bg-yellow-500/20 text-yellow-600',
-  shortlisted: 'bg-emerald-500/20 text-emerald-600',
   interview: 'bg-purple-500/20 text-purple-600',
   hired: 'bg-green-500/30 text-green-600',
-  rejected: 'bg-red-500/20 text-red-600'
+  // Canonical 30 statuses
+  application_received: 'bg-blue-500/20 text-blue-600',
+  under_screening: 'bg-yellow-500/20 text-yellow-700',
+  shortlisted: 'bg-emerald-500/20 text-emerald-600',
+  test_assigned: 'bg-indigo-500/20 text-indigo-600',
+  test_completed: 'bg-indigo-500/30 text-indigo-700',
+  test_failed: 'bg-red-500/20 text-red-600',
+  hr_interview_scheduled: 'bg-purple-500/20 text-purple-600',
+  hr_interview_completed: 'bg-purple-500/30 text-purple-700',
+  department_interview_scheduled: 'bg-fuchsia-500/20 text-fuchsia-600',
+  department_interview_completed: 'bg-fuchsia-500/30 text-fuchsia-700',
+  management_review: 'bg-amber-500/20 text-amber-700',
+  selected: 'bg-emerald-500/30 text-emerald-700',
+  waitlisted: 'bg-yellow-500/30 text-yellow-700',
+  documents_requested: 'bg-sky-500/20 text-sky-600',
+  documents_under_verification: 'bg-sky-500/30 text-sky-700',
+  documents_verified: 'bg-teal-500/30 text-teal-700',
+  documents_rejected: 'bg-red-500/30 text-red-700',
+  offer_generated: 'bg-lime-500/20 text-lime-700',
+  offer_sent: 'bg-lime-500/30 text-lime-800',
+  offer_accepted: 'bg-green-500/30 text-green-700',
+  offer_declined: 'bg-red-500/25 text-red-700',
+  joining_scheduled: 'bg-cyan-500/20 text-cyan-700',
+  joined: 'bg-green-600/30 text-green-800',
+  internship: 'bg-violet-500/20 text-violet-700',
+  trainee: 'bg-violet-500/30 text-violet-800',
+  probation: 'bg-orange-500/20 text-orange-700',
+  regular_employee: 'bg-emerald-600/30 text-emerald-800',
+  rejected: 'bg-red-500/20 text-red-600',
+  application_withdrawn: 'bg-slate-400/30 text-slate-600',
+  application_closed: 'bg-slate-500/30 text-slate-700',
 };
+
+const formatStatus = (s) => (s || '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+// Phase A: canonical 30 statuses (spec §10). Legacy 6-status shorthand is
+// still accepted server-side but the admin UI drives the full list.
+const CANONICAL_STATUSES = [
+  'application_received', 'under_screening', 'shortlisted',
+  'test_assigned', 'test_completed', 'test_failed',
+  'hr_interview_scheduled', 'hr_interview_completed',
+  'department_interview_scheduled', 'department_interview_completed',
+  'management_review', 'selected', 'waitlisted',
+  'documents_requested', 'documents_under_verification', 'documents_verified', 'documents_rejected',
+  'offer_generated', 'offer_sent', 'offer_accepted', 'offer_declined',
+  'joining_scheduled', 'joined',
+  'internship', 'trainee', 'probation', 'regular_employee',
+  'rejected', 'application_withdrawn', 'application_closed'
+];
 
 const AdminCareers = () => {
   const admin = JSON.parse(localStorage.getItem('paras_user') || '{}');
@@ -41,6 +90,10 @@ const AdminCareers = () => {
   const [filterJob, setFilterJob] = useState('');
   const [appSearch, setAppSearch] = useState('');
   const [viewApp, setViewApp] = useState(null);
+  // Phase A: Kanban pipeline (spec §12)
+  const [board, setBoard] = useState([]);
+  const [kanbanJob, setKanbanJob] = useState('');
+  const [kanbanLoading, setKanbanLoading] = useState(false);
   const newJobForm = {
     title: '', department: '', location: 'Chatrapati Sambhaji Nagar, Maharashtra',
     job_type: 'Full-time', experience_min: 0, experience_max: 0,
@@ -90,6 +143,21 @@ const AdminCareers = () => {
   useEffect(() => {
     if (activeTab === 'applications') fetchApplications();
   }, [activeTab, fetchApplications]);
+
+  // Phase A: Kanban board fetcher
+  const fetchKanban = useCallback(async () => {
+    try {
+      setKanbanLoading(true);
+      const params = kanbanJob ? `?job_id=${encodeURIComponent(kanbanJob)}` : '';
+      const res = await axios.get(`${API}/public/careers/kanban${params}`);
+      setBoard(res.data?.board || []);
+    } catch { toast.error('Failed to load pipeline'); }
+    finally { setKanbanLoading(false); }
+  }, [kanbanJob]);
+
+  useEffect(() => {
+    if (activeTab === 'kanban') fetchKanban();
+  }, [activeTab, fetchKanban]);
 
   /* Job Actions */
   const openCreateModal = () => {
@@ -250,7 +318,8 @@ const AdminCareers = () => {
         <div className="flex gap-1 bg-slate-100 p-1 rounded-lg mb-4">
           {[
             { id: 'jobs', label: 'Job Postings', icon: Briefcase },
-            { id: 'applications', label: 'Applications', icon: Users }
+            { id: 'applications', label: 'Applications', icon: Users },
+            { id: 'kanban', label: 'Pipeline', icon: LayoutGrid }
           ].map(t => (
             <button
               key={t.id}
@@ -267,14 +336,15 @@ const AdminCareers = () => {
 
         {/* Content */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-          {activeTab === 'jobs' ? (
+          {activeTab === 'jobs' && (
             <JobsTab
               jobs={filteredJobs} loading={loading}
               filterActive={filterActive} setFilterActive={setFilterActive}
               search={jobSearch} setSearch={setJobSearch}
               onEdit={openEditModal} onToggle={toggleJobActive} onDelete={deleteJob}
             />
-          ) : (
+          )}
+          {activeTab === 'applications' && (
             <ApplicationsTab
               apps={filteredApps} loading={loading}
               jobs={jobs}
@@ -282,6 +352,17 @@ const AdminCareers = () => {
               filterJob={filterJob} setFilterJob={setFilterJob}
               search={appSearch} setSearch={setAppSearch}
               onView={setViewApp} onUpdateStatus={updateAppStatus} onDownloadResume={downloadResume}
+            />
+          )}
+          {activeTab === 'kanban' && (
+            <KanbanTab
+              board={board}
+              loading={kanbanLoading}
+              jobs={jobs}
+              kanbanJob={kanbanJob}
+              setKanbanJob={setKanbanJob}
+              onView={setViewApp}
+              onUpdateStatus={async (appId, status) => { await updateAppStatus(appId, status); fetchKanban(); }}
             />
           )}
         </div>
@@ -398,7 +479,7 @@ const ApplicationsTab = ({ apps, loading, jobs, filterStatus, setFilterStatus, f
       </div>
       <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" data-testid="filter-status">
         <option value="">All Statuses</option>
-        {['new','reviewed','shortlisted','interview','hired','rejected'].map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+        {CANONICAL_STATUSES.map(s => <option key={s} value={s}>{formatStatus(s)}</option>)}
       </select>
       <select value={filterJob} onChange={e => setFilterJob(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" data-testid="filter-job">
         <option value="">All Jobs</option>
@@ -419,7 +500,7 @@ const ApplicationsTab = ({ apps, loading, jobs, filterStatus, setFilterStatus, f
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <h4 className="font-semibold text-slate-900">{a.name}</h4>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[a.status] || 'bg-slate-200 text-slate-700'}`}>
-                    {a.status}
+                    {formatStatus(a.status)}
                   </span>
                   <span className="text-xs text-slate-500">• Applied for {a.job_title}</span>
                 </div>
@@ -437,7 +518,7 @@ const ApplicationsTab = ({ apps, loading, jobs, filterStatus, setFilterStatus, f
                   className="px-2 py-1 bg-white border border-slate-200 rounded text-xs"
                   data-testid={`status-${a.application_id}`}
                 >
-                  {['new','reviewed','shortlisted','interview','hired','rejected'].map(s => <option key={s} value={s}>{s}</option>)}
+                  {CANONICAL_STATUSES.map(s => <option key={s} value={s}>{formatStatus(s)}</option>)}
                 </select>
                 <button onClick={() => onDownloadResume(a.application_id)} title="Download Resume" className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg" data-testid={`resume-${a.application_id}`}>
                   <Download className="w-4 h-4" />
@@ -583,13 +664,40 @@ const ApplicationModal = ({ app, onClose, onUpdateStatus, onAddNote, onDownloadR
 
           <div>
             <p className="text-xs text-slate-500 mb-1">Status</p>
-            <div className="flex gap-2 flex-wrap">
-              {['new','reviewed','shortlisted','interview','hired','rejected'].map(s => (
-                <button key={s} onClick={() => onUpdateStatus(app.application_id, s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${app.status === s ? STATUS_COLORS[s] + ' ring-2 ring-current' : 'bg-white text-slate-500 hover:text-white'}`} data-testid={`modal-status-${s}`}>
-                  {s.charAt(0).toUpperCase()+s.slice(1)}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ring-2 ring-current ${STATUS_COLORS[app.status] || 'bg-slate-100 text-slate-600'}`} data-testid="current-status-badge">
+                {formatStatus(app.status)}
+              </span>
+              <select
+                value=""
+                onChange={e => { if (e.target.value) onUpdateStatus(app.application_id, e.target.value); }}
+                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900"
+                data-testid="modal-status-select"
+              >
+                <option value="">Move to…</option>
+                {CANONICAL_STATUSES.filter(s => s !== app.status).map(s => (
+                  <option key={s} value={s}>{formatStatus(s)}</option>
+                ))}
+              </select>
             </div>
+            {Array.isArray(app.status_history) && app.status_history.length > 0 && (
+              <details className="mt-2 text-xs text-slate-500">
+                <summary className="cursor-pointer hover:text-slate-700" data-testid="status-history-toggle">
+                  View history ({app.status_history.length})
+                </summary>
+                <div className="mt-2 space-y-1 max-h-40 overflow-y-auto bg-slate-50 border border-slate-200 rounded-lg p-2">
+                  {app.status_history.slice().reverse().map((h, i) => (
+                    <div key={i} className="flex items-center gap-2 text-[11px]">
+                      <span className="text-slate-400 shrink-0">{h.at?.slice(0, 16).replace('T', ' ')}</span>
+                      <span className="text-slate-600">
+                        {h.from ? formatStatus(h.from) : '—'} → <span className="font-semibold text-slate-800">{formatStatus(h.to)}</span>
+                      </span>
+                      <span className="text-slate-400">by {h.by || 'system'}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
           </div>
 
           <div>
@@ -655,6 +763,92 @@ const Field = ({ label, value }) => (
     <p className="text-xs text-slate-500">{label}</p>
     <p className="text-sm text-slate-200 truncate">{value || '—'}</p>
   </div>
+);
+
+/* ========== Phase A: Recruitment Pipeline (Kanban) ========== */
+const KanbanTab = ({ board, loading, jobs, kanbanJob, setKanbanJob, onView, onUpdateStatus }) => {
+  if (loading) return <div className="text-center py-10"><Loader2 className="w-8 h-8 animate-spin text-amber-500 mx-auto" /></div>;
+
+  const nonEmpty = board.filter(col => col.count > 0);
+  const totalApps = board.reduce((s, c) => s + c.count, 0);
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <select
+          value={kanbanJob}
+          onChange={e => setKanbanJob(e.target.value)}
+          className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900"
+          data-testid="kanban-job-filter"
+        >
+          <option value="">All jobs</option>
+          {jobs.map(j => (
+            <option key={j.job_id} value={j.job_id}>
+              {j.title} {j.job_code ? `(${j.job_code})` : ''}
+            </option>
+          ))}
+        </select>
+        <p className="text-sm text-slate-500">
+          Showing <span className="font-semibold text-slate-900">{totalApps}</span> applications across{' '}
+          <span className="font-semibold text-slate-900">{nonEmpty.length}</span> active stages
+        </p>
+      </div>
+
+      {totalApps === 0 ? (
+        <div className="text-center py-10 text-slate-500 text-sm" data-testid="kanban-empty">
+          No applications yet for the selected filter.
+        </div>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto pb-3" data-testid="kanban-board">
+          {board.map(col => (
+            <div key={col.status} className="min-w-[260px] w-[260px] shrink-0 bg-white border border-slate-200 rounded-lg" data-testid={`kanban-col-${col.status}`}>
+              <div className={`flex items-center justify-between px-3 py-2 border-b border-slate-200 rounded-t-lg ${STATUS_COLORS[col.status] || 'bg-slate-100 text-slate-700'}`}>
+                <span className="text-xs font-semibold uppercase tracking-wide truncate">{col.label}</span>
+                <span className="text-xs font-bold bg-white/70 text-slate-800 px-1.5 py-0.5 rounded">{col.count}</span>
+              </div>
+              <div className="p-2 space-y-2 max-h-[520px] overflow-y-auto">
+                {col.applications.length === 0 && (
+                  <p className="text-[11px] text-slate-400 text-center py-3">Empty</p>
+                )}
+                {col.applications.map(a => (
+                  <div key={a.application_id} className="bg-slate-50 border border-slate-200 hover:border-amber-400 rounded-lg p-2 cursor-pointer" onClick={() => onView(a)} data-testid={`kanban-card-${a.application_id}`}>
+                    <p className="text-sm font-semibold text-slate-900 truncate">{a.name}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{a.application_id}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{a.job_title}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[10px] text-slate-400">{a.recruitment_source || 'Website'}</span>
+                      <KanbanQuickMove appId={a.application_id} current={col.status} onUpdateStatus={onUpdateStatus} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const _KANBAN_QUICK_TRANSITIONS = [
+  'under_screening', 'shortlisted', 'test_assigned', 'hr_interview_scheduled',
+  'selected', 'documents_verified', 'offer_generated', 'offer_accepted',
+  'joined', 'rejected', 'application_withdrawn'
+];
+
+const KanbanQuickMove = ({ appId, current, onUpdateStatus }) => (
+  <select
+    value=""
+    onChange={e => { e.stopPropagation(); if (e.target.value) onUpdateStatus(appId, e.target.value); }}
+    onClick={e => e.stopPropagation()}
+    className="text-[10px] px-1 py-0.5 bg-white border border-slate-300 rounded"
+    data-testid={`kanban-move-${appId}`}
+  >
+    <option value="">Move…</option>
+    {_KANBAN_QUICK_TRANSITIONS.filter(s => s !== current).map(s => (
+      <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+    ))}
+  </select>
 );
 
 export default AdminCareers;
