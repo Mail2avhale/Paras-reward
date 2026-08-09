@@ -1,3 +1,58 @@
+## Implemented (Feb 27, 2026 — Careers Phase D + Attendance/Leave Core, per `careers.docx` §27-30, §32, §42-43, §71)
+
+### Phase D — Onboarding Checklist (§27)
+- Collection `employee_onboarding`: 10-task default checklist (Welcome email, ID card, laptop, email provisioning, ERP access, bank details, PF/ESI, buddy, orientation) — customisable via `tasks` in init payload.
+- `POST /api/public/employees/{eid}/onboarding/init` — idempotent seed
+- `GET /api/public/employees/{eid}/onboarding` — returns tasks + `progress {done, total, percent}`
+- `PATCH /api/public/employees/{eid}/onboarding/{task_id}` — toggle done, stamps `done_by`/`done_at`, auto-sets `completed_at` when all done (auto-clears if any un-checked)
+
+### Phase D — 5 HR Letter PDF Templates (§71)
+- Collection `employee_letters`. Kinds: **appointment / confirmation / increment / promotion / experience** — each with a bespoke reportlab-generated PDF layout (company header, employee block, kind-specific body copy + tables, footer with authorised signatory).
+- `POST /api/public/employees/{eid}/letters/generate` (validates kind, builds PDF, persists row) → returns `LTR-KIND-XXXXXXXX` letter_id.
+- `GET /api/public/employees/{eid}/letters` — list
+- `GET /api/public/employees/{eid}/letters/{lid}/pdf` — stream PDF (lazy rebuild if file missing)
+- Experience letter side-effect: flips employee `status → separated` and stamps `separated_at`.
+
+### Attendance Core (§32, §42)
+- Collection `attendance` — one document per (employee_id, date). Statuses: present / absent / half_day / wfh / leave.
+- `POST /api/public/attendance/mark` — upsert with auto-computed `hours_worked` from HH:MM check-in / check-out.
+- `GET /api/public/attendance/roster?date=&district=&department=` — daily roster + `by_status` aggregate counts.
+- `GET /api/public/attendance/employee/{eid}?month=YYYY-MM` — monthly view with per-status summary + `total_hours`.
+
+### Leave Management (§43)
+- Collection `leaves`. Types: casual, sick, earned, comp_off, lop, maternity, paternity. Statuses: requested / approved / rejected / cancelled.
+- Default annual entitlement encoded (casual 12, sick 10, earned 15, maternity 180, paternity 15, others 0).
+- `POST /api/public/leaves/apply` — computes `days` inclusive; validates type + date range
+- `POST /api/public/leaves/{lid}/decision {action: approve|reject, approver, comment}` — approving auto-marks attendance as `leave` for every day covered (upsert)
+- `POST /api/public/leaves/{lid}/cancel` — self-serve cancellation (rejects double-cancel)
+- `GET /api/public/leaves` — filter by `employee_id`, `status`, `department`
+- `GET /api/public/leaves/balance/{eid}?year=` — remaining entitlement per leave type
+
+### Admin frontend
+- 2 new tabs in `/admin/careers`: **Attendance** (date picker + 5-status pills + roster table + Mark-Attendance modal) and **Leaves** (status filter + pending queue with 1-click Approve/Reject buttons).
+- New per-row buttons in Employees table: **Onboarding** (`emp-onboarding-{id}`) and **Letters** (`emp-letters-{id}`) → open `EmployeeToolModal` (2 internal tabs).
+- `EmployeeToolModal` with `initialTab` param supports:
+  - Onboarding: init button + interactive checklist with per-task checkboxes and live progress
+  - Letters: generate-letter modal (5 kinds with kind-specific fields), issued-letter list with PDF download links
+
+### Testing
+- `backend/tests/test_careers_phase_d.py` — 17 pytest scenarios (all pass)
+- Full careers regression: **56/56 pass** across Phase 3 + A + B + C + D + auth + mall
+- `/app/test_reports/iteration_285.json` — backend 17/17, frontend E2E green, zero critical/minor issues
+
+### Files touched
+- **NEW** `backend/routes/careers_phase_d.py`
+- **NEW** `backend/tests/test_careers_phase_d.py` (17 scenarios)
+- `backend/server.py` — wired careers_d_router
+- `frontend/src/pages/Admin/AdminCareers.js` — 2 new tabs, MarkAttendanceModal, LeavesTab, EmployeeToolModal, GenerateLetterForm
+
+### Careers roadmap remaining (~35-40% still to build)
+- **Phase F — Performance + Increment + Promotion + Incentive workflows** (§34-41): quarterly evaluations, appraisal cycles, incentive rules
+- **Phase G — RBAC + Audit trail + Notifications + Analytics** (§46-53, §49-50, §7 role matrix)
+- **Phase H — Employee Separation workflow + HR reports + Final QA per §80** (§69)
+
+
+
 ## Implemented (Feb 27, 2026 — Careers Phase B + Phase C + Employee Master Skeleton, per `careers.docx` §15-18, §21-26, §28, §71, §74)
 
 ### Phase B — Online Tests + Interviews + Scorecards (§15, §16-18, §74)
