@@ -1,3 +1,32 @@
+## Refactored (Feb 27, 2026 — AdminCareers.js split into per-tab modules)
+
+### What changed
+- **AdminCareers.js**: `2338 lines → 474 lines` (80% smaller container-only file: state, fetchers, tab switcher, layout, modal wiring).
+- **New directory**: `/app/frontend/src/pages/Admin/Careers/` with 11 focused modules:
+  - `constants.js` (59 lines) — STATUS_COLORS, formatStatus, CANONICAL_STATUSES
+  - `shared.jsx` (60 lines) — Field, StatPill, Input, Select, Textarea primitives
+  - `JobsTab.jsx` (109) — JobsTab + JobModal
+  - `ApplicationsTab.jsx` (245) — ApplicationsTab + ApplicationModal
+  - `KanbanTab.jsx` (92) — KanbanTab + KanbanQuickMove
+  - `TestsTab.jsx` (277) — TestsTab + TestBankModal + QuickActionModal
+  - `EmployeesTab.jsx` (234) — EmployeesTab + EmployeeToolModal + GenerateLetterForm
+  - `AttendanceTab.jsx` (114) — AttendanceTab + MarkAttendanceModal
+  - `LeavesTab.jsx` (76) — LeavesTab
+  - `SystemTab.jsx` (317) — SystemTab + AuditLogPane + RbacPane + TemplatesPane + TemplateFormModal
+  - `ReportsTab.jsx` (369) — ReportsTab + AnalyticsPane + SeparationsPane + SeparationInitModal + SeparationDetailModal
+- **Bonus UX fix**: Corrected the pre-existing tab-strip contrast issue flagged by testing agent (`bg-slate-200 text-white` → `bg-white text-slate-900 shadow-sm`, hover state fixed too).
+
+### Testing
+- Zero behaviour changes — pure structural refactor.
+- Backend regression: 28/28 careers pytest pass (Phase 3 + A + FG + H sampled).
+- Frontend E2E: `/app/test_reports/iteration_288.json` — **100% pass, zero critical issues, zero fatal React/JS errors, all 9 tabs render, all HR quick-actions work, all data-testids preserved**.
+
+### Files touched
+- `/app/frontend/src/pages/Admin/AdminCareers.js` — trimmed to container-only
+- **NEW** 11 files under `/app/frontend/src/pages/Admin/Careers/`
+
+
+
 ## Implemented (Feb 27, 2026 — Careers Phase H: Separations + HR Analytics + Health, per `careers.docx` §49-50, §69, §80)
 
 ### Phase H — Employee Separation Workflow (§69)

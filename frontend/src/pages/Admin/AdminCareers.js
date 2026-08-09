@@ -339,7 +339,7 @@ const AdminCareers = () => {
               onClick={() => setActiveTab(t.id)}
               data-testid={`tab-${t.id}`}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                activeTab === t.id ? 'bg-slate-200 text-white' : 'text-slate-500 hover:text-slate-200'
+                activeTab === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
               <t.icon className="w-4 h-4" /> {t.label}
