@@ -32,6 +32,9 @@ const CareersPage = () => {
   const [selectedJob, setSelectedJob] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDept, setFilterDept] = useState('All');
+  const [filterLocation, setFilterLocation] = useState('All');
+  const [filterWorkMode, setFilterWorkMode] = useState('All');
+  const [filterExperience, setFilterExperience] = useState('All');
   const [showApply, setShowApply] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
@@ -95,9 +98,19 @@ const CareersPage = () => {
     finally { setApplying(false); }
   };
 
-  const departments = ['All', ...new Set(jobs.map(j => j.department))];
+  const departments = ['All', ...new Set(jobs.map(j => j.department).filter(Boolean))];
+  const locations = ['All', ...new Set(jobs.map(j => j.location).filter(Boolean))];
+  const workModes = ['All', ...new Set(jobs.map(j => j.work_mode || j.job_type).filter(Boolean))];
+  const experienceLevels = ['All', 'Fresher', 'Experienced'];
   const filtered = jobs.filter(j => {
     if (filterDept !== 'All' && j.department !== filterDept) return false;
+    if (filterLocation !== 'All' && j.location !== filterLocation) return false;
+    if (filterWorkMode !== 'All' && (j.work_mode || j.job_type) !== filterWorkMode) return false;
+    if (filterExperience !== 'All') {
+      const yrs = j.experience_max || 0;
+      if (filterExperience === 'Fresher' && yrs > 0) return false;
+      if (filterExperience === 'Experienced' && yrs === 0) return false;
+    }
     if (searchQuery && !j.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
@@ -221,8 +234,8 @@ const CareersPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Hero */}
-      <div className="bg-slate-900 text-white py-16 px-4">
+      {/* Hero — Feb 27 2026 spec verbatim (careers.docx) */}
+      <div className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <div className="flex justify-center mb-5">
             <HiringBadge
@@ -234,12 +247,27 @@ const CareersPage = () => {
               }}
             />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-3">Join Our Mission</h1>
-          <p className="text-slate-300 text-lg max-w-2xl mx-auto mb-2">Build the future of digital rewards with Paras Reward Technologies</p>
-          <p className="text-slate-400 text-sm">B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra</p>
-          <div className="flex gap-3 justify-center mt-4 flex-wrap">
-            <a href="#positions" className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">View Open Positions</a>
-            <button onClick={() => setShowStatusCheck(!showStatusCheck)} className="px-6 py-2.5 border border-slate-600 text-slate-300 rounded-lg font-medium hover:border-slate-400" data-testid="check-status-btn">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-2" data-testid="careers-h1">
+            PARAS REWARD
+          </h1>
+          <p className="text-blue-200 text-base sm:text-lg mb-4" data-testid="careers-tagline">
+            India&apos;s Trusted Reward Platform
+          </p>
+          <div className="inline-block px-4 py-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-100 text-xs font-semibold uppercase tracking-widest mb-4">
+            New Startup Company
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3 text-white" data-testid="careers-h2">
+            WE ARE HIRING!
+          </h2>
+          <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto mb-5" data-testid="careers-audience">
+            FRESHER · TRAINEE · INTERN · EXPERIENCED CANDIDATES
+          </p>
+          <p className="text-slate-400 text-xs">B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra</p>
+          <div className="flex gap-3 justify-center mt-6 flex-wrap">
+            <a href="#positions" className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors" data-testid="view-positions-btn">
+              View Open Positions
+            </a>
+            <button onClick={() => setShowStatusCheck(!showStatusCheck)} className="px-6 py-2.5 border border-slate-500 text-slate-200 rounded-lg font-medium hover:border-slate-300 hover:bg-slate-800 transition-colors" data-testid="check-status-btn">
               Check Application Status
             </button>
           </div>
@@ -326,41 +354,79 @@ const CareersPage = () => {
         <div id="positions">
           <h2 className="text-xl font-bold text-slate-900 mb-4 text-center">Open Positions</h2>
 
-          {/* Filter */}
-          <div className="flex gap-2 mb-4 flex-wrap">
-            <div className="flex-1 min-w-[150px] relative">
+          {/* Filters — 5 fields per docx spec */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+            <div className="col-span-2 md:col-span-1 relative">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
               <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search jobs..." className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" data-testid="search-jobs" />
             </div>
-            <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white">
-              {departments.map(d => <option key={d} value={d}>{d}</option>)}
+            <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" data-testid="filter-dept">
+              {departments.map(d => <option key={d} value={d}>{d === 'All' ? 'All Departments' : d}</option>)}
+            </select>
+            <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" data-testid="filter-location">
+              {locations.map(l => <option key={l} value={l}>{l === 'All' ? 'All Locations' : l}</option>)}
+            </select>
+            <select value={filterWorkMode} onChange={e => setFilterWorkMode(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" data-testid="filter-workmode">
+              {workModes.map(w => <option key={w} value={w}>{w === 'All' ? 'All Work Modes' : w}</option>)}
+            </select>
+            <select value={filterExperience} onChange={e => setFilterExperience(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 bg-white" data-testid="filter-experience">
+              {experienceLevels.map(l => <option key={l} value={l}>{l === 'All' ? 'All Experience' : l}</option>)}
             </select>
           </div>
 
           {loading ? (
             <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
-              <Briefcase className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No open positions right now</p>
-              <p className="text-slate-400 text-sm mt-1">Check back soon or send your resume to {BENEFITS[0]?.desc ? 'info@parasreward.com' : ''}</p>
+            <div className="text-center py-16 bg-white rounded-xl border border-slate-200" data-testid="no-openings">
+              <Briefcase className="w-14 h-14 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-900 font-semibold text-base">No open positions matching your filters</p>
+              <p className="text-slate-500 text-sm mt-1">Try clearing filters, or send your resume to <a href="mailto:careers@parasreward.com" className="text-blue-600 underline">careers@parasreward.com</a></p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filtered.map(job => (
-                <div key={job.job_id} onClick={() => setSelectedJob(job)} className="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:shadow-md hover:border-slate-300 transition-all flex items-center justify-between" data-testid={`job-${job.job_id}`}>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{job.title}</h3>
-                    <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-500">
-                      <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{job.department}</span>
-                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{job.location}</span>
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{job.job_type}</span>
-                      {job.experience_max > 0 && <span>{job.experience_min}-{job.experience_max} yrs</span>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filtered.map(job => {
+                const isWFH = (job.work_mode || job.job_type || '').toLowerCase().includes('remote') || (job.work_mode || '').toLowerCase().includes('wfh');
+                const isFresher = (job.experience_max || 0) === 0;
+                return (
+                  <div key={job.job_id} className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-300 transition-all flex flex-col" data-testid={`job-${job.job_id}`}>
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-bold text-slate-900 text-base leading-tight">{job.title}</h3>
+                      {isFresher && (
+                        <span className="ml-2 shrink-0 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold uppercase">Fresher</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-3 text-xs text-slate-500">
+                      <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{job.department || '—'}</span>
+                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{job.location || '—'}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{job.work_mode || job.job_type || 'Full-time'}</span>
+                    </div>
+                    <div className="text-xs text-slate-600 space-y-1 mb-4">
+                      {job.qualification && (
+                        <p><span className="text-slate-400">Qualification: </span>{job.qualification}</p>
+                      )}
+                      {(job.experience_min !== undefined || job.experience_max) && (
+                        <p><span className="text-slate-400">Experience: </span>{isFresher ? 'Freshers welcome' : `${job.experience_min || 0}-${job.experience_max} yrs`}</p>
+                      )}
+                      {job.show_salary && job.salary_min && (
+                        <p className="text-emerald-600 font-semibold">
+                          ₹{job.salary_min.toLocaleString()} - ₹{job.salary_max.toLocaleString()}/month
+                        </p>
+                      )}
+                      {isWFH && (
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-semibold uppercase">Work From Home</span>
+                      )}
+                    </div>
+                    <div className="mt-auto flex gap-2">
+                      <button onClick={() => setSelectedJob(job)} className="flex-1 px-3 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-50" data-testid={`view-details-${job.job_id}`}>
+                        View Details
+                      </button>
+                      <button onClick={() => { setSelectedJob(job); setShowApply(true); }} className="flex-1 px-3 py-2 bg-slate-900 text-white rounded-lg text-xs font-medium hover:bg-slate-800" data-testid={`apply-now-${job.job_id}`}>
+                        Apply Now
+                      </button>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-slate-400" />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
