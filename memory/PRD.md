@@ -1,3 +1,53 @@
+## Implemented (Feb 27, 2026 — Careers Phase F + Phase G, per `careers.docx` §7, §34-41, §46-53)
+
+### Phase F — Performance Management + Incentives (§34-41)
+- **Targets** (§34): `POST /api/public/performance/targets` assigns weighted KPIs per employee for a period (daily/weekly/monthly/quarterly/annual). Metric weights must sum to 100 (server-validated). `GET /performance/targets` filter by employee_id/period.
+- **Appraisals** (§35-37): `POST /api/public/performance/appraisals` idempotent per `(employee_id, cycle)`. `PATCH /performance/appraisals/{id}` updates `self_review` / `manager_review` / `kpi_scores`; **auto-computes** `overall_score` (weighted with 150% cap per KPI to reward overachievement) and maps to a 5-tier `rating`:
+  - `overall ≥ 90` → outstanding
+  - `overall ≥ 75` → exceeds_expectations
+  - `overall ≥ 60` → meets_expectations
+  - `overall ≥ 40` → needs_improvement
+  - else → unsatisfactory
+- Status machine: `draft → self_submitted → manager_reviewed → finalised`. `POST /performance/appraisals/{id}/finalize` validates `recommendation ∈ {increment, promotion, increment_and_promotion, pip, none}`, locks the record.
+- **Incentives** (§41): `POST /api/public/incentive/rules` — auto-sorts tiers by `threshold_pct DESC` so highest match wins. `POST /incentive/calculate {employee_id, cycle}` reads the cycle's appraisal KPI scores, matches each active rule for the employee's department (or global rules), and creates `AWD-XXXXXXXXXX` awards. `POST /incentive/awards/{id}/decide {action}` enforces state machine: `calculated → approved → paid` OR `calculated → rejected` OR `approved → rejected`. `GET /incentive/awards` filter by employee/status/cycle.
+
+### Phase G — RBAC + Audit + Notification Templates (§7, §46-53)
+- **7-role permission matrix** hard-coded in `careers_phase_g.py::ROLE_MATRIX`: super_admin / hr_admin / recruiter / department_head / district_manager / employee / candidate. Uses wildcard suffixes like `career.*`, `attendance.*`.
+- `GET /api/public/rbac/roles` — read matrix + labels
+- `POST /rbac/bind` — idempotent (user, role) → creates `RB-*` binding
+- `DELETE /rbac/bind/{id}`
+- `GET /rbac/bindings` (filter by user / role)
+- `GET /rbac/check?user=&permission=` — evaluates all bound roles, supports wildcards
+- **Audit log** — new helper `utils/audit_log.py::log_action(...)` writes to append-only `hr_audit_log` collection with `{log_id, actor, action, entity_type, entity_id, before, after, diff, meta, ts}`. Called from every Phase F/G write endpoint. `GET /api/public/audit?actor=&action=&entity_type=&entity_id=&limit=` for viewing.
+- **Notification templates** (§46-47): 20 canonical keys (application_received, test_assigned, interview_scheduled, offer_generated, leave_approved, appraisal_finalised, birthday, work_anniversary, etc.) × 4 channels (email/sms/in_app/whatsapp). Auto-seeds 5 defaults on first list read. CRUD via `POST/GET/PUT/DELETE /api/public/notifications/templates`. `POST /notifications/render {key, channel, context}` does `{var}` substitution, leaves missing vars as `{var}` verbatim for debugging.
+
+### Admin frontend
+- New **System** tab (`tab-system`) with 3 sub-panes (radio-tab UI):
+  - **Audit Log**: filterable table with action-prefix + entity-type filters, shows time / actor / action pill / entity / diff summary
+  - **Roles & Access**: 7 role cards with permission pills, bind form (user email + role dropdown + bind button), active bindings table with unbind
+  - **Notification Templates**: template table with variable list + active state, new/edit modal with `{var}` placeholder-friendly editor + live preview using context JSON
+
+### Testing
+- `backend/tests/test_careers_phase_fg.py` — 8 pytest scenarios (all pass)
+- Full careers regression: **47/47 pass** across Phase 3 + A + B + C + D + F + G
+- `/app/test_reports/iteration_286.json` — backend 8/8, frontend 100% (Audit + RBAC + Templates E2E green), 0 critical, 0 minor issues
+
+### Files touched
+- **NEW** `backend/routes/careers_phase_f.py` (Targets/Appraisals/Incentives)
+- **NEW** `backend/routes/careers_phase_g.py` (RBAC/Audit/Templates)
+- **NEW** `backend/utils/audit_log.py` (append-only audit helper)
+- **NEW** `backend/tests/test_careers_phase_fg.py` (8 scenarios)
+- `backend/server.py` — wired 2 new routers
+- `frontend/src/pages/Admin/AdminCareers.js` — SystemTab, AuditLogPane, RbacPane, TemplatesPane, TemplateFormModal
+
+### Careers roadmap remaining (~15-20% still to build)
+- **Phase H — Employee Separation workflow + HR analytics reports + Final QA per §80** (§69, §49-50)
+- Candidate Test Portal (public `/careers/test/{token}` page for candidates to actually take assigned tests)
+- Email/SMS notification delivery (currently templates are stored + rendered but not dispatched)
+- Optional: connect audit log to Phase A-D writes (only Phase F/G write endpoints call log_action today)
+
+
+
 ## Implemented (Feb 27, 2026 — Careers Phase D + Attendance/Leave Core, per `careers.docx` §27-30, §32, §42-43, §71)
 
 ### Phase D — Onboarding Checklist (§27)
