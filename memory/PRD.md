@@ -1,3 +1,28 @@
+## Implemented (Feb 27, 2026 — P0 Careers Phase 3 Extended: multi-doc apply form + admin downloads)
+
+### What shipped
+1. **Backend** — `POST /api/public/careers/apply` (already accepted `aadhaar` / `pan` / `marksheet` UploadFiles + `education_json` / `work_history_json` Form strings). Added new generic endpoint `GET /api/public/careers/applications/{app_id}/document/{kind}` where `kind ∈ {aadhaar, pan, marksheet}` — returns file with inferred media type, 404 if not uploaded, 400 for invalid kind. Files persist under `/app/backend/uploads/documents/` at 5 MB cap each.
+2. **Frontend public `/careers`** — apply modal (`CareersPage.js`) now includes:
+   - 3 optional supporting-doc uploads (Aadhaar, PAN, Marksheet) with in-form file preview + remove
+   - Dynamic **Education** rows (degree / institution / year / marks) with Add + Remove (remove disabled when 1 row remains)
+   - Dynamic **Work Experience** rows (company / role / from / to / description) with Add + Remove
+   - `handleApply` FormData submission includes all fields, strips empty rows, guards each supporting doc ≤ 5 MB client-side.
+3. **Frontend admin `/admin/careers`** — `ApplicationModal` (`AdminCareers.js`) now surfaces:
+   - Education & Work-history sections with structured display
+   - Download Aadhaar / PAN / Marksheet buttons (only visible when the doc was uploaded)
+
+### Testing
+- `/app/test_reports/iteration_282.json` — Backend 100%, Frontend 100%, no critical issues.
+- New pytest file: `/app/backend/tests/test_careers_phase3_extended.py` (4 scenarios: full apply with all docs, no-docs + malformed JSON, duplicate email, invalid document kind).
+- Manual curl E2E verified: resume/aadhaar/pan downloads = 200, marksheet (not uploaded) = 404, invalid kind = 400, admin fetch returns education[N] + work_history[N] arrays with `*_path` fields set correctly.
+
+### Known non-blocker code-review notes (flagged for next sweep)
+- `GET /api/public/careers/applications` (list) is unauthenticated and returns raw FS paths in `aadhaar_path`/`pan_path`/`marksheet_path` — should be admin-gated and return booleans.
+- `POST /api/public/careers/apply` has no rate limit / captcha (spam-vulnerable at up to 20 MB per request).
+- Uploaded supporting docs are not MIME-sniffed — extension-based content type only.
+
+
+
 # PARAS REWARD — Product Requirements Document
 
 ## Original Problem Statement
