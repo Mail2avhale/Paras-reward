@@ -126,6 +126,9 @@ from routes.careers_phase_f import router as careers_f_router, set_db as set_car
 from routes.careers_phase_g import router as careers_g_router, set_db as set_careers_g_db
 from routes.careers_phase_h import router as careers_h_router, set_db as set_careers_h_db
 from routes.candidate_portal import router as candidate_portal_router, set_db as set_candidate_portal_db
+from routes.employee_portal import router as employee_portal_router, admin_router as employee_portal_admin_router, set_db as set_employee_portal_db
+from routes.hr_payroll import router as hr_payroll_router, set_db as set_hr_payroll_db
+from routes.hr_orgchart import router as hr_orgchart_router, set_db as set_hr_orgchart_db
 from routes.social_profile import router as social_profile_router, set_db as set_social_profile_db
 from routes.live_ticker import router as live_ticker_router, set_db as set_live_ticker_db, set_cache as set_live_ticker_cache
 
@@ -37282,6 +37285,10 @@ api_router.include_router(careers_f_router)
 api_router.include_router(careers_g_router)
 api_router.include_router(careers_h_router)
 api_router.include_router(candidate_portal_router)
+api_router.include_router(employee_portal_router)
+api_router.include_router(employee_portal_admin_router)
+api_router.include_router(hr_payroll_router)
+api_router.include_router(hr_orgchart_router)
 # Social Profile Router (Phase 1 refactor - extracted from server.py April 2026)
 set_social_profile_db(db)
 api_router.include_router(social_profile_router)
@@ -37429,6 +37436,9 @@ set_careers_f_db(db)
 set_careers_g_db(db)
 set_careers_h_db(db)
 set_candidate_portal_db(db)
+set_employee_portal_db(db)
+set_hr_payroll_db(db)
+set_hr_orgchart_db(db)
 
 # Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
 # set_eko_db(db)

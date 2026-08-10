@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   Briefcase, Users, LayoutGrid, ClipboardList, UserCheck,
   CalendarDays, Coffee, Settings, BarChart3, Loader2,
-  RefreshCw, Plus,
+  RefreshCw, Plus, Calculator, Network, Shield,
 } from 'lucide-react';
 
 import { API } from "../../lib/api";
@@ -19,6 +19,9 @@ import { AttendanceTab } from './Careers/AttendanceTab';
 import { LeavesTab } from './Careers/LeavesTab';
 import { SystemTab } from './Careers/SystemTab';
 import { ReportsTab } from './Careers/ReportsTab';
+import { PayrollTab } from './Careers/PayrollTab';
+import { OrgChartTab } from './Careers/OrgChartTab';
+import { PortalTab } from './Careers/PortalTab';
 import { StatPill } from './Careers/shared';
 
 const AdminCareers = () => {
@@ -331,6 +334,9 @@ const AdminCareers = () => {
             { id: 'employees', label: 'Employees', icon: UserCheck },
             { id: 'attendance', label: 'Attendance', icon: CalendarDays },
             { id: 'leaves', label: 'Leaves', icon: Coffee },
+            { id: 'payroll', label: 'Payroll', icon: Calculator },
+            { id: 'orgchart', label: 'Org Chart', icon: Network },
+            { id: 'portal', label: 'Portal Access', icon: Shield },
             { id: 'system', label: 'System', icon: Settings },
             { id: 'reports', label: 'Reports', icon: BarChart3 }
           ].map(t => (
@@ -406,6 +412,15 @@ const AdminCareers = () => {
               onRefresh={fetchLeaves}
               adminId={adminId}
             />
+          )}
+          {activeTab === 'payroll' && (
+            <PayrollTab employees={employees} onNeedEmployees={fetchEmployees} adminId={adminId} />
+          )}
+          {activeTab === 'orgchart' && (
+            <OrgChartTab adminId={adminId} />
+          )}
+          {activeTab === 'portal' && (
+            <PortalTab adminId={adminId} />
           )}
           {activeTab === 'system' && (
             <SystemTab adminId={adminId} />

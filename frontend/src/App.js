@@ -648,6 +648,8 @@ const CareersPage = lazy(() => import(/* webpackChunkName: "public" */ "@/pages/
 const InvestorsPage = lazy(() => import(/* webpackChunkName: "public" */ "@/pages/InvestorsPage"));
 const CandidatePortal = lazy(() => import(/* webpackChunkName: "public" */ "@/pages/CandidatePortal"));
 const CandidateOfferRespond = lazy(() => import(/* webpackChunkName: "public" */ "@/pages/CandidateOfferRespond"));
+const EmployeeLogin = lazy(() => import(/* webpackChunkName: "public" */ "@/pages/EmployeeLogin"));
+const EmployeePortal = lazy(() => import(/* webpackChunkName: "public" */ "@/pages/EmployeePortal"));
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
 // GiftVoucherRedemption - REMOVED (deprecated April 2026)
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
@@ -739,6 +741,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/careers" element={<Suspense fallback={<LoadingFallback />}><CareersPage /></Suspense>} />
             <Route path="/candidate/:appId" element={<Suspense fallback={<LoadingFallback />}><CandidatePortal /></Suspense>} />
             <Route path="/candidate/offer/:token" element={<Suspense fallback={<LoadingFallback />}><CandidateOfferRespond /></Suspense>} />
+            <Route path="/employee/login" element={<Suspense fallback={<LoadingFallback />}><EmployeeLogin /></Suspense>} />
+            <Route path="/employee/portal" element={<Suspense fallback={<LoadingFallback />}><EmployeePortal /></Suspense>} />
             <Route path="/investors" element={<Suspense fallback={<LoadingFallback />}><InvestorsPage /></Suspense>} />
             <Route path="/register" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RegisterSimple />} />
             <Route path="/set-new-pin" element={<SetNewPin onLogin={handleLogin} />} />
