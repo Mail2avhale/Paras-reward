@@ -256,7 +256,7 @@ class TestCareersApplications:
         result = response.json()
         assert result["success"] == True
         assert "application_id" in result
-        assert result["application_id"].startswith("APP-")
+        assert result["application_id"].startswith("PR-HR-")
         
         self.__class__.test_application_id = result["application_id"]
         self.__class__.test_email = unique_email

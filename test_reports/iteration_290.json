@@ -1,0 +1,37 @@
+{
+  "summary": "Full end-to-end regression sweep of Careers/HR system after Payroll + OrgChart + Employee Self-Service additions. Backend: 91 pytests pass, 5 skipped (env-dependent), 0 failures across the entire careers suite (test_careers_investors, phase_a, phase_bc, phase_d, phase_fg, phase_h, phase3_extended, candidate_portal, referral_share, employee_portal_payroll). This covers: public jobs CRUD, apply-with-resume + duplicate rejection, investor endpoints (metrics/faq/team/press/docs/contact), 30-status pipeline, tests+interviews+notes+offers, employee master + onboarding + 5 letter kinds, attendance + leaves (with auto-marking on approval), performance/incentives, RBAC + notification templates + audit, separation + HR analytics, candidate portal hydration + referral share, employee JWT flow (set-password, login, /me, change-password, 5-fail lockout HTTP 423), payroll config + salary structure + run + idempotency 400 + payslip PDF + NEFT/PF/ESI/PT/TDS CSVs + cancel-run cleanup, org chart tree + cycle + self-loop detection, and cross-module integrity (leave->attendance, experience letter->separated, applicant->joined status). Frontend: /careers loads with 100 active jobs and full data-testid coverage (view-positions-btn, check-status-btn, filters, job-<id>, view-details-<id>, apply-now-<id>). Apply modal renders complete form (apply-name, apply-email, apply-phone, apply-source, upload-resume, upload-aadhaar/pan/marksheet, education-section + add/remove, work-history-section, submit-application). Candidate portal /candidate/<id> renders 5-step timeline (Applied/Assessment/Interview/Offer/Joined) with portal-current-status, portal-referral-card, portal-share-toggle, portal-timeline, portal-history testids and proper error boundary on invalid IDs (Cannot load your portal). Employee login /employee/login renders (employee-id-input, employee-password-input, employee-login-submit). Admin UI at /login remains blocked in preview by device-binding 403 (pre-existing infra) — admin flows verified via API + pytest instead. Applied a stale-assertion fix in test_careers_investors.py: application_id prefix changed from legacy APP- to PR-HR-YYYY-##### (matches current backend). No functional regressions found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_careers_investors.py",
+    "/app/backend/tests/test_careers_phase_a.py",
+    "/app/backend/tests/test_careers_phase_bc.py",
+    "/app/backend/tests/test_careers_phase_d.py",
+    "/app/backend/tests/test_careers_phase_fg.py",
+    "/app/backend/tests/test_careers_phase_h.py",
+    "/app/backend/tests/test_careers_phase3_extended.py",
+    "/app/backend/tests/test_candidate_portal.py",
+    "/app/backend/tests/test_referral_share.py",
+    "/app/backend/tests/test_employee_portal_payroll.py",
+    "/app/test_reports/pytest/careers_full_regression.xml"
+  ],
+  "action_items": [
+    "Admin Careers UI (/admin) could not be exercised via UI because /login returns 403 (device-binding) in this preview container. This is a pre-existing environment restriction, not a bug in the Careers/HR modules. To do a browser E2E of PayrollTab/OrgChartTab/PortalTab/JobsTab/ApplicationsTab/KanbanTab/TestsTab/EmployeesTab/AttendanceTab/LeavesTab/SystemTab/ReportsTab, either whitelist the preview device fingerprint or expose an admin bypass token. All admin business logic is already covered end-to-end by pytest against the real API."
+  ],
+  "critical_code_review_comments": [
+    "Application ID format now standardises to PR-HR-YYYY-##### (via utils/id_counters.next_application_id). Confirmed consistent with PR-JOB-YYYY-#### for jobs and PR-EMP-##### for employees.",
+    "All new payroll, orgchart, and employee-portal endpoints properly namespaced under /api/public/{payroll,orgchart,employee,hr}. Consistent routing conventions.",
+    "Employee lockout returns HTTP 423 after 5 wrong logins as per playbook. bcrypt usage correct on employees collection.",
+    "Candidate portal endpoint properly redacts assessment correct_index and only exposes meet_link when interview status is scheduled — confirmed via test_candidate_portal.py."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_careers_investors.py (application_id prefix assertion updated from APP- to PR-HR-)"
+  ],
+  "success_rate": {"backend": "100% (91/91 tests passed, 5 env-skipped)", "frontend": "100% (public careers, apply modal, candidate portal, employee login all render + integrate; admin UI code-verified only due to /login device-binding 403)"},
+  "test_credentials": "Admin (mobile 9999999999 / PIN 153759) — blocked by device-binding 403 on /login in this preview. Employees created dynamically via apply → convert → set-password flow (documented in test_employee_portal_payroll.py).",
+  "seed_data_creation": "One live application PR-HR-2026-00372 created via public API against job PR-JOB-2026-0378 for candidate portal frontend verification. Ephemeral employees + payroll run created and cleaned up during pytest.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend fully green (91/91). If you need to exercise Admin UI tabs (Payroll, OrgChart, PortalAccess, etc.) in a browser, first resolve the /login 403 device-binding in this preview container — all APIs backing those tabs are already API-tested. Public flows (/careers, /candidate/<id>, /employee/login) all render correctly with full data-testid coverage.",
+  "rca of the issue": "The only pytest failure encountered (test_apply_for_job_with_resume) was a stale assertion that expected application_id to start with 'APP-' whereas the backend now uses PR-HR-YYYY-##### (a deliberate schema change to unify with PR-JOB / PR-EMP). Updated the assertion; test now passes. No production bug — a test-file bug."
+}
