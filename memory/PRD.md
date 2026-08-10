@@ -1,3 +1,47 @@
+## Implemented (Aug 10, 2026 — Employee Self-Service Portal + Payroll + Org Chart)
+
+### P0 — Employee Self-Service Portal
+- **Backend `/app/backend/routes/employee_portal.py`** — JWT-based auth (HS256, JWT_SECRET_KEY, 12h TTL, Bearer header)
+  - Admin: `POST /api/public/hr/employees/set-password`, `GET /api/public/hr/employees/credentials`
+  - Employee: `POST /api/public/employee/login` (bcrypt cost-10, 5-fail lockout for 15 min → HTTP 423), `/me`, `/change-password`
+  - Own-data: `/attendance?month=YYYY-MM`, `/leaves`, `/leaves/balance`, `POST /leaves/apply`, `POST /leaves/{id}/cancel`, `/payslips`, `/payslips/{id}/pdf`, `/letters`, `/appraisals`, `/announcements`
+  - Announcements admin CRUD (`/public/hr/announcements`) with audience = `all` or `department:X`, pinned, expires_at
+- **Frontend routes**: `/employee/login` (`EmployeeLogin.jsx`) + `/employee/portal` (`EmployeePortal.jsx`) — 7 tabs: Overview, Attendance, Leaves, Payslips, Letters, Appraisals, News + Change-Password modal + Apply-Leave modal
+- **Admin UI**: New `PortalTab.jsx` under Careers → "Portal Access" tab (sub-tabs: Portal Access with SetPassword modal, Announcements with CRUD)
+
+### P1 — Payroll & Compliance (Indian statutory)
+- **Backend `/app/backend/routes/hr_payroll.py`** — Uses new tax regime (Feb 2026) with 4% cess, ₹75k std deduction, 6-slab tax table
+  - `POST /api/public/payroll/salary-structure/{employee_id}` (monthly_ctc + bank + PAN + UAN + ESI)
+  - `POST /api/public/payroll/run` (idempotent per month), `GET/DELETE /run/{run_id}`, `GET /runs`
+  - Payslip PDF (`/payslip/{id}/pdf`) using reportlab — Basic 50%, HRA 40%-of-Basic, Special = remainder, PF 12% on min(Basic, ₹15k), ESI 0.75% (≤₹21k gross), PT ₹200 (₹300 Feb), TDS annual slab, LOP from unpaid attendance + `lop` leaves
+  - Statutory CSVs: PF register (with EPS/EPF split), ESI register, PT register, TDS 24Q quarterly summary, **Bank NEFT batch CSV** per run
+  - `GET/PUT /config` for tweaking rates
+- **Admin UI**: `PayrollTab.jsx` — Salary structure table + edit modal + Run Payroll modal (month picker + employee checklist) + Run detail modal (per-employee payslip download) + Config modal + NEFT/PF/ESI/PT CSV download buttons per run
+
+### P2 — Org Chart Builder
+- **Backend `/app/backend/routes/hr_orgchart.py`** — `PATCH /api/public/orgchart/employees/{id}` (cycle detection + self-loop guard), `GET /tree` (nested with `total_employees`, `max_depth`, `orphans`), `GET /flat` (dropdown source)
+- **Admin UI**: `OrgChartTab.jsx` — Collapsible visual tree with per-node edit-manager modal, department filter, orphan warning list
+
+### Testing
+- **`/app/backend/tests/test_employee_portal_payroll.py`** — 9 pytest cases, all pass:
+  - Auth: login-disabled, admin-set-password + JWT, change-password, 5-fail lockout with 423, admin re-set unlocks
+  - Self-service: leave apply→cancel→balance flow, announcements audience filter (all + department)
+  - Payroll: pure component math (Basic/HRA/PF/ESI/PT/TDS/LOP/Net), full run + idempotency 400, run detail, payslip PDF (bytes), employee-own payslip via Bearer, PF/ESI/PT/NEFT/TDS CSV endpoints
+  - Org chart: tree shape, self-loop 400, cycle detection 400
+- **Testing agent (iter 289)** — 100% pass, no critical/high issues. Frontend employee portal fully verified via browser automation. Admin tabs code-verified (browser E2E blocked by pre-existing device-binding 403 on admin /login — infra issue, not related to new modules).
+
+### Files touched
+- **NEW backend**: `routes/employee_portal.py`, `routes/hr_payroll.py`, `routes/hr_orgchart.py`, `tests/test_employee_portal_payroll.py`
+- **NEW frontend**: `pages/EmployeeLogin.jsx`, `pages/EmployeePortal.jsx`, `pages/Admin/Careers/PayrollTab.jsx`, `pages/Admin/Careers/OrgChartTab.jsx`, `pages/Admin/Careers/PortalTab.jsx`
+- **Updated**: `backend/server.py` (wired 3 routers), `frontend/src/App.js` (2 new routes), `frontend/src/pages/Admin/AdminCareers.js` (3 new tabs: payroll, orgchart, portal)
+- **New collections**: `employee_login_events`, `announcements`, `salary_structures`, `payroll_runs`, `payslips`, `payroll_config`
+
+### Careers/HR system status: ~99% shipped
+Only remaining spec items: email/SMS dispatch (needs Resend/Twilio integration) + minor data-hygiene backfill on old audit records.
+
+---
+
+
 ## Implemented (Feb 27, 2026 — Candidate Portal Referral Share)
 
 ### Frontend — inline referral share card
