@@ -1,3 +1,60 @@
+## Implemented (Aug 10, 2026 — Referral Bonus Campaign ₹200 Limited Time Offer)
+
+### Rules (as per user)
+- ₹200 bonus to DIRECT referrer on every NEW paid subscription
+- Payment must be Razorpay OR manual — NOT PRC redemption
+- First-time subscription only (no renewals)
+- L1 only (no cascade)
+- Admin manually pays via NEFT using daily report
+- Referrer bank details taken from user profile; missing → user-side claim modal
+
+### Backend `/app/backend/routes/referral_bonus.py`
+- Helper: `credit_referral_bonus(db, uid, payment_method, amount, plan)` — idempotent, hooked into both razorpay success path (razorpay_payments.py line ~510) and manual activation path (line ~1637). All safety guards: campaign active, date range, payment method allowed, first paid subscription, no self-referral, unpaid-referrer block, duplicate block.
+- Admin endpoints (JWT admin required, prefix `/api/admin/`):
+  - GET / PUT `/referral-bonus/campaign` — config: enabled, bonus_amount, start_date, end_date, notes
+  - GET `/referral-bonus/report?from_date&to_date&status&referrer_uid` — list + totals
+  - GET `/referral-bonus/report/csv` — full CSV export (Date, Name, Mobile, Email, New User, Plan, Payment Method, Bonus, Bank A/c, IFSC, Bank Name, Account Holder, Payout Ref, Paid At)
+  - GET `/referral-bonus/summary` — top-10 referrers + status totals for dashboard
+  - POST `/referral-bonus/mark-paid` — bulk mark paid with payout_reference
+  - POST `/referral-bonus/reverse/{bonus_id}` — reverse with reason
+- User endpoints (open, uid-based):
+  - GET `/referral-bonus/my/{uid}` — own bonuses + totals + `needs_bank_details` flag
+  - GET / POST `/referral-bonus/bank-details/{uid}` — save/fetch bank; POST also backfills pending bonus rows with new bank snapshot
+
+### Frontend
+- `/app/frontend/src/pages/Admin/AdminReferralBonus.js` (route: `/admin/referral-bonus`) — Campaign config modal, live-status banner, 4 stat cards, top-10 referrers grid, filter bar (from/to/status), CSV download, bulk multi-select + Mark-Paid modal with NEFT reference input, full detail table with copy-to-clipboard mobile field and "⚠ Missing" bank warnings.
+- `/app/frontend/src/pages/MyReferralBonus.js` (route: `/my-referral-bonus`) — User-facing page showing campaign banner, own pending/paid/total, red banner prompting bank details when missing, bottom-sheet Bank Details modal with account/IFSC/bank name/holder validation.
+- Routes wired in `/app/frontend/src/App.js`.
+
+### New MongoDB collections
+- `referral_bonus_campaigns` — singleton `_id="default"` with config
+- `referral_bonuses` — one row per earned bonus, all data needed for NEFT payout + audit
+- User doc extended with `bank_account`, `bank_ifsc`, `bank_name`, `bank_holder_name`, `bank_updated_at`
+
+### Tests
+- `/app/backend/tests/test_referral_bonus.py` — **10/10 pass**:
+  1. Happy path credit
+  2. PRC payment blocked
+  3. Renewal blocked (multiple vip_payments)
+  4. No referrer → no bonus
+  5. Self-referral blocked
+  6. Idempotency (duplicate insert skipped)
+  7. Unpaid/free referrer blocked
+  8. Campaign disabled → no bonus
+  9. Campaign expired → no bonus
+  10. Manual activation payment method works
+
+### Files touched
+- **NEW backend**: `routes/referral_bonus.py`, `tests/test_referral_bonus.py`
+- **NEW frontend**: `pages/Admin/AdminReferralBonus.js`, `pages/MyReferralBonus.js`
+- **Modified**: `backend/server.py` (imports + include_router + set_db), `routes/razorpay_payments.py` (2 hook points), `frontend/src/App.js` (2 new routes)
+
+### How to enable the offer
+Admin → `/admin/referral-bonus` → Campaign Config → toggle Enable → set start/end dates → Save. From that moment every new Razorpay/manual activation of a referred user auto-credits ₹200 to their referrer as `pending`. Admin does NEFT, then multi-selects + Mark Paid with UTR.
+
+---
+
+
 ## Implemented (Aug 10, 2026 — Employee Self-Service Portal + Payroll + Org Chart)
 
 ### P0 — Employee Self-Service Portal

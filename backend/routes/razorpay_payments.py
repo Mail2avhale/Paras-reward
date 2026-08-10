@@ -509,6 +509,19 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             except Exception as vip_error:
                 logging.warning(f"[RAZORPAY] VIP payment insert error (non-fatal): {vip_error}")
         
+        # ==================== REFERRAL BONUS HOOK (razorpay path) ====================
+        try:
+            from routes.referral_bonus import credit_referral_bonus
+            await credit_referral_bonus(
+                database=db,
+                new_user_uid=request.user_id,
+                payment_method="razorpay",
+                payment_amount=payment_amount,
+                subscription_plan=plan_name,
+            )
+        except Exception as _rb_err:
+            logging.warning(f"[REF-BONUS] hook failed (non-fatal): {_rb_err}")
+        
         # ==================== STEP 11: GENERATE GST INVOICE ====================
         try:
             from routes.gst_invoice import calculate_gst, get_next_invoice_number, generate_invoice_pdf
@@ -1635,6 +1648,19 @@ async def manual_activate_by_email(request: Request):
         })
         
         logging.info(f"[MANUAL] Subscription activated for {email} ({user_id}), plan: {plan}, days: {total_days}")
+        
+        # ==================== REFERRAL BONUS HOOK (manual path) ====================
+        try:
+            from routes.referral_bonus import credit_referral_bonus
+            await credit_referral_bonus(
+                database=db,
+                new_user_uid=user_id,
+                payment_method="manual_activation",
+                payment_amount=0.0,
+                subscription_plan=plan,
+            )
+        except Exception as _rb_err:
+            logging.warning(f"[REF-BONUS] hook failed (non-fatal): {_rb_err}")
         
         return {
             "success": True,
