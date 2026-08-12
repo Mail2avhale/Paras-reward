@@ -520,6 +520,207 @@ async def mark_paid(data: MarkPaidRequest):
     return {"success": True, "marked_paid": r.modified_count, "requested": len(data.bonus_ids)}
 
 
+# ============================================================================
+# ADMIN — BACKFILL for retroactively crediting bonuses on already-activated users
+# ============================================================================
+
+class BackfillRequest(BaseModel):
+    from_date: Optional[str] = None    # YYYY-MM-DD — inclusive
+    to_date: Optional[str] = None      # YYYY-MM-DD — inclusive
+    dry_run: bool = True
+    admin_id: str = "admin"
+
+
+@router.post("/admin/referral-bonus/backfill")
+async def backfill_missing_bonuses(data: BackfillRequest):
+    """Scan all approved vip_payments in [from_date, to_date] and retroactively
+    credit referral bonuses for any that qualify but were missed.
+
+    Useful when:
+      - The referral_bonus hook was added AFTER some payments already happened
+      - Payments were activated via a code path that didn't have the hook
+      - Manual sync from Razorpay bulk-activated users
+
+    All the safety guards from credit_referral_bonus still apply — first paid
+    subscription only, referrer must exist + be paid + not self, campaign active
+    at the earned_at time, idempotency guaranteed.
+
+    Set dry_run=True to preview what WOULD be credited without mutating.
+    """
+    q = {"status": "approved", "payment_method": {"$in": ["razorpay", "manual_activation"]}}
+    if data.from_date:
+        q["$or"] = [
+            {"created_at": {"$gte": data.from_date}},
+            {"approved_at": {"$gte": data.from_date}},
+        ]
+    if data.to_date:
+        to_ceiling = data.to_date + "T23:59:59"
+        for or_clause in q.get("$or", []):
+            for k, v in or_clause.items():
+                if isinstance(v, dict):
+                    v["$lte"] = to_ceiling
+
+    payments = await db.vip_payments.find(q, {"_id": 0}).sort("created_at", 1).to_list(50000)
+
+    credited = []
+    skipped = []
+    for p in payments:
+        uid = p.get("user_id")
+        if not uid:
+            continue
+        # First paid subscription check — before this payment, how many approved paid ones existed?
+        earlier_count = await db.vip_payments.count_documents({
+            "user_id": uid,
+            "status": "approved",
+            "payment_method": {"$in": ["razorpay", "manual_activation"]},
+            "created_at": {"$lt": p.get("created_at") or p.get("approved_at") or ""},
+        })
+        if earlier_count > 0:
+            skipped.append({"user_id": uid, "reason": "not first paid subscription (renewal)", "order_id": p.get("order_id")})
+            continue
+
+        # Duplicate bonus check
+        existing_bonus = await db.referral_bonuses.find_one({
+            "new_user_uid": uid, "status": {"$ne": "reversed"},
+        })
+        if existing_bonus:
+            skipped.append({"user_id": uid, "reason": "bonus already exists", "bonus_id": existing_bonus["bonus_id"]})
+            continue
+
+        if data.dry_run:
+            # Simulate — check whether it WOULD credit
+            user = await db.users.find_one({"uid": uid}, {"_id": 0, "referred_by": 1, "name": 1})
+            if not user:
+                skipped.append({"user_id": uid, "reason": "user not found"})
+                continue
+            ref_uid = user.get("referred_by")
+            if not ref_uid:
+                skipped.append({"user_id": uid, "name": user.get("name"), "reason": "no referrer (referred_by missing)"})
+                continue
+            if ref_uid == uid:
+                skipped.append({"user_id": uid, "reason": "self-referral"})
+                continue
+            ref = await db.users.find_one({"uid": ref_uid}, {"_id": 0, "name": 1, "subscription_plan": 1})
+            if not ref:
+                skipped.append({"user_id": uid, "reason": "referrer not found"})
+                continue
+            ref_plan = (ref.get("subscription_plan") or "explorer").lower()
+            if ref_plan in ("", "explorer", "free"):
+                skipped.append({"user_id": uid, "reason": f"referrer is on free plan ({ref_plan})", "referrer_name": ref.get("name")})
+                continue
+            credited.append({
+                "user_id": uid, "name": user.get("name"),
+                "referrer_uid": ref_uid, "referrer_name": ref.get("name"),
+                "order_id": p.get("order_id"),
+            })
+        else:
+            # Real credit — use the helper (which re-runs all guards)
+            result = await credit_referral_bonus(
+                database=db,
+                new_user_uid=uid,
+                payment_method=p.get("payment_method") or "razorpay",
+                payment_amount=float(p.get("amount") or 0),
+                subscription_plan=p.get("subscription_plan") or "",
+            )
+            if result:
+                credited.append({
+                    "user_id": uid, "bonus_id": result["bonus_id"],
+                    "referrer_name": result["referrer_name"],
+                    "amount": result["bonus_amount"],
+                })
+            else:
+                skipped.append({"user_id": uid, "reason": "helper returned None (see logs)", "order_id": p.get("order_id")})
+
+    return {
+        "success": True,
+        "dry_run": data.dry_run,
+        "scanned": len(payments),
+        "would_credit" if data.dry_run else "credited": len(credited),
+        "skipped": len(skipped),
+        "credited_list": credited[:200],
+        "skipped_list": skipped[:200],
+    }
+
+
+# ============================================================================
+# ADMIN — Diagnose why a user did NOT get their referral bonus
+# ============================================================================
+
+@router.get("/admin/referral-bonus/diagnose/{new_user_id_or_email}")
+async def diagnose(new_user_id_or_email: str):
+    """Explain why a specific user did / did not get a referral bonus.
+    Accepts either a UID or an email address."""
+    key = new_user_id_or_email.strip()
+    user = None
+    if "@" in key:
+        user = await db.users.find_one({"email": key}, {"_id": 0, "password_hash": 0})
+    else:
+        user = await db.users.find_one({"uid": key}, {"_id": 0, "password_hash": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User not found for '{key}'")
+
+    uid = user["uid"]
+    reasons = []
+    would_credit = True
+    referrer = None
+
+    # 1. Campaign active?
+    cam = await db.referral_bonus_campaigns.find_one({"_id": DEFAULT_CAMPAIGN_ID})
+    if not cam or not cam.get("enabled"):
+        reasons.append("Campaign is DISABLED")
+        would_credit = False
+
+    # 2. Referrer set?
+    ref_uid = user.get("referred_by")
+    if not ref_uid:
+        reasons.append("User has NO `referred_by` field — didn't use a referral code at signup")
+        would_credit = False
+    elif ref_uid == uid:
+        reasons.append("SELF-REFERRAL (referred_by == uid)")
+        would_credit = False
+    else:
+        referrer = await db.users.find_one({"uid": ref_uid}, {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1, "subscription_plan": 1, "bank_account": 1, "bank_ifsc": 1})
+        if not referrer:
+            reasons.append(f"Referrer UID `{ref_uid}` NOT FOUND in users collection")
+            would_credit = False
+        else:
+            plan = (referrer.get("subscription_plan") or "explorer").lower()
+            if plan in ("", "explorer", "free"):
+                reasons.append(f"Referrer '{referrer.get('name')}' is on FREE plan ({plan}) — needs to be a paid subscriber")
+                would_credit = False
+            if not referrer.get("bank_account") or not referrer.get("bank_ifsc"):
+                reasons.append(f"⚠️ Referrer has NO bank details on file (payout will need manual collection)")
+
+    # 3. Paid subscription history
+    payments = await db.vip_payments.find(
+        {"user_id": uid, "status": "approved", "payment_method": {"$in": ["razorpay", "manual_activation"]}},
+        {"_id": 0, "order_id": 1, "created_at": 1, "activation_source": 1, "payment_method": 1, "amount": 1, "subscription_plan": 1},
+    ).sort("created_at", 1).to_list(50)
+    paid_count = len(payments)
+    if paid_count == 0:
+        reasons.append("User has NO approved paid subscription (only PRC or none)")
+        would_credit = False
+    elif paid_count > 1:
+        reasons.append(f"User has {paid_count} paid subscriptions — the referral bonus only applies to the FIRST one. Subsequent ones are RENEWALS")
+    # 4. Existing bonus?
+    existing_bonus = await db.referral_bonuses.find_one({"new_user_uid": uid}, {"_id": 0})
+
+    return {
+        "user": {
+            "uid": uid, "name": user.get("name"), "email": user.get("email"),
+            "mobile": user.get("mobile") or user.get("phone"),
+            "referred_by": ref_uid,
+            "subscription_plan": user.get("subscription_plan"),
+        },
+        "referrer": referrer,
+        "paid_subscriptions": payments,
+        "existing_bonus": existing_bonus,
+        "campaign": {"enabled": cam.get("enabled") if cam else False, "range": [cam.get("start_date"), cam.get("end_date")] if cam else None},
+        "would_credit_now": would_credit and not existing_bonus,
+        "reasons": reasons if reasons else ["All conditions met — bonus SHOULD have been credited"],
+    }
+
+
 class ReverseRequest(BaseModel):
     reason: str
     admin_id: str = "admin"

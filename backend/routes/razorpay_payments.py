@@ -1264,6 +1264,17 @@ async def sync_payments_from_razorpay(request: Request):
                             "auto_activated": True,
                             "activation_source": "manual_sync"
                         })
+
+                        # ==================== REFERRAL BONUS HOOK (manual_sync path) ====================
+                        try:
+                            from routes.referral_bonus import credit_referral_bonus
+                            await credit_referral_bonus(
+                                database=db, new_user_uid=user_id,
+                                payment_method="razorpay", payment_amount=amount,
+                                subscription_plan=plan_name,
+                            )
+                        except Exception as _rb_err:
+                            logging.warning(f"[REF-BONUS] hook failed in manual_sync (non-fatal): {_rb_err}")
                         
                         synced.append({
                             "order_id": order_id,
@@ -1533,6 +1544,17 @@ async def fix_user_subscription(request: Request):
                 "created_at": now.isoformat(),
                 "fixed_by_admin": True
             })
+
+            # ==================== REFERRAL BONUS HOOK (admin fix — DB order path) ====================
+            try:
+                from routes.referral_bonus import credit_referral_bonus
+                await credit_referral_bonus(
+                    database=db, new_user_uid=user_id,
+                    payment_method="razorpay", payment_amount=amount,
+                    subscription_plan=plan_name,
+                )
+            except Exception as _rb_err:
+                logging.warning(f"[REF-BONUS] hook failed in admin_fix_db (non-fatal): {_rb_err}")
         
         return {
             "success": True,

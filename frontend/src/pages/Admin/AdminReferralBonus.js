@@ -5,7 +5,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import {
   Gift, Settings, Calendar, RefreshCw, Download, CheckCircle,
-  Trophy, Users, IndianRupee, X, Loader2, ChevronDown, Copy,
+  Trophy, Users, IndianRupee, X, Loader2, ChevronDown, Copy, Search, PlayCircle, AlertCircle,
 } from 'lucide-react';
 import { API } from '../../lib/api';
 
@@ -19,6 +19,8 @@ const copy = (v, label) => {
 const AdminReferralBonus = () => {
   const [campaign, setCampaign] = useState(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [showBackfill, setShowBackfill] = useState(false);
+  const [showDiagnose, setShowDiagnose] = useState(false);
   const [rows, setRows] = useState([]);
   const [totals, setTotals] = useState({});
   const [topRefs, setTopRefs] = useState([]);
@@ -103,9 +105,17 @@ const AdminReferralBonus = () => {
             <p className="text-xs text-slate-500">₹200 to referrer on every NEW paid subscription (Razorpay + Manual only)</p>
           </div>
         </div>
-        <button onClick={() => setShowConfig(true)} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium" data-testid="campaign-config-btn">
-          <Settings className="w-3.5 h-3.5" /> Campaign Config
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowDiagnose(true)} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium" data-testid="diagnose-btn">
+            <Search className="w-3.5 h-3.5" /> Diagnose User
+          </button>
+          <button onClick={() => setShowBackfill(true)} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium" data-testid="backfill-btn">
+            <PlayCircle className="w-3.5 h-3.5" /> Backfill
+          </button>
+          <button onClick={() => setShowConfig(true)} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium" data-testid="campaign-config-btn">
+            <Settings className="w-3.5 h-3.5" /> Campaign Config
+          </button>
+        </div>
       </div>
 
       {/* Campaign status banner */}
@@ -271,6 +281,167 @@ const AdminReferralBonus = () => {
 
       {showConfig && <ConfigModal campaign={campaign} onClose={() => setShowConfig(false)} onSaved={() => { setShowConfig(false); fetchCampaign(); }} />}
       {showPayModal && <MarkPaidModal bonusIds={selectedIds} onClose={() => setShowPayModal(false)} onDone={() => { setShowPayModal(false); fetchReport(); }} />}
+      {showBackfill && <BackfillModal onClose={() => setShowBackfill(false)} onDone={() => { setShowBackfill(false); fetchReport(); fetchSummary(); }} />}
+      {showDiagnose && <DiagnoseModal onClose={() => setShowDiagnose(false)} />}
+    </div>
+  );
+};
+
+// Backfill Modal — retroactively credit bonuses on already-activated payments
+const BackfillModal = ({ onClose, onDone }) => {
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [dryRun, setDryRun] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const run = async () => {
+    setBusy(true); setResult(null);
+    try {
+      const { data } = await axios.post(`${API}/admin/referral-bonus/backfill`, {
+        from_date: fromDate || null, to_date: toDate || null, dry_run: dryRun,
+      });
+      setResult(data);
+      toast.success(`${dryRun ? 'Dry-run' : 'Backfill'} complete — ${dryRun ? data.would_credit : data.credited} to credit, ${data.skipped} skipped`);
+      if (!dryRun) onDone();
+    } catch (e) { toast.error(e?.response?.data?.detail || 'Backfill failed'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white rounded-xl max-w-2xl w-full p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} data-testid="backfill-modal">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Backfill Missing Bonuses</h3>
+            <p className="text-xs text-slate-500">Retroactively credit ₹200 for already-activated users whose hook missed</p>
+          </div>
+          <button onClick={onClose}><X className="w-5 h-5 text-slate-500" /></button>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">From Date (optional)</label>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" data-testid="backfill-from" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">To Date (optional)</label>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" data-testid="backfill-to" />
+          </div>
+        </div>
+        <label className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg cursor-pointer">
+          <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} data-testid="backfill-dry-run" />
+          <div>
+            <p className="text-xs font-semibold text-yellow-900">Dry Run</p>
+            <p className="text-[10px] text-yellow-700">Preview what WOULD be credited without any DB writes. Uncheck to actually credit.</p>
+          </div>
+        </label>
+        <div className="flex justify-end gap-2 mt-3">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+          <button onClick={run} disabled={busy} className={`px-4 py-2 text-sm rounded-lg font-semibold disabled:opacity-60 ${dryRun ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`} data-testid="backfill-run">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin inline" /> : <>{dryRun ? 'Preview' : 'Credit Now'}</>}
+          </button>
+        </div>
+        {result && (
+          <div className="mt-4 border-t border-slate-200 pt-4 space-y-3" data-testid="backfill-result">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-slate-50 rounded-lg p-2"><p className="text-[10px] text-slate-500">Scanned</p><p className="font-bold">{result.scanned}</p></div>
+              <div className="bg-emerald-50 rounded-lg p-2"><p className="text-[10px] text-emerald-700">{result.dry_run ? 'Would Credit' : 'Credited'}</p><p className="font-bold text-emerald-700">{result.dry_run ? result.would_credit : result.credited}</p></div>
+              <div className="bg-yellow-50 rounded-lg p-2"><p className="text-[10px] text-yellow-700">Skipped</p><p className="font-bold text-yellow-700">{result.skipped}</p></div>
+            </div>
+            {result.credited_list?.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-emerald-700 mb-1">✓ {result.dry_run ? 'Would credit' : 'Credited'}:</p>
+                <div className="max-h-40 overflow-y-auto text-[10px] bg-emerald-50 rounded-lg p-2 space-y-0.5">
+                  {result.credited_list.map((c, i) => (
+                    <div key={i}>• {c.name || c.user_id} → referrer: <span className="font-semibold">{c.referrer_name}</span> {c.amount && `(₹${c.amount})`}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.skipped_list?.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-yellow-700 mb-1">⚠ Skipped:</p>
+                <div className="max-h-40 overflow-y-auto text-[10px] bg-yellow-50 rounded-lg p-2 space-y-0.5">
+                  {result.skipped_list.map((s, i) => (
+                    <div key={i}>• {s.name || s.user_id?.slice(0, 12)}: {s.reason}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Diagnose Modal — check why a specific user didn't get their bonus
+const DiagnoseModal = ({ onClose }) => {
+  const [query, setQuery] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [data, setData] = useState(null);
+
+  const run = async () => {
+    if (!query.trim()) { toast.error('Enter user UID or email'); return; }
+    setBusy(true); setData(null);
+    try {
+      const { data: d } = await axios.get(`${API}/admin/referral-bonus/diagnose/${encodeURIComponent(query.trim())}`);
+      setData(d);
+    } catch (e) { toast.error(e?.response?.data?.detail || 'Not found'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-white rounded-xl max-w-2xl w-full p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} data-testid="diagnose-modal">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Diagnose Missing Bonus</h3>
+            <p className="text-xs text-slate-500">Check why a user didn&apos;t get their referral bonus credited</p>
+          </div>
+          <button onClick={onClose}><X className="w-5 h-5 text-slate-500" /></button>
+        </div>
+        <div className="flex gap-2 mb-3">
+          <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run()} placeholder="User UID or email (e.g. franklinfashion9741@gmail.com)" className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm" data-testid="diagnose-query" />
+          <button onClick={run} disabled={busy} className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-lg text-sm font-semibold disabled:opacity-60" data-testid="diagnose-run">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Check'}
+          </button>
+        </div>
+        {data && (
+          <div className="border-t border-slate-200 pt-3 space-y-3" data-testid="diagnose-result">
+            <div className={`p-3 rounded-lg ${data.would_credit_now ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+              <p className={`text-sm font-bold ${data.would_credit_now ? 'text-emerald-800' : 'text-red-800'}`}>
+                {data.would_credit_now ? '✓ Bonus SHOULD be credited (run Backfill)' : '✗ Bonus will NOT credit'}
+              </p>
+              <ul className="mt-2 text-xs space-y-1">
+                {data.reasons.map((r, i) => (
+                  <li key={i} className={data.would_credit_now ? 'text-emerald-700' : 'text-red-700'}>• {r}</li>
+                ))}
+              </ul>
+            </div>
+            <details className="text-xs">
+              <summary className="cursor-pointer font-semibold text-slate-700">User</summary>
+              <pre className="bg-slate-50 p-2 rounded mt-1 overflow-x-auto text-[10px]">{JSON.stringify(data.user, null, 2)}</pre>
+            </details>
+            {data.referrer && (
+              <details className="text-xs">
+                <summary className="cursor-pointer font-semibold text-slate-700">Referrer</summary>
+                <pre className="bg-slate-50 p-2 rounded mt-1 overflow-x-auto text-[10px]">{JSON.stringify(data.referrer, null, 2)}</pre>
+              </details>
+            )}
+            <details className="text-xs">
+              <summary className="cursor-pointer font-semibold text-slate-700">Paid Subscriptions ({data.paid_subscriptions?.length || 0})</summary>
+              <pre className="bg-slate-50 p-2 rounded mt-1 overflow-x-auto text-[10px]">{JSON.stringify(data.paid_subscriptions, null, 2)}</pre>
+            </details>
+            {data.existing_bonus && (
+              <details className="text-xs">
+                <summary className="cursor-pointer font-semibold text-emerald-700">Existing Bonus</summary>
+                <pre className="bg-emerald-50 p-2 rounded mt-1 overflow-x-auto text-[10px]">{JSON.stringify(data.existing_bonus, null, 2)}</pre>
+              </details>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

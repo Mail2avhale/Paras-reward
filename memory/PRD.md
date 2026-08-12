@@ -1,3 +1,47 @@
+## Fixed (Aug 10, 2026 — Referral Bonus Root Cause: 3 unhooked activation paths)
+
+### Root Cause
+User reported that **Amar franklin** and other users who paid via Razorpay were NOT showing up in the referral bonus list even though the campaign was live. Investigation of `/app/backend/routes/razorpay_payments.py` revealed 5 places where `vip_payments.insert_one(status="approved")` fires, but the `credit_referral_bonus` hook was only wired to 2 of them:
+
+| Line | Path | Was Hooked? |
+|------|------|-------------|
+| 491  | Normal Razorpay checkout success | ✅ |
+| 1249 | Admin "Sync Payments from Razorpay" (bulk activation) | ❌ **MISSED** |
+| 1443 | Admin manual fix — Razorpay API lookup | ❌ **MISSED** |
+| 1523 | Admin manual fix — order found in DB | ❌ **MISSED** |
+| 1632 | Manual activation flow | ✅ |
+
+Amar's `pay_T0rcEnWBjyE0gt` payment was activated via the **manual sync** path (path 1249), where the referral bonus hook never fired.
+
+### Fix
+1. **Added `credit_referral_bonus` hook to all 3 missed paths** in `razorpay_payments.py` (with matching payment_method="razorpay", subscription_plan, amount).
+2. **New admin endpoint `POST /api/admin/referral-bonus/backfill`** — scans approved vip_payments in a date range and retroactively credits missing bonuses. Supports `dry_run=true` to preview. Uses the same helper with all safety guards intact (first paid sub only, no self-referral, referrer must be paid, idempotency).
+3. **New admin endpoint `GET /api/admin/referral-bonus/diagnose/{uid_or_email}`** — explains for any user why their bonus was (or was not) credited: campaign status, referrer info, paid subscription count, existing bonus, and a bullet-point list of blocking reasons.
+4. **Admin UI enhancements** on `/admin/referral-bonus`:
+   - "Diagnose User" button → modal accepts UID or email, shows full user + referrer state + reasons.
+   - "Backfill" button → modal with from/to dates + dry-run checkbox + result grid showing scanned/credited/skipped counts and per-row reasons.
+
+### How admin fixes Amar franklin (and similar users) on production
+1. Deploy latest code to production (Emergent Deploy button).
+2. Go to `/admin/referral-bonus`.
+3. Click **Diagnose User** → paste `franklinfashion9741@gmail.com` → see the exact reason (likely: "no `referred_by`" OR "renewal" OR "would credit now" — code path miss).
+4. If it says "would credit now", click **Backfill** → set dates → **Dry Run** first → confirm the list → uncheck dry-run → **Credit Now**.
+
+### All safety guards remain intact during backfill
+- First paid subscription only (renewals blocked)
+- No self-referral
+- Referrer must be a paid subscriber
+- Bonus already exists → skipped
+- Campaign date range respected
+
+### Files touched
+- **Modified backend**: `routes/razorpay_payments.py` (3 new hook points), `routes/referral_bonus.py` (backfill + diagnose endpoints)
+- **Modified frontend**: `pages/Admin/AdminReferralBonus.js` (Backfill modal + Diagnose modal + header buttons)
+- 11/11 pytests still pass
+
+---
+
+
 ## Extended (Aug 10, 2026 — Referral Bonus Paid Side-Effects)
 
 When admin clicks **Mark Paid** on a referral bonus (bulk), the system now auto-creates 4 downstream artefacts for the referrer, giving them full visibility & celebration:
