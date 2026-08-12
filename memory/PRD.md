@@ -1,3 +1,54 @@
+## Extended (Aug 10, 2026 — Referral Bonus Paid Side-Effects)
+
+When admin clicks **Mark Paid** on a referral bonus (bulk), the system now auto-creates 4 downstream artefacts for the referrer, giving them full visibility & celebration:
+
+### 1. Bank Redeem ledger entry (`bank_transfer_requests`)
+- `channel: "referral_bonus_payout"`, `is_referral_bonus: true`, status: `paid`
+- `amount_inr = withdrawal_amount = bonus.bonus_amount` (₹200)
+- `total_prc_deducted: 0` (no PRC touched — real cash payout via NEFT)
+- `utr_number` from admin's Mark-Paid payload
+- `bank_details` snapshot from bonus row
+- **Effect**: Appears in user's Bank Redeem history AND rolls up into `get_user_all_time_redeemed` → **Total Rewards Redeemed** counter increases
+
+### 2. Transactions statement row
+- `type: "referral_bonus_payout"`, positive `amount_inr` (payout INTO bank)
+- Description: `₹200 Referral Bonus — <new user name>`
+- ref_id links back to bank_transfer_requests row
+
+### 3. In-app notification (via `create_notification`)
+- Type: `mining_referral_reward` (gift icon, fuchsia color)
+- Title: `🎉 ₹200 Referral Bonus Received!`
+- Message: "Congratulations! Your ₹200 referral bonus for bringing X on board has been transferred..."
+- `data.action_link: "/my-referral-bonus"` for tap-to-open
+
+### 4. Community forum success story (via existing `create_success_story_post` helper)
+- `service_type: "bank_redeem"`, `amount_inr: 200`
+- Idempotent via `ref_id: "referral_bonus:{bonus_id}"`
+- Auto-authored as "Paras Reward" system post with celebratory copy
+
+### 5. Frontend Celebration Modal
+- `/my-referral-bonus` page now detects freshly-paid bonuses (unseen in localStorage)
+- Shows a full-screen confetti modal: "Congratulations {firstName}! ₹200 Bonus Received"
+- Native Web Share API button to share on WhatsApp / other apps
+- Dismissal is remembered in localStorage per bonus_id
+
+### Idempotency
+- Bank ledger row uses `request_id = "REFB-PAY-{bonus_id}"` — duplicate insert skipped
+- Mark-paid endpoint only fires side effects for rows that transitioned from `pending → paid` (existing paid rows are ignored)
+- Community post uses `ref_id: "referral_bonus:{bonus_id}"` — existing 24h dedup + ref_id dedup logic prevents duplicates
+
+### Tests
+Extended `/app/backend/tests/test_referral_bonus.py` to **11/11 pass** with new coverage:
+- `test_mark_paid_side_effects` — verifies bank_transfer_requests + transactions rows are created with correct fields (amount, UTR, channel, is_referral_bonus flag, bank snapshot); notification + community helpers are stubbed; idempotency re-check confirmed.
+
+### Files touched
+- **Modified backend**: `routes/referral_bonus.py` (added `_fire_paid_side_effects` helper + wired into `mark_paid` endpoint)
+- **Modified frontend**: `pages/MyReferralBonus.js` (added `CelebrationModal` component + auto-detect via localStorage flag)
+- **Test**: added `test_mark_paid_side_effects` case
+
+---
+
+
 ## Implemented (Aug 10, 2026 — Referral Bonus Campaign ₹200 Limited Time Offer)
 
 ### Rules (as per user)

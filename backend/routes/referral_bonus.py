@@ -380,11 +380,129 @@ class MarkPaidRequest(BaseModel):
     admin_id: str = "admin"
 
 
+async def _fire_paid_side_effects(bonus: dict, payout_reference: str, admin_id: str):
+    """After a bonus is marked paid, create user-facing artefacts:
+    1. Bank Redeem ledger entry (bank_transfer_requests) — shows in user's Bank Redeem
+       history AND rolls up into Total Rewards Redeemed.
+    2. Transactions statement row.
+    3. In-app notification greeting.
+    4. Community forum success story post (via community helper).
+    Fire-and-forget: errors logged, never raised."""
+    d = db
+    now_iso = datetime.now(timezone.utc).isoformat()
+    referrer_uid = bonus["referrer_uid"]
+    amount_inr = float(bonus["bonus_amount"])
+    request_id = f"REFB-PAY-{bonus['bonus_id']}"
+
+    # 1) Bank redeem ledger entry
+    try:
+        bank_doc = {
+            "request_id": request_id,
+            "user_id": referrer_uid,
+            "user_name": bonus.get("referrer_name") or "",
+            "user_mobile": bonus.get("referrer_mobile") or "",
+            "amount_inr": amount_inr,
+            "total_inr": amount_inr,
+            "withdrawal_amount": amount_inr,
+            "total_prc_deducted": 0,
+            "admin_fee_inr": 0,
+            "transaction_fee_inr": 0,
+            "bank_details": {
+                "account_number": bonus.get("referrer_bank_account") or "",
+                "ifsc_code": bonus.get("referrer_bank_ifsc") or "",
+                "bank_name": bonus.get("referrer_bank_name") or "",
+                "account_holder_name": bonus.get("referrer_bank_holder") or "",
+            },
+            "status": "paid",
+            "utr_number": payout_reference,
+            "admin_remark": f"₹{int(amount_inr)} Referral Bonus payout ({bonus['bonus_id']})",
+            "processed_by": admin_id,
+            "processed_at": now_iso,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+            "channel": "referral_bonus_payout",
+            "is_referral_bonus": True,
+            "ref_bonus_id": bonus["bonus_id"],
+        }
+        # Idempotent: skip if already inserted for this bonus
+        exists = await d.bank_transfer_requests.find_one({"request_id": request_id})
+        if not exists:
+            await d.bank_transfer_requests.insert_one(bank_doc)
+    except Exception as e:
+        logging.warning(f"[REF-BONUS-PAID] bank_transfer_requests insert failed: {e}")
+
+    # 2) Transactions statement row
+    try:
+        await d.transactions.insert_one({
+            "user_id": referrer_uid,
+            "type": "referral_bonus_payout",
+            "amount_prc": 0,
+            "amount_inr": amount_inr,   # POSITIVE — this is a payout INTO their bank
+            "description": f"₹{int(amount_inr)} Referral Bonus — {bonus.get('new_user_name') or 'new user'}",
+            "ref_id": request_id,
+            "created_at": now_iso,
+            "metadata": {
+                "bonus_id": bonus["bonus_id"],
+                "payout_reference": payout_reference,
+                "admin_id": admin_id,
+                "new_user_uid": bonus.get("new_user_uid"),
+            },
+        })
+    except Exception as e:
+        logging.warning(f"[REF-BONUS-PAID] transactions insert failed: {e}")
+
+    # 3) Greeting notification
+    try:
+        from routes.notifications import create_notification
+        title = "🎉 ₹{:g} Referral Bonus Received!".format(amount_inr)
+        message = (
+            f"Congratulations! Your ₹{int(amount_inr)} referral bonus for bringing "
+            f"{bonus.get('new_user_name') or 'a new subscriber'} on board has been "
+            f"transferred to your bank account."
+            + (f"\nUTR: {payout_reference}" if payout_reference else "")
+        )
+        await create_notification(
+            user_id=referrer_uid,
+            notification_type="mining_referral_reward",
+            title=title,
+            message=message,
+            data={
+                "bonus_id": bonus["bonus_id"],
+                "amount_inr": amount_inr,
+                "payout_reference": payout_reference,
+                "action_link": "/my-referral-bonus",
+            },
+        )
+    except Exception as e:
+        logging.warning(f"[REF-BONUS-PAID] notification create failed: {e}")
+
+    # 4) Community success story post
+    try:
+        # Late import — helper reads db from server.py's globals
+        from routes.community import create_success_story_post
+        await create_success_story_post(
+            user_id=referrer_uid,
+            service_type="bank_redeem",
+            amount_inr=amount_inr,
+            extra_title="Referral Bonus",
+            ref_id=f"referral_bonus:{bonus['bonus_id']}",
+        )
+    except Exception as e:
+        logging.warning(f"[REF-BONUS-PAID] community post hook failed: {e}")
+
+
 @router.post("/admin/referral-bonus/mark-paid")
 async def mark_paid(data: MarkPaidRequest):
     if not data.bonus_ids:
         raise HTTPException(status_code=400, detail="bonus_ids empty")
     now = datetime.now(timezone.utc).isoformat()
+
+    # Fetch the pending bonuses BEFORE update (need bank details for side-effects)
+    pending_rows = await db.referral_bonuses.find(
+        {"bonus_id": {"$in": data.bonus_ids}, "status": "pending"},
+        {"_id": 0},
+    ).to_list(len(data.bonus_ids))
+
     r = await db.referral_bonuses.update_many(
         {"bonus_id": {"$in": data.bonus_ids}, "status": "pending"},
         {"$set": {
@@ -394,6 +512,11 @@ async def mark_paid(data: MarkPaidRequest):
             "payout_reference": data.payout_reference,
         }},
     )
+
+    # Fire user-facing side effects for each newly-paid bonus (fire-and-forget)
+    for bonus in pending_rows:
+        await _fire_paid_side_effects(bonus, data.payout_reference, data.admin_id)
+
     return {"success": True, "marked_paid": r.modified_count, "requested": len(data.bonus_ids)}
 
 

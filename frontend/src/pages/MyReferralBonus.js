@@ -3,11 +3,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Gift, IndianRupee, CheckCircle, Clock, X, ArrowLeft, Building2, Loader2 } from 'lucide-react';
+import { Gift, IndianRupee, CheckCircle, Clock, X, ArrowLeft, Building2, Loader2, PartyPopper, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/api';
 
 const currencyFmt = (n) => `₹ ${(Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const CELEBRATED_KEY = 'paras_ref_bonus_celebrated';
 
 const MyReferralBonus = ({ user }) => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const MyReferralBonus = ({ user }) => {
   const [showBankModal, setShowBankModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [campaignInfo, setCampaignInfo] = useState(null);
+  const [celebration, setCelebration] = useState(null);   // bonus obj to celebrate
 
   const uid = user?.uid;
 
@@ -31,6 +33,11 @@ const MyReferralBonus = ({ user }) => {
       if (my.data?.needs_bank_details) {
         setShowBankModal(true);
       }
+
+      // 🎉 Celebrate freshly-paid bonuses that user hasn't seen yet
+      const celebrated = new Set(JSON.parse(localStorage.getItem(CELEBRATED_KEY) || '[]'));
+      const freshPaid = (my.data?.bonuses || []).find(b => b.status === 'paid' && !celebrated.has(b.bonus_id));
+      if (freshPaid) setCelebration(freshPaid);
     } catch (e) { toast.error(e?.response?.data?.detail || 'Failed to load'); }
     finally { setLoading(false); }
   }, [uid]);
@@ -161,6 +168,89 @@ const MyReferralBonus = ({ user }) => {
           onSaved={() => { setShowBankModal(false); fetchAll(); }}
         />
       )}
+
+      {celebration && (
+        <CelebrationModal
+          bonus={celebration}
+          userName={user?.name}
+          onClose={() => {
+            const list = JSON.parse(localStorage.getItem(CELEBRATED_KEY) || '[]');
+            if (!list.includes(celebration.bonus_id)) list.push(celebration.bonus_id);
+            localStorage.setItem(CELEBRATED_KEY, JSON.stringify(list));
+            setCelebration(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+const CelebrationModal = ({ bonus, userName, onClose }) => {
+  const firstName = (userName || 'friend').split(' ')[0];
+  const amount = bonus.bonus_amount || 200;
+
+  const share = async () => {
+    const text = `🎉 I just received ₹${amount} Referral Bonus from Paras Reward! Join using my referral code and get amazing rewards. 💰`;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Paras Reward Bonus', text }); } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast.success('Copied! Share it anywhere.');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[100]" data-testid="celebration-modal">
+      <style>{`
+        @keyframes confettiPop { 0% { transform: scale(0) rotate(0); opacity: 0; } 60% { transform: scale(1.1) rotate(180deg); opacity: 1; } 100% { transform: scale(1) rotate(360deg); opacity: 1; } }
+        @keyframes floatUp { 0% { transform: translateY(30px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+      `}</style>
+      <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center relative overflow-hidden" style={{ animation: 'floatUp 0.4s ease-out' }}>
+        {/* Confetti dots */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {['bg-red-400', 'bg-yellow-400', 'bg-emerald-400', 'bg-blue-400', 'bg-purple-400', 'bg-pink-400'].map((c, i) => (
+            <span key={i} className={`absolute w-3 h-3 ${c} rounded-sm`} style={{
+              left: `${(i * 17) % 100}%`, top: `${(i * 23) % 40}%`,
+              animation: `confettiPop 0.6s ease-out ${i * 0.08}s both`,
+            }} />
+          ))}
+        </div>
+
+        <button onClick={onClose} className="absolute top-3 right-3 p-1.5 hover:bg-slate-100 rounded-full z-10" data-testid="close-celebration">
+          <X className="w-4 h-4 text-slate-500" />
+        </button>
+
+        <div className="relative z-10 mt-2">
+          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center mb-3 shadow-lg" style={{ animation: 'confettiPop 0.6s ease-out both' }}>
+            <PartyPopper className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900">Congratulations {firstName}!</h2>
+          <p className="text-slate-500 text-sm mt-1">Your referral bonus is on the way</p>
+
+          <div className="my-5 py-4 bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-2xl">
+            <p className="text-xs uppercase font-semibold text-amber-700 tracking-wider">Bonus Received</p>
+            <p className="text-4xl font-bold text-amber-600 mt-1">₹ {amount.toLocaleString('en-IN')}</p>
+            <p className="text-xs text-slate-600 mt-1">
+              For bringing <span className="font-semibold">{bonus.new_user_name || 'a new subscriber'}</span> on board
+            </p>
+          </div>
+
+          {bonus.payout_reference && (
+            <p className="text-[10px] text-slate-500 font-mono mb-3">
+              NEFT Ref: {bonus.payout_reference}
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={onClose} className="py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50" data-testid="celebrate-thanks">
+              Thanks!
+            </button>
+            <button onClick={share} className="py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5" data-testid="celebrate-share">
+              <Share2 className="w-4 h-4" /> Share
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

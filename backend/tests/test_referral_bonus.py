@@ -218,3 +218,57 @@ def test_manual_activation_works(db_, mod):
     out = _run(mod.credit_referral_bonus(db_, newu, "manual_activation", 0, "elite"))
     assert out is not None
     assert out["payment_method"] == "manual_activation"
+
+
+# =========================================================================
+# MARK-PAID side effects (Bank Redeem entry, transactions, notification, forum)
+# =========================================================================
+
+def test_mark_paid_side_effects(db_, mod):
+    """Ensure marking a bonus paid inserts a bank_transfer_requests row + transactions row.
+    (Notification + community post are stubbed since they import from other modules.)"""
+    # Set up: create + credit a bonus
+    _setup_campaign(db_, mod)
+    _, newu = _setup_users(db_)
+    bonus = _run(mod.credit_referral_bonus(db_, newu, "razorpay", 999, "elite"))
+    assert bonus is not None
+
+    # Extend FakeDB with the extra collections
+    db_.bank_transfer_requests = type(db_.users)()  # FakeCollection
+    db_.transactions = type(db_.users)()
+
+    # Monkey-patch mod.db so side-effects see our fake db
+    mod.db = db_
+    # Stub the external imports (notification + community)
+    import sys
+    dummy = type('M', (), {'create_notification': lambda **kw: None, 'create_success_story_post': lambda **kw: None})
+    sys.modules['routes.notifications'] = dummy
+    sys.modules['routes.community'] = dummy
+
+    _run(mod._fire_paid_side_effects(bonus, "UTR-TEST-12345", "test-admin"))
+
+    # Check bank_transfer_requests row created
+    bank_rows = _run(db_.bank_transfer_requests.find({}, {}).to_list(10))
+    assert len(bank_rows) == 1
+    br = bank_rows[0]
+    assert br["status"] == "paid"
+    assert br["amount_inr"] == 200
+    assert br["withdrawal_amount"] == 200
+    assert br["channel"] == "referral_bonus_payout"
+    assert br["utr_number"] == "UTR-TEST-12345"
+    assert br["is_referral_bonus"] is True
+    assert br["bank_details"]["account_number"] == "123456789"
+    assert br["bank_details"]["ifsc_code"] == "HDFC0001234"
+
+    # Check transactions row created
+    tx_rows = _run(db_.transactions.find({}, {}).to_list(10))
+    assert len(tx_rows) == 1
+    tx = tx_rows[0]
+    assert tx["type"] == "referral_bonus_payout"
+    assert tx["amount_inr"] == 200
+    assert tx["ref_id"] == f"REFB-PAY-{bonus['bonus_id']}"
+
+    # Idempotent — running side effects again should NOT create duplicates
+    _run(mod._fire_paid_side_effects(bonus, "UTR-TEST-12345", "test-admin"))
+    bank_rows = _run(db_.bank_transfer_requests.find({}, {}).to_list(10))
+    assert len(bank_rows) == 1   # still 1
