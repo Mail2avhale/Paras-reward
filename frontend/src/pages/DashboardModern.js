@@ -13,6 +13,7 @@ import {
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/ProfileCompletionComponents';
 import LockedPRCCard from '@/components/LockedPRCCard';
+import WalletServiceChargeLock from '@/components/WalletServiceChargeLock';
 // AIChatbotEnhanced REMOVED - chatbot feature deprecated (March 2026)
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
@@ -1113,6 +1114,13 @@ const DashboardModern = ({ user, onLogout }) => {
                   {Number(performanceSummary.available_prc_balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })} PRC
                 </span>
               </div>
+
+              {/* Redemption lock status — pending 20% cash service charge (Feb 2026) */}
+              <WalletServiceChargeLock
+                uid={user?.uid}
+                prcBalance={performanceSummary.available_prc_balance || user?.prc_balance || 0}
+                prcRate={stats.prcRate || 10}
+              />
 
               {/* Estimated PRC Value */}
               <div className="flex items-center justify-between" data-testid="perf-estimated-value">

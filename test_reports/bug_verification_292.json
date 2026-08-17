@@ -1,0 +1,37 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "The /admin/service-charges route was rendering the legacy Bill Payment Service Charges Configuration page instead of the new Phase-3 PRC Redemption Service Charges admin dashboard. Testing agent reported this in iteration_291.",
+  "summary": "No relevant testing skill found. Verified code routing and ran focused UI flow: logged in as admin@test.com, opened /admin/service-charges, confirmed the Phase-3 dashboard rendered with all required data-testids and heading 'Redemption Service Charges' while legacy text was absent. Also verified /admin/bill-service-charges still renders the legacy Service Charges Configuration page. Relevant app APIs returned 200; only unrelated Google Ads 403 console noise was observed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/admin_service_charges_route_ui_test.py",
+    "/app/test_reports/bug_verification_292.json",
+    "/app/test_reports/iteration_292.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "App.js now imports AdminServiceCharges from '@/pages/Admin/AdminServiceCharges' and maps /admin/service-charges to it; /admin/bill-service-charges maps to AdminBillServiceCharges. Runtime UI evidence matched this route split."
+  ],
+  "updated_files": [
+    "/app/test_reports/admin_service_charges_route_ui_test.py",
+    "/app/test_reports/bug_verification_292.json",
+    "/app/test_reports/iteration_292.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Focused bug verification only. Skill lookup for 'admin service charges route dashboard' returned no relevant testing skill. UI test used https://formula-audit-fix.preview.emergentagent.com, admin@test.com / 153759. Required dashboard testids all present: admin-svc-charges-page, stat-pending, stat-paid, stat-total, stat-rate, search-input, search-btn, days-filter, refresh-btn, charges-table, revenue-chart. Relevant endpoints observed as 200: /api/auth/check-auth-type, /api/auth/login, /api/admin/redemption-service-charge/{summary,pending,revenue-report,search}, and legacy /api/admin/service-charges.",
+  "rca_of_the_issue": "Previous failure was caused by /admin/service-charges resolving to the legacy bill-payment AdminServiceCharges file. The fix separates imports/routes so the new Phase-3 PRC dashboard owns /admin/service-charges and the legacy config remains available at /admin/bill-service-charges. Reproduction no longer occurs."
+}

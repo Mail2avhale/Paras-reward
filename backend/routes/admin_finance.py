@@ -339,7 +339,27 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             "date": {"$gte": start_str, "$lte": end_str}
         }, {"_id": 0, "amount": 1}).to_list(1000)
         revenue["other_income"] = sum(oi.get("amount", 0) for oi in other_income)
-        
+
+        # 9. PRC Redemption Service Charges (Feb 2026) — 20% cash fee collected
+        # AFTER a successful bank redemption. Only PAID rows count as recognised
+        # revenue. Grandfathered: pre-migration completed redemptions have no
+        # charge row so they contribute 0.
+        try:
+            svc_charges = await db.redemption_service_charges.find({
+                "status": "PAID",
+                "paid_at": {"$gte": start_str, "$lte": end_str},
+            }, {"_id": 0, "total_payable": 1, "service_charge_amount": 1}).to_list(50000)
+            prc_redeem_svc_revenue = sum(
+                float(sc.get("total_payable", sc.get("service_charge_amount", 0)) or 0)
+                for sc in svc_charges
+            )
+            revenue["service_charges"] += prc_redeem_svc_revenue
+            revenue_details["prc_redemption_service_charges"] = round(prc_redeem_svc_revenue, 2)
+            revenue_details["prc_redemption_service_charge_count"] = len(svc_charges)
+        except Exception as _e:
+            revenue_details["prc_redemption_service_charges"] = 0
+            revenue_details["prc_redemption_service_charge_count"] = 0
+
         total_revenue = sum(revenue.values())
         
         # ===== EXPENSE CALCULATION =====

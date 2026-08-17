@@ -1,3 +1,46 @@
+## Shipped (Feb 17, 2026 — PRC Redemption Service Charge Phase 2 + Phase 3)
+
+### Delivered
+- **Phase 2 (User Frontend)**:
+  - Global `ServiceChargePendingBanner` mounted in App.js (all logged-in non-admin views)
+  - `/my-service-charges` route (+ alias `/my-redeems/service-charges`) rendering `MyServiceCharges` page with totals, history, retry-pay via Razorpay
+  - BankRedeemPage post-success info toast + amber preview panel (data-testid `svc-charge-preview`) showing "20% cash service charge post-success"
+  - 402 error deep-link: submit-time block auto-navigates user to `/my-service-charges`
+  - `WalletServiceChargeLock` component in DashboardModern — shows "Redemption Locked" chip when a pending charge exists, "Redemption: Available" otherwise
+- **Phase 3 (Admin)**:
+  - `/admin/service-charges` route now correctly points to Phase-3 `Admin/AdminServiceCharges.js` (bug fix: previously loaded legacy Bill Payment config from `pages/AdminServiceCharges.js`; that file renamed to `AdminBillServiceCharges.js` and moved to `/admin/bill-service-charges`)
+  - Stat cards (Pending / Paid / Total / Collection Rate), search, days filter, refresh
+  - Manual Mark Paid modal (`X-Finance-Pin` gated)
+  - Reverse/Refund modal (new endpoint `POST /admin/redemption-service-charge/reverse`)
+  - Revenue timeseries mini-chart (new endpoint `GET /admin/redemption-service-charge/revenue-report?days=30`)
+- **Backend production wiring fix**: `manual_bank_transfer.py` (the actual `/api/bank-transfer/*` production flow) now integrates the pending block on `POST /request` (HTTP 402 with details) and creates the service charge on `POST /admin/mark-paid` + `POST /admin/bulk-mark-paid`. This closes the critical gap where Phase 1 hooks were only in the unused `bank_redeem.py` path.
+- **Revenue reporting**: `admin_finance.py` (P&L report) now counts `redemption_service_charges` with `status=PAID` inside the reporting window as `revenue.service_charges`, with `revenue_details.prc_redemption_service_charges` breakdown.
+- **In-app notifications**: user receives a notification on charge creation ("💰 Redemption Service Charge Pending") and on reversal ("↩ Service Charge Refunded")
+- **Grandfathering**: pre-existing redemptions that completed before this build have no `redemption_service_charges` row → block only fires when a NEW post-hook redemption completes without paying
+
+### Files created
+- `/app/frontend/src/components/WalletServiceChargeLock.jsx`
+- `/app/backend/tests/test_prc_svc_charge_http.py` (12/12 pass — public + admin endpoints, revenue report, admin_finance integration)
+- `/app/backend/tests/test_prc_svc_charge_e2e_block.py` (2/2 pass — 402 block flow end-to-end)
+
+### Files modified
+- `/app/frontend/src/App.js` — banner mount, new route, fixed import path
+- `/app/frontend/src/pages/BankRedeemPage.js` — preview panel + post-success toast + 402 handler
+- `/app/frontend/src/pages/DashboardModern.js` — Wallet lock chip
+- `/app/frontend/src/pages/Admin/AdminServiceCharges.js` — Reverse modal + revenue chart
+- `/app/frontend/src/pages/AdminBillServiceCharges.js` — renamed from `pages/AdminServiceCharges.js`
+- `/app/backend/routes/redemption_service_charge.py` — /reverse + /revenue-report + user notification
+- `/app/backend/routes/manual_bank_transfer.py` — pending-block on /request; create-on-success in mark-paid + bulk-mark-paid
+- `/app/backend/routes/admin_finance.py` — service-charge revenue accrual
+
+### Testing status
+- **All 10 existing pytests pass** (`test_redemption_service_charge.py`)
+- **12/12 new HTTP tests pass** (`test_prc_svc_charge_http.py`)
+- **2/2 e2e block tests pass** (`test_prc_svc_charge_e2e_block.py`)
+- **Bug fix verified** via bug_testing_agent iteration_292 — `/admin/service-charges` renders Phase-3 dashboard; legacy config preserved at `/admin/bill-service-charges`
+
+---
+
 ## Shipped (Aug 13, 2026 — PRC Redemption Service Charge Phase 1 — Backend Core)
 
 ### Business Rule Delivered

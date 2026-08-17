@@ -349,6 +349,12 @@ const BankRedeemPage = ({ user: initialUser }) => {
         
         // Show processing info
         toast.info('Your request will be processed within 3 to 7 working days.', { duration: 6000 });
+        // Post-success — inform user that a 20% cash service charge will
+        // become payable once admin marks the request PAID (Feb 2026 spec).
+        toast('After admin marks it paid, a 20% cash Redemption Service Charge will apply. Track it under "My Service Charges".', {
+          duration: 8000,
+          icon: '💰',
+        });
         
         // Update local balance
         setUser(prev => ({
@@ -381,8 +387,15 @@ const BankRedeemPage = ({ user: initialUser }) => {
         // No setTimeout redirect anymore — the modal's onClose handles it.
       }
     } catch (error) {
+      const status = error.response?.status;
       const msg = error.response?.data?.detail || 'Failed to submit request';
-      toast.error(msg);
+      if (status === 402) {
+        // Pending service charge — deep-link user to pay it
+        toast.error(msg, { duration: 8000 });
+        setTimeout(() => { try { navigate('/my-service-charges'); } catch { /* noop */ } }, 900);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -584,6 +597,26 @@ const BankRedeemPage = ({ user: initialUser }) => {
                   <p className="text-slate-500 text-xs mt-3">
                     Rate: 1 INR = {config.prc_rate} PRC &middot; Fee: ₹{config.transaction_fee} + {config.admin_fee_percent}% (extra, not in ₹2,500 cap)
                   </p>
+
+                  {/* PRC Redemption Service Charge preview (Feb 2026) — informs
+                      the user that a 20% cash service fee will apply AFTER
+                      admin marks the request PAID. Only shown when a valid
+                      amount is selected. */}
+                  {amount && !isNaN(amount) && (lifetimeQuota?.allowed_amounts || [100, 200, 400, 800, 1000]).includes(parseInt(amount)) && (
+                    <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3" data-testid="svc-charge-preview">
+                      <p className="text-amber-300 text-xs font-bold flex items-center gap-1.5">
+                        <IndianRupee className="w-3.5 h-3.5" />
+                        Service Charge Notice (post-success)
+                      </p>
+                      <p className="text-amber-100/90 text-xs mt-1 leading-relaxed">
+                        On successful bank transfer of <b>₹{parseInt(amount)}</b>, a
+                        <b> 20% Redemption Service Charge = ₹{Math.max(1, Math.round(parseInt(amount) * 0.20))}</b> becomes payable in cash via Razorpay.
+                      </p>
+                      <p className="text-amber-100/70 text-[11px] mt-1">
+                        Until paid, you can&apos;t create a new redemption. It appears in <b>My Service Charges</b>.
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
             </Card>

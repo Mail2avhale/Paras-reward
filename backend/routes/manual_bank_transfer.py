@@ -603,6 +603,26 @@ async def create_redeem_request(request: RedeemRequest):
         amount = request.amount
         bank = request.bank_details
 
+        # NEW (Feb 2026) — Block if user has an unpaid 20% cash service charge
+        # from a previously-completed redemption. See Phase 1 spec.
+        try:
+            from routes.redemption_service_charge import has_pending_service_charge
+            pending_svc = await has_pending_service_charge(user_id)
+            if pending_svc:
+                raise HTTPException(
+                    status_code=402,
+                    detail=(
+                        f"Your previous PRC redemption was successfully completed, but its "
+                        f"20% Redemption Service Charge of ₹{pending_svc.get('total_payable', 0)} "
+                        f"is still pending. Please complete the pending service charge "
+                        f"payment before creating a new redemption request."
+                    ),
+                )
+        except HTTPException:
+            raise
+        except Exception as _e:
+            logging.warning(f"[SVC-CHG] pending check failed (non-fatal, allowing): {_e}")
+
         # 1. NEW (Feb 2026) — Validate amount against the fixed allow-list
         # and the per-user lifetime cap. This supersedes the progressive
         # minimum check for the public bank-redeem flow.
@@ -1516,6 +1536,28 @@ async def mark_request_paid(action: AdminActionRequest):
         
         logging.info(f"[BANK TRANSFER] Marked PAID: {action.request_id} | Admin: {action.admin_id} | UTR: {action.utr_number}")
 
+        # PRC Redemption Service Charge (Feb 2026, Phase 1) — create 20% cash
+        # fee row. Fires ONLY here (SUCCESSFULLY_COMPLETED path). Idempotent
+        # via unique index on redemption_id. Skips partner-store settlements.
+        try:
+            if request.get("source_type") != "partner_store":
+                from routes.redemption_service_charge import create_service_charge_on_success
+                prc_deducted = float(request.get("prc_deducted") or request.get("total_prc") or 0)
+                # Use withdrawal_amount × prc_rate if prc_deducted not stored
+                if prc_deducted <= 0:
+                    prc_rate = int(request.get("prc_rate") or 10)
+                    prc_deducted = float(request.get("withdrawal_amount") or 0) * prc_rate
+                if prc_deducted > 0:
+                    await create_service_charge_on_success(
+                        user_id=request.get("user_id"),
+                        redemption_id=action.request_id,
+                        prc_amount=prc_deducted,
+                        redemption_type="bank",
+                    )
+                    logging.info(f"[SVC-CHG] created on paid: {action.request_id} prc={prc_deducted}")
+        except Exception as _e:
+            logging.warning(f"[SVC-CHG] create on mark-paid failed (non-fatal): {_e}")
+
         # Partner Store settlement hook (Feb 2026, v2.0) — when a
         # partner-store settlement is paid, move funds from
         # pending_settlement_prc → lifetime_settled_prc on the store wallet.
@@ -2033,6 +2075,24 @@ async def bulk_mark_paid(action: BulkActionRequest):
                     )
                 except Exception as burn_err:
                     logging.warning(f"[SUSTAIN-BURN] bulk bank redeem hook failed (non-fatal): {burn_err}")
+
+                # PRC Redemption Service Charge — bulk-paid path (Feb 2026)
+                try:
+                    if request.get("source_type") != "partner_store":
+                        from routes.redemption_service_charge import create_service_charge_on_success
+                        prc_deducted_b = float(request.get("prc_deducted") or request.get("total_prc") or 0)
+                        if prc_deducted_b <= 0:
+                            prc_rate_b = int(request.get("prc_rate") or 10)
+                            prc_deducted_b = float(request.get("withdrawal_amount") or 0) * prc_rate_b
+                        if prc_deducted_b > 0:
+                            await create_service_charge_on_success(
+                                user_id=request.get("user_id"),
+                                redemption_id=request_id,
+                                prc_amount=prc_deducted_b,
+                                redemption_type="bank",
+                            )
+                except Exception as _svc_err:
+                    logging.warning(f"[SVC-CHG] bulk create failed (non-fatal): {_svc_err}")
             except Exception as req_err:
                 logging.error(f"Error processing request {request_id}: {req_err}")
                 error_count += 1

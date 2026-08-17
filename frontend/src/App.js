@@ -20,6 +20,7 @@ import BottomNav from "@/components/BottomNav";
 import LiveTickerStrip from "@/components/LiveTickerStrip";
 import WebVitalsReporter from "@/components/WebVitalsReporter";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
+import ServiceChargePendingBanner from "@/components/ServiceChargePendingBanner";
 import AdminOnWebOnly from "@/components/AdminOnWebOnly";
 import { applyBrandedStatusBar } from "@/utils/nativeUx";
 import { useAdMob } from "@/hooks/useAdMob";
@@ -516,6 +517,7 @@ if (typeof window !== 'undefined') {
 // TapGame removed - feature deprecated
 const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
 const MyReferralBonus = lazy(() => import("@/pages/MyReferralBonus"));
+const MyServiceCharges = lazy(() => import("@/pages/MyServiceCharges"));
 const DownlineLiveFeed = lazy(() => import("@/pages/DownlineLiveFeed"));
 // Marketplace & Orders removed - feature deprecated (December 2025)
 // const Orders = lazy(() => import("@/pages/Orders"));
@@ -611,7 +613,8 @@ const AdminForceActivateSubscription = IS_USER_BUILD ? null : lazy(() => import(
 const AdminWebVitals = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminWebVitals"));
 // AdminBankWithdrawals removed - merged into AdminUnifiedPayments
 // AdminGiftVouchers - REMOVED (feature discontinued May 2026)
-const AdminServiceCharges = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceCharges"));
+const AdminServiceCharges = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminServiceCharges"));
+const AdminBillServiceCharges = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBillServiceCharges"));
 const AdminServiceToggles = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceToggles"));
 const AdminPolicies = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPolicies"));
 const AdminUserLedger = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUserLedger"));
@@ -719,6 +722,10 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
       <BrowserRouter>
         <PageTitleUpdater />
         <WebVitalsReporter user={user} />
+        {/* Global PRC Redemption Service Charge pending banner — Feb 2026.
+            Shows only when logged-in non-admin user has a PENDING 20% cash
+            fee awaiting Razorpay payment. Silent otherwise. */}
+        {user && !isAdminOrManager(user) && <ServiceChargePendingBanner user={user} />}
         {/* Feb 22 2026 — GlobalBannerAd (native AdMob banner) removed.
             User confirmed the banner had no measurable revenue benefit
             and Google was serving "TEST AD" placeholders on many
@@ -791,6 +798,8 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             {/* Removed: Treasure Hunt and Scratch Card games */}
             <Route path="/referrals" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Referrals user={user} onLogout={handleLogout} refreshUserData={refreshUserData} />) : <Navigate to="/login" />} />
             <Route path="/my-referral-bonus" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Suspense fallback={<LoadingFallback />}><MyReferralBonus user={user} /></Suspense>) : <Navigate to="/login" />} />
+            <Route path="/my-service-charges" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Suspense fallback={<LoadingFallback />}><MyServiceCharges user={user} /></Suspense>) : <Navigate to="/login" />} />
+            <Route path="/my-redeems/service-charges" element={<Navigate to="/my-service-charges" replace />} />
             <Route path="/referrals/live-feed" element={user ? <DownlineLiveFeed user={user} /> : <Navigate to="/login" />} />
             <Route path="/referrals/dashboard" element={<Navigate to="/referrals" replace />} />
             <Route path="/referrals/ai" element={<Navigate to="/referrals" replace />} />
@@ -975,6 +984,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
                 <Route path="/admin/redeem-limits" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRedeemLimits user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/performance-report" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPerformanceReport user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/service-charges" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminServiceCharges user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/bill-service-charges" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminBillServiceCharges user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/service-toggles" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminServiceToggles user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/policies" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPolicies user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/kyc" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminKYC user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />

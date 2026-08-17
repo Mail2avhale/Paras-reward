@@ -1,0 +1,42 @@
+{
+  "summary": "End-to-end verification of PRC Redemption Service Charge (Phase 2 frontend + Phase 3 admin). Backend: 24/24 tests pass covering pending/history/create-payment/admin endpoints/reverse/revenue-report/profit-loss integration + E2E block on /bank-transfer/request when a PENDING charge exists (seeded via Mongo). Frontend: banner + wallet lock render correctly when pending charge seeded, /my-service-charges page renders with totals, WalletServiceChargeLock shows 'Redemption: Available' when no pending. CRITICAL BUG: /admin/service-charges route in App.js imports the LEGACY '@/pages/AdminServiceCharges' (Bill-Payment config, 180 lines) instead of the new PRC Phase-3 admin page at '@/pages/Admin/AdminServiceCharges' (308 lines with search, revenue chart, ReverseModal, manual-mark-paid).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "App.js route /admin/service-charges (line 616 + 985)",
+        "issue": "Route mounts the old legacy AdminServiceCharges (Bill-Payment config) instead of the new Phase-3 PRC admin page at src/pages/Admin/AdminServiceCharges.js. The new page (with pending list, search, revenue timeseries chart, ReverseModal, Manual-Mark-Paid modal, testids reverse-modal/submit-reverse/revenue-chart/svc-charge-search) is completely unreachable via any route.",
+        "selector": "/admin/service-charges",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_redemption_service_charge.py",
+    "/app/backend/tests/test_prc_svc_charge_http.py",
+    "/app/backend/tests/test_prc_svc_charge_e2e_block.py",
+    "/app/test_reports/pytest/prc_svc_full.xml"
+  ],
+  "action_items": [
+    "Fix App.js line 616: change lazy import for AdminServiceCharges (admin route) to `@/pages/Admin/AdminServiceCharges` (the Phase-3 version). Alternatively, delete legacy /app/frontend/src/pages/AdminServiceCharges.js or rename the new file and update route.",
+    "Optional: mount a separate admin route (e.g., /admin/bill-payment-service-charges) for the legacy bill-payment config page if it is still needed."
+  ],
+  "critical_code_review_comments": [
+    "Two React files share the same default-export name 'AdminServiceCharges' at /app/frontend/src/pages/AdminServiceCharges.js and /app/frontend/src/pages/Admin/AdminServiceCharges.js. App.js currently imports the wrong one, silently breaking Phase-3 admin workflow. Recommend renaming to avoid ambiguity.",
+    "manual_bank_transfer.py mark-paid uses `request.get('prc_deducted') or (withdrawal_amount * prc_rate)` fallback. Verify prc_deducted is actually stored on request creation; otherwise the fallback dominates and prc_rate may not be present (only prc_rate 10 assumed).",
+    "Notification insert on create_service_charge_on_success uses `user_uid=user_id`. Confirm notifications feed queries by `user_uid` in downstream endpoints for consistency."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_prc_svc_charge_http.py (new)",
+    "/app/backend/tests/test_prc_svc_charge_e2e_block.py (new)"
+  ],
+  "success_rate": {"backend": "100% (24/24)", "frontend": "80% (banner + lock + my-service-charges verified; /admin/service-charges renders WRONG page)"},
+  "test_credentials": "Primary user: 9970100782 / 997010 (UID 76b75808-47fa-48dd-ad7c-8074678e3607). Admin: admin@test.com / 153759. FINANCE_ADMIN_PIN not set in env — reverse/manual-mark-paid correctly return 403 (expected).",
+  "seed_data_creation": "Backend E2E test seeds a PENDING redemption_service_charges row (marked _test_seed=True) and cleans up in fixture teardown. Also seeded once for banner UI verification and cleaned up after screenshot.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After main agent fixes App.js import to `@/pages/Admin/AdminServiceCharges`, re-run: (1) login admin, (2) goto /admin/service-charges, (3) verify data-testid='svc-charge-search', 'revenue-chart', 'reverse-modal', 'submit-reverse' render. Backend tests are stable, no re-run needed unless routes change. FINANCE_ADMIN_PIN must be set in backend/.env to actually exercise the positive-path reverse/manual-mark-paid transitions.",
+  "rca of the issue": "There are two files exporting AdminServiceCharges. The App.js lazy import path `@/pages/AdminServiceCharges` (line 616) resolves to the legacy Bill-Payment config file (@/pages/AdminServiceCharges.js, 180 lines). The Phase-3 file is nested under @/pages/Admin/AdminServiceCharges.js (308 lines). Because the resolver picked the shorter path, the /admin/service-charges route (line 985) mounts the wrong component. Reproduction: login as admin, browse to /admin/service-charges, observe 'Service Charges Configuration / Bill Payment & Recharge' page instead of the PRC charge dashboard. Fix: change import to `@/pages/Admin/AdminServiceCharges` OR route the two components under distinct paths."
+}

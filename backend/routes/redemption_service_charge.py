@@ -141,6 +141,28 @@ async def create_service_charge_on_success(
         await db.redemption_service_charges.insert_one(doc)
         await _audit(charge_id, "created", "-", "PENDING", user_id,
                      reason=f"Auto on redemption {redemption_id} success")
+        # In-app notification (Feb 2026, Phase 3) — non-fatal
+        try:
+            await db.notifications.insert_one({
+                "notification_id": str(uuid.uuid4()).replace("-", ""),
+                "user_id": user_id,
+                "user_uid": user_id,
+                "type": "redemption_service_charge_created",
+                "title": "💰 Redemption Service Charge Pending",
+                "message": (
+                    f"Your ₹{inr_value:.0f} redemption completed successfully. "
+                    f"A 20% cash service charge of ₹{fee:.0f} is now due. "
+                    f"Pay it to unlock your next redemption."
+                ),
+                "action_url": "/my-service-charges",
+                "created_at": now_iso,
+                "read": False,
+                "is_read": False,
+                "charge_id": charge_id,
+                "redemption_id": redemption_id,
+            })
+        except Exception as _ne:
+            logger.warning(f"[SVC-CHG] notification insert failed (non-fatal): {_ne}")
         return doc
     except Exception as e:
         # Unique index on redemption_id → duplicate = someone else already created
@@ -392,6 +414,86 @@ async def admin_audit_log(charge_id: str):
         {"charge_id": charge_id}, {"_id": 0},
     ).sort("ts", 1).to_list(500)
     return {"charge_id": charge_id, "audit": rows}
+
+
+class ReversalRequest(BaseModel):
+    charge_id: str
+    reason: str = Field(min_length=5, max_length=500)
+    admin_id: str
+    refund_reference: str = ""
+
+
+@router.post("/admin/redemption-service-charge/reverse")
+async def admin_reverse_charge(data: ReversalRequest,
+                                x_finance_pin: str = Header(..., alias="X-Finance-Pin")):
+    """Reverse/refund a PAID service charge — for admin corrections and
+    disputes (Phase 3). Requires the finance PIN. Fully audit-logged.
+    """
+    expected = os.environ.get("FINANCE_ADMIN_PIN", "")
+    if not expected or x_finance_pin != expected:
+        raise HTTPException(status_code=403, detail="Finance authorization required")
+
+    charge = await db.redemption_service_charges.find_one({"charge_id": data.charge_id})
+    if not charge:
+        raise HTTPException(status_code=404, detail="Charge not found")
+    if charge["status"] not in ("PAID",):
+        raise HTTPException(status_code=400, detail=f"Cannot reverse a {charge['status']} charge")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    await db.redemption_service_charges.update_one(
+        {"charge_id": data.charge_id},
+        {"$set": {
+            "status": "REFUNDED", "refunded_at": now_iso, "updated_at": now_iso,
+            "reversed_by": data.admin_id, "reversal_reason": data.reason,
+            "refund_reference": data.refund_reference,
+        }},
+    )
+    await _audit(data.charge_id, "reversed", "PAID", "REFUNDED",
+                 charge["user_id"], admin_id=data.admin_id, reason=data.reason,
+                 meta={"refund_reference": data.refund_reference})
+    # In-app notification to user
+    try:
+        await db.notifications.insert_one({
+            "notification_id": str(uuid.uuid4()).replace("-", ""),
+            "user_id": charge["user_id"], "user_uid": charge["user_id"],
+            "type": "redemption_service_charge_reversed",
+            "title": "↩ Service Charge Refunded",
+            "message": (
+                f"Your ₹{charge['total_payable']} redemption service charge "
+                f"has been refunded. Ref: {data.refund_reference or 'N/A'}."
+            ),
+            "action_url": "/my-service-charges",
+            "created_at": now_iso, "read": False, "is_read": False,
+            "charge_id": data.charge_id,
+        })
+    except Exception:
+        pass
+    return {"success": True}
+
+
+@router.get("/admin/redemption-service-charge/revenue-report")
+async def admin_revenue_report(days: int = 30):
+    """Daily revenue timeseries for admin dashboard reporting (Phase 3)."""
+    from datetime import timedelta
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    pipeline = [
+        {"$match": {"status": "PAID", "paid_at": {"$gte": since}}},
+        {"$group": {
+            "_id": {"$substr": ["$paid_at", 0, 10]},
+            "count": {"$sum": 1},
+            "revenue": {"$sum": "$total_payable"},
+        }},
+        {"$sort": {"_id": 1}},
+    ]
+    rows = await db.redemption_service_charges.aggregate(pipeline).to_list(days + 5)
+    return {
+        "since": since,
+        "days": days,
+        "series": [{"date": r["_id"], "count": r["count"],
+                    "revenue": round(r["revenue"], 2)} for r in rows],
+        "total_revenue": round(sum(r["revenue"] for r in rows), 2),
+        "total_count": sum(r["count"] for r in rows),
+    }
 
 
 # ============================================================================
