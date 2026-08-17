@@ -1,3 +1,57 @@
+## Shipped (Aug 13, 2026 — Device Binding: 2 users/device + Blocked Users Panel)
+
+### Rule change
+- **Old**: 1 device = 1 user (hard binding). Any second user got blocked.
+- **New**: 1 device = up to **N users** (default 2, admin-configurable 1-10 via `max_users_per_device` in `app_settings`). The (N+1)th distinct user is blocked.
+
+### Backend changes (`routes/device_binding.py`)
+1. `get_max_users_per_device()` — reads config from `app_settings.device_binding.max_users_per_device` (default 2).
+2. `check_and_bind_device` rewritten:
+   - Loads ALL active bindings for the device (was: `find_one`, now: `find().to_list`).
+   - If current user already bound → refresh (same behavior).
+   - Else, if `len(active_bindings) < max_users` → add binding.
+   - Else → collision → audit log + enforce per flag.
+3. Legacy unique index `device_bindings_active_unique` on `(device_id, active=True)` dropped; replaced with `device_bindings_active_user_unique` on `(device_id, user_uid, active=True)` — allows multiple users on same device but still prevents duplicate self-binding.
+4. Collision doc now records `bound_uids` (full list) + `max_users_per_device` snapshot.
+
+### New admin endpoints (all require `X-Admin-Pin` + admin JWT)
+- `GET /api/admin/device-binding/max-users` — current setting
+- `POST /api/admin/device-binding/max-users` — set 1..10
+- `GET /api/admin/device-binding/devices?only_over_limit=&limit=` — every device with # users bound, last-seen, at_capacity flag; sorted by users_count desc
+- `GET /api/admin/device-binding/devices/{device_id}/users` — full user records for a device
+- `GET /api/admin/device-binding/blocked-users?hours=N` — currently-blocked users list (deduped by attempted_uid) with the device they tried and the users blocking them
+- `POST /api/admin/device-binding/unblock-user` — two actions:
+   - `bind_to_device` = force-add user to device (bypasses max cap once, marks `override_max_users=true`)
+   - `clear_only` = wipe collision audit; user can retry naturally
+- `POST /api/admin/device-binding/remove-binding` — deactivate a user⇄device pair, freeing a slot
+
+### Frontend changes (`pages/AdminDeviceBinding.js`)
+Three new cards added to the existing device binding admin panel:
+1. **Max Users Per Device** — number input + Save
+2. **Blocked Users** — table with window filter (24h/3d/7d/30d), user name/mobile, device_id (truncated), device_model, bound_uids preview, attempts counter, **Bind** + **Clear** action buttons
+3. **Bound Devices** — collapsible list of every device with users_count badge (yellow if at capacity), device_id, model, last_seen; expand row → user details + per-user Remove button; "Only at capacity" filter to focus review
+
+### Files touched
+- **Modified backend**: `routes/device_binding.py` (~250 new lines — new endpoints + rewritten binding logic + index migration)
+- **Modified frontend**: `pages/AdminDeviceBinding.js` (+3 cards ~250 lines)
+
+### How to use (admin)
+1. Open `/admin/device-binding`
+2. Enter admin PIN once (top card)
+3. Set **Max Users Per Device** = 2 (or your policy)
+4. Toggle enforcement ON if needed
+5. Watch **Blocked Users** — click **Bind** to allow a genuine 3rd user, or **Clear** to reset counter
+6. Explore **Bound Devices** to see fraud clusters (any device with 2 users is now normal, 3+ needs review — those show as at-capacity)
+
+### Curl verified working
+- max-users GET/POST ✓
+- devices ✓
+- blocked-users ✓
+- Backend healthy, lint clean
+
+---
+
+
 ## Fixed (Aug 13, 2026 — AdMob Request-to-Impression Gap 47% → target 80%+)
 
 ### Root Causes Found

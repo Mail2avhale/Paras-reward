@@ -230,6 +230,15 @@ const AdminDeviceBinding = ({ user }) => {
         </p>
       </Card>
 
+      {/* Max users per device config */}
+      <MaxUsersCard pin={pin} headers={headers} />
+
+      {/* Blocked users (fresh Aug 2026) */}
+      <BlockedUsersCard pin={pin} headers={headers} adminId={user?.uid || 'admin'} />
+
+      {/* Devices with multiple users */}
+      <DevicesCard pin={pin} headers={headers} adminId={user?.uid || 'admin'} />
+
       {/* Retro scan */}
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3">
@@ -485,3 +494,247 @@ const AdminDeviceBinding = ({ user }) => {
 };
 
 export default AdminDeviceBinding;
+
+// ============================================================================
+// NEW CARDS (Aug 2026) — Max users config + Blocked users + Devices list
+// ============================================================================
+
+const MaxUsersCard = ({ pin, headers }) => {
+  const [maxUsers, setMaxUsers] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!pin || pin.length < 4) return;
+    axios.get(`${API}/admin/device-binding/max-users`, { headers: headers() })
+      .then(r => setMaxUsers(r.data.max_users_per_device))
+      .catch(() => {});
+  }, [pin, headers]);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await axios.post(`${API}/admin/device-binding/max-users`,
+        { max_users_per_device: Number(maxUsers) },
+        { headers: headers() },
+      );
+      toast.success(`Set to ${maxUsers} users per device`);
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Card className="p-4" data-testid="max-users-card">
+      <h2 className="font-bold text-lg flex items-center gap-2 mb-2">
+        <Users className="w-5 h-5" /> Max Users Per Device
+      </h2>
+      <p className="text-sm text-gray-500 mb-3">
+        Up to this many DISTINCT users may share one physical device. Login attempts by additional users are blocked.
+        Recommended: <b>2</b>.
+      </p>
+      <div className="flex items-center gap-2 max-w-xs">
+        <Input type="number" min={1} max={10} value={maxUsers ?? ''} onChange={(e) => setMaxUsers(Number(e.target.value))} data-testid="max-users-input" />
+        <Button onClick={save} disabled={!pin || busy || !maxUsers} data-testid="max-users-save">Save</Button>
+      </div>
+    </Card>
+  );
+};
+
+const BlockedUsersCard = ({ pin, headers, adminId }) => {
+  const [rows, setRows] = useState([]);
+  const [hours, setHours] = useState(168);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!pin || pin.length < 4) return;
+    setLoading(true);
+    try {
+      const r = await axios.get(`${API}/admin/device-binding/blocked-users?hours=${hours}`, { headers: headers() });
+      setRows(r.data.blocked || []);
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+    finally { setLoading(false); }
+  }, [pin, headers, hours]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const unblock = async (row, action) => {
+    if (!window.confirm(`${action === 'bind_to_device' ? 'Bind this user to the device (overrides cap)' : 'Clear collisions only'}?`)) return;
+    try {
+      await axios.post(`${API}/admin/device-binding/unblock-user`,
+        { attempted_uid: row.attempted_uid, device_id: row.device_id, action, admin_id: adminId },
+        { headers: headers() },
+      );
+      toast.success('Unblocked');
+      load();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+  };
+
+  return (
+    <Card className="p-4" data-testid="blocked-users-card">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-bold text-lg flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-red-500" /> Blocked Users (last {hours}h)
+        </h2>
+        <div className="flex gap-2">
+          <select value={hours} onChange={(e) => setHours(Number(e.target.value))} className="text-xs border rounded px-2 py-1" data-testid="blocked-window-filter">
+            <option value={24}>Last 24h</option>
+            <option value={72}>Last 3d</option>
+            <option value={168}>Last 7d</option>
+            <option value={720}>Last 30d</option>
+          </select>
+          <Button onClick={load} disabled={!pin || loading} variant="outline" size="sm" data-testid="blocked-refresh">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-sm text-gray-500 py-4 text-center">No blocked users in this window.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="px-2 py-2 text-left">When</th>
+                <th className="px-2 py-2 text-left">User</th>
+                <th className="px-2 py-2 text-left">Device</th>
+                <th className="px-2 py-2 text-left">Bound to</th>
+                <th className="px-2 py-2 text-right">Attempts</th>
+                <th className="px-2 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.attempted_uid + r.device_id} className="border-b border-slate-100" data-testid={`blocked-row-${r.attempted_uid}`}>
+                  <td className="px-2 py-1.5 text-slate-600">{(r.occurred_at || '').slice(0, 16)}</td>
+                  <td className="px-2 py-1.5">
+                    <p className="font-medium">{r.attempted_user?.name || '—'}</p>
+                    <p className="text-[10px] text-slate-400">{r.attempted_user?.mobile || r.attempted_user?.email}</p>
+                  </td>
+                  <td className="px-2 py-1.5 font-mono text-[10px]">{r.device_id?.slice(0, 20)}...<br/><span className="text-slate-400">{r.device_model}</span></td>
+                  <td className="px-2 py-1.5 text-[10px]">
+                    {(r.bound_uids || [r.bound_uid]).slice(0, 3).map(u => <div key={u} className="font-mono text-slate-500">{u?.slice(0, 10)}</div>)}
+                  </td>
+                  <td className="px-2 py-1.5 text-right">{r.attempts}</td>
+                  <td className="px-2 py-1.5 text-right">
+                    <button onClick={() => unblock(r, 'bind_to_device')} className="text-xs text-emerald-600 hover:underline mr-2" data-testid={`unblock-bind-${r.attempted_uid}`}>
+                      Bind
+                    </button>
+                    <button onClick={() => unblock(r, 'clear_only')} className="text-xs text-slate-500 hover:underline" data-testid={`unblock-clear-${r.attempted_uid}`}>
+                      Clear
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-[10px] text-slate-500 mt-2">
+            <b>Bind</b> = force-add this user to the device (bypasses max cap once). <b>Clear</b> = just resolve the collision log; next attempt binds only if room.
+          </p>
+        </div>
+      )}
+    </Card>
+  );
+};
+
+const DevicesCard = ({ pin, headers, adminId }) => {
+  const [rows, setRows] = useState([]);
+  const [onlyOverLimit, setOnlyOverLimit] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState({});
+  const [details, setDetails] = useState({});
+
+  const load = useCallback(async () => {
+    if (!pin || pin.length < 4) return;
+    setLoading(true);
+    try {
+      const r = await axios.get(`${API}/admin/device-binding/devices?only_over_limit=${onlyOverLimit}&limit=300`, { headers: headers() });
+      setRows(r.data.devices || []);
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+    finally { setLoading(false); }
+  }, [pin, headers, onlyOverLimit]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const expand = async (dev) => {
+    const wasOpen = expanded[dev.device_id];
+    setExpanded(prev => ({ ...prev, [dev.device_id]: !wasOpen }));
+    if (!wasOpen && !details[dev.device_id]) {
+      try {
+        const r = await axios.get(`${API}/admin/device-binding/devices/${encodeURIComponent(dev.device_id)}/users`, { headers: headers() });
+        setDetails(prev => ({ ...prev, [dev.device_id]: r.data.bindings }));
+      } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+    }
+  };
+
+  const removeBinding = async (device_id, user_uid) => {
+    if (!window.confirm('Remove this user from the device? (Frees a slot)')) return;
+    try {
+      await axios.post(`${API}/admin/device-binding/remove-binding`,
+        { device_id, user_uid, admin_id: adminId, reason: 'admin_manual' },
+        { headers: headers() },
+      );
+      toast.success('Binding removed');
+      setDetails(prev => ({ ...prev, [device_id]: null }));
+      setExpanded(prev => ({ ...prev, [device_id]: false }));
+      load();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+  };
+
+  return (
+    <Card className="p-4" data-testid="devices-card">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h2 className="font-bold text-lg flex items-center gap-2">
+          <Activity className="w-5 h-5" /> Bound Devices
+        </h2>
+        <div className="flex items-center gap-2">
+          <label className="text-xs flex items-center gap-1">
+            <input type="checkbox" checked={onlyOverLimit} onChange={(e) => setOnlyOverLimit(e.target.checked)} data-testid="devices-over-limit-filter" />
+            Only at capacity
+          </label>
+          <Button onClick={load} disabled={!pin || loading} variant="outline" size="sm" data-testid="devices-refresh">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-sm text-gray-500 py-4 text-center">{loading ? 'Loading...' : 'No devices to show.'}</p>
+      ) : (
+        <div className="space-y-1">
+          {rows.map(dev => (
+            <div key={dev.device_id} className={`border rounded-lg ${dev.at_capacity ? 'border-yellow-300 bg-yellow-50/40' : 'border-slate-200'}`} data-testid={`device-${dev.device_id}`}>
+              <button onClick={() => expand(dev)} className="w-full flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`px-2 py-0.5 rounded font-semibold ${dev.at_capacity ? 'bg-yellow-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                    {dev.users_count} user{dev.users_count > 1 ? 's' : ''}
+                  </span>
+                  <span className="font-mono text-slate-700 truncate">{dev.device_id.slice(0, 30)}</span>
+                  <span className="text-slate-400 hidden sm:inline">
+                    {dev.device_models?.[0]}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400">Last: {(dev.last_seen_at || '').slice(0, 10)}</span>
+              </button>
+              {expanded[dev.device_id] && details[dev.device_id] && (
+                <div className="border-t border-slate-200 p-2 space-y-1 bg-white">
+                  {details[dev.device_id].map(b => (
+                    <div key={b.binding_id} className="flex items-center justify-between text-[11px] px-2 py-1 hover:bg-slate-50">
+                      <div>
+                        <p className="font-medium">{b.user?.name || '—'} <span className="text-slate-400 font-mono">({b.user_uid?.slice(0, 10)})</span></p>
+                        <p className="text-slate-500 text-[10px]">
+                          Bound {(b.bound_at || '').slice(0, 10)} • {b.user?.mobile || b.user?.email || '—'}
+                          {b.override_max_users && <span className="ml-1 text-amber-600">• override</span>}
+                        </p>
+                      </div>
+                      <button onClick={() => removeBinding(dev.device_id, b.user_uid)} className="text-red-500 hover:underline text-xs" data-testid={`remove-${dev.device_id}-${b.user_uid}`}>
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+};

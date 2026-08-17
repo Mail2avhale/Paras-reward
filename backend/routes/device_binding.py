@@ -93,6 +93,25 @@ async def is_enforcement_enabled() -> bool:
     return enabled
 
 
+DEFAULT_MAX_USERS_PER_DEVICE = 2
+
+async def get_max_users_per_device() -> int:
+    """Config: how many DISTINCT users are allowed to share one device.
+    Default 2 — a device holding a 3rd user gets blocked.
+    Admin can tune via /api/admin/device-binding/max-users."""
+    if db is None:
+        return DEFAULT_MAX_USERS_PER_DEVICE
+    try:
+        doc = await db.app_settings.find_one(
+            {"key": "device_binding"}, {"_id": 0, "max_users_per_device": 1}
+        )
+        if doc and isinstance(doc.get("max_users_per_device"), int) and doc["max_users_per_device"] >= 1:
+            return int(doc["max_users_per_device"])
+    except Exception:
+        pass
+    return DEFAULT_MAX_USERS_PER_DEVICE
+
+
 def _clear_flag_cache():
     _FLAG_CACHE["value"] = None
     _FLAG_CACHE["expires_at"] = 0.0
@@ -176,14 +195,32 @@ async def check_and_bind_device(
 
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    # Look up any ACTIVE binding for this device.
-    existing = await db.device_bindings.find_one(
+    # Look up ALL active bindings for this device (0..N).
+    # New rule (Aug 2026): up to `max_users_per_device` distinct users may
+    # share the same device. Only when a NEW (N+1)th user tries to bind is
+    # the login blocked.
+    active_bindings = await db.device_bindings.find(
         {"device_id": device_id, "active": True},
         {"_id": 0, "user_uid": 1, "bound_at": 1},
-    )
+    ).to_list(20)
 
-    # Rule 2 — first time this device is seen.
-    if not existing:
+    max_users = await get_max_users_per_device()
+
+    # If THIS user is already one of the active bindings — just refresh.
+    for b in active_bindings:
+        if b.get("user_uid") == uid:
+            await db.device_bindings.update_one(
+                {"device_id": device_id, "user_uid": uid, "active": True},
+                {"$set": {
+                    "last_seen_at": now_iso,
+                    "last_ip": ip_address,
+                    "last_user_agent": (user_agent or "")[:200],
+                }, "$inc": {"login_count": 1}}
+            )
+            return BindResult(True, "existing_owner", bound_to_uid=uid)
+
+    # New user for this device — check if capacity allows.
+    if len(active_bindings) < max_users:
         try:
             await db.device_bindings.insert_one({
                 "binding_id": str(uuid.uuid4()),
@@ -199,18 +236,22 @@ async def check_and_bind_device(
                 "active": True,
             })
         except Exception as e:
-            # Unique-index race — someone else claimed it in the same ms.
-            # Re-read and fall through.
-            logger.warning(f"[DEVICE-BIND] insert race for {device_id}: {e}")
-            existing = await db.device_bindings.find_one(
+            logger.warning(f"[DEVICE-BIND] insert race for {device_id}/{uid}: {e}")
+            # Re-read — someone else may have claimed the slot in the same ms
+            active_bindings = await db.device_bindings.find(
                 {"device_id": device_id, "active": True},
                 {"_id": 0, "user_uid": 1},
-            )
-            if not existing:
+            ).to_list(20)
+            for b in active_bindings:
+                if b.get("user_uid") == uid:
+                    return BindResult(True, "insert_race_resolved", bound_to_uid=uid)
+            # Race lost + capacity now full — fall through to collision.
+            if len(active_bindings) >= max_users:
+                pass   # will hit collision block below
+            else:
                 return BindResult(True, "insert_race_resolved")
         else:
-            # Successful new binding — also stamp primary_device_id on the
-            # user doc for fast lookup on subsequent checks.
+            # Stamp primary_device_id on user doc (first-ever device only)
             await db.users.update_one(
                 {"uid": uid, "primary_device_id": {"$exists": False}},
                 {"$set": {
@@ -221,21 +262,9 @@ async def check_and_bind_device(
             return BindResult(True, "new_binding_created",
                               bound_to_uid=uid, was_new_binding=True)
 
-    bound_uid = existing["user_uid"]
-
-    # Rule 3 — same user, just refresh the touch timestamp.
-    if bound_uid == uid:
-        await db.device_bindings.update_one(
-            {"device_id": device_id, "active": True},
-            {"$set": {
-                "last_seen_at": now_iso,
-                "last_ip": ip_address,
-                "last_user_agent": (user_agent or "")[:200],
-            }, "$inc": {"login_count": 1}}
-        )
-        return BindResult(True, "existing_owner", bound_to_uid=uid)
-
-    # Rule 4 — collision. Always write an audit row; enforce only if flag on.
+    # Capacity FULL — this is a real collision (attempting a (N+1)th user).
+    # Log audit + enforce per flag.
+    bound_uid = active_bindings[0]["user_uid"] if active_bindings else "unknown"
     enforcement_on = await is_enforcement_enabled()
     try:
         await db.device_binding_collisions.insert_one({
@@ -243,8 +272,10 @@ async def check_and_bind_device(
             "device_id": device_id,
             "attempted_uid": uid,
             "bound_uid": bound_uid,
+            "bound_uids": [b.get("user_uid") for b in active_bindings],
             "event": event,
             "enforcement_on": enforcement_on,
+            "max_users_per_device": max_users,
             "ip_address": ip_address,
             "user_agent": (user_agent or "")[:200],
             "device_model": device_model,
@@ -1011,23 +1042,277 @@ def _require_admin(pin: str):
 
 
 # ────────────────────────────────────────────────────────────────────────
+# NEW ADMIN ENDPOINTS (Aug 2026)
+# — List devices with # of bound users, drill down to users, unblock,
+# — Configure max_users_per_device
+# ────────────────────────────────────────────────────────────────────────
+
+@admin_router.get("/max-users")
+async def get_max_users(x_admin_pin: str = Header(..., alias="X-Admin-Pin")):
+    _require_admin(x_admin_pin)
+    n = await get_max_users_per_device()
+    return {"max_users_per_device": n, "default": DEFAULT_MAX_USERS_PER_DEVICE}
+
+
+class SetMaxUsersRequest(BaseModel):
+    max_users_per_device: int = Field(ge=1, le=10)
+
+
+@admin_router.post("/max-users")
+async def set_max_users(
+    data: SetMaxUsersRequest,
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+):
+    _require_admin(x_admin_pin)
+    await db.app_settings.update_one(
+        {"key": "device_binding"},
+        {"$set": {"max_users_per_device": int(data.max_users_per_device)}},
+        upsert=True,
+    )
+    return {"success": True, "max_users_per_device": int(data.max_users_per_device)}
+
+
+@admin_router.get("/devices")
+async def list_devices(
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+    only_over_limit: bool = False,
+    limit: int = 500,
+):
+    """List every active device with # of distinct users bound + latest activity.
+    Set `only_over_limit=true` to show devices with users_count >= max (helpful
+    for admin review).
+    """
+    _require_admin(x_admin_pin)
+    max_users = await get_max_users_per_device()
+
+    pipeline = [
+        {"$match": {"active": True}},
+        {"$group": {
+            "_id": "$device_id",
+            "users_count": {"$sum": 1},
+            "user_uids": {"$push": "$user_uid"},
+            "device_models": {"$addToSet": "$device_model"},
+            "last_seen_at": {"$max": "$last_seen_at"},
+            "first_bound_at": {"$min": "$bound_at"},
+        }},
+        {"$sort": {"users_count": -1, "last_seen_at": -1}},
+        {"$limit": int(limit)},
+    ]
+    rows = await db.device_bindings.aggregate(pipeline).to_list(limit)
+
+    output = []
+    for r in rows:
+        cnt = r["users_count"]
+        if only_over_limit and cnt < max_users:
+            continue
+        output.append({
+            "device_id": r["_id"],
+            "users_count": cnt,
+            "user_uids": r["user_uids"],
+            "device_models": [m for m in r["device_models"] if m],
+            "last_seen_at": r["last_seen_at"],
+            "first_bound_at": r["first_bound_at"],
+            "at_capacity": cnt >= max_users,
+        })
+    return {
+        "devices": output,
+        "total": len(output),
+        "max_users_per_device": max_users,
+    }
+
+
+@admin_router.get("/devices/{device_id}/users")
+async def device_users(
+    device_id: str,
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+):
+    """Details of users bound to a specific device (includes user names for admin)."""
+    _require_admin(x_admin_pin)
+    bindings = await db.device_bindings.find(
+        {"device_id": device_id, "active": True},
+        {"_id": 0},
+    ).sort("bound_at", 1).to_list(50)
+    for b in bindings:
+        u = await db.users.find_one(
+            {"uid": b["user_uid"]},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1, "subscription_plan": 1, "status": 1},
+        )
+        b["user"] = u
+    return {"device_id": device_id, "bindings": bindings, "total": len(bindings)}
+
+
+@admin_router.get("/blocked-users")
+async def blocked_users(
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+    hours: int = 168,   # last 7 days by default
+    limit: int = 500,
+):
+    """List users whose login/register was recently BLOCKED due to a
+    device collision. Groups by attempted_uid so admin sees each unique
+    blocked user once with the latest event and device involved.
+    """
+    _require_admin(x_admin_pin)
+    since = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    pipeline = [
+        {"$match": {"occurred_at": {"$gte": since}, "enforcement_on": True}},
+        {"$sort": {"occurred_at": -1}},
+        {"$group": {
+            "_id": "$attempted_uid",
+            "device_id": {"$first": "$device_id"},
+            "bound_uid": {"$first": "$bound_uid"},
+            "bound_uids": {"$first": "$bound_uids"},
+            "device_model": {"$first": "$device_model"},
+            "ip_address": {"$first": "$ip_address"},
+            "occurred_at": {"$first": "$occurred_at"},
+            "attempts": {"$sum": 1},
+            "event": {"$first": "$event"},
+        }},
+        {"$sort": {"occurred_at": -1}},
+        {"$limit": int(limit)},
+    ]
+    rows = await db.device_binding_collisions.aggregate(pipeline).to_list(limit)
+
+    output = []
+    for r in rows:
+        attempted_uid = r.pop("_id")
+        u = await db.users.find_one(
+            {"uid": attempted_uid},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1, "subscription_plan": 1, "created_at": 1},
+        )
+        output.append({
+            "attempted_uid": attempted_uid,
+            "attempted_user": u,
+            **r,
+        })
+    return {"blocked": output, "total": len(output), "window_hours": hours}
+
+
+class UnblockUserRequest(BaseModel):
+    attempted_uid: str
+    device_id: str
+    admin_id: str = "admin"
+    action: str = "bind_to_device"   # "bind_to_device" | "clear_only"
+
+
+@admin_router.post("/unblock-user")
+async def unblock_user(
+    data: UnblockUserRequest,
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+):
+    """Unblock a specific user for a specific device.
+
+    Actions:
+      - `bind_to_device`: force-add this user as a binding on the device
+        (bypasses the max_users cap for this one-time override).
+      - `clear_only`: just wipe the collision audit log so future retries
+        aren't rejected on quota — the next login will bind naturally IF
+        the device isn't already at cap.
+
+    Both actions also mark related collision rows as `resolved` so they
+    drop off the Blocked Users list.
+    """
+    _require_admin(x_admin_pin)
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    if data.action not in ("bind_to_device", "clear_only"):
+        raise HTTPException(status_code=400, detail="action must be bind_to_device or clear_only")
+
+    if data.action == "bind_to_device":
+        # Idempotent: skip if already actively bound
+        existing = await db.device_bindings.find_one({
+            "device_id": data.device_id, "user_uid": data.attempted_uid, "active": True,
+        })
+        if not existing:
+            await db.device_bindings.insert_one({
+                "binding_id": str(uuid.uuid4()),
+                "device_id": data.device_id,
+                "user_uid": data.attempted_uid,
+                "bound_at": now_iso,
+                "last_seen_at": now_iso,
+                "bound_via_event": "admin_unblock",
+                "admin_unblock_by": data.admin_id,
+                "active": True,
+                "override_max_users": True,
+            })
+
+    # Mark collision rows resolved
+    r = await db.device_binding_collisions.update_many(
+        {"attempted_uid": data.attempted_uid, "device_id": data.device_id,
+         "resolved": {"$exists": False}},
+        {"$set": {
+            "resolved": True, "resolved_by": data.admin_id, "resolved_at": now_iso,
+            "resolve_action": data.action,
+        }},
+    )
+
+    return {
+        "success": True,
+        "action": data.action,
+        "resolved_collisions": r.modified_count,
+    }
+
+
+class RemoveBindingRequest(BaseModel):
+    device_id: str
+    user_uid: str
+    admin_id: str = "admin"
+    reason: str = ""
+
+
+@admin_router.post("/remove-binding")
+async def remove_binding(
+    data: RemoveBindingRequest,
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+):
+    """Deactivate a user⇄device binding so the slot is freed up.
+    (Used by admin to free space when a device is at capacity and
+    someone genuine needs to be added.)"""
+    _require_admin(x_admin_pin)
+    now_iso = datetime.now(timezone.utc).isoformat()
+    r = await db.device_bindings.update_one(
+        {"device_id": data.device_id, "user_uid": data.user_uid, "active": True},
+        {"$set": {
+            "active": False,
+            "deactivated_at": now_iso,
+            "deactivated_by": data.admin_id,
+            "deactivation_reason": data.reason or "admin_removed",
+        }},
+    )
+    if r.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Active binding not found")
+    return {"success": True, "removed": True}
+
+
+# ────────────────────────────────────────────────────────────────────────
 # INDEX HELPER — call once at startup
 # ────────────────────────────────────────────────────────────────────────
 async def ensure_indexes():
-    """Idempotent — safe to call on every boot. Creates the compound index
-    that makes the (device_id, active=True) lookup fast + unique.
+    """Idempotent — safe to call on every boot.
+
+    Aug 2026 update: the OLD (device_id, active=True) unique index has been
+    replaced with (device_id, user_uid, active=True) unique because a device
+    can now be bound to multiple distinct users (up to
+    `max_users_per_device`, default 2).
     """
     if db is None:
         return
     try:
-        # Unique when active=True; multiple inactive rows for the same device
-        # are fine (audit trail).
+        # Drop the legacy 1-per-device unique index if present.
+        try:
+            await db.device_bindings.drop_index("device_bindings_active_unique")
+            logger.info("[DEVICE-BIND] dropped legacy device_bindings_active_unique")
+        except Exception:
+            pass  # not present — first-time upgrade or fresh DB
+
+        # New composite unique — prevents the SAME user re-binding twice on the
+        # same device, but allows different users to share the device.
         await db.device_bindings.create_index(
-            [("device_id", 1), ("active", 1)],
+            [("device_id", 1), ("user_uid", 1), ("active", 1)],
             partialFilterExpression={"active": True},
             unique=True,
-            name="device_bindings_active_unique",
+            name="device_bindings_active_user_unique",
         )
+        await db.device_bindings.create_index([("device_id", 1)])   # non-unique lookup
         await db.device_bindings.create_index([("user_uid", 1)])
         await db.device_binding_collisions.create_index([("occurred_at", -1)])
         await db.device_binding_collisions.create_index([("device_id", 1)])
@@ -1038,6 +1323,6 @@ async def ensure_indexes():
             [("status", 1), ("requested_at", -1)]
         )
         await db.device_change_requests.create_index([("user_uid", 1)])
-        logger.info("[DEVICE-BIND] indexes ensured")
+        logger.info("[DEVICE-BIND] indexes ensured (multi-user-per-device mode)")
     except Exception as e:
         logger.warning(f"[DEVICE-BIND] index ensure failed (non-fatal): {e}")
