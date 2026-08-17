@@ -327,7 +327,10 @@ def calculate_total_prc(amount_inr: int, burn_rate_percent: int = 1) -> dict:
         return None
     
     processing_fee = get_processing_fee(amount_inr)
-    admin_charge = int(amount_inr * (ADMIN_CHARGE_PERCENT / 100))
+    # PRC-based admin charge REMOVED (Aug 2026) — replaced by post-success
+    # cash Service Charge model in routes/redemption_service_charge.py.
+    # Kept as 0 in the payload for backward compat with old UI clients.
+    admin_charge = 0
     subtotal_inr = amount_inr + processing_fee + admin_charge
     
     # Burn calculation: burn_rate% of subtotal
@@ -341,14 +344,14 @@ def calculate_total_prc(amount_inr: int, burn_rate_percent: int = 1) -> dict:
         "amount_inr": amount_inr,
         "processing_fee_inr": processing_fee,
         "admin_charge_inr": admin_charge,
-        "admin_charge_percent": ADMIN_CHARGE_PERCENT,
+        "admin_charge_percent": 0,
         "burn_inr": burn_inr,
         "burn_rate_percent": burn_rate_percent,
         "subtotal_inr": subtotal_inr,
         "total_inr": round(total_inr, 2),
         "amount_prc": amount_inr * prc_rate,
         "processing_fee_prc": processing_fee * prc_rate,
-        "admin_charge_prc": admin_charge * prc_rate,
+        "admin_charge_prc": 0,
         "burn_prc": round(burn_inr * prc_rate, 2),
         "total_prc": int(total_inr * prc_rate),
         "prc_rate": prc_rate
@@ -358,7 +361,7 @@ def calculate_total_prc(amount_inr: int, burn_rate_percent: int = 1) -> dict:
 def calculate_charges(amount_inr: int, burn_rate_percent: int = 1) -> dict:
     """Calculate charges breakdown for a given amount including burn"""
     processing_fee = get_processing_fee(amount_inr)
-    admin_charge = int(amount_inr * (ADMIN_CHARGE_PERCENT / 100))
+    admin_charge = 0   # See note above — service charge now post-success cash
     subtotal_inr = amount_inr + processing_fee + admin_charge
     burn_inr = round(subtotal_inr * burn_rate_percent / 100, 2)
     total_inr = subtotal_inr + burn_inr
@@ -621,7 +624,30 @@ async def create_withdrawal_request(user_id: str, request: Request):
     user = await db.users.find_one({"uid": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
+    # ==================== PENDING SERVICE CHARGE GUARD (Aug 2026) ====================
+    # Spec Points 7, 18, 37: block new redemption if user has any PENDING
+    # PRC Redemption Service Charge. Failed/rejected/cancelled redemptions
+    # do NOT create service charges, so this only blocks after a successful
+    # redemption whose 20% cash fee hasn't been paid yet.
+    try:
+        from routes.redemption_service_charge import has_pending_service_charge
+        pending_charge = await has_pending_service_charge(user_id)
+        if pending_charge:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "REDEMPTION_SERVICE_CHARGE_PENDING",
+                    "message": "Your previous PRC redemption was successfully completed, but its 20% Redemption Service Charge is still pending. Please complete the pending service charge payment before creating a new redemption request.",
+                    "charge_id": pending_charge.get("charge_id"),
+                    "amount_inr": pending_charge.get("total_payable"),
+                },
+            )
+    except HTTPException:
+        raise
+    except Exception as _e:
+        logging.warning(f"[BANK-REDEEM] pending svc-chg check failed (non-fatal): {_e}")
+
     # ===== CRITICAL: CHECK SUBSCRIPTION FIRST =====
     subscription_plan = (user.get("subscription_plan") or "explorer").lower()
     
@@ -1335,6 +1361,21 @@ async def approve_withdrawal(request_id: str, request: Request):
             "eko_response": eko_transfer_result
         }}
     )
+
+    # ==================== CREATE SERVICE CHARGE ON SUCCESS (Aug 2026) ====================
+    # Spec Point 4: 20% cash service charge is created ONLY here when the
+    # redemption reaches SUCCESSFULLY_COMPLETED. Idempotent — unique index
+    # on redemption_id prevents duplicates on double webhook / retry.
+    try:
+        from routes.redemption_service_charge import create_service_charge_on_success
+        await create_service_charge_on_success(
+            user_id=withdrawal["user_id"],
+            redemption_id=withdrawal.get("request_id") or str(withdrawal.get("_id")),
+            prc_amount=float(withdrawal.get("total_prc") or withdrawal.get("amount_prc") or 0),
+            redemption_type="bank_withdrawal",
+        )
+    except Exception as _e:
+        logging.warning(f"[BANK-REDEEM] service charge creation failed (non-fatal): {_e}")
     
     # Notify user
     if create_notification:

@@ -746,6 +746,7 @@ async def calculate_charges(amount: float, user_id: str = None) -> dict:
     amount_inr = float(amount)
     platform_fee = PLATFORM_FEE
     admin_charge = round(amount_inr * (ADMIN_CHARGE_PERCENT / 100))
+    admin_charge = 0   # PRC-based admin cut removed Aug 2026 — see bank_redeem.py note
     subtotal = amount_inr + platform_fee + admin_charge
     
     # Burn rate based on user's subscription payment type

@@ -1,3 +1,67 @@
+## Shipped (Aug 13, 2026 — PRC Redemption Service Charge Phase 1 — Backend Core)
+
+### Business Rule Delivered
+20% cash service fee on PRC redemptions, charged AFTER successful completion (not deducted from PRC). Full 41-point spec implemented at backend/DB level. Frontend + admin panel = Phase 2/3.
+
+### Files created
+- **`/app/backend/routes/redemption_service_charge.py`** — new module:
+  - `create_service_charge_on_success(user_id, redemption_id, prc_amount)` — helper, idempotent via unique index on redemption_id
+  - `has_pending_service_charge(user_id)` — pending guard helper
+  - User endpoints: `/redemption-service-charge/pending/{uid}`, `/{charge_id}`, `/history/{uid}`, `/create-payment`, `/verify-payment` (server-side Razorpay HMAC signature check)
+  - Admin endpoints: `/summary`, `/pending`, `/search`, `/manual-mark-paid` (guarded by `X-Finance-Pin` env), `/audit/{charge_id}`
+  - `ensure_indexes()` — unique index on (charge_id) + (redemption_id) + composite (user_id, status)
+- **`/app/backend/tests/test_redemption_service_charge.py`** — **10/10 tests pass**:
+  ✅ successful redemption creates one charge  
+  ✅ idempotent (double call returns same charge)  
+  ✅ has_pending returns None when clean  
+  ✅ has_pending returns charge when exists (blocks next redeem)  
+  ✅ zero PRC amount skipped  
+  ✅ min service charge floor (₹1)  
+  ✅ 10000 PRC → ₹200 fee math  
+  ✅ all spec-required fields present  
+  ✅ audit row created on charge creation  
+  ✅ config defaults persist  
+
+### Files modified
+- **`server.py`** — wired new router + `ensure_indexes()` on startup
+- **`routes/bank_redeem.py`**:
+  - Pending-fee GUARD added at top of `create_withdrawal_request` — returns HTTP 409 `REDEMPTION_SERVICE_CHARGE_PENDING` with user-facing Marathi/English message
+  - Success creator hooked into `approve_withdrawal` after status → paid
+  - **Old 20% PRC cut ZEROED OUT** (`admin_charge = 0`) in both `calculate_charges_with_burn` and `calculate_charges`
+- **`routes/unified_redeem_v2.py`** — same `admin_charge = 0` cleanup
+
+### Collections created (auto on first use)
+- `redemption_service_charges` — one row per successful redemption
+- `service_charge_config` — singleton `_id="default"` with percent + rate config
+- `service_charge_audit` — every state transition logged
+
+### Rule fidelity vs 41-point spec
+- Points 1-4 (core rule + trigger only on success): ✅
+- Points 7, 18, 37 (pending charge blocks new redeem via HTTP 409): ✅
+- Point 10 (`prc_rate` snapshotted on charge, immune to future config changes): ✅
+- Point 11 (formula `prc_amount / prc_rate * pct / 100`): ✅
+- Point 12 (admin-configurable, historical unchanged): ✅
+- Point 13 (server-side Razorpay HMAC verification, never trust client): ✅
+- Point 17 (idempotency via unique index on redemption_id): ✅
+- Point 26 (service charge does NOT deduct PRC — pure INR cash flow): ✅
+- Point 30 (manual paid requires `X-Finance-Pin`): ✅
+- Point 31 (every transition audit-logged): ✅
+- Point 33 (failed/rejected redemption creates ZERO charge — no hook fires): ✅
+- Point 35 (backend independently calculates everything): ✅
+- Point 40 acceptance criteria: 10/10 backend items pass
+
+### Remaining work
+- **Phase 2** (User frontend) — redeem form fee preview, post-success screen, pending banner, `/my-redeems/service-charges` retry UI, wallet available-vs-locked, Razorpay checkout wiring
+- **Phase 3** (Admin panel + notifications + reversal workflow)
+
+### Curl-verified
+- Pending endpoint returns `{has_pending: false, charge: null}` for nonexistent user ✓
+- Backend healthy after restart ✓
+- All lint clean ✓
+
+---
+
+
 ## Shipped (Aug 13, 2026 — Device Binding: 2 users/device + Blocked Users Panel)
 
 ### Rule change

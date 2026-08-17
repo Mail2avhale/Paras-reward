@@ -131,6 +131,7 @@ from routes.hr_payroll import router as hr_payroll_router, set_db as set_hr_payr
 from routes.hr_orgchart import router as hr_orgchart_router, set_db as set_hr_orgchart_db
 from routes.referral_bonus import router as referral_bonus_router, set_db as set_referral_bonus_db, credit_referral_bonus
 from routes.ad_analytics import router as ad_analytics_router, set_db as set_ad_analytics_db
+from routes.redemption_service_charge import router as rsc_router, set_db as set_rsc_db, ensure_indexes as rsc_ensure_indexes, has_pending_service_charge, create_service_charge_on_success
 from routes.social_profile import router as social_profile_router, set_db as set_social_profile_db
 from routes.live_ticker import router as live_ticker_router, set_db as set_live_ticker_db, set_cache as set_live_ticker_cache
 
@@ -37293,6 +37294,7 @@ api_router.include_router(hr_payroll_router)
 api_router.include_router(hr_orgchart_router)
 api_router.include_router(referral_bonus_router)
 api_router.include_router(ad_analytics_router)
+api_router.include_router(rsc_router)
 # Social Profile Router (Phase 1 refactor - extracted from server.py April 2026)
 set_social_profile_db(db)
 api_router.include_router(social_profile_router)
@@ -37445,6 +37447,12 @@ set_hr_payroll_db(db)
 set_hr_orgchart_db(db)
 set_referral_bonus_db(db)
 set_ad_analytics_db(db)
+set_rsc_db(db)
+import asyncio as _asyncio
+try:
+    _asyncio.get_event_loop().create_task(rsc_ensure_indexes())
+except Exception:
+    pass
 
 # Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
 # set_eko_db(db)

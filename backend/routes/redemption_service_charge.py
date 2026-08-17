@@ -1,0 +1,412 @@
+"""
+PRC Redemption Service Charge — 20% cash fee, charged AFTER successful redemption.
+
+Spec: 41-point business requirements from user (Aug 2026).
+
+Business rules
+--------------
+1. Cash fee = 20% of INR redemption value (config: `service_charge_percent`)
+2. PRC rate = 10 PRC = ₹1 INR (config: `prc_inr_rate`)
+3. Fee is created ONLY when redemption reaches SUCCESSFULLY_COMPLETED status
+4. Failed/rejected/cancelled/expired redemptions → NO fee (Point 33)
+5. Any PENDING fee blocks the user from creating a new redemption (Points 7, 18, 37)
+6. PRC rate is SNAPSHOTTED on the fee row — future rate changes don't retroactively alter historical fees (Point 10)
+7. Unique index on (redemption_id) — one successful redemption = exactly one fee (Point 17)
+8. Payment verified server-side via Razorpay signature (Point 13)
+9. Duplicate webhook cannot create duplicate paid state (Point 17)
+
+Collections
+-----------
+redemption_service_charges — one row per successful redemption
+service_charge_audit — every state transition
+service_charge_config — singleton with rate config
+"""
+import os
+import uuid
+import hmac
+import hashlib
+import logging
+from datetime import datetime, timezone
+from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Header
+from pydantic import BaseModel, Field
+
+router = APIRouter(prefix="", tags=["Redemption Service Charge"])
+db = None
+logger = logging.getLogger(__name__)
+
+DEFAULT_CONFIG = {
+    "_id": "default",
+    "service_charge_percent": 20,
+    "prc_inr_rate": 10,        # 10 PRC = ₹1
+    "min_service_charge_inr": 1,
+    "max_payment_attempts": 5,
+}
+
+
+def set_db(database):
+    global db
+    db = database
+
+
+async def get_config() -> dict:
+    row = await db.service_charge_config.find_one({"_id": "default"})
+    if not row:
+        await db.service_charge_config.insert_one(dict(DEFAULT_CONFIG))
+        return dict(DEFAULT_CONFIG)
+    return {**DEFAULT_CONFIG, **row}
+
+
+async def _audit(charge_id: str, action: str, old_status: str, new_status: str,
+                 user_id: Optional[str], admin_id: Optional[str] = None,
+                 reason: str = "", meta: Optional[dict] = None):
+    try:
+        await db.service_charge_audit.insert_one({
+            "audit_id": str(uuid.uuid4()),
+            "charge_id": charge_id,
+            "action": action,
+            "old_status": old_status,
+            "new_status": new_status,
+            "user_id": user_id,
+            "admin_id": admin_id,
+            "reason": reason,
+            "meta": meta or {},
+            "ts": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as e:
+        logger.warning(f"[SVC-CHG-AUDIT] failed (non-fatal): {e}")
+
+
+# ============================================================================
+# CORE HELPERS (called from redemption success paths)
+# ============================================================================
+
+async def has_pending_service_charge(user_id: str) -> Optional[dict]:
+    """Returns the pending charge doc if user has one, else None."""
+    return await db.redemption_service_charges.find_one(
+        {"user_id": user_id, "status": "PENDING"},
+        {"_id": 0},
+    )
+
+
+async def create_service_charge_on_success(
+    user_id: str,
+    redemption_id: str,
+    prc_amount: float,
+    redemption_type: str = "generic",
+) -> Optional[dict]:
+    """Called when a redemption reaches SUCCESSFULLY_COMPLETED status.
+
+    Idempotent — unique index on redemption_id ensures at most one row.
+    Returns the charge doc or None on failure.
+    """
+    if not redemption_id or prc_amount <= 0:
+        return None
+    cfg = await get_config()
+    rate = float(cfg["prc_inr_rate"])
+    pct = float(cfg["service_charge_percent"])
+
+    inr_value = round(prc_amount / rate, 2)
+    fee = round(inr_value * pct / 100, 2)
+    fee = max(fee, float(cfg["min_service_charge_inr"]))
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    charge_id = f"SVC-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+
+    doc = {
+        "charge_id": charge_id,
+        "user_id": user_id,
+        "redemption_id": redemption_id,
+        "redemption_type": redemption_type,
+        "prc_amount": prc_amount,
+        "prc_rate": rate,               # SNAPSHOT — never mutated (Point 10)
+        "redemption_value_inr": inr_value,
+        "service_charge_percentage": pct,
+        "service_charge_amount": fee,
+        "tax_amount": 0.0,              # separately handled per CA advice
+        "total_payable": fee,
+        "currency": "INR",
+        "status": "PENDING",            # PENDING → PAID | EXPIRED | REFUNDED
+        "payment_order_id": None,
+        "payment_id": None,
+        "payment_gateway": "razorpay",
+        "payment_attempts": 0,
+        "created_at": now_iso,
+        "applicable_at": now_iso,
+        "paid_at": None,
+        "updated_at": now_iso,
+    }
+
+    try:
+        await db.redemption_service_charges.insert_one(doc)
+        await _audit(charge_id, "created", "-", "PENDING", user_id,
+                     reason=f"Auto on redemption {redemption_id} success")
+        return doc
+    except Exception as e:
+        # Unique index on redemption_id → duplicate = someone else already created
+        existing = await db.redemption_service_charges.find_one(
+            {"redemption_id": redemption_id}, {"_id": 0},
+        )
+        if existing:
+            return existing
+        logger.warning(f"[SVC-CHG] create failed: {e}")
+        return None
+
+
+# ============================================================================
+# USER ENDPOINTS
+# ============================================================================
+
+@router.get("/redemption-service-charge/pending/{user_id}")
+async def get_pending(user_id: str):
+    row = await has_pending_service_charge(user_id)
+    return {"has_pending": bool(row), "charge": row}
+
+
+@router.get("/redemption-service-charge/{charge_id}")
+async def get_charge(charge_id: str):
+    row = await db.redemption_service_charges.find_one({"charge_id": charge_id}, {"_id": 0})
+    if not row:
+        raise HTTPException(status_code=404, detail="Charge not found")
+    return row
+
+
+@router.get("/redemption-service-charge/history/{user_id}")
+async def user_history(user_id: str, limit: int = 100):
+    rows = await db.redemption_service_charges.find(
+        {"user_id": user_id}, {"_id": 0},
+    ).sort("created_at", -1).to_list(limit)
+    totals = {"pending": 0.0, "paid": 0.0}
+    for r in rows:
+        if r["status"] == "PENDING":
+            totals["pending"] += r["total_payable"]
+        elif r["status"] == "PAID":
+            totals["paid"] += r["total_payable"]
+    return {"charges": rows, "totals": {k: round(v, 2) for k, v in totals.items()}}
+
+
+class CreatePaymentRequest(BaseModel):
+    charge_id: str
+
+
+@router.post("/redemption-service-charge/create-payment")
+async def create_payment_order(data: CreatePaymentRequest):
+    """Create a Razorpay order for this pending service charge."""
+    charge = await db.redemption_service_charges.find_one({"charge_id": data.charge_id})
+    if not charge:
+        raise HTTPException(status_code=404, detail="Charge not found")
+    if charge["status"] != "PENDING":
+        raise HTTPException(status_code=400, detail=f"Charge status is {charge['status']}, not PENDING")
+
+    cfg = await get_config()
+    if charge["payment_attempts"] >= cfg["max_payment_attempts"]:
+        raise HTTPException(status_code=429, detail="Max payment attempts reached. Contact support.")
+
+    # Idempotent: reuse open order if it exists
+    if charge.get("payment_order_id"):
+        return {
+            "order_id": charge["payment_order_id"],
+            "amount": int(charge["total_payable"] * 100),
+            "currency": "INR",
+            "charge_id": charge["charge_id"],
+            "razorpay_key": os.environ.get("RAZORPAY_KEY_ID", ""),
+            "reused": True,
+        }
+
+    # Create Razorpay order
+    try:
+        import razorpay
+        client = razorpay.Client(auth=(os.environ["RAZORPAY_KEY_ID"], os.environ["RAZORPAY_KEY_SECRET"]))
+        order = client.order.create({
+            "amount": int(charge["total_payable"] * 100),   # paise
+            "currency": "INR",
+            "receipt": data.charge_id,
+            "notes": {
+                "charge_id": data.charge_id,
+                "redemption_id": charge["redemption_id"],
+                "type": "prc_redemption_service_charge",
+            },
+        })
+        await db.redemption_service_charges.update_one(
+            {"charge_id": data.charge_id},
+            {"$set": {
+                "payment_order_id": order["id"],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }, "$inc": {"payment_attempts": 1}},
+        )
+        await _audit(data.charge_id, "payment_order_created", "PENDING", "PENDING",
+                     charge["user_id"], meta={"order_id": order["id"]})
+        return {
+            "order_id": order["id"],
+            "amount": order["amount"],
+            "currency": order["currency"],
+            "charge_id": data.charge_id,
+            "razorpay_key": os.environ.get("RAZORPAY_KEY_ID", ""),
+        }
+    except Exception as e:
+        logger.error(f"[SVC-CHG] razorpay order failed: {e}")
+        raise HTTPException(status_code=502, detail="Payment gateway error")
+
+
+class VerifyPaymentRequest(BaseModel):
+    charge_id: str
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+
+@router.post("/redemption-service-charge/verify-payment")
+async def verify_payment(data: VerifyPaymentRequest):
+    """Server-side signature verification (Point 13, 35)."""
+    charge = await db.redemption_service_charges.find_one({"charge_id": data.charge_id})
+    if not charge:
+        raise HTTPException(status_code=404, detail="Charge not found")
+    if charge["status"] == "PAID":
+        return {"success": True, "already_paid": True, "charge_id": data.charge_id}
+
+    # Verify signature server-side
+    secret = os.environ.get("RAZORPAY_KEY_SECRET", "")
+    body = f"{data.razorpay_order_id}|{data.razorpay_payment_id}"
+    expected = hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, data.razorpay_signature):
+        await _audit(data.charge_id, "signature_verification_failed", "PENDING", "PENDING",
+                     charge["user_id"], reason="Invalid Razorpay signature")
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    if data.razorpay_order_id != charge.get("payment_order_id"):
+        raise HTTPException(status_code=400, detail="Order ID mismatch")
+
+    # Atomic transition to PAID — protects against double webhook
+    now_iso = datetime.now(timezone.utc).isoformat()
+    result = await db.redemption_service_charges.update_one(
+        {"charge_id": data.charge_id, "status": "PENDING"},
+        {"$set": {
+            "status": "PAID",
+            "payment_id": data.razorpay_payment_id,
+            "paid_at": now_iso,
+            "updated_at": now_iso,
+        }},
+    )
+    if result.modified_count == 0:
+        # Someone else already marked paid — idempotent success
+        fresh = await db.redemption_service_charges.find_one({"charge_id": data.charge_id}, {"_id": 0})
+        return {"success": True, "already_paid": True, "charge": fresh}
+
+    await _audit(data.charge_id, "paid", "PENDING", "PAID", charge["user_id"],
+                 meta={"payment_id": data.razorpay_payment_id})
+    fresh = await db.redemption_service_charges.find_one({"charge_id": data.charge_id}, {"_id": 0})
+    return {"success": True, "charge": fresh}
+
+
+# ============================================================================
+# ADMIN ENDPOINTS
+# ============================================================================
+
+@router.get("/admin/redemption-service-charge/summary")
+async def admin_summary(days: int = 30):
+    from datetime import timedelta
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    pipeline = [
+        {"$match": {"created_at": {"$gte": since}}},
+        {"$group": {
+            "_id": "$status", "count": {"$sum": 1},
+            "amount": {"$sum": "$total_payable"},
+        }},
+    ]
+    rows = await db.redemption_service_charges.aggregate(pipeline).to_list(20)
+    by_status = {"PENDING": {"count": 0, "amount": 0.0}, "PAID": {"count": 0, "amount": 0.0}}
+    for r in rows:
+        by_status[r["_id"]] = {"count": r["count"], "amount": round(r["amount"], 2)}
+    return {"by_status": by_status, "since": since, "days": days}
+
+
+@router.get("/admin/redemption-service-charge/pending")
+async def admin_pending_list(limit: int = 200):
+    rows = await db.redemption_service_charges.find(
+        {"status": "PENDING"}, {"_id": 0},
+    ).sort("created_at", -1).to_list(limit)
+    for r in rows:
+        u = await db.users.find_one({"uid": r["user_id"]},
+            {"_id": 0, "name": 1, "email": 1, "mobile": 1, "phone": 1})
+        r["user"] = u
+    return {"pending": rows, "total": len(rows)}
+
+
+@router.get("/admin/redemption-service-charge/search")
+async def admin_search(q: str):
+    """Search by user_id / redemption_id / charge_id / payment_id / mobile."""
+    or_query = [
+        {"user_id": q}, {"redemption_id": q}, {"charge_id": q}, {"payment_id": q},
+    ]
+    # Also try mobile lookup → user_id
+    user = await db.users.find_one({"$or": [{"mobile": q}, {"phone": q}, {"email": q}]},
+                                    {"_id": 0, "uid": 1})
+    if user:
+        or_query.append({"user_id": user["uid"]})
+    rows = await db.redemption_service_charges.find(
+        {"$or": or_query}, {"_id": 0},
+    ).sort("created_at", -1).to_list(50)
+    return {"results": rows, "total": len(rows)}
+
+
+class ManualPaidRequest(BaseModel):
+    charge_id: str
+    reason: str = Field(min_length=5, max_length=500)
+    admin_id: str
+    external_reference: str = ""
+
+
+@router.post("/admin/redemption-service-charge/manual-mark-paid")
+async def admin_manual_paid(data: ManualPaidRequest,
+                             x_finance_pin: str = Header(..., alias="X-Finance-Pin")):
+    """Requires separate finance PIN to prevent casual admin misuse (Point 30)."""
+    expected = os.environ.get("FINANCE_ADMIN_PIN", "")
+    if not expected or x_finance_pin != expected:
+        raise HTTPException(status_code=403, detail="Finance authorization required")
+
+    charge = await db.redemption_service_charges.find_one({"charge_id": data.charge_id})
+    if not charge:
+        raise HTTPException(status_code=404, detail="Charge not found")
+    if charge["status"] == "PAID":
+        raise HTTPException(status_code=400, detail="Already paid")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    await db.redemption_service_charges.update_one(
+        {"charge_id": data.charge_id, "status": "PENDING"},
+        {"$set": {
+            "status": "PAID", "paid_at": now_iso, "updated_at": now_iso,
+            "manual_marked_by": data.admin_id,
+            "manual_reason": data.reason,
+            "external_reference": data.external_reference,
+        }},
+    )
+    await _audit(data.charge_id, "manual_marked_paid", "PENDING", "PAID",
+                 charge["user_id"], admin_id=data.admin_id, reason=data.reason,
+                 meta={"external_reference": data.external_reference})
+    return {"success": True}
+
+
+@router.get("/admin/redemption-service-charge/audit/{charge_id}")
+async def admin_audit_log(charge_id: str):
+    rows = await db.service_charge_audit.find(
+        {"charge_id": charge_id}, {"_id": 0},
+    ).sort("ts", 1).to_list(500)
+    return {"charge_id": charge_id, "audit": rows}
+
+
+# ============================================================================
+# INDEXES (called on startup)
+# ============================================================================
+
+async def ensure_indexes():
+    if db is None:
+        return
+    try:
+        await db.redemption_service_charges.create_index("charge_id", unique=True)
+        await db.redemption_service_charges.create_index("redemption_id", unique=True)  # 1 charge per redemption
+        await db.redemption_service_charges.create_index([("user_id", 1), ("status", 1)])
+        await db.redemption_service_charges.create_index("created_at")
+        await db.service_charge_audit.create_index([("charge_id", 1), ("ts", 1)])
+        logger.info("[SVC-CHG] indexes ensured")
+    except Exception as e:
+        logger.warning(f"[SVC-CHG] index ensure failed: {e}")
