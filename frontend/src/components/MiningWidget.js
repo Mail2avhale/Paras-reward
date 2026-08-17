@@ -254,12 +254,6 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
       setStartCooldown(cd);
 
       setTimeout(() => { collectInProgressRef.current = false; fetchMiningStatus(false); }, 3000);
-
-      // ── Forced ad interstitial (Jun 24, 2026) ────────────────────
-      // Primary PRC has just been credited. Now offer a skippable ad
-      // for +5..10 BONUS PRC. Rendered via React Portal so production
-      // rendering edge-cases can't hide it like the old modal did.
-      setForcedAdOpen(true);
     } catch (error) {
       collectInProgressRef.current = false;
       smartToast.error(error.response?.data?.detail || 'Failed to collect rewards');
@@ -268,20 +262,17 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
     }
   };
 
-  // Opens the Google-AdMob-compliant opt-in modal. User can watch ad for
-  // a +5..10 bonus PRC or skip. Either path runs performCollect afterwards
-  // so the user always receives their mined PRC.
+  // ── FORCED-AD-BEFORE-COLLECT (Aug 13, 2026) ────────────────────────
+  // Business rule change: user MUST watch the rewarded ad to collect PRC.
+  // If ad fails to load or user closes early → PRC is NOT credited.
+  // Ad = income source, so "no ad = no PRC" protects revenue.
   //
-  // ── BUG FIX (Jun 24, 2026) ─────────────────────────────────────
-  // In production the RewardedAdPrompt modal silently failed to render
-  // for some users (verified by forcing `adPromptOpen=true` via React
-  // fiber: the modal still did not mount). Until that's root-caused we
-  // collect PRC directly so users are never blocked from their rewards.
-  // The AdMob bonus opt-in can be re-enabled once the rendering issue
-  // is fully diagnosed.
+  // Old flow: /mining/collect → credit primary PRC → then show BONUS ad.
+  // New flow: show ad first → on complete callback → /mining/collect.
   const collectRewards = () => {
     if (sessionPRC < 0.01) { smartToast.error('Not enough PRC to collect'); return; }
-    performCollect();
+    triggerHaptic('medium');
+    setForcedAdOpen(true);
   };
 
   const formatTime = (seconds) => {
@@ -495,11 +486,14 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
         onSkip={performCollect}
         onComplete={performCollect}
       />
-      {/* Forced ad interstitial (Portal-based) — shows AFTER collect succeeds. */}
+      {/* Forced ad interstitial — MUST watch ad before PRC is collected.
+          If ad fails / user closes early, performCollect is NOT called,
+          protecting revenue since ads are the primary income source. */}
       <ForcedAdInterstitial
         open={forcedAdOpen}
         placement="main_mining_collect"
         onClose={() => setForcedAdOpen(false)}
+        onAdCompleted={performCollect}
       />
     </div>
   );

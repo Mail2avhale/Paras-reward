@@ -70,12 +70,13 @@ const AdSenseSlot = () => {
   );
 };
 
-const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect' }) => {
+const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_mining_collect' }) => {
   const [phase, setPhase] = useState('init');     // init | playing | done
   const [secsLeft, setSecsLeft] = useState(MIN_VIEW_SECONDS);
   const startedRef = useRef(false);
   const viewTokenRef = useRef(null);
   const closedRef = useRef(false);
+  const adCompletedRef = useRef(false);   // true only if ad watched to completion
 
   // Reset state when the modal opens/closes
   useEffect(() => {
@@ -83,6 +84,7 @@ const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect'
       startedRef.current = false;
       closedRef.current = false;
       viewTokenRef.current = null;
+      adCompletedRef.current = false;
       setPhase('init');
       setSecsLeft(MIN_VIEW_SECONDS);
       return;
@@ -92,7 +94,7 @@ const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect'
 
     let cancelled = false;
     (async () => {
-      // Step 1 — mint view_token
+      // Step 1 — mint view_token (bonus PRC tracking, best-effort)
       try {
         const token = localStorage.getItem('token');
         const startRes = await axios.post(
@@ -104,36 +106,29 @@ const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect'
           viewTokenRef.current = startRes.data.view_token;
         }
       } catch (_) {
-        // /start failed — silently dismiss. Primary PRC already collected.
+        // best-effort — bonus tracking failure shouldn't block collect
       }
 
       if (cancelled) return;
 
-      if (!viewTokenRef.current) {
-        // No bonus available (quota / auth / network). Close silently.
-        if (!closedRef.current) {
-          closedRef.current = true;
-          onClose?.();
-        }
-        return;
-      }
-
-      // Step 2 — play the ad
+      // Step 2 — play the ad. Ad completion is a HARD requirement for
+      // onAdCompleted to fire. If the ad fails or user closes early,
+      // onClose runs but onAdCompleted does NOT — so PRC won't be collected.
       if (Capacitor.isNativePlatform()) {
-        // Native: AdMob handles the entire UX. Modal is hidden behind
-        // AdMob's full-screen video.
         setPhase('playing');
         const result = await showNativeRewardedAd();
         if (cancelled) return;
         if (result.shown) {
-          await creditBonus();
+          adCompletedRef.current = true;
+          if (viewTokenRef.current) await creditBonus();
         }
         if (!closedRef.current) {
           closedRef.current = true;
+          if (adCompletedRef.current) onAdCompleted?.();   // ✅ credit PRC
           onClose?.();
         }
       } else {
-        // Web: AdSense slot renders inside our modal. Start countdown.
+        // Web: AdSense slot renders inside modal. User must watch MIN_VIEW_SECONDS.
         setPhase('playing');
       }
     })();
@@ -155,9 +150,12 @@ const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect'
     const t = setTimeout(async () => {
       if (closedRef.current) return;
       closedRef.current = true;
-      if (!Capacitor.isNativePlatform() && viewTokenRef.current) {
-        await creditBonus();
+      // Web MAX_VIEW_SECONDS hit → treat as completed (user sat through it)
+      if (!Capacitor.isNativePlatform()) {
+        adCompletedRef.current = true;
+        if (viewTokenRef.current) await creditBonus();
       }
+      if (adCompletedRef.current) onAdCompleted?.();
       onClose?.();
     }, MAX_VIEW_SECONDS * 1000);
     return () => clearTimeout(t);
@@ -183,8 +181,10 @@ const ForcedAdInterstitial = ({ open, onClose, placement = 'main_mining_collect'
   const handleSkip = async () => {
     if (closedRef.current) return;
     closedRef.current = true;
-    // User watched the minimum 5s — credit the bonus.
+    // User watched the minimum 5s on web — count as completed, credit bonus + collect PRC.
+    adCompletedRef.current = true;
     if (viewTokenRef.current) await creditBonus();
+    onAdCompleted?.();
     onClose?.();
   };
 

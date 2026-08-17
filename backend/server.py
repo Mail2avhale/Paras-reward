@@ -130,6 +130,7 @@ from routes.employee_portal import router as employee_portal_router, admin_route
 from routes.hr_payroll import router as hr_payroll_router, set_db as set_hr_payroll_db
 from routes.hr_orgchart import router as hr_orgchart_router, set_db as set_hr_orgchart_db
 from routes.referral_bonus import router as referral_bonus_router, set_db as set_referral_bonus_db, credit_referral_bonus
+from routes.ad_analytics import router as ad_analytics_router, set_db as set_ad_analytics_db
 from routes.social_profile import router as social_profile_router, set_db as set_social_profile_db
 from routes.live_ticker import router as live_ticker_router, set_db as set_live_ticker_db, set_cache as set_live_ticker_cache
 
@@ -37291,6 +37292,7 @@ api_router.include_router(employee_portal_admin_router)
 api_router.include_router(hr_payroll_router)
 api_router.include_router(hr_orgchart_router)
 api_router.include_router(referral_bonus_router)
+api_router.include_router(ad_analytics_router)
 # Social Profile Router (Phase 1 refactor - extracted from server.py April 2026)
 set_social_profile_db(db)
 api_router.include_router(social_profile_router)
@@ -37442,6 +37444,7 @@ set_employee_portal_db(db)
 set_hr_payroll_db(db)
 set_hr_orgchart_db(db)
 set_referral_bonus_db(db)
+set_ad_analytics_db(db)
 
 # Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
 # set_eko_db(db)
