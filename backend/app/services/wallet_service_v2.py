@@ -203,7 +203,30 @@ class WalletServiceV2:
                 logging.error(f"[WalletV2] PRC Ledger insert error: {e}")
             
             logging.info(f"[WalletV2] DEBIT SUCCESS: {user_id} | -{amount} PRC | {balance_before} -> {balance_after} | TXN: {txn_id} | Ref: {reference}")
-            
+
+            # ============================================
+            # UNIVERSAL 20% SERVICE CHARGE HOOK (Feb 2026)
+            # ============================================
+            # Auto-generate a 20% cash service charge for EVERY user-initiated
+            # PRC spend (bills, recharges, vouchers, subscriptions, etc.).
+            # Skips: refunds, admin/system moves, transfers, burns, and
+            # bank_transfer (which has its own hook on admin mark-paid).
+            # Individual flows can opt-out via metadata={"skip_service_charge": True}.
+            try:
+                from app.services.service_charge_sync import (
+                    NON_CHARGEABLE_TXN_TYPES, create_service_charge_sync,
+                )
+                skip_flag = bool((metadata or {}).get("skip_service_charge"))
+                if txn_type not in NON_CHARGEABLE_TXN_TYPES and not skip_flag:
+                    create_service_charge_sync(
+                        user_id=user_id,
+                        redemption_id=reference or txn_id,
+                        prc_amount=float(amount),
+                        redemption_type=service_type or txn_type,
+                    )
+            except Exception as _svc_e:
+                logging.warning(f"[WalletV2] service-charge hook failed (non-fatal): {_svc_e}")
+
             return {
                 "success": True,
                 "txn_id": txn_id,
@@ -342,6 +365,20 @@ class WalletServiceV2:
                 logging.error(f"[WalletV2] PRC Ledger insert error: {e}")
             
             logging.info(f"[WalletV2] CREDIT SUCCESS: {user_id} | +{amount} PRC | {balance_before} -> {balance_after} | TXN: {txn_id}")
+
+            # Auto-cancel linked service charge on refund (Feb 2026)
+            # When a service is refunded (recharge failed, voucher cancelled,
+            # etc.), the linked PENDING charge is auto-CANCELLED and a PAID
+            # charge is flagged REFUNDED for finance to actually refund.
+            try:
+                if txn_type in ("refund", "prc_refund") and reference:
+                    from app.services.service_charge_sync import cancel_service_charge_by_reference_sync
+                    cancel_service_charge_by_reference_sync(
+                        reference=reference,
+                        reason=f"Refund credited · {description[:100]}",
+                    )
+            except Exception as _c_e:
+                logging.warning(f"[WalletV2] service-charge auto-cancel failed (non-fatal): {_c_e}")
             
             return {
                 "success": True,

@@ -752,6 +752,18 @@ async def pay_partner_store(body: PartnerStorePayRequest):
         },
     ])
 
+    # 20% PRC Redemption Service Charge (Feb 2026) — universal fee on PRC spend
+    try:
+        from routes.redemption_service_charge import create_service_charge_on_success
+        await create_service_charge_on_success(
+            user_id=body.user_uid,
+            redemption_id=txn_id,
+            prc_amount=float(body.prc_amount),
+            redemption_type="partner_store_payment",
+        )
+    except Exception as _svc_e:
+        logging.warning(f"[PARTNER-STORE] svc-charge hook failed (non-fatal): {_svc_e}")
+
     # 7) Community Forum post — celebrate the payment with a "Partner
     # Payment" badge post. Best-effort — never blocks the payment flow.
     try:

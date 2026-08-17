@@ -176,6 +176,20 @@ async def create_service_charge_on_success(
 
 
 # ============================================================================
+# SYNC VERSIONS — for WalletServiceV2 (uses sync pymongo)
+# ============================================================================
+# Re-exports from the lightweight app/services/service_charge_sync module so
+# WalletServiceV2 (sync path) can hook 20% service charge on every user PRC
+# spend without importing FastAPI / auth here.
+from app.services.service_charge_sync import (  # noqa: E402
+    NON_CHARGEABLE_TXN_TYPES,
+    create_service_charge_sync,
+    cancel_service_charge_by_reference_sync,
+)
+
+
+
+# ============================================================================
 # USER ENDPOINTS
 # ============================================================================
 

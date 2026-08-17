@@ -792,6 +792,18 @@ async def book_product(product_id: str, body: BookProductRequest):
         {"$inc": {"prc_balance": -upfront_prc, "total_spent_prc": upfront_prc}}
     )
 
+    # 20% PRC Redemption Service Charge (Feb 2026) — applies to Paras Mall bookings too
+    try:
+        from routes.redemption_service_charge import create_service_charge_on_success
+        await create_service_charge_on_success(
+            user_id=body.user_id,
+            redemption_id=booking_id,
+            prc_amount=float(upfront_prc),
+            redemption_type="paras_mall_booking",
+        )
+    except Exception as _svc_e:
+        logging.warning(f"[MALL] svc-charge hook failed (non-fatal): {_svc_e}")
+
     # Invalidate lifetime-redeemed cache so dashboards reflect this debit immediately
     try:
         from server import invalidate_lifetime_cache
@@ -931,6 +943,16 @@ async def cancel_booking(
         {"uid": body.user_id},
         {"$inc": {"prc_balance": upfront_prc, "total_spent_prc": -upfront_prc}}
     )
+
+    # Auto-cancel linked 20% service charge (Feb 2026)
+    try:
+        from routes.redemption_service_charge import cancel_service_charge_by_reference_sync
+        cancel_service_charge_by_reference_sync(
+            reference=booking_id,
+            reason="Mall booking cancelled",
+        )
+    except Exception as _svc_e:
+        logging.warning(f"[MALL] svc-charge auto-cancel failed (non-fatal): {_svc_e}")
 
     # 2. Mark booking cancelled — and zero `total_prc_deducted` so the
     #    lifetime-redeemed scanner stops counting this booking toward

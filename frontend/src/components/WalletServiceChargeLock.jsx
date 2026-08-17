@@ -44,8 +44,8 @@ const WalletServiceChargeLock = ({ uid, prcBalance = 0, prcRate = 10 }) => {
         <span className="text-amber-300 text-[11px] font-bold">Redemption Locked</span>
       </div>
       <p className="text-amber-100/80 text-[10px] leading-tight">
-        A prior redemption&apos;s 20% service fee of{' '}
-        <b>₹{charge.total_payable}</b> is pending. Pay it to unlock new redemptions.
+        A prior PRC spend&apos;s 20% service fee of{' '}
+        <b>₹{charge.total_payable}</b> is pending. Pay it to unlock new PRC spends.
       </p>
       <div className="flex items-center gap-1 text-amber-200 text-[10px] font-semibold">
         <AlertCircle className="w-3 h-3" />

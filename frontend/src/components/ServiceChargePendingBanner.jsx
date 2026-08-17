@@ -75,10 +75,10 @@ const ServiceChargePendingBanner = ({ user }) => {
         <AlertCircle className="w-5 h-5 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold">
-            PRC Redemption Service Fee Pending — ₹{charge.total_payable}
+            Service Fee Pending — ₹{charge.total_payable}
           </p>
           <p className="text-xs opacity-90 truncate">
-            Complete this payment to unlock your next PRC redemption.
+            Complete this payment to unlock further PRC spends.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

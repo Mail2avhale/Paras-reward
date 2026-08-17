@@ -1,3 +1,61 @@
+## Shipped (Feb 17, 2026 — Universal 20% Service Charge on ALL PRC Spend)
+
+### Delivered
+The 20% cash service charge now applies to **every user-initiated PRC spend**, not just bank redemptions. Implemented as a single-choke-point interceptor in `WalletServiceV2` so future services automatically inherit the charge.
+
+### Services covered (23 flows)
+- **Bank Transfer / Redeem** (via `manual_bank_transfer` mark-paid hook — kept separate)
+- **Bill Payments**: Electricity, Gas, Water, Broadband, Landline, Cable TV, Credit Card, Insurance, FASTag, LPG, Municipal Tax, Housing Society, EMI, Education Fees
+- **Recharges**: Mobile Prepaid, Mobile Postpaid, DTH
+- **Gift Vouchers** (Amazon, Flipkart etc.)
+- **Luxury Product Orders**
+- **PRC Subscription** (Elite via PRC / `monthly_fee`)
+- **Partner Store Payments** (`partner_store.py`)
+- **Paras Mall Bookings** (`paras_mall.py`)
+- **Gift Subscription to another user** (`gift_subscription.py`)
+- Any future service that calls `WalletServiceV2.debit(...)` — auto-covered
+
+### Skipped (system / internal — no charge)
+Refunds, mining, rewards, referral bonuses, admin credits/debits, manual corrections, peer-to-peer transfers, retries, auto-burns, sustainability-burns, bank_transfer submit (handled by mark-paid).
+
+### Architecture
+- **New lightweight module**: `/app/backend/app/services/service_charge_sync.py` — sync (PyMongo) versions of `create_service_charge_sync()` and `cancel_service_charge_by_reference_sync()`. Zero FastAPI/auth dependencies so it can be imported inside `WalletServiceV2` without triggering server-wide validation.
+- **WalletServiceV2.debit()**: universal charge-creation hook with `NON_CHARGEABLE_TXN_TYPES` blacklist + `metadata={"skip_service_charge": True}` opt-out.
+- **WalletServiceV2.credit()**: on `refund` / `prc_refund`, auto-cancels linked PENDING charges (or flags PAID → REFUNDED).
+- **Raw-$inc flows** (partner_store, paras_mall, gift_subscription) manually wired with async `create_service_charge_on_success` calls.
+- **Idempotent**: unique index on `redemption_id` — duplicate debits with same reference create at most one charge.
+
+### Fee formula
+`fee_inr = round((prc_amount / 10) * 0.20, 2)` (min ₹1)
+- 100 PRC → ₹2 fee · 1000 PRC → ₹20 fee · 10000 PRC → ₹200 fee
+
+### Tests (32/32 pass)
+- 10 unit tests (`test_redemption_service_charge.py`)
+- 12 HTTP endpoint tests (`test_prc_svc_charge_http.py`)
+- 2 e2e block flow tests (`test_prc_svc_charge_e2e_block.py`)
+- **8 new universal-hook tests** (`test_prc_universal_svc_hook.py`) — covers redeem, bank_transfer skip, admin skip, transfer skip, monthly_fee, metadata opt-out, refund cascade, idempotency
+
+### UI copy updates
+- Global banner: "Service Fee Pending — Complete this payment to unlock further PRC spends"
+- Wallet lock chip: "A prior PRC spend's 20% service fee..."
+- Bank redeem preview: "This 20% fee applies to every PRC use (bill payments, recharges, vouchers, mall bookings, etc.)"
+- Admin dashboard tagline: "20% cash fee on every PRC spend"
+
+### Files touched
+- **NEW**: `/app/backend/app/services/service_charge_sync.py` (200 lines)
+- **NEW**: `/app/backend/tests/test_prc_universal_svc_hook.py` (8 tests)
+- **MODIFIED**: `/app/backend/app/services/wallet_service_v2.py` (debit + credit hooks)
+- **MODIFIED**: `/app/backend/routes/redemption_service_charge.py` (re-exports sync helpers)
+- **MODIFIED**: `/app/backend/routes/partner_store.py` (async hook post-payment)
+- **MODIFIED**: `/app/backend/routes/paras_mall.py` (async hook on booking + auto-cancel on cancellation)
+- **MODIFIED**: `/app/backend/routes/gift_subscription.py` (async hook post-gift)
+- **MODIFIED**: `/app/frontend/src/components/ServiceChargePendingBanner.jsx` (copy)
+- **MODIFIED**: `/app/frontend/src/components/WalletServiceChargeLock.jsx` (copy)
+- **MODIFIED**: `/app/frontend/src/pages/BankRedeemPage.js` (preview copy)
+- **MODIFIED**: `/app/frontend/src/pages/Admin/AdminServiceCharges.js` (tagline)
+
+---
+
 ## Shipped (Feb 17, 2026 — PRC Redemption Service Charge Phase 2 + Phase 3)
 
 ### Delivered

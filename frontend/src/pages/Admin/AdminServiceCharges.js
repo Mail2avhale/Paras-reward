@@ -56,7 +56,7 @@ const AdminServiceCharges = () => {
           </div>
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-slate-900">Redemption Service Charges</h1>
-            <p className="text-xs text-slate-500">20% cash fee on completed PRC redemptions · Revenue tracker</p>
+            <p className="text-xs text-slate-500">20% cash fee on every PRC spend (bills, recharges, redeems, mall, vouchers) · Revenue tracker</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

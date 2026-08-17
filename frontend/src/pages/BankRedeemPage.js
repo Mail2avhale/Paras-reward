@@ -606,14 +606,14 @@ const BankRedeemPage = ({ user: initialUser }) => {
                     <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3" data-testid="svc-charge-preview">
                       <p className="text-amber-300 text-xs font-bold flex items-center gap-1.5">
                         <IndianRupee className="w-3.5 h-3.5" />
-                        Service Charge Notice (post-success)
+                        20% Service Charge (applies to every PRC spend)
                       </p>
                       <p className="text-amber-100/90 text-xs mt-1 leading-relaxed">
                         On successful bank transfer of <b>₹{parseInt(amount)}</b>, a
-                        <b> 20% Redemption Service Charge = ₹{Math.max(1, Math.round(parseInt(amount) * 0.20))}</b> becomes payable in cash via Razorpay.
+                        <b> 20% service charge of ₹{Math.max(1, Math.round(parseInt(amount) * 0.20))}</b> becomes payable in cash via Razorpay.
                       </p>
                       <p className="text-amber-100/70 text-[11px] mt-1">
-                        Until paid, you can&apos;t create a new redemption. It appears in <b>My Service Charges</b>.
+                        This 20% fee applies to every PRC use (bill payments, recharges, vouchers, mall bookings, etc.). Until paid, you can&apos;t create a new PRC spend. Track it under <b>My Service Charges</b>.
                       </p>
                     </div>
                   )}

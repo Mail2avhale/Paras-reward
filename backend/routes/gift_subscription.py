@@ -198,6 +198,18 @@ async def send_gift_subscription(request: GiftSubscriptionRequest):
     })
     
     logging.info(f"[Gift] {request.parent_uid} gifted 24hr Elite to {request.child_uid}")
+
+    # 20% PRC Redemption Service Charge (Feb 2026) — applies to gift subscriptions
+    try:
+        from routes.redemption_service_charge import create_service_charge_on_success
+        await create_service_charge_on_success(
+            user_id=request.parent_uid,
+            redemption_id=gift_id,
+            prc_amount=float(GIFT_PRC_COST),
+            redemption_type="gift_subscription",
+        )
+    except Exception as _svc_e:
+        logging.warning(f"[Gift] svc-charge hook failed (non-fatal): {_svc_e}")
     
     return {
         "success": True,
