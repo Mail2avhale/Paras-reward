@@ -4065,15 +4065,18 @@ async def get_subscription_pricing():
 @api_router.get("/subscription/elite-pricing")
 async def get_elite_pricing():
     """
-    Get current Elite subscription pricing breakdown
-    Shows full formula: ₹999 + 18% GST + ₹10 Processing + 20% Admin + 5% Burn
+    Get current Elite subscription pricing breakdown.
+    Feb 2026: old ₹10 Processing + 20% Admin charges retired; universal 20%
+    cash service charge is billed post-success via Razorpay.
     """
     try:
         pricing = await calculate_elite_prc_price()
+        # Compute the post-success 20% cash service charge preview
+        svc_charge_inr = round(pricing["total_prc"] / (pricing["prc_rate"] or 10) * 0.20, 2)
         return {
             "success": True,
             "plan": "elite",
-            "formula": "₹999 + 18% GST + ₹10 Processing Fee + 20% Admin Charges + 5% Burn",
+            "formula": "₹999 + 18% GST (PRC deducted) + 20% cash service charge (post-success)",
             "base_price_inr": ELITE_BASE_PRICE,
             "gst_rate": f"{GST_RATE * 100}%",
             "processing_fee": f"₹{PROCESSING_FEE_INR}",
@@ -4081,8 +4084,16 @@ async def get_elite_pricing():
             "burn_rate": "5%",
             "duration_days": 28,
             "pricing": pricing,
+            "service_charge_inr": svc_charge_inr,
+            "service_charge_note": (
+                f"After PRC deduction, a 20% cash service charge of "
+                f"₹{svc_charge_inr:.2f} is billed via Razorpay."
+            ),
             "total_prc_required": pricing["total_prc"],
-            "message": f"Pay {pricing['total_prc']:,.0f} PRC for 28 days Elite subscription"
+            "message": (
+                f"Pay {pricing['total_prc']:,.0f} PRC + ₹{svc_charge_inr:.0f} cash "
+                f"for 28 days Elite subscription"
+            ),
         }
     except Exception as e:
         logging.error(f"Pricing calc error: {e}")
@@ -4144,8 +4155,12 @@ async def get_prc_subscription_eligibility(uid: str):
 
 ELITE_BASE_PRICE = 999  # Base price in INR
 GST_RATE = 0.18  # 18% GST
-PROCESSING_FEE_INR = 10  # ₹10 flat processing fee
-ADMIN_CHARGE_RATE = 0.20  # 20% admin charges
+# Feb 2026 — old processing fee + 20% admin charge retired in favour of the
+# universal 20% cash service charge (see routes/redemption_service_charge.py).
+# Subscription PRC price now = base + GST only. The 20% cash fee is billed
+# post-success via Razorpay by the WalletServiceV2 universal interceptor.
+PROCESSING_FEE_INR = 0
+ADMIN_CHARGE_RATE = 0.0
 
 async def calculate_elite_prc_price(prc_rate: float = None) -> dict:
     """

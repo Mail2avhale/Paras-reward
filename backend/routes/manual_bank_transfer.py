@@ -113,8 +113,11 @@ def set_prc_rate_getter(func):
 
 # ==================== CONSTANTS ====================
 
-TRANSACTION_FEE = 10  # ₹10 flat fee
-ADMIN_FEE_PERCENT = 20  # 20% admin fee
+# Feb 2026 — old ₹10 transaction fee + 20% admin fee retired. Users now pay
+# only the base withdrawal amount in PRC. The 20% cash service charge is
+# billed post-success via Razorpay (routes/redemption_service_charge.py).
+TRANSACTION_FEE = 0
+ADMIN_FEE_PERCENT = 0
 MIN_WITHDRAWAL_BASE = 100  # ₹100 base minimum (May 2026 — was ₹1,000 flat)
 MIN_WITHDRAWAL = MIN_WITHDRAWAL_BASE  # legacy alias used elsewhere in code
 MAX_WITHDRAWAL = 10000  # ₹10,000 maximum (per-request hard cap)

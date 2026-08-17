@@ -74,8 +74,8 @@ DEFAULT_MAX_PRC_PER_USER = 7.142857  # Maximum PRC per user (at 2 users = 50/7)
 DEFAULT_REDEEM_PERCENT = 70  # Default redeem percentage
 DEFAULT_BURN_RATE_PRC = 5  # 5% burn for Elite by PRC
 DEFAULT_BURN_RATE_CASH = 1  # 1% burn for Elite by Cash/Razorpay
-DEFAULT_PROCESSING_FEE_INR = 10  # ₹10 processing fee
-DEFAULT_ADMIN_CHARGE_PERCENT = 20  # 20% admin charges on PRC
+DEFAULT_PROCESSING_FEE_INR = 0  # Feb 2026 — retired in favour of universal 20% cash service charge (see routes/redemption_service_charge.py)
+DEFAULT_ADMIN_CHARGE_PERCENT = 0  # Feb 2026 — retired in favour of universal 20% cash service charge
 
 
 # ==================== FORMULA LOCK SYSTEM ====================

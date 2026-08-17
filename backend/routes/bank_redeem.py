@@ -281,15 +281,13 @@ async def check_loan_emi_this_week(user_id: str) -> dict:
         "next_monday": result.get("next_eligible", "")
     }
 
-# Processing fees - EMI style
-# <= ₹499: 50% of amount
-# > ₹499: Flat ₹10
+# Processing fees — Feb 2026: retired in favour of universal 20% cash service
+# charge (routes/redemption_service_charge.py). Kept function for backwards
+# compatibility with legacy callers but always returns 0.
 def get_processing_fee(amount_inr: int) -> int:
-    """Calculate processing fee like EMI"""
-    if amount_inr <= 499:
-        return int(amount_inr * 0.5)  # 50% of amount
-    else:
-        return 10  # Flat ₹10
+    """Retired — was ₹10 flat / 50% of amount for < ₹499. Now zero."""
+    _ = amount_inr
+    return 0
 
 # Admin charge percentage — single source of truth in routes/growth_economy.py
 from routes.growth_economy import DEFAULT_ADMIN_CHARGE_PERCENT as ADMIN_CHARGE_PERCENT

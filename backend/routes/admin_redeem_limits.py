@@ -400,8 +400,10 @@ async def admin_direct_redeem(request: DirectRedeemRequest):
     # Fees + PRC math
     from utils.helpers import get_prc_rate
     prc_rate = await get_prc_rate(db)
-    TRANSACTION_FEE = 10
-    ADMIN_FEE_PERCENT = 20
+    # Feb 2026 — old TRANSACTION_FEE + ADMIN_FEE_PERCENT retired.
+    # Only base amount is deducted in PRC; 20% cash fee is billed post-success.
+    TRANSACTION_FEE = 0
+    ADMIN_FEE_PERCENT = 0
     admin_fee = int(request.amount_inr * ADMIN_FEE_PERCENT / 100)
     total_inr = request.amount_inr + admin_fee + TRANSACTION_FEE
     total_prc = total_inr * prc_rate
