@@ -1,0 +1,13 @@
+{
+  "deleted": 4,
+  "details": [
+    {
+      "prefix": "SVC-QA-ORDERCREATE",
+      "deleted": 2
+    },
+    {
+      "prefix": "SVC-QA-UIRENDER",
+      "deleted": 2
+    }
+  ]
+}

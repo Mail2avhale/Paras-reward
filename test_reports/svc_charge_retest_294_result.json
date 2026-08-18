@@ -1,0 +1,63 @@
+{
+  "started_at": "2026-08-18T10:27:53.303582+00:00",
+  "api": "http://localhost:8001/api",
+  "checks": [
+    {
+      "name": "single_pay_valid_keys",
+      "status_code": 200,
+      "body": {
+        "order_id": "order_TRCQnHC5DF9RjL",
+        "amount": 30000,
+        "currency": "INR",
+        "charge_id": "SVC-294-FC85F81745",
+        "razorpay_key": "rzp_live_SLaUMsGWw4ga78"
+      }
+    },
+    {
+      "name": "single_pay_reused_valid_keys",
+      "status_code": 200,
+      "body": {
+        "order_id": "order_reused_test",
+        "amount": 30000,
+        "currency": "INR",
+        "charge_id": "SVC-294-1335C99075",
+        "razorpay_key": "rzp_live_SLaUMsGWw4ga78",
+        "reused": true
+      }
+    },
+    {
+      "name": "bulk_pay_valid_keys",
+      "status_code": 200,
+      "body": {
+        "order_id": "order_TRCQo7tQmfRJ9Y",
+        "amount": 600,
+        "currency": "INR",
+        "charge_ids": [
+          "SVC-294-9491808444",
+          "SVC-294-198E4A7E6A"
+        ],
+        "charge_count": 2,
+        "razorpay_key": "rzp_live_SLaUMsGWw4ga78",
+        "bulk_receipt": "BULK-bulk-294-260818102754"
+      }
+    },
+    {
+      "name": "single_pay_reused_blank_key",
+      "status_code": 503,
+      "body": {
+        "detail": "Payment service is temporarily unavailable. Admin: check RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env vars."
+      }
+    },
+    {
+      "name": "bulk_pay_blank_key",
+      "status_code": 503,
+      "body": {
+        "detail": "Payment service is temporarily unavailable. Admin: check RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env vars."
+      }
+    }
+  ],
+  "final_restore_attempted": true,
+  "overall": "pass",
+  "final_restore_success": true,
+  "finished_at": "2026-08-18T10:28:07.326946+00:00"
+}

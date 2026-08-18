@@ -238,6 +238,17 @@ async def create_payment_order(data: CreatePaymentRequest):
     if charge["payment_attempts"] >= cfg["max_payment_attempts"]:
         raise HTTPException(status_code=429, detail="Max payment attempts reached. Contact support.")
 
+    # Sanity: Razorpay env vars must be present regardless of whether we
+    # reuse an existing order or create a new one (bug testing agent flag).
+    key_id = os.environ.get("RAZORPAY_KEY_ID", "").strip()
+    key_secret = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
+    if not key_id or not key_secret:
+        logger.error("[SVC-CHG] Razorpay env vars missing in this environment")
+        raise HTTPException(
+            status_code=503,
+            detail="Payment service is temporarily unavailable. Admin: check RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env vars.",
+        )
+
     # Idempotent: reuse open order if it exists
     if charge.get("payment_order_id"):
         return {
@@ -245,21 +256,13 @@ async def create_payment_order(data: CreatePaymentRequest):
             "amount": int(charge["total_payable"] * 100),
             "currency": "INR",
             "charge_id": charge["charge_id"],
-            "razorpay_key": os.environ.get("RAZORPAY_KEY_ID", ""),
+            "razorpay_key": key_id,
             "reused": True,
         }
 
     # Create Razorpay order
     try:
         import razorpay
-        key_id = os.environ.get("RAZORPAY_KEY_ID", "").strip()
-        key_secret = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
-        if not key_id or not key_secret:
-            logger.error("[SVC-CHG] Razorpay env vars missing in this environment")
-            raise HTTPException(
-                status_code=503,
-                detail="Payment service is temporarily unavailable. Admin: check RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env vars.",
-            )
         client = razorpay.Client(auth=(key_id, key_secret))
         order = client.order.create({
             "amount": int(charge["total_payable"] * 100),   # paise

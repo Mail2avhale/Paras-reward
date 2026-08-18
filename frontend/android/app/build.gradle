@@ -273,13 +273,12 @@ android {
         //     Together these prevent the classic release-only NoClassDef /
         //     NoSuchMethod crashes without loosening R8's optimization.
         //     Play Console recommendation should fully clear on this AAB.
-        // versionCode 37 → 38 — Feb 26, 2026 — v1.3.8 (Bugfixes)
-        //     - FIX: Collect Reward silent-fail on AdMob load failure
-        //       (native ad now falls back to 5s continue-mode instead of freezing)
-        //     - FIX: PRC Subscription (self) not creating 20% service charge
-        //     - FIX: Sale Elite to friends not creating 20% service charge
-        versionCode 38
-        versionName "1.3.8"
+        // versionCode 38 → 39 — Feb 26, 2026 — v1.3.9 (Better diagnostics)
+        //     - Pay Now / Bulk Pay toast now shows the EXACT reason:
+        //       (network error, HTTP status, Razorpay SDK error text)
+        //     - Env var missing check on backend surfaces a clear 503 message
+        versionCode 39
+        versionName "1.3.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

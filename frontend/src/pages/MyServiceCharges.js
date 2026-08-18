@@ -55,7 +55,15 @@ const MyServiceCharges = ({ user }) => {
       });
       rzp.open();
     } catch (e) {
-      toast.error(e?.response?.data?.detail || 'Order create failed');
+      const detail = e?.response?.data?.detail;
+      const status = e?.response?.status;
+      const netErr = !e?.response;
+      const msg = detail
+        || (netErr && `Network error — cannot reach payment server${e?.message ? ` (${e.message})` : ''}`)
+        || (status && `Order create failed (HTTP ${status})`)
+        || 'Order create failed';
+      toast.error(msg, { duration: 8000 });
+      console.error('[svc-charge single-pay error]', { status, detail, err: e });
     } finally { setPaying(null); }
   };
 
@@ -103,7 +111,15 @@ const MyServiceCharges = ({ user }) => {
       rzp.on('payment.failed', () => setBulkPaying(false));
       rzp.open();
     } catch (e) {
-      toast.error(e?.response?.data?.detail || 'Bulk order create failed');
+      const detail = e?.response?.data?.detail;
+      const status = e?.response?.status;
+      const netErr = !e?.response;
+      const msg = detail
+        || (netErr && `Network error — cannot reach payment server${e?.message ? ` (${e.message})` : ''}`)
+        || (status && `Bulk order create failed (HTTP ${status})`)
+        || 'Bulk order create failed';
+      toast.error(msg, { duration: 8000 });
+      console.error('[svc-charge bulk-pay error]', { status, detail, err: e });
       setBulkPaying(false);
     }
   };

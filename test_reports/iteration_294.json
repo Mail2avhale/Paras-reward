@@ -1,0 +1,42 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "Service charges pay now केल्यावर 'Order create failed' error येतो. Both single-pay (row Pay Now) and Bulk Pay (top banner) fail on production Android APK even after redeployment with correct RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET env vars.",
+  "summary": "No relevant testing skill found. Focused backend retest passed: single Pay Now create-payment returned 200 with a real Razorpay order for a seeded ₹300 pending charge, reused-order returned 200 with non-empty razorpay_key, blank RAZORPAY_KEY_ID on reused-order now returned 503 instead of 200/empty key, bulk-pay returned 200 with valid keys and 503 with blank key, and the requested pytest suite passed 36/36 from /app. Frontend/production Android APK was not retested in this backend-only request.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/svc_charge_retest_294.py",
+    "/app/test_reports/svc_charge_retest_294_result.json",
+    "/app/test_reports/bug_verification_294.json",
+    "/app/test_reports/iteration_294.json"
+  ],
+  "action_items": [
+    "No backend fix required from this retest. For production confidence, deploy this exact backend build/env and smoke-test the Android APK against production."
+  ],
+  "critical_code_review_comments": [
+    "create_payment_order now validates RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET before the reused-order branch, so reused orders cannot return 200 with an empty razorpay_key when env vars are blank.",
+    "bulk-pay blank-key path returned the expected 503 in runtime testing; no mocked APIs were used in the focused verification script."
+  ],
+  "updated_files": [
+    "/app/test_reports/svc_charge_retest_294.py",
+    "/app/test_reports/svc_charge_retest_294_result.json",
+    "/app/test_reports/bug_verification_294.json",
+    "/app/test_reports/iteration_294.json"
+  ],
+  "success_rate": {
+    "backend": "100% (5/5 focused API checks + 36/36 requested pytests passed)",
+    "frontend": "not tested (backend-only retest; previous iteration covered UI)"
+  },
+  "seed_data_creation": "Created disposable redemption_service_charges rows marked _test_seed=bug_294_service_charge_paynow for user cbdf46d7-7d66-4d43-8495-e1432a2ab071 and temporary bulk test users; all seeded Mongo rows were cleaned up. Real Razorpay orders were created for order-creation tests, but no payments were made or verified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend env was temporarily blanked by the focused test and restored successfully; post-check confirmed RAZORPAY_KEY_ID/SECRET are present and /api/health returns 200. Pytest command run: python -m pytest backend/tests/test_redemption_service_charge.py backend/tests/test_prc_svc_charge_http.py backend/tests/test_prc_svc_charge_e2e_block.py backend/tests/test_prc_universal_svc_hook.py backend/tests/test_prc_svc_charge_bulk_pay.py -> 36 passed.",
+  "rca_of_the_issue": "The previously flagged RCA edge case was a reused open order path bypassing Razorpay env validation and potentially returning HTTP 200 with an empty razorpay_key, which could make Android checkout fail as 'Order create failed'. Runtime verification now shows the env validation guard executes before reuse: blank-key reused-order returns 503 with detail beginning 'Payment service is temporarily unavailable', while valid-key single and bulk order creation succeeds."
+}

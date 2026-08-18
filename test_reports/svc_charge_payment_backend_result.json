@@ -1,0 +1,62 @@
+{
+  "api": "http://127.0.0.1:8001/api",
+  "user_id": "cbdf46d7-7d66-4d43-8495-e1432a2ab071",
+  "checks": [
+    {
+      "name": "single_create_payment_200",
+      "ok": true,
+      "status": 200,
+      "amount": 100,
+      "order_id_prefix": "order_TRBzIo"
+    },
+    {
+      "name": "bulk_pay_order_200",
+      "ok": true,
+      "status": 200,
+      "amount": 300,
+      "charge_count": 3,
+      "order_id_prefix": "order_TRBzJg"
+    },
+    {
+      "name": "single_missing_env_503",
+      "ok": true,
+      "status": 503,
+      "detail_prefix": "Payment service is temporarily unavailable. Admin: check RAZORPA"
+    },
+    {
+      "name": "bulk_missing_env_503",
+      "ok": true,
+      "status": 503,
+      "detail_prefix": "Payment service is temporarily unavailable. Admin: check RAZORPA"
+    },
+    {
+      "name": "single_bad_razorpay_502",
+      "ok": true,
+      "status": 502,
+      "detail_prefix": "Payment gateway error: Authentication failed"
+    },
+    {
+      "name": "bulk_bad_razorpay_502",
+      "ok": true,
+      "status": 502,
+      "detail_prefix": "Payment gateway error: Authentication failed"
+    }
+  ],
+  "seeded_charge_ids": [
+    "SVC-QA-ORDERCREATE-SINGLE-0-1787047311852",
+    "SVC-QA-ORDERCREATE-BULK-0-1787047312639",
+    "SVC-QA-ORDERCREATE-BULK-1-1787047312639",
+    "SVC-QA-ORDERCREATE-MISSING-SINGLE-0-1787047313427",
+    "SVC-QA-ORDERCREATE-MISSING-BULK-0-1787047313428",
+    "SVC-QA-ORDERCREATE-MISSING-BULK-1-1787047313428",
+    "SVC-QA-ORDERCREATE-BAD-SINGLE-0-1787047321210",
+    "SVC-QA-ORDERCREATE-BAD-BULK-0-1787047321211",
+    "SVC-QA-ORDERCREATE-BAD-BULK-1-1787047321211"
+  ],
+  "ok": true,
+  "ui_charge_ids": [
+    "SVC-QA-ORDERCREATE-UI-0-1787047336398",
+    "SVC-QA-ORDERCREATE-UI-1-1787047336398"
+  ],
+  "final_env_restored": true
+}
