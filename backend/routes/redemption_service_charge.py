@@ -252,7 +252,15 @@ async def create_payment_order(data: CreatePaymentRequest):
     # Create Razorpay order
     try:
         import razorpay
-        client = razorpay.Client(auth=(os.environ["RAZORPAY_KEY_ID"], os.environ["RAZORPAY_KEY_SECRET"]))
+        key_id = os.environ.get("RAZORPAY_KEY_ID", "").strip()
+        key_secret = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
+        if not key_id or not key_secret:
+            logger.error("[SVC-CHG] Razorpay env vars missing in this environment")
+            raise HTTPException(
+                status_code=503,
+                detail="Payment service is temporarily unavailable. Admin: check RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env vars.",
+            )
+        client = razorpay.Client(auth=(key_id, key_secret))
         order = client.order.create({
             "amount": int(charge["total_payable"] * 100),   # paise
             "currency": "INR",
@@ -279,9 +287,16 @@ async def create_payment_order(data: CreatePaymentRequest):
             "charge_id": data.charge_id,
             "razorpay_key": os.environ.get("RAZORPAY_KEY_ID", ""),
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"[SVC-CHG] razorpay order failed: {e}")
-        raise HTTPException(status_code=502, detail="Payment gateway error")
+        logger.error(f"[SVC-CHG] razorpay order failed: {type(e).__name__}: {e}")
+        # Return the underlying reason so admin can debug (never expose raw
+        # keys — the string is razorpay SDK error text, not our secret).
+        raise HTTPException(
+            status_code=502,
+            detail=f"Payment gateway error: {str(e)[:180]}",
+        )
 
 
 class VerifyPaymentRequest(BaseModel):
@@ -373,9 +388,15 @@ async def create_bulk_pay_order(data: BulkPayOrderRequest):
 
     try:
         import razorpay
-        client = razorpay.Client(
-            auth=(os.environ["RAZORPAY_KEY_ID"], os.environ["RAZORPAY_KEY_SECRET"]),
-        )
+        key_id = os.environ.get("RAZORPAY_KEY_ID", "").strip()
+        key_secret = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
+        if not key_id or not key_secret:
+            logger.error("[SVC-CHG] Razorpay env vars missing (bulk)")
+            raise HTTPException(
+                status_code=503,
+                detail="Payment service is temporarily unavailable. Admin: check RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env vars.",
+            )
+        client = razorpay.Client(auth=(key_id, key_secret))
         order = client.order.create({
             "amount": total_paise,
             "currency": "INR",
@@ -387,9 +408,14 @@ async def create_bulk_pay_order(data: BulkPayOrderRequest):
                 "charge_ids": ",".join(charge_ids[:20]),   # notes cap ~15 keys
             },
         })
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"[SVC-CHG] bulk razorpay order failed: {e}")
-        raise HTTPException(status_code=502, detail="Payment gateway error")
+        logger.error(f"[SVC-CHG] bulk razorpay order failed: {type(e).__name__}: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Payment gateway error: {str(e)[:180]}",
+        )
 
     now_iso = datetime.now(timezone.utc).isoformat()
     # Stamp the SAME order_id on every included charge + bump attempts
