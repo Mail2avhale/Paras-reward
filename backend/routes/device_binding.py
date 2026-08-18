@@ -1284,6 +1284,106 @@ async def remove_binding(
 
 
 # ────────────────────────────────────────────────────────────────────────
+# NUCLEAR RESET (Feb 2026) — one-click unbind ALL devices + unblock ALL users
+# ────────────────────────────────────────────────────────────────────────
+class ResetAllRequest(BaseModel):
+    admin_id: str = "admin"
+    reason: str = "admin_global_reset"
+    confirmation: str = Field(
+        ...,
+        description="Must be exactly 'CONFIRM RESET ALL' to prevent accidents",
+    )
+
+
+@admin_router.post("/reset-all")
+async def admin_reset_all_bindings(
+    data: ResetAllRequest,
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+):
+    """One-click NUCLEAR RESET.
+
+    - Deactivates every active device⇄user binding.
+    - Marks every unresolved collision row as resolved.
+    - Cancels every pending device-change request.
+
+    Effect: every user can log in fresh on any device on next attempt.
+
+    Requires the admin operation PIN + an explicit confirmation string
+    to prevent accidental invocation.
+    """
+    _require_admin(x_admin_pin)
+    if data.confirmation.strip().upper() != "CONFIRM RESET ALL":
+        raise HTTPException(
+            status_code=400,
+            detail="confirmation must be exactly 'CONFIRM RESET ALL'",
+        )
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # 1) Deactivate every active binding
+    r1 = await db.device_bindings.update_many(
+        {"active": True},
+        {"$set": {
+            "active": False,
+            "deactivated_at": now_iso,
+            "deactivated_by": data.admin_id,
+            "deactivation_reason": data.reason,
+        }},
+    )
+
+    # 2) Resolve every unresolved collision row (clears Blocked Users list)
+    r2 = await db.device_binding_collisions.update_many(
+        {"resolved": {"$exists": False}},
+        {"$set": {
+            "resolved": True,
+            "resolved_by": data.admin_id,
+            "resolved_at": now_iso,
+            "resolve_action": "global_reset",
+        }},
+    )
+
+    # 3) Cancel any pending device-change requests
+    r3 = await db.device_change_requests.update_many(
+        {"status": "pending"},
+        {"$set": {
+            "status": "cancelled",
+            "reviewed_by": data.admin_id,
+            "reviewed_at": now_iso,
+            "review_reason": "global_reset",
+        }},
+    )
+
+    # 4) Audit log so the reset is traceable
+    try:
+        await db.device_binding_audit.insert_one({
+            "audit_id": str(uuid.uuid4()),
+            "action": "global_reset_all",
+            "admin_id": data.admin_id,
+            "reason": data.reason,
+            "bindings_deactivated": r1.modified_count,
+            "collisions_resolved": r2.modified_count,
+            "change_requests_cancelled": r3.modified_count,
+            "ts": now_iso,
+        })
+    except Exception as _e:
+        logger.warning(f"[DEVICE-BIND] audit insert failed (non-fatal): {_e}")
+
+    logger.info(
+        f"[DEVICE-BIND] GLOBAL RESET by {data.admin_id}: "
+        f"bindings={r1.modified_count}, collisions={r2.modified_count}, "
+        f"change_reqs={r3.modified_count}"
+    )
+
+    return {
+        "success": True,
+        "bindings_deactivated": r1.modified_count,
+        "collisions_resolved": r2.modified_count,
+        "change_requests_cancelled": r3.modified_count,
+        "ts": now_iso,
+    }
+
+
+# ────────────────────────────────────────────────────────────────────────
 # INDEX HELPER — call once at startup
 # ────────────────────────────────────────────────────────────────────────
 async def ensure_indexes():

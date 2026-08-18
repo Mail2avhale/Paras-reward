@@ -33,6 +33,45 @@ const AdminDeviceBinding = ({ user }) => {
   const [changeRequests, setChangeRequests] = useState([]);
   const [changeReqBusy, setChangeReqBusy] = useState(false);
 
+  // Nuclear "Reset All" — unbind every device, unblock every user
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState('');
+  const [showResetPanel, setShowResetPanel] = useState(false);
+
+  const handleResetAll = async () => {
+    if (resetConfirm.trim().toUpperCase() !== 'CONFIRM RESET ALL') {
+      toast.error('Type exactly: CONFIRM RESET ALL');
+      return;
+    }
+    if (!pin) { toast.error('Admin PIN required'); return; }
+    setResetBusy(true);
+    try {
+      const r = await axios.post(
+        `${API}/admin/device-binding/reset-all`,
+        {
+          admin_id: user?.uid || 'admin',
+          reason: 'admin_global_reset_from_ui',
+          confirmation: 'CONFIRM RESET ALL',
+        },
+        { headers: headers() },
+      );
+      toast.success(
+        `Reset complete: ${r.data.bindings_deactivated} bindings unbound, ` +
+        `${r.data.collisions_resolved} users unblocked, ` +
+        `${r.data.change_requests_cancelled} change-requests cancelled.`,
+        { duration: 8000 },
+      );
+      setResetConfirm('');
+      setShowResetPanel(false);
+      // Refresh the visible state
+      loadFlag();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Reset failed');
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
   const headers = useCallback(() => ({ 'X-Admin-Pin': pin }), [pin]);
 
   const loadFlag = useCallback(async () => {
@@ -232,6 +271,71 @@ const AdminDeviceBinding = ({ user }) => {
 
       {/* Max users per device config */}
       <MaxUsersCard pin={pin} headers={headers} />
+
+      {/* ────────────────────────────────────────────────────────────── */}
+      {/* NUCLEAR RESET — one-click unbind ALL devices + unblock ALL users */}
+      {/* ────────────────────────────────────────────────────────────── */}
+      <Card className="p-4 border-2 border-red-300 bg-red-50/50" data-testid="global-reset-card">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-lg flex items-center gap-2 text-red-700">
+              <AlertTriangle className="w-5 h-5" /> Global Reset — Danger Zone
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              One click will <b>unbind every device</b>, <b>unblock every user</b>, and
+              <b> cancel every pending change-request</b>. All users can then log in
+              fresh on any device on their next attempt. This action is fully audit-logged
+              but <b>cannot be reversed</b>.
+            </p>
+          </div>
+          {!showResetPanel && (
+            <Button
+              onClick={() => setShowResetPanel(true)}
+              disabled={!pin}
+              className="bg-red-600 hover:bg-red-700 text-white shrink-0"
+              data-testid="open-global-reset-btn"
+            >
+              <Unlock className="w-4 h-4 mr-1" /> Reset All Bindings
+            </Button>
+          )}
+        </div>
+        {showResetPanel && (
+          <div className="mt-4 p-4 rounded-lg border border-red-400 bg-white space-y-3">
+            <p className="text-sm text-red-700 font-semibold">
+              To confirm, type exactly: <code className="px-2 py-0.5 bg-red-100 rounded">CONFIRM RESET ALL</code>
+            </p>
+            <Input
+              value={resetConfirm}
+              onChange={(e) => setResetConfirm(e.target.value)}
+              placeholder="CONFIRM RESET ALL"
+              className="max-w-md"
+              data-testid="global-reset-confirm-input"
+            />
+            <div className="flex gap-2 pt-1">
+              <Button
+                onClick={handleResetAll}
+                disabled={resetBusy || resetConfirm.trim().toUpperCase() !== 'CONFIRM RESET ALL'}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                data-testid="confirm-global-reset-btn"
+              >
+                {resetBusy ? (
+                  <><RefreshCw className="w-4 h-4 mr-1 animate-spin" /> Resetting…</>
+                ) : (
+                  <><Unlock className="w-4 h-4 mr-1" /> Yes, Reset Everything</>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setShowResetPanel(false); setResetConfirm(''); }}
+                disabled={resetBusy}
+                data-testid="cancel-global-reset-btn"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* Blocked users (fresh Aug 2026) */}
       <BlockedUsersCard pin={pin} headers={headers} adminId={user?.uid || 'admin'} />
