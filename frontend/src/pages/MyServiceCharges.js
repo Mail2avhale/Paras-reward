@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { ArrowLeft, IndianRupee, CheckCircle, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, IndianRupee, CheckCircle, Clock, Loader2, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/api';
 
@@ -13,6 +13,7 @@ const MyServiceCharges = ({ user }) => {
   const [data, setData] = useState({ charges: [], totals: {} });
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(null);
+  const [bulkPaying, setBulkPaying] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.uid) return;
@@ -58,6 +59,55 @@ const MyServiceCharges = ({ user }) => {
     } finally { setPaying(null); }
   };
 
+  // Bulk Pay — one Razorpay checkout that clears ALL pending charges
+  const payAll = async () => {
+    if (!user?.uid) return;
+    setBulkPaying(true);
+    try {
+      const { data: order } = await axios.post(`${API}/redemption-service-charge/bulk-pay-order`, {
+        user_id: user.uid,
+      });
+      const rzp = new window.Razorpay({
+        key: order.razorpay_key,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.order_id,
+        name: 'Paras Reward',
+        description: `Bulk Service Charge · ${order.charge_count} charges`,
+        prefill: { name: user?.name, email: user?.email, contact: user?.mobile },
+        theme: { color: '#0ea5e9' },
+        modal: { ondismiss: () => setBulkPaying(false) },
+        handler: async (resp) => {
+          try {
+            const { data: verify } = await axios.post(
+              `${API}/redemption-service-charge/bulk-verify-payment`,
+              {
+                user_id: user.uid,
+                charge_ids: order.charge_ids,
+                razorpay_order_id: resp.razorpay_order_id,
+                razorpay_payment_id: resp.razorpay_payment_id,
+                razorpay_signature: resp.razorpay_signature,
+              },
+            );
+            toast.success(
+              `All cleared! ${verify.paid_count} charges marked PAID` +
+              (verify.already_paid ? ` (${verify.already_paid} were already paid)` : ''),
+              { duration: 6000 },
+            );
+            load();
+          } catch (e) {
+            toast.error(e?.response?.data?.detail || 'Bulk verify failed');
+          } finally { setBulkPaying(false); }
+        },
+      });
+      rzp.on('payment.failed', () => setBulkPaying(false));
+      rzp.open();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || 'Bulk order create failed');
+      setBulkPaying(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-20" data-testid="my-service-charges-page">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
@@ -86,6 +136,40 @@ const MyServiceCharges = ({ user }) => {
             <p className="text-lg font-bold text-emerald-700 mt-1">{fmt(data.totals?.paid)}</p>
           </div>
         </div>
+
+        {/* Bulk-Pay banner — shows when 2+ pending charges exist */}
+        {(() => {
+          const pendingCharges = (data.charges || []).filter((c) => c.status === 'PENDING');
+          if (pendingCharges.length < 2) return null;
+          return (
+            <div
+              className="mb-3 rounded-xl border border-sky-300 bg-gradient-to-r from-sky-50 to-cyan-50 p-3 flex items-center justify-between gap-3 flex-wrap"
+              data-testid="bulk-pay-banner"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-sky-800 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" /> Bulk Pay Available
+                </p>
+                <p className="text-[11px] text-sky-700/80 mt-0.5">
+                  Clear all <b>{pendingCharges.length}</b> pending charges of
+                  <b> {fmt(data.totals?.pending)}</b> in ONE checkout instead of {pendingCharges.length} separate payments.
+                </p>
+              </div>
+              <button
+                onClick={payAll}
+                disabled={bulkPaying}
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold disabled:opacity-60 shrink-0 flex items-center gap-1"
+                data-testid="bulk-pay-btn"
+              >
+                {bulkPaying ? (
+                  <><Loader2 className="w-3 h-3 animate-spin" /> Processing…</>
+                ) : (
+                  <><Zap className="w-3 h-3" /> Pay All {fmt(data.totals?.pending)}</>
+                )}
+              </button>
+            </div>
+          );
+        })()}
 
         {loading ? (
           <div className="text-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-400 mx-auto" /></div>

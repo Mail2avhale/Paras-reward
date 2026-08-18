@@ -335,6 +335,154 @@ async def verify_payment(data: VerifyPaymentRequest):
 
 
 # ============================================================================
+# BULK PAY (Feb 2026) — clear ALL pending charges in one Razorpay checkout
+# ============================================================================
+
+class BulkPayOrderRequest(BaseModel):
+    user_id: str
+
+
+@router.post("/redemption-service-charge/bulk-pay-order")
+async def create_bulk_pay_order(data: BulkPayOrderRequest):
+    """Create ONE Razorpay order for the sum of ALL pending charges of a user.
+
+    Returns the order + the list of `charge_ids` included so the frontend can
+    pass them back to `/bulk-verify-payment` after Razorpay success.
+    """
+    pending = await db.redemption_service_charges.find(
+        {"user_id": data.user_id, "status": "PENDING"}, {"_id": 0},
+    ).sort("created_at", 1).to_list(500)
+    if not pending:
+        raise HTTPException(status_code=404, detail="No pending charges to pay")
+
+    cfg = await get_config()
+    # Skip charges whose attempt counter is maxed out
+    payable = [c for c in pending if c.get("payment_attempts", 0) < cfg["max_payment_attempts"]]
+    if not payable:
+        raise HTTPException(
+            status_code=429,
+            detail="All pending charges have exceeded max payment attempts. Contact support.",
+        )
+
+    total_paise = sum(int(round(c["total_payable"] * 100)) for c in payable)
+    if total_paise <= 0:
+        raise HTTPException(status_code=400, detail="Payable amount is zero")
+
+    charge_ids = [c["charge_id"] for c in payable]
+    bulk_receipt = f"BULK-{data.user_id[:8]}-{datetime.now(timezone.utc).strftime('%y%m%d%H%M%S')}"
+
+    try:
+        import razorpay
+        client = razorpay.Client(
+            auth=(os.environ["RAZORPAY_KEY_ID"], os.environ["RAZORPAY_KEY_SECRET"]),
+        )
+        order = client.order.create({
+            "amount": total_paise,
+            "currency": "INR",
+            "receipt": bulk_receipt,
+            "notes": {
+                "user_id": data.user_id,
+                "type": "prc_redemption_service_charge_bulk",
+                "charge_count": len(charge_ids),
+                "charge_ids": ",".join(charge_ids[:20]),   # notes cap ~15 keys
+            },
+        })
+    except Exception as e:
+        logger.error(f"[SVC-CHG] bulk razorpay order failed: {e}")
+        raise HTTPException(status_code=502, detail="Payment gateway error")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    # Stamp the SAME order_id on every included charge + bump attempts
+    await db.redemption_service_charges.update_many(
+        {"charge_id": {"$in": charge_ids}, "status": "PENDING"},
+        {"$set": {
+            "payment_order_id": order["id"],
+            "bulk_pay_receipt": bulk_receipt,
+            "updated_at": now_iso,
+        }, "$inc": {"payment_attempts": 1}},
+    )
+    for cid in charge_ids:
+        await _audit(cid, "bulk_payment_order_created", "PENDING", "PENDING",
+                     data.user_id, meta={"order_id": order["id"],
+                                          "bulk_receipt": bulk_receipt,
+                                          "charge_count": len(charge_ids)})
+
+    return {
+        "order_id": order["id"],
+        "amount": order["amount"],
+        "currency": order["currency"],
+        "charge_ids": charge_ids,
+        "charge_count": len(charge_ids),
+        "razorpay_key": os.environ.get("RAZORPAY_KEY_ID", ""),
+        "bulk_receipt": bulk_receipt,
+    }
+
+
+class BulkVerifyRequest(BaseModel):
+    user_id: str
+    charge_ids: list
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+
+@router.post("/redemption-service-charge/bulk-verify-payment")
+async def bulk_verify_payment(data: BulkVerifyRequest):
+    """Verify a bulk-pay signature and mark ALL included charges PAID atomically."""
+    if not data.charge_ids:
+        raise HTTPException(status_code=400, detail="charge_ids is empty")
+
+    # Signature check (once, on the aggregated order)
+    secret = os.environ.get("RAZORPAY_KEY_SECRET", "")
+    body = f"{data.razorpay_order_id}|{data.razorpay_payment_id}"
+    expected = hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, data.razorpay_signature):
+        for cid in data.charge_ids:
+            await _audit(cid, "bulk_signature_verification_failed", "PENDING", "PENDING",
+                         data.user_id, reason="Invalid signature on bulk pay")
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    paid_count = 0
+    already_paid = 0
+    skipped = []
+    for cid in data.charge_ids:
+        charge = await db.redemption_service_charges.find_one({"charge_id": cid})
+        if not charge:
+            skipped.append({"charge_id": cid, "reason": "not_found"})
+            continue
+        if charge["status"] == "PAID":
+            already_paid += 1
+            continue
+        if charge.get("payment_order_id") != data.razorpay_order_id:
+            skipped.append({"charge_id": cid, "reason": "order_mismatch"})
+            continue
+        r = await db.redemption_service_charges.update_one(
+            {"charge_id": cid, "status": "PENDING"},
+            {"$set": {
+                "status": "PAID",
+                "payment_id": data.razorpay_payment_id,
+                "paid_at": now_iso,
+                "updated_at": now_iso,
+                "bulk_paid": True,
+            }},
+        )
+        if r.modified_count:
+            paid_count += 1
+            await _audit(cid, "bulk_paid", "PENDING", "PAID", data.user_id,
+                         meta={"payment_id": data.razorpay_payment_id,
+                               "bulk_batch_size": len(data.charge_ids)})
+
+    return {
+        "success": True,
+        "paid_count": paid_count,
+        "already_paid": already_paid,
+        "skipped": skipped,
+        "total_requested": len(data.charge_ids),
+    }
+
+
+# ============================================================================
 # ADMIN ENDPOINTS
 # ============================================================================
 
