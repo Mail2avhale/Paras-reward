@@ -73,6 +73,7 @@ const AdSenseSlot = () => {
 const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_mining_collect' }) => {
   const [phase, setPhase] = useState('init');     // init | playing | done
   const [secsLeft, setSecsLeft] = useState(MIN_VIEW_SECONDS);
+  const [nativeFallback, setNativeFallback] = useState(false); // true when native ad fails
   const startedRef = useRef(false);
   const viewTokenRef = useRef(null);
   const closedRef = useRef(false);
@@ -87,6 +88,7 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
       adCompletedRef.current = false;
       setPhase('init');
       setSecsLeft(MIN_VIEW_SECONDS);
+      setNativeFallback(false);
       return;
     }
     if (startedRef.current) return;
@@ -121,11 +123,20 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
         if (result.shown) {
           adCompletedRef.current = true;
           if (viewTokenRef.current) await creditBonus();
-        }
-        if (!closedRef.current) {
-          closedRef.current = true;
-          if (adCompletedRef.current) onAdCompleted?.();   // ✅ credit PRC
-          onClose?.();
+          if (!closedRef.current) {
+            closedRef.current = true;
+            onAdCompleted?.();   // ✅ credit PRC
+            onClose?.();
+          }
+        } else {
+          // Native AdMob failed — inventory empty, module missing, or SDK
+          // error. Fall back to the web-style 5s modal so user isn't stuck
+          // seeing nothing. Show a soft notice.
+          console.warn('[ForcedAd] native ad failed, falling back to web mode:', result.reason);
+          try { toast.info('Loading reward…'); } catch (_) { /* noop */ }
+          setNativeFallback(true);
+          // secsLeft already at MIN_VIEW_SECONDS — the web countdown effect
+          // will pick this up and let the user proceed after 5s.
         }
       } else {
         // Web: AdSense slot renders inside modal. User must watch MIN_VIEW_SECONDS.
@@ -136,13 +147,15 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
     return () => { cancelled = true; };
   }, [open, placement]);
 
-  // Countdown timer for web Skip path
+  // Countdown timer for web Skip path (also drives native fallback)
   useEffect(() => {
-    if (!open || phase !== 'playing' || Capacitor.isNativePlatform()) return;
+    if (!open || phase !== 'playing') return;
+    // On native without fallback, the countdown is not needed — AdMob drives closure
+    if (Capacitor.isNativePlatform() && !nativeFallback) return;
     if (secsLeft <= 0) return;
     const t = setTimeout(() => setSecsLeft((s) => Math.max(0, s - 1)), 1000);
     return () => clearTimeout(t);
-  }, [open, phase, secsLeft]);
+  }, [open, phase, secsLeft, nativeFallback]);
 
   // Hard cap — auto-close after MAX_VIEW_SECONDS
   useEffect(() => {
@@ -150,8 +163,9 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
     const t = setTimeout(async () => {
       if (closedRef.current) return;
       closedRef.current = true;
-      // Web MAX_VIEW_SECONDS hit → treat as completed (user sat through it)
-      if (!Capacitor.isNativePlatform()) {
+      // Web OR native fallback MAX_VIEW_SECONDS hit → treat as completed
+      const nonNativeFlow = !Capacitor.isNativePlatform() || nativeFallback;
+      if (nonNativeFlow) {
         adCompletedRef.current = true;
         if (viewTokenRef.current) await creditBonus();
       }
@@ -159,7 +173,7 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
       onClose?.();
     }, MAX_VIEW_SECONDS * 1000);
     return () => clearTimeout(t);
-  }, [open]);
+  }, [open, nativeFallback]);
 
   const creditBonus = async () => {
     if (!viewTokenRef.current) return;
@@ -191,7 +205,9 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
   if (!open) return null;
 
   const isNative = Capacitor.isNativePlatform();
-  const canSkip = !isNative && secsLeft <= 0;
+  // Native fallback mode = act like web (show countdown + skip button)
+  const showWebOverlay = !isNative || nativeFallback;
+  const canSkip = showWebOverlay && secsLeft <= 0;
 
   const overlay = (
     <div
@@ -205,7 +221,7 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
           <span className="text-zinc-400 text-xs uppercase tracking-widest font-semibold">
-            Bonus Ad
+            {nativeFallback ? 'Preparing Reward' : 'Bonus Ad'}
           </span>
           {canSkip ? (
             <button
@@ -213,14 +229,14 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
               className="text-zinc-300 hover:text-white text-xs font-semibold flex items-center gap-1 px-2 py-1 rounded hover:bg-zinc-800"
               data-testid="forced-ad-skip"
             >
-              Skip <X className="w-3 h-3" />
+              {nativeFallback ? 'Continue' : 'Skip'} <X className="w-3 h-3" />
             </button>
           ) : (
             <span
               className="text-amber-400 text-xs font-mono tabular-nums"
               data-testid="forced-ad-countdown"
             >
-              Skip in {secsLeft}s
+              {nativeFallback ? 'Ready in' : 'Skip in'} {secsLeft}s
             </span>
           )}
         </div>
@@ -233,7 +249,7 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
               <p className="text-zinc-500 text-xs">Loading bonus ad…</p>
             </div>
           )}
-          {phase === 'playing' && isNative && (
+          {phase === 'playing' && isNative && !nativeFallback && (
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
               <p className="text-zinc-500 text-xs">Playing ad…</p>
@@ -242,6 +258,15 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
           {phase === 'playing' && !isNative && (
             <div className="w-full">
               <AdSenseSlot />
+            </div>
+          )}
+          {phase === 'playing' && nativeFallback && (
+            <div className="flex flex-col items-center gap-3 text-center px-4">
+              <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+              <p className="text-zinc-300 text-sm font-semibold">Ad unavailable right now</p>
+              <p className="text-zinc-500 text-xs">
+                We&apos;ll credit your reward directly. Please continue in {secsLeft}s.
+              </p>
             </div>
           )}
         </div>

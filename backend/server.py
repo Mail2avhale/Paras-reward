@@ -13502,6 +13502,22 @@ async def subscription_pay_with_prc(request: Request):
         except Exception as burn_err:
             logging.warning(f"[SUSTAIN-BURN] subscription hook failed (non-fatal): {burn_err}")
 
+        # 20% Cash Service Charge (Feb 2026) — universal fee on every PRC spend.
+        # This flow bypasses WalletServiceV2 (uses raw $inc for atomic-with-cooldown),
+        # so we call the async helper explicitly. Idempotent via unique index on
+        # redemption_id (payment_id).
+        try:
+            from routes.redemption_service_charge import create_service_charge_on_success
+            await create_service_charge_on_success(
+                user_id=user_id,
+                redemption_id=payment_id,
+                prc_amount=float(prc_amount),
+                redemption_type="elite_subscription",
+            )
+            logging.info(f"[SVC-CHG] created for PRC subscription {payment_id} prc={prc_amount}")
+        except Exception as _svc_e:
+            logging.warning(f"[SVC-CHG] PRC subscription hook failed (non-fatal): {_svc_e}")
+
         # Community success-story post (immediate activations only, not upcoming/queued)
         if not is_upcoming:
             try:
@@ -14391,6 +14407,21 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
             )
         except Exception as burn_err:
             logging.warning(f"[SALE-ELITE] sustain burn non-fatal: {burn_err}")
+
+        # 20% Cash Service Charge (Feb 2026) — universal fee on Sale Elite too.
+        # Sender's PRC is spent to sponsor another user's Elite plan → treat
+        # this as a PRC spend and generate the fee.
+        try:
+            from routes.redemption_service_charge import create_service_charge_on_success
+            await create_service_charge_on_success(
+                user_id=sender.get("uid"),
+                redemption_id=sale_id,
+                prc_amount=float(total_prc),
+                redemption_type="sale_elite_subscription",
+            )
+            logging.info(f"[SVC-CHG] created for sale-elite {sale_id} prc={total_prc}")
+        except Exception as _svc_e:
+            logging.warning(f"[SVC-CHG] sale-elite hook failed (non-fatal): {_svc_e}")
 
         # ===== Activity log =====
         try:
