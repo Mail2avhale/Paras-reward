@@ -55,6 +55,7 @@ from routes.admin import router as admin_router, set_db as set_admin_db, set_cac
 from routes.admin_delivery import router as admin_delivery_router, set_db as set_admin_delivery_db
 from routes.admin_system import router as admin_system_router, set_db as set_admin_system_db, set_cache as set_admin_system_cache, set_helpers as set_admin_system_helpers
 from routes.admin_finance import router as admin_finance_router, set_db as set_admin_finance_db, set_cache as set_admin_finance_cache
+from routes.admin_finance_metrics import router as admin_finance_metrics_router, set_db as set_admin_finance_metrics_db
 from routes.admin_users import router as admin_users_router, set_db as set_admin_users_db, set_cache as set_admin_users_cache, set_helpers as set_admin_users_helpers
 from routes.admin_user360 import router as admin_user360_router, set_db as set_admin_user360_db, set_redeemed_fn as set_admin_user360_redeemed_fn, set_redeem_limit_fn as set_admin_user360_limit_fn
 from routes.admin_failed_transactions import router as admin_failed_txn_router, set_db as set_admin_failed_txn_db
@@ -37151,6 +37152,8 @@ except Exception as _obs_reg_err:
 set_admin_finance_db(db)
 set_admin_finance_cache(cache)
 api_router.include_router(admin_finance_router)
+set_admin_finance_metrics_db(db)
+api_router.include_router(admin_finance_metrics_router)
 
 # Include admin users router (refactored)
 set_admin_users_db(db)

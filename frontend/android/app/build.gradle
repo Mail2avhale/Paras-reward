@@ -273,8 +273,12 @@ android {
         //     Together these prevent the classic release-only NoClassDef /
         //     NoSuchMethod crashes without loosening R8's optimization.
         //     Play Console recommendation should fully clear on this AAB.
-        versionCode 35
-        versionName "1.3.5"
+        // versionCode 35 → 36 — Feb 26, 2026 — v1.3.6 (Finance Metrics)
+        //     - Daily Finance Metrics dashboard for admins (11 KPIs)
+        //     - Universal 20% cash service charge on every PRC spend
+        //     - Global Reset in Device Binding admin panel
+        versionCode 36
+        versionName "1.3.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
