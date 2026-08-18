@@ -1,0 +1,61 @@
+{
+  "verdict": "not_fixed",
+  "user_reported_bug": "Collect PRC button not working on dashboard — 'button dead — कोणतीच action hot नाही' (nothing happens on click). Reproduced on production https://www.parasreward.com / bugzappers.emergent.host with mobile 9970100782. Production is on v1.3.8 but user reports the button still does nothing.",
+  "summary": "No relevant testing skill found. Focused retest verified backend collect works, collect button renders, parent 25s safety timer fires after double-tap, and 36/36 requested pytests pass. However the normal user-visible forced-ad modal does not render at all after clicking Collect; the user sees no immediate action until the 25.86s fallback collects PRC, so the reported 'button dead/nothing happens' symptom is still partially reproducible.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "MiningWidget",
+        "issue": "Clicking data-testid='collect-rewards-btn' did not render data-testid='forced-ad-overlay' or data-testid='forced-ad-modal' (overlay_count=0, modal_count=0). Code review shows ForcedAdInterstitial is only mounted in the idle-state return, while the Collect button is in the active-session return.",
+        "selector": "[data-testid='collect-rewards-btn'], [data-testid='forced-ad-overlay']",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Dashboard MiningWidget Collect PRC",
+        "issue": "The parent safety net eventually called /api/mining/collect after 25.86s and showed 'Collected 31.55 PRC', but there was no immediate visible click response/ad interstitial. This can still feel like a dead button to users.",
+        "affected_selectors": [
+          "collect-rewards-btn",
+          "forced-ad-overlay",
+          "forced-ad-modal"
+        ]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/collect_prc_backend_probe.py",
+    "/app/test_reports/collect_prc_frontend_safety_playwright.py",
+    "/app/test_reports/collect_prc_backend_probe_output.json"
+  ],
+  "action_items": [
+    "Mount ForcedAdInterstitial outside the active/idle conditional returns (or include it in the active-session JSX) so Collect immediately shows the ad/fallback UI when forcedAdOpen=true.",
+    "Add immediate user feedback on Collect click (modal/loading state or toast) so the 25s safety fallback is not perceived as a dead button if the modal/ad SDK fails.",
+    "Keep the parent safety timer; it passed the stuck-modal/double-tap fallback test. Add a regression test that asserts forced-ad overlay appears from the active MiningWidget collect path."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/src/components/MiningWidget.js lines ~320-435 return the active-session UI containing the Collect button before the ForcedAdInterstitial JSX at lines ~513-526, so forcedAdOpen cannot render the modal while the Collect button is visible.",
+    "The safety timer comment says v1.3.9 while the requested release is v1.4.0; not functional, but confusing for future RCA."
+  ],
+  "updated_files": [
+    "/app/test_reports/collect_prc_backend_probe.py",
+    "/app/test_reports/collect_prc_frontend_safety_playwright.py",
+    "/app/test_reports/collect_prc_backend_probe_output.json",
+    "/app/test_reports/bug_verification_295.json",
+    "/app/test_reports/iteration_295.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "75%"
+  },
+  "seed_data_creation": "Used preview test user 9970100782 / uid 76b75808-47fa-48dd-ad7c-8074678e3607. Seeded Elite active mining sessions via MongoDB for API and UI tests. API probe collected 62.1113 PRC; UI safety test collected 31.55 PRC and left the user in the normal 60s post-collect cooldown.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend preview /api/mining/collect passed with auth and valid payload. Browser mobile retest logged in with 9970100782/PIN 997010, Collect button rendered enabled, double-tap produced no forced-ad overlay, then exactly one /api/mining/collect 200 response arrived after 25.86s and the collected toast appeared. Requested pytests: 36 passed. Retest after moving ForcedAdInterstitial so the active collect path renders it immediately.",
+  "rca_of_the_issue": "The parent 25s safety-net works, but the Collect button's normal ad path is still broken because the ForcedAdInterstitial component is placed only in the idle-state JSX return. During an active mining session, MiningWidget returns before that JSX, so setting forcedAdOpen=true has no visible effect and no ad callbacks can fire. The safety timer masks the permanent stuck state by collecting after ~25s, but the immediate user-visible 'nothing happens' symptom remains. No MOCKED APIs were used."
+}

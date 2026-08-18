@@ -1,0 +1,43 @@
+{
+  "ok": true,
+  "steps": [
+    {
+      "step": "login",
+      "status": 200
+    },
+    {
+      "step": "seed_active_session_for_api_collect",
+      "uid": "76b75808-47fa-48dd-ad7c-8074678e3607"
+    },
+    {
+      "step": "status_before_collect",
+      "session_active": true,
+      "mined_this_session": 62.110626,
+      "subscription_type": "standard"
+    },
+    {
+      "step": "collect_endpoint",
+      "status": 200,
+      "payload": {
+        "success": true,
+        "message": "Collected 62.1113 PRC",
+        "collected_amount": 62.111299,
+        "new_balance": 20062.111299,
+        "burned": false,
+        "tier": "elite",
+        "session_duration_seconds": 7200.475188,
+        "auto_started": false,
+        "cooldown_seconds": 60,
+        "next_session_available_at": "2026-08-18T10:46:45.838428+00:00"
+      }
+    },
+    {
+      "step": "reseed_active_session_for_frontend",
+      "uid": "76b75808-47fa-48dd-ad7c-8074678e3607"
+    }
+  ],
+  "backend_url": "https://formula-audit-fix.preview.emergentagent.com",
+  "uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+  "mobile": "9970100782",
+  "reseeded_for_frontend": true
+}

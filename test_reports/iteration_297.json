@@ -1,0 +1,43 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "Collect PRC button not working on dashboard — 'button dead — कोणतीच action hot नाही' (nothing happens on click). Root cause: ForcedAdInterstitial was only mounted in the idle-state return branch of MiningWidget, so during an active mining session the modal never renders when forcedAdOpen=true. Fixed in v1.4.1 by mounting the modal in the active-session return branch too.",
+  "summary": "No relevant testing skill found. Full focused runtime verification completed: seeded the preview test user into an active mining session, logged in via UI, confirmed collect-rewards-btn was visible/enabled, and clicking Collect showed 'Loading reward…' plus forced-ad-overlay/forced-ad-modal in 0.149s. Completing the modal produced one /api/mining/collect 200 response, and no duplicate collect fired after the 25s safety window. Backend collect probe passed and requested pytest suite passed 36/36.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/collect_prc_seed_backend_297.py",
+    "/app/test_reports/collect_prc_seed_backend_297_output.json",
+    "/app/test_reports/collect_prc_frontend_modal_297_playwright.py"
+  ],
+  "action_items": [
+    "No fix action required for this reported bug. Keep this active-session forced-ad modal regression covered in future self-tests."
+  ],
+  "critical_code_review_comments": [
+    "MiningWidget.js now mounts ForcedAdInterstitial inside the active-session return branch as well as the idle branch, so forcedAdOpen=true can render while collect-rewards-btn is visible.",
+    "collectRewards() still sets collectSafetyRef with a 25000ms timeout, and both active-branch onClose/onAdCompleted handlers clear the timer before/after modal completion. Runtime confirmed no duplicate collect after the safety window.",
+    "app_version.py is bumped to LATEST_VERSION_NAME=1.4.1 and LATEST_VERSION_CODE=41."
+  ],
+  "updated_files": [
+    "/app/test_reports/collect_prc_seed_backend_297.py",
+    "/app/test_reports/collect_prc_seed_backend_297_output.json",
+    "/app/test_reports/collect_prc_frontend_modal_297_playwright.py",
+    "/app/test_reports/bug_verification_297.json",
+    "/app/test_reports/iteration_297.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "Seeded active mining sessions for uid 76b75808-47fa-48dd-ad7c-8074678e3607 with mining_active=true, is_mining_active=true, mining_start_time ~90 minutes old, current_session_prc=5.0, elite plan, active subscription. Backend collect credited 46.595522 PRC; UI collect then credited the re-seeded active session and left the user in normal 60s post-collect cooldown. No MOCKED APIs were used.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 297 fixed verdict. Browser evidence: collect button enabled with active MiningWidget; 'Loading reward…' appeared within 1s; forced-ad overlay/modal rendered in 0.149s; after countdown skip, exactly one collect API 200 occurred; waited past 25s safety window with no duplicate collect. Backend evidence: authenticated status can_collect=true, collect 200 valid payload. Pytest suite: 36 passed, 2 warnings.",
+  "rca_of_the_issue": "Prior RCA was correct: the active-session return path did not include ForcedAdInterstitial, so setting forcedAdOpen had no rendered modal. The v1.4.1 change mounts ForcedAdInterstitial in the active-session branch, closing the dead-button symptom while preserving the 25s safety net. Regression steps verified: seed active session, login, open dashboard, click Collect, observe modal immediately, complete ad fallback, collect PRC successfully."
+}

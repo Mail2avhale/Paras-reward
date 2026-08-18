@@ -1,0 +1,261 @@
+{
+  "uid": "76b75808-47fa-48dd-ad7c-8074678e3607",
+  "api": "https://formula-audit-fix.preview.emergentagent.com/api",
+  "started_at": "2026-08-18T11:07:16.699082+00:00",
+  "login": {
+    "status": 200,
+    "body_keys": [
+      "aadhaar_number",
+      "access_token",
+      "address",
+      "birthday",
+      "created_at",
+      "district",
+      "email",
+      "expires_in",
+      "first_name",
+      "is_active",
+      "kyc_status",
+      "last_login",
+      "last_name",
+      "last_tap_date",
+      "membership_expiry",
+      "membership_type",
+      "middle_name",
+      "mining_active",
+      "mining_session_end",
+      "mining_start_time",
+      "mobile",
+      "name",
+      "pan_number",
+      "partner_store_id",
+      "password_hash",
+      "pincode",
+      "prc_balance",
+      "profile_picture",
+      "referral_code",
+      "referred_by",
+      "refresh_token",
+      "reset_token",
+      "reset_token_expiry",
+      "role",
+      "session_token",
+      "state",
+      "subscription_days_expired",
+      "subscription_expired",
+      "subscription_expiry",
+      "subscription_expiry_message",
+      "subscription_plan",
+      "tahsil",
+      "taluka",
+      "taps_today",
+      "token",
+      "token_type",
+      "total_mined",
+      "uid",
+      "updated_at",
+      "upi_id",
+      "village",
+      "vip_days_expired",
+      "vip_expired",
+      "vip_expiry",
+      "vip_expiry_message",
+      "wallet_status"
+    ]
+  },
+  "seed_for_backend_collect": {
+    "label": "backend_collect",
+    "matched": 1,
+    "modified": 1,
+    "mining_active": true,
+    "is_mining_active": true,
+    "mining_start_time": "2026-08-18T09:37:17.375139+00:00",
+    "mining_session_end": "2026-08-19T09:37:17.375139+00:00",
+    "current_session_prc": 5.0,
+    "last_mining_action": "2026-08-18T11:07:17.375139+00:00",
+    "next_session_available_at": null,
+    "subscription_plan": "elite",
+    "membership_type": "elite",
+    "subscription_status": "active",
+    "subscription_expired": false,
+    "subscription_expiry": "2026-11-16T11:07:17.375139+00:00"
+  },
+  "cache_clear_before_backend": {
+    "user_data:76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "status": 401,
+      "body": {
+        "detail": "Authentication required. Please provide a valid token."
+      }
+    },
+    "user:dashboard:76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "status": 401,
+      "body": {
+        "detail": "Authentication required. Please provide a valid token."
+      }
+    },
+    "mining:status:76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "status": 401,
+      "body": {
+        "detail": "Authentication required. Please provide a valid token."
+      }
+    },
+    "user:perf_summary:76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "status": 401,
+      "body": {
+        "detail": "Authentication required. Please provide a valid token."
+      }
+    },
+    "user:redeem_limit:76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "status": 401,
+      "body": {
+        "detail": "Authentication required. Please provide a valid token."
+      }
+    }
+  },
+  "status_before_collect": {
+    "status": 200,
+    "body": {
+      "mining_active": true,
+      "session_active": true,
+      "mined_coins": 46.593529,
+      "mined_this_session": 46.593529,
+      "mining_rate": 0.008626,
+      "mining_rate_per_hour": 31.0536,
+      "total_daily_rate": 745.29,
+      "base_rate": 740,
+      "network_rate": 5.29,
+      "boost_multiplier": 1.0,
+      "can_start": false,
+      "can_collect": true,
+      "start_cooldown_seconds": 0,
+      "next_session_available_at": null,
+      "is_explorer": false,
+      "session_start": "2026-08-18T09:37:17.375139+00:00",
+      "session_end": "2026-08-19T09:37:17.375139+00:00",
+      "time_remaining": 80998,
+      "remaining_hours": 22.5,
+      "session_progress": 6.25,
+      "network_size": 1,
+      "network_cap": 800,
+      "direct_referrals": 3,
+      "l1_indirect_referrals": 0,
+      "l3_count": 0,
+      "l4_count": 0,
+      "l5_count": 0,
+      "cap_tier1_base": 800,
+      "cap_tier2_bonus": 0,
+      "cap_tier3_bonus": 0,
+      "cap_tier4_bonus": 0,
+      "cap_tier5_bonus": 0,
+      "cap_tier6_bonus": 0,
+      "prc_per_user": 5.285714,
+      "subscription_type": "standard"
+    }
+  },
+  "collect": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "message": "Collected 46.5955 PRC",
+      "collected_amount": 46.595522,
+      "new_balance": 20158.987298,
+      "burned": false,
+      "tier": "elite",
+      "session_duration_seconds": 5401.753089,
+      "auto_started": false,
+      "cooldown_seconds": 60,
+      "next_session_available_at": "2026-08-18T11:08:19.128228+00:00"
+    }
+  },
+  "seed_for_frontend_ui": {
+    "label": "frontend_ui",
+    "matched": 1,
+    "modified": 1,
+    "mining_active": true,
+    "is_mining_active": true,
+    "mining_start_time": "2026-08-18T09:37:19.173273+00:00",
+    "mining_session_end": "2026-08-19T09:37:19.173273+00:00",
+    "current_session_prc": 5.0,
+    "last_mining_action": "2026-08-18T11:07:19.173273+00:00",
+    "next_session_available_at": null,
+    "subscription_plan": "elite",
+    "membership_type": "elite",
+    "subscription_status": "active",
+    "subscription_expired": false,
+    "subscription_expiry": "2026-11-16T11:07:19.173273+00:00"
+  },
+  "cache_clear_before_frontend": {
+    "user_data:76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "status": 401,
+      "body": {
+        "detail": "Authentication required. Please provide a valid token."
+      }
+    },
+    "user:dashboard:76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "status": 401,
+      "body": {
+        "detail": "Authentication required. Please provide a valid token."
+      }
+    },
+    "mining:status:76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "status": 401,
+      "body": {
+        "detail": "Authentication required. Please provide a valid token."
+      }
+    },
+    "user:perf_summary:76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "status": 401,
+      "body": {
+        "detail": "Authentication required. Please provide a valid token."
+      }
+    },
+    "user:redeem_limit:76b75808-47fa-48dd-ad7c-8074678e3607": {
+      "status": 401,
+      "body": {
+        "detail": "Authentication required. Please provide a valid token."
+      }
+    }
+  },
+  "status_before_frontend": {
+    "status": 200,
+    "body": {
+      "mining_active": true,
+      "session_active": true,
+      "mined_coins": 46.592321,
+      "mined_this_session": 46.592321,
+      "mining_rate": 0.008626,
+      "mining_rate_per_hour": 31.0536,
+      "total_daily_rate": 745.29,
+      "base_rate": 740,
+      "network_rate": 5.29,
+      "boost_multiplier": 1.0,
+      "can_start": false,
+      "can_collect": true,
+      "start_cooldown_seconds": 0,
+      "next_session_available_at": null,
+      "is_explorer": false,
+      "session_start": "2026-08-18T09:37:19.173273+00:00",
+      "session_end": "2026-08-19T09:37:19.173273+00:00",
+      "time_remaining": 80998,
+      "remaining_hours": 22.5,
+      "session_progress": 6.25,
+      "network_size": 1,
+      "network_cap": 800,
+      "direct_referrals": 3,
+      "l1_indirect_referrals": 0,
+      "l3_count": 0,
+      "l4_count": 0,
+      "l5_count": 0,
+      "cap_tier1_base": 800,
+      "cap_tier2_bonus": 0,
+      "cap_tier3_bonus": 0,
+      "cap_tier4_bonus": 0,
+      "cap_tier5_bonus": 0,
+      "cap_tier6_bonus": 0,
+      "prc_per_user": 5.285714,
+      "subscription_type": "standard"
+    }
+  },
+  "finished_at": "2026-08-18T11:07:20.592710+00:00",
+  "ok": true
+}

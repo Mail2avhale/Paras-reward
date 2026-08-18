@@ -51,6 +51,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
   const progressRef = useRef(null);
   const cooldownRef = useRef(null);
   const collectInProgressRef = useRef(false);
+  const collectSafetyRef = useRef(null);
 
   const subscriptionPlan = user?.subscription_plan || 'explorer';
   const isFreeUser = !subscriptionPlan || subscriptionPlan === 'explorer' || subscriptionPlan === 'free' || subscriptionPlan === '';
@@ -271,8 +272,30 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
   // New flow: show ad first → on complete callback → /mining/collect.
   const collectRewards = () => {
     if (sessionPRC < 0.01) { smartToast.error('Not enough PRC to collect'); return; }
+    // Immediate feedback so user sees something is happening even if the ad
+    // SDK takes a second to initialise (v1.4.1 UX polish).
+    smartToast.info('Loading reward…');
+    // If a previous forced-ad modal state is still open (stuck), reset it
+    // so the user can try again cleanly.
+    if (forcedAdOpen) {
+      setForcedAdOpen(false);
+      setTimeout(() => setForcedAdOpen(true), 50);
+    } else {
+      setForcedAdOpen(true);
+    }
     triggerHaptic('medium');
-    setForcedAdOpen(true);
+
+    // SAFETY NET — if the ad interstitial doesn't fire onClose or
+    // onAdCompleted within 25s (5s past its own MAX_VIEW_SECONDS hard-cap),
+    // credit PRC directly so the user is never permanently blocked on a
+    // broken ad SDK / modal render bug.
+    if (collectSafetyRef.current) clearTimeout(collectSafetyRef.current);
+    collectSafetyRef.current = setTimeout(() => {
+      if (collectInProgressRef.current) return;
+      console.warn('[MiningWidget] Forced-ad safety-net fired — crediting PRC directly');
+      setForcedAdOpen(false);
+      performCollect();
+    }, 25000);
   };
 
   const formatTime = (seconds) => {
@@ -410,6 +433,21 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
             </Button>
           )}
         </div>
+
+        {/* Forced ad interstitial — also mounted here so it renders during
+            active mining (v1.4.1 fix: was only in idle return before). */}
+        <ForcedAdInterstitial
+          open={forcedAdOpen}
+          placement="main_mining_collect"
+          onClose={() => {
+            setForcedAdOpen(false);
+            if (collectSafetyRef.current) { clearTimeout(collectSafetyRef.current); collectSafetyRef.current = null; }
+          }}
+          onAdCompleted={() => {
+            if (collectSafetyRef.current) { clearTimeout(collectSafetyRef.current); collectSafetyRef.current = null; }
+            performCollect();
+          }}
+        />
       </div>
     );
   }
@@ -492,8 +530,16 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
       <ForcedAdInterstitial
         open={forcedAdOpen}
         placement="main_mining_collect"
-        onClose={() => setForcedAdOpen(false)}
-        onAdCompleted={performCollect}
+        onClose={() => {
+          setForcedAdOpen(false);
+          // Cancel safety timer — modal exited normally
+          if (collectSafetyRef.current) { clearTimeout(collectSafetyRef.current); collectSafetyRef.current = null; }
+        }}
+        onAdCompleted={() => {
+          // Cancel safety timer — real completion path
+          if (collectSafetyRef.current) { clearTimeout(collectSafetyRef.current); collectSafetyRef.current = null; }
+          performCollect();
+        }}
       />
     </div>
   );
