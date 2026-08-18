@@ -1,0 +1,153 @@
+[
+  {
+    "scenario": "happy_banner",
+    "passed": true,
+    "checkout_iframes": 1,
+    "script_count": 1,
+    "toast": "",
+    "constructor_error_in_logs": false,
+    "logs_tail": [
+      "error: Failed to load resource: the server responded with a status of 403 ()",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "warning: Unrecognized feature: 'web-share'.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document."
+    ]
+  },
+  {
+    "scenario": "happy_row",
+    "passed": true,
+    "checkout_iframes": 1,
+    "script_count": 1,
+    "toast": "",
+    "constructor_error_in_logs": false,
+    "logs_tail": [
+      "error: Failed to load resource: the server responded with a status of 403 ()",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "warning: Unrecognized feature: 'web-share'.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document."
+    ]
+  },
+  {
+    "scenario": "happy_bulk",
+    "passed": true,
+    "checkout_iframes": 1,
+    "script_count": 1,
+    "toast": "",
+    "constructor_error_in_logs": false,
+    "logs_tail": [
+      "error: Failed to load resource: the server responded with a status of 403 ()",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "warning: Unrecognized feature: 'web-share'.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document."
+    ]
+  },
+  {
+    "scenario": "blocked_abort_banner",
+    "passed": true,
+    "toast": "Cannot open payment gateway (Razorpay checkout.js failed to load \u2014 check network / CDN)",
+    "checkout_iframes": 0,
+    "script_count": 1,
+    "constructor_error_in_text_or_logs": false,
+    "logs_tail": [
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: Failed to load resource: the server responded with a status of 403 ()",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: Failed to load resource: net::ERR_FAILED",
+      "error: [svc-charge banner pay error] Error: Razorpay checkout.js failed to load \u2014 check network / CDN\n    at script.onerror (https://formula-audit-fix.preview.emergentagent.com/static/js/bundle.js:78465:23)"
+    ]
+  },
+  {
+    "scenario": "blocked_abort_row",
+    "passed": true,
+    "toast": "Network error \u2014 cannot reach payment server (Razorpay checkout.js failed to load \u2014 check network / CDN)",
+    "checkout_iframes": 0,
+    "script_count": 1,
+    "constructor_error_in_text_or_logs": false,
+    "logs_tail": [
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: Failed to load resource: the server responded with a status of 403 ()",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "error: Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: Failed to load resource: net::ERR_FAILED",
+      "error: [svc-charge single-pay error] {status: undefined, detail: undefined, err: Error: Razorpay checkout.js failed to load \u2014 check network / CDN\n    at script.onerror (https://for\u2026}"
+    ]
+  },
+  {
+    "scenario": "blocked_abort_bulk",
+    "passed": true,
+    "toast": "Network error \u2014 cannot reach payment server (Razorpay checkout.js failed to load \u2014 check network / CDN)",
+    "checkout_iframes": 0,
+    "script_count": 1,
+    "constructor_error_in_text_or_logs": false,
+    "logs_tail": [
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: Failed to load resource: the server responded with a status of 403 ()",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "error: Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: Framing 'https://www.google.com/' violates the following report-only Content Security Policy directive: \"frame-ancestors 'self'\". The violation has been logged, but no further action has been taken.\n",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: Failed to load resource: net::ERR_FAILED",
+      "error: [svc-charge bulk-pay error] {status: undefined, detail: undefined, err: Error: Razorpay checkout.js failed to load \u2014 check network / CDN\n    at script.onerror (https://for\u2026}"
+    ]
+  },
+  {
+    "scenario": "blocked_hang_row",
+    "passed": true,
+    "toast": "Network error \u2014 cannot reach payment server (Razorpay checkout.js load timed out)",
+    "checkout_iframes": 0,
+    "script_count": 1,
+    "constructor_error_in_text_or_logs": false,
+    "logs_tail": [
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: Failed to load resource: the server responded with a status of 403 ()",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: [svc-charge single-pay error] {status: undefined, detail: undefined, err: Error: Razorpay checkout.js load timed out\n    at https://formula-audit-fix.preview.emergentagent.c\u2026}"
+    ]
+  },
+  {
+    "scenario": "blocked_hang_banner",
+    "passed": true,
+    "toast": "Cannot open payment gateway (Razorpay checkout.js load timed out)",
+    "checkout_iframes": 0,
+    "script_count": 1,
+    "constructor_error_in_text_or_logs": false,
+    "logs_tail": [
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: Failed to load resource: the server responded with a status of 403 ()",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+      "error: [svc-charge banner pay error] Error: Razorpay checkout.js load timed out\n    at https://formula-audit-fix.preview.emergentagent.com/static/js/bundle.js:78472:25"
+    ]
+  }
+]

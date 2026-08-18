@@ -1,0 +1,40 @@
+{
+  "scenario": "mobile_banner_real_hit_test_blocked_cdn",
+  "passed": true,
+  "base_url": "https://formula-audit-fix.preview.emergentagent.com",
+  "hit_test": {
+    "rect": {
+      "left": 222.84375,
+      "top": 22,
+      "width": 78.625,
+      "height": 28,
+      "right": 301.46875,
+      "bottom": 50
+    },
+    "center": {
+      "x": 262.15625,
+      "y": 36
+    },
+    "topTag": "BUTTON",
+    "topTestId": "banner-pay-btn",
+    "topText": "Pay \u20b9300",
+    "topClass": "px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 rounded-md text-xs font-bold disabled:opacity-60",
+    "topIsButtonOrChild": true
+  },
+  "click_count_after_real_click": 1,
+  "toast": "Cannot open payment gateway (Razorpay checkout.js failed to load \u2014 check network / CDN)",
+  "script_count": 1,
+  "constructor_or_generic_order_error_seen": false,
+  "logs_tail": [
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+    "error: Failed to load resource: the server responded with a status of 403 ()",
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+    "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+    "error: Failed to load resource: net::ERR_FAILED",
+    "error: Failed to load resource: net::ERR_FAILED",
+    "error: [svc-charge banner pay error] Error: Razorpay checkout.js failed to load \u2014 check network / CDN\n    at script.onerror (https://formula-audit-fix.preview.emergentagent.com/static/js/bundle.js:78465:23)"
+  ]
+}

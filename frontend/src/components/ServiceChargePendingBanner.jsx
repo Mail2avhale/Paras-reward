@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { AlertCircle, Loader2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/api';
+import { ensureRazorpayLoaded } from '../lib/razorpay';
 
 const ServiceChargePendingBanner = ({ user }) => {
   const navigate = useNavigate();
@@ -27,10 +28,17 @@ const ServiceChargePendingBanner = ({ user }) => {
     return () => clearInterval(t);
   }, [load]);
 
+  // Preload Razorpay SDK as soon as the banner mounts so Pay is snappy.
+  // Best-effort — errors are surfaced only when user actually clicks Pay.
+  useEffect(() => {
+    if (charge) ensureRazorpayLoaded().catch(() => { /* noop preload */ });
+  }, [charge]);
+
   const pay = async () => {
     if (!charge) return;
     setBusy(true);
     try {
+      await ensureRazorpayLoaded();
       const { data: order } = await axios.post(`${API}/redemption-service-charge/create-payment`, {
         charge_id: charge.charge_id,
       });
@@ -61,7 +69,13 @@ const ServiceChargePendingBanner = ({ user }) => {
       rzp.on('payment.failed', () => toast.error('Payment failed. You can retry from the banner.'));
       rzp.open();
     } catch (e) {
-      toast.error(e?.response?.data?.detail || 'Failed to create payment order');
+      const detail = e?.response?.data?.detail;
+      const netErr = !e?.response;
+      const msg = detail
+        || (netErr && `Cannot open payment gateway${e?.message ? ` (${e.message})` : ''}`)
+        || 'Failed to create payment order';
+      toast.error(msg, { duration: 8000 });
+      console.error('[svc-charge banner pay error]', e);
     } finally {
       setBusy(false);
     }
@@ -70,7 +84,7 @@ const ServiceChargePendingBanner = ({ user }) => {
   if (!charge || dismissed) return null;
 
   return (
-    <div className="sticky top-0 z-40 bg-amber-500 text-slate-900 border-b-2 border-amber-600" data-testid="svc-charge-banner">
+    <div className="sticky top-0 z-[60] bg-amber-500 text-slate-900 border-b-2 border-amber-600 shadow-md" data-testid="svc-charge-banner">
       <div className="max-w-7xl mx-auto px-3 py-2 flex items-center gap-3 flex-wrap">
         <AlertCircle className="w-5 h-5 shrink-0" />
         <div className="flex-1 min-w-0">

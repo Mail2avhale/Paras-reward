@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, IndianRupee, CheckCircle, Clock, Loader2, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/api';
+import { ensureRazorpayLoaded } from '../lib/razorpay';
 
 const fmt = (n) => `₹ ${(Number(n) || 0).toFixed(2)}`;
 
@@ -30,6 +31,8 @@ const MyServiceCharges = ({ user }) => {
   const pay = async (charge) => {
     setPaying(charge.charge_id);
     try {
+      // Ensure the Razorpay checkout SDK is loaded before we call new Razorpay(...)
+      await ensureRazorpayLoaded();
       const { data: order } = await axios.post(`${API}/redemption-service-charge/create-payment`, {
         charge_id: charge.charge_id,
       });
@@ -72,6 +75,7 @@ const MyServiceCharges = ({ user }) => {
     if (!user?.uid) return;
     setBulkPaying(true);
     try {
+      await ensureRazorpayLoaded();
       const { data: order } = await axios.post(`${API}/redemption-service-charge/bulk-pay-order`, {
         user_id: user.uid,
       });

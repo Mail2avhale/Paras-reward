@@ -273,14 +273,13 @@ android {
         //     Together these prevent the classic release-only NoClassDef /
         //     NoSuchMethod crashes without loosening R8's optimization.
         //     Play Console recommendation should fully clear on this AAB.
-        // versionCode 40 → 41 — Feb 26, 2026 — v1.4.1 (Collect PRC modal fix)
-        //     - CRITICAL FIX: ForcedAdInterstitial modal now mounted in the
-        //       active-session return branch too (was only in idle branch,
-        //       so during active mining the modal never rendered → button
-        //       appeared dead).
-        //     - Immediate "Loading reward…" toast on Collect click for UX
-        versionCode 41
-        versionName "1.4.1"
+        // versionCode 41 → 42 — Feb 26, 2026 — v1.4.2 (Razorpay SDK loader)
+        //     - CRITICAL FIX: 'window.Razorpay is not a constructor' error
+        //       on service charge Pay Now. Razorpay checkout.js is now
+        //       lazily loaded before every payment call.
+        //     - Preload SDK on banner mount for snappy Pay button
+        versionCode 42
+        versionName "1.4.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
