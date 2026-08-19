@@ -287,8 +287,11 @@ android {
         //     - Fix: mirror Subscription — pass `webview_intent: true`
         //       when isNativePlatform() is true, and drop the ineffective
         //       method:{...} filter that was actually hiding UPI further.
-        versionCode 46
-        versionName "1.4.6"
+        // versionCode 46 → 47 — Feb 27, 2026 — v1.4.7 (Play Console bump)
+        //     - Same code as v1.4.6. Play Console rejected 46 because a
+        //       previous AAB had already claimed that code. No code change.
+        versionCode 47
+        versionName "1.4.7"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
