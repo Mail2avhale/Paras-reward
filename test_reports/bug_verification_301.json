@@ -1,0 +1,49 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "Production Android APK: Razorpay checkout modal opens, UPI apps (PhonePe/GPay/Paytm) icons are visible, but tapping them does NOTHING \u2014 the UPI app never launches. On the same website (Chrome browser), Razorpay works fine and UPI apps launch correctly. Only Android APK is affected.",
+  "summary": "No relevant testing skill found. Focused iteration 301 verification passed within the preview-verifiable scope: static Android code review confirms MainActivity now dispatches intent:// plus direct UPI/app schemes to ACTION_VIEW/startActivity and falls back correctly; AndroidManifest queries include generic UPI + explicit PSP packages; DB/API/backend/PWA/Gradle versions are synced to 1.4.3/code 43; /my-service-charges banner Pay still opens a Razorpay checkout iframe on web preview; requested PRC service-charge pytests are 36/36 passing. Real APK WebView launch of PhonePe/GPay/Paytm could not be executed in this container and still needs final device validation after rebuilding/installing the APK.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/tests/verify_android_upi_static_and_version_iter301.py",
+    "/app/test_reports/android_upi_static_version_iter301_results.json",
+    "/app/tests/verify_web_service_charge_banner_iter301.py",
+    "/app/test_reports/web_service_charge_banner_iter301_results.json",
+    "/app/test_reports/pytest/prc_svc_iter301.xml"
+  ],
+  "action_items": [
+    "Build/install the production Android APK on a real Android device and tap PhonePe/GPay/Paytm from Razorpay checkout to confirm the external UPI app launch end-to-end; this runtime step is not possible in the preview browser/container."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/android/app/src/main/java/com/parasreward/prc/MainActivity.java handles intent:// with Intent.parseUri(url.toString(), Intent.URI_INTENT_SCHEME), adds FLAG_ACTIVITY_NEW_TASK, calls startActivity(intent), and returns true on dispatch.",
+    "The same shouldOverrideUrlLoading override now handles direct schemes upi, phonepe, tez, paytmmp, paytm, gpay, bhim, and credpay with new Intent(Intent.ACTION_VIEW, url) + FLAG_ACTIVITY_NEW_TASK + startActivity(intent).",
+    "Both ActivityNotFoundException handlers return false, allowing Razorpay fallback behavior, and non-UPI schemes return super.shouldOverrideUrlLoading(view, request) so Capacitor navigation/security handling remains in effect.",
+    "/app/frontend/android/app/src/main/AndroidManifest.xml has <queries> with generic VIEW upi intent plus explicit packages including PhonePe, GPay, Paytm, BHIM, Amazon Pay, WhatsApp, and CRED.",
+    "Attempted Android Java compilation via ./gradlew :app:compileDebugJavaWithJavac, but the container has no JAVA_HOME/java; this is an environment limitation, not a code failure observed by the static checks."
+  ],
+  "updated_files": [
+    "/app/tests/verify_android_upi_static_and_version_iter301.py",
+    "/app/test_reports/android_upi_static_version_iter301_results.json",
+    "/app/tests/verify_web_service_charge_banner_iter301.py",
+    "/app/test_reports/web_service_charge_banner_iter301_results.json",
+    "/app/test_reports/pytest/prc_svc_iter301.xml",
+    "/app/test_reports/bug_verification_301.json",
+    "/app/test_reports/iteration_301.json"
+  ],
+  "success_rate": {
+    "backend": "100% (36/36 PRC service-charge pytests passed; /api/app/version-info returned 1.4.3/code 43)",
+    "frontend": "100% for preview-verifiable checks (Android static checks passed; web /my-service-charges banner Pay opened 1 Razorpay iframe with 1 checkout.js script and no constructor error)"
+  },
+  "seed_data_creation": "Used /app/tests/seed_service_charges_for_razorpay_bug.py to create one deterministic PENDING Rs.300 service charge for UID 76b75808-47fa-48dd-ad7c-8074678e3607 during the web banner regression.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "No relevant testing skill found. Android runtime was not available, so direct APK UPI app launch was not executed. Evidence files: android_upi_static_version_iter301_results.json shows all static/version/DB/API checks passing; web_service_charge_banner_iter301_results.json shows hit_test topTestId=banner-pay-btn, checkout_iframes=1, script_count=1, constructor_error_in_logs=false; prc_svc_iter301.xml shows 36 passed.",
+  "rca_of_the_issue": "The original APK-only symptom is consistent with Android WebView failing to handle non-http(s) Razorpay deep links. The fix adds WebView URL interception for intent:// and direct UPI/payment schemes, dispatching them as Android ACTION_VIEW intents while returning false when no target app is found so Razorpay can continue to its fallback UI."
+}

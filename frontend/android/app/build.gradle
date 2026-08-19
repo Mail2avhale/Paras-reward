@@ -273,13 +273,16 @@ android {
         //     Together these prevent the classic release-only NoClassDef /
         //     NoSuchMethod crashes without loosening R8's optimization.
         //     Play Console recommendation should fully clear on this AAB.
-        // versionCode 41 → 42 — Feb 26, 2026 — v1.4.2 (Razorpay SDK loader)
-        //     - CRITICAL FIX: 'window.Razorpay is not a constructor' error
-        //       on service charge Pay Now. Razorpay checkout.js is now
-        //       lazily loaded before every payment call.
-        //     - Preload SDK on banner mount for snappy Pay button
-        versionCode 42
-        versionName "1.4.2"
+        // versionCode 43 → 44 — Feb 26, 2026 — v1.4.4 (Collect PRC android credit fix)
+        //     - CRITICAL FIX: Ad shows on Android APK but PRC was NEVER
+        //       credited to wallet after ad — because MAX_VIEW_SECONDS
+        //       (20s) hard-cap fired BEFORE the AdMob rewarded video
+        //       resolved (30-60s typical), pre-emptively closing the
+        //       modal without calling onAdCompleted.
+        //     - Fix: hard-cap now skipped on native AdMob path; SDK
+        //       drives completion. Parent safety net extended to 60s.
+        versionCode 44
+        versionName "1.4.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

@@ -1,0 +1,25 @@
+{
+  "scenario": "web_banner_pay_opens_razorpay_checkout",
+  "passed": true,
+  "hit_test": {
+    "topTag": "BUTTON",
+    "topTestId": "banner-pay-btn",
+    "buttonText": "Pay \u20b9300",
+    "x": 1472.15625,
+    "y": 26
+  },
+  "checkout_iframes": 1,
+  "script_count": 1,
+  "constructor_error_in_logs": false,
+  "logs_tail": [
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+    "error: Failed to load resource: the server responded with a status of 403 ()",
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+    "info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.",
+    "warning: Unrecognized feature: 'web-share'.",
+    "pageerror: Failed to read the 'localStorage' property from 'Window': Access is denied for this document."
+  ]
+}

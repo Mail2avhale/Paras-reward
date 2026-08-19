@@ -157,19 +157,23 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
     return () => clearTimeout(t);
   }, [open, phase, secsLeft, nativeFallback]);
 
-  // Hard cap — auto-close after MAX_VIEW_SECONDS
+  // Hard cap — auto-close after MAX_VIEW_SECONDS.
+  // Only applies to web + native-fallback flows. On native AdMob path we
+  // let the SDK drive completion (rewarded ads can legitimately run 30+s).
+  // v1.4.4 fix: previously the hard-cap fired on native too, closing the
+  // modal before AdMob resolved → onAdCompleted never called → PRC never
+  // credited even though the user watched the full ad.
   useEffect(() => {
     if (!open) return;
+    const isNative = Capacitor.isNativePlatform();
+    // Skip the hard-cap on native AdMob path — let the SDK finish naturally
+    if (isNative && !nativeFallback) return;
     const t = setTimeout(async () => {
       if (closedRef.current) return;
       closedRef.current = true;
-      // Web OR native fallback MAX_VIEW_SECONDS hit → treat as completed
-      const nonNativeFlow = !Capacitor.isNativePlatform() || nativeFallback;
-      if (nonNativeFlow) {
-        adCompletedRef.current = true;
-        if (viewTokenRef.current) await creditBonus();
-      }
-      if (adCompletedRef.current) onAdCompleted?.();
+      adCompletedRef.current = true;
+      if (viewTokenRef.current) await creditBonus();
+      onAdCompleted?.();
       onClose?.();
     }, MAX_VIEW_SECONDS * 1000);
     return () => clearTimeout(t);

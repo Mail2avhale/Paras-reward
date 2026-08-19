@@ -286,16 +286,16 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
     triggerHaptic('medium');
 
     // SAFETY NET — if the ad interstitial doesn't fire onClose or
-    // onAdCompleted within 25s (5s past its own MAX_VIEW_SECONDS hard-cap),
-    // credit PRC directly so the user is never permanently blocked on a
-    // broken ad SDK / modal render bug.
+    // onAdCompleted within 60s (long enough for a full rewarded video ad
+    // to complete on native), credit PRC directly so the user is never
+    // permanently blocked on a broken ad SDK / modal render bug.
     if (collectSafetyRef.current) clearTimeout(collectSafetyRef.current);
     collectSafetyRef.current = setTimeout(() => {
       if (collectInProgressRef.current) return;
       console.warn('[MiningWidget] Forced-ad safety-net fired — crediting PRC directly');
       setForcedAdOpen(false);
       performCollect();
-    }, 25000);
+    }, 60000);
   };
 
   const formatTime = (seconds) => {

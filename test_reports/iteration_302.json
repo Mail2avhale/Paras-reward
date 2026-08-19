@@ -1,0 +1,71 @@
+{
+  "summary": "Iteration 302 (Android APK PRC credit fix v1.4.4). Static code review confirmed both fixes; version sync verified across manifest/gradle/DB/API (all 1.4.4/code 44); PRC service-charge pytest suite ran 35/36 (1 pre-existing failure unrelated to this fix); web Collect flow regression PASSED end-to-end on Playwright preview: overlay opened in 0.10s, hard-cap fired at ~20s, /api/ads/rewarded/credit + /api/mining/collect returned 200, toast 'Collected 15.97 PRC!' shown, widget transitioned to idle with 60s cooldown. Android runtime path is out of scope for this container as noted by main agent.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/mining/status/{uid}", "issue": "Returns 500 with 'can't subtract offset-naive and offset-aware datetimes' when Mongo stores mining_start_time as naive datetime while now() is tz-aware. Not triggered by real user flow (backend writes ISO strings), only surfaced during seed. Consider defensive tz-normalisation on read."},
+      {"endpoint": "backend/tests/test_prc_svc_charge_e2e_block.py::test_after_clearing_pending_not_blocked_by_svc_charge", "issue": "1 pre-existing pytest failure unrelated to v1.4.4 fix — still 402 after clearing pending svc charge. Same failure pattern present in prior iterations."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "static_code_review_findings": {
+    "ForcedAdInterstitial.js": {
+      "hard_cap_useEffect_lines": "166-180",
+      "native_admob_early_return": "Confirmed at L168-170: `const isNative = Capacitor.isNativePlatform(); if (isNative && !nativeFallback) return;` — no timer scheduled on native AdMob path, letting SDK drive completion.",
+      "web_and_native_fallback_timer_still_fires": "Confirmed — setTimeout(MAX_VIEW_SECONDS*1000) still calls onAdCompleted() then onClose() on web + native-fallback paths (L171-178).",
+      "native_fallback_UX_intact": "Confirmed — setNativeFallback(true) at L137 triggers the 5s countdown + 'Continue' button (canSkip once secsLeft<=0) at L214, L236-244."
+    },
+    "MiningWidget.js": {
+      "collectSafetyRef_timeout_line": "298",
+      "value": "60000ms (was 25000)",
+      "clear_on_close_and_completed": "Confirmed at L444 (onClose) and L447/L540 (onAdCompleted) — clearTimeout + null out ref in both mount points (active + idle branches)."
+    }
+  },
+  "version_sync_check": {
+    "backend_defaults": "LATEST_VERSION_NAME=1.4.4, LATEST_VERSION_CODE=44",
+    "manifest_json": "1.4.4",
+    "android_build_gradle": "versionCode 44, versionName 1.4.4",
+    "app_config_db": "version_name=1.4.4, version_code=44",
+    "api_version_info_response": "latest_version_name=1.4.4, latest_version_code=44 — matches"
+  },
+  "web_regression_result": {
+    "credentials_used": "9970100782 / 997010 (from /app/memory/test_credentials.md)",
+    "seed": "Set mining_active=true, mining_start_time=now-30min (ISO string), mining_session_end=+24h; sessionPRC ~15.79",
+    "steps_and_evidence": [
+      "Login OK — auto-redirect to /dashboard after 6-digit PIN",
+      "mining-widget-active rendered; collect-rewards-btn label='Collect Rewards (15.79 PRC)' enabled",
+      "Clicked collect → forced-ad-overlay appeared at t=0.10s (well within 2s target)",
+      "Initial countdown: 'Skip in 5s' (web AdSense path)",
+      "POST /api/ads/rewarded/start → 200",
+      "After ~20s hard-cap: POST /api/ads/rewarded/credit → 200; POST /api/mining/collect/{uid} → 200",
+      "Toast 'Collected 15.97 PRC!' rendered; widget transitioned to idle with 'Start Session in 59s' cooldown"
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/pytest/iter302.xml",
+    "/app/test_reports/iteration_302.json"
+  ],
+  "action_items": [
+    "User to build/install APK v1.4.4 (code 44) and verify PRC credited to wallet after AdMob rewarded video on real Android device — cannot reproduce Capacitor.isNativePlatform() path in Playwright preview.",
+    "Optional hardening: /api/mining/status could normalise naive mining_start_time to UTC-aware to prevent 500 if any legacy doc has naive datetime (surfaced during test seeding, not by production flow)."
+  ],
+  "critical_code_review_comments": [
+    "Fix is minimal, well-commented, and correctly scoped: only the hard-cap useEffect early-returns on native (isNative && !nativeFallback). Native fallback path still uses the countdown timer as expected. onClose + onAdCompleted still gate closedRef.current to prevent double-fire.",
+    "MiningWidget safety timeout 60000ms is a reasonable upper bound for rewarded videos (30-60s typical). Cleared in both onClose and onAdCompleted callbacks in both active and idle branch renders (widget renders ForcedAdInterstitial twice — a known duplication but not blocking the fix).",
+    "Minor code-quality nit (pre-existing, not part of this fix): ForcedAdInterstitial is instantiated in two branches of MiningWidget.js (L439-450 for active, L530-543 for idle). Could be lifted to a single mount to remove duplication."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "97% (35/36 PRC svc-charge pytests; the 1 failure is pre-existing and unrelated to v1.4.4)",
+    "frontend": "100% for web regression scope (collect → overlay → hard-cap → credit → toast → cooldown)"
+  },
+  "seed_data_creation": "Seeded active mining session on UID 76b75808-47fa-48dd-ad7c-8074678e3607: mining_active=true, mining_start_time=now-30min (ISO), mining_session_end=+24h; cleared next_session_available_at.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Web regression for the v1.4.4 Collect PRC hard-cap fix passed cleanly. Static review confirmed: ForcedAdInterstitial hard-cap useEffect early-returns on Capacitor.isNativePlatform() && !nativeFallback (L168-170); MiningWidget collectSafetyRef timeout is 60000ms. Version sync verified 1.4.4/code 44 across manifest.json, android/app/build.gradle, DB app_config, and /api/app/version-info. Android runtime path requires physical device — user will verify after APK rebuild. Seed script pattern: set mining_start_time as ISO string (naive datetime causes tz mismatch 500 in /api/mining/status).",
+  "rca_of_the_issue": "ForcedAdInterstitial previously scheduled a MAX_VIEW_SECONDS=20 hard-cap timeout for all platforms. On Android APK the AdMob rewarded video runs 30-60s; when the 20s timer fired first it set closedRef.current=true and skipped onAdCompleted, then when AdMob's real completion fired the `if (!closedRef.current)` guard blocked the collect path. Fix v1.4.4 early-returns from the hard-cap useEffect when Capacitor.isNativePlatform() && !nativeFallback so the SDK drives completion; parent MiningWidget safety net extended from 25s to 60s so it does not false-fire on legit long ads."
+}

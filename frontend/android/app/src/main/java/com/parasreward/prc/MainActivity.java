@@ -39,18 +39,50 @@ public class MainActivity extends BridgeActivity {
                 @Override
                 public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                     Uri url = request.getUrl();
-                    if (url != null && "intent".equalsIgnoreCase(url.getScheme())) {
-                        try {
-                            Intent intent = Intent.parseUri(url.toString(), Intent.URI_INTENT_SCHEME);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(intent);
-                            return true;
-                        } catch (ActivityNotFoundException e) {
-                            // Target UPI app not installed — fall through so
-                            // Razorpay's fallback UI (QR / collect) can render.
-                            return false;
-                        } catch (Exception e) {
-                            return false;
+                    if (url != null) {
+                        String scheme = url.getScheme();
+
+                        // 1) intent:// — Razorpay's canonical deep-link format.
+                        //    Parse with URI_INTENT_SCHEME so package/target survive.
+                        if ("intent".equalsIgnoreCase(scheme)) {
+                            try {
+                                Intent intent = Intent.parseUri(url.toString(), Intent.URI_INTENT_SCHEME);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                                return true;
+                            } catch (ActivityNotFoundException e) {
+                                return false;
+                            } catch (Exception e) {
+                                return false;
+                            }
+                        }
+
+                        // 2) Direct UPI app schemes — upi://, phonepe://, tez://,
+                        //    paytmmp://, paytm://, gpay://, bhim://, credpay://
+                        //    Razorpay sometimes emits these directly (esp. on
+                        //    older Android or on partial fallbacks). WebView
+                        //    would otherwise treat them as navigation and fail
+                        //    with ERR_UNKNOWN_URL_SCHEME.
+                        if (scheme != null && (
+                                scheme.equalsIgnoreCase("upi")
+                                || scheme.equalsIgnoreCase("phonepe")
+                                || scheme.equalsIgnoreCase("tez")
+                                || scheme.equalsIgnoreCase("paytmmp")
+                                || scheme.equalsIgnoreCase("paytm")
+                                || scheme.equalsIgnoreCase("gpay")
+                                || scheme.equalsIgnoreCase("bhim")
+                                || scheme.equalsIgnoreCase("credpay")
+                        )) {
+                            try {
+                                Intent intent = new Intent(Intent.ACTION_VIEW, url);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                                return true;
+                            } catch (ActivityNotFoundException e) {
+                                return false;
+                            } catch (Exception e) {
+                                return false;
+                            }
                         }
                     }
                     return super.shouldOverrideUrlLoading(view, request);

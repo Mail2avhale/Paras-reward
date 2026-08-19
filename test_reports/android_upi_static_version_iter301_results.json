@@ -1,0 +1,149 @@
+[
+  {
+    "check": "intent scheme parsed with URI_INTENT_SCHEME",
+    "passed": true
+  },
+  {
+    "check": "external intent gets NEW_TASK flag",
+    "passed": true
+  },
+  {
+    "check": "external intent dispatches startActivity",
+    "passed": true
+  },
+  {
+    "check": "ActivityNotFoundException explicitly handled",
+    "passed": true
+  },
+  {
+    "check": "non-UPI schemes delegated to Capacitor parent",
+    "passed": true
+  },
+  {
+    "check": "direct scheme handled: upi",
+    "passed": true
+  },
+  {
+    "check": "direct scheme handled: phonepe",
+    "passed": true
+  },
+  {
+    "check": "direct scheme handled: tez",
+    "passed": true
+  },
+  {
+    "check": "direct scheme handled: paytmmp",
+    "passed": true
+  },
+  {
+    "check": "direct scheme handled: paytm",
+    "passed": true
+  },
+  {
+    "check": "direct scheme handled: gpay",
+    "passed": true
+  },
+  {
+    "check": "direct scheme handled: bhim",
+    "passed": true
+  },
+  {
+    "check": "direct scheme handled: credpay",
+    "passed": true
+  },
+  {
+    "check": "direct schemes dispatch ACTION_VIEW with URL",
+    "passed": true
+  },
+  {
+    "check": "ActivityNotFoundException returns false for Razorpay fallback",
+    "passed": true
+  },
+  {
+    "check": "manifest has <queries> block",
+    "passed": true
+  },
+  {
+    "check": "queries generic VIEW action",
+    "passed": true
+  },
+  {
+    "check": "queries generic upi scheme",
+    "passed": true
+  },
+  {
+    "check": "manifest queries package: com.phonepe.app",
+    "passed": true
+  },
+  {
+    "check": "manifest queries package: com.google.android.apps.nbu.paisa.user",
+    "passed": true
+  },
+  {
+    "check": "manifest queries package: net.one97.paytm",
+    "passed": true
+  },
+  {
+    "check": "manifest queries package: in.org.npci.upiapp",
+    "passed": true
+  },
+  {
+    "check": "manifest queries package: in.amazon.mShop.android.shopping",
+    "passed": true
+  },
+  {
+    "check": "manifest queries package: com.whatsapp",
+    "passed": true
+  },
+  {
+    "check": "manifest queries package: com.dreamplug.androidapp",
+    "passed": true
+  },
+  {
+    "check": "backend fallback version name",
+    "passed": true
+  },
+  {
+    "check": "backend fallback version code",
+    "passed": true
+  },
+  {
+    "check": "PWA manifest version",
+    "passed": true,
+    "value": "1.4.3"
+  },
+  {
+    "check": "Android build.gradle versionCode",
+    "passed": true
+  },
+  {
+    "check": "Android build.gradle versionName",
+    "passed": true
+  },
+  {
+    "check": "DB app_config android_app_version",
+    "passed": true,
+    "value": {
+      "key": "android_app_version",
+      "force_update": false,
+      "minimum_supported_code": 22,
+      "release_notes": "v1.4.3 \u2014 Feb 26, 2026 (Critical Android fix):\n\u2022 FIX: UPI apps (PhonePe, GPay, Paytm, BHIM, CRED) now correctly launch from the Razorpay checkout modal on Android APK\n\u2022 Root cause: WebView was blocking upi://, phonepe://, tez://, paytmmp://, gpay://, bhim://, credpay:// deep-link schemes\n\u2022 MainActivity now intercepts all UPI schemes and dispatches ACTION_VIEW Intents\n\u2022 Website flow was already working \u2014 this only affects the Android app",
+      "version_code": 43,
+      "version_name": "1.4.3",
+      "updated_at": "2026-08-19T05:27:41.280819+00:00"
+    }
+  },
+  {
+    "check": "GET /api/app/version-info",
+    "passed": true,
+    "value": {
+      "platform": "android",
+      "latest_version_name": "1.4.3",
+      "latest_version_code": 43,
+      "minimum_supported_version_code": 22,
+      "force_update": false,
+      "release_notes": "v1.4.3 \u2014 Feb 26, 2026 (Critical Android fix):\n\u2022 FIX: UPI apps (PhonePe, GPay, Paytm, BHIM, CRED) now correctly launch from the Razorpay checkout modal on Android APK\n\u2022 Root cause: WebView was blocking upi://, phonepe://, tez://, paytmmp://, gpay://, bhim://, credpay:// deep-link schemes\n\u2022 MainActivity now intercepts all UPI schemes and dispatches ACTION_VIEW Intents\n\u2022 Website flow was already working \u2014 this only affects the Android app",
+      "play_store_url": "https://play.google.com/store/apps/details?id=com.parasreward.prc"
+    }
+  }
+]
