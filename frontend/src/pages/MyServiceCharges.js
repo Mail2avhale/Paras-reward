@@ -6,6 +6,7 @@ import { ArrowLeft, IndianRupee, CheckCircle, Clock, Loader2, Zap } from 'lucide
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/api';
 import { ensureRazorpayLoaded } from '../lib/razorpay';
+import { isNativePlatform } from '@/utils/nativeUx';
 
 const fmt = (n) => `₹ ${(Number(n) || 0).toFixed(2)}`;
 
@@ -36,17 +37,19 @@ const MyServiceCharges = ({ user }) => {
       const { data: order } = await axios.post(`${API}/redemption-service-charge/create-payment`, {
         charge_id: charge.charge_id,
       });
+      // v1.4.6 Android fix: Razorpay Checkout requires an explicit
+      // `webview_intent: true` flag to expose UPI Apps (PhonePe / GPay /
+      // Paytm / BHIM etc.) inside a Capacitor WebView. Same fix that is
+      // already proven working in SubscriptionPlans.js — mirror it here so
+      // Service Charge checkout shows UPI section on Android APK.
+      const runningInWebView = isNativePlatform();
       const rzp = new window.Razorpay({
         key: order.razorpay_key,
         amount: order.amount, currency: order.currency, order_id: order.order_id,
         name: 'Paras Reward',
         description: `Service Charge · ${charge.charge_id}`,
+        ...(runningInWebView ? { webview_intent: true } : {}),
         prefill: { name: user?.name, email: user?.email, contact: user?.mobile },
-        // v1.4.5 Android fix: explicitly enable UPI + other methods so
-        // Razorpay checkout inside Capacitor WebView shows PhonePe/GPay
-        // options (WebView UA misdetection was hiding them).
-        method: { upi: true, card: true, netbanking: true, wallet: true },
-        config: { display: { preferences: { show_default_blocks: true } } },
         theme: { color: '#f59e0b' },
         handler: async (resp) => {
           try {
@@ -84,6 +87,7 @@ const MyServiceCharges = ({ user }) => {
       const { data: order } = await axios.post(`${API}/redemption-service-charge/bulk-pay-order`, {
         user_id: user.uid,
       });
+      const runningInWebView = isNativePlatform();
       const rzp = new window.Razorpay({
         key: order.razorpay_key,
         amount: order.amount,
@@ -91,9 +95,8 @@ const MyServiceCharges = ({ user }) => {
         order_id: order.order_id,
         name: 'Paras Reward',
         description: `Bulk Service Charge · ${order.charge_count} charges`,
+        ...(runningInWebView ? { webview_intent: true } : {}),
         prefill: { name: user?.name, email: user?.email, contact: user?.mobile },
-        method: { upi: true, card: true, netbanking: true, wallet: true },
-        config: { display: { preferences: { show_default_blocks: true } } },
         theme: { color: '#0ea5e9' },
         modal: { ondismiss: () => setBulkPaying(false) },
         handler: async (resp) => {

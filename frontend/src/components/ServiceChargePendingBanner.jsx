@@ -7,6 +7,7 @@ import { AlertCircle, Loader2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/api';
 import { ensureRazorpayLoaded } from '../lib/razorpay';
+import { isNativePlatform } from '@/utils/nativeUx';
 
 const ServiceChargePendingBanner = ({ user }) => {
   const navigate = useNavigate();
@@ -42,6 +43,8 @@ const ServiceChargePendingBanner = ({ user }) => {
       const { data: order } = await axios.post(`${API}/redemption-service-charge/create-payment`, {
         charge_id: charge.charge_id,
       });
+      // v1.4.6 Android WebView UPI fix — mirror SubscriptionPlans.js.
+      const runningInWebView = isNativePlatform();
       // Open Razorpay checkout
       const rzp = new window.Razorpay({
         key: order.razorpay_key,
@@ -49,9 +52,8 @@ const ServiceChargePendingBanner = ({ user }) => {
         order_id: order.order_id,
         name: 'Paras Reward',
         description: `PRC Redemption Service Charge · ${charge.charge_id}`,
+        ...(runningInWebView ? { webview_intent: true } : {}),
         prefill: { name: user?.name, email: user?.email, contact: user?.mobile || user?.phone },
-        method: { upi: true, card: true, netbanking: true, wallet: true },
-        config: { display: { preferences: { show_default_blocks: true } } },
         theme: { color: '#f59e0b' },
         handler: async (resp) => {
           try {

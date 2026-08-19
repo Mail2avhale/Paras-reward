@@ -274,15 +274,21 @@ android {
         //     NoSuchMethod crashes without loosening R8's optimization.
         //     Play Console recommendation should fully clear on this AAB.
         // versionCode 44 → 45 — Feb 26, 2026 — v1.4.5 (Razorpay UPI in APK)
-        //     - CRITICAL FIX: UPI apps (PhonePe, GPay, Paytm) now appear
-        //       as payment options in Razorpay checkout inside Android APK.
-        //     - Root cause: Razorpay was hiding UPI in the Capacitor WebView
-        //       because the default UA looked non-mobile.
-        //     - Fix: explicit method:{upi,card,netbanking,wallet}:true in
-        //       every checkout call, plus appendUserAgent 'ParasRewardApp
-        //       Mobile' in capacitor.config.json.
-        versionCode 45
-        versionName "1.4.5"
+        //     - Attempted fix via method:{upi,...}:true + appendUserAgent.
+        //     - Did NOT work: UPI section still hidden in APK for Service
+        //       Charge checkout while Subscription checkout worked.
+        // versionCode 45 → 46 — Feb 27, 2026 — v1.4.6 (Razorpay UPI in APK v2)
+        //     - ROOT CAUSE: Razorpay Checkout requires an explicit
+        //       `webview_intent: true` flag to expose UPI Apps (PhonePe,
+        //       GPay, Paytm, BHIM, CRED) inside a Capacitor WebView. The
+        //       working Subscription flow already had this flag; the
+        //       Service Charge flows (MyServiceCharges.js single + bulk
+        //       and ServiceChargePendingBanner.jsx) did not.
+        //     - Fix: mirror Subscription — pass `webview_intent: true`
+        //       when isNativePlatform() is true, and drop the ineffective
+        //       method:{...} filter that was actually hiding UPI further.
+        versionCode 46
+        versionName "1.4.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
