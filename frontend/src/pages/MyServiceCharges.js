@@ -42,6 +42,11 @@ const MyServiceCharges = ({ user }) => {
         name: 'Paras Reward',
         description: `Service Charge · ${charge.charge_id}`,
         prefill: { name: user?.name, email: user?.email, contact: user?.mobile },
+        // v1.4.5 Android fix: explicitly enable UPI + other methods so
+        // Razorpay checkout inside Capacitor WebView shows PhonePe/GPay
+        // options (WebView UA misdetection was hiding them).
+        method: { upi: true, card: true, netbanking: true, wallet: true },
+        config: { display: { preferences: { show_default_blocks: true } } },
         theme: { color: '#f59e0b' },
         handler: async (resp) => {
           try {
@@ -87,6 +92,8 @@ const MyServiceCharges = ({ user }) => {
         name: 'Paras Reward',
         description: `Bulk Service Charge · ${order.charge_count} charges`,
         prefill: { name: user?.name, email: user?.email, contact: user?.mobile },
+        method: { upi: true, card: true, netbanking: true, wallet: true },
+        config: { display: { preferences: { show_default_blocks: true } } },
         theme: { color: '#0ea5e9' },
         modal: { ondismiss: () => setBulkPaying(false) },
         handler: async (resp) => {

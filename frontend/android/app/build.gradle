@@ -273,16 +273,16 @@ android {
         //     Together these prevent the classic release-only NoClassDef /
         //     NoSuchMethod crashes without loosening R8's optimization.
         //     Play Console recommendation should fully clear on this AAB.
-        // versionCode 43 → 44 — Feb 26, 2026 — v1.4.4 (Collect PRC android credit fix)
-        //     - CRITICAL FIX: Ad shows on Android APK but PRC was NEVER
-        //       credited to wallet after ad — because MAX_VIEW_SECONDS
-        //       (20s) hard-cap fired BEFORE the AdMob rewarded video
-        //       resolved (30-60s typical), pre-emptively closing the
-        //       modal without calling onAdCompleted.
-        //     - Fix: hard-cap now skipped on native AdMob path; SDK
-        //       drives completion. Parent safety net extended to 60s.
-        versionCode 44
-        versionName "1.4.4"
+        // versionCode 44 → 45 — Feb 26, 2026 — v1.4.5 (Razorpay UPI in APK)
+        //     - CRITICAL FIX: UPI apps (PhonePe, GPay, Paytm) now appear
+        //       as payment options in Razorpay checkout inside Android APK.
+        //     - Root cause: Razorpay was hiding UPI in the Capacitor WebView
+        //       because the default UA looked non-mobile.
+        //     - Fix: explicit method:{upi,card,netbanking,wallet}:true in
+        //       every checkout call, plus appendUserAgent 'ParasRewardApp
+        //       Mobile' in capacitor.config.json.
+        versionCode 45
+        versionName "1.4.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

@@ -50,6 +50,8 @@ const ServiceChargePendingBanner = ({ user }) => {
         name: 'Paras Reward',
         description: `PRC Redemption Service Charge · ${charge.charge_id}`,
         prefill: { name: user?.name, email: user?.email, contact: user?.mobile || user?.phone },
+        method: { upi: true, card: true, netbanking: true, wallet: true },
+        config: { display: { preferences: { show_default_blocks: true } } },
         theme: { color: '#f59e0b' },
         handler: async (resp) => {
           try {

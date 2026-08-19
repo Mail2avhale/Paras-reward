@@ -1,0 +1,52 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "On website (browser), PRC redemption service charge Razorpay payment gateway works correctly — UPI apps (PhonePe/GPay/Paytm) appear as payment options. On Android APK, UPI apps do NOT even appear as options in the Razorpay checkout modal. User confirmed via screen recordings — website works, APK doesn't show UPI method at all.",
+  "summary": "No relevant testing skill found. Focused verification passed for the requested Razorpay PRC service-charge UPI fix in mobile-emulated Chromium: banner Pay, row Pay Now, and bulk Pay All all opened Razorpay checkout iframes and exposed UPI options/text (PhonePe; row also showed Google Pay, PhonePe, PayTM, CRED, BHIM). Static checks confirm method/config flags in all 3 frontend paths and Capacitor appendUserAgent/version sync. Actual Android APK/WebView was not executed in this container; user/device APK retest is still the final deployment check.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "pytest backend/tests/test_prc_svc_charge_e2e_block.py::test_after_clearing_pending_not_blocked_by_svc_charge",
+        "issue": "Requested pytest suite ran 35/36 passing, not 36/36. Failure is caused by an existing non-_test_seed PENDING charge for the preview test user, so the test's cleanup helper does not clear all pending service charges before asserting bank-transfer is not 402. This is test-data contamination, not the Razorpay UPI display symptom."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_303_static_data_check.py",
+    "/app/test_reports/iteration_303_seed_bulk_charge.py",
+    "/app/test_reports/iteration_303_cleanup_seed.py",
+    "/app/test_reports/iteration_303_browser_flow.py"
+  ],
+  "action_items": [
+    "Run final verification on a rebuilt Android APK/device because this container can only emulate mobile Chromium, not the real Capacitor WebView/Razorpay native intent environment.",
+    "Clean or isolate preview pending service-charge test data if the backend pytest suite must be green; current requested run is 35/36 due to an existing PENDING QA charge for user 76b75808-47fa-48dd-ad7c-8074678e3607."
+  ],
+  "critical_code_review_comments": [
+    "PASS: /app/frontend/src/pages/MyServiceCharges.js contains method:{upi,card,netbanking,wallet}:true and config.display.preferences.show_default_blocks:true in both pay() and payAll().",
+    "PASS: /app/frontend/src/components/ServiceChargePendingBanner.jsx contains the same Razorpay method/config flags for banner pay().",
+    "PASS: /app/frontend/capacitor.config.json android.appendUserAgent is ParasRewardApp/1.4.5 Mobile.",
+    "PASS: version sync verified in DB app_config, backend fallback, manifest, and Android build.gradle as 1.4.5 / code 45."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_303_static_data_check.py",
+    "/app/test_reports/iteration_303_seed_bulk_charge.py",
+    "/app/test_reports/iteration_303_cleanup_seed.py",
+    "/app/test_reports/iteration_303_browser_flow.py",
+    "/app/test_reports/iteration_303.json",
+    "/app/test_reports/bug_verification_303.json"
+  ],
+  "success_rate": {
+    "backend": "97.2% (35/36 requested pytest tests passed)",
+    "frontend": "100% for requested mobile-emulated Razorpay UPI visibility checks"
+  },
+  "seed_data_creation": "Created one temporary PENDING charge SVC-ITER303-4ED2080A to make Bulk Pay visible with 2 pending charges; it was deleted after UI verification. Existing preview QA pending charge SVC-QA-RZP-1-DD0D203D remains.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Skill lookup was performed first; no relevant testing skill found. Browser evidence from rerun: banner checkout iframe text included 'Pay 300 PhonePe'; row Pay Now iframe text included 'Recommended UPI - Google Pay', 'UPI - PhonePe', 'PayTM', 'BHIM Apps & UPI ID'; bulk checkout iframe text included 'Pay 320 PhonePe'. No test payment was completed. Note the actual Android APK was not run here.",
+  "rca_of_the_issue": "Reported RCA/fix validated by code and browser proxy: Razorpay was hiding UPI in the APK WebView due to client-side environment/UA detection. The frontend now explicitly passes method flags and show_default_blocks in all PRC service-charge checkout paths, and Capacitor appends a mobile-tagged UA."
+}
