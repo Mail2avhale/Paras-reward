@@ -53,6 +53,11 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
   const [cancelling, setCancelling] = useState(false);
   const tickRef = useRef(null);
   const cooldownRef = useRef(null);
+  // Safety-net timer: if the forced ad SDK is broken (native fallback
+  // also stuck), don't leave the user unable to collect forever. Mirror
+  // MiningWidget's 60s safety net.
+  const collectSafetyRef = useRef(null);
+  const collectInProgressRef = useRef(false);
 
   useEffect(() => {
     setLiveAccumulated(booking.session_accumulated_prc || 0);
@@ -101,6 +106,13 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
   }, [sessionActive, booking.status, liveCooldown, onRefresh]);
 
   const performCollect = async () => {
+    if (collectInProgressRef.current) return;
+    collectInProgressRef.current = true;
+    // Clear the safety-net timer — the collect is happening.
+    if (collectSafetyRef.current) {
+      clearTimeout(collectSafetyRef.current);
+      collectSafetyRef.current = null;
+    }
     try {
       const res = await axios.post(`${API}/mall/collect/${booking.booking_id}`, { user_id: booking.user_id });
       if (res.data?.success) {
@@ -110,22 +122,44 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
         setLiveCooldown(res.data.cooldown_seconds || 0);
         onCollect?.();
         onRefresh?.();
-        // ── Direct rewarded ad (Jun 24, 2026) ─────────────────────
-        // Primary product PRC has just been credited. Now show the
-        // direct AdMob rewarded video for a bonus, matching the
-        // dashboard Mining Widget flow.
-        setForcedAdOpen(true);
       }
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Collect failed');
+    } finally {
+      collectInProgressRef.current = false;
     }
   };
 
-  // Direct-collect (no intermediate opt-in modal — the ad screen runs
-  // AUTOMATICALLY right after the primary collect succeeds).
+  // ── FORCED-AD-BEFORE-COLLECT (Feb 27, 2026) ─────────────────────────
+  // Business rule: user MUST watch the rewarded ad to collect Mall PRC.
+  // If ad fails to load or user closes early → PRC is NOT credited.
+  // Mirrors the dashboard Mining Widget flow — ad = income source, so
+  // "no ad = no PRC" protects revenue for Mall product sessions too.
+  //
+  // Old flow: /mall/collect → credit primary PRC → then show BONUS ad.
+  // New flow: show ad first → onAdCompleted callback → /mall/collect.
   const collect = () => {
     if (liveAccumulated < 0.01) return;
-    performCollect();
+    // Immediate feedback so user knows the flow started even if the ad
+    // SDK takes a moment to initialise.
+    toast.info('Loading reward…');
+    // Reset any stuck previous state so the modal re-mounts cleanly.
+    if (forcedAdOpen) {
+      setForcedAdOpen(false);
+      setTimeout(() => setForcedAdOpen(true), 50);
+    } else {
+      setForcedAdOpen(true);
+    }
+    // Safety net: if neither onAdCompleted nor onClose fires within 60s
+    // (broken AdMob SDK / stuck modal), auto-credit so the user is never
+    // permanently blocked. Long enough for a full rewarded video ad.
+    if (collectSafetyRef.current) clearTimeout(collectSafetyRef.current);
+    collectSafetyRef.current = setTimeout(() => {
+      if (collectInProgressRef.current) return;
+      console.warn('[MallBookings] Forced-ad safety-net fired — crediting PRC directly');
+      setForcedAdOpen(false);
+      performCollect();
+    }, 60000);
   };
 
   // User-initiated booking cancellation. Refunds upfront PRC, burns the
@@ -575,11 +609,24 @@ const BookingCard = ({ booking, onCollect, onRefresh }) => {
         onSkip={performCollect}
         onComplete={performCollect}
       />
-      {/* Direct rewarded ad — auto-plays after a successful product collect. */}
+      {/* Forced rewarded ad — MUST be watched before Mall PRC is credited.
+          Mirrors the dashboard Mining Widget flow (v1.4.7).
+          - onAdCompleted fires ONLY on genuine ad completion → PRC credited.
+          - onClose fires on any close (skip / cancel / SDK error) → NO PRC. */}
       <ForcedAdInterstitial
         open={forcedAdOpen}
         placement="mall_collect"
-        onClose={() => setForcedAdOpen(false)}
+        onAdCompleted={performCollect}
+        onClose={() => {
+          setForcedAdOpen(false);
+          // If the user closed the ad WITHOUT completing it (i.e.
+          // performCollect never ran), cancel the safety net so we
+          // don't credit PRC after the ad was skipped.
+          if (!collectInProgressRef.current && collectSafetyRef.current) {
+            clearTimeout(collectSafetyRef.current);
+            collectSafetyRef.current = null;
+          }
+        }}
       />
     </motion.div>
   );
