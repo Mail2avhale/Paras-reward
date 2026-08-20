@@ -290,8 +290,14 @@ android {
         // versionCode 46 → 47 — Feb 27, 2026 — v1.4.7 (Play Console bump)
         //     - Same code as v1.4.6. Play Console rejected 46 because a
         //       previous AAB had already claimed that code. No code change.
-        versionCode 47
-        versionName "1.4.7"
+        // versionCode 47 → 48 — Feb 27, 2026 — v1.4.8 (Mall ad-gate)
+        //     - Mall product Collect now requires watching the rewarded
+        //       ad FIRST (mirrors Dashboard MiningWidget flow). Ad skip
+        //       / close → NO PRC credited. Closes ad-revenue bypass.
+        //     - Also includes global device-binding reset now clearing
+        //       user-level `device_binding_locked` flag (backend fix).
+        versionCode 48
+        versionName "1.4.8"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

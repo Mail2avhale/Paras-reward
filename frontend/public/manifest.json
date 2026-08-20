@@ -1,7 +1,7 @@
 {
   "name": "PARAS REWARD - India's Trusted Reward Platform",
   "short_name": "PARAS REWARD",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "India's Next-Generation Trusted Reward Platform. Earn PRC points daily, play games, invite friends, and redeem for real products & vouchers!",
   "start_url": "/dashboard?utm_source=pwa&utm_medium=homescreen",
   "display": "standalone",
