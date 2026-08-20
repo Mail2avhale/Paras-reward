@@ -1331,6 +1331,19 @@ async def admin_reset_all_bindings(
         }},
     )
 
+    # 1.5) Clear `device_binding_locked` on every user carrying it.
+    # Retro-block flags this on user docs (line ~649); without clearing
+    # it here, users stay 403-locked at login even after nuclear reset.
+    r_unlock = await db.users.update_many(
+        {"device_binding_locked": True},
+        {"$unset": {
+            "device_binding_locked": "",
+            "device_binding_locked_at": "",
+            "device_binding_locked_by": "",
+            "device_binding_locked_reason": "",
+        }},
+    )
+
     # 2) Resolve every unresolved collision row (clears Blocked Users list)
     r2 = await db.device_binding_collisions.update_many(
         {"resolved": {"$exists": False}},
@@ -1361,6 +1374,7 @@ async def admin_reset_all_bindings(
             "admin_id": data.admin_id,
             "reason": data.reason,
             "bindings_deactivated": r1.modified_count,
+            "users_unlocked": r_unlock.modified_count,
             "collisions_resolved": r2.modified_count,
             "change_requests_cancelled": r3.modified_count,
             "ts": now_iso,
@@ -1370,13 +1384,14 @@ async def admin_reset_all_bindings(
 
     logger.info(
         f"[DEVICE-BIND] GLOBAL RESET by {data.admin_id}: "
-        f"bindings={r1.modified_count}, collisions={r2.modified_count}, "
-        f"change_reqs={r3.modified_count}"
+        f"bindings={r1.modified_count}, users_unlocked={r_unlock.modified_count}, "
+        f"collisions={r2.modified_count}, change_reqs={r3.modified_count}"
     )
 
     return {
         "success": True,
         "bindings_deactivated": r1.modified_count,
+        "users_unlocked": r_unlock.modified_count,
         "collisions_resolved": r2.modified_count,
         "change_requests_cancelled": r3.modified_count,
         "ts": now_iso,

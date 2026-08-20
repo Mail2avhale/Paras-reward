@@ -57,9 +57,10 @@ const AdminDeviceBinding = ({ user }) => {
       );
       toast.success(
         `Reset complete: ${r.data.bindings_deactivated} bindings unbound, ` +
-        `${r.data.collisions_resolved} users unblocked, ` +
+        `${r.data.users_unlocked || 0} users unlocked, ` +
+        `${r.data.collisions_resolved} collisions resolved, ` +
         `${r.data.change_requests_cancelled} change-requests cancelled.`,
-        { duration: 8000 },
+        { duration: 10000 },
       );
       setResetConfirm('');
       setShowResetPanel(false);
