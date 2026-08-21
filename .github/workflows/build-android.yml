@@ -227,23 +227,50 @@ jobs:
           PARAS_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           PARAS_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          set -o pipefail
+          # Pre-create the log file so it always exists as an artifact —
+          # even if gradlew crashes on the very first line (Feb 27 2026 —
+          # AAB run showed "No files were found ... gradle-build.log"
+          # because tee never got to write anything).
+          : > gradle-build.log
           chmod +x ./gradlew
+          # Guard-rail: verify required signing secrets are present.
+          # An empty secret makes gradle print a very confusing
+          # "keystore.jks not found" that costs 20 min to debug.
+          for var in PARAS_KEYSTORE_PASSWORD PARAS_KEY_ALIAS PARAS_KEY_PASSWORD; do
+            eval "val=\${$var}"
+            if [ -z "$val" ]; then
+              echo "::error::Required secret $var is empty. Set it under GitHub → Settings → Secrets and variables → Actions."
+              exit 1
+            fi
+          done
+          if [ ! -s "$PARAS_KEYSTORE_FILE" ]; then
+            echo "::error::Keystore file $PARAS_KEYSTORE_FILE is missing or empty. Check KEYSTORE_BASE64 secret."
+            exit 1
+          fi
           # Verbose output (--stacktrace --info) so any failure surfaces the
           # actual Gradle/Capacitor error message in the workflow logs.
+          # `set -o pipefail` above ensures gradle's non-zero exit is preserved
+          # even though we pipe through tee.
           ./gradlew bundleRelease --no-daemon --stacktrace --info 2>&1 | tee gradle-build.log
           # Fail loudly if AAB wasn't produced
           if [ ! -f app/build/outputs/bundle/release/app-release.aab ]; then
             echo "::error::AAB file was not produced. See gradle-build.log artifact for details."
+            echo "──────── LAST 80 LINES OF gradle-build.log ────────"
+            tail -n 80 gradle-build.log || true
+            echo "──────── END LOG TAIL ────────"
             exit 1
           fi
 
-      # If the build fails, upload the verbose gradle log so we can debug.
-      - name: Upload gradle build log (on failure)
-        if: failure()
+      # Always upload the gradle log — even on success it helps diagnose
+      # slow builds; on failure it's the only thing we have.
+      - name: Upload gradle build log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gradle-build-log
           path: frontend/android/gradle-build.log
+          if-no-files-found: warn
           retention-days: 7
 
       # ── 9. UPLOAD AAB ARTIFACT ─────────────────────────────────────────────
