@@ -269,7 +269,7 @@ jobs:
       # slow builds; on failure it's the only thing we have.
       - name: Upload gradle build log
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: gradle-build-log
           path: frontend/android/gradle-build.log
@@ -278,7 +278,7 @@ jobs:
 
       # ── 9. UPLOAD AAB ARTIFACT ─────────────────────────────────────────────
       - name: Upload AAB artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: paras-reward-release-aab
           path: frontend/android/app/build/outputs/bundle/release/app-release.aab
