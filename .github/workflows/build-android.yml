@@ -35,24 +35,27 @@ jobs:
     steps:
       # ── 1. CHECKOUT ────────────────────────────────────────────────────────
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # ── 2. NODE + YARN ─────────────────────────────────────────────────────
       - name: Setup Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
 
       # ── 3. JAVA 21 ─────────────────────────────────────────────────────────
       - name: Setup Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
 
       # ── 4. ANDROID SDK ─────────────────────────────────────────────────────
+      # v3 targets Node.js 20 which GitHub deprecated Sep 2025. v4 was
+      # released Nov 2025 and targets Node 24 — mandatory once GitHub
+      # fully retires Node 20 on runners.
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-35 platforms;android-36 build-tools;35.0.0 build-tools;36.0.0'
 
@@ -266,7 +269,7 @@ jobs:
       # slow builds; on failure it's the only thing we have.
       - name: Upload gradle build log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gradle-build-log
           path: frontend/android/gradle-build.log
@@ -275,7 +278,7 @@ jobs:
 
       # ── 9. UPLOAD AAB ARTIFACT ─────────────────────────────────────────────
       - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: paras-reward-release-aab
           path: frontend/android/app/build/outputs/bundle/release/app-release.aab
