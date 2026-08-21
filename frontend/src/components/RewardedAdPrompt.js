@@ -26,21 +26,15 @@ import { Capacitor } from '@capacitor/core';
 import { Gift, X, Play, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { showCachedRewarded, AD_UNITS } from '@/hooks/useAdMob';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-async function showRewardedAd() {
-  if (!Capacitor.isNativePlatform()) return { shown: false, reason: 'web' };
-  try {
-    const { AdMob } = await import('@capacitor-community/admob');
-    await AdMob.prepareRewardVideoAd({
-      adId: 'ca-app-pub-3556805218952480/7314369451',
-    });
-    const reward = await AdMob.showRewardVideoAd();
-    return { shown: true, reward };
-  } catch (e) {
-    return { shown: false, reason: e?.message || 'admob-error' };
-  }
+async function showRewardedAd(placement) {
+  // Route through the shared cached path in useAdMob so we don't
+  // duplicate `prepareRewardVideoAd` — closes the AdMob request→impression
+  // gap (Feb 27 2026).
+  return showCachedRewarded(AD_UNITS.rewarded, placement || 'rewarded_prompt');
 }
 
 export const RewardedAdPrompt = ({
@@ -97,7 +91,7 @@ export const RewardedAdPrompt = ({
   const handleWatch = async () => {
     if (!viewToken) return;
     setPhase('watching');
-    const result = await showRewardedAd();
+    const result = await showRewardedAd(placement);
 
     // On web (no AdMob) we still credit so testers can exercise the flow.
     // On native, only credit if AdMob fired the reward callback.

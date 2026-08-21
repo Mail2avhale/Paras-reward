@@ -29,6 +29,7 @@ import { Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { Capacitor } from '@capacitor/core';
+import { showCachedRewarded, AD_UNITS } from '@/hooks/useAdMob';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ADSENSE_CLIENT = 'ca-pub-3556805218952480';
@@ -36,15 +37,12 @@ const ADSENSE_SLOT = process.env.REACT_APP_ADSENSE_INTERSTITIAL_SLOT || '';
 const MIN_VIEW_SECONDS = 5;
 const MAX_VIEW_SECONDS = 20;
 
-async function showNativeRewardedAd() {
-  try {
-    const { AdMob } = await import('@capacitor-community/admob');
-    await AdMob.prepareRewardVideoAd({ adId: 'ca-app-pub-3556805218952480/7314369451' });
-    const reward = await AdMob.showRewardVideoAd();
-    return { shown: true, reward };
-  } catch (e) {
-    return { shown: false, reason: e?.message || 'admob-error' };
-  }
+async function showNativeRewardedAd(placement) {
+  // Route through the shared cached path in useAdMob so we don't
+  // duplicate `prepareRewardVideoAd` calls the cold-start pre-warm
+  // already made. This is the biggest single fix for the AdMob
+  // request→impression gap (Feb 27 2026).
+  return showCachedRewarded(AD_UNITS.rewarded, placement || 'forced_ad');
 }
 
 const AdSenseSlot = () => {
@@ -118,7 +116,7 @@ const ForcedAdInterstitial = ({ open, onClose, onAdCompleted, placement = 'main_
       // onClose runs but onAdCompleted does NOT — so PRC won't be collected.
       if (Capacitor.isNativePlatform()) {
         setPhase('playing');
-        const result = await showNativeRewardedAd();
+        const result = await showNativeRewardedAd(placement);
         if (cancelled) return;
         if (result.shown) {
           adCompletedRef.current = true;

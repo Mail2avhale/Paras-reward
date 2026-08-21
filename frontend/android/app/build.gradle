@@ -296,8 +296,19 @@ android {
         //       / close → NO PRC credited. Closes ad-revenue bypass.
         //     - Also includes global device-binding reset now clearing
         //       user-level `device_binding_locked` flag (backend fix).
-        versionCode 48
-        versionName "1.4.8"
+        // versionCode 48 → 49 — Feb 27, 2026 — v1.4.9 (AdMob show-rate)
+        //     - AdMob show rate on prod was ~46% (15.8k req / 7.13k imp).
+        //     - Killed duplicate `prepareRewardVideoAd` calls in 3
+        //       modals (ForcedAdInterstitial, RewardedAdPrompt,
+        //       RewardedInterstitialTrigger) — all now funnel through
+        //       shared cached path in useAdMob.js.
+        //     - Removed the post-show background pre-fetch that was
+        //       burning ~40% of requests on ads users never saw.
+        //     - App Open cold-start timeout 4s → 6s so slow-network
+        //       requests actually get a chance to render.
+        //     - Expected: show rate 46% → 80%+, requests drop ~40%.
+        versionCode 49
+        versionName "1.4.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

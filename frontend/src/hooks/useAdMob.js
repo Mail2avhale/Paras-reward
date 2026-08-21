@@ -45,14 +45,36 @@ export const AD_UNITS = {
 let initialized = false;
 let splashHidden = false;
 
-// ── AD CACHE + ANALYTICS (Aug 2026) ────────────────────────────────────
-// Impression rate on production was dropping to ~53% (6.14k req / 3.25k imp).
-// Two structural fixes:
-//   1. Cache a "ready" rewarded ad so multiple UX callers don't each fire
-//      a `prepareRewardVideoAd` — one prepare, one show, one impression.
-//   2. Post lifecycle events to /api/ad-events so we can compute our own
+// ── AD CACHE + ANALYTICS (Aug 2026, Feb 27 2026 rewrite) ───────────────
+// Impression rate on production was dropping to ~46% (15.8k req / 7.13k imp).
+// Root causes found:
+//   • Every modal (ForcedAdInterstitial / RewardedAdPrompt / RewardedInterstitialTrigger)
+//     called its OWN prepareRewardVideoAd → duplicate requests
+//     that bypassed the cache.
+//   • After every show, we background-prefetched the NEXT ad — but
+//     users typically do 1-2 collects per session, so that prefetched
+//     ad expired unused = 1 request, 0 impression.
+//
+// Fixes:
+//   1. `_adCache` keyed per adId (rewarded + rewarded interstitial share
+//      the same cache infra now). Single-flight per adId. Exported
+//      helpers `prepareCachedRewarded(adId)` + `showCachedRewarded(adId, placement)`
+//      so ALL callers deduplicate through the same code path.
+//   2. NO post-show background pre-fetch. The cold-start pre-warm covers
+//      the first collect; every subsequent collect fires ONE fresh prepare
+//      that goes straight into a show.
+//   3. Post lifecycle events to /api/ad-events so we can compute our own
 //      funnel and cross-check AdMob's reporting.
-const _rewardedCache = { adId: null, ready: false, preparing: null };
+const _adCache = new Map(); // adId -> { ready: boolean, preparing: Promise|null }
+
+function _cacheSlot(adId) {
+  let slot = _adCache.get(adId);
+  if (!slot) {
+    slot = { ready: false, preparing: null };
+    _adCache.set(adId, slot);
+  }
+  return slot;
+}
 
 function logAdEvent(event_type, ad_unit, placement, extra = {}) {
   try {
@@ -71,29 +93,57 @@ function logAdEvent(event_type, ad_unit, placement, extra = {}) {
 }
 
 async function _prepareRewarded(adId) {
-  if (_rewardedCache.ready && _rewardedCache.adId === adId) return true;
+  const slot = _cacheSlot(adId);
+  if (slot.ready) return true;
   // Single-flight lock — if a prepare is in-flight for this adId, await it
-  if (_rewardedCache.preparing) {
-    try { return await _rewardedCache.preparing; } catch (_) { /* fall through to retry */ }
+  if (slot.preparing) {
+    try { return await slot.preparing; } catch (_) { /* fall through to retry */ }
   }
-  _rewardedCache.preparing = (async () => {
+  slot.preparing = (async () => {
     logAdEvent('requested', adId, 'rewarded_prepare');
     try {
       const { AdMob } = await import('@capacitor-community/admob');
       await AdMob.prepareRewardVideoAd({ adId });
-      _rewardedCache.adId = adId;
-      _rewardedCache.ready = true;
+      slot.ready = true;
       logAdEvent('loaded', adId, 'rewarded_prepare');
       return true;
     } catch (e) {
-      _rewardedCache.ready = false;
+      slot.ready = false;
       logAdEvent('failed', adId, 'rewarded_prepare', { error: String(e?.message || e) });
       throw e;
     } finally {
-      _rewardedCache.preparing = null;
+      slot.preparing = null;
     }
   })();
-  return _rewardedCache.preparing;
+  return slot.preparing;
+}
+
+/**
+ * Public helper — any UI modal that needs a rewarded ad should call this
+ * instead of importing @capacitor-community/admob directly. Enforces
+ * one prepare per shown ad → keeps AdMob "show rate" (impressions /
+ * requests) high. Returns { shown, reward, reason }.
+ *
+ * Web / non-native platforms → { shown: false, reason: 'web' }.
+ */
+export async function showCachedRewarded(adId, placement = 'rewarded') {
+  if (!IS_NATIVE) return { shown: false, reward: null, reason: 'web' };
+  const slot = _cacheSlot(adId);
+  try {
+    await _prepareRewarded(adId);
+    const { AdMob } = await import('@capacitor-community/admob');
+    logAdEvent('show_attempt', adId, placement);
+    const reward = await AdMob.showRewardVideoAd();
+    // Consumed — clear slot. NO background pre-fetch (was causing 40%
+    // of the request→impression gap). Next call re-primes on demand.
+    slot.ready = false;
+    logAdEvent('completed', adId, placement, { reward_type: reward?.type, reward_amount: reward?.amount });
+    return { shown: true, reward };
+  } catch (e) {
+    slot.ready = false;
+    logAdEvent('failed', adId, placement, { error: String(e?.message || e) });
+    return { shown: false, reward: null, reason: e?.message || 'error' };
+  }
 }
 
 async function hideSplashSafe() {
@@ -147,14 +197,14 @@ function scheduleAdMobInit() {
       console.warn('[AppOpenAd] init failed (non-fatal):', e);
     }
 
-    // Cold-start App Open ad — 4 s cap. Bumped from 1.5 s (2026-08-13):
-    // the 1.5 s window was too tight on slow networks / low-end phones —
-    // the request fired but the ad never rendered → counted a REQUEST
-    // with no IMPRESSION. 4 s is well under Android's 5 s ANR watchdog
-    // and covers 95%+ of real-world ad loads.
+    // Cold-start App Open ad — 6 s cap. Bumped from 4 s (2026-02-27):
+    // Users on slow 3G / low-end devices frequently hit the timeout before
+    // the ad rendered → counted a REQUEST with no IMPRESSION. 6 s is well
+    // under Android's ANR watchdog (5 s foreground / 20 s background) and
+    // AppOpen ad runs on a detached task so it never blocks the JS thread.
     try {
       logAdEvent('requested', AD_UNITS.appOpen, 'cold_start');
-      const res = await AppOpenAdPlugin.showOnColdStart({ timeoutMs: 4000 });
+      const res = await AppOpenAdPlugin.showOnColdStart({ timeoutMs: 6000 });
       logAdEvent(res?.shown ? 'completed' : 'failed', AD_UNITS.appOpen, 'cold_start', { reason: res?.reason });
     } catch (e) {
       logAdEvent('failed', AD_UNITS.appOpen, 'cold_start', { error: String(e?.message || e) });
@@ -162,6 +212,8 @@ function scheduleAdMobInit() {
     }
 
     // Pre-warm the rewarded ad cache so the first Collect PRC tap is instant.
+    // NOTE: NO background pre-fetch after subsequent shows — that was
+    // burning ~40% of requests on ads the user never got to.
     _prepareRewarded(AD_UNITS.rewarded).catch(() => {});
   };
 
@@ -198,43 +250,15 @@ export function useAdMob() {
   }, []);
 
   const showRewarded = useCallback(async () => {
-    if (!IS_NATIVE) return { shown: false, reward: null, reason: 'web' };
-    const adId = AD_UNITS.rewarded;
-    try {
-      // Use the cache — if a prepared ad is already in memory this is a no-op.
-      await _prepareRewarded(adId);
-      const { AdMob } = await import('@capacitor-community/admob');
-      logAdEvent('show_attempt', adId, 'rewarded');
-      const reward = await AdMob.showRewardVideoAd();
-      // Ad consumed — clear cache and pre-fetch the next one in background
-      _rewardedCache.ready = false;
-      _rewardedCache.adId = null;
-      logAdEvent('completed', adId, 'rewarded', { reward_type: reward?.type, reward_amount: reward?.amount });
-      _prepareRewarded(adId).catch(() => {});
-      return { shown: true, reward };
-    } catch (e) {
-      _rewardedCache.ready = false;
-      _rewardedCache.adId = null;
-      logAdEvent('failed', adId, 'rewarded', { error: String(e?.message || e) });
-      return { shown: false, reward: null, reason: e?.message || 'error' };
-    }
+    // Delegates to the shared cached path so useAdMob and every modal
+    // (ForcedAdInterstitial / RewardedAdPrompt / RewardedInterstitialTrigger)
+    // funnel through the SAME prepare-once-show-once code path. This is
+    // what closes the request→impression gap on the AdMob dashboard.
+    return showCachedRewarded(AD_UNITS.rewarded, 'rewarded');
   }, []);
 
   const showRewardedInterstitial = useCallback(async () => {
-    if (!IS_NATIVE) return { shown: false, reward: null, reason: 'web' };
-    const adId = AD_UNITS.rewardedInterstitial;
-    try {
-      const { AdMob } = await import('@capacitor-community/admob');
-      logAdEvent('requested', adId, 'rewarded_interstitial');
-      await AdMob.prepareRewardVideoAd({ adId });
-      logAdEvent('show_attempt', adId, 'rewarded_interstitial');
-      const reward = await AdMob.showRewardVideoAd();
-      logAdEvent('completed', adId, 'rewarded_interstitial', { reward_type: reward?.type, reward_amount: reward?.amount });
-      return { shown: true, reward };
-    } catch (e) {
-      logAdEvent('failed', adId, 'rewarded_interstitial', { error: String(e?.message || e) });
-      return { shown: false, reward: null, reason: e?.message || 'error' };
-    }
+    return showCachedRewarded(AD_UNITS.rewardedInterstitial, 'rewarded_interstitial');
   }, []);
 
   return { isNative: IS_NATIVE, showAppOpen, showRewarded, showRewardedInterstitial };

@@ -32,22 +32,17 @@ import { Capacitor } from '@capacitor/core';
 import { Gift, X, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { showCachedRewarded, AD_UNITS } from '@/hooks/useAdMob';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const REWARDED_INTERSTITIAL_UNIT = 'ca-app-pub-3556805218952480/2377737544';
 
 async function playAd() {
-  if (!Capacitor.isNativePlatform()) {
-    return { shown: false, reason: 'web' };
-  }
-  try {
-    const { AdMob } = await import('@capacitor-community/admob');
-    await AdMob.prepareRewardVideoAd({ adId: REWARDED_INTERSTITIAL_UNIT });
-    const reward = await AdMob.showRewardVideoAd();
-    return { shown: true, reward };
-  } catch (e) {
-    return { shown: false, reason: e?.message || 'admob-error' };
-  }
+  // Route through the shared cached rewarded path (deduplicates prepare
+  // calls that were burning ad requests without impressions). This ad
+  // unit is DIFFERENT from the main rewarded unit — the cache is keyed
+  // per-adId so both units coexist cleanly.
+  return showCachedRewarded(AD_UNITS.rewardedInterstitial, 'rewarded_interstitial_post_action');
 }
 
 /**
