@@ -48,6 +48,12 @@ const SERVICE_THEME = {
     icon: '🛍️',
     label: 'Product Booked',
   },
+  service_charge: {
+    gradient: 'from-emerald-500 via-teal-500 to-cyan-500',
+    chip: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    icon: '💎',
+    label: 'Redemption Complete',
+  },
 };
 
 const REACTIONS = [
@@ -68,6 +74,7 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
   const isSaleElite = meta.service_type === 'sale_elite_subscription';
   const isSaleEliteReceived = meta.service_type === 'sale_elite_received';
   const isParasMall = meta.service_type === 'paras_mall';
+  const isServiceCharge = meta.service_type === 'service_charge';
   const planName = (meta.plan_name || '').trim();
   let chipLabel = theme.label;
   if (isSubscription && planName) chipLabel = `${theme.label} • ${planName}`;
@@ -79,6 +86,7 @@ const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
   else if (isSaleEliteReceived) completionLabel = `Purchased from ${meta.sender_masked_name || 'a seller'}`;
   else if (isSaleElite) completionLabel = `Sold to ${meta.beneficiary_masked_name || 'a buyer'}`;
   else if (isParasMall) completionLabel = 'Product Booked';
+  else if (isServiceCharge) completionLabel = 'Service Charge Paid';
   const isOwn = !!currentUserId && meta.beneficiary_user_id === currentUserId;
 
   const [reactions, setReactions] = useState(post.reactions_count || { celebrate: 0, love: 0, fire: 0 });

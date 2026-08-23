@@ -220,18 +220,29 @@ async def create_success_story_post(
                 "✅ Smart reward shopping at Paras Reward",
             ]
         elif service_type == "service_charge":
-            # `amount_inr` here is the SERVICE CHARGE the user just paid
-            # (20 % of the redemption). `extra_title` optionally carries
-            # a short redemption descriptor like "Bank Redeem" so the
-            # post reads as a completed-flow celebration, not a fee bill.
-            redemption_note = (extra_title or "redemption").strip()
-            title = f"{icon} {first_name} from {location} completed a {redemption_note}!"
+            # `amount_inr` = 20 % service charge the user just paid.
+            # User-provided post format (Feb 27 2026) — verbatim reproduction
+            # with variable substitution so every payment reads identically.
+            fee_int = int(round(amount_inr))
+            title = f"🎉 Redemption Success Story — {first_name} from {location}"
             body_lines = [
-                f"🎉 Congratulations **{first_name}** from **{location}**!",
+                "🎉 REDEMPTION SUCCESS STORY 🎉",
+                f"🇮🇳 Congratulations, **{first_name}**!",
                 "",
-                f"Cleared the **20% service charge (₹{int(amount_inr):,})** and completed a **{redemption_note}** on Paras Reward",
+                f"We are happy to share that **{first_name}** from **{location}** has successfully completed their redemption on Paras Reward. ✅",
                 "",
-                "✅ Trust · ✅ Transparency · ✅ Real payouts",
+                f"💳 20% Redemption Service Charge: **₹{fee_int}**",
+                "✅ Service Charge Successfully Paid",
+                "✅ Redemption Successfully Completed",
+                "",
+                "This is an important milestone for our growing Paras Reward community. 💎",
+                "**Trust • Transparency • Process**",
+                "",
+                f"🙏 Thank you, **{first_name}**, for your patience and cooperation.",
+                "🚀 More users. More progress. A stronger Paras Reward ecosystem.",
+                "",
+                "💎 **PARAS REWARD**",
+                "*Together We Grow.*",
             ]
         else:
             title = f"{icon} {first_name} from {location} completed {label}!"
