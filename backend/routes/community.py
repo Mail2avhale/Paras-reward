@@ -147,6 +147,7 @@ async def create_success_story_post(
             "bank_redeem": ("Bank Redeem", "💰"),
             "subscription": ("Subscription", "👑"),
             "paras_mall": ("Paras Mall", "🛍️"),
+            "service_charge": ("Service Charge", "💎"),
         }
         label, icon = service_labels.get(service_type, ("Transaction", "✅"))
 
@@ -217,6 +218,20 @@ async def create_success_story_post(
                 "",
                 "💎 Mining started — daily PRC rewards now active",
                 "✅ Smart reward shopping at Paras Reward",
+            ]
+        elif service_type == "service_charge":
+            # `amount_inr` here is the SERVICE CHARGE the user just paid
+            # (20 % of the redemption). `extra_title` optionally carries
+            # a short redemption descriptor like "Bank Redeem" so the
+            # post reads as a completed-flow celebration, not a fee bill.
+            redemption_note = (extra_title or "redemption").strip()
+            title = f"{icon} {first_name} from {location} completed a {redemption_note}!"
+            body_lines = [
+                f"🎉 Congratulations **{first_name}** from **{location}**!",
+                "",
+                f"Cleared the **20% service charge (₹{int(amount_inr):,})** and completed a **{redemption_note}** on Paras Reward",
+                "",
+                "✅ Trust · ✅ Transparency · ✅ Real payouts",
             ]
         else:
             title = f"{icon} {first_name} from {location} completed {label}!"

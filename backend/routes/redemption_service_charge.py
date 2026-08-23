@@ -44,6 +44,45 @@ DEFAULT_CONFIG = {
 }
 
 
+# Friendly labels for the Community Forum success-story post.
+# `redemption_type` values in redemption_service_charges are set by
+# create_service_charge_on_success() (line 96) — keep this map in sync
+# if new redemption types are ever added upstream.
+_REDEMPTION_TYPE_LABELS = {
+    "mobile_recharge": "Mobile Recharge",
+    "dth_recharge": "DTH Recharge",
+    "bank_redeem": "Bank Redeem",
+    "subscription": "Subscription",
+    "gift_prc": "Gift PRC",
+    "paras_mall": "Paras Mall booking",
+    "generic": "redemption",
+}
+
+
+def _redemption_type_label(redemption_id: Optional[str]) -> str:
+    """Best-effort human label for the Community Forum post body.
+
+    We first check the ID prefix (fast + no extra DB call). If unknown, we
+    fall back to "redemption" — the generic template still reads well.
+    """
+    if not redemption_id:
+        return "redemption"
+    rid = redemption_id.upper()
+    if rid.startswith("MOB") or rid.startswith("RCH") or "MOBILE" in rid:
+        return _REDEMPTION_TYPE_LABELS["mobile_recharge"]
+    if rid.startswith("DTH"):
+        return _REDEMPTION_TYPE_LABELS["dth_recharge"]
+    if rid.startswith("BNK") or rid.startswith("BANK") or rid.startswith("MBT"):
+        return _REDEMPTION_TYPE_LABELS["bank_redeem"]
+    if rid.startswith("SUB") or rid.startswith("PLAN"):
+        return _REDEMPTION_TYPE_LABELS["subscription"]
+    if rid.startswith("GIFT"):
+        return _REDEMPTION_TYPE_LABELS["gift_prc"]
+    if rid.startswith("MALL") or rid.startswith("BOOK"):
+        return _REDEMPTION_TYPE_LABELS["paras_mall"]
+    return "redemption"
+
+
 def set_db(database):
     global db
     db = database
@@ -349,6 +388,24 @@ async def verify_payment(data: VerifyPaymentRequest):
     await _audit(data.charge_id, "paid", "PENDING", "PAID", charge["user_id"],
                  meta={"payment_id": data.razorpay_payment_id})
     fresh = await db.redemption_service_charges.find_one({"charge_id": data.charge_id}, {"_id": 0})
+
+    # Community Forum success-story post (Feb 27 2026) — celebrate that the
+    # user cleared the 20% service charge and finished their redemption.
+    # Idempotent via ref_id + 24 h dedup inside create_success_story_post.
+    try:
+        import asyncio as _asyncio
+        from routes.community import create_success_story_post
+        redemption_note = _redemption_type_label(fresh.get("redemption_id"))
+        _asyncio.create_task(create_success_story_post(
+            user_id=charge["user_id"],
+            service_type="service_charge",
+            amount_inr=float(fresh.get("total_payable") or 0),
+            ref_id=f"svc-charge:{data.charge_id}",
+            extra_title=redemption_note,
+        ))
+    except Exception as e:
+        logger.warning(f"[SVC-CHARGE] community post failed (non-fatal): {e}")
+
     return {"success": True, "charge": fresh}
 
 
@@ -501,6 +558,22 @@ async def bulk_verify_payment(data: BulkVerifyRequest):
             await _audit(cid, "bulk_paid", "PENDING", "PAID", data.user_id,
                          meta={"payment_id": data.razorpay_payment_id,
                                "bulk_batch_size": len(data.charge_ids)})
+            # Community Forum success-story post per PAID charge — same
+            # dedup rules as the single-pay path. Fire-and-forget so a
+            # community failure never blocks the bulk-pay response.
+            try:
+                import asyncio as _asyncio
+                from routes.community import create_success_story_post
+                redemption_note = _redemption_type_label(charge.get("redemption_id"))
+                _asyncio.create_task(create_success_story_post(
+                    user_id=data.user_id,
+                    service_type="service_charge",
+                    amount_inr=float(charge.get("total_payable") or 0),
+                    ref_id=f"svc-charge:{cid}",
+                    extra_title=redemption_note,
+                ))
+            except Exception as _e:
+                logger.warning(f"[SVC-CHARGE bulk] community post failed (non-fatal): {_e}")
 
     return {
         "success": True,
@@ -596,6 +669,22 @@ async def admin_manual_paid(data: ManualPaidRequest,
     await _audit(data.charge_id, "manual_marked_paid", "PENDING", "PAID",
                  charge["user_id"], admin_id=data.admin_id, reason=data.reason,
                  meta={"external_reference": data.external_reference})
+
+    # Community Forum success-story post (parity with the Razorpay path).
+    try:
+        import asyncio as _asyncio
+        from routes.community import create_success_story_post
+        redemption_note = _redemption_type_label(charge.get("redemption_id"))
+        _asyncio.create_task(create_success_story_post(
+            user_id=charge["user_id"],
+            service_type="service_charge",
+            amount_inr=float(charge.get("total_payable") or 0),
+            ref_id=f"svc-charge:{data.charge_id}",
+            extra_title=redemption_note,
+        ))
+    except Exception as _e:
+        logger.warning(f"[SVC-CHARGE manual] community post failed (non-fatal): {_e}")
+
     return {"success": True}
 
 
