@@ -2,7 +2,7 @@ import React from 'react';
 
 const DashboardSkeleton = () => {
   return (
-    <div className="min-h-screen bg-gray-950 pb-24 animate-pulse">
+    <div className="min-h-screen bg-paras-app pb-24 animate-pulse">
       {/* Header Skeleton */}
       <div className="px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">

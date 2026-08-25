@@ -3,6 +3,74 @@
 /* Admin Dark Theme Styles */
 @import './styles/admin-theme.css';
 
+/* ═══════════════════════════════════════════════════════════════════
+   Paras Reward — App Design Refresh (Feb 27 2026)
+   Premium high-contrast dark theme. Every dashboard component reads
+   from these CSS variables so a single palette edit re-themes the
+   whole app.
+   ─────────────────────────────────────────────────────────────────── */
+:root {
+  /* Base surfaces */
+  --paras-obsidian: #0F1115;      /* full-page background            */
+  --paras-obsidian-deep: #0A0C0E; /* timer boxes, very-deep surfaces */
+  --paras-slate: #1A1C23;         /* card body                        */
+  --paras-slate-alt: #161920;     /* alt card variant                 */
+  --paras-slate-line: #2A2D3A;    /* card borders                     */
+  --paras-slate-track: #2A2D35;   /* progress bar track               */
+
+  /* Accents */
+  --paras-gold: #FFC107;          /* primary brand accent, key nums   */
+  --paras-gold-warm: #F5A623;     /* gradient partner / soft gold     */
+  --paras-gold-border: #3D3520;   /* muted gold hairline outline      */
+  --paras-gold-deep: #5D4037;     /* dark text on gold buttons        */
+
+  --paras-mint: #2EC4B6;          /* Active, positive rate           */
+  --paras-red: #E57373;           /* warnings, negative              */
+
+  /* Typography */
+  --paras-text: #F8FAFC;          /* Good Morning / primary text     */
+  --paras-text-secondary: #E2E8F0;
+  --paras-text-mute: #94A3B8;     /* Card Holder, PRC/SEC, labels    */
+
+  /* Elevations */
+  --paras-shadow-card: 0 10px 32px -12px rgba(0, 0, 0, 0.6);
+  --paras-shadow-gold: 0 0 24px -6px rgba(255, 193, 7, 0.35);
+}
+
+/* Convenience utilities so we don't spread hex codes across JSX */
+.bg-paras-app        { background-color: var(--paras-obsidian); }
+.bg-paras-card       { background-color: var(--paras-slate); }
+.bg-paras-card-alt   { background-color: var(--paras-slate-alt); }
+.bg-paras-deep       { background-color: var(--paras-obsidian-deep); }
+.border-paras-card   { border-color: var(--paras-slate-line); }
+.border-paras-gold   { border-color: var(--paras-gold-border); }
+.text-paras          { color: var(--paras-text); }
+.text-paras-mute     { color: var(--paras-text-mute); }
+.text-paras-gold     { color: var(--paras-gold); }
+.text-paras-mint     { color: var(--paras-mint); }
+.text-paras-red      { color: var(--paras-red); }
+.ring-paras-gold     { box-shadow: var(--paras-shadow-gold); }
+.shadow-paras-card   { box-shadow: var(--paras-shadow-card); }
+
+/* Metallic gold button — reusable, no more per-page hard-coded hex */
+.btn-paras-gold {
+  background: linear-gradient(135deg, #FFD54F 0%, #FFC107 45%, #C9971A 100%);
+  color: var(--paras-gold-deep);
+  font-weight: 700;
+  border: 1px solid var(--paras-gold-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35),
+              0 8px 22px -8px rgba(255, 193, 7, 0.55);
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+.btn-paras-gold:hover  { filter: brightness(1.06); }
+.btn-paras-gold:active { transform: translateY(1px); }
+
+/* Live-region banner + Sonner toast lift so bottom nav is never covered */
+[data-sonner-toaster] {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 84px) !important;
+}
+
+
 /* Fade In Animation */
 @keyframes fadeIn {
   from {

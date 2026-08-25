@@ -362,7 +362,7 @@ const DashboardModern = ({ user, onLogout }) => {
 
   return (
     <PullToRefresh onRefresh={fetchDashboardData}>
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+    <div className="min-h-screen pb-24 bg-paras-app">
 
       {/* Refund Blocker Modal - blocks entire dashboard */}
       {requiresRefundAction && (
@@ -390,11 +390,11 @@ const DashboardModern = ({ user, onLogout }) => {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-lg">{greeting.emoji}</span>
-              <p className={`text-transparent bg-clip-text bg-gradient-to-r ${greeting.color} text-sm font-medium`}>
+              <p className="text-paras text-sm font-medium">
                 {greeting.text}
               </p>
             </div>
-            <h1 className="text-white text-xl font-bold">
+            <h1 className="text-paras text-xl font-bold">
               {userData?.name || user?.email?.split('@')[0] || 'User'}
             </h1>
           </div>
@@ -711,58 +711,35 @@ const DashboardModern = ({ user, onLogout }) => {
                 >
                   {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
-                <p className="text-gray-500 text-[10px] tracking-widest">REWARD POINTS</p>
+                <p className="text-[color:var(--paras-text-mute)] text-[10px] tracking-widest">REWARD POINTS</p>
               </div>
               <div className="flex items-baseline gap-2">
                 <span 
                   className="text-4xl font-black tracking-tight"
                   style={{
-                    background: stats.subscriptionPlan === 'elite'
-                      ? 'linear-gradient(180deg, #ffd700 0%, #f5f5f5 40%, #ffd700 100%)'
-                      : stats.subscriptionPlan === 'growth'
-                      ? 'linear-gradient(180deg, #10b981 0%, #f5f5f5 40%, #10b981 100%)'
-                      : stats.subscriptionPlan === 'startup'
-                      ? 'linear-gradient(180deg, #3b82f6 0%, #f5f5f5 40%, #3b82f6 100%)'
-                      : 'linear-gradient(180deg, #9ca3af 0%, #f5f5f5 40%, #9ca3af 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    textShadow: stats.subscriptionPlan === 'elite'
-                      ? '0 2px 10px rgba(255, 215, 0, 0.2)'
-                      : stats.subscriptionPlan === 'growth'
-                      ? '0 2px 10px rgba(16, 185, 129, 0.2)'
-                      : stats.subscriptionPlan === 'startup'
-                      ? '0 2px 10px rgba(59, 130, 246, 0.2)'
-                      : '0 2px 10px rgba(100, 100, 100, 0.1)'
+                    color: 'var(--paras-gold)',
+                    textShadow: '0 2px 12px rgba(255, 193, 7, 0.28)'
                   }}
                 >
                   {showBalance ? stats.prcBalance.toFixed(2) : '••••••'}
                 </span>
-                <span className={`text-lg font-semibold ${
-                  stats.subscriptionPlan === 'elite' ? 'text-amber-500/80' :
-                  stats.subscriptionPlan === 'growth' ? 'text-emerald-500/80' :
-                  stats.subscriptionPlan === 'startup' ? 'text-blue-500/80' :
-                  'text-gray-500/80'
-                }`}>PRC</span>
+                <span className="text-lg font-semibold" style={{ color: 'var(--paras-gold)', opacity: 0.85 }}>PRC</span>
               </div>
             </div>
 
             {/* Bottom Row - Card Holder & Mining Speed */}
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">CARD HOLDER</p>
-                <p className="text-white text-sm font-semibold tracking-wide uppercase truncate max-w-[180px]">
+                <p className="text-[color:var(--paras-text-mute)] text-[8px] tracking-widest mb-0.5">CARD HOLDER</p>
+                <p className="text-paras text-sm font-semibold tracking-wide uppercase truncate max-w-[180px]">
                   {userData?.name || user?.email?.split('@')[0] || 'USER'}
                 </p>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-1 justify-end">
-                  <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">REWARD RATE</p>
+                  <p className="text-[color:var(--paras-text-mute)] text-[8px] tracking-widest mb-0.5">REWARD RATE</p>
                 </div>
-                <p className={`text-sm font-bold flex items-center gap-1 ${
-                  stats.subscriptionPlan === 'elite' ? 
-                    'text-emerald-400' :
-                  'text-gray-500'
-                }`}>
+                <p className="text-sm font-bold flex items-center gap-1" style={{ color: 'var(--paras-mint)' }}>
                   {stats.subscriptionPlan === 'elite' || stats.subscriptionPlan === 'growth' || stats.subscriptionPlan === 'vip' ? 
                     (userData?.subscription_payment_type === 'prc' ? '100%' : <>100% + 30%<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 ml-0.5 inline-block" fill="none"><path d="M7 8C7 5.5 8.5 3 12 3C15.5 3 17 5.5 17 8" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/><path d="M5.5 8C4.5 8 3 8.5 3 10.5C3 12 4 12.5 5 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/><path d="M18.5 8C19.5 8 21 8.5 21 10.5C21 12 20 12.5 19 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/><path d="M5 12.5L7 21H17L19 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="10" cy="8" r="1.5" fill="#fbbf24"/><circle cx="14" cy="8" r="1.5" fill="#fbbf24"/><circle cx="12" cy="6.5" r="1.2" fill="#fbbf24"/></svg></>) : 
                     '0%'}
@@ -967,29 +944,32 @@ const DashboardModern = ({ user, onLogout }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.12 }}
           onClick={() => navigate('/pay-partner-store')}
-          className="w-full rounded-xl p-4 relative overflow-hidden text-left"
+          className="w-full rounded-xl p-4 relative overflow-hidden text-left backdrop-blur-xl"
           style={{
-            background: 'linear-gradient(135deg, #064e3b 0%, #10b981 50%, #34d399 100%)',
-            border: '1px solid rgba(52, 211, 153, 0.4)',
-            boxShadow: '0 8px 25px -5px rgba(16, 185, 129, 0.30)'
+            // Sophisticated dark emerald glassmorphism — muted, not neon.
+            background: 'linear-gradient(135deg, rgba(6,78,59,0.85) 0%, rgba(6,95,70,0.72) 50%, rgba(6,78,59,0.85) 100%)',
+            border: '1px solid rgba(46, 196, 182, 0.35)',
+            boxShadow: '0 8px 25px -6px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(46, 196, 182, 0.08)'
           }}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          {/* Ambient glass sheen */}
+          <div className="absolute inset-0 pointer-events-none opacity-40" style={{ background: 'radial-gradient(circle at 20% 0%, rgba(46,196,182,0.14), transparent 55%)' }} />
+          <div className="relative flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(46, 196, 182, 0.18)', border: '1px solid rgba(46, 196, 182, 0.35)' }}>
+              <svg className="w-5 h-5" style={{ color: 'var(--paras-mint)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="text-white font-bold text-sm">Pay to Partner Store</p>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/20 text-white">NEW</span>
+                <p className="text-paras font-bold text-sm">Pay to Partner Store</p>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,193,7,0.18)', color: 'var(--paras-gold)', border: '1px solid var(--paras-gold-border)' }}>NEW</span>
               </div>
-              <p className="text-emerald-100 text-[11px] mt-0.5 truncate">
+              <p className="text-paras-mute text-[11px] mt-0.5 truncate">
                 Use PRC at verified local shops via mobile or Store ID
               </p>
             </div>
-            <svg className="w-4 h-4 text-white opacity-80" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 opacity-80" style={{ color: 'var(--paras-mint)' }} fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
             </svg>
           </div>
@@ -1003,65 +983,64 @@ const DashboardModern = ({ user, onLogout }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="rounded-xl p-4 cursor-pointer overflow-hidden relative"
+            className="rounded-xl p-4 cursor-pointer overflow-hidden relative bg-paras-card border shadow-paras-card"
             style={{
-              background: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 40%, #a855f7 70%, #c084fc 100%)',
-              border: '1px solid rgba(192, 132, 252, 0.4)',
-              boxShadow: '0 8px 25px -5px rgba(124, 58, 237, 0.25)'
+              borderColor: 'var(--paras-gold-border)',
             }}
             onClick={() => navigate('/bank-redeem')}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
-                  <Building2 className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255,193,7,0.12)', border: '1px solid var(--paras-gold-border)' }}>
+                  <Building2 className="w-4 h-4" style={{ color: 'var(--paras-gold)' }} />
                 </div>
-                <span className="text-white font-semibold text-sm">Redeem Limit</span>
+                <span className="text-paras font-semibold text-sm">Redeem Limit</span>
               </div>
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-400/20 text-amber-300">
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,193,7,0.14)', color: 'var(--paras-gold)', border: '1px solid var(--paras-gold-border)' }}>
                 {(redeemLimit.unlock_percent || 0).toFixed(2)}% Unlocked
               </span>
             </div>
 
-            {/* Progress bar - unlocked vs remaining */}
+            {/* Progress bar — silver-grey track + electric gold fill */}
             <div className="mb-1">
-              <div className="w-full h-2 bg-purple-900/50 rounded-full overflow-hidden">
+              <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--paras-slate-track)' }}>
                 <div 
                   className="h-full rounded-full transition-all duration-500"
                   style={{ 
                     width: `${Math.min(100, Math.max(0, redeemLimit.unlock_percent || 0))}%`,
-                    background: 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                    background: 'linear-gradient(90deg, #FFD54F, #FFC107 60%, #C9971A)',
+                    boxShadow: '0 0 10px rgba(255,193,7,0.55)'
                   }}
                 />
               </div>
               <div className="flex justify-between mt-0.5">
-                <span className="text-white/40 text-[9px]">0%</span>
-                <span className="text-white/40 text-[9px]">100% max</span>
+                <span className="text-paras-mute text-[9px]">0%</span>
+                <span className="text-paras-mute text-[9px]">100% max</span>
               </div>
             </div>
 
             {/* Values - row layout like screenshot */}
             <div className="space-y-2 mt-2">
               <div className="flex items-center justify-between">
-                <span className="text-white/70 text-xs uppercase tracking-wider">Total Limit</span>
+                <span className="text-paras-mute text-xs uppercase tracking-wider">Total Limit</span>
                 <div className="text-right">
-                  <span className="text-white text-sm font-bold">{Number(redeemLimit.total_limit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRC</span>
-                  <span className="text-white/40 text-[10px] ml-1.5">₹{(Number(redeemLimit.total_limit || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  <span className="text-paras text-sm font-bold">{Number(redeemLimit.total_limit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRC</span>
+                  <span className="text-paras-mute text-[10px] ml-1.5">₹{(Number(redeemLimit.total_limit || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </div>
               </div>
               <div className="flex items-center justify-between cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/usage-history'); }}>
-                <span className="text-white/70 text-xs uppercase tracking-wider">Used</span>
+                <span className="text-paras-mute text-xs uppercase tracking-wider">Used</span>
                 <div className="text-right">
-                  <span className="text-amber-300 text-sm font-bold">- {Number(redeemLimit.total_redeemed || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRC</span>
-                  <span className="text-white/40 text-[10px] ml-1.5">₹{(Number(redeemLimit.total_redeemed || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  <span className="text-sm font-bold" style={{ color: 'var(--paras-gold)' }}>- {Number(redeemLimit.total_redeemed || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRC</span>
+                  <span className="text-paras-mute text-[10px] ml-1.5">₹{(Number(redeemLimit.total_redeemed || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </div>
               </div>
-              <div className="border-t border-white/15 pt-2 flex items-center justify-between">
-                <span className="text-white font-bold text-xs uppercase tracking-wider">Remaining</span>
+              <div className="border-t pt-2 flex items-center justify-between" style={{ borderColor: 'var(--paras-slate-line)' }}>
+                <span className="text-paras font-bold text-xs uppercase tracking-wider">Remaining</span>
                 <div className="text-right">
-                  <span className="text-yellow-300 text-sm font-extrabold">{Number(redeemLimit.effective_available || redeemLimit.available || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} PRC</span>
-                  <span className="text-white/40 text-[10px] ml-1.5">₹{(Number(redeemLimit.effective_available || redeemLimit.available || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  <span className="text-sm font-extrabold" style={{ color: 'var(--paras-gold)' }}>{Number(redeemLimit.effective_available || redeemLimit.available || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} PRC</span>
+                  <span className="text-paras-mute text-[10px] ml-1.5">₹{(Number(redeemLimit.effective_available || redeemLimit.available || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </div>
               </div>
             </div>
@@ -1076,41 +1055,41 @@ const DashboardModern = ({ user, onLogout }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="rounded-xl p-4 bg-zinc-900/80 border border-zinc-700/50"
+            className="rounded-xl p-4 bg-paras-card border border-paras-card shadow-paras-card"
           >
             {/* Header */}
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-emerald-400" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(46,196,182,0.12)', border: '1px solid rgba(46,196,182,0.3)' }}>
+                <TrendingUp className="w-4 h-4" style={{ color: 'var(--paras-mint)' }} />
               </div>
-              <span className="text-white font-semibold text-sm" data-testid="perf-title">Performance Summary</span>
+              <span className="text-paras font-semibold text-sm" data-testid="perf-title">Performance Summary</span>
             </div>
 
             {/* Fields */}
             <div className="space-y-3">
               {/* Total Subscription Paid */}
               <div className="flex items-center justify-between" data-testid="perf-subscription-paid">
-                <span className="text-zinc-400 text-xs">Total Subscription Paid</span>
-                <span className="text-white text-sm font-bold">
+                <span className="text-paras-mute text-xs">Total Subscription Paid</span>
+                <span className="text-paras text-sm font-bold">
                   ₹{Number(performanceSummary.total_subscription_paid_inr || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
               </div>
 
               {/* Total Rewards Redeemed */}
               <div className="flex items-center justify-between" data-testid="perf-rewards-redeemed">
-                <span className="text-zinc-400 text-xs">Total Rewards Redeemed</span>
-                <span className="text-emerald-400 text-sm font-bold">
+                <span className="text-paras-mute text-xs">Total Rewards Redeemed</span>
+                <span className="text-sm font-bold" style={{ color: 'var(--paras-mint)' }}>
                   ₹{Number(performanceSummary.total_rewards_redeemed_inr || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
               </div>
 
               {/* Divider */}
-              <div className="border-t border-zinc-700/50" />
+              <div className="border-t" style={{ borderColor: 'var(--paras-slate-line)' }} />
 
               {/* Available PRC Balance */}
               <div className="flex items-center justify-between" data-testid="perf-prc-balance">
-                <span className="text-zinc-400 text-xs">Available PRC Balance</span>
-                <span className="text-amber-300 text-sm font-bold">
+                <span className="text-paras-mute text-xs">Available PRC Balance</span>
+                <span className="text-sm font-bold" style={{ color: 'var(--paras-gold)' }}>
                   {Number(performanceSummary.available_prc_balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })} PRC
                 </span>
               </div>
@@ -1124,16 +1103,16 @@ const DashboardModern = ({ user, onLogout }) => {
 
               {/* Estimated PRC Value */}
               <div className="flex items-center justify-between" data-testid="perf-estimated-value">
-                <span className="text-zinc-400 text-xs">Estimated Value</span>
-                <span className="text-white/80 text-sm font-medium">
+                <span className="text-paras-mute text-xs">Estimated Value</span>
+                <span className="text-paras text-sm font-medium">
                   ≈ ₹{Number(performanceSummary.estimated_prc_value_inr || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                  <span className="text-zinc-500 text-[9px] ml-1">(platform utility value)</span>
+                  <span className="text-paras-mute text-[9px] ml-1">(platform utility value)</span>
                 </span>
               </div>
             </div>
 
             {/* Legal Safety Text */}
-            <p className="text-zinc-500 text-[9px] mt-3 leading-relaxed text-center" data-testid="perf-legal-text">
+            <p className="text-paras-mute text-[9px] mt-3 leading-relaxed text-center opacity-70" data-testid="perf-legal-text">
               This is a performance-based reward summary. PRC is a digital reward and not a financial investment.
             </p>
           </motion.div>

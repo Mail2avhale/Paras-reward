@@ -1,12 +1,21 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Gift, User, MessageCircle, ShoppingBag } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
+// import { useLanguage } from '@/contexts/LanguageContext';
 
+/**
+ * BottomNav (Feb 27 2026 design refresh).
+ *
+ * Unified premium dark theme:
+ *  • Translucent obsidian background with a subtle top hairline in muted gold.
+ *  • Active tab: solid gold pill (icon + label), soft gold glow.
+ *  • Inactive tabs: soft silver-grey icon + label — no more competing colours.
+ *  • Home icon promoted to the sophisticated "filled" look (via strokeWidth 2.6).
+ *  • Bottom safe-area padding so gesture bars / notches don't crop the labels.
+ */
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useLanguage();
 
   const getActiveTab = () => {
     const path = location.pathname;
@@ -20,24 +29,31 @@ const BottomNav = () => {
 
   const activeTab = getActiveTab();
 
-  // Feb 20 2026 — Bottom nav label fix. Previously the /referrals tab was
-  // labelled "Community" which duplicated the /community (forum) tab and
-  // confused users. Renamed /referrals → "Refer & Earn" (Gift icon) so the
-  // two tabs are distinguishable at a glance. /community stays labelled
-  // "Community" (chat-bubble icon).
   const navItems = [
-    { id: 'home',      label: 'Home',         icon: Home,          route: '/dashboard', activeColor: 'from-amber-400 to-amber-600', textColor: 'text-amber-400',  glowColor: 'shadow-amber-500/30' },
-    { id: 'referrals', label: 'Refer & Earn', icon: Gift,          route: '/referrals', activeColor: 'from-cyan-400 to-blue-500',   textColor: 'text-cyan-400',   glowColor: 'shadow-cyan-500/30' },
-    { id: 'mall',      label: 'Mall',         icon: ShoppingBag,   route: '/mall',      activeColor: 'from-yellow-300 to-amber-500', textColor: 'text-yellow-300', glowColor: 'shadow-yellow-500/40' },
-    { id: 'community', label: 'Community',    icon: MessageCircle, route: '/community', activeColor: 'from-rose-400 to-pink-500',   textColor: 'text-rose-400',   glowColor: 'shadow-rose-500/30' },
-    { id: 'profile',   label: 'Profile',      icon: User,          route: '/profile',   activeColor: 'from-emerald-400 to-green-500', textColor: 'text-emerald-400', glowColor: 'shadow-emerald-500/30' },
+    { id: 'home',      label: 'Home',         icon: Home,          route: '/dashboard' },
+    { id: 'referrals', label: 'Refer & Earn', icon: Gift,          route: '/referrals' },
+    { id: 'mall',      label: 'Mall',         icon: ShoppingBag,   route: '/mall'      },
+    { id: 'community', label: 'Community',    icon: MessageCircle, route: '/community' },
+    { id: 'profile',   label: 'Profile',      icon: User,          route: '/profile'   },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40">
-      <div className="bg-gray-950/98 backdrop-blur-xl border-t border-gray-800/80">
+    <div className="fixed bottom-0 left-0 right-0 z-40" data-testid="bottom-nav">
+      <div
+        className="backdrop-blur-xl border-t"
+        style={{
+          backgroundColor: 'rgba(15, 17, 21, 0.92)',
+          borderTopColor: 'var(--paras-slate-line)',
+        }}
+      >
         <div className="max-w-md mx-auto">
-          <div className="flex items-center justify-around h-[68px] px-1">
+          <div
+            className="flex items-center justify-around px-1"
+            style={{
+              height: 'calc(68px + env(safe-area-inset-bottom, 0px))',
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
+          >
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -47,33 +63,53 @@ const BottomNav = () => {
                   key={item.id}
                   data-testid={`nav-${item.id}`}
                   onClick={() => navigate(item.route)}
-                  className="flex flex-col items-center justify-center flex-1 py-1.5 relative"
+                  className="flex flex-col items-center justify-center flex-1 py-1.5 relative outline-none"
+                  aria-label={item.label}
+                  aria-current={isActive ? 'page' : undefined}
                 >
-                  {/* Active indicator line */}
+                  {/* Active gold hairline at top */}
                   {isActive && (
-                    <div className={`absolute -top-[1px] w-8 h-[3px] rounded-full bg-gradient-to-r ${item.activeColor}`} />
+                    <span
+                      className="absolute -top-px w-8 h-[3px] rounded-full"
+                      style={{
+                        background:
+                          'linear-gradient(90deg, #FFD54F 0%, #FFC107 50%, #C9971A 100%)',
+                        boxShadow: '0 0 12px rgba(255, 193, 7, 0.55)',
+                      }}
+                    />
                   )}
 
-                  {/* Icon container */}
-                  <div className={`relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-300 ${
-                    isActive
-                      ? `bg-gradient-to-br ${item.activeColor} shadow-lg ${item.glowColor}`
-                      : 'bg-transparent'
-                  }`}>
+                  {/* Icon pill */}
+                  <div
+                    className="relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-300"
+                    style={{
+                      backgroundColor: isActive ? 'rgba(255, 193, 7, 0.14)' : 'transparent',
+                      boxShadow: isActive
+                        ? '0 0 18px -4px rgba(255, 193, 7, 0.55), inset 0 0 0 1px rgba(255, 193, 7, 0.35)'
+                        : 'none',
+                    }}
+                  >
                     <Icon
-                      className={`transition-all duration-300 ${
-                        isActive
-                          ? 'h-5 w-5 text-white'
-                          : 'h-[22px] w-[22px] text-gray-500'
-                      }`}
-                      strokeWidth={isActive ? 2.5 : 1.8}
+                      className="transition-colors duration-300"
+                      style={{
+                        color: isActive ? 'var(--paras-gold)' : 'var(--paras-text-mute)',
+                        width: 22,
+                        height: 22,
+                      }}
+                      strokeWidth={isActive ? 2.6 : 1.9}
+                      // Home always uses the sophisticated filled look
+                      fill={item.id === 'home' && isActive ? 'currentColor' : 'none'}
                     />
                   </div>
 
                   {/* Label */}
-                  <span className={`text-[10px] mt-0.5 font-medium transition-all duration-300 ${
-                    isActive ? `${item.textColor} font-bold` : 'text-gray-600'
-                  }`}>
+                  <span
+                    className="text-[10px] mt-0.5 tracking-wide transition-colors duration-300"
+                    style={{
+                      color: isActive ? 'var(--paras-gold)' : 'var(--paras-text-mute)',
+                      fontWeight: isActive ? 700 : 500,
+                    }}
+                  >
                     {item.label}
                   </span>
                 </button>
