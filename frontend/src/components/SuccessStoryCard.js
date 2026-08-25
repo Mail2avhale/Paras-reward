@@ -69,12 +69,18 @@ const REACTIONS = [
  */
 const SuccessStoryCard = ({ post, currentUserId, onClick }) => {
   const meta = post.metadata || {};
-  const theme = SERVICE_THEME[meta.service_type] || SERVICE_THEME.mobile_recharge;
-  const isSubscription = meta.service_type === 'subscription';
-  const isSaleElite = meta.service_type === 'sale_elite_subscription';
-  const isSaleEliteReceived = meta.service_type === 'sale_elite_received';
-  const isParasMall = meta.service_type === 'paras_mall';
-  const isServiceCharge = meta.service_type === 'service_charge';
+  // Safety net: any post whose ref_id came from the 20% redemption service
+  // charge flow (backend hooks in redemption_service_charge.py) is always
+  // a "Redemption Complete" celebration — even if the stored service_type
+  // was accidentally set to something else by a legacy code path. Feb 27 2026.
+  const isServiceChargeByRef = typeof meta.ref_id === 'string' && meta.ref_id.startsWith('svc-charge:');
+  const effectiveServiceType = isServiceChargeByRef ? 'service_charge' : meta.service_type;
+  const theme = SERVICE_THEME[effectiveServiceType] || SERVICE_THEME.mobile_recharge;
+  const isSubscription = effectiveServiceType === 'subscription';
+  const isSaleElite = effectiveServiceType === 'sale_elite_subscription';
+  const isSaleEliteReceived = effectiveServiceType === 'sale_elite_received';
+  const isParasMall = effectiveServiceType === 'paras_mall';
+  const isServiceCharge = effectiveServiceType === 'service_charge';
   const planName = (meta.plan_name || '').trim();
   let chipLabel = theme.label;
   if (isSubscription && planName) chipLabel = `${theme.label} • ${planName}`;

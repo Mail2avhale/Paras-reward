@@ -751,6 +751,32 @@ async def admin_reverse_charge(data: ReversalRequest,
     return {"success": True}
 
 
+@router.post("/admin/redemption-service-charge/fix-community-tags")
+async def admin_fix_community_tags(
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+):
+    """One-shot migration: force `metadata.service_type = "service_charge"`
+    on every community post whose `metadata.ref_id` starts with
+    `svc-charge:`. Fixes posts that were created before the frontend
+    theme knew about the service_charge type, so they render with the
+    proper 💎 Redemption Complete chip instead of the mobile_recharge
+    fallback.
+    """
+    expected = os.environ.get("ADMIN_OPERATION_PIN", "")
+    if not expected or x_admin_pin != expected:
+        raise HTTPException(status_code=403, detail="Invalid admin operation PIN")
+    r = await db.community_posts.update_many(
+        {"metadata.ref_id": {"$regex": "^svc-charge:"},
+         "metadata.service_type": {"$ne": "service_charge"}},
+        {"$set": {
+            "metadata.service_type": "service_charge",
+            "metadata.service_label": "Service Charge",
+            "metadata.service_icon": "💎",
+        }},
+    )
+    return {"success": True, "posts_migrated": r.modified_count}
+
+
 @router.get("/admin/redemption-service-charge/revenue-report")
 async def admin_revenue_report(days: int = 30):
     """Daily revenue timeseries for admin dashboard reporting (Phase 3)."""
