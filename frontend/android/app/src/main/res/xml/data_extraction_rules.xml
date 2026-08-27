@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Data Extraction Rules for Android 12+ (API 31+).
+    See: https://developer.android.com/guide/topics/data/autobackup#XMLSyntax
+         https://developer.android.com/about/versions/12/backup-restore
+
+    Cloud Backup (Google Drive) uses <cloud-backup> and Device-to-Device
+    (Quick Start, Nearby Share transfer) uses <device-transfer>. They can
+    have DIFFERENT rules. Aug 2026 Google Play "Secure Onboarding & Device
+    Migration" quality requirement — apps MUST provide this file when
+    targetSdkVersion >= 31 to spell out exactly what moves across devices
+    during Google's new Quick Start / Cross-device Restore flow.
+
+    Rule of thumb for Paras Reward:
+      • Cloud Backup (Drive)      → keep only cosmetic prefs. Never
+                                    tokens (Drive backups are old and can
+                                    replay stale credentials).
+      • Device Transfer (D→D)     → same aggressive exclude list. If the
+                                    user is moving to a new phone, they
+                                    should re-login on the new phone —
+                                    Device Binding requires it anyway
+                                    (see device_binding.py retro-scan).
+
+    Anything not listed below inherits Android's default behaviour, which
+    for us means the include list ONLY (nothing else moves).
+-->
+<data-extraction-rules>
+
+    <!-- ─────────  1. Google Drive cloud backup rules  ───────── -->
+    <cloud-backup>
+        <!-- What CAN move via Drive backup -->
+        <include domain="sharedpref" path="ui_prefs.xml" />
+        <include domain="sharedpref" path="language.xml" />
+        <include domain="sharedpref" path="onboarding_state.xml" />
+
+        <!-- What must NEVER move via Drive backup -->
+        <exclude domain="sharedpref" path="auth_tokens.xml" />
+        <exclude domain="sharedpref" path="auth_prefs.xml" />
+        <exclude domain="sharedpref" path="jwt_store.xml" />
+        <exclude domain="sharedpref" path="session.xml" />
+        <exclude domain="sharedpref" path="device_binding.xml" />
+        <exclude domain="sharedpref" path="razorpay.xml" />
+        <exclude domain="sharedpref" path="biometric.xml" />
+        <exclude domain="sharedpref" path="CapacitorStorage.xml" />
+        <exclude domain="file" path="secure/" />
+        <exclude domain="file" path="tokens/" />
+        <exclude domain="file" path="session/" />
+        <exclude domain="file" path="app_webview/" />
+        <exclude domain="database" path="webview.db" />
+        <exclude domain="database" path="webviewCookiesChromium.db" />
+    </cloud-backup>
+
+    <!-- ─────────  2. Device → Device transfer rules (Quick Start)  ───────── -->
+    <device-transfer>
+        <!-- Only cosmetic prefs cross the D→D wire. Everything auth
+             related is deliberately re-fetched via login on the new
+             device so Device Binding audit trail stays consistent. -->
+        <include domain="sharedpref" path="ui_prefs.xml" />
+        <include domain="sharedpref" path="language.xml" />
+        <include domain="sharedpref" path="onboarding_state.xml" />
+
+        <exclude domain="sharedpref" path="auth_tokens.xml" />
+        <exclude domain="sharedpref" path="auth_prefs.xml" />
+        <exclude domain="sharedpref" path="jwt_store.xml" />
+        <exclude domain="sharedpref" path="session.xml" />
+        <exclude domain="sharedpref" path="device_binding.xml" />
+        <exclude domain="sharedpref" path="razorpay.xml" />
+        <exclude domain="sharedpref" path="biometric.xml" />
+        <exclude domain="sharedpref" path="CapacitorStorage.xml" />
+        <exclude domain="file" path="secure/" />
+        <exclude domain="file" path="tokens/" />
+        <exclude domain="file" path="session/" />
+        <exclude domain="file" path="app_webview/" />
+        <exclude domain="database" path="webview.db" />
+        <exclude domain="database" path="webviewCookiesChromium.db" />
+    </device-transfer>
+
+</data-extraction-rules>

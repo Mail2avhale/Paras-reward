@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Auto Backup rules (Android 6.0 - Android 11).
+    See: https://developer.android.com/guide/topics/data/autobackup
+
+    Aug 2026 Google Play "App Quality — Secure Onboarding" requirement:
+    apps that use hardware-bound Keystore secrets or FIDO/biometric material
+    MUST explicitly exclude them from Auto Backup. If we let the platform
+    silently copy those files across a device transfer, the new device's
+    Keystore can't unwrap them and the app crashes / fails to log in on the
+    first launch after migration.
+
+    Rule of thumb for this app:
+      • EXCLUDE anything that identifies THIS user session or device
+        (JWT tokens, Razorpay device_id, biometric hashes, Emergent
+        session_id cookies, Capacitor Preferences shard for auth).
+      • INCLUDE ONLY non-sensitive preferences (theme, language,
+        onboarding tour flags) — everything else the user can restore
+        by re-logging in.
+
+    Anything not covered by an explicit include/exclude falls back to the
+    Android default (included). We use domain="root" excludes below to
+    aggressively protect sensitive files.
+-->
+<full-backup-content>
+    <!-- Explicit ALLOW: cosmetic prefs the user won't want to reconfigure -->
+    <include domain="sharedpref" path="ui_prefs.xml" />
+    <include domain="sharedpref" path="language.xml" />
+    <include domain="sharedpref" path="onboarding_state.xml" />
+
+    <!-- Explicit DENY: auth/token/session material — must never move devices -->
+    <exclude domain="sharedpref" path="auth_tokens.xml" />
+    <exclude domain="sharedpref" path="auth_prefs.xml" />
+    <exclude domain="sharedpref" path="jwt_store.xml" />
+    <exclude domain="sharedpref" path="session.xml" />
+    <exclude domain="sharedpref" path="device_binding.xml" />
+    <exclude domain="sharedpref" path="razorpay.xml" />
+    <exclude domain="sharedpref" path="biometric.xml" />
+    <exclude domain="sharedpref" path="CapacitorStorage.xml" />
+
+    <!-- Deny all files under our internal auth folder -->
+    <exclude domain="file" path="secure/" />
+    <exclude domain="file" path="tokens/" />
+    <exclude domain="file" path="session/" />
+
+    <!-- Never copy the WebView cookie jar (contains Razorpay + session cookies) -->
+    <exclude domain="file" path="app_webview/" />
+    <exclude domain="database" path="webview.db" />
+    <exclude domain="database" path="webviewCookiesChromium.db" />
+</full-backup-content>

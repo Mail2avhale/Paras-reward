@@ -307,8 +307,25 @@ android {
         //     - App Open cold-start timeout 4s → 6s so slow-network
         //       requests actually get a chance to render.
         //     - Expected: show rate 46% → 80%+, requests drop ~40%.
-        versionCode 49
-        versionName "1.4.9"
+        // versionCode 49 → 50 — Feb 27, 2026 — v1.5.0 (Play compliance)
+        //     - Google Play "App Quality Aug 2026" gating requirements
+        //       audit + fixes:
+        //         ✔ targetSdk 36 (Android 16) — already in variables.gradle
+        //         ✔ APK Signature Scheme v2 + v3 — already enabled
+        //         ✔ android:exported on every activity — already present
+        //         ✔ NEW backup_content.xml — excludes JWT/session/WebView
+        //           cookies from Auto Backup so hardware-bound Keystore
+        //           secrets don't get copied to a new device.
+        //         ✔ NEW data_extraction_rules.xml — same aggressive
+        //           exclude list for D→D transfer (Quick Start) and
+        //           cloud backup (Google Drive) — required on Android 12+
+        //           for the new "Secure Onboarding & Device Migration"
+        //           quality bar.
+        //         ✔ Dashboard theme refresh — premium obsidian + gold.
+        //     - Also: MyServiceCharges community post now fires 💎
+        //       "Redemption Complete" card (ref_id-based safety net).
+        versionCode 50
+        versionName "1.5.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
