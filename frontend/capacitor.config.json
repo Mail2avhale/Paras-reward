@@ -8,7 +8,7 @@
   },
   "android": {
     "allowMixedContent": false,
-    "appendUserAgent": "ParasRewardApp/1.5.0 Mobile",
+    "appendUserAgent": "ParasRewardApp/1.5.1 Mobile",
     "buildOptions": {
       "keystorePath": "keystores/paras-reward.keystore",
       "keystoreAlias": "paras-reward",

@@ -324,8 +324,25 @@ android {
         //         ✔ Dashboard theme refresh — premium obsidian + gold.
         //     - Also: MyServiceCharges community post now fires 💎
         //       "Redemption Complete" card (ref_id-based safety net).
-        versionCode 50
-        versionName "1.5.0"
+        // versionCode 50 → 51 — Sep 1, 2026 — v1.5.1 (Payment reconcile)
+        //     - CRITICAL user-facing bug: users paid 20% service charge
+        //       via Razorpay UPI (money deducted, GPay showed Completed,
+        //       Paras Reward Technologies received the funds) but the
+        //       dashboard still displayed "Service Fee Pending" forever.
+        //     - Root cause: verify-payment relied only on the client
+        //       Razorpay handler callback, which never fired if the
+        //       WebView closed / network dropped right after payment.
+        //     - Fix (backend): server-to-server reconcile against the
+        //       Razorpay orders API. New _reconcile_charge_from_razorpay
+        //       helper called from has_pending_service_charge so every
+        //       /pending poll silently self-heals, plus explicit public
+        //       /reconcile/{charge_id} + /reconcile-user/{user_id} and
+        //       admin sweep endpoints for the stuck long-tail.
+        //     - Fix (frontend): pending-banner load fires reconcile-user
+        //       before reading /pending so the banner disappears on the
+        //       next screen open with zero user action.
+        versionCode 51
+        versionName "1.5.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

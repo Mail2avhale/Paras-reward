@@ -18,6 +18,13 @@ const ServiceChargePendingBanner = ({ user }) => {
   const load = useCallback(async () => {
     if (!user?.uid) return;
     try {
+      // Sep 1 2026 self-heal: before checking pending state, ask the
+      // backend to reconcile every PENDING charge for this user against
+      // Razorpay's live API. Fixes the case where Razorpay collected
+      // the money but the app never saw the client-side handler
+      // callback (WebView closed, network drop, etc.). Fire-and-forget
+      // — if it succeeds, the /pending call below returns "no pending".
+      axios.post(`${API}/redemption-service-charge/reconcile-user/${user.uid}`).catch(() => {});
       const { data } = await axios.get(`${API}/redemption-service-charge/pending/${user.uid}`);
       setCharge(data.has_pending ? data.charge : null);
     } catch { /* silent */ }

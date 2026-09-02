@@ -26,6 +26,7 @@ import uuid
 import hmac
 import hashlib
 import logging
+import razorpay
 from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Header
@@ -120,12 +121,127 @@ async def _audit(charge_id: str, action: str, old_status: str, new_status: str,
 # CORE HELPERS (called from redemption success paths)
 # ============================================================================
 
+async def _reconcile_charge_from_razorpay(charge_id: str) -> Optional[dict]:
+    """Server-to-server reconcile against Razorpay's live API.
+
+    Motivation (Sep 1 2026): Multiple users reported paying via Razorpay
+    UPI (money DEDUCTED, GPay screen showing "Completed", Paras Reward
+    Technologies received the funds) but the app dashboard still shows
+    "Service Fee Pending". Root cause: client-side `handler` callback
+    from Razorpay Checkout is racy — if the WebView is closed, the phone
+    loses network, or the app crashes right after payment success, the
+    `/verify-payment` call never fires and the charge stays PENDING
+    forever even though Razorpay has already captured the money.
+
+    Fix: When a charge is PENDING and has a `payment_order_id`, we ask
+    Razorpay directly whether any captured payment exists on that order.
+    If yes → we mark the charge PAID with the exact same side effects
+    as the normal verify-payment path (audit + community post + notif).
+
+    Idempotent — a PAID charge is returned as-is; a race between two
+    concurrent reconciles is resolved by the atomic PENDING→PAID update.
+    Returns the up-to-date charge doc, or None if not found.
+    """
+    charge = await db.redemption_service_charges.find_one({"charge_id": charge_id})
+    if not charge:
+        return None
+    if charge.get("status") == "PAID":
+        return {k: v for k, v in charge.items() if k != "_id"}
+    order_id = charge.get("payment_order_id")
+    if not order_id or charge.get("status") != "PENDING":
+        return {k: v for k, v in charge.items() if k != "_id"}
+
+    key_id = os.environ.get("RAZORPAY_KEY_ID", "").strip()
+    key_secret = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
+    if not key_id or not key_secret:
+        logger.warning("[SVC-CHG reconcile] Razorpay creds missing — skipping reconcile for %s", charge_id)
+        return {k: v for k, v in charge.items() if k != "_id"}
+
+    try:
+        # Razorpay Python SDK is sync; run in threadpool to avoid blocking asyncio
+        import asyncio as _asyncio
+        def _fetch_payments():
+            client = razorpay.Client(auth=(key_id, key_secret))
+            return client.order.payments(order_id)
+        result = await _asyncio.to_thread(_fetch_payments)
+        payments = (result or {}).get("items", []) if isinstance(result, dict) else []
+    except Exception as e:
+        logger.warning(f"[SVC-CHG reconcile] Razorpay API failed for {charge_id}/{order_id}: {e}")
+        return {k: v for k, v in charge.items() if k != "_id"}
+
+    captured = next((p for p in payments if p.get("status") == "captured"), None)
+    if not captured:
+        return {k: v for k, v in charge.items() if k != "_id"}
+
+    payment_id = captured.get("id")
+    now_iso = datetime.now(timezone.utc).isoformat()
+    r = await db.redemption_service_charges.update_one(
+        {"charge_id": charge_id, "status": "PENDING"},
+        {"$set": {
+            "status": "PAID",
+            "payment_id": payment_id,
+            "paid_at": now_iso,
+            "updated_at": now_iso,
+            "reconciled_from_razorpay": True,
+        }},
+    )
+    if r.modified_count:
+        await _audit(charge_id, "reconciled_paid", "PENDING", "PAID", charge["user_id"],
+                     meta={"payment_id": payment_id, "order_id": order_id,
+                           "source": "razorpay_api_reconcile"})
+        logger.info(f"[SVC-CHG reconcile] Self-healed {charge_id} → PAID via {payment_id}")
+        # Fire the community post + user notification exactly like verify_payment
+        try:
+            import asyncio as _asyncio
+            from routes.community import create_success_story_post
+            redemption_note = _redemption_type_label(charge.get("redemption_id"))
+            _asyncio.create_task(create_success_story_post(
+                user_id=charge["user_id"], service_type="service_charge",
+                amount_inr=float(charge.get("total_payable") or 0),
+                ref_id=f"svc-charge:{charge_id}", extra_title=redemption_note,
+            ))
+        except Exception as _e:
+            logger.warning(f"[SVC-CHG reconcile] community post failed (non-fatal): {_e}")
+        try:
+            await db.notifications.insert_one({
+                "notification_id": str(uuid.uuid4()).replace("-", ""),
+                "user_id": charge["user_id"], "user_uid": charge["user_id"],
+                "type": "redemption_service_charge_reconciled",
+                "title": "✅ Service Charge Payment Confirmed",
+                "message": (
+                    f"Your ₹{charge['total_payable']} service charge payment was "
+                    f"confirmed with Razorpay. Redemption is now unlocked."
+                ),
+                "action_url": "/my-service-charges",
+                "created_at": now_iso, "read": False, "is_read": False,
+                "charge_id": charge_id,
+            })
+        except Exception:
+            pass
+    return await db.redemption_service_charges.find_one({"charge_id": charge_id}, {"_id": 0})
+
+
 async def has_pending_service_charge(user_id: str) -> Optional[dict]:
-    """Returns the pending charge doc if user has one, else None."""
-    return await db.redemption_service_charges.find_one(
+    """Returns the pending charge doc if user has one, else None.
+
+    Sep 1 2026: BEFORE returning "yes, still pending", we opportunistically
+    reconcile any PENDING charge that already has a Razorpay order_id — so a
+    user who paid successfully but never saw the app confirm it will simply
+    open their dashboard and watch the pending banner disappear automatically.
+    """
+    row = await db.redemption_service_charges.find_one(
         {"user_id": user_id, "status": "PENDING"},
         {"_id": 0},
     )
+    if not row:
+        return None
+    # Only attempt reconcile if a Razorpay order was already created for
+    # this charge (i.e. user reached the checkout flow at least once).
+    if row.get("payment_order_id"):
+        healed = await _reconcile_charge_from_razorpay(row["charge_id"])
+        if healed and healed.get("status") == "PAID":
+            return None
+    return row
 
 
 async def create_service_charge_on_success(
@@ -258,6 +374,78 @@ async def user_history(user_id: str, limit: int = 100):
         elif r["status"] == "PAID":
             totals["paid"] += r["total_payable"]
     return {"charges": rows, "totals": {k: round(v, 2) for k, v in totals.items()}}
+
+
+@router.post("/redemption-service-charge/reconcile/{charge_id}")
+async def reconcile_charge_public(charge_id: str):
+    """User-triggered reconcile — for the rare user who paid on Razorpay
+    but the app never marked their charge as PAID. Safe to call any
+    number of times (idempotent). Frontend calls this from the "Details"
+    button on the Service Fee Pending banner and after any bulk-pay
+    checkout so long-tail races self-heal on the next screen open.
+    """
+    fresh = await _reconcile_charge_from_razorpay(charge_id)
+    if not fresh:
+        raise HTTPException(status_code=404, detail="Charge not found")
+    return {"success": True, "charge": fresh, "reconciled": fresh.get("status") == "PAID"}
+
+
+@router.post("/redemption-service-charge/reconcile-user/{user_id}")
+async def reconcile_charges_for_user(user_id: str):
+    """Reconcile every PENDING charge for a single user against Razorpay
+    in one call. Frontend fires this from the dashboard/service-charges
+    page load so users who paid multiple charges in one Razorpay session
+    but never got the client-side handler callback see everything clear
+    up on the next screen open.
+    """
+    rows = await db.redemption_service_charges.find(
+        {"user_id": user_id, "status": "PENDING",
+         "payment_order_id": {"$exists": True, "$ne": None}},
+        {"charge_id": 1, "_id": 0},
+    ).to_list(50)
+    healed = 0
+    for row in rows:
+        try:
+            r = await _reconcile_charge_from_razorpay(row["charge_id"])
+            if r and r.get("status") == "PAID":
+                healed += 1
+        except Exception as e:
+            logger.warning(f"[SVC-CHG bulk-reconcile] {row.get('charge_id')} failed: {e}")
+    return {"success": True, "checked": len(rows), "healed": healed}
+
+
+@router.post("/admin/redemption-service-charge/sweep-reconcile")
+async def admin_sweep_reconcile(
+    x_admin_pin: str = Header(..., alias="X-Admin-Pin"),
+    max_age_minutes: int = 10,
+    limit: int = 500,
+):
+    """Admin sweep — reconcile ALL PENDING service charges older than
+    `max_age_minutes` against Razorpay. Runs on-demand from the admin
+    panel or by scheduled cron. Requires the operation PIN.
+    """
+    expected = os.environ.get("ADMIN_OPERATION_PIN", "")
+    if not expected or x_admin_pin != expected:
+        raise HTTPException(status_code=403, detail="Invalid admin operation PIN")
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=max_age_minutes)).isoformat()
+    rows = await db.redemption_service_charges.find(
+        {"status": "PENDING",
+         "payment_order_id": {"$exists": True, "$ne": None},
+         "created_at": {"$lte": cutoff}},
+        {"charge_id": 1, "_id": 0},
+    ).sort("created_at", 1).to_list(limit)
+    healed, checked, errors = 0, 0, 0
+    for row in rows:
+        checked += 1
+        try:
+            r = await _reconcile_charge_from_razorpay(row["charge_id"])
+            if r and r.get("status") == "PAID":
+                healed += 1
+        except Exception:
+            errors += 1
+    logger.info(f"[SVC-CHG admin-sweep] checked={checked} healed={healed} errors={errors}")
+    return {"success": True, "checked": checked, "healed": healed, "errors": errors}
 
 
 class CreatePaymentRequest(BaseModel):
