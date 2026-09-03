@@ -1,13 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.parasreward.prc",
       "sha256_cert_fingerprints": [
-        "06:E8:37:C5:18:88:CA:B2:DB:A8:19:EA:2E:17:E9:79:1E:F9:11:DC:17:2F:AE:B0:DF:3C:0D:01:98:C4:6D:D8"
+        "06:44:A2:F7:98:5F:D6:02:E9:EE:47:E7:61:9F:22:BD:CE:B9:89:BB:62:91:E3:E1:BD:87:52:21:B5:35:60:6E"
       ]
     }
   }
 ]
-
