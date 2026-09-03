@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
-import { Package, Plus, Edit, Trash2, CheckCircle, Truck, RefreshCw, X, Save, Upload, Image as ImageIcon, Coins, Sparkles, Wand2, Loader2, Star, Copy, MapPin, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, CheckCircle, Truck, RefreshCw, X, Save, Upload, Image as ImageIcon, Coins, Sparkles, Wand2, Loader2, Star, Copy, MapPin, AlertTriangle, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -87,6 +87,38 @@ const AdminParasMall = () => {
   const [bookingsPage, setBookingsPage] = useState(1);
   useEffect(() => { setBookingsPage(1); }, [bookingsTab]);
 
+  // Global search query — filters bookings and products across every
+  // human-facing field the admin might remember (user name, mobile,
+  // email, product name, booking ID, delivery address, city, PIN, etc.)
+  // A single input works for both tabs. Case-insensitive substring match
+  // fires from the very first character typed. Empty string = no filter.
+  const [searchQuery, setSearchQuery] = useState('');
+  const q = searchQuery.trim().toLowerCase();
+  const _matchesBooking = (b) => {
+    if (!q) return true;
+    const d = b.delivery || {};
+    const hay = [
+      b.user_name, b.user_mobile, b.user_email, b.user_id,
+      b.product_name, b.product_id, b.booking_id,
+      b.status,
+      d.name, d.mobile, d.address_line, d.landmark,
+      d.city, d.state, d.pin_code,
+    ].filter(Boolean).map(String).join(' ').toLowerCase();
+    return hay.includes(q);
+  };
+  const _matchesProduct = (p) => {
+    if (!q) return true;
+    const hay = [
+      p.product_name, p.product_id, p.category,
+      p.description, p.tagline,
+      p.status,
+    ].filter(Boolean).map(String).join(' ').toLowerCase();
+    return hay.includes(q);
+  };
+  // Reset paginators when the search query changes so the first hit is
+  // always visible.
+  useEffect(() => { setBookingsPage(1); setProductsPage(1); }, [q]);
+
   // Derived booking lists
   // Feb 23 2026 — Pending Delivery is a FIFO queue: oldest fulfilled_at
   // first so admins dispatch in the order bookings became eligible.
@@ -94,21 +126,25 @@ const AdminParasMall = () => {
   const _fifoSortKey = (b) => b.fulfilled_at || b.created_at || '';
   const pendingDeliveryBookings = bookings
     .filter((b) => b.status === 'fulfilled')
+    .filter(_matchesBooking)
     .sort((a, b) => (_fifoSortKey(a) < _fifoSortKey(b) ? -1 : _fifoSortKey(a) > _fifoSortKey(b) ? 1 : 0));
-  const deliveredBookings = bookings.filter((b) => b.status === 'delivered');
+  const deliveredBookings = bookings.filter((b) => b.status === 'delivered').filter(_matchesBooking);
+  const allFilteredBookings = bookings.filter(_matchesBooking);
   const visibleBookings =
     bookingsTab === 'pending_delivery'
       ? pendingDeliveryBookings
       : bookingsTab === 'delivered'
       ? deliveredBookings
-      : bookings;
+      : allFilteredBookings;
+
+  const filteredProducts = products.filter(_matchesProduct);
 
   // Paginated slices — recomputed only when list or page changes.
-  const productsTotalPages = Math.max(1, Math.ceil(products.length / PRODUCT_PAGE_SIZE));
+  const productsTotalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCT_PAGE_SIZE));
   const bookingsTotalPages = Math.max(1, Math.ceil(visibleBookings.length / BOOKING_PAGE_SIZE));
   const productsSlice = useMemo(
-    () => products.slice((productsPage - 1) * PRODUCT_PAGE_SIZE, productsPage * PRODUCT_PAGE_SIZE),
-    [products, productsPage],
+    () => filteredProducts.slice((productsPage - 1) * PRODUCT_PAGE_SIZE, productsPage * PRODUCT_PAGE_SIZE),
+    [filteredProducts, productsPage],
   );
   const bookingsSlice = useMemo(
     () => visibleBookings.slice((bookingsPage - 1) * BOOKING_PAGE_SIZE, bookingsPage * BOOKING_PAGE_SIZE),
@@ -278,7 +314,7 @@ const AdminParasMall = () => {
       )}
 
       {/* Tab pills */}
-      <div className="flex gap-2 mb-5 flex-wrap">
+      <div className="flex gap-2 mb-3 flex-wrap">
         {['products', 'bookings', 'pipeline'].map((t) => (
           <button
             key={t}
@@ -305,6 +341,45 @@ const AdminParasMall = () => {
           </button>
         ))}
       </div>
+
+      {/* Universal search — works across both Products and Bookings tabs.
+          Sep 1 2026 request: "Kuthlyahi record — name/mobile/email/product —
+          type kartach filter ho." Fires on the very first character. */}
+      {(tab === 'products' || tab === 'bookings') && (
+        <div className="mb-4 relative" data-testid="admin-mall-search-wrap">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={
+              tab === 'products'
+                ? 'Search products by name, category, ID, tagline…'
+                : 'Search bookings by name, mobile, email, product, city, PIN, booking ID…'
+            }
+            className="pl-9 pr-9 h-10 bg-white border-slate-200"
+            data-testid="admin-mall-search-input"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-slate-100 grid place-items-center text-slate-500"
+              title="Clear search"
+              data-testid="admin-mall-search-clear"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {q && (
+            <p className="text-[11px] text-slate-500 mt-1.5 ml-1" data-testid="admin-mall-search-summary">
+              {tab === 'products'
+                ? `${filteredProducts.length} of ${products.length} products match`
+                : `${allFilteredBookings.length} of ${bookings.length} bookings match`}
+            </p>
+          )}
+        </div>
+      )}
 
       {tab === 'pipeline' && <OrderPipelineKanban />}
 
