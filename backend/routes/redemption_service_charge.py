@@ -778,20 +778,46 @@ async def bulk_verify_payment(data: BulkVerifyRequest):
 
 @router.get("/admin/redemption-service-charge/summary")
 async def admin_summary(days: int = 30):
+    """Revenue summary + all-time pending. Sep 1 2026:
+      • PENDING = ALL-TIME across every user (state-based — a fee pending
+        for 100 days is still pending, so a date filter would hide it).
+      • PAID    = filtered to the requested window so admin can compare
+        7 / 30 / 90-day collections without stale numbers.
+    """
     from datetime import timedelta
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    pipeline = [
-        {"$match": {"created_at": {"$gte": since}}},
-        {"$group": {
-            "_id": "$status", "count": {"$sum": 1},
-            "amount": {"$sum": "$total_payable"},
-        }},
+
+    pending_pipeline = [
+        {"$match": {"status": "PENDING"}},
+        {"$group": {"_id": None, "count": {"$sum": 1},
+                    "amount": {"$sum": "$total_payable"},
+                    "unique_users": {"$addToSet": "$user_id"}}},
     ]
-    rows = await db.redemption_service_charges.aggregate(pipeline).to_list(20)
-    by_status = {"PENDING": {"count": 0, "amount": 0.0}, "PAID": {"count": 0, "amount": 0.0}}
-    for r in rows:
-        by_status[r["_id"]] = {"count": r["count"], "amount": round(r["amount"], 2)}
-    return {"by_status": by_status, "since": since, "days": days}
+    p_rows = await db.redemption_service_charges.aggregate(pending_pipeline).to_list(1)
+    pending = {"count": 0, "amount": 0.0, "unique_users": 0}
+    if p_rows:
+        pending = {
+            "count": p_rows[0]["count"],
+            "amount": round(p_rows[0]["amount"], 2),
+            "unique_users": len(p_rows[0].get("unique_users") or []),
+        }
+
+    paid_pipeline = [
+        {"$match": {"status": "PAID", "paid_at": {"$gte": since}}},
+        {"$group": {"_id": None, "count": {"$sum": 1},
+                    "amount": {"$sum": "$total_payable"}}},
+    ]
+    pd_rows = await db.redemption_service_charges.aggregate(paid_pipeline).to_list(1)
+    paid = {"count": 0, "amount": 0.0}
+    if pd_rows:
+        paid = {"count": pd_rows[0]["count"], "amount": round(pd_rows[0]["amount"], 2)}
+
+    return {
+        "by_status": {"PENDING": pending, "PAID": paid},
+        "since": since,
+        "days": days,
+        "pending_is_all_time": True,
+    }
 
 
 @router.get("/admin/redemption-service-charge/pending")

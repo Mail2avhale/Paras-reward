@@ -11,6 +11,8 @@ const AdminServiceCharges = () => {
   const [summary, setSummary] = useState({ by_status: {} });
   const [pending, setPending] = useState([]);
   const [recentPaid, setRecentPaid] = useState({ recent: [], total_paid_inr: 0 });
+  const [recentPage, setRecentPage] = useState(1);
+  const RECENT_PAGE_SIZE = 20;
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,12 +28,12 @@ const AdminServiceCharges = () => {
         axios.get(`${API}/admin/redemption-service-charge/summary?days=${days}`),
         axios.get(`${API}/admin/redemption-service-charge/pending?limit=100`),
         axios.get(`${API}/admin/redemption-service-charge/revenue-report?days=${days}`).catch(() => ({ data: null })),
-        axios.get(`${API}/admin/redemption-service-charge/recent-paid?limit=25`).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/redemption-service-charge/recent-paid?limit=200`).catch(() => ({ data: null })),
       ]);
       setSummary(s.data);
       setPending(p.data.pending || []);
       if (r.data) setReport(r.data);
-      if (rp.data) setRecentPaid(rp.data);
+      if (rp.data) { setRecentPaid(rp.data); setRecentPage(1); }
     } catch (e) { toast.error(e?.response?.data?.detail || 'Load failed'); }
     finally { setLoading(false); }
   }, [days]);
@@ -76,7 +78,7 @@ const AdminServiceCharges = () => {
 
       {/* Revenue cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <Card color="yellow" icon={Clock} label="Pending" count={bs.PENDING?.count || 0} amount={bs.PENDING?.amount || 0} testid="stat-pending" />
+        <Card color="yellow" icon={Clock} label={`Pending${bs.PENDING?.unique_users ? ` · ${bs.PENDING.unique_users} users` : ''}`} count={bs.PENDING?.count || 0} amount={bs.PENDING?.amount || 0} testid="stat-pending" />
         <Card color="emerald" icon={CheckCircle} label="Paid (Revenue)" count={bs.PAID?.count || 0} amount={bs.PAID?.amount || 0} testid="stat-paid" />
         <Card color="slate" icon={IndianRupee} label="Total Charges" count={(bs.PENDING?.count || 0) + (bs.PAID?.count || 0)} amount={(bs.PENDING?.amount || 0) + (bs.PAID?.amount || 0)} testid="stat-total" />
         <Card color="blue" icon={IndianRupee} label="Collection Rate" count={0} amount={0} customValue={`${((bs.PAID?.count || 0) / Math.max(1, (bs.PAID?.count || 0) + (bs.PENDING?.count || 0)) * 100).toFixed(0)}%`} testid="stat-rate" />
@@ -88,13 +90,13 @@ const AdminServiceCharges = () => {
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
           <div>
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">💰 Latest Payments</h3>
-            <p className="text-[10px] text-slate-500">Last {recentPaid.recent.length} paid · ₹{Number(recentPaid.total_paid_inr).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} collected in this window</p>
+            <p className="text-[10px] text-slate-500">Latest {recentPaid.recent.length} paid · ₹{Number(recentPaid.total_paid_inr).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} collected</p>
           </div>
           <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">LIVE</span>
         </div>
-        <div className="overflow-x-auto max-h-72 overflow-y-auto">
+        <div className="overflow-x-auto">
           <table className="w-full text-xs" data-testid="recent-paid-table">
-            <thead className="bg-slate-50 text-slate-600 sticky top-0">
+            <thead className="bg-slate-50 text-slate-600">
               <tr>
                 <th className="px-2 py-1.5 text-left">Paid At</th>
                 <th className="px-2 py-1.5 text-left">User</th>
@@ -107,7 +109,9 @@ const AdminServiceCharges = () => {
             <tbody>
               {recentPaid.recent.length === 0 ? (
                 <tr><td colSpan={6} className="text-center py-6 text-slate-400 text-[11px]">{loading ? 'Loading...' : 'No paid charges yet'}</td></tr>
-              ) : recentPaid.recent.map((r) => {
+              ) : recentPaid.recent
+                  .slice((recentPage - 1) * RECENT_PAGE_SIZE, recentPage * RECENT_PAGE_SIZE)
+                  .map((r) => {
                 const paidDt = r.paid_at ? new Date(r.paid_at) : null;
                 const timeLabel = paidDt
                   ? paidDt.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -129,6 +133,35 @@ const AdminServiceCharges = () => {
             </tbody>
           </table>
         </div>
+        {/* Pagination */}
+        {recentPaid.recent.length > RECENT_PAGE_SIZE && (
+          <div className="flex items-center justify-between px-3 py-2 border-t border-slate-100 text-[11px]" data-testid="recent-paid-pagination">
+            <span className="text-slate-500">
+              Showing {(recentPage - 1) * RECENT_PAGE_SIZE + 1}–{Math.min(recentPage * RECENT_PAGE_SIZE, recentPaid.recent.length)} of {recentPaid.recent.length}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setRecentPage((p) => Math.max(1, p - 1))}
+                disabled={recentPage === 1}
+                className="px-2.5 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                data-testid="recent-paid-prev"
+              >
+                ← Prev
+              </button>
+              <span className="px-2 text-slate-600 font-semibold">
+                Page {recentPage} / {Math.ceil(recentPaid.recent.length / RECENT_PAGE_SIZE)}
+              </span>
+              <button
+                onClick={() => setRecentPage((p) => Math.min(Math.ceil(recentPaid.recent.length / RECENT_PAGE_SIZE), p + 1))}
+                disabled={recentPage >= Math.ceil(recentPaid.recent.length / RECENT_PAGE_SIZE)}
+                className="px-2.5 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                data-testid="recent-paid-next"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Search */}
