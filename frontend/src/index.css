@@ -65,9 +65,14 @@
 .btn-paras-gold:hover  { filter: brightness(1.06); }
 .btn-paras-gold:active { transform: translateY(1px); }
 
-/* Live-region banner + Sonner toast lift so bottom nav is never covered */
-[data-sonner-toaster] {
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 84px) !important;
+/* Sonner toast positioning — top-center with proper safe-area padding
+   so the toast clears the Android status bar / iOS notch. The App.js
+   `offset` prop already handles this cleanly; this rule is a fallback
+   for any other Toaster instance in the tree (e.g. EmployeePortal).
+   Removed the earlier `bottom: … !important` override — the toaster is
+   top-anchored, so a bottom rule was a no-op and shipped confusion. */
+[data-sonner-toaster][data-y-position="top"] {
+  top: max(env(safe-area-inset-top, 0px), 12px) !important;
 }
 
 

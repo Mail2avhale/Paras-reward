@@ -1060,16 +1060,19 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
         {/* Admin Popup Message - Shows for logged-in users only */}
         <PopupMessage />
       </BrowserRouter>
-      <Toaster 
-        position="top-center" 
-        richColors 
+      <Toaster
+        position="top-center"
+        richColors
         visibleToasts={2}
         toastOptions={{
           duration: 3000,
-          style: {
-            marginTop: '40vh',
-          },
+          // Sep 1 2026: removed `marginTop: '40vh'` — it was pushing every
+          // toast to the middle of the viewport and blocking real content
+          // (mining stats, session progress, admin dashboard cards). The
+          // safe-area-inset padding below already clears the status bar /
+          // notch on notched Android devices without covering primary UI.
         }}
+        offset="calc(env(safe-area-inset-top, 0px) + 12px)"
       />
       {/* Duplicate ToastContainer removed - Sonner handles all toasts */}
     </MobileAppGate>
