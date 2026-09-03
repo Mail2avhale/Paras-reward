@@ -10,6 +10,7 @@ const fmt = (n) => `₹ ${(Number(n) || 0).toLocaleString('en-IN', { minimumFrac
 const AdminServiceCharges = () => {
   const [summary, setSummary] = useState({ by_status: {} });
   const [pending, setPending] = useState([]);
+  const [recentPaid, setRecentPaid] = useState({ recent: [], total_paid_inr: 0 });
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -21,14 +22,16 @@ const AdminServiceCharges = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, p, r] = await Promise.all([
+      const [s, p, r, rp] = await Promise.all([
         axios.get(`${API}/admin/redemption-service-charge/summary?days=${days}`),
         axios.get(`${API}/admin/redemption-service-charge/pending?limit=100`),
         axios.get(`${API}/admin/redemption-service-charge/revenue-report?days=${days}`).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/redemption-service-charge/recent-paid?limit=25`).catch(() => ({ data: null })),
       ]);
       setSummary(s.data);
       setPending(p.data.pending || []);
       if (r.data) setReport(r.data);
+      if (rp.data) setRecentPaid(rp.data);
     } catch (e) { toast.error(e?.response?.data?.detail || 'Load failed'); }
     finally { setLoading(false); }
   }, [days]);
@@ -77,6 +80,55 @@ const AdminServiceCharges = () => {
         <Card color="emerald" icon={CheckCircle} label="Paid (Revenue)" count={bs.PAID?.count || 0} amount={bs.PAID?.amount || 0} testid="stat-paid" />
         <Card color="slate" icon={IndianRupee} label="Total Charges" count={(bs.PENDING?.count || 0) + (bs.PAID?.count || 0)} amount={(bs.PENDING?.amount || 0) + (bs.PAID?.amount || 0)} testid="stat-total" />
         <Card color="blue" icon={IndianRupee} label="Collection Rate" count={0} amount={0} customValue={`${((bs.PAID?.count || 0) / Math.max(1, (bs.PAID?.count || 0) + (bs.PENDING?.count || 0)) * 100).toFixed(0)}%`} testid="stat-rate" />
+      </div>
+
+      {/* Latest paid — freshest 20% service charge inflow so the admin can
+          answer "koni kadhi kiti pay kela" at a glance (Sep 1 2026). */}
+      <div className="bg-white border border-slate-200 rounded-xl mb-4" data-testid="recent-paid-card">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+          <div>
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">💰 Latest Payments</h3>
+            <p className="text-[10px] text-slate-500">Last {recentPaid.recent.length} paid · ₹{Number(recentPaid.total_paid_inr).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} collected in this window</p>
+          </div>
+          <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">LIVE</span>
+        </div>
+        <div className="overflow-x-auto max-h-72 overflow-y-auto">
+          <table className="w-full text-xs" data-testid="recent-paid-table">
+            <thead className="bg-slate-50 text-slate-600 sticky top-0">
+              <tr>
+                <th className="px-2 py-1.5 text-left">Paid At</th>
+                <th className="px-2 py-1.5 text-left">User</th>
+                <th className="px-2 py-1.5 text-left">Mobile</th>
+                <th className="px-2 py-1.5 text-right">Amount</th>
+                <th className="px-2 py-1.5 text-left">Redemption</th>
+                <th className="px-2 py-1.5 text-left">Payment ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentPaid.recent.length === 0 ? (
+                <tr><td colSpan={6} className="text-center py-6 text-slate-400 text-[11px]">{loading ? 'Loading...' : 'No paid charges yet'}</td></tr>
+              ) : recentPaid.recent.map((r) => {
+                const paidDt = r.paid_at ? new Date(r.paid_at) : null;
+                const timeLabel = paidDt
+                  ? paidDt.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  : '—';
+                return (
+                  <tr key={r.charge_id} className="border-b border-slate-50 hover:bg-emerald-50/40" data-testid={`recent-paid-${r.charge_id}`}>
+                    <td className="px-2 py-1.5 text-slate-600 whitespace-nowrap">{timeLabel}</td>
+                    <td className="px-2 py-1.5">
+                      <p className="font-medium text-slate-800 truncate max-w-[140px]">{r.user?.name || '—'}</p>
+                      {r.user?.city && <p className="text-[10px] text-slate-400 truncate max-w-[140px]">{r.user.city}</p>}
+                    </td>
+                    <td className="px-2 py-1.5 font-mono text-slate-600">{r.user?.mobile || r.user?.phone || '—'}</td>
+                    <td className="px-2 py-1.5 text-right font-bold text-emerald-600 whitespace-nowrap">{fmt(r.total_payable)}</td>
+                    <td className="px-2 py-1.5 font-mono text-[10px] text-slate-500">{r.redemption_id?.slice(0, 14) || '—'}</td>
+                    <td className="px-2 py-1.5 font-mono text-[10px] text-slate-500 truncate max-w-[110px]" title={r.payment_id}>{r.payment_id?.slice(0, 12) || '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Search */}

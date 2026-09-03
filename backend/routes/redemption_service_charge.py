@@ -806,6 +806,31 @@ async def admin_pending_list(limit: int = 200):
     return {"pending": rows, "total": len(rows)}
 
 
+@router.get("/admin/redemption-service-charge/recent-paid")
+async def admin_recent_paid(limit: int = 50):
+    """Latest PAID service charges — who / how much / when.
+
+    Sep 1 2026 request: "Latest koni kiti charges paid kelet te samjt nahi."
+    Ha endpoint sorted-by-paid_at DESC returns karto so admin can see the
+    freshest income stream at a glance. Includes user name + mobile so
+    admin can immediately recognise the payer.
+    """
+    rows = await db.redemption_service_charges.find(
+        {"status": "PAID"}, {"_id": 0},
+    ).sort("paid_at", -1).to_list(limit)
+    total_paid_inr = 0.0
+    for r in rows:
+        u = await db.users.find_one({"uid": r["user_id"]},
+            {"_id": 0, "name": 1, "email": 1, "mobile": 1, "phone": 1, "city": 1})
+        r["user"] = u
+        total_paid_inr += float(r.get("total_payable") or 0)
+    return {
+        "recent": rows,
+        "total": len(rows),
+        "total_paid_inr": round(total_paid_inr, 2),
+    }
+
+
 @router.get("/admin/redemption-service-charge/search")
 async def admin_search(q: str):
     """Search by user_id / redemption_id / charge_id / payment_id / mobile."""
