@@ -1105,11 +1105,17 @@ async def get_admin_withdrawal_requests(
     search: str = None,
     date_from: str = None,
     date_to: str = None,
-    sort_order: str = "desc"
+    sort_order: str = "desc",
+    active_only: bool = True,
 ):
     """Get all bank withdrawal requests for admin with search and date filters
     Note: Fetches from BOTH bank_withdrawal_requests AND bank_redeem_requests collections
     to handle legacy data migration issues
+
+    Sep 1, 2026: `active_only` (default True) filters out requests from users
+    whose subscription has expired — admin should not process bank payouts to
+    users who are no longer paying subscribers. Set active_only=false to see
+    the full historical list.
     """
     query = {}
     if status:
@@ -1180,6 +1186,39 @@ async def get_admin_withdrawal_requests(
     
     # Apply pagination
     total = len(all_requests)
+
+    # Filter by active subscription (Sep 1, 2026) — hide payouts to users
+    # whose subscription has expired. Runs BEFORE pagination so page numbers
+    # stay meaningful for the shrunken set.
+    if active_only and all_requests:
+        from datetime import datetime, timezone
+        # Batch-load user subscription snapshots
+        user_ids = list({r.get("user_id") for r in all_requests if r.get("user_id")})
+        subs = {}
+        if user_ids:
+            async for u in db.users.find(
+                {"uid": {"$in": user_ids}},
+                {"_id": 0, "uid": 1, "subscription_plan": 1, "subscription_expiry": 1},
+            ):
+                plan = (u.get("subscription_plan") or "").lower()
+                is_active = plan not in ("", "explorer", "free")
+                if is_active:
+                    exp = u.get("subscription_expiry")
+                    if exp:
+                        try:
+                            exp_dt = exp if isinstance(exp, datetime) else datetime.fromisoformat(str(exp).replace("Z", "+00:00"))
+                            if exp_dt.tzinfo is None:
+                                exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                            if exp_dt < datetime.now(timezone.utc):
+                                is_active = False
+                        except Exception:
+                            pass
+                subs[u["uid"]] = is_active
+        before = len(all_requests)
+        all_requests = [r for r in all_requests if subs.get(r.get("user_id"), False)]
+        total = len(all_requests)
+        print(f"[bank-redeem admin] active_only filter: {before} → {total} requests")
+
     paginated = all_requests[skip:skip + limit]
     
     # Get combined stats

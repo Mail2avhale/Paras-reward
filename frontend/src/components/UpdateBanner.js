@@ -17,6 +17,7 @@ const DISMISS_KEY = 'paras_update_banner_dismissed_until';
 export const UpdateBanner = () => {
   const [versionInfo, setVersionInfo] = useState(null);
   const [installedCode, setInstalledCode] = useState(null);
+  const [installedName, setInstalledName] = useState(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -29,9 +30,12 @@ export const UpdateBanner = () => {
         // Android `build` is the versionCode; iOS it's the bundle build number
         const code = parseInt(info.build, 10);
         setInstalledCode(Number.isFinite(code) ? code : 0);
+        setInstalledName((info.version || '').trim());
 
         const res = await axios.get(`${API}/app/version-info`);
         setVersionInfo(res.data);
+        // Debug tag so field reports can share the exact numbers seen.
+        console.info('[UpdateBanner] installed:', info.version, '(code', info.build, ') · latest:', res.data.latest_version_name, '(code', res.data.latest_version_code, ')');
 
         // Honour 24h dismissal from localStorage (skipped if force_update)
         const dismissUntil = parseInt(localStorage.getItem(DISMISS_KEY) || '0', 10);
@@ -43,7 +47,16 @@ export const UpdateBanner = () => {
   }, []);
 
   if (!versionInfo || installedCode === null) return null;
+
+  // Sep 1 2026 fix: some users reported the banner still showing after
+  // upgrading to the latest version. Root cause: `App.getInfo().build`
+  // occasionally returns a stale value on the first cold-launch of a
+  // fresh install (Capacitor plugin cache). Guard with a version-NAME
+  // string match as a fallback so a matching versionName also hides
+  // the banner even if the code comparison is momentarily wrong.
+  const _norm = (s) => (s || '').toString().trim().replace(/^v/i, '');
   if (installedCode >= versionInfo.latest_version_code) return null;
+  if (installedName && _norm(installedName) === _norm(versionInfo.latest_version_name)) return null;
 
   const isForce = versionInfo.force_update ||
     installedCode < versionInfo.minimum_supported_version_code;

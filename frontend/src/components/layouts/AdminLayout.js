@@ -214,6 +214,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       subItems: [
         { id: 'accounting', label: 'Accounting Dashboard', icon: BarChart2, path: '/admin/accounting' },
         { id: 'finance-metrics', label: '📊 Daily Finance Metrics', icon: BarChart3, path: '/admin/finance-metrics', highlight: true },
+        { id: 'service-charges-finance', label: '💎 PRC Service Charges', icon: CreditCard, path: '/admin/service-charges', highlight: true },
         { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss', highlight: true },
         { id: 'gst-report', label: 'GST Report (State-wise)', icon: Receipt, path: '/admin/gst-report', highlight: true },
         { id: 'cash-bank-book', label: 'Cash & Bank Book', icon: Wallet, path: '/admin/cash-bank-book' },

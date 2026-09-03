@@ -1492,7 +1492,14 @@ async def admin_delete_product(product_id: str):
 
 
 @admin_router.get("/bookings")
-async def admin_list_bookings(status: Optional[str] = None, limit: int = 200):
+async def admin_list_bookings(
+    status: Optional[str] = None,
+    limit: int = 200,
+    active_only: bool = True,
+):
+    """Sep 1 2026: `active_only` (default True) hides bookings whose owner's
+    subscription has expired — admin shouldn't fulfil products for users who
+    stopped paying. Set active_only=false to see the historical list."""
     q = {}
     if status:
         q["status"] = status
@@ -1502,15 +1509,32 @@ async def admin_list_bookings(status: Optional[str] = None, limit: int = 200):
     users = await db.users.find(
         {"uid": {"$in": user_ids}},
         {"_id": 0, "uid": 1, "name": 1, "first_name": 1, "last_name": 1,
-         "mobile": 1, "phone": 1, "email": 1}
+         "mobile": 1, "phone": 1, "email": 1,
+         "subscription_plan": 1, "subscription_expiry": 1}
     ).to_list(len(user_ids) or 1)
+    from datetime import datetime, timezone
+    now_utc = datetime.now(timezone.utc)
     user_map = {}
     for u in users:
         full = u.get("name") or " ".join(filter(None, [u.get("first_name"), u.get("last_name")])).strip()
+        plan = (u.get("subscription_plan") or "").lower()
+        is_active = plan not in ("", "explorer", "free")
+        if is_active:
+            exp = u.get("subscription_expiry")
+            if exp:
+                try:
+                    exp_dt = exp if isinstance(exp, datetime) else datetime.fromisoformat(str(exp).replace("Z", "+00:00"))
+                    if exp_dt.tzinfo is None:
+                        exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                    if exp_dt < now_utc:
+                        is_active = False
+                except Exception:
+                    pass
         user_map[u["uid"]] = {
             "name": full or "Unknown",
             "mobile": u.get("mobile") or u.get("phone") or "",
             "email": u.get("email") or "",
+            "subscription_active": is_active,
         }
     for b in bookings:
         b["progress_percent"] = round((b.get("paid_prc", 0) / b.get("total_prc", 1)) * 100, 2)
@@ -1518,6 +1542,11 @@ async def admin_list_bookings(status: Optional[str] = None, limit: int = 200):
         b["user_name"] = u.get("name", "Unknown")
         b["user_mobile"] = u.get("mobile", "")
         b["user_email"] = u.get("email", "")
+        b["user_subscription_active"] = u.get("subscription_active", False)
+    if active_only:
+        before = len(bookings)
+        bookings = [b for b in bookings if b.get("user_subscription_active")]
+        print(f"[paras-mall admin] active_only filter: {before} → {len(bookings)} bookings")
     return {"success": True, "count": len(bookings), "bookings": bookings}
 
 

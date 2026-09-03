@@ -127,6 +127,16 @@ const settingsCategories = [
     borderColor: 'border-emerald-500/30'
   },
   {
+    id: 'service-charges-hub',
+    label: '💎 PRC Service Charges',
+    icon: CreditCard,
+    description: 'All 20% PRC redemption service fees. See pending across every user, latest paid, revenue chart, and reconcile stuck Razorpay payments.',
+    path: '/admin/service-charges',
+    color: 'from-amber-500 to-orange-500',
+    bgColor: 'bg-amber-500/10',
+    borderColor: 'border-amber-500/40',
+  },
+  {
     id: 'device-binding',
     label: 'Device Binding',
     icon: Shield,
