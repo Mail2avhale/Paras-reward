@@ -899,6 +899,26 @@ async def pay_bill(data: PayBillRequest):
                 "is_expired": sub_check.get("is_expired", False)
             }
     
+    # ===== PENDING REDEMPTION SERVICE CHARGE GUARD (Aug 2026) =====
+    # Block BBPS bill payment if user has any pending 20% Redemption Service
+    # Charge from a prior successful redemption. Runs BEFORE cooldown check.
+    if data.user_id:
+        try:
+            from routes.redemption_service_charge import has_pending_service_charge
+            _pending = await has_pending_service_charge(data.user_id)
+            if _pending:
+                return {
+                    "success": False,
+                    "status": 409,
+                    "message": "Your previous PRC redemption's 20% Redemption Service Charge is still pending. Please complete the pending service charge payment to continue.",
+                    "code": "REDEMPTION_SERVICE_CHARGE_PENDING",
+                    "charge_id": _pending.get("charge_id"),
+                    "amount_inr": _pending.get("total_payable"),
+                    "data": None,
+                }
+        except Exception as _e:
+            logging.warning(f"[BBPS PAY] pending svc-chg check failed (non-fatal): {_e}")
+
     # ===== CHECK COOLDOWN: 24 hours between bill payments =====
     if data.user_id:
         cooldown = await check_bbps_cooldown(data.user_id)
@@ -909,6 +929,26 @@ async def pay_bill(data: PayBillRequest):
                 "message": f"Please wait {cooldown['wait_hours']:.0f} hours before making another bill payment.",
                 "data": None
             }
+
+    # ===== PENDING REDEMPTION SERVICE CHARGE GUARD (Aug 2026) =====
+    # Block BBPS bill payment if user has any pending 20% Redemption Service
+    # Charge from a prior successful redemption.
+    if data.user_id:
+        try:
+            from routes.redemption_service_charge import has_pending_service_charge
+            _pending = await has_pending_service_charge(data.user_id)
+            if _pending:
+                return {
+                    "success": False,
+                    "status": 409,
+                    "message": "Your previous PRC redemption's 20% Redemption Service Charge is still pending. Please complete the pending service charge payment to continue.",
+                    "code": "REDEMPTION_SERVICE_CHARGE_PENDING",
+                    "charge_id": _pending.get("charge_id"),
+                    "amount_inr": _pending.get("total_payable"),
+                    "data": None,
+                }
+        except Exception as _e:
+            logging.warning(f"[BBPS PAY] pending svc-chg check failed (non-fatal): {_e}")
     
     # ===== CHECK SUBSCRIPTION-STAKE INR CAP (Jun 2026 — sole gate) =====
     if data.user_id and check_subscription_cap_func and data.amount:

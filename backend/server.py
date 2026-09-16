@@ -13164,6 +13164,27 @@ async def subscription_pay_with_prc(request: Request):
         
         logging.info(f"[PRC-SUB] Request: User={user_id}, Plan={plan_name}, Amount={prc_amount}, Balance={current_balance}")
 
+        # ==================== PENDING REDEMPTION SERVICE CHARGE GUARD ====================
+        # Block PRC-subscription purchase if user has any pending 20% cash
+        # Redemption Service Charge from a prior successful redemption.
+        try:
+            from routes.redemption_service_charge import has_pending_service_charge
+            _pending = await has_pending_service_charge(user_id)
+            if _pending:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "REDEMPTION_SERVICE_CHARGE_PENDING",
+                        "message": "Your previous PRC redemption's 20% Redemption Service Charge is still pending. Please complete the pending service charge payment to continue.",
+                        "charge_id": _pending.get("charge_id"),
+                        "amount_inr": _pending.get("total_payable"),
+                    },
+                )
+        except HTTPException:
+            raise
+        except Exception as _e:
+            logging.warning(f"[PRC-SUB] pending svc-chg check failed (non-fatal): {_e}")
+
         # ==================== UNLIMITED PRC SUBSCRIPTIONS (May 2026) ====================
         # Previously: 3-time PRC subscription lifetime cap. REMOVED per user
         # decision — users can now PRC-subscribe unlimited times. Only balance
@@ -14024,6 +14045,27 @@ async def sale_elite_activate(request: SaleEliteActivateRequest):
         if not sender:
             raise HTTPException(status_code=404, detail="Sender account not found.")
         # ELITE-ONLY gate removed May 2026 — inactive/Explorer can sponsor too.
+
+        # ===== Pending Redemption Service Charge guard =====
+        # Block Sale-Elite (Sell to Friends) if sender has any pending 20%
+        # cash Redemption Service Charge from a prior successful redemption.
+        try:
+            from routes.redemption_service_charge import has_pending_service_charge
+            _pending = await has_pending_service_charge(request.sender_uid)
+            if _pending:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "REDEMPTION_SERVICE_CHARGE_PENDING",
+                        "message": "Your previous PRC redemption's 20% Redemption Service Charge is still pending. Please complete the pending service charge payment to continue.",
+                        "charge_id": _pending.get("charge_id"),
+                        "amount_inr": _pending.get("total_payable"),
+                    },
+                )
+        except HTTPException:
+            raise
+        except Exception as _e:
+            logging.warning(f"[SALE-ELITE] pending svc-chg check failed (non-fatal): {_e}")
 
         # ===== Verify sender PIN =====
         stored_pin = (

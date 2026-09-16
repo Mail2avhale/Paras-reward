@@ -644,6 +644,26 @@ async def initiate_recharge(data: RechargeRequest):
         logging.info(f"[RECHARGE] Step 4b: User {data.user_id} plan={plan} blocked")
         return {"success": False, "message": "Active subscription required for recharge services.", "error_ref": "R04B"}
 
+    # ===== Step 4c: Pending Redemption Service Charge guard =====
+    # Block if user has any PENDING 20% cash Service Charge from a prior
+    # successful redemption. Applies to Mobile/DTH recharge, BBPS bill pay,
+    # bank redeem, PRC subscription and Sale-Elite flows uniformly.
+    try:
+        from routes.redemption_service_charge import has_pending_service_charge
+        _pending = await has_pending_service_charge(data.user_id)
+        if _pending:
+            logging.info(f"[RECHARGE] Step 4c: BLOCKED — pending service charge {_pending.get('charge_id')}")
+            return {
+                "success": False,
+                "message": "Your previous PRC redemption's 20% Redemption Service Charge is still pending. Please complete the pending service charge payment to continue.",
+                "error_ref": "R04C",
+                "code": "REDEMPTION_SERVICE_CHARGE_PENDING",
+                "charge_id": _pending.get("charge_id"),
+                "amount_inr": _pending.get("total_payable"),
+            }
+    except Exception as _e:
+        logging.warning(f"[RECHARGE] Step 4c: pending svc-chg check failed (non-fatal): {_e}")
+
     # ===== Step 5: Calculate PRC charges =====
     if not calculate_charges_func:
         logging.error("[RECHARGE] Step 5a: calculate_charges_func not set")
