@@ -182,11 +182,8 @@ async def ensure_can_spend(db, user_id: str, prc_amount: float) -> Tuple[bool, d
     if prc_amount <= 0:
         return False, snap, "Invalid amount"
     if prc_amount > snap["available_prc"] + 1e-6:
-        remaining_inr = snap["available_prc"] / PRC_TO_INR_RATE
-        return False, snap, (
-            f"You've reached today's redemption limit. Available: ₹{remaining_inr:.2f} "
-            f"(day {snap['day_number']}/365). More unlocks tomorrow."
-        )
+        available_prc = int(snap["available_prc"]) if snap["available_prc"] == int(snap["available_prc"]) else round(snap["available_prc"], 2)
+        return False, snap, f"Available PRC LIMIT = {available_prc} PRC"
     return True, snap, ""
 
 
