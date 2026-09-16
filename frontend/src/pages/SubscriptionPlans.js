@@ -1445,13 +1445,31 @@ const SubscriptionPlans = ({ user }) => {
                       client_request_id: clientRequestId,
                     });
                     if (res.data.success) {
+                      // Show success screen (Step 5) instead of full-page reload.
+                      // Full reload caused a brief blank screen and lost the
+                      // success toast before the user could see it.
                       toast.success(res.data.message || 'Subscription activated with PRC!');
-                      window.location.reload();
+                      setPaymentSuccess(true);
+                      setCurrentStep(5);
+                      // Refresh user context so header / dashboard reflect new
+                      // Elite plan when user navigates back.
+                      try {
+                        const uRes = await axios.get(`${API}/user/${user.uid}`);
+                        if (uRes.data) setUserData(uRes.data);
+                      } catch (_) { /* non-fatal */ }
                     } else {
                       toast.error(res.data.error || res.data.message || 'PRC payment failed');
                     }
                   } catch (err) {
-                    const msg = err.response?.data?.detail || err.response?.data?.error || 'PRC payment failed';
+                    // Backend may return `detail` as a string OR as an object
+                    // (e.g., REDEMPTION_SERVICE_CHARGE_PENDING carries a dict
+                    // with code/message/charge_id/amount_inr). Extract message
+                    // safely so React never tries to render a raw object.
+                    const d = err.response?.data?.detail;
+                    let msg;
+                    if (typeof d === 'string') msg = d;
+                    else if (d && typeof d === 'object') msg = d.message || d.error || 'PRC payment failed';
+                    else msg = err.response?.data?.error || err.response?.data?.message || 'PRC payment failed';
                     toast.error(msg);
                   } finally {
                     setPrcLoading(false);

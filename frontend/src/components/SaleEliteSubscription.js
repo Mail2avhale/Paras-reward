@@ -105,7 +105,13 @@ const SaleEliteSubscription = ({ user }) => {
         toast.error('Activation failed. Try again.');
       }
     } catch (e) {
-      const msg = e?.response?.data?.detail || 'Activation failed';
+      // detail may be a string OR an object (e.g., pending service charge
+      // returns {code, message, charge_id, amount_inr}). Extract cleanly.
+      const d = e?.response?.data?.detail;
+      let msg;
+      if (typeof d === 'string') msg = d;
+      else if (d && typeof d === 'object') msg = d.message || d.error || 'Activation failed';
+      else msg = 'Activation failed';
       toast.error(msg);
     } finally {
       setActivating(false);
