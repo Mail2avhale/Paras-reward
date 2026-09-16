@@ -48,7 +48,7 @@ from typing import Optional, Tuple
 DAILY_INCREMENT_PRC = 10       # +10 PRC per day
 CYCLE_LENGTH_DAYS = 365
 PRC_TO_INR_RATE = 10            # 10 PRC = ₹1 (mirrors DEFAULT_CONFIG)
-DEFAULT_EXISTING_USER_START = "2026-09-02T00:00:00+00:00"
+DEFAULT_EXISTING_USER_START = "2026-09-10T00:00:00+00:00"
 
 
 def _cumulative_cap(day_number: int) -> float:
