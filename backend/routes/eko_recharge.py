@@ -624,6 +624,15 @@ async def initiate_recharge(data: RechargeRequest):
         logging.info(f"[RECHARGE] Step 3.5: BLOCKED monthly limit ₹{int_amount} > remaining ₹{monthly_remaining}")
         return {"success": False, "message": "You've reached your monthly recharge limit. No worries! Keep collecting reward points to continue next month.", "error_ref": "R03M"}
 
+    # ===== Step 3.6: Daily redemption limit (Sep 1 2026) =====
+    # Growing cumulative PRC cap that resets every 365 days.
+    from app.services.redemption_limit_service import ensure_can_spend
+    _prc_needed = float(int_amount) * 10.0
+    _ok, _snap, _reason = await ensure_can_spend(db, data.user_id, _prc_needed)
+    if not _ok:
+        logging.info(f"[RECHARGE] Step 3.6: BLOCKED redemption limit — {_reason}")
+        return {"success": False, "message": _reason, "error_ref": "R03R"}
+
     # ===== Step 4: User + subscription check =====
     user = await db.users.find_one({"uid": data.user_id})
     if not user:
@@ -826,6 +835,15 @@ async def initiate_recharge(data: RechargeRequest):
     user_mobile = user.get("mobile", "")
 
     if final_status in ("success", "pending"):
+        # Daily redemption limit — deduct PRC on confirmed-success/pending
+        # so the growing cap tracks real spend even if the user retries
+        # via idempotency. `ensure_can_spend` above already gate-kept.
+        try:
+            from app.services.redemption_limit_service import deduct as _rl_deduct
+            await _rl_deduct(db, data.user_id, float(int_amount) * 10.0,
+                             note=f"recharge:{tid}")
+        except Exception as _rl_e:
+            logging.warning(f"[RECHARGE] redemption limit deduct failed: {_rl_e}")
         # CRITICAL: Once Eko confirms success, ALWAYS return success to user.
         # Even if our DB recording fails, the recharge already went through.
         try:

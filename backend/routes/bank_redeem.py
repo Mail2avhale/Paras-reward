@@ -695,6 +695,16 @@ async def create_withdrawal_request(user_id: str, request: Request):
             status_code=400, 
             detail=f"Maximum withdrawal amount is ₹{MAX_AMOUNT}"
         )
+
+    # Daily redemption limit guard (Sep 1 2026) — cumulative cap that grows
+    # 10 PRC per day up to 667,950 PRC over a 365-day cycle. Independent of
+    # main PRC balance / fees / service-charge lock. See
+    # /app/backend/app/services/redemption_limit_service.py
+    from app.services.redemption_limit_service import ensure_can_spend
+    prc_needed = float(amount_inr) * 10.0  # 10 PRC = ₹1
+    ok, snap, reason = await ensure_can_spend(db, user_id, prc_needed)
+    if not ok:
+        raise HTTPException(status_code=400, detail=reason)
     
     # Check bank details
     if not user.get("bank_details"):
@@ -825,7 +835,16 @@ async def create_withdrawal_request(user_id: str, request: Request):
         "created_at": now.isoformat()
     }
     await db.transactions.insert_one(transaction)
-    
+
+    # Daily redemption limit — deduct PRC-equivalent from the growing cap
+    # so today's remaining budget shrinks by exactly what was withdrawn.
+    try:
+        from app.services.redemption_limit_service import deduct as _rl_deduct
+        await _rl_deduct(db, user_id, float(amount_inr) * 10.0,
+                         note=f"bank_redeem:{request_id}")
+    except Exception as _rl_e:
+        logging.warning(f"[bank-redeem] redemption limit deduct failed: {_rl_e}")
+
     # Create notification
     if create_notification:
         try:
