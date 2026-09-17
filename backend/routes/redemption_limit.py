@@ -124,6 +124,7 @@ async def admin_backfill_missing_service_charges(request: Request):
         raise HTTPException(status_code=403, detail="Admin PIN required")
 
     dry_run = bool(data.get("dry_run", True))
+    only_upcoming = bool(data.get("only_upcoming", False))
 
     # Lazy import — avoids circular init since redemption_service_charge sets
     # its own db in main.py startup.
@@ -134,10 +135,16 @@ async def admin_backfill_missing_service_charges(request: Request):
         "sale_elite_subscription": {"scanned": 0, "already_charged": 0, "missing": 0, "created": 0, "errors": 0},
         "users_touched": set(),
         "sample_missing": [],  # first 10 missing for preview
+        "filter": "only_upcoming" if only_upcoming else "all_prc_subscriptions",
     }
 
     # ---------- Elite subscriptions ----------
     query_sub = {"payment_method": "prc", "prc_amount": {"$gt": 0}}
+    if only_upcoming:
+        # ONLY queued/advance subscriptions that have not yet activated.
+        # These are the ones users bought BEFORE the service-charge system
+        # existed and stashed as future plans.
+        query_sub["status"] = "upcoming"
     cursor = db.subscription_payments.find(
         query_sub,
         {"_id": 0, "payment_id": 1, "user_id": 1, "prc_amount": 1, "status": 1, "created_at": 1},
@@ -175,41 +182,43 @@ async def admin_backfill_missing_service_charges(request: Request):
                 stats["elite_subscription"]["errors"] += 1
 
     # ---------- Sale-Elite sponsorships ----------
-    cursor = db.sponsored_subscriptions.find(
-        {"prc_amount": {"$gt": 0}},
-        {"_id": 0, "sale_id": 1, "sender_uid": 1, "user_id": 1, "prc_amount": 1, "created_at": 1, "status": 1},
-    )
-    async for doc in cursor:
-        stats["sale_elite_subscription"]["scanned"] += 1
-        sid = doc.get("sale_id")
-        # sender pays the service charge (the buyer of the sponsorship)
-        uid = doc.get("sender_uid") or doc.get("user_id")
-        prc = float(doc.get("prc_amount") or 0)
-        if not sid or not uid or prc <= 0:
-            continue
-        exists = await db.redemption_service_charges.find_one(
-            {"redemption_id": sid}, {"_id": 1}
+    # Skip entirely when caller only wants upcoming PRC subscriptions.
+    if not only_upcoming:
+        sale_cursor = db.sponsored_subscriptions.find(
+            {"prc_amount": {"$gt": 0}},
+            {"_id": 0, "sale_id": 1, "sender_uid": 1, "user_id": 1, "prc_amount": 1, "created_at": 1, "status": 1},
         )
-        if exists:
-            stats["sale_elite_subscription"]["already_charged"] += 1
-            continue
-        stats["sale_elite_subscription"]["missing"] += 1
-        stats["users_touched"].add(uid)
-        if len(stats["sample_missing"]) < 10:
-            stats["sample_missing"].append({
-                "type": "sale_elite_subscription", "user_id": uid,
-                "redemption_id": sid, "prc_amount": prc,
-                "created_at": doc.get("created_at"), "status": doc.get("status"),
-            })
-        if not dry_run:
-            try:
-                await create_service_charge_on_success(
-                    user_id=uid, redemption_id=sid,
-                    prc_amount=prc, redemption_type="sale_elite_subscription",
-                )
-                stats["sale_elite_subscription"]["created"] += 1
-            except Exception:
-                stats["sale_elite_subscription"]["errors"] += 1
+        async for doc in sale_cursor:
+            stats["sale_elite_subscription"]["scanned"] += 1
+            sid = doc.get("sale_id")
+            # sender pays the service charge (the buyer of the sponsorship)
+            uid = doc.get("sender_uid") or doc.get("user_id")
+            prc = float(doc.get("prc_amount") or 0)
+            if not sid or not uid or prc <= 0:
+                continue
+            exists = await db.redemption_service_charges.find_one(
+                {"redemption_id": sid}, {"_id": 1}
+            )
+            if exists:
+                stats["sale_elite_subscription"]["already_charged"] += 1
+                continue
+            stats["sale_elite_subscription"]["missing"] += 1
+            stats["users_touched"].add(uid)
+            if len(stats["sample_missing"]) < 10:
+                stats["sample_missing"].append({
+                    "type": "sale_elite_subscription", "user_id": uid,
+                    "redemption_id": sid, "prc_amount": prc,
+                    "created_at": doc.get("created_at"), "status": doc.get("status"),
+                })
+            if not dry_run:
+                try:
+                    await create_service_charge_on_success(
+                        user_id=uid, redemption_id=sid,
+                        prc_amount=prc, redemption_type="sale_elite_subscription",
+                    )
+                    stats["sale_elite_subscription"]["created"] += 1
+                except Exception:
+                    stats["sale_elite_subscription"]["errors"] += 1
 
     # Convert set to count for JSON output
     users_touched_count = len(stats["users_touched"])
