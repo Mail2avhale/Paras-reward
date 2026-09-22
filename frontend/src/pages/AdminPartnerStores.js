@@ -1,5 +1,5 @@
 /**
- * Admin — Partner Stores Management (Paras Reward v2.0, Feb 2026)
+ * Admin — Partner Stores Management (Paras Rewards v2.0, Feb 2026)
  * ================================================================
  * Admin creates + verifies Partner Store logins. No public registration.
  * Endpoints under /api/v2/partner-stores/admin/*. Requires X-Admin-Pin.

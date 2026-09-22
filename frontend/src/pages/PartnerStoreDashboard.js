@@ -1,5 +1,5 @@
 /**
- * Partner Store Dashboard — Paras Reward v2.0 (Feb 2026)
+ * Partner Store Dashboard — Paras Rewards v2.0 (Feb 2026)
  * ======================================================
  * Minimal, mobile-first dashboard for verified Partner Stores.
  *

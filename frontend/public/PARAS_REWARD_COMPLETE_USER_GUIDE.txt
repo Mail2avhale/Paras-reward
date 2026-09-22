@@ -1,5 +1,5 @@
 ================================================================================
-                    PARAS REWARD - COMPLETE USER GUIDE
+                    PARAS REWARDS - COMPLETE USER GUIDE
                     ===================================
                     From Registration to Redemption
                     Everything You Need to Know
@@ -8,7 +8,7 @@
 
 TABLE OF CONTENTS
 -----------------
-1. What is Paras Reward?
+1. What is Paras Rewards?
 2. Registration (Sign Up)
 3. Login
 4. Dashboard & Home
@@ -30,16 +30,16 @@ TABLE OF CONTENTS
 
 
 ================================================================================
-1. WHAT IS PARAS REWARD?
+1. WHAT IS PARAS REWARDS?
 ================================================================================
 
-Paras Reward is a rewards-based platform where users earn PRC (Paras Reward 
+Paras Rewards is a rewards-based platform where users earn PRC (Paras Rewards 
 Coins) daily through mining. The more you grow your network, the more you 
 earn. PRC can be redeemed for real value - gift vouchers, bill payments, 
 bank transfers, and more.
 
 Key Concept:
-- PRC = Paras Reward Coin (Digital reward currency)
+- PRC = Paras Rewards Coin (Digital reward currency)
 - 1 PRC has a dynamic INR value (changes based on ecosystem health)
 - You earn PRC every day through mining
 - You spend PRC on real services and products
@@ -50,7 +50,7 @@ Key Concept:
 ================================================================================
 
 How to Register:
-1. Open the Paras Reward app/website
+1. Open the Paras Rewards app/website
 2. Click "Sign Up"
 3. Fill in the required details:
    - Full Name (minimum 2 characters)
@@ -627,5 +627,5 @@ REDEEM OPTIONS:
   Flash Sales:    Special deals
 
 ================================================================================
-             PARAS REWARD - Earn. Grow. Redeem. Repeat.
+             PARAS REWARDS - Earn. Grow. Redeem. Repeat.
 ================================================================================

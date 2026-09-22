@@ -1,5 +1,5 @@
 /**
- * AdMobBanner — banner ad renderer (Paras Reward, updated Feb 17 2026)
+ * AdMobBanner — banner ad renderer (Paras Rewards, updated Feb 17 2026)
  * =====================================================================
  * On Capacitor (Android app): mounts a real Google AdMob banner using
  *   @capacitor-community/admob. Banner is shown at BOTTOM_CENTER with

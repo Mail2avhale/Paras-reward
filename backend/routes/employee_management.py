@@ -6,7 +6,7 @@ EMPLOYEE MANAGEMENT SYSTEM
 3. Attendance (Present/Absent/Half-day/Leave)
 4. Salary Slip (Indian standard: Basic, HRA, Allowances, PF, ESI, PT, TDS)
 5. Digital ID Card
-6. Company: Paras Reward Technologies Private Limited
+6. Company: Paras Rewards Technologies Private Limited
 """
 
 import logging
@@ -28,7 +28,7 @@ cache = None
 # (e.g., startup catch-up firing simultaneously with the regular cron)
 _employee_distribution_lock = None  # Lazy-init in distribute_employee_pool
 
-COMPANY_NAME = "Paras Reward Technologies Private Limited"
+COMPANY_NAME = "Paras Rewards Technologies Private Limited"
 COMPANY_ADDRESS = "B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra 431006"
 COMPANY_WEBSITE = "www.parasreward.com"
 

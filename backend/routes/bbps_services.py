@@ -1,5 +1,5 @@
 """
-PARAS REWARD - EKO BBPS MULTI SERVICE BACKEND
+PARAS REWARDS - EKO BBPS MULTI SERVICE BACKEND
 ============================================
 Clean implementation following official EKO documentation with standard error handling.
 
@@ -502,7 +502,7 @@ def create_pending_response(
 def health():
     """Health check endpoint"""
     return {
-        "status": "PARAS REWARD BBPS RUNNING",
+        "status": "PARAS REWARDS BBPS RUNNING",
         "version": "2.1",
         "services": ["electricity", "dth", "fastag", "emi", "mobile_prepaid", "water", "credit_card", "insurance"]
     }

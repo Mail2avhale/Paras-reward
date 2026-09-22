@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "PARAS REWARD",
+    "appName": "PARAS REWARDS",
     "login": "Login",
     "register": "Register",
     "logout": "Logout",
@@ -44,7 +44,7 @@
     "step_3_title": "Redeem Rewards",
     "step_3_desc": "Exchange your PRC points for products from our marketplace.",
     "features": "Features",
-    "why_choose": "Why Choose PARAS REWARD",
+    "why_choose": "Why Choose PARAS REWARDS",
     "feature_mining": "Daily Points Collection",
     "feature_mining_desc": "Earn PRC reward points every day through daily activities",
     "feature_games": "Fun Games",
@@ -97,7 +97,7 @@
     "privacy": "Privacy Policy",
     "contact_us": "Contact Us",
     "follow_us": "Follow Us",
-    "copyright": "© 2026 Paras Reward Technologies Private Limited. All rights reserved.",
+    "copyright": "© 2026 Paras Rewards Technologies Private Limited. All rights reserved.",
     "language": "Language",
     "select_language": "Select Language"
   },

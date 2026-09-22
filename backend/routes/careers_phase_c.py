@@ -81,7 +81,7 @@ def _build_offer_pdf(*, offer: dict, application: dict) -> str:
     body = ParagraphStyle("body", parent=styles["Normal"], alignment=TA_LEFT, fontSize=10.5, leading=14)
 
     story = []
-    story.append(Paragraph("PARAS REWARD TECHNOLOGIES PRIVATE LIMITED", title_style))
+    story.append(Paragraph("PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED", title_style))
     story.append(Paragraph("B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra 431006 &nbsp;•&nbsp; www.parasreward.com", subtitle))
     story.append(Paragraph(f"<b>Offer Letter</b> &nbsp; ({offer['offer_id']})", h))
     story.append(Spacer(1, 6))
@@ -95,7 +95,7 @@ def _build_offer_pdf(*, offer: dict, application: dict) -> str:
     story.append(Spacer(1, 4))
     story.append(Paragraph(
         f"We are pleased to offer you the position of <b>{offer['designation']}</b> in the "
-        f"<b>{offer['department']}</b> department at <b>Paras Reward Technologies Pvt. Ltd.</b>, "
+        f"<b>{offer['department']}</b> department at <b>Paras Rewards Technologies Pvt. Ltd.</b>, "
         f"under the hiring type <b>{offer['hiring_type']}</b>. Your date of joining will be "
         f"<b>{offer['joining_date']}</b> at our <b>{offer['work_location']}</b> office.",
         body,
@@ -146,7 +146,7 @@ def _build_offer_pdf(*, offer: dict, application: dict) -> str:
     story.append(Spacer(1, 24))
     story.append(Paragraph("Warm regards,", body))
     story.append(Spacer(1, 20))
-    story.append(Paragraph("<b>HR Department</b><br/>Paras Reward Technologies Private Limited", body))
+    story.append(Paragraph("<b>HR Department</b><br/>Paras Rewards Technologies Private Limited", body))
 
     doc.build(story)
     return fpath

@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Ledger Models
+PARAS REWARDS - Ledger Models
 ============================
 Double-entry accounting ledger models.
 Every financial transaction MUST have a ledger entry.

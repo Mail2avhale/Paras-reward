@@ -57,7 +57,7 @@ const ServiceChargePendingBanner = ({ user }) => {
         key: order.razorpay_key,
         amount: order.amount, currency: order.currency,
         order_id: order.order_id,
-        name: 'Paras Reward',
+        name: 'Paras Rewards',
         description: `PRC Redemption Service Charge · ${charge.charge_id}`,
         ...(runningInWebView ? { webview_intent: true } : {}),
         prefill: { name: user?.name, email: user?.email, contact: user?.mobile || user?.phone },

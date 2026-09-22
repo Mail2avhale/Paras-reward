@@ -113,7 +113,7 @@ export default function DeleteAccount() {
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
             Delete Account & Data
           </h1>
-          <p className="text-sm text-slate-500 mt-1">PARAS REWARD</p>
+          <p className="text-sm text-slate-500 mt-1">PARAS REWARDS</p>
         </div>
 
         {/* Form card */}
@@ -246,7 +246,7 @@ export default function DeleteAccount() {
 
         {/* Footer */}
         <p className="text-center text-[11px] text-slate-400 mt-6 leading-relaxed">
-          PARAS REWARD will process verified requests within 30 days. <br />
+          PARAS REWARDS will process verified requests within 30 days. <br />
           Data Safety form compliant — Google Play.
         </p>
       </div>

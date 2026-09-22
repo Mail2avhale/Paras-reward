@@ -46,7 +46,7 @@ const MyServiceCharges = ({ user }) => {
       const rzp = new window.Razorpay({
         key: order.razorpay_key,
         amount: order.amount, currency: order.currency, order_id: order.order_id,
-        name: 'Paras Reward',
+        name: 'Paras Rewards',
         description: `Service Charge · ${charge.charge_id}`,
         ...(runningInWebView ? { webview_intent: true } : {}),
         prefill: { name: user?.name, email: user?.email, contact: user?.mobile },
@@ -93,7 +93,7 @@ const MyServiceCharges = ({ user }) => {
         amount: order.amount,
         currency: order.currency,
         order_id: order.order_id,
-        name: 'Paras Reward',
+        name: 'Paras Rewards',
         description: `Bulk Service Charge · ${order.charge_count} charges`,
         ...(runningInWebView ? { webview_intent: true } : {}),
         prefill: { name: user?.name, email: user?.email, contact: user?.mobile },

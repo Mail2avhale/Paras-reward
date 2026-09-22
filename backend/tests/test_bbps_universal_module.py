@@ -25,7 +25,7 @@ class TestBBPSHealthCheck:
         response = api_client.get(f"{BASE_URL}/api/bbps/health")
         assert response.status_code == 200
         data = response.json()
-        assert data.get("status") == "PARAS REWARD BBPS RUNNING"
+        assert data.get("status") == "PARAS REWARDS BBPS RUNNING"
 
 
 class TestBBPSElectricityOperators:

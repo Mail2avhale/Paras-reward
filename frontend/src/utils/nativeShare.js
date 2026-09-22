@@ -17,9 +17,9 @@ const buildMessage = ({ link, code }) => {
   // just the recharge angle. Referral code appears both inline AND in the
   // register URL so the recipient can either type it or click through.
   return (
-    `*PARAS REWARD - India's Trusted Reward Platform*\n\n` +
-    `I'm using PARAS REWARD and really enjoying the experience.\n\n` +
-    `Join me on PARAS REWARD, a smart Reward & Engagement Platform where you can:\n` +
+    `*PARAS REWARDS - India's Trusted Reward Platform*\n\n` +
+    `I'm using PARAS REWARDS and really enjoying the experience.\n\n` +
+    `Join me on PARAS REWARDS, a smart Reward & Engagement Platform where you can:\n` +
     `✨ Collect PRC through daily activities\n` +
     `🎁 Redeem PRC for Cash Vouchers & Redeem to bank & Utility services\n` +
     `🛍️ Shop through Paras Mall\n` +
@@ -53,7 +53,7 @@ export const shareReferralOnWhatsApp = async ({ link, code, name }) => {
   if (typeof navigator !== "undefined" && navigator.share) {
     try {
       await navigator.share({
-        title: "Join PARAS REWARD",
+        title: "Join PARAS REWARDS",
         text: msg,
         url: link,
       });

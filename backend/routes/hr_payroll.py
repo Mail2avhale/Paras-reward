@@ -344,7 +344,7 @@ def build_payslip_pdf(ps: dict) -> str:
     lbl_s = ParagraphStyle("l", parent=ss["Normal"], fontSize=10)
 
     story = []
-    story.append(Paragraph("PARAS REWARD TECHNOLOGIES PRIVATE LIMITED", title_s))
+    story.append(Paragraph("PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED", title_s))
     story.append(Paragraph("B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra 431006", sub_s))
 
     yr, mo = ps["month"].split("-")

@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Pydantic Schemas/Models
+PARAS REWARDS - Pydantic Schemas/Models
 ======================================
 All request/response models for API endpoints
 """

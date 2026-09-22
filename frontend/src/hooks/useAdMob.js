@@ -5,7 +5,7 @@
  *
  * No-op on web (only triggers on native Android).
  *
- * Ad units (from AdMob console — Paras Reward):
+ * Ad units (from AdMob console — Paras Rewards):
  *   - App ID:               ca-app-pub-3556805218952480~1933993140
  *   - App Open:             ca-app-pub-3556805218952480/2186165856
  *   - Rewarded ("PRC"):     ca-app-pub-3556805218952480/7314369451

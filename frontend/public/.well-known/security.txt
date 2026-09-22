@@ -1,4 +1,4 @@
-# PARAS REWARD Security Policy
+# PARAS REWARDS Security Policy
 # https://www.parasreward.com/.well-known/security.txt
 
 Contact: mailto:security@parasreward.com

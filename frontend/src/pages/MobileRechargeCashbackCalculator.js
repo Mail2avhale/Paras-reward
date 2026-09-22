@@ -20,12 +20,12 @@ const DEMO_PRC_RATE = 0.10;
 
 const FAQS = [
   {
-    q: 'How much cashback do I get on mobile recharge through Paras Reward?',
+    q: 'How much cashback do I get on mobile recharge through Paras Rewards?',
     a: "Explorer (free) members get 0.5% cashback in PRC on every successful mobile/DTH recharge. Elite subscribers earn 5x more — 2.5% cashback. Cashback is credited instantly to your PRC balance and can be converted to INR or used for future recharges.",
   },
   {
     q: 'Is the cashback in actual cash or coupon points?',
-    a: "It's PRC (Paras Reward Coin), which is convertible to actual INR cash via Bank Redeem. Unlike coupon-only apps, your cashback is real money that goes to your bank account.",
+    a: "It's PRC (Paras Rewards Coin), which is convertible to actual INR cash via Bank Redeem. Unlike coupon-only apps, your cashback is real money that goes to your bank account.",
   },
   {
     q: 'Which operators are supported for mobile recharge?',
@@ -56,7 +56,7 @@ const MobileRechargeCashbackCalculator = () => {
   const [openFaq, setOpenFaq] = useState(0);
 
   useEffect(() => {
-    document.title = 'Mobile Recharge Cashback Calculator | Paras Reward — Up to 2.5% Cashback';
+    document.title = 'Mobile Recharge Cashback Calculator | Paras Rewards — Up to 2.5% Cashback';
     const m = document.querySelector('meta[name="description"]');
     const orig = m?.getAttribute('content');
     if (m) m.setAttribute('content',
@@ -89,7 +89,7 @@ const MobileRechargeCashbackCalculator = () => {
         </h1>
         <p className="mt-3 text-base text-slate-600 leading-relaxed">
           See exactly <strong>how much cashback you'll earn</strong> on any Airtel,
-          Jio, Vi, BSNL, or DTH recharge through Paras Reward. Instant PRC
+          Jio, Vi, BSNL, or DTH recharge through Paras Rewards. Instant PRC
           credit, instant INR conversion.
         </p>
       </section>
@@ -153,7 +153,7 @@ const MobileRechargeCashbackCalculator = () => {
         </h2>
         <p className="text-base text-slate-700 leading-relaxed mb-4">
           Most Indian recharge apps either don't offer cashback or give you
-          coupon points that expire. <strong>Paras Reward gives you real PRC
+          coupon points that expire. <strong>Paras Rewards gives you real PRC
           coins</strong> on every successful mobile recharge, DTH recharge, or
           bill payment. PRC is instantly convertible to INR cash in your
           bank account — no coupon strings attached.

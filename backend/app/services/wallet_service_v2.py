@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Wallet Service V2
+PARAS REWARDS - Wallet Service V2
 ================================
 CRITICAL: All PRC operations MUST go through this service.
 

@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Database Connection Manager
+PARAS REWARDS - Database Connection Manager
 ==========================================
 Manages MongoDB connections with auto-reconnect capability.
 

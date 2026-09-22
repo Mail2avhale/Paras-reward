@@ -75,7 +75,7 @@ class TestBBPSHealthCheck:
         response = requests.get(f"{API_URL}/api/bbps/health", timeout=10)
         assert response.status_code == 200
         data = response.json()
-        assert data.get("status") == "PARAS REWARD BBPS RUNNING"
+        assert data.get("status") == "PARAS REWARDS BBPS RUNNING"
         assert "services" in data
         assert "mobile_prepaid" in data["services"]
 

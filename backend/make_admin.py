@@ -19,7 +19,7 @@ async def main():
     db = client[db_name]
     
     print("=" * 60)
-    print("PARAS REWARD - Admin Role Assignment Tool")
+    print("PARAS REWARDS - Admin Role Assignment Tool")
     print("=" * 60)
     
     # List all users

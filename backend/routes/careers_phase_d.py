@@ -160,7 +160,7 @@ def _base_styles():
 
 
 def _company_header(story, s, letter_title, letter_id):
-    story.append(Paragraph("PARAS REWARD TECHNOLOGIES PRIVATE LIMITED", s["title"]))
+    story.append(Paragraph("PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED", s["title"]))
     story.append(Paragraph("B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra 431006 &nbsp;•&nbsp; www.parasreward.com", s["sub"]))
     story.append(Paragraph(f"<b>{letter_title}</b> &nbsp; ({letter_id})", s["h"]))
     story.append(Spacer(1, 4))
@@ -175,7 +175,7 @@ def _employee_block(story, s, emp):
 
 def _footer(story, s):
     story.append(Spacer(1, 22))
-    story.append(Paragraph("For Paras Reward Technologies Private Limited,", s["body"]))
+    story.append(Paragraph("For Paras Rewards Technologies Private Limited,", s["body"]))
     story.append(Spacer(1, 24))
     story.append(Paragraph("<b>Authorised Signatory</b><br/>Human Resources Department", s["body"]))
 
@@ -204,7 +204,7 @@ def _build_letter_pdf(letter_id: str, kind: str, employee: dict, payload: dict) 
         story.append(Paragraph(
             f"With reference to your acceptance of our offer, we are pleased to appoint you as "
             f"<b>{employee.get('designation', '')}</b> in the <b>{dept}</b> department at "
-            f"<b>Paras Reward Technologies Pvt. Ltd.</b>, effective from <b>{joining}</b>.",
+            f"<b>Paras Rewards Technologies Pvt. Ltd.</b>, effective from <b>{joining}</b>.",
             s["body"],
         ))
         story.append(Paragraph(
@@ -213,7 +213,7 @@ def _build_letter_pdf(letter_id: str, kind: str, employee: dict, payload: dict) 
             f"as amended from time to time shall be binding on you.",
             s["body"],
         ))
-        story.append(Paragraph("We warmly welcome you to the Paras Reward family.", s["body"]))
+        story.append(Paragraph("We warmly welcome you to the Paras Rewards family.", s["body"]))
     elif kind == "confirmation":
         story.append(Paragraph(f"Dear {first},", s["body"]))
         story.append(Paragraph(
@@ -265,7 +265,7 @@ def _build_letter_pdf(letter_id: str, kind: str, employee: dict, payload: dict) 
         story.append(Paragraph("To Whom It May Concern,", s["body"]))
         story.append(Paragraph(
             f"This is to certify that <b>{employee.get('name', '')}</b> ({employee.get('employee_id', '')}) was employed with "
-            f"<b>Paras Reward Technologies Pvt. Ltd.</b> from <b>{joining}</b> to <b>{rd}</b>. "
+            f"<b>Paras Rewards Technologies Pvt. Ltd.</b> from <b>{joining}</b> to <b>{rd}</b>. "
             f"At the time of separation, {first} held the position of <b>{employee.get('designation', '')}</b> "
             f"in the <b>{dept}</b> department.",
             s["body"],

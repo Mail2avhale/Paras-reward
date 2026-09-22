@@ -23,11 +23,11 @@ const ShareApp = ({ user, variant = 'button', className = '' }) => {
   const referralCode = user?.referral_code || 'PARAS';
   const referralLink = `${SHARE_DOMAIN}/register?ref=${referralCode}`;
   
-  const shareMessage = `*PARAS REWARD - India's Trusted Reward Platform*
+  const shareMessage = `*PARAS REWARDS - India's Trusted Reward Platform*
 
-I'm using PARAS REWARD and really enjoying the experience.
+I'm using PARAS REWARDS and really enjoying the experience.
 
-Join me on PARAS REWARD, a smart Reward & Engagement Platform where you can:
+Join me on PARAS REWARDS, a smart Reward & Engagement Platform where you can:
 ✨ Collect PRC through daily activities
 🎁 Redeem PRC for Cash Vouchers & Redeem to bank & Utility services
 🛍️ Shop through Paras Mall
@@ -54,7 +54,7 @@ Join today and start your reward journey with me! 💎`;
 
   const shareNative = async () => {
     const shareData = {
-      title: 'Join PARAS REWARD',
+      title: 'Join PARAS REWARDS',
       text: shareMessage,
       url: referralLink
     };
@@ -276,7 +276,7 @@ const ShareModal = ({
                   <Share2 className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-white text-xl font-bold">Share PARAS REWARD</h2>
+                  <h2 className="text-white text-xl font-bold">Share PARAS REWARDS</h2>
                   <p className="text-white/80 text-sm">Invite friends & earn bonus</p>
                 </div>
               </div>

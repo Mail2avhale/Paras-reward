@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Models Package
+PARAS REWARDS - Models Package
 """
 
 from .schemas import (

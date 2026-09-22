@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Admin Ledger Routes
+PARAS REWARDS - Admin Ledger Routes
 ==================================
 Admin endpoints for viewing and managing ledger entries.
 """

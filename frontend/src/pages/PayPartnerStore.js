@@ -1,5 +1,5 @@
 /**
- * Pay to Partner Store — user-facing payment flow (Paras Reward v2.0, Feb 2026)
+ * Pay to Partner Store — user-facing payment flow (Paras Rewards v2.0, Feb 2026)
  * =============================================================================
  * Step 1: enter mobile / 6-digit Store ID → lookup
  * Step 2: enter PRC amount + optional remark → confirm

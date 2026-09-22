@@ -13,7 +13,7 @@ import { API } from "../lib/api";
 const Disclaimer = () => {
   const navigate = useNavigate();
   const [companyInfo, setCompanyInfo] = useState({
-    company_name: 'PARAS REWARD',
+    company_name: 'PARAS REWARDS',
     email: 'Info@parasreward.com',
     address: 'India'
   });
@@ -38,7 +38,7 @@ const Disclaimer = () => {
     <>
       <SEO 
         title="Disclaimer"
-        description="Important legal disclaimers for PARAS REWARD platform users. Read our disclaimer policy carefully."
+        description="Important legal disclaimers for PARAS REWARDS platform users. Read our disclaimer policy carefully."
         url="https://www.parasreward.com/disclaimer"
       />
       <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
@@ -113,7 +113,7 @@ const Disclaimer = () => {
                 </p>
               </div>
               <ul className="list-disc list-inside space-y-2 ml-4 mt-4">
-                <li>PRC (PARAS REWARD CURRENCY) points are <strong>NOT</strong> cryptocurrency, legal tender, or real currency</li>
+                <li>PRC (PARAS REWARDS CURRENCY) points are <strong>NOT</strong> cryptocurrency, legal tender, or real currency</li>
                 <li>PRC points have <strong>NO</strong> monetary value outside our platform</li>
                 <li>We do <strong>NOT</strong> provide any investment advice or financial services</li>
                 <li>The value of PRC points is determined solely by us and can change at any time</li>

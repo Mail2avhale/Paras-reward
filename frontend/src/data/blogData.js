@@ -2,18 +2,18 @@ export const blogArticles = [
   {
     id: 1,
     slug: "what-is-paras-reward-complete-guide",
-    title: "What Is Paras Reward? A Complete Guide for New Users",
+    title: "What Is Paras Rewards? A Complete Guide for New Users",
     excerpt: "Are you looking for a platform where you can collect digital coins just by logging in daily and staying active? Discover India's first reward-based platform.",
-    author: "PARAS REWARD Team",
+    author: "PARAS REWARDS Team",
     date: "November 2, 2024",
     readTime: "5 min read",
     category: "Getting Started",
     image: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800&h=400&fit=crop",
     content: `
-      <p class="lead">Are you looking for a platform where you can collect digital coins just by logging in daily and staying active? Paras Reward is India's first reward-based engagement platform, where you get PRC (Paras Reward Coins) without any investment — just your time and engagement!</p>
+      <p class="lead">Are you looking for a platform where you can collect digital coins just by logging in daily and staying active? Paras Rewards is India's first reward-based engagement platform, where you get PRC (Paras Rewards Coins) without any investment — just your time and engagement!</p>
 
-      <h2>✅ What Is Paras Reward?</h2>
-      <p>Paras Reward is a mobile app and online platform where users can:</p>
+      <h2>✅ What Is Paras Rewards?</h2>
+      <p>Paras Rewards is a mobile app and online platform where users can:</p>
       <ul>
         <li>Collect reward points every hour</li>
         <li>Boost rewards with referrals</li>
@@ -23,7 +23,7 @@ export const blogArticles = [
       <p>It's a reward model based on user time and engagement — not cryptocurrency trading or investment.</p>
 
       <h2>✅ How Does the Rewards System Work?</h2>
-      <p>Collecting rewards is the heart of Paras Reward. Once you start your reward session in the app, PRC coins start accumulating automatically every hour. You can boost your reward rate by:</p>
+      <p>Collecting rewards is the heart of Paras Rewards. Once you start your reward session in the app, PRC coins start accumulating automatically every hour. You can boost your reward rate by:</p>
       <ul>
         <li>Logging in daily</li>
         <li>Keeping reward sessions active</li>
@@ -31,36 +31,36 @@ export const blogArticles = [
       </ul>
 
       <h2>✅ What Are PRC Coins?</h2>
-      <p>PRC (Paras Reward Coin) is the in-app virtual currency you collect for free. You can use PRC to get:</p>
+      <p>PRC (Paras Rewards Coin) is the in-app virtual currency you collect for free. You can use PRC to get:</p>
       <ul>
         <li>Instant UPI cash transfer (Elite only)</li>
         <li>Shopping vouchers</li>
         <li>Special offers & premium access</li>
       </ul>
 
-      <h2>✅ Is Paras Reward Free?</h2>
+      <h2>✅ Is Paras Rewards Free?</h2>
       <p>Yes — joining and collecting rewards is 100% free. Elite Membership is optional and required only for redemption.</p>
 
       <h2>✅ Is It Legal and Safe?</h2>
-      <p>Yes. Paras Reward is a compliant, India-based rewards platform, not a crypto trading or investment app. Coins collected in the app reflect your activity and are used within supported platform channels.</p>
+      <p>Yes. Paras Rewards is a compliant, India-based rewards platform, not a crypto trading or investment app. Coins collected in the app reflect your activity and are used within supported platform channels.</p>
     `
   },
   {
     id: 2,
     slug: "how-daily-rewards-work",
-    title: "How Daily Rewards Work in Paras Reward (Full Breakdown)",
+    title: "How Daily Rewards Work in Paras Rewards (Full Breakdown)",
     excerpt: "Understanding the time-based reward process designed for everyday users. No investment, trading knowledge, or hardware needed.",
-    author: "PARAS REWARD Team",
+    author: "PARAS REWARDS Team",
     date: "November 2, 2024",
     readTime: "4 min read",
     category: "Rewards",
     image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop",
     content: `
-      <p class="lead">Collecting rewards in Paras Reward is a simple, time-based process designed for everyday users. You don't need any investment, trading knowledge, or hardware.</p>
+      <p class="lead">Collecting rewards in Paras Rewards is a simple, time-based process designed for everyday users. You don't need any investment, trading knowledge, or hardware.</p>
 
       <h2>🕒 Step-by-Step Rewards Guide:</h2>
       <ol>
-        <li>Open Paras Reward app</li>
+        <li>Open Paras Rewards app</li>
         <li>Tap "Start Earning"</li>
         <li>Coins will be added to your account every hour</li>
         <li>Login daily to maintain your earning rate</li>
@@ -78,21 +78,21 @@ export const blogArticles = [
       </ul>
 
       <h2>🧠 What Happens If You Miss a Day?</h2>
-      <p>Paras Reward encourages consistent engagement. While missing a day won't lose your coins, staying consistent ensures you maintain optimal earning rates. Regular users benefit from higher reward accumulation!</p>
+      <p>Paras Rewards encourages consistent engagement. While missing a day won't lose your coins, staying consistent ensures you maintain optimal earning rates. Regular users benefit from higher reward accumulation!</p>
     `
   },
   {
     id: 3,
     slug: "earn-more-with-referrals",
-    title: "How to Grow Your Network & Increase Rewards with Paras Reward",
+    title: "How to Grow Your Network & Increase Rewards with Paras Rewards",
     excerpt: "The Growth Network is your best tool for maximizing rewards. Learn how to grow your network and increase your benefits.",
-    author: "PARAS REWARD Team",
+    author: "PARAS REWARDS Team",
     date: "November 2, 2024",
     readTime: "4 min read",
     category: "Referrals",
     image: "https://images.unsplash.com/photo-1556742393-d75f468bfcb0?w=800&h=400&fit=crop",
     content: `
-      <p class="lead">If you're serious about increasing rewards with Paras Reward, the Growth Network is your best friend.</p>
+      <p class="lead">If you're serious about increasing rewards with Paras Rewards, the Growth Network is your best friend.</p>
 
       <h2>🎯 Benefits of Growing Your Network:</h2>
       <ul>
@@ -123,9 +123,9 @@ export const blogArticles = [
   {
     id: 4,
     slug: "vip-membership-benefits-guide",
-    title: "VIP Membership in Paras Reward – Benefits, Fees & Full Guide",
+    title: "VIP Membership in Paras Rewards – Benefits, Fees & Full Guide",
     excerpt: "Convert your earned PRC coins into rewards via UPI. Discover what VIP Membership unlocks and whether it's worth it.",
-    author: "PARAS REWARD Team",
+    author: "PARAS REWARDS Team",
     date: "November 2, 2024",
     readTime: "5 min read",
     category: "VIP",
@@ -134,7 +134,7 @@ export const blogArticles = [
       <p class="lead">What if you could convert your earned PRC coins into rewards via UPI? That's what the VIP Membership unlocks!</p>
 
       <h2>💎 What Is VIP Membership?</h2>
-      <p>A paid subscription inside the Paras Reward app that activates:</p>
+      <p>A paid subscription inside the Paras Rewards app that activates:</p>
       <ul>
         <li>Redeem system</li>
         <li>Daily bonus boosts</li>
@@ -166,15 +166,15 @@ export const blogArticles = [
   {
     id: 6,
     slug: "is-paras-reward-legit",
-    title: "Is Paras Reward Legit and Safe? (Full Transparency Review)",
-    excerpt: "Paras Reward is a legit Indian reward app, not a crypto scam or MLM scheme. Here's everything you need to know about safety and legitimacy.",
-    author: "PARAS REWARD Team",
+    title: "Is Paras Rewards Legit and Safe? (Full Transparency Review)",
+    excerpt: "Paras Rewards is a legit Indian reward app, not a crypto scam or MLM scheme. Here's everything you need to know about safety and legitimacy.",
+    author: "PARAS REWARDS Team",
     date: "November 2, 2024",
     readTime: "5 min read",
     category: "Safety",
     image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&h=400&fit=crop",
     content: `
-      <p class="lead">Paras Reward is a legit Indian reward app, not a crypto scam or MLM scheme. Here's why:</p>
+      <p class="lead">Paras Rewards is a legit Indian reward app, not a crypto scam or MLM scheme. Here's why:</p>
 
       <h2>🛡️ Why It's Safe:</h2>
       <ul>
@@ -212,9 +212,9 @@ export const blogArticles = [
   {
     id: 7,
     slug: "tips-to-boost-earnings",
-    title: "Tips to Boost Daily Earnings in Paras Reward",
+    title: "Tips to Boost Daily Earnings in Paras Rewards",
     excerpt: "Want to double your earnings? Here are proven strategies to maximize your PRC accumulation every day.",
-    author: "PARAS REWARD Team",
+    author: "PARAS REWARDS Team",
     date: "November 2, 2024",
     readTime: "3 min read",
     category: "Tips & Tricks",
@@ -250,9 +250,9 @@ export const blogArticles = [
   {
     id: 8,
     slug: "common-mistakes-to-avoid",
-    title: "Common Mistakes to Avoid in Reward Apps Like Paras Reward",
+    title: "Common Mistakes to Avoid in Reward Apps Like Paras Rewards",
     excerpt: "New users often make mistakes that cost them earning opportunities. Avoid these common pitfalls and maximize your rewards.",
-    author: "PARAS REWARD Team",
+    author: "PARAS REWARDS Team",
     date: "November 2, 2024",
     readTime: "4 min read",
     category: "Tips & Tricks",
@@ -270,7 +270,7 @@ export const blogArticles = [
       <p><strong>✔️ Solution:</strong> Without VIP, coins cannot be redeemed to rewards — consider upgrading if you are serious about earnings.</p>
 
       <h2>❌ Mistake #4: Using Fake Accounts</h2>
-      <p><strong>✔️ Solution:</strong> Paras Reward has strict device checks. Fraudulent activity leads to permanent bans. One genuine account is better than multiple fake ones.</p>
+      <p><strong>✔️ Solution:</strong> Paras Rewards has strict device checks. Fraudulent activity leads to permanent bans. One genuine account is better than multiple fake ones.</p>
 
       <h2>❌ Mistake #5: Not Completing KYC</h2>
       <p><strong>✔️ Solution:</strong> Complete KYC verification early to avoid delays during redemption.</p>

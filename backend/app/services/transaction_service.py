@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Transaction Service
+PARAS REWARDS - Transaction Service
 ==================================
 Manages transaction lifecycle with state machine.
 """

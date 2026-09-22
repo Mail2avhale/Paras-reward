@@ -10,7 +10,7 @@ import { API, BACKEND_URL } from "../lib/api";
 const ContactUs = () => {
   const navigate = useNavigate();
   const [contactDetails, setContactDetails] = useState({
-    address: "PARAS REWARD\nMaharashtra, India",
+    address: "PARAS REWARDS\nMaharashtra, India",
     phone: "+91-XXXXXXXXXX",
     email: "Info@parasreward.com",
     website: "www.parasreward.com"
@@ -34,7 +34,7 @@ const ContactUs = () => {
         const data = response.data;
         
         setContactDetails({
-          company_name: data.company_name || "PARAS REWARD",
+          company_name: data.company_name || "PARAS REWARDS",
           address: data.address || "Maharashtra, India",
           phone: data.phone || "+91-XXXXXXXXXX",
           phone_secondary: data.phone_secondary || "",
@@ -98,7 +98,7 @@ const ContactUs = () => {
     <>
       <SEO 
         title="Contact Us"
-        description="Get in touch with PARAS REWARD team. We're here to help with your queries about rewards, redemptions, and more."
+        description="Get in touch with PARAS REWARDS team. We're here to help with your queries about rewards, redemptions, and more."
         url="https://www.parasreward.com/contact-us"
       />
       <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">

@@ -14,7 +14,7 @@ import { API } from "../lib/api";
 const TermsConditions = () => {
   const navigate = useNavigate();
   const [companyInfo, setCompanyInfo] = useState({
-    company_name: 'Paras Reward Technologies Private Limited',
+    company_name: 'Paras Rewards Technologies Private Limited',
     email: 'Info@parasreward.com',
     address: 'India'
   });
@@ -217,7 +217,7 @@ const TermsConditions = () => {
                   <h3 className="text-lg font-semibold text-white mt-6">4.1 Nature of PRC Points</h3>
                   <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
                     <p className="text-yellow-400 text-sm">
-                      <strong>Important:</strong> PRC (PARAS REWARD CURRENCY) points are <strong>NOT</strong> real currency, cryptocurrency, or legal tender. They are virtual reward points with no cash value outside our platform.
+                      <strong>Important:</strong> PRC (PARAS REWARDS CURRENCY) points are <strong>NOT</strong> real currency, cryptocurrency, or legal tender. They are virtual reward points with no cash value outside our platform.
                     </p>
                   </div>
 

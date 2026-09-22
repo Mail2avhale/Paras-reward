@@ -4,7 +4,7 @@ REDEEM VALIDATION CHECKLIST - COMPULSORY CHECKS
 This module contains ALL validation functions that MUST be called before any redemption.
 All checks are MANDATORY and should BLOCK redemption if any fails.
 
-Author: Paras Reward System
+Author: Paras Rewards System
 Last Updated: March 2026
 """
 

@@ -1459,7 +1459,7 @@ async def get_vip_invoice(payment_id: str):
             "validity_end": payment.get("validity_end"),
             
             # Company details
-            "company_name": "PARAS REWARD",
+            "company_name": "PARAS REWARDS",
             "company_address": "India",
             "company_email": "support@parasreward.com",
             "company_gstin": "N/A"

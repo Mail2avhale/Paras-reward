@@ -9,7 +9,7 @@ import {
  * Referral Earnings Calculator — Public SEO landing page.
  * Goals:
  *  1. Rank on Google for "referral earning calculator India", "PRC earnings
- *     calculator", "mining rate calculator paras reward".
+ *     calculator", "mining rate calculator paras rewards".
  *  2. Provide AdSense Auto Ads with rich text content to place ads inside.
  *  3. Drive organic visitors to sign up via in-page CTAs.
  */
@@ -51,11 +51,11 @@ function calcDailyPrc(direct, l1) {
 
 const FAQS = [
   {
-    q: 'How does the Paras Reward referral earnings calculator work?',
+    q: 'How does the Paras Rewards referral earnings calculator work?',
     a: "It estimates your daily PRC mining rate based on your direct referrals and their referrals (L1 indirect). The formula combines a base rate of 1,000 PRC/day for small networks with a per-user bonus that scales with your team size. PRC converts to INR at the fixed rate of 10 PRC = ₹1.",
   },
   {
-    q: 'What is a "direct referral" vs "L1 indirect" on Paras Reward?',
+    q: 'What is a "direct referral" vs "L1 indirect" on Paras Rewards?',
     a: "A direct referral is someone who signs up using your referral code. An L1 indirect is someone who signs up using YOUR direct referral's code — they're your 'second level' Community member. Both contribute to your mining rate but with different weights.",
   },
   {
@@ -64,7 +64,7 @@ const FAQS = [
   },
   {
     q: 'Is the calculator showing GUARANTEED earnings?',
-    a: "No. The calculator is an estimation tool only. Actual earnings vary based on (1) whether your referrals stay active, (2) your subscription tier, and (3) Paras Reward's network economy at any given time. PRC→INR is fixed at 10 PRC = ₹1. It's a planning aid, not a contract.",
+    a: "No. The calculator is an estimation tool only. Actual earnings vary based on (1) whether your referrals stay active, (2) your subscription tier, and (3) Paras Rewards's network economy at any given time. PRC→INR is fixed at 10 PRC = ₹1. It's a planning aid, not a contract.",
   },
   {
     q: 'Do I need to become an Elite subscriber to earn referral rewards?',
@@ -72,11 +72,11 @@ const FAQS = [
   },
   {
     q: 'How quickly does my referral count update in the calculator?',
-    a: "This public calculator uses example values you enter manually. Inside the Paras Reward app, your real-time mining dashboard updates every second using your actual network data — try it after signing up.",
+    a: "This public calculator uses example values you enter manually. Inside the Paras Rewards app, your real-time mining dashboard updates every second using your actual network data — try it after signing up.",
   },
   {
     q: 'Can I withdraw my PRC earnings to my bank?',
-    a: "Yes. Paras Reward supports Bank Redeem (direct UPI/IMPS transfer to your bank account) once you complete KYC verification. Minimum redeem and processing fees apply as per current policy.",
+    a: "Yes. Paras Rewards supports Bank Redeem (direct UPI/IMPS transfer to your bank account) once you complete KYC verification. Minimum redeem and processing fees apply as per current policy.",
   },
 ];
 
@@ -89,12 +89,12 @@ const ReferralCalculator = () => {
 
   // SEO: set document title + meta description on mount
   useEffect(() => {
-    document.title = 'Referral Earnings Calculator | Paras Reward — Estimate Your PRC & ₹ Daily';
+    document.title = 'Referral Earnings Calculator | Paras Rewards — Estimate Your PRC & ₹ Daily';
     const metaDesc = document.querySelector('meta[name="description"]');
     const origDesc = metaDesc?.getAttribute('content');
     if (metaDesc) {
       metaDesc.setAttribute('content',
-        'Calculate how much you can earn from referrals on Paras Reward. Interactive PRC mining calculator showing daily, monthly & yearly earnings in ₹INR. Free tool — no signup required.'
+        'Calculate how much you can earn from referrals on Paras Rewards. Interactive PRC mining calculator showing daily, monthly & yearly earnings in ₹INR. Free tool — no signup required.'
       );
     }
     return () => {
@@ -129,7 +129,7 @@ const ReferralCalculator = () => {
         </h1>
         <p className="mt-3 text-base text-slate-600 leading-relaxed">
           Estimate your <strong>daily PRC mining rate</strong> and{' '}
-          <strong>₹INR earnings</strong> from referrals on Paras Reward.
+          <strong>₹INR earnings</strong> from referrals on Paras Rewards.
           Adjust direct + indirect referral counts to see how much you could
           potentially earn each month.
         </p>
@@ -250,10 +250,10 @@ const ReferralCalculator = () => {
       {/* SEO content section */}
       <section className="px-5 py-10 max-w-3xl mx-auto">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-4">
-          How does the Paras Reward Mining Formula work?
+          How does the Paras Rewards Mining Formula work?
         </h2>
         <p className="text-base text-slate-700 leading-relaxed mb-4">
-          Paras Reward uses a transparent <strong>single-leg network mining
+          Paras Rewards uses a transparent <strong>single-leg network mining
           algorithm</strong>. Your daily PRC mining rate is calculated using
           two components: a <strong>base mining rate of 1,000 PRC per
           day</strong> when your network is below 250 users, and a network

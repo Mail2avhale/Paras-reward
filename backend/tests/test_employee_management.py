@@ -264,7 +264,7 @@ class TestSalarySlip:
         
         # Verify company info
         assert "company" in slip
-        assert slip["company"]["name"] == "Paras Reward Technologies Private Limited"
+        assert slip["company"]["name"] == "Paras Rewards Technologies Private Limited"
         
         # Verify earnings breakdown
         assert "earnings" in slip
@@ -320,7 +320,7 @@ class TestIDCard:
         card = data["id_card"]
         
         # Verify company details
-        assert card["company_name"] == "Paras Reward Technologies Private Limited"
+        assert card["company_name"] == "Paras Rewards Technologies Private Limited"
         assert "B-18" in card["company_address"]
         assert card["company_website"] == "www.parasreward.com"
         

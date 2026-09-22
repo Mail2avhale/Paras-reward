@@ -1,4 +1,4 @@
-// Multi-Language Translations for Paras Reward App
+// Multi-Language Translations for Paras Rewards App
 // Supports: Marathi (mr), Hindi (hi), English (en)
 
 const translations = {
@@ -469,9 +469,9 @@ const translations = {
   // ==================== TUTORIAL ====================
   // Welcome Slide
   tutorialWelcomeTitle: {
-    mr: "Paras Reward मध्ये स्वागत! 🎉",
-    hi: "Paras Reward में स्वागत! 🎉",
-    en: "Welcome to Paras Reward! 🎉"
+    mr: "Paras Rewards मध्ये स्वागत! 🎉",
+    hi: "Paras Rewards में स्वागत! 🎉",
+    en: "Welcome to Paras Rewards! 🎉"
   },
   tutorialWelcomeSubtitle: {
     mr: "तुमचा reward journey सुरू करा",

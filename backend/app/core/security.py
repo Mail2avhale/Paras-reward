@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Security Utilities
+PARAS REWARDS - Security Utilities
 =================================
 JWT token handling, password hashing, and security utilities.
 

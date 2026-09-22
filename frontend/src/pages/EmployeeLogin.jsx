@@ -52,7 +52,7 @@ const EmployeeLogin = () => {
             <Building2 className="w-7 h-7 text-amber-600" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Employee Portal</h1>
-          <p className="text-sm text-slate-500 mt-1">Paras Reward Technologies Pvt. Ltd.</p>
+          <p className="text-sm text-slate-500 mt-1">Paras Rewards Technologies Pvt. Ltd.</p>
         </div>
 
         <form onSubmit={submit} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">

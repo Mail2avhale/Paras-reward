@@ -178,8 +178,8 @@ const AdminRazorpaySubscriptions = ({ user }) => {
     if (!printWindow) return;
     const bodyContent = DOMPurify.sanitize(`
         <div class="header">
-          <h1>PARAS REWARD</h1>
-          <p>PARAS REWARD TECHNOLOGIES PRIVATE LIMITED</p>
+          <h1>PARAS REWARDS</h1>
+          <p>PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED</p>
           <p>Tax Invoice</p>
         </div>
         <div class="info-grid">
@@ -1326,7 +1326,7 @@ const AdminRazorpaySubscriptions = ({ user }) => {
             <div className="p-4 space-y-4">
               {/* Company Header */}
               <div className="text-center pb-4 border-b border-slate-200">
-                <h1 className="text-xl font-bold text-emerald-600">PARAS REWARD</h1>
+                <h1 className="text-xl font-bold text-emerald-600">PARAS REWARDS</h1>
                 <p className="text-xs text-slate-500">{invoiceData.company?.name}</p>
               </div>
               

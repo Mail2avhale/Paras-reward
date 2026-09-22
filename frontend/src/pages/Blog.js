@@ -13,7 +13,7 @@ const Blog = () => {
     <>
       <SEO 
         title="Blog - Tips, News & Updates"
-        description="Read the latest updates, tips, and news from PARAS REWARD. Learn how to maximize your earnings and rewards."
+        description="Read the latest updates, tips, and news from PARAS REWARDS. Learn how to maximize your earnings and rewards."
         url="https://www.parasreward.com/blog"
       />
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -25,7 +25,7 @@ const Blog = () => {
               <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-xl">P</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">PARAS REWARD</span>
+              <span className="text-xl font-bold text-gray-900">PARAS REWARDS</span>
             </Link>
             <Link to="/">
               <Button variant="ghost" className="flex items-center gap-2 hover:bg-purple-50">
@@ -45,7 +45,7 @@ const Blog = () => {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl mb-6 shadow-2xl">
               <BookOpen className="h-10 w-10 text-white" />
             </div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">PARAS REWARD Blog</h1>
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">PARAS REWARDS Blog</h1>
             <p className="text-xl text-gray-600">
               Guides, tips, and insights to maximize your rewards
             </p>
@@ -116,7 +116,7 @@ const Blog = () => {
             <Card className="p-10 bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-2xl">
               <h2 className="text-3xl font-bold mb-4">Ready to Start Earning?</h2>
               <p className="text-xl text-purple-100 mb-6">
-                Join 10,000+ users already earning daily rewards with PARAS REWARD
+                Join 10,000+ users already earning daily rewards with PARAS REWARDS
               </p>
               <Link to="/register">
                 <Button className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-6 text-lg rounded-xl shadow-xl">

@@ -1,5 +1,5 @@
 """
-Partner Store Payment & Settlement Network — Paras Reward v2.0 (Feb 2026)
+Partner Store Payment & Settlement Network — Paras Rewards v2.0 (Feb 2026)
 ==========================================================================
 
 New module for the Partner Store Network. Enables verified local businesses
@@ -767,7 +767,7 @@ async def pay_partner_store(body: PartnerStorePayRequest):
     # 7) Community Forum post — celebrate the payment with a "Partner
     # Payment" badge post. Best-effort — never blocks the payment flow.
     try:
-        payer_name = (debit.get("name") if isinstance(debit, dict) else None) or user.get("name") or "Paras Reward Member"
+        payer_name = (debit.get("name") if isinstance(debit, dict) else None) or user.get("name") or "Paras Rewards Member"
         payer_city = (debit or {}).get("city") or user.get("city") or ""
         payer_state = (debit or {}).get("state") or user.get("state") or ""
         location = ", ".join([p for p in [str(payer_city).strip(), str(payer_state).strip()] if p]) or "India"

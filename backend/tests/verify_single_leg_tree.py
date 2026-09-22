@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Single Leg Tree & Formula Verification Script
+PARAS REWARDS - Single Leg Tree & Formula Verification Script
 Verifies ALL users joined after March 1, 2026:
 1. Single Leg Tree (tree_position order)
 2. Network Size (BFS referral chain)
@@ -109,7 +109,7 @@ async def main():
     ).sort("tree_position", 1).to_list(10000)
     
     print(f"\n{'='*80}")
-    print(f"PARAS REWARD - SINGLE LEG TREE & FORMULA VERIFICATION")
+    print(f"PARAS REWARDS - SINGLE LEG TREE & FORMULA VERIFICATION")
     print(f"Users joined after March 1, 2026: {len(users)}")
     print(f"{'='*80}")
     

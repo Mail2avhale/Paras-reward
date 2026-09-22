@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Utils Package
+PARAS REWARDS - Utils Package
 """
 
 from .helpers import (

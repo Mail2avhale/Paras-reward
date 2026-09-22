@@ -24,7 +24,7 @@ router = APIRouter(prefix="/public", tags=["Public Pages"])
 db = None
 
 COMPANY = {
-    "name": "Paras Reward Technologies Private Limited",
+    "name": "Paras Rewards Technologies Private Limited",
     "address": "B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra 431006",
     "website": "www.parasreward.com",
     "email": "info@parasreward.com",
@@ -805,8 +805,8 @@ async def get_investor_faq():
         faqs = await db.investor_faqs.find({}, {"_id": 0}).sort("order", 1).to_list(50)
         if not faqs:
             faqs = [
-                {"question": "What is Paras Reward?", "answer": "Paras Reward is India's first PRC-powered digital reward ecosystem with subscription-based mining, integrated bill payments, and a community-driven platform.", "order": 1},
-                {"question": "What is PRC?", "answer": "PRC (Paras Reward Coin) is our digital reward token. Users earn PRC through mining, referrals, and platform activities. PRC can be used for bill payments, recharges, and marketplace purchases.", "order": 2},
+                {"question": "What is Paras Rewards?", "answer": "Paras Rewards is India's first PRC-powered digital reward ecosystem with subscription-based mining, integrated bill payments, and a community-driven platform.", "order": 1},
+                {"question": "What is PRC?", "answer": "PRC (Paras Rewards Coin) is our digital reward token. Users earn PRC through mining, referrals, and platform activities. PRC can be used for bill payments, recharges, and marketplace purchases.", "order": 2},
                 {"question": "What is the business model?", "answer": "Revenue comes from monthly subscriptions (Elite/VIP plans), transaction fees on BBPS/bill payments, PRC marketplace commissions, and platform service charges.", "order": 3},
                 {"question": "What stage is the company at?", "answer": "We are in the growth phase with an established product, active user base, and multiple revenue streams. We are looking for strategic investors to scale operations.", "order": 4},
                 {"question": "What is the minimum investment?", "answer": "We welcome investors across all ranges. Please connect with our team through the contact form to discuss opportunities that match your investment goals.", "order": 5},

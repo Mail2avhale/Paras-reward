@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Common Utilities
+PARAS REWARDS - Common Utilities
 ================================
 Helper functions used across the application
 """

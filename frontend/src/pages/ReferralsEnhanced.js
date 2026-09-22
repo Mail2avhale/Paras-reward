@@ -623,7 +623,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             <button
               onClick={async () => {
                 if (navigator.share) {
-                  try { await navigator.share({ title: 'Paras Reward', url: referralLink }); return; } catch (_e) { /* user cancelled */ }
+                  try { await navigator.share({ title: 'Paras Rewards', url: referralLink }); return; } catch (_e) { /* user cancelled */ }
                 }
                 try { await navigator.clipboard.writeText(referralLink); toast.success('Link copied — share with friends!'); } catch { toast.error('Copy failed'); }
               }}
@@ -948,7 +948,7 @@ const openWA = (mobile, name) => {
   const digits = (mobile || '').replace(/\D/g, '');
   if (!digits) return;
   const e164 = digits.startsWith('91') && digits.length === 12 ? digits : digits.length === 10 ? `91${digits}` : digits;
-  const msg = `Hi ${name || 'there'} 👋\n\nHave you mined on Paras Reward today? 🚀\n\nLog in and tap Start Mining to earn daily PRC. Don't break your streak!\n\nApp: https://parasreward.com\n\n— Your Referrer`;
+  const msg = `Hi ${name || 'there'} 👋\n\nHave you mined on Paras Rewards today? 🚀\n\nLog in and tap Start Mining to earn daily PRC. Don't break your streak!\n\nApp: https://parasreward.com\n\n— Your Referrer`;
   window.open(`https://wa.me/${e164}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
 };
 
@@ -1179,7 +1179,7 @@ const openWhatsAppNudge = (mobile, name) => {
     : digits.length === 10 ? `91${digits}` : digits;
   const message =
     `Hi ${name || 'there'} 👋\n\n` +
-    `Have you mined on Paras Reward today? 🚀\n\n` +
+    `Have you mined on Paras Rewards today? 🚀\n\n` +
     `Log in and tap Start Mining to earn daily PRC. ` +
     `Don't break your streak!\n\n` +
     `App: https://parasreward.com\n\n` +

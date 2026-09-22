@@ -12,15 +12,15 @@ import { Helmet } from 'react-helmet-async';
  * @param {string} type - og:type (default: website)
  */
 const SEO = ({ 
-  title = "PARAS REWARD - India's Trusted Reward Platform",
+  title = "PARAS REWARDS - India's Trusted Reward Platform",
   description = "Join 3000+ Indians earning daily rewards! Collect PRC points, play games, invite friends & enjoy exclusive benefits!",
-  keywords = "paras reward, prc points, daily rewards, earn rewards india",
+  keywords = "paras rewards, prc points, daily rewards, earn rewards india",
   image = "https://www.parasreward.com/paras-logo.png",
   url = "https://www.parasreward.com",
   type = "website",
   noIndex = false
 }) => {
-  const fullTitle = title.includes("PARAS REWARD") ? title : `${title} | PARAS REWARD`;
+  const fullTitle = title.includes("PARAS REWARDS") ? title : `${title} | PARAS REWARDS`;
   
   return (
     <Helmet>
@@ -46,7 +46,7 @@ const SEO = ({
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image} />
-      <meta property="og:site_name" content="PARAS REWARD" />
+      <meta property="og:site_name" content="PARAS REWARDS" />
       <meta property="og:locale" content="en_IN" />
       
       {/* Twitter */}
@@ -67,15 +67,15 @@ export default SEO;
  */
 export const SEOConfigs = {
   home: {
-    title: "PARAS REWARD - India's Trusted Reward Platform | Earn PRC Daily",
+    title: "PARAS REWARDS - India's Trusted Reward Platform | Earn PRC Daily",
     description: "Join 3000+ Indians earning daily rewards! Collect PRC points, play games, invite friends & enjoy exclusive platform benefits!",
-    keywords: "paras reward, paras reward app, prc points, daily rewards app india, earn rewards online, loyalty rewards platform",
+    keywords: "paras rewards, paras rewards app, prc points, daily rewards app india, earn rewards online, loyalty rewards platform",
     url: "https://www.parasreward.com"
   },
   dashboard: {
     title: "Dashboard - Track Your PRC Rewards",
     description: "View your PRC balance, daily rewards progress, and recent transactions. Start earning today!",
-    keywords: "paras reward dashboard, prc balance, daily rewards tracker",
+    keywords: "paras rewards dashboard, prc balance, daily rewards tracker",
     url: "https://www.parasreward.com/dashboard",
     noIndex: true
   },
@@ -91,43 +91,43 @@ export const SEOConfigs = {
   subscription: {
     title: "VIP Membership Plans - Unlock Premium Benefits",
     description: "Upgrade to VIP for 2x rewards, exclusive vouchers, priority support & more! Plans start at ₹149/year.",
-    keywords: "vip membership, premium rewards, paras reward plans",
+    keywords: "vip membership, premium rewards, paras rewards plans",
     url: "https://www.parasreward.com/subscription"
   },
   login: {
-    title: "Login to PARAS REWARD",
-    description: "Sign in to your PARAS REWARD account and start earning daily rewards!",
-    keywords: "paras reward login, sign in rewards app",
+    title: "Login to PARAS REWARDS",
+    description: "Sign in to your PARAS REWARDS account and start earning daily rewards!",
+    keywords: "paras rewards login, sign in rewards app",
     url: "https://www.parasreward.com/login"
   },
   register: {
-    title: "Register - Join PARAS REWARD Free",
-    description: "Create your free PARAS REWARD account in 30 seconds! Start earning PRC immediately.",
-    keywords: "paras reward register, create account, free rewards signup",
+    title: "Register - Join PARAS REWARDS Free",
+    description: "Create your free PARAS REWARDS account in 30 seconds! Start earning PRC immediately.",
+    keywords: "paras rewards register, create account, free rewards signup",
     url: "https://www.parasreward.com/register"
   },
   faq: {
     title: "FAQ - Frequently Asked Questions",
-    description: "Find answers to common questions about PARAS REWARD, PRC points, redemptions, and more.",
-    keywords: "paras reward faq, help, support, questions",
+    description: "Find answers to common questions about PARAS REWARDS, PRC points, redemptions, and more.",
+    keywords: "paras rewards faq, help, support, questions",
     url: "https://www.parasreward.com/faq"
   },
   howItWorks: {
-    title: "How It Works - Learn About PARAS REWARD",
-    description: "Discover how PARAS REWARD works! Earn PRC through daily activities, games & referrals. Unlock exclusive benefits!",
-    keywords: "how paras reward works, earning rewards, prc explained",
+    title: "How It Works - Learn About PARAS REWARDS",
+    description: "Discover how PARAS REWARDS works! Earn PRC through daily activities, games & referrals. Unlock exclusive benefits!",
+    keywords: "how paras rewards works, earning rewards, prc explained",
     url: "https://www.parasreward.com/how-it-works"
   },
   terms: {
     title: "Terms & Conditions",
-    description: "Read the terms and conditions for using PARAS REWARD platform.",
-    keywords: "terms conditions, paras reward terms",
+    description: "Read the terms and conditions for using PARAS REWARDS platform.",
+    keywords: "terms conditions, paras rewards terms",
     url: "https://www.parasreward.com/terms"
   },
   privacy: {
     title: "Privacy Policy",
-    description: "Learn how PARAS REWARD protects your privacy and handles your data.",
-    keywords: "privacy policy, data protection, paras reward privacy",
+    description: "Learn how PARAS REWARDS protects your privacy and handles your data.",
+    keywords: "privacy policy, data protection, paras rewards privacy",
     url: "https://www.parasreward.com/privacy"
   }
 };

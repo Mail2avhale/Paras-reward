@@ -400,7 +400,7 @@ class TestInvoiceDataIntegrity:
         
         invoice = response.json()["invoice"]
         
-        assert invoice["company"]["name"] == "PARAS REWARD TECHNOLOGIES PRIVATE LIMITED"
+        assert invoice["company"]["name"] == "PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED"
         assert invoice["company"]["gstin"] == "27AAQCP6686E1ZR"
         assert invoice["company"]["address"] == "Maharashtra, India"
     

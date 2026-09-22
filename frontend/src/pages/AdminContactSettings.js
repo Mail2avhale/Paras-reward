@@ -121,7 +121,7 @@ const AdminContactSettings = ({ user }) => {
               </label>
               <input
                 type="text"
-                placeholder="PARAS REWARD PVT LTD"
+                placeholder="PARAS REWARDS PVT LTD"
                 value={settings.company_name}
                 onChange={(e) => handleChange('company_name', e.target.value)}
                 className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent"

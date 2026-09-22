@@ -1,5 +1,5 @@
 """
-Test Suite: Admin Tracking & RD Features for Paras Reward App
+Test Suite: Admin Tracking & RD Features for Paras Rewards App
 Testing:
 1. Admin tracking (approved_by/rejected_by) for Bank Redeem requests
 2. Admin tracking for RD Redeem requests

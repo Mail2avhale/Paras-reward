@@ -266,7 +266,7 @@ const CandidatePortal = () => {
           </details>
         )}
 
-        <p className="text-center text-xs text-slate-400 pt-4">Paras Reward Technologies — Recruitment Portal</p>
+        <p className="text-center text-xs text-slate-400 pt-4">Paras Rewards Technologies — Recruitment Portal</p>
       </div>
     </div>
   );
@@ -279,7 +279,7 @@ const ReferralShareCard = ({ application }) => {
   const shareUrl = jobKey
     ? `${window.location.origin}/careers?job=${encodeURIComponent(jobKey)}&ref=${encodeURIComponent(application.application_id)}`
     : `${window.location.origin}/careers`;
-  const shareText = `I just applied for ${application.job_title} at Paras Reward Technologies — think you'd be a great fit too! Check it out: ${shareUrl}`;
+  const shareText = `I just applied for ${application.job_title} at Paras Rewards Technologies — think you'd be a great fit too! Check it out: ${shareUrl}`;
 
   const copyLink = async () => {
     try {

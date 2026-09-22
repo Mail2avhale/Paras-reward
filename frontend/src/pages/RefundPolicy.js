@@ -87,7 +87,7 @@ const RefundPolicy = () => {
       <div className="px-5 py-4">
         <div className="bg-gray-900/50 rounded-2xl p-4 border border-gray-800">
           <p className="text-gray-400 text-sm leading-relaxed">
-            At <span className="text-amber-500 font-semibold">PARAS REWARD</span>, we are committed to ensuring your satisfaction. 
+            At <span className="text-amber-500 font-semibold">PARAS REWARDS</span>, we are committed to ensuring your satisfaction. 
             This policy outlines the terms for refunds, cancellations, and returns on our platform.
           </p>
         </div>
@@ -157,7 +157,7 @@ const RefundPolicy = () => {
             <div>
               <p className="text-amber-400 font-semibold text-sm mb-1">Important Notice</p>
               <p className="text-gray-400 text-xs leading-relaxed">
-                PARAS REWARD reserves the right to deny refund requests that do not meet our policy criteria. 
+                PARAS REWARDS reserves the right to deny refund requests that do not meet our policy criteria. 
                 All decisions are final and at the discretion of our admin team.
               </p>
             </div>

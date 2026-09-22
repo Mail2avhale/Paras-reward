@@ -14,7 +14,7 @@ import { API } from "../lib/api";
 const PrivacyPolicy = () => {
   const navigate = useNavigate();
   const [companyInfo, setCompanyInfo] = useState({
-    company_name: 'Paras Reward Technologies Private Limited',
+    company_name: 'Paras Rewards Technologies Private Limited',
     email: 'Info@parasreward.com',
     address: 'India'
   });

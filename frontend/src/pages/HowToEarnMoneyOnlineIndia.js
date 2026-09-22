@@ -18,23 +18,23 @@ const FAQS = [
   },
   {
     q: 'How much can a beginner realistically earn online in India per month?',
-    a: "Beginners typically earn ₹500-₹3,000/month in the first 2 months while learning. Within 6 months, consistent users on referral + cashback platforms like Paras Reward can earn ₹5,000-₹15,000/month. Top users with strong networks earn ₹30,000+/month, but this requires consistent daily activity.",
+    a: "Beginners typically earn ₹500-₹3,000/month in the first 2 months while learning. Within 6 months, consistent users on referral + cashback platforms like Paras Rewards can earn ₹5,000-₹15,000/month. Top users with strong networks earn ₹30,000+/month, but this requires consistent daily activity.",
   },
   {
     q: 'Do I need to invest money to start earning online in India?',
-    a: "No. Most legitimate platforms (including Paras Reward) are free to join. Optional subscriptions (like Elite at ₹999+GST) unlock higher earnings but are not required to start. If anyone asks for ₹5,000+ deposit promising guaranteed returns, it's likely a scam.",
+    a: "No. Most legitimate platforms (including Paras Rewards) are free to join. Optional subscriptions (like Elite at ₹999+GST) unlock higher earnings but are not required to start. If anyone asks for ₹5,000+ deposit promising guaranteed returns, it's likely a scam.",
   },
   {
     q: 'What documents do I need for online earning in India?',
-    a: "Basic KYC documents are required for cash withdrawal: PAN card, Aadhaar (for OTP verification), and a bank account in your name. Paras Reward uses RBI-approved KYC partners — your data is encrypted and never shared.",
+    a: "Basic KYC documents are required for cash withdrawal: PAN card, Aadhaar (for OTP verification), and a bank account in your name. Paras Rewards uses RBI-approved KYC partners — your data is encrypted and never shared.",
   },
   {
     q: 'Will I have to pay tax on online earnings in India?',
-    a: "Online earnings above ₹50,000/year are typically taxable as 'income from other sources'. Maintain records of your withdrawals and consult a CA during tax season. Paras Reward provides annual income statements on request.",
+    a: "Online earnings above ₹50,000/year are typically taxable as 'income from other sources'. Maintain records of your withdrawals and consult a CA during tax season. Paras Rewards provides annual income statements on request.",
   },
   {
     q: 'How fast can I withdraw my earnings to my bank account?',
-    a: "On Paras Reward, Bank Redeem credits are usually instant (via UPI/IMPS), processing within 30 seconds to a few minutes after submission. KYC must be verified once before your first withdrawal.",
+    a: "On Paras Rewards, Bank Redeem credits are usually instant (via UPI/IMPS), processing within 30 seconds to a few minutes after submission. KYC must be verified once before your first withdrawal.",
   },
 ];
 
@@ -42,7 +42,7 @@ const METHODS = [
   {
     icon: Users, color: 'amber',
     title: 'Referral Marketing',
-    description: 'Invite friends to apps and earn commission on their activity. Paras Reward pays daily PRC mining bonuses for every active referral in your network — no cap on earnings.',
+    description: 'Invite friends to apps and earn commission on their activity. Paras Rewards pays daily PRC mining bonuses for every active referral in your network — no cap on earnings.',
     range: '₹3,000 – ₹50,000/month',
   },
   {
@@ -70,7 +70,7 @@ const HowToEarnMoneyOnlineIndia = () => {
   const [openFaq, setOpenFaq] = useState(0);
 
   useEffect(() => {
-    document.title = 'How to Earn Money Online in India 2026 | Paras Reward — Real Methods';
+    document.title = 'How to Earn Money Online in India 2026 | Paras Rewards — Real Methods';
     const m = document.querySelector('meta[name="description"]');
     const orig = m?.getAttribute('content');
     if (m) m.setAttribute('content',
@@ -135,13 +135,13 @@ const HowToEarnMoneyOnlineIndia = () => {
 
       <section className="px-5 py-10 max-w-3xl mx-auto">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-4">
-          Why Paras Reward Stands Out
+          Why Paras Rewards Stands Out
         </h2>
         <p className="text-base text-slate-700 leading-relaxed mb-4">
           Most "earn money online" platforms either pay in points that
           expire, lock you into a subscription before you see a single rupee,
           or operate as MLM-style schemes where only top sponsors earn.
-          <strong> Paras Reward is built differently.</strong>
+          <strong> Paras Rewards is built differently.</strong>
         </p>
         <p className="text-base text-slate-700 leading-relaxed mb-4">
           Every PRC you earn — whether from daily mining, recharge cashback,
@@ -156,7 +156,7 @@ const HowToEarnMoneyOnlineIndia = () => {
         </h2>
         <div className="space-y-3">
           {[
-            'Download the Paras Reward app (Android) or visit parasreward.com',
+            'Download the Paras Rewards app (Android) or visit parasreward.com',
             'Sign up with your mobile number — verify via OTP',
             'Complete PAN-only KYC (2-minute Aadhaar OTP flow)',
             'Start daily mining — earnings accumulate every second',

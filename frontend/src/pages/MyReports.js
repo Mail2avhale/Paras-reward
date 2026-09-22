@@ -130,7 +130,7 @@ const MyReports = ({ user }) => {
           <Briefcase className="w-12 h-12 text-slate-400 mx-auto mb-3" />
           <h2 className="text-lg font-bold text-slate-900 mb-2">Not an Employee</h2>
           <p className="text-sm text-slate-600 mb-4">
-            This portal is for Paras Reward employees only. Your account is not linked to an employee record.
+            This portal is for Paras Rewards employees only. Your account is not linked to an employee record.
           </p>
           <Link to="/dashboard" className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm">
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard

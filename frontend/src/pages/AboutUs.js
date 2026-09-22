@@ -39,8 +39,8 @@ const AboutUs = () => {
   return (
     <>
       <SEO 
-        title="About Us - Learn About PARAS REWARD"
-        description="PARAS REWARD is India's trusted reward platform. Learn about our mission, values, and how we help millions earn rewards daily."
+        title="About Us - Learn About PARAS REWARDS"
+        description="PARAS REWARDS is India's trusted reward platform. Learn about our mission, values, and how we help millions earn rewards daily."
         url="https://www.parasreward.com/about-us"
       />
       <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
@@ -69,7 +69,7 @@ const AboutUs = () => {
             <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
               <Award className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">PARAS REWARD</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">PARAS REWARDS</h2>
             <p className="text-amber-400 text-sm">India&apos;s First Mining-Based Rewards Platform</p>
           </div>
         </div>
@@ -96,7 +96,7 @@ const AboutUs = () => {
           </h3>
           <div className="space-y-3 text-gray-400 text-sm leading-relaxed">
             <p>
-              <span className="text-amber-400 font-semibold">PARAS REWARD</span> is a digital engagement and rewards platform where users earn virtual reward points through daily activities, games, and platform interactions.
+              <span className="text-amber-400 font-semibold">PARAS REWARDS</span> is a digital engagement and rewards platform where users earn virtual reward points through daily activities, games, and platform interactions.
             </p>
             <p>
               Our platform offers a fun and engaging way to collect promotional rewards. The term "mining" refers to our virtual reward generation system based on user engagement - <span className="text-red-400">not cryptocurrency or real money mining</span>.
@@ -186,7 +186,7 @@ const AboutUs = () => {
                 Verified Business
               </h3>
               <p className="text-gray-400 text-sm">
-                Paras Reward Technologies Private Limited is a D-U-N-S® Registered company, 
+                Paras Rewards Technologies Private Limited is a D-U-N-S® Registered company, 
                 verified by Dun & Bradstreet - the global leader in business data and analytics.
               </p>
             </div>

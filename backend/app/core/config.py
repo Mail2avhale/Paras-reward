@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Core Configuration
+PARAS REWARDS - Core Configuration
 =================================
 Centralized configuration for the entire application.
 All environment variables and settings are managed here.

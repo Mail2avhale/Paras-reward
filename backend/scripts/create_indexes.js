@@ -7,7 +7,7 @@
  * Created: March 10, 2026
  */
 
-print("=== PARAS REWARD - INDEX OPTIMIZATION SCRIPT ===\n");
+print("=== PARAS REWARDS - INDEX OPTIMIZATION SCRIPT ===\n");
 print("Starting index creation...\n");
 
 // ========== DMT TRANSACTIONS ==========

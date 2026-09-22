@@ -59,7 +59,7 @@ export const SmartAppBanner = () => {
           <Smartphone className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold leading-tight">Get the Paras Reward app</div>
+          <div className="text-sm font-bold leading-tight">Get the Paras Rewards app</div>
           <div className="text-[11px] text-blue-100/90 leading-tight mt-0.5">
             Faster &amp; better experience on Android
           </div>

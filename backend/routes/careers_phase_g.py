@@ -206,15 +206,15 @@ CHANNELS = ["email", "sms", "in_app", "whatsapp"]
 
 DEFAULT_TEMPLATES = [
     {"key": "application_received", "channel": "email", "subject": "Application received — {job_title}",
-     "body": "Hi {name},\n\nThanks for applying for {job_title}. Your application ID is {application_id}. Our team will review and get back to you shortly.\n\n— Paras Reward HR"},
+     "body": "Hi {name},\n\nThanks for applying for {job_title}. Your application ID is {application_id}. Our team will review and get back to you shortly.\n\n— Paras Rewards HR"},
     {"key": "interview_scheduled", "channel": "email", "subject": "Interview scheduled for {job_title}",
-     "body": "Hi {name},\n\nYour {interview_kind} interview is scheduled for {scheduled_at} ({mode}). Link: {meet_link}\n\n— Paras Reward HR"},
-    {"key": "offer_generated", "channel": "email", "subject": "Your offer letter — Paras Reward",
-     "body": "Hi {name},\n\nWe're thrilled to extend an offer. Please review and respond via {accept_url}. Offer ID: {offer_id}.\n\n— Paras Reward HR"},
+     "body": "Hi {name},\n\nYour {interview_kind} interview is scheduled for {scheduled_at} ({mode}). Link: {meet_link}\n\n— Paras Rewards HR"},
+    {"key": "offer_generated", "channel": "email", "subject": "Your offer letter — Paras Rewards",
+     "body": "Hi {name},\n\nWe're thrilled to extend an offer. Please review and respond via {accept_url}. Offer ID: {offer_id}.\n\n— Paras Rewards HR"},
     {"key": "leave_approved", "channel": "email", "subject": "Leave approved — {from_date} to {to_date}",
-     "body": "Hi {name},\n\nYour {leave_type} leave from {from_date} to {to_date} ({days} days) is approved.\n\n— Paras Reward HR"},
+     "body": "Hi {name},\n\nYour {leave_type} leave from {from_date} to {to_date} ({days} days) is approved.\n\n— Paras Rewards HR"},
     {"key": "appraisal_finalised", "channel": "email", "subject": "Your appraisal — {cycle}",
-     "body": "Hi {name},\n\nYour appraisal for cycle {cycle} has been finalised. Rating: {rating}. Recommendation: {recommendation}.\n\n— Paras Reward HR"},
+     "body": "Hi {name},\n\nYour appraisal for cycle {cycle} has been finalised. Rating: {rating}. Recommendation: {recommendation}.\n\n— Paras Rewards HR"},
 ]
 
 

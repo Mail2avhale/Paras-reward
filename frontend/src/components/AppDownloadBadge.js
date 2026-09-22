@@ -70,7 +70,7 @@ export const AppDownloadBadge = ({ variant = 'default', className = '' }) => {
       <a
         href={PLAY_STORE_URL}
         onClick={handleClick}
-        aria-label="Get the Paras Reward app on Google Play"
+        aria-label="Get the Paras Rewards app on Google Play"
         data-testid="app-download-badge-icon"
         className={`inline-flex items-center justify-center w-11 h-11 rounded-xl bg-black hover:bg-gray-900 transition-colors ${className}`}
       >

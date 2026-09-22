@@ -190,9 +190,9 @@ const CelebrationModal = ({ bonus, userName, onClose }) => {
   const amount = bonus.bonus_amount || 200;
 
   const share = async () => {
-    const text = `🎉 I just received ₹${amount} Referral Bonus from Paras Reward! Join using my referral code and get amazing rewards. 💰`;
+    const text = `🎉 I just received ₹${amount} Referral Bonus from Paras Rewards! Join using my referral code and get amazing rewards. 💰`;
     if (navigator.share) {
-      try { await navigator.share({ title: 'Paras Reward Bonus', text }); } catch { /* user cancelled */ }
+      try { await navigator.share({ title: 'Paras Rewards Bonus', text }); } catch { /* user cancelled */ }
     } else {
       await navigator.clipboard.writeText(text);
       toast.success('Copied! Share it anywhere.');

@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Background Task Service
+PARAS REWARDS - Background Task Service
 ======================================
 Simple database-backed task queue for background processing.
 No external dependencies (Redis/Celery) required.

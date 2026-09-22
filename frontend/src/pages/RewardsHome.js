@@ -53,8 +53,8 @@ const RewardsHome = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2" data-testid="header-logo">
-              <img src={LOGO_URL} alt="Paras Reward" className="h-11 w-auto object-contain" />
-              <span className="font-bold text-lg text-gray-900 hidden sm:block">Paras Reward</span>
+              <img src={LOGO_URL} alt="Paras Rewards" className="h-11 w-auto object-contain" />
+              <span className="font-bold text-lg text-gray-900 hidden sm:block">Paras Rewards</span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="relative">
@@ -89,7 +89,7 @@ const RewardsHome = () => {
         <div className="relative max-w-4xl mx-auto text-center z-10">
           <motion.div initial="hidden" animate="visible" variants={stagger}>
             <motion.div variants={fadeUp} custom={0}>
-              <img src={LOGO_URL} alt="Paras Reward" className="h-20 sm:h-24 w-auto mx-auto mb-6 object-contain" />
+              <img src={LOGO_URL} alt="Paras Rewards" className="h-20 sm:h-24 w-auto mx-auto mb-6 object-contain" />
             </motion.div>
             <motion.h1 variants={fadeUp} custom={1} className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-4">
               Earn Rewards with<br />Daily Activity
@@ -144,7 +144,7 @@ const RewardsHome = () => {
               ))}
             </div>
             <p className="text-sm text-gray-500">
-              <span className="font-semibold text-gray-700">{loading ? '...' : `${stats.totalUsers.toLocaleString()}+`}</span> users trust Paras Reward
+              <span className="font-semibold text-gray-700">{loading ? '...' : `${stats.totalUsers.toLocaleString()}+`}</span> users trust Paras Rewards
             </p>
           </div>
         </div>
@@ -369,7 +369,7 @@ const RewardsHome = () => {
                 <Building2 className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 text-lg">Paras Reward Technologies Private Limited</h3>
+                <h3 className="font-bold text-gray-900 text-lg">Paras Rewards Technologies Private Limited</h3>
                 <p className="text-sm text-gray-500 mt-0.5">CIN: U82990MH2026PTC467423 &bull; Maharashtra, India</p>
               </div>
             </div>
@@ -520,7 +520,7 @@ const RewardsHome = () => {
               <h3 className="font-bold text-gray-900 text-lg">About Us</h3>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed mb-4">
-              Paras Reward Technologies Private Limited is a digital platform focused on building a simple and scalable reward-based ecosystem for users across India.
+              Paras Rewards Technologies Private Limited is a digital platform focused on building a simple and scalable reward-based ecosystem for users across India.
             </p>
             <p className="text-sm text-gray-600 leading-relaxed mb-4">
               The platform allows users to earn digital rewards (PRC) through their daily activity and engagement. These rewards can be used for real utility services such as mobile recharge and controlled bank payout options.
@@ -581,7 +581,7 @@ const RewardsHome = () => {
       <section className="py-12 sm:py-20 px-6" data-testid="why-choose-section">
         <div className="max-w-4xl mx-auto">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-10">
-            <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">Why Choose Paras Reward?</motion.h2>
+            <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">Why Choose Paras Rewards?</motion.h2>
           </motion.div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
@@ -606,7 +606,7 @@ const RewardsHome = () => {
           <div className="text-center mt-10">
             <Button data-testid="why-cta-btn" onClick={() => navigate('/register')}
               className="rounded-full px-8 py-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg shadow-blue-600/25 text-sm">
-              Join Paras Reward <ArrowRight className="ml-2 h-4 w-4" />
+              Join Paras Rewards <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -622,10 +622,10 @@ const RewardsHome = () => {
               </div>
               <h3 className="text-lg font-bold text-gray-900">Important Disclaimer</h3>
             </div>
-            <p className="text-sm text-gray-700 mb-4 font-medium">Paras Reward is a digital reward platform.</p>
+            <p className="text-sm text-gray-700 mb-4 font-medium">Paras Rewards is a digital reward platform.</p>
             <ul className="space-y-2.5">
               {[
-                'PRC (Paras Reward Coin) is a reward unit and not a currency, investment, or financial instrument',
+                'PRC (Paras Rewards Coin) is a reward unit and not a currency, investment, or financial instrument',
                 'The platform does not guarantee any fixed or assured income',
                 'Rewards are based on user activity, participation, and system conditions',
                 'The displayed PRC value is indicative and for utility purposes only',
@@ -638,7 +638,7 @@ const RewardsHome = () => {
               ))}
             </ul>
             <p className="text-xs text-gray-400 mt-4 pt-3 border-t border-amber-200">
-              By using Paras Reward, you agree to our <Link to="/terms" className="text-blue-600 underline">Terms & Conditions</Link> and <Link to="/disclaimer" className="text-blue-600 underline">Full Disclaimer</Link>.
+              By using Paras Rewards, you agree to our <Link to="/terms" className="text-blue-600 underline">Terms & Conditions</Link> and <Link to="/disclaimer" className="text-blue-600 underline">Full Disclaimer</Link>.
             </p>
           </div>
         </div>
@@ -696,7 +696,7 @@ const RewardsHome = () => {
               Join thousands of users earning rewards daily
             </motion.p>
             <motion.p variants={fadeUp} custom={2} className="text-blue-200 text-xs mb-8 max-w-md mx-auto">
-              Paras Reward is designed as a performance-based digital reward system, not an investment or income guarantee platform.
+              Paras Rewards is designed as a performance-based digital reward system, not an investment or income guarantee platform.
             </motion.p>
             <motion.div variants={fadeUp} custom={3}>
               <Button data-testid="final-cta-btn" size="lg" onClick={() => navigate('/register')}
@@ -714,7 +714,7 @@ const RewardsHome = () => {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-10">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <img src={LOGO_URL} alt="Paras Reward" className="h-10 w-auto object-contain" />
+                <img src={LOGO_URL} alt="Paras Rewards" className="h-10 w-auto object-contain" />
               </div>
               <p className="text-gray-400 text-sm leading-relaxed mb-4">A digital platform focused on building a simple and scalable reward-based ecosystem for users across India.</p>
               <AppDownloadBadge variant="compact" data-testid="footer-app-download" />
@@ -758,7 +758,7 @@ const RewardsHome = () => {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} Paras Reward Technologies Private Limited. All rights reserved.</p>
+            <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} Paras Rewards Technologies Private Limited. All rights reserved.</p>
             <div className="flex items-center gap-3">
               <a href="https://www.dnb.com/duns-number.html" target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg hover:border-gray-600 transition-all" title="D-U-N-S Registered">

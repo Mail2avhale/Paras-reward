@@ -10,7 +10,7 @@ import { API } from "../lib/api";
 const Footer = () => {
   const { t } = useTranslation();
   const [contactDetails, setContactDetails] = useState({
-    address: 'PARAS REWARD\nMaharashtra, India',
+    address: 'PARAS REWARDS\nMaharashtra, India',
     phone: '+91-XXXXXXXXXX',
     email: 'Info@parasreward.com',
     website: 'www.parasreward.com'
@@ -44,7 +44,7 @@ const Footer = () => {
         ].filter(Boolean).join('\n');
         
         setContactDetails({
-          address: fullAddress || 'PARAS REWARD\nMaharashtra, India',
+          address: fullAddress || 'PARAS REWARDS\nMaharashtra, India',
           phone: data.phone_primary || '+91-XXXXXXXXXX',
           email: data.email_support || 'Info@parasreward.com',
           website: 'www.parasreward.com'
@@ -75,7 +75,7 @@ const Footer = () => {
             <div className="flex items-center gap-2 mb-4">
               <img 
                 src="/paras-logo.png" 
-                alt="PARAS REWARD" 
+                alt="PARAS REWARDS" 
                 className="h-12 w-auto object-contain logo-animated"
               />
             </div>

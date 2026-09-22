@@ -11,7 +11,7 @@ import { HiringBadge } from '../components/HiringBadge';
 import { API } from "../lib/api";
 
 const MILESTONES = [
-  { year: '2025', title: 'Founded', desc: 'Paras Reward Technologies Pvt Ltd incorporated in Maharashtra' },
+  { year: '2025', title: 'Founded', desc: 'Paras Rewards Technologies Pvt Ltd incorporated in Maharashtra' },
   { year: '2025', title: 'Product Launch', desc: 'PRC ecosystem launched with mining, subscriptions, and recharge services' },
   { year: '2026', title: 'Growth Phase', desc: 'Rapid user acquisition with Elite subscription model and BBPS integration' },
   { year: '2026', title: 'Community', desc: 'Community forum and Employee Management System launched' }
@@ -129,7 +129,7 @@ const InvestorsPage = () => {
           <p className="text-blue-400 text-sm font-medium mb-2 uppercase tracking-wider">Investor Relations</p>
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">Building the Future of Digital Rewards</h1>
           <p className="text-slate-300 text-base max-w-2xl mx-auto mb-6">
-            Paras Reward Technologies is creating India's first PRC-powered digital reward ecosystem
+            Paras Rewards Technologies is creating India's first PRC-powered digital reward ecosystem
             with subscriptions, mining, and integrated financial services.
           </p>
           <div className="flex gap-3 justify-center">
@@ -418,7 +418,7 @@ const InvestorsPage = () => {
 
       {/* Footer */}
       <div className="bg-slate-900 text-white py-8 px-4 text-center">
-        <p className="text-slate-400 text-sm">Paras Reward Technologies Private Limited</p>
+        <p className="text-slate-400 text-sm">Paras Rewards Technologies Private Limited</p>
         <p className="text-slate-500 text-xs mt-1">B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra 431006</p>
         <p className="text-slate-500 text-xs mt-1">www.parasreward.com</p>
       </div>

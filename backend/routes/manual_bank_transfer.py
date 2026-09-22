@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Manual Bank Transfer Redeem System
+PARAS REWARDS - Manual Bank Transfer Redeem System
 =================================================
 Complete fintech-style redeem system where users convert PRC to INR bank transfer.
 Admin manually processes transfers and marks requests as PAID/FAILED.
@@ -1443,7 +1443,7 @@ async def get_first_payout_queue(limit: int = Query(default=100, le=500)):
 
     # 2) Fetch all pending requests, sort oldest-first (FIFO).
     #    Exclude partner_store settlement requests — this queue is for
-    #    user first-payouts only (Paras Reward v2.0 spec, Feb 2026).
+    #    user first-payouts only (Paras Rewards v2.0 spec, Feb 2026).
     pending = await db.bank_transfer_requests.find(
         {
             "status": {"$in": ["pending", "processing"]},

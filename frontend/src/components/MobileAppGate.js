@@ -5,7 +5,7 @@ import { API } from '@/lib/api';
 /*
  * MobileAppGate
  * -------------
- * Forces every mobile-web visitor to install the Paras Reward Android
+ * Forces every mobile-web visitor to install the Paras Rewards Android
  * app. The gate only renders when ALL of the following are true:
  *   1. The page is running inside a regular mobile browser (NOT inside
  *      the Capacitor-wrapped native APK). We detect this via
@@ -162,14 +162,14 @@ const MobileAppGate = ({ children }) => {
       {/* Logo */}
       <img
         src={LOGO_URL}
-        alt="PARAS REWARD"
+        alt="PARAS REWARDS"
         className="h-24 w-24 rounded-3xl object-contain bg-white p-3 shadow-2xl mb-6"
         onError={(e) => { e.currentTarget.style.display = 'none'; }}
       />
 
       {/* Title */}
       <h1 className="text-3xl font-bold text-white text-center leading-tight">
-        Get the Official<br/>PARAS REWARD App
+        Get the Official<br/>PARAS REWARDS App
       </h1>
       <p className="mt-3 text-sm text-slate-300 text-center max-w-sm leading-relaxed">
         For security, faster mining, and exclusive rewards — please
@@ -214,7 +214,7 @@ const MobileAppGate = ({ children }) => {
       </div>
 
       <p className="mt-10 text-[11px] text-slate-500 text-center">
-        © {new Date().getFullYear()} PARAS REWARD · Android · v3.3.1
+        © {new Date().getFullYear()} PARAS REWARDS · Android · v3.3.1
       </p>
     </div>
   );

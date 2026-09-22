@@ -7,7 +7,7 @@ import {
 
 /**
  * PRC to INR Converter — Public SEO landing page.
- * Target keywords: "prc to inr", "paras reward coin to rupee", "prc value today".
+ * Target keywords: "prc to inr", "paras rewards coin to rupee", "prc value today".
  */
 
 // PRC to INR rate — FIXED at ₹0.10 per PRC (10 PRC = ₹1).
@@ -16,15 +16,15 @@ const DEMO_PRC_RATE = 0.10;
 const FAQS = [
   {
     q: 'What is the current PRC to INR rate?',
-    a: "PRC (Paras Reward Coin) has a fixed INR conversion rate: 10 PRC = ₹1 (i.e., ₹0.10 per PRC). This rate is constant across the platform — no daily changes, no dynamic adjustments. What you see is what you get when you redeem.",
+    a: "PRC (Paras Rewards Coin) has a fixed INR conversion rate: 10 PRC = ₹1 (i.e., ₹0.10 per PRC). This rate is constant across the platform — no daily changes, no dynamic adjustments. What you see is what you get when you redeem.",
   },
   {
     q: 'Why does the PRC rate change?',
-    a: "Paras Reward uses a fixed PRC-to-INR rate of 10 PRC = ₹1. No daily adjustments, no surprise dilution, no inflation — the rate stays constant so users always know exactly what their PRC is worth.",
+    a: "Paras Rewards uses a fixed PRC-to-INR rate of 10 PRC = ₹1. No daily adjustments, no surprise dilution, no inflation — the rate stays constant so users always know exactly what their PRC is worth.",
   },
   {
     q: 'How do I convert my PRC into actual cash (INR)?',
-    a: "Inside the Paras Reward app: (1) Verify your KYC, (2) Open Bank Redeem, (3) Enter the PRC amount, (4) Confirm with your security PIN. The INR amount is credited directly to your registered bank account via UPI/IMPS, typically within minutes.",
+    a: "Inside the Paras Rewards app: (1) Verify your KYC, (2) Open Bank Redeem, (3) Enter the PRC amount, (4) Confirm with your security PIN. The INR amount is credited directly to your registered bank account via UPI/IMPS, typically within minutes.",
   },
   {
     q: 'Is there a minimum amount of PRC required to redeem to INR?',
@@ -36,7 +36,7 @@ const FAQS = [
   },
   {
     q: 'Are there taxes on PRC redemption in India?',
-    a: "PRC earnings redeemed to INR are treated as 'income from other sources' for Indian tax purposes. Users should consult a CA for personal tax advice. Paras Reward provides annual statements for tax filing on request.",
+    a: "PRC earnings redeemed to INR are treated as 'income from other sources' for Indian tax purposes. Users should consult a CA for personal tax advice. Paras Rewards provides annual statements for tax filing on request.",
   },
 ];
 
@@ -48,11 +48,11 @@ const PrcToInrConverter = () => {
   const [openFaq, setOpenFaq] = useState(0);
 
   useEffect(() => {
-    document.title = 'PRC to INR Converter | Paras Reward — Live Coin to Rupee Value';
+    document.title = 'PRC to INR Converter | Paras Rewards — Live Coin to Rupee Value';
     const m = document.querySelector('meta[name="description"]');
     const orig = m?.getAttribute('content');
     if (m) m.setAttribute('content',
-      'Convert Paras Reward Coin (PRC) to Indian Rupees (₹INR) instantly. Free PRC value calculator with daily conversion rate, redemption guide, and FAQ. Updated 2026.'
+      'Convert Paras Rewards Coin (PRC) to Indian Rupees (₹INR) instantly. Free PRC value calculator with daily conversion rate, redemption guide, and FAQ. Updated 2026.'
     );
     return () => { if (m && orig) m.setAttribute('content', orig); };
   }, []);
@@ -73,7 +73,7 @@ const PrcToInrConverter = () => {
           PRC to INR Converter
         </h1>
         <p className="mt-3 text-base text-slate-600 leading-relaxed">
-          Convert <strong>Paras Reward Coin (PRC)</strong> to <strong>Indian Rupees (₹INR)</strong> instantly.
+          Convert <strong>Paras Rewards Coin (PRC)</strong> to <strong>Indian Rupees (₹INR)</strong> instantly.
           See exactly how much your mining earnings are worth in real cash.
         </p>
       </section>
@@ -141,10 +141,10 @@ const PrcToInrConverter = () => {
 
       <section className="px-5 py-10 max-w-3xl mx-auto">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-4">
-          What is PRC (Paras Reward Coin)?
+          What is PRC (Paras Rewards Coin)?
         </h2>
         <p className="text-base text-slate-700 leading-relaxed mb-4">
-          <strong>PRC</strong> is the native reward currency of the Paras Reward
+          <strong>PRC</strong> is the native reward currency of the Paras Rewards
           platform. It's earned through daily mining (single-leg network
           algorithm), referrals, mobile recharge cashback, bill payment
           cashback, and community engagement. Every PRC has a transparent
@@ -152,7 +152,7 @@ const PrcToInrConverter = () => {
         </p>
         <p className="text-base text-slate-700 leading-relaxed mb-4">
           Unlike cryptocurrencies, PRC is a <strong>centralized reward token</strong>
-          backed by the Paras Reward platform's revenue from subscription
+          backed by the Paras Rewards platform's revenue from subscription
           plans, peer-to-peer Sale Subscriptions, and service partnerships.
           The rate is stabilized via a sustainability-anchored model that
           prevents inflation as the user base grows.
@@ -195,7 +195,7 @@ const PrcToInrConverter = () => {
         <div className="space-y-3">
           {[
             { n: 1, t: 'Complete KYC verification', d: 'PAN-only KYC via Aadhaar OTP — takes 2 minutes. Required for all bank withdrawals per RBI rules.' },
-            { n: 2, t: 'Open the Bank Redeem screen', d: 'Inside the Paras Reward app, tap "Bank Redeem" from the dashboard.' },
+            { n: 2, t: 'Open the Bank Redeem screen', d: 'Inside the Paras Rewards app, tap "Bank Redeem" from the dashboard.' },
             { n: 3, t: 'Enter your PRC amount', d: 'See live INR equivalent + applicable fees. Confirm with your 6-digit security PIN.' },
             { n: 4, t: 'Receive cash within minutes', d: 'INR is credited directly via UPI or IMPS to your registered bank account. Get notification + receipt.' },
           ].map((s) => (

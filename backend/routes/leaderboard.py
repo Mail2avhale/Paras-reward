@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Leaderboard Routes
+PARAS REWARDS - Leaderboard Routes
 ==================================
 All leaderboard related API endpoints
 

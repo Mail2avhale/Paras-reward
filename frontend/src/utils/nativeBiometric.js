@@ -102,7 +102,7 @@ export const enableNativeBiometric = async ({ identifier, pin }) => {
       cancelTitle: "Cancel",
       allowDeviceCredential: true,
       iosFallbackTitle: "Use Passcode",
-      androidTitle: "PARAS REWARD",
+      androidTitle: "PARAS REWARDS",
       androidSubtitle: "Enable Fingerprint Login",
       androidConfirmationRequired: false,
     });
@@ -138,11 +138,11 @@ export const nativeBiometricLogin = async () => {
 
   try {
     await plugins.BiometricAuth.authenticate({
-      reason: "Sign in to PARAS REWARD",
+      reason: "Sign in to PARAS REWARDS",
       cancelTitle: "Use PIN instead",
       allowDeviceCredential: true,
       iosFallbackTitle: "Use Passcode",
-      androidTitle: "PARAS REWARD",
+      androidTitle: "PARAS REWARDS",
       androidSubtitle: "Sign in with Fingerprint",
       androidConfirmationRequired: false,
     });

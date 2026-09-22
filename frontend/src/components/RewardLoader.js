@@ -36,7 +36,7 @@ const RewardLoader = ({ message = 'Loading...', size = 'default', theme = 'dark'
         {/* Logo with zoom pulse */}
         <img 
           src={logoSrc}
-          alt="Paras Reward"
+          alt="Paras Rewards"
           className="w-full h-full object-contain"
           style={{ animation: 'logoPulse 2s ease-in-out infinite' }}
           draggable={false}

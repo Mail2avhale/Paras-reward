@@ -71,7 +71,7 @@ export const scheduleSessionExpiryWarning = async (expiresInSeconds) => {
         {
           id: SESSION_NOTIF_ID,
           title: "Session expiring soon",
-          body: "Your PARAS REWARD session expires in 5 minutes. Tap to re-authenticate.",
+          body: "Your PARAS REWARDS session expires in 5 minutes. Tap to re-authenticate.",
           schedule: { at: new Date(fireAtMs), allowWhileIdle: true },
           smallIcon: "ic_launcher",
           // Channel id reused across calls — Android groups them automatically.

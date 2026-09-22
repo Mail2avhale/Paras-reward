@@ -139,7 +139,7 @@ def generate_hdfc_excel(data: List[dict], payment_type: str):
         elif payment_type == "SAVINGS_VAULT":
             narration = f"VAULT REDEEM {str(request_id)[-8:].upper()}"
         else:
-            narration = f"PARAS REWARD {str(request_id)[-8:].upper()}"
+            narration = f"PARAS REWARDS {str(request_id)[-8:].upper()}"
         
         row_data = [
             row_num - 1,  # SR NO

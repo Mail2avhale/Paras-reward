@@ -1,7 +1,7 @@
 """
 Fraud Detection & Prevention System
 ====================================
-Free, built-in fraud detection for Paras Reward Platform
+Free, built-in fraud detection for Paras Rewards Platform
 """
 
 import asyncio

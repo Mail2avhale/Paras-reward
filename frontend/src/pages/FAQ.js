@@ -13,12 +13,12 @@ const FAQ = () => {
       icon: HelpCircle,
       questions: [
         {
-          question: "What is Paras Reward?",
-          answer: "PARAS REWARD is a digital engagement platform where users earn virtual reward points (PRC) through activities like daily engagement and referrals. The term 'mining' refers to our virtual reward system - NOT cryptocurrency mining. Points can be used within the platform for various services through our partners."
+          question: "What is Paras Rewards?",
+          answer: "PARAS REWARDS is a digital engagement platform where users earn virtual reward points (PRC) through activities like daily engagement and referrals. The term 'mining' refers to our virtual reward system - NOT cryptocurrency mining. Points can be used within the platform for various services through our partners."
         },
         {
-          question: "What is PRC (Paras Reward Coin)?",
-          answer: "PRC is a virtual reward point used ONLY within the Paras Reward platform. It is earned through platform activities and can be used for in-app services. PRC has NO cash value and cannot be converted to real money directly."
+          question: "What is PRC (Paras Rewards Coin)?",
+          answer: "PRC is a virtual reward point used ONLY within the Paras Rewards platform. It is earned through platform activities and can be used for in-app services. PRC has NO cash value and cannot be converted to real money directly."
         },
         {
           question: "What PRC is NOT - Important Disclaimer",
@@ -26,7 +26,7 @@ const FAQ = () => {
         },
         {
           question: "Is there any joining fee?",
-          answer: "No! Joining PARAS REWARD is completely free. You can start collecting promotional reward points immediately after registration. Note: Reward points are promotional in nature and have no guaranteed monetary value."
+          answer: "No! Joining PARAS REWARDS is completely free. You can start collecting promotional reward points immediately after registration. Note: Reward points are promotional in nature and have no guaranteed monetary value."
         }
       ]
     },
@@ -197,7 +197,7 @@ const FAQ = () => {
     <>
       <SEO 
         title="FAQs - Frequently Asked Questions"
-        description="Find answers to common questions about PARAS REWARD - how to earn PRC points, redeem rewards, VIP membership, and more."
+        description="Find answers to common questions about PARAS REWARDS - how to earn PRC points, redeem rewards, VIP membership, and more."
         url="https://www.parasreward.com/faq"
       />
       <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">

@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Wallet Service
+PARAS REWARDS - Wallet Service
 =============================
 Handles all wallet operations with ledger integration.
 Every wallet change MUST go through this service.

@@ -1,5 +1,5 @@
 """
-GST Invoice System for Paras Reward
+GST Invoice System for Paras Rewards
 - Generate GST-compliant invoices
 - PDF generation with reportlab
 - Sequential invoice numbering
@@ -25,7 +25,7 @@ from reportlab.lib.enums import TA_CENTER
 router = APIRouter(prefix="/invoice", tags=["GST Invoice"])
 
 # Company Details
-COMPANY_NAME = "PARAS REWARD TECHNOLOGIES PRIVATE LIMITED"
+COMPANY_NAME = "PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED"
 COMPANY_GSTIN = "27AAQCP6686E1ZR"
 COMPANY_ADDRESS = "Maharashtra, India"
 COMPANY_EMAIL = "support@parasreward.com"

@@ -40,7 +40,7 @@ class TestBBPSHealthCheck:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["status"] == "PARAS REWARD BBPS RUNNING"
+        assert data["status"] == "PARAS REWARDS BBPS RUNNING"
         assert data["version"] == "2.1"  # Updated version after BBPS fix
         assert "services" in data
         assert len(data["services"]) == 8

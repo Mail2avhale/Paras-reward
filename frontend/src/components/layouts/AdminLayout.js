@@ -554,7 +554,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
             <img src={LOGO_URL} alt="Logo" className="h-11 w-11 rounded-xl shadow-md" />
             {!sidebarCollapsed && (
               <div>
-                <h1 className="font-bold text-lg text-slate-800 tracking-tight">PARAS REWARD</h1>
+                <h1 className="font-bold text-lg text-slate-800 tracking-tight">PARAS REWARDS</h1>
                 <p className="text-xs text-slate-400 font-medium">Admin Panel</p>
               </div>
             )}
@@ -625,7 +625,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
               <div className="flex items-center gap-3">
                 <img src={LOGO_URL} alt="Logo" className="h-11 w-11 rounded-xl shadow-md" />
                 <div>
-                  <h1 className="font-bold text-slate-800">PARAS REWARD</h1>
+                  <h1 className="font-bold text-slate-800">PARAS REWARDS</h1>
                   <p className="text-xs text-slate-400">Admin Panel</p>
                 </div>
               </div>
@@ -722,7 +722,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
         {/* Footer */}
         <footer className="bg-white border-t border-slate-200 px-6 py-3 text-center">
-          <p className="text-xs text-slate-400">© 2021 - 2026 Paras Reward Technologies</p>
+          <p className="text-xs text-slate-400">© 2021 - 2026 Paras Rewards Technologies</p>
         </footer>
       </div>
     </div>

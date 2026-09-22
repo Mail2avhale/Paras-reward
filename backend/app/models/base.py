@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Base Models
+PARAS REWARDS - Base Models
 ==========================
 Pydantic models for request/response validation.
 """

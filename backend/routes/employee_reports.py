@@ -81,7 +81,7 @@ def set_db(database):
 
 
 # ==================== COMPANY / CONSTANTS ====================
-COMPANY_NAME = "PARAS REWARD TECHNOLOGIES PRIVATE LIMITED"
+COMPANY_NAME = "PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED"
 COMPANY_ADDRESS = "B-18, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra - 431001"
 COMPANY_WEBSITE = "www.parasreward.com"
 COMPANY_EMAIL = "info@parasreward.com"

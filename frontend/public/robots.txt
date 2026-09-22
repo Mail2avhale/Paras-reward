@@ -1,4 +1,4 @@
-# robots.txt for PARAS REWARD
+# robots.txt for PARAS REWARDS
 # https://www.parasreward.com/robots.txt
 
 User-agent: *

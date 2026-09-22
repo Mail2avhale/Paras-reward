@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Gift Subscription Feature
+PARAS REWARDS - Gift Subscription Feature
 =========================================
 
 Parent user can gift 24-hour Elite subscription to their L1 (direct) referrals.

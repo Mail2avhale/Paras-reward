@@ -3,8 +3,8 @@ import { X, Printer, Download } from 'lucide-react';
 import DOMPurify from 'dompurify';
 
 const COMPANY = {
-  name: 'PARAS REWARD',
-  legal: 'PARAS REWARD TECHNOLOGIES PRIVATE LIMITED',
+  name: 'PARAS REWARDS',
+  legal: 'PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED',
   gstin: '27AAQCP6686E1ZR',
   address: 'A-38, Bizz Tower, Chatrapati Sambhaji Nagar, Maharashtra 431006',
   state: 'Maharashtra',

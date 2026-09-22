@@ -80,7 +80,7 @@ class TestCareersMeta:
         assert "Full-time" in data["job_types"]
         
         # Verify company info
-        assert data["company"]["name"] == "Paras Reward Technologies Private Limited"
+        assert data["company"]["name"] == "Paras Rewards Technologies Private Limited"
         print(f"PASS: Career meta returns {len(data['departments'])} departments, {len(data['job_types'])} job types")
 
 

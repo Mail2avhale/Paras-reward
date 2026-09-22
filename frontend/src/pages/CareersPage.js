@@ -422,7 +422,7 @@ const CareersPage = () => {
             />
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-2" data-testid="careers-h1">
-            PARAS REWARD
+            PARAS REWARDS
           </h1>
           <p className="text-blue-200 text-base sm:text-lg mb-4" data-testid="careers-tagline">
             India&apos;s Trusted Reward Platform
@@ -608,7 +608,7 @@ const CareersPage = () => {
 
       {/* Footer */}
       <div className="bg-slate-900 text-white py-8 px-4 text-center">
-        <p className="text-slate-400 text-sm">Paras Reward Technologies Private Limited</p>
+        <p className="text-slate-400 text-sm">Paras Rewards Technologies Private Limited</p>
         <p className="text-slate-500 text-xs mt-1">www.parasreward.com</p>
       </div>
     </div>

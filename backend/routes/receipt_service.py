@@ -99,7 +99,7 @@ def generate_receipt_pdf(receipt_data: Dict[str, Any], receipt_type: str = "BBPS
     )
     
     # Header
-    elements.append(Paragraph("PARAS REWARD", title_style))
+    elements.append(Paragraph("PARAS REWARDS", title_style))
     elements.append(Paragraph(f"{'BBPS Bill Payment' if receipt_type == 'BBPS' else 'Money Transfer'} Receipt", header_style))
     elements.append(Spacer(1, 20))
     

@@ -103,7 +103,7 @@ async def get_razorpay_config():
     return {
         "key_id": RAZORPAY_KEY_ID,
         "currency": "INR",
-        "company_name": "PARAS REWARD",
+        "company_name": "PARAS REWARDS",
         "code_version": CODE_VERSION,
         "security": "DOUBLE_VERIFICATION_ENABLED",
         "enabled": is_enabled
@@ -180,7 +180,7 @@ async def create_razorpay_order(request: CreateOrderRequest):
                 "customer_email": customer_email,
                 "customer_mobile": customer_mobile,
                 "product": f"Elite {request.plan_type} Subscription",
-                "merchant": "PARAS REWARD"
+                "merchant": "PARAS REWARDS"
             }
         }
         
@@ -558,7 +558,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                     "date": now.strftime("%d-%m-%Y"),
                     "created_at": now.isoformat(),
                     "company": {
-                        "name": "PARAS REWARD TECHNOLOGIES PRIVATE LIMITED",
+                        "name": "PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED",
                         "gstin": "27AAQCP6686E1ZR",
                         "address": "Maharashtra, India"
                     }
@@ -3814,7 +3814,7 @@ async def generate_invoice(order_id: str):
             
             # Company details
             "company": {
-                "name": "PARAS REWARD TECHNOLOGIES PRIVATE LIMITED",
+                "name": "PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED",
                 "address": "Maharashtra, India",
                 "gstin": "27XXXXXXXXXXXXXXX",  # Add your GSTIN
                 "pan": "XXXXXXXXXX",  # Add your PAN

@@ -1,8 +1,8 @@
-# PARAS REWARD
+# PARAS REWARDS
 
 > India's Next-Generation Trusted Reward Platform. Collect PRC points daily, play games, invite friends and redeem points for gift vouchers, bill payments and real products.
 
-PARAS REWARD is a free-to-join digital rewards app for Indian users. The platform combines daily mining-style PRC point accumulation, a referral-based growth network, peer-to-peer subscription sales, and a curated marketplace ("PARAS MALL") where members spend points on real goods. Premium "Elite" subscriptions unlock 2x mining rate, exclusive vouchers and priority support. Earnings convert to INR via a fixed 10 PRC = ₹1 rate and can be withdrawn to a verified Indian bank account (UPI / IMPS) after a one-time PAN-based KYC.
+PARAS REWARDS is a free-to-join digital rewards app for Indian users. The platform combines daily mining-style PRC point accumulation, a referral-based growth network, peer-to-peer subscription sales, and a curated marketplace ("PARAS MALL") where members spend points on real goods. Premium "Elite" subscriptions unlock 2x mining rate, exclusive vouchers and priority support. Earnings convert to INR via a fixed 10 PRC = ₹1 rate and can be withdrawn to a verified Indian bank account (UPI / IMPS) after a one-time PAN-based KYC.
 
 ## Core Pages
 

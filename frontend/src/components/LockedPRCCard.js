@@ -12,7 +12,7 @@
  *
  * Polls /api/prc-lock/status/{uid} once on mount.
  *
- * Jun 9, 2026 — Owner: Paras Reward
+ * Jun 9, 2026 — Owner: Paras Rewards
  */
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';

@@ -1,5 +1,5 @@
 """
-PARAS REWARD - Admin Task Queue Routes
+PARAS REWARDS - Admin Task Queue Routes
 ======================================
 Admin endpoints for managing background tasks.
 NOTE: Auto-retry functionality has been REMOVED. Failed transactions are refunded immediately.

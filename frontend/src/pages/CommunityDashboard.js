@@ -99,17 +99,17 @@ const BADGE_META = {
 
 const buildShare = (referralLink, name) => ({
   whatsapp: `https://wa.me/?text=${encodeURIComponent(
-    `Join me on Paras Reward and start earning daily PRC! Use my code below and let's grow together.\n\n${referralLink}`,
+    `Join me on Paras Rewards and start earning daily PRC! Use my code below and let's grow together.\n\n${referralLink}`,
   )}`,
   telegram: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(
-    `Join Paras Reward with ${name || 'me'} and earn daily PRC rewards.`,
+    `Join Paras Rewards with ${name || 'me'} and earn daily PRC rewards.`,
   )}`,
   native: async () => {
     if (!navigator.share) return false;
     try {
       await navigator.share({
-        title: 'Paras Reward',
-        text: `Join Paras Reward and earn daily PRC. Use my link:`,
+        title: 'Paras Rewards',
+        text: `Join Paras Rewards and earn daily PRC. Use my link:`,
         url: referralLink,
       });
       return true;

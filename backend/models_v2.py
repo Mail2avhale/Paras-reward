@@ -1,5 +1,5 @@
 """
-PARAS REWARD V2 - Enhanced Backend
+PARAS REWARDS V2 - Enhanced Backend
 Complete implementation with all new features
 """
 

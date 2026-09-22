@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to create a Manager user for PARAS REWARD application.
+Script to create a Manager user for PARAS REWARDS application.
 
 Manager Role Permissions:
 - KYC verification (approve/reject)
@@ -45,7 +45,7 @@ def hash_password(password: str) -> str:
 async def create_manager():
     """Create a manager user"""
     print("=" * 50)
-    print("PARAS REWARD - Manager User Creation")
+    print("PARAS REWARDS - Manager User Creation")
     print("=" * 50)
     print()
     

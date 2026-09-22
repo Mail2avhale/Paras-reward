@@ -128,12 +128,12 @@ const TopBar = ({ user, onLogout }) => {
           >
             <img
               src={LOGO_URL}
-              alt="PARAS REWARD"
+              alt="PARAS REWARDS"
               className="h-10 w-auto rounded-xl object-contain bg-black p-1 shadow-lg"
             />
             <div className="hidden sm:flex flex-col">
               <span className="font-bold text-lg text-gray-900 leading-tight">
-                PARAS REWARD
+                PARAS REWARDS
               </span>
               <span className="text-xs text-purple-600 leading-tight">
                 India&apos;s No.1 Rewards Platform

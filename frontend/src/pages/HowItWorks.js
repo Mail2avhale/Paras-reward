@@ -9,7 +9,7 @@ const HowItWorks = () => {
     <>
       <SEO 
         title="How It Works"
-        description="Learn how to collect PRC reward points on PARAS REWARD - from daily mining to referrals and Elite benefits."
+        description="Learn how to collect PRC reward points on PARAS REWARDS - from daily mining to referrals and Elite benefits."
         url="https://www.parasreward.com/how-it-works"
       />
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -21,7 +21,7 @@ const HowItWorks = () => {
               <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-xl">P</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">PARAS REWARD</span>
+              <span className="text-xl font-bold text-gray-900">PARAS REWARDS</span>
             </Link>
             <Link to="/">
               <Button variant="ghost" className="flex items-center gap-2 hover:bg-purple-50">
@@ -41,7 +41,7 @@ const HowItWorks = () => {
             <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl mb-6 shadow-2xl">
               <Play className="h-12 w-12 text-white" />
             </div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">How PARAS REWARD Works</h1>
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">How PARAS REWARDS Works</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               A simple 3-step process to start collecting rewards daily
             </p>

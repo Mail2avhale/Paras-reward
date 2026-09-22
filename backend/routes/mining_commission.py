@@ -1,5 +1,5 @@
 """
-PARAS REWARD — Mining Collect Commission (3-Tier Elite Referral Reward)
+PARAS REWARDS — Mining Collect Commission (3-Tier Elite Referral Reward)
 ========================================================================
 Feature: Jul 2026
 

@@ -206,7 +206,7 @@ async def create_success_story_post(
                 f"Successfully activated **{plan_label} Subscription** plan",
                 "",
                 f"🚀 Welcome to the {plan_label} club!",
-                "✅ Now earning premium rewards via Paras Reward",
+                "✅ Now earning premium rewards via Paras Rewards",
             ]
         elif service_type == "paras_mall":
             product_label = (extra_title or "a smart product").strip()
@@ -217,7 +217,7 @@ async def create_success_story_post(
                 f"Booked **{product_label}** (worth ₹{int(amount_inr):,}) via **Paras Mall**",
                 "",
                 "💎 Mining started — daily PRC rewards now active",
-                "✅ Smart reward shopping at Paras Reward",
+                "✅ Smart reward shopping at Paras Rewards",
             ]
         elif service_type == "service_charge":
             # `amount_inr` = 20 % service charge the user just paid.
@@ -229,19 +229,19 @@ async def create_success_story_post(
                 "🎉 REDEMPTION SUCCESS STORY 🎉",
                 f"🇮🇳 Congratulations, **{first_name}**!",
                 "",
-                f"We are happy to share that **{first_name}** from **{location}** has successfully completed their redemption on Paras Reward. ✅",
+                f"We are happy to share that **{first_name}** from **{location}** has successfully completed their redemption on Paras Rewards. ✅",
                 "",
                 f"💳 20% Redemption Service Charge: **₹{fee_int}**",
                 "✅ Service Charge Successfully Paid",
                 "✅ Redemption Successfully Completed",
                 "",
-                "This is an important milestone for our growing Paras Reward community. 💎",
+                "This is an important milestone for our growing Paras Rewards community. 💎",
                 "**Trust • Transparency • Process**",
                 "",
                 f"🙏 Thank you, **{first_name}**, for your patience and cooperation.",
-                "🚀 More users. More progress. A stronger Paras Reward ecosystem.",
+                "🚀 More users. More progress. A stronger Paras Rewards ecosystem.",
                 "",
-                "💎 **PARAS REWARD**",
+                "💎 **PARAS REWARDS**",
                 "*Together We Grow.*",
             ]
         else:
@@ -251,7 +251,7 @@ async def create_success_story_post(
                 "",
                 f"Successfully completed **{label}** of **₹{int(amount_inr):,}**",
                 "",
-                "✅ Transaction completed successfully via Paras Reward",
+                "✅ Transaction completed successfully via Paras Rewards",
             ]
         content = "\n".join(body_lines)
 
@@ -264,14 +264,14 @@ async def create_success_story_post(
             "post_id": post_id,
             # Fields aligned with regular posts so they appear in the unified feed
             "user_id": "system",
-            "user_name": "Paras Reward",
+            "user_name": "Paras Rewards",
             "user_plan": "admin",
             "status": "active",
             "is_helpful": False,
             "report_count": 0,
             # Success-story specific flags
             "author_uid": "system",
-            "author_name": "Paras Reward",
+            "author_name": "Paras Rewards",
             "author_role": "admin",
             "is_admin_post": True,
             "is_success_story": True,
@@ -398,7 +398,7 @@ async def _repair_zero_amount_success_stories():
                 "",
                 f"Successfully completed **{label}** of **₹{int(amount):,}**",
                 "",
-                "✅ Transaction completed successfully via Paras Reward",
+                "✅ Transaction completed successfully via Paras Rewards",
             ])
             await db.community_posts.update_one(
                 {"post_id": post["post_id"]},

@@ -125,7 +125,7 @@ async def _reconcile_charge_from_razorpay(charge_id: str) -> Optional[dict]:
     """Server-to-server reconcile against Razorpay's live API.
 
     Motivation (Sep 1 2026): Multiple users reported paying via Razorpay
-    UPI (money DEDUCTED, GPay screen showing "Completed", Paras Reward
+    UPI (money DEDUCTED, GPay screen showing "Completed", Paras Rewards
     Technologies received the funds) but the app dashboard still shows
     "Service Fee Pending". Root cause: client-side `handler` callback
     from Razorpay Checkout is racy — if the WebView is closed, the phone

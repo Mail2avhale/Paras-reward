@@ -1,5 +1,5 @@
 """
-E2E Backend Tests for PARAS REWARD App
+E2E Backend Tests for PARAS REWARDS App
 Tests core flows: Login, Dashboard, Growth Network, Subscription, Redeem Limit
 """
 import pytest

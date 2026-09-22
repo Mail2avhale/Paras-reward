@@ -283,7 +283,7 @@ const SubscriptionPlans = ({ user }) => {
         key: key_id,
         amount: amount,
         currency: currency,
-        name: 'PARAS REWARD',
+        name: 'PARAS REWARDS',
         description: `${selectedPlan.name} - ${selectedDuration} Subscription`,
         order_id: order_id,
         // 👇 UPI Apps (PhonePe / GPay / Paytm) visibility inside the Android app

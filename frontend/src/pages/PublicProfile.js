@@ -92,7 +92,7 @@ const PublicProfile = ({ user }) => {
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/profile/${uid}`;
-    const shareText = `Check out ${profile?.name}'s profile on PARAS REWARD! ${profile?.current_badge?.badge || ''}`;
+    const shareText = `Check out ${profile?.name}'s profile on PARAS REWARDS! ${profile?.current_badge?.badge || ''}`;
     
     if (navigator.share) {
       try {

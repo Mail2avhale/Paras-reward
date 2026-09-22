@@ -61,7 +61,7 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Google AdMob App ID (Paras Reward) -->
+        <!-- Google AdMob App ID (Paras Rewards) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3556805218952480~1933993140"/>

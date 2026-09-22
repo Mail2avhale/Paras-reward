@@ -165,7 +165,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
             <div className="flex items-center gap-3 min-w-0">
               <img
                 src={LOGO_URL}
-                alt="PARAS REWARD"
+                alt="PARAS REWARDS"
                 className="h-11 w-11 rounded-xl object-contain bg-slate-900 p-1 shadow-sm"
               />
               <div className="min-w-0">
@@ -295,7 +295,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
             )}
           </div>
           <p className="text-[10px] text-center text-slate-400 mt-3">
-            © {new Date().getFullYear()} PARAS REWARD · v3.3.1
+            © {new Date().getFullYear()} PARAS REWARDS · v3.3.1
           </p>
         </div>
       </aside>

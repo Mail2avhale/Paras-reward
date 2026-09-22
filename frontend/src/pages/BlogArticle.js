@@ -28,7 +28,7 @@ const BlogArticle = () => {
               <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-xl">P</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">PARAS REWARD</span>
+              <span className="text-xl font-bold text-gray-900">PARAS REWARDS</span>
             </Link>
             <Link to="/blog">
               <Button variant="ghost" className="flex items-center gap-2 hover:bg-purple-50">
@@ -126,7 +126,7 @@ const BlogArticle = () => {
           <Card className="p-10 bg-gradient-to-br from-purple-600 to-pink-600 text-white text-center shadow-2xl">
             <h2 className="text-3xl font-bold mb-4">Start Earning Today</h2>
             <p className="text-xl text-purple-100 mb-6">
-              Join thousands of users earning daily with PARAS REWARD
+              Join thousands of users earning daily with PARAS REWARDS
             </p>
             <Link to="/register">
               <Button className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-6 text-lg rounded-xl shadow-xl">

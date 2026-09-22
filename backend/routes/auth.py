@@ -293,8 +293,8 @@ async def simple_register(request: Request):
             "notification_id": str(uuid.uuid4()),
             "user_id": user_data["uid"],
             "user_uid": user_data["uid"],
-            "title": "🎉 Welcome to Paras Reward!",
-            "message": f"Hi {user_data['name']}! Welcome to Paras Reward. Start your journey by completing your profile and exploring amazing rewards!",
+            "title": "🎉 Welcome to Paras Rewards!",
+            "message": f"Hi {user_data['name']}! Welcome to Paras Rewards. Start your journey by completing your profile and exploring amazing rewards!",
             "type": "welcome",
             "icon": "🎉",
             "action_url": "/dashboard",
@@ -1790,7 +1790,7 @@ async def get_biometric_register_options(user_id: str):
     webauthn_rp_id = os.environ.get('WEBAUTHN_RP_ID', 'localhost')
     options = generate_registration_options(
         rp_id=webauthn_rp_id,
-        rp_name="PARAS REWARD",
+        rp_name="PARAS REWARDS",
         user_id=user_id.encode('utf-8'),
         user_name=user.get("email", "user"),
         user_display_name=user.get("name", "User"),

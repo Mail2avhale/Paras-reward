@@ -1,5 +1,5 @@
 """
-PARAS REWARD - GROWTH ECONOMY SYSTEM
+PARAS REWARDS - GROWTH ECONOMY SYSTEM
 =====================================
 
 Complete Economy System with:

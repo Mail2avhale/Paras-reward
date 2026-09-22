@@ -225,7 +225,7 @@ const MyInvoices = ({ user }) => {
         {/* Company Info Footer */}
         <div className="mt-8 text-center">
           <p className="text-gray-500 text-xs">
-            PARAS REWARD TECHNOLOGIES PRIVATE LIMITED
+            PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED
           </p>
           <p className="text-gray-600 text-[10px] mt-1">
             GSTIN: 27AAQCP6686E1ZR | Maharashtra, India

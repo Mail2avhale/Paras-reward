@@ -1140,7 +1140,7 @@ const AdminSettings = ({ user }) => {
                 <label className="text-sm font-medium text-slate-600 mb-2 block">Account Holder Name</label>
                 <input
                   type="text"
-                  placeholder="PARAS REWARD PVT LTD"
+                  placeholder="PARAS REWARDS PVT LTD"
                   value={paymentConfig.account_holder}
                   onChange={(e) => handlePaymentConfigChange('account_holder', e.target.value)}
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"

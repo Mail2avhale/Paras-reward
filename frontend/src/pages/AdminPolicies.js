@@ -62,17 +62,17 @@ const AdminPolicies = ({ user, onLogout }) => {
 
   const getDefaultTerms = () => `# Terms and Conditions
 
-Welcome to PARAS REWARD. By using our services, you agree to these terms.
+Welcome to PARAS REWARDS. By using our services, you agree to these terms.
 
 ## 1. Acceptance of Terms
-By accessing or using PARAS REWARD, you agree to be bound by these Terms and Conditions.
+By accessing or using PARAS REWARDS, you agree to be bound by these Terms and Conditions.
 
 ## 2. Eligibility
 - You must be at least 18 years old
 - You must be a resident of India
 - You must have a valid mobile number and email
 
-## 3. PRC (Paras Reward Coins)
+## 3. PRC (Paras Rewards Coins)
 - PRC is a virtual currency within our platform
 - 10 PRC = ₹1 INR
 - PRC can be earned through mining, referrals, and games
@@ -98,7 +98,7 @@ For queries, reach out to our support team.`;
 
   const getDefaultPrivacy = () => `# Privacy Policy
 
-Your privacy is important to us at PARAS REWARD.
+Your privacy is important to us at PARAS REWARDS.
 
 ## 1. Information We Collect
 - Personal information (name, email, phone)
@@ -130,7 +130,7 @@ For privacy concerns, contact our support team.`;
 
   const getDefaultRefund = () => `# Refund Policy
 
-PARAS REWARD refund policy for various transactions.
+PARAS REWARDS refund policy for various transactions.
 
 ## 1. VIP Membership
 - Processing time: Minimum 3 to 7 days

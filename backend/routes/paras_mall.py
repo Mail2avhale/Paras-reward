@@ -529,7 +529,7 @@ async def post_community_forum_delivery(booking: dict):
             {"uid": user_id},
             {"_id": 0, "name": 1, "city": 1, "state": 1}
         ) or {}
-        user_name = user_doc.get("name") or "Paras Reward Member"
+        user_name = user_doc.get("name") or "Paras Rewards Member"
         # Real name — user explicitly chose 1.a in confirmation
         city = (user_doc.get("city") or "").strip()
         state = (user_doc.get("state") or "").strip()

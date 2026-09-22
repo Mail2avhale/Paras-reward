@@ -2570,7 +2570,7 @@ async def get_admin_stats_live():
 @app.get("/")
 async def root():
     """Root endpoint"""
-    return {"status": "ok", "message": "Paras Reward API is running"}
+    return {"status": "ok", "message": "Paras Rewards API is running"}
 
 # Create scheduler for automated tasks (explicit UTC timezone for deterministic cron math)
 import pytz
@@ -3668,7 +3668,7 @@ class User(BaseModel):
     referral_code: str = Field(default_factory=lambda: ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8)))
     referred_by: Optional[str] = None
 
-    # Partner Store link (Paras Reward v2.0 — Feb 2026)
+    # Partner Store link (Paras Rewards v2.0 — Feb 2026)
     # Populated only when role == 'partner_store'. Frontend uses this to
     # redirect the partner-store login to /partner-store/dashboard.
     partner_store_id: Optional[str] = None
@@ -6648,7 +6648,7 @@ async def check_user_birthday(uid: str):
                 "is_birthday": True,
                 "message": f"🎂 Happy Birthday, {user_name}! 🎉",
                 "greeting": "Wishing you a wonderful birthday filled with joy and happiness!",
-                "bonus_message": "Enjoy your special day with PARAS REWARD!"
+                "bonus_message": "Enjoy your special day with PARAS REWARDS!"
             }
         
         return {"is_birthday": False, "message": None}
@@ -7797,7 +7797,7 @@ async def get_biometric_register_options(user_id: str):
     webauthn_rp_id = os.environ.get('WEBAUTHN_RP_ID', 'localhost')
     options = generate_registration_options(
         rp_id=webauthn_rp_id,
-        rp_name="PARAS REWARD",
+        rp_name="PARAS REWARDS",
         user_id=user_id.encode('utf-8'),
         user_name=user.get("email", "user"),
         user_display_name=user.get("name", "User"),
@@ -12451,7 +12451,7 @@ async def get_public_settings():
         "qr_code_url": qr_code_url,
         "bank_details": bank_details,
         "payment_instructions": payment_instructions,
-        "company_name": settings.get("company_name", "PARAS REWARD") if settings else "PARAS REWARD",
+        "company_name": settings.get("company_name", "PARAS REWARDS") if settings else "PARAS REWARDS",
         "support_email": settings.get("support_email", "support@parasreward.com") if settings else "support@parasreward.com",
         "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210",
         "manual_subscription_enabled": manual_subscription_enabled,
@@ -13778,13 +13778,13 @@ async def _create_sale_elite_community_post(
         sender_post = {
             "post_id": str(uuid.uuid4()),
             "user_id": "system",
-            "user_name": "Paras Reward",
+            "user_name": "Paras Rewards",
             "user_plan": "admin",
             "status": "active",
             "is_helpful": False,
             "report_count": 0,
             "author_uid": "system",
-            "author_name": "Paras Reward",
+            "author_name": "Paras Rewards",
             "author_role": "admin",
             "is_admin_post": True,
             "is_success_story": True,
@@ -13796,7 +13796,7 @@ async def _create_sale_elite_community_post(
                 "💎 Plan: **Elite** — 28 days",
                 f"💰 Value: **₹{amount:,.2f}**",
                 "",
-                "✅ Peer-to-Peer subscription via Paras Reward",
+                "✅ Peer-to-Peer subscription via Paras Rewards",
             ]),
             "image_url": None,
             "images": [],
@@ -13838,13 +13838,13 @@ async def _create_sale_elite_community_post(
         benef_post = {
             "post_id": str(uuid.uuid4()),
             "user_id": "system",
-            "user_name": "Paras Reward",
+            "user_name": "Paras Rewards",
             "user_plan": "admin",
             "status": "active",
             "is_helpful": False,
             "report_count": 0,
             "author_uid": "system",
-            "author_name": "Paras Reward",
+            "author_name": "Paras Rewards",
             "author_role": "admin",
             "is_admin_post": True,
             "is_success_story": True,
@@ -13857,7 +13857,7 @@ async def _create_sale_elite_community_post(
                 "💎 Plan: **Elite** — 28 days",
                 f"💰 Value: **₹{amount:,.2f}**",
                 "",
-                "✅ Activated via Paras Reward",
+                "✅ Activated via Paras Rewards",
             ]),
             "image_url": None,
             "images": [],
@@ -26171,14 +26171,14 @@ async def get_contact_details():
     if not config:
         # Return default contact details
         return {
-            "address": "PARAS REWARD\nMaharashtra, India",
+            "address": "PARAS REWARDS\nMaharashtra, India",
             "phone": "+91-XXXXXXXXXX",
             "email": "support@parasreward.com",
             "website": "www.parasreward.com"
         }
     
     return {
-        "address": config.get("address", "PARAS REWARD\nMaharashtra, India"),
+        "address": config.get("address", "PARAS REWARDS\nMaharashtra, India"),
         "phone": config.get("phone", "+91-XXXXXXXXXX"),
         "email": config.get("email", "support@parasreward.com"),
         "website": config.get("website", "www.parasreward.com")
@@ -34844,7 +34844,7 @@ async def get_contact_settings():
     settings = await db.settings.find_one({}, {"_id": 0, "contact_settings": 1})
     
     default_settings = {
-        "company_name": "PARAS REWARD",
+        "company_name": "PARAS REWARDS",
         "address_line1": "",
         "address_line2": "",
         "city": "",
@@ -34868,7 +34868,7 @@ async def update_contact_settings(request: Request):
     data = await request.json()
     
     contact_settings = {
-        "company_name": data.get("company_name", "PARAS REWARD"),
+        "company_name": data.get("company_name", "PARAS REWARDS"),
         "address_line1": data.get("address_line1", ""),
         "address_line2": data.get("address_line2", ""),
         "city": data.get("city", ""),
@@ -34950,7 +34950,7 @@ async def get_public_contact_info():
     settings = await db.settings.find_one({}, {"_id": 0, "contact_settings": 1})
     
     default_settings = {
-        "company_name": "PARAS REWARD",
+        "company_name": "PARAS REWARDS",
         "address_line1": "",
         "address_line2": "",
         "city": "",
@@ -35008,7 +35008,7 @@ async def get_logo_settings():
         "logo_url": "",
         "footer_logo_url": "",
         "favicon_url": "",
-        "app_name": "PARAS REWARD",
+        "app_name": "PARAS REWARDS",
         "tagline": "Earn Rewards, Live Better"
     }
     
@@ -35025,7 +35025,7 @@ async def update_logo_settings(request: Request):
         "logo_url": data.get("logo_url", ""),
         "footer_logo_url": data.get("footer_logo_url", ""),
         "favicon_url": data.get("favicon_url", ""),
-        "app_name": data.get("app_name", "PARAS REWARD"),
+        "app_name": data.get("app_name", "PARAS REWARDS"),
         "tagline": data.get("tagline", "Earn Rewards, Live Better"),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
@@ -37582,7 +37582,7 @@ set_redeem_v2_sub_cap(check_subscription_redeem_cap)
 set_bbps_sub_cap(check_subscription_redeem_cap)
 set_bank_transfer_sub_cap(check_subscription_redeem_cap)
 
-# Partner Store Payment & Settlement Network — Paras Reward v2.0 (Feb 2026)
+# Partner Store Payment & Settlement Network — Paras Rewards v2.0 (Feb 2026)
 app.include_router(partner_store_router)
 
 # Manual Bank Transfer Router

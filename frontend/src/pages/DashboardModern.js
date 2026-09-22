@@ -661,11 +661,11 @@ const DashboardModern = ({ user, onLogout }) => {
           <div className="relative z-10 p-5 h-full flex flex-col justify-between">
             {/* Top Row - Logo & Plan Badge */}
             <div className="flex items-start justify-between">
-              {/* PARAS REWARD Logo */}
+              {/* PARAS REWARDS Logo */}
               <div className="flex items-center">
                 <img 
                   src="/paras-logo.png"
-                  alt="PARAS REWARD"
+                  alt="PARAS REWARDS"
                   className="h-16 w-16 object-contain rounded"
                   style={{
                     filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'

@@ -11,7 +11,7 @@
     targetSdkVersion >= 31 to spell out exactly what moves across devices
     during Google's new Quick Start / Cross-device Restore flow.
 
-    Rule of thumb for Paras Reward:
+    Rule of thumb for Paras Rewards:
       • Cloud Backup (Drive)      → keep only cosmetic prefs. Never
                                     tokens (Drive backups are old and can
                                     replay stale credentials).

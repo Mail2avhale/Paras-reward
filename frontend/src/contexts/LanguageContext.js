@@ -20,7 +20,7 @@ export const LANGUAGES = [
 const translations = {
   // ==================== COMMON ====================
   appName: {
-    en: 'Paras Reward',
+    en: 'Paras Rewards',
     hi: 'पारस रिवॉर्ड',
     mr: 'पारस रिवॉर्ड',
     gu: 'પારસ રિવૉર્ડ',
