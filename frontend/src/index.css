@@ -4,37 +4,171 @@
 @import './styles/admin-theme.css';
 
 /* ═══════════════════════════════════════════════════════════════════
-   Paras Rewards — App Design Refresh (Feb 27 2026)
-   Premium high-contrast dark theme. Every dashboard component reads
-   from these CSS variables so a single palette edit re-themes the
-   whole app.
+   PARAS REWARDS — Light Palette Refresh (Sep 17 2026)
+   User-requested cream / white / light-green / light-blue design.
+   Text uses Dark Forest Green (#14532D) — black avoided everywhere.
    ─────────────────────────────────────────────────────────────────── */
 :root {
   /* Base surfaces */
-  --paras-obsidian: #0F1115;      /* full-page background            */
-  --paras-obsidian-deep: #0A0C0E; /* timer boxes, very-deep surfaces */
-  --paras-slate: #1A1C23;         /* card body                        */
-  --paras-slate-alt: #161920;     /* alt card variant                 */
-  --paras-slate-line: #2A2D3A;    /* card borders                     */
-  --paras-slate-track: #2A2D35;   /* progress bar track               */
+  --paras-obsidian:      #FFF9E6; /* Cream — full-page background     */
+  --paras-obsidian-deep: #EFF6FF; /* Very-soft blue — deep surfaces   */
+  --paras-slate:         #FFFFFF; /* Pure White — primary card body   */
+  --paras-slate-alt:     #FEFCE8; /* Warm cream — alt card variant    */
+  --paras-slate-line:    #D1FAE5; /* Mint hairline — card borders     */
+  --paras-slate-track:   #DBEAFE; /* Soft blue — progress track       */
 
-  /* Accents */
-  --paras-gold: #FFC107;          /* primary brand accent, key nums   */
-  --paras-gold-warm: #F5A623;     /* gradient partner / soft gold     */
-  --paras-gold-border: #3D3520;   /* muted gold hairline outline      */
-  --paras-gold-deep: #5D4037;     /* dark text on gold buttons        */
+  /* Accents — user choice 2c: Blue = actions, Green = success */
+  --paras-gold:          #3B82F6; /* Primary action — sky blue         */
+  --paras-gold-warm:     #60A5FA; /* Softer gradient blue              */
+  --paras-gold-border:   #BFDBFE; /* Muted blue hairline               */
+  --paras-gold-deep:     #FFFFFF; /* Text on blue action buttons       */
 
-  --paras-mint: #2EC4B6;          /* Active, positive rate           */
-  --paras-red: #E57373;           /* warnings, negative              */
+  --paras-mint:          #22C55E; /* Success / positive / rewards      */
+  --paras-red:           #DC2626; /* Warnings / errors                 */
 
-  /* Typography */
-  --paras-text: #F8FAFC;          /* Good Morning / primary text     */
-  --paras-text-secondary: #E2E8F0;
-  --paras-text-mute: #94A3B8;     /* Card Holder, PRC/SEC, labels    */
+  /* Typography — user choice 1c: Dark Forest Green */
+  --paras-text:           #14532D; /* Primary text                     */
+  --paras-text-secondary: #166534; /* Secondary text                   */
+  --paras-text-mute:      #4B5563; /* Muted labels / helper text       */
 
   /* Elevations */
-  --paras-shadow-card: 0 10px 32px -12px rgba(0, 0, 0, 0.6);
-  --paras-shadow-gold: 0 0 24px -6px rgba(255, 193, 7, 0.35);
+  --paras-shadow-card: 0 8px 24px -12px rgba(20, 83, 45, 0.15);
+  --paras-shadow-gold: 0 0 24px -6px rgba(59, 130, 246, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Global Tailwind Overrides — remap hardcoded dark palette classes
+   into the new light palette so every legacy component reskins
+   without touching JSX. Ordered from darkest to lightest for
+   predictable hierarchy on the light theme.
+   ─────────────────────────────────────────────────────────────────── */
+/* Page-level darkest → warm cream */
+.bg-black,
+.bg-gray-950, .bg-slate-950, .bg-zinc-950, .bg-neutral-950,
+.bg-gray-900, .bg-slate-900, .bg-zinc-900, .bg-neutral-900,
+.bg-gray-900\/95, .bg-slate-900\/95, .bg-zinc-900\/95,
+.bg-gray-900\/80, .bg-slate-900\/80,
+.bg-gray-900\/50, .bg-slate-900\/50,
+.bg-gray-950\/80, .bg-slate-950\/80 {
+  background-color: #FFF9E6 !important; /* Cream */
+}
+
+/* Card / panel dark → white */
+.bg-gray-800, .bg-slate-800, .bg-zinc-800, .bg-neutral-800,
+.bg-gray-800\/50, .bg-slate-800\/50,
+.bg-gray-800\/70, .bg-slate-800\/70,
+.bg-gray-800\/80, .bg-slate-800\/80 {
+  background-color: #FFFFFF !important; /* White cards */
+  border-color: #D1FAE5 !important;     /* soft mint edge */
+}
+
+/* Elevated / secondary dark → light blue tint */
+.bg-gray-700, .bg-slate-700, .bg-zinc-700 {
+  background-color: #F0F9FF !important; /* Sky-50 */
+}
+
+/* Muted grey surfaces → warm cream alt */
+.bg-gray-600, .bg-slate-600 {
+  background-color: #FEFCE8 !important; /* Yellow-50 (cream alt) */
+}
+
+/* Text — force readable dark green everywhere text-white was used */
+.text-white,
+.text-gray-50, .text-slate-50, .text-neutral-50,
+.text-gray-100, .text-slate-100, .text-neutral-100,
+.text-gray-200, .text-slate-200 {
+  color: #14532D !important; /* Dark Forest Green */
+}
+
+/* Muted-on-dark text → gray-600 on light */
+.text-gray-300, .text-slate-300, .text-neutral-300,
+.text-gray-400, .text-slate-400, .text-neutral-400,
+.text-gray-500, .text-slate-500, .text-neutral-500 {
+  color: #4B5563 !important; /* slate-600 */
+}
+
+/* Borders that were dark → soft mint */
+.border-gray-800, .border-slate-800, .border-zinc-800,
+.border-gray-900, .border-slate-900, .border-zinc-900,
+.border-gray-700, .border-slate-700 {
+  border-color: #D1FAE5 !important; /* Emerald-100 */
+}
+
+/* Gradients that used dark navy → cream-to-white */
+.from-gray-950, .from-slate-950, .from-gray-900, .from-slate-900,
+.from-black,
+.from-purple-900, .from-indigo-900, .from-blue-900, .from-pink-900 {
+  --tw-gradient-from: #FFF9E6 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(255, 249, 230, 0) var(--tw-gradient-to-position) !important;
+}
+.via-gray-900, .via-slate-900, .via-purple-900, .via-gray-950, .via-slate-950,
+.via-indigo-900, .via-blue-900, .via-pink-900 {
+  --tw-gradient-via: #FEFCE8 var(--tw-gradient-via-position) !important;
+  --tw-gradient-to: rgba(254, 252, 232, 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to) !important;
+}
+.to-gray-950, .to-slate-950, .to-gray-900, .to-slate-900, .to-black,
+.to-purple-900, .to-indigo-900, .to-blue-900, .to-pink-900 {
+  --tw-gradient-to: #FFFFFF var(--tw-gradient-to-position) !important;
+}
+
+/* Purple / pink / indigo strong shades → mapped to sky-blue palette */
+.bg-purple-500, .bg-purple-600, .bg-purple-700, .bg-purple-800,
+.bg-indigo-500, .bg-indigo-600, .bg-indigo-700, .bg-indigo-800,
+.bg-pink-500, .bg-pink-600, .bg-pink-700, .bg-pink-800,
+.bg-violet-500, .bg-violet-600, .bg-violet-700, .bg-violet-800,
+.bg-fuchsia-500, .bg-fuchsia-600, .bg-fuchsia-700 {
+  background-color: #3B82F6 !important; /* Sky-blue action */
+  color: #FFFFFF !important;
+}
+.from-purple-500, .from-purple-600, .from-purple-700,
+.from-indigo-500, .from-indigo-600, .from-indigo-700,
+.from-pink-500, .from-pink-600, .from-pink-700,
+.from-violet-500, .from-violet-600, .from-fuchsia-500, .from-fuchsia-600 {
+  --tw-gradient-from: #93C5FD var(--tw-gradient-from-position) !important;
+}
+.to-purple-500, .to-purple-600, .to-purple-700,
+.to-indigo-500, .to-indigo-600, .to-indigo-700,
+.to-pink-500, .to-pink-600, .to-pink-700,
+.to-violet-500, .to-violet-600, .to-fuchsia-500, .to-fuchsia-600 {
+  --tw-gradient-to: #3B82F6 var(--tw-gradient-to-position) !important;
+}
+.via-purple-500, .via-purple-600, .via-indigo-500, .via-indigo-600,
+.via-pink-500, .via-pink-600, .via-violet-500, .via-fuchsia-500 {
+  --tw-gradient-via: #60A5FA var(--tw-gradient-via-position) !important;
+}
+.text-purple-400, .text-purple-500, .text-purple-600,
+.text-indigo-400, .text-indigo-500, .text-indigo-600,
+.text-pink-400, .text-pink-500, .text-pink-600,
+.text-violet-400, .text-violet-500 {
+  color: #3B82F6 !important;
+}
+
+/* Emerald / teal (existing success color) — keep aligned to mint-green */
+.text-emerald-400, .text-emerald-500, .text-teal-400, .text-teal-500,
+.text-green-400, .text-green-500 {
+  color: #22C55E !important; /* Success green */
+}
+
+/* Amber / gold accents (existing brand) — remap to sky blue action */
+.text-amber-400, .text-amber-500, .text-amber-600, .text-yellow-400, .text-yellow-500 {
+  color: #3B82F6 !important; /* Sky-500 */
+}
+.bg-amber-500, .bg-amber-600, .bg-yellow-500 {
+  background-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+}
+.from-amber-500, .from-yellow-500 {
+  --tw-gradient-from: #60A5FA var(--tw-gradient-from-position) !important;
+}
+.to-amber-600, .to-yellow-600 {
+  --tw-gradient-to: #3B82F6 var(--tw-gradient-to-position) !important;
+}
+.border-amber-500, .border-amber-500\/30, .border-amber-500\/40 {
+  border-color: #BFDBFE !important;
+}
+.bg-amber-500\/10, .bg-amber-500\/20 {
+  background-color: rgba(59, 130, 246, 0.08) !important;
 }
 
 /* Convenience utilities so we don't spread hex codes across JSX */
@@ -52,14 +186,14 @@
 .ring-paras-gold     { box-shadow: var(--paras-shadow-gold); }
 .shadow-paras-card   { box-shadow: var(--paras-shadow-card); }
 
-/* Metallic gold button — reusable, no more per-page hard-coded hex */
+/* Metallic action button (was gold, now sky-blue) — reusable */
 .btn-paras-gold {
-  background: linear-gradient(135deg, #FFD54F 0%, #FFC107 45%, #C9971A 100%);
+  background: linear-gradient(135deg, #93C5FD 0%, #3B82F6 45%, #1D4ED8 100%);
   color: var(--paras-gold-deep);
   font-weight: 700;
   border: 1px solid var(--paras-gold-border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35),
-              0 8px 22px -8px rgba(255, 193, 7, 0.55);
+              0 8px 22px -8px rgba(59, 130, 246, 0.55);
   transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
 }
 .btn-paras-gold:hover  { filter: brightness(1.06); }
