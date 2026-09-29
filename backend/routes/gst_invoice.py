@@ -6,7 +6,7 @@ GST Invoice System for Paras Rewards
 - Database storage
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
@@ -712,4 +712,197 @@ async def get_yearly_gst_summary(year: Optional[int] = None):
         "total_amount": round(sum(m["total_amount"] for m in months_data), 2),
         "total_invoices": sum(m["invoice_count"] for m in months_data),
         "months": months_data,
+    }
+
+
+# ============================================================================
+# Service-Charge Invoice Helper (Sep 2026) — shared entry-point used by
+# `redemption_service_charge` when a 20% cash service charge is marked
+# PAID via Razorpay. Also used by the backfill admin endpoint for
+# retroactive invoices on already-paid historical charges.
+# ============================================================================
+
+async def create_service_charge_invoice(
+    charge: dict,
+    payment_id: str,
+) -> Optional[dict]:
+    """Generate a GST invoice for a paid redemption-service-charge.
+
+    Idempotent — if an invoice already exists for the given `payment_id`
+    OR the given `charge_id` we return the existing row without touching
+    the DB. Safe to call from webhooks, reconcile sweeps, and backfill.
+
+    Returns the invoice doc (without pdf_base64) or None on failure.
+    """
+    if db is None or not charge or not payment_id:
+        return None
+
+    charge_id = charge.get("charge_id")
+    user_id = charge.get("user_id")
+    total_payable = float(charge.get("total_payable") or 0)
+    if not user_id or total_payable <= 0:
+        return None
+
+    # Idempotency: one invoice per payment OR per charge
+    existing = await db.invoices.find_one(
+        {"$or": [{"payment_id": payment_id}, {"service_charge_id": charge_id}]},
+        {"_id": 0, "pdf_base64": 0},
+    )
+    if existing:
+        return existing
+
+    # Customer + state lookup (same logic as VIP invoice)
+    user = await db.users.find_one({"uid": user_id}) or {}
+    customer_state = (user.get("state") or "").strip()
+    if not customer_state:
+        try:
+            kyc = await db.kyc_submissions.find_one(
+                {"user_id": user_id},
+                {"_id": 0, "state": 1, "address_state": 1},
+            )
+            if kyc:
+                customer_state = (kyc.get("state") or kyc.get("address_state") or "").strip()
+        except Exception:
+            pass
+    if not customer_state:
+        customer_state = "Unknown"
+
+    invoice_number = await get_next_invoice_number()
+    invoice_id = (
+        f"INV_SVC_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_"
+        f"{user_id[:8]}"
+    )
+    gst_breakdown = calculate_gst(total_payable)
+
+    # Descriptive plan_name so the PDF and admin list read cleanly.
+    r_type = (charge.get("redemption_type") or "generic").replace("_", " ").title()
+    plan_name = f"Redemption Service Charge — {r_type}"
+
+    invoice_data = {
+        "invoice_id": invoice_id,
+        "invoice_number": invoice_number,
+        "user_id": user_id,
+        "customer_name": user.get("name", "Customer"),
+        "customer_email": user.get("email", ""),
+        "customer_phone": user.get("phone", "") or user.get("mobile", ""),
+        "customer_state": customer_state,
+        "payment_id": payment_id,
+        "plan_name": plan_name,
+        "plan_type": "service_charge",
+        "invoice_type": "redemption_service_charge",
+        # Cross-reference back to the service charge and its parent redemption
+        "service_charge_id": charge_id,
+        "redemption_id": charge.get("redemption_id"),
+        "redemption_type": charge.get("redemption_type"),
+        "prc_amount": charge.get("prc_amount"),
+        "amount": total_payable,
+        "gst_breakdown": gst_breakdown,
+        "date": datetime.now(timezone.utc).strftime("%d-%m-%Y"),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "company": {
+            "name": COMPANY_NAME,
+            "gstin": COMPANY_GSTIN,
+            "address": COMPANY_ADDRESS,
+        },
+    }
+
+    # Generate PDF (best-effort — a failure still stores the row so the
+    # admin download endpoint can regenerate on demand)
+    try:
+        pdf_bytes = generate_invoice_pdf(invoice_data)
+        invoice_data["pdf_base64"] = base64.b64encode(pdf_bytes).decode("utf-8")
+    except Exception as e:
+        logging.error(f"[SVC-CHG INVOICE] PDF gen failed for {charge_id}: {e}")
+
+    try:
+        await db.invoices.insert_one(invoice_data)
+    except Exception as e:
+        # Duplicate on unique index (payment_id) — race with concurrent
+        # webhook. Return the winner.
+        existing = await db.invoices.find_one(
+            {"payment_id": payment_id}, {"_id": 0, "pdf_base64": 0}
+        )
+        if existing:
+            return existing
+        logging.error(f"[SVC-CHG INVOICE] insert failed {charge_id}: {e}")
+        return None
+
+    logging.info(
+        f"[SVC-CHG INVOICE] {invoice_number} generated for charge {charge_id} "
+        f"(₹{total_payable}, user {user_id[:8]})"
+    )
+    # Return without pdf_base64 for lightweight logging
+    out = dict(invoice_data)
+    out.pop("pdf_base64", None)
+    return out
+
+
+@router.post("/admin/backfill-service-charges")
+async def admin_backfill_service_charge_invoices(request: Request):
+    """One-shot admin backfill — generate GST invoices for every PAID
+    `redemption_service_charges` row that does not yet have an invoice.
+
+    Body: {"admin_pin": "969696", "dry_run": true|false, "limit": 500}
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="DB not configured")
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    if data.get("admin_pin") != "969696":
+        raise HTTPException(status_code=403, detail="Admin PIN required")
+
+    dry_run = bool(data.get("dry_run", True))
+    limit = int(data.get("limit", 500))
+
+    cursor = db.redemption_service_charges.find(
+        {"status": "PAID", "payment_id": {"$ne": None}},
+        {"_id": 0},
+    ).sort("paid_at", 1).limit(limit)
+
+    stats = {"scanned": 0, "already_invoiced": 0, "created": 0, "errors": 0, "sample": []}
+    async for charge in cursor:
+        stats["scanned"] += 1
+        pid = charge.get("payment_id")
+        cid = charge.get("charge_id")
+        exists = await db.invoices.find_one(
+            {"$or": [{"payment_id": pid}, {"service_charge_id": cid}]},
+            {"_id": 1},
+        )
+        if exists:
+            stats["already_invoiced"] += 1
+            continue
+        if dry_run:
+            if len(stats["sample"]) < 10:
+                stats["sample"].append({
+                    "charge_id": cid,
+                    "user_id": charge.get("user_id"),
+                    "payment_id": pid,
+                    "total_payable": charge.get("total_payable"),
+                    "paid_at": charge.get("paid_at"),
+                })
+            stats["created"] += 1  # will-create count in dry-run
+            continue
+        try:
+            inv = await create_service_charge_invoice(charge, pid)
+            if inv:
+                stats["created"] += 1
+            else:
+                stats["errors"] += 1
+        except Exception as e:
+            logging.error(f"[BACKFILL SVC-INV] {cid}: {e}")
+            stats["errors"] += 1
+
+    return {
+        "success": True,
+        "dry_run": dry_run,
+        "stats": stats,
+        "message": (
+            f"DRY-RUN: would create {stats['created']} invoices "
+            f"(already-invoiced: {stats['already_invoiced']})"
+            if dry_run else
+            f"Created {stats['created']} invoices "
+            f"(skipped {stats['already_invoiced']} already-invoiced, {stats['errors']} errors)"
+        ),
     }
