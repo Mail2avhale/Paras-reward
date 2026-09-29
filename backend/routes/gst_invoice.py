@@ -466,16 +466,33 @@ async def get_all_invoices(
     page: int = 1,
     limit: int = 50,
     month: Optional[int] = None,
-    year: Optional[int] = None
+    year: Optional[int] = None,
+    from_date: Optional[str] = None,     # YYYY-MM-DD (Sep 2026)
+    to_date: Optional[str] = None,       # YYYY-MM-DD (Sep 2026)
+    search: Optional[str] = None,        # invoice#/name/phone/payment_id
+    invoice_type: Optional[str] = None,  # "vip" | "service_charge" | None (all)
 ):
-    """Admin: Get all invoices for GST reporting"""
+    """Admin: Get all invoices for GST reporting.
+
+    Sep 17 2026 — added `from_date`/`to_date` range, free-text `search`
+    and `invoice_type` filter so the admin UI can drill from the state
+    summary down to individual invoice PDFs.
+    """
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
-    
-    query = {}
-    
-    # Filter by month/year if provided
-    if month and year:
+
+    query: dict = {}
+
+    # 1) Date filter — prefer explicit range, fall back to month/year
+    if from_date or to_date:
+        date_q: dict = {}
+        if from_date:
+            date_q["$gte"] = from_date  # ISO strings sort lexicographically
+        if to_date:
+            # inclusive end-of-day
+            date_q["$lte"] = f"{to_date}T23:59:59.999999+00:00"
+        query["created_at"] = date_q
+    elif month and year:
         start_date = f"{year}-{month:02d}-01"
         if month == 12:
             end_date = f"{year + 1}-01-01"
@@ -484,24 +501,67 @@ async def get_all_invoices(
         query["created_at"] = {"$gte": start_date, "$lt": end_date}
     elif year:
         query["created_at"] = {"$gte": f"{year}-01-01", "$lt": f"{year + 1}-01-01"}
-    
+
+    # 2) Invoice type filter (redemption_service_charge is explicit; anything
+    #    else / missing = VIP subscription invoice — that's what we shipped
+    #    before Sep 2026).
+    if invoice_type == "service_charge":
+        query["invoice_type"] = "redemption_service_charge"
+    elif invoice_type == "vip":
+        query["$or"] = [
+            {"invoice_type": {"$exists": False}},
+            {"invoice_type": {"$ne": "redemption_service_charge"}},
+        ]
+
+    # 3) Free-text search over user-visible fields
+    if search:
+        s = search.strip()
+        if s:
+            rx = {"$regex": s, "$options": "i"}
+            text_or = [
+                {"invoice_number": rx},
+                {"customer_name": rx},
+                {"customer_phone": rx},
+                {"customer_email": rx},
+                {"payment_id": rx},
+                {"invoice_id": rx},
+                {"service_charge_id": rx},
+            ]
+            # Merge with any pre-existing $or from invoice_type filter
+            if "$or" in query:
+                query = {"$and": [{"$or": query.pop("$or")}, {"$or": text_or}, query]}
+            else:
+                query["$or"] = text_or
+
     skip = (page - 1) * limit
-    
+
     invoices = await db.invoices.find(
         query,
         {"_id": 0, "pdf_base64": 0}
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
-    
+
     total = await db.invoices.count_documents(query)
-    
-    # Calculate totals for GST reporting
-    if invoices:
-        total_base = sum(inv.get("gst_breakdown", {}).get("base_amount", 0) for inv in invoices)
-        total_gst = sum(inv.get("gst_breakdown", {}).get("gst_amount", 0) for inv in invoices)
-        total_amount = sum(inv.get("amount", 0) for inv in invoices)
+
+    # Aggregate GST across the FULL filtered set (not just this page) so the
+    # summary card at the top of the admin UI is always correct.
+    agg_cursor = db.invoices.aggregate([
+        {"$match": query},
+        {"$group": {
+            "_id": None,
+            "total_base":   {"$sum": "$gst_breakdown.base_amount"},
+            "total_gst":    {"$sum": "$gst_breakdown.gst_amount"},
+            "total_amount": {"$sum": "$amount"},
+            "count":        {"$sum": 1},
+        }},
+    ])
+    agg = await agg_cursor.to_list(1)
+    if agg:
+        total_base = float(agg[0].get("total_base") or 0)
+        total_gst = float(agg[0].get("total_gst") or 0)
+        total_amount = float(agg[0].get("total_amount") or 0)
     else:
         total_base = total_gst = total_amount = 0
-    
+
     return {
         "success": True,
         "invoices": invoices,
