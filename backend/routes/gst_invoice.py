@@ -1080,3 +1080,102 @@ async def admin_backfill_service_charge_invoices(request: Request):
             f"(skipped {stats['already_invoiced']} already-invoiced, {stats['errors']} errors)"
         ),
     }
+
+
+@router.post("/admin/regenerate-pdfs")
+async def admin_regenerate_invoice_pdfs(request: Request):
+    """Re-render every invoice's PDF with the CURRENT generator (font,
+    address, columns, email, website) and refresh `pdf_base64` in
+    `db.invoices`. Safe to re-run — pure PDF regeneration, no DB
+    schema changes; already-fresh PDFs are overwritten harmlessly.
+
+    Body: {
+      "admin_pin": "969696",   # required
+      "dry_run":    true,      # default true — count only
+      "limit":      500,       # per-call batch cap so client doesn't time out
+      "offset":     0,         # skip N already-processed rows
+      "invoice_type": "all"    # "all" | "service_charge" | "vip"
+    }
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="DB not configured")
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    if data.get("admin_pin") != "969696":
+        raise HTTPException(status_code=403, detail="Admin PIN required")
+
+    dry_run = bool(data.get("dry_run", True))
+    limit = int(data.get("limit", 500))
+    offset = int(data.get("offset", 0))
+    inv_type = (data.get("invoice_type") or "all").lower()
+
+    query: dict = {}
+    if inv_type == "service_charge":
+        query["invoice_type"] = "redemption_service_charge"
+    elif inv_type == "vip":
+        query["$or"] = [
+            {"invoice_type": {"$exists": False}},
+            {"invoice_type": {"$ne": "redemption_service_charge"}},
+        ]
+
+    total = await db.invoices.count_documents(query)
+    cursor = db.invoices.find(query).sort("created_at", 1).skip(offset).limit(limit)
+
+    stats = {
+        "total_matching": total,
+        "processed": 0,
+        "regenerated": 0,
+        "errors": 0,
+        "skipped_missing_data": 0,
+        "next_offset": offset + limit,
+    }
+
+    async for inv in cursor:
+        stats["processed"] += 1
+        # Required fields to rebuild PDF
+        if not inv.get("gst_breakdown") or not inv.get("invoice_number"):
+            stats["skipped_missing_data"] += 1
+            continue
+
+        if dry_run:
+            stats["regenerated"] += 1
+            continue
+
+        try:
+            # Ensure plan_name/plan_type present (older rows may miss them)
+            payload = dict(inv)
+            payload.pop("_id", None)
+            payload.pop("pdf_base64", None)
+            payload.setdefault("plan_name", "Subscription")
+            payload.setdefault("plan_type", "Service")
+            payload.setdefault("date", (payload.get("created_at") or "")[:10])
+
+            pdf_bytes = generate_invoice_pdf(payload)
+            new_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
+            await db.invoices.update_one(
+                {"invoice_id": inv["invoice_id"]},
+                {"$set": {
+                    "pdf_base64": new_b64,
+                    "pdf_regenerated_at": datetime.now(timezone.utc).isoformat(),
+                }},
+            )
+            stats["regenerated"] += 1
+        except Exception as e:
+            logging.error(f"[INVOICE regen] {inv.get('invoice_id')}: {e}")
+            stats["errors"] += 1
+
+    stats["has_more"] = stats["next_offset"] < total
+    return {
+        "success": True,
+        "dry_run": dry_run,
+        "stats": stats,
+        "message": (
+            f"DRY-RUN: {stats['regenerated']} would be regenerated "
+            f"(offset {offset}, total {total})"
+            if dry_run else
+            f"Regenerated {stats['regenerated']} PDFs "
+            f"(offset {offset}, errors {stats['errors']}, has_more={stats['has_more']})"
+        ),
+    }
