@@ -20,15 +20,50 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os as _os
+
+# Register a Unicode-capable font once at module import so the rupee (₹,
+# U+20B9) glyph renders correctly.  Helvetica (default) and LiberationSans
+# on this container do NOT ship the rupee glyph — FreeSans does.
+_FONT_REG = "Helvetica"
+_FONT_BOLD = "Helvetica-Bold"
+try:
+    _candidates = [
+        # (regular, bold) — first pair that exists AND has ₹ wins
+        (
+            "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+            "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+        ),
+        (
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        ),
+    ]
+    for _reg, _bld in _candidates:
+        if _os.path.exists(_reg) and _os.path.exists(_bld):
+            pdfmetrics.registerFont(TTFont("InvoiceSans", _reg))
+            pdfmetrics.registerFont(TTFont("InvoiceSans-Bold", _bld))
+            _FONT_REG = "InvoiceSans"
+            _FONT_BOLD = "InvoiceSans-Bold"
+            logging.info(f"[INVOICE] Registered {_reg} for rupee-glyph support")
+            break
+except Exception as _fe:
+    logging.warning(f"[INVOICE] Unicode font registration failed, using Helvetica: {_fe}")
 
 router = APIRouter(prefix="/invoice", tags=["GST Invoice"])
 
 # Company Details
 COMPANY_NAME = "PARAS REWARDS TECHNOLOGIES PRIVATE LIMITED"
 COMPANY_GSTIN = "27AAQCP6686E1ZR"
-COMPANY_ADDRESS = "Maharashtra, India"
-COMPANY_EMAIL = "support@parasreward.com"
+COMPANY_ADDRESS = (
+    "Office No. A-38, Ground Floor, Bizz Tower, "
+    "Chhatrapati Sambhajinagar (Aurangabad), Maharashtra, 431006"
+)
+COMPANY_EMAIL = "info@parasreward.com"
+COMPANY_WEBSITE = "www.parasreward.com"
 COMPANY_PHONE = "+91 9970100782"
 
 # GST Rate
@@ -102,123 +137,196 @@ def calculate_gst(total_amount: float) -> dict:
 
 def generate_invoice_pdf(invoice_data: dict) -> bytes:
     """Generate PDF invoice using reportlab"""
-    
+
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=20*mm,
-        leftMargin=20*mm,
-        topMargin=20*mm,
-        bottomMargin=20*mm
+        rightMargin=18*mm,
+        leftMargin=18*mm,
+        topMargin=18*mm,
+        bottomMargin=18*mm
     )
-    
+
     styles = getSampleStyleSheet()
-    
-    # Custom styles
+
+    # Custom styles — all bound to the Unicode-capable font so ₹ renders.
     title_style = ParagraphStyle(
         'Title',
         parent=styles['Heading1'],
-        fontSize=18,
+        fontName=_FONT_BOLD,
+        fontSize=16,
         alignment=TA_CENTER,
-        spaceAfter=10
+        spaceAfter=6,
     )
-    
+
     header_style = ParagraphStyle(
         'Header',
         parent=styles['Normal'],
-        fontSize=10,
-        alignment=TA_CENTER
+        fontName=_FONT_REG,
+        fontSize=9,
+        alignment=TA_CENTER,
+        leading=12,
     )
-    
+
     normal_style = ParagraphStyle(
         'CustomNormal',
         parent=styles['Normal'],
-        fontSize=10
+        fontName=_FONT_REG,
+        fontSize=10,
+        leading=13,
     )
-    
+
     bold_style = ParagraphStyle(
         'Bold',
         parent=styles['Normal'],
+        fontName=_FONT_BOLD,
         fontSize=10,
-        fontName='Helvetica-Bold'
     )
-    
+
+    # Cell paragraphs — Description wraps naturally instead of overflowing
+    cell_wrap_style = ParagraphStyle(
+        'CellWrap',
+        parent=styles['Normal'],
+        fontName=_FONT_REG,
+        fontSize=10,
+        leading=13,
+    )
+    cell_wrap_bold = ParagraphStyle(
+        'CellWrapBold',
+        parent=styles['Normal'],
+        fontName=_FONT_BOLD,
+        fontSize=10,
+        leading=13,
+    )
+    cell_right_style = ParagraphStyle(
+        'CellRight',
+        parent=styles['Normal'],
+        fontName=_FONT_REG,
+        fontSize=10,
+        alignment=TA_RIGHT,
+        leading=13,
+    )
+    cell_right_bold = ParagraphStyle(
+        'CellRightBold',
+        parent=styles['Normal'],
+        fontName=_FONT_BOLD,
+        fontSize=11,
+        alignment=TA_RIGHT,
+        leading=14,
+    )
+
     elements = []
-    
-    # Company Header
+
+    # Company Header — full address split into wrapped lines
     elements.append(Paragraph(COMPANY_NAME, title_style))
     elements.append(Paragraph(f"GSTIN: {COMPANY_GSTIN}", header_style))
     elements.append(Paragraph(COMPANY_ADDRESS, header_style))
-    elements.append(Spacer(1, 20))
-    
+    elements.append(Paragraph(
+        f"Email: {COMPANY_EMAIL} &nbsp;|&nbsp; Website: {COMPANY_WEBSITE} &nbsp;|&nbsp; Phone: {COMPANY_PHONE}",
+        header_style,
+    ))
+    elements.append(Spacer(1, 14))
+
     # TAX INVOICE Title
     elements.append(Paragraph("<b>TAX INVOICE</b>", ParagraphStyle(
         'InvoiceTitle',
         parent=styles['Heading2'],
+        fontName=_FONT_BOLD,
         fontSize=14,
         alignment=TA_CENTER,
         textColor=colors.darkblue
     )))
-    elements.append(Spacer(1, 15))
-    
+    elements.append(Spacer(1, 12))
+
     # Invoice Details Table
     invoice_info = [
         ["Invoice Number:", invoice_data["invoice_number"], "Date:", invoice_data["date"]],
         ["Payment ID:", invoice_data["payment_id"], "", ""]
     ]
-    
-    info_table = Table(invoice_info, colWidths=[80, 150, 50, 100])
+
+    info_table = Table(invoice_info, colWidths=[85, 165, 50, 100])
     info_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (0, -1), _FONT_BOLD),
+        ('FONTNAME', (2, 0), (2, -1), _FONT_BOLD),
+        ('FONTNAME', (1, 0), (1, -1), _FONT_REG),
+        ('FONTNAME', (3, 0), (3, -1), _FONT_REG),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
     ]))
     elements.append(info_table)
-    elements.append(Spacer(1, 15))
-    
+    elements.append(Spacer(1, 14))
+
     # Customer Details
     elements.append(Paragraph("<b>Bill To:</b>", bold_style))
     elements.append(Paragraph(f"Name: {invoice_data['customer_name']}", normal_style))
     elements.append(Paragraph(f"Email: {invoice_data['customer_email']}", normal_style))
     if invoice_data.get('customer_phone'):
         elements.append(Paragraph(f"Phone: {invoice_data['customer_phone']}", normal_style))
-    elements.append(Spacer(1, 20))
-    
-    # Service Details Table
+    elements.append(Spacer(1, 18))
+
+    # Service Details Table — Description in Paragraph so it wraps cleanly
     gst = invoice_data["gst_breakdown"]
-    
+    plan_desc = (
+        f"Digital Platform Subscription — "
+        f"{invoice_data['plan_name'].title()} Plan ({invoice_data['plan_type'].title()})"
+    )
+
     service_data = [
-        ["Description", "SAC Code", "Amount (₹)"],
-        [f"Digital Platform Subscription - {invoice_data['plan_name'].title()} Plan ({invoice_data['plan_type'].title()})", "998314", f"₹{gst['base_amount']:,.2f}"],
+        [
+            Paragraph("<b>Description</b>", cell_wrap_bold),
+            Paragraph("<b>SAC Code</b>", cell_wrap_bold),
+            Paragraph("<b>Amount (Rs.)</b>", cell_right_bold),
+        ],
+        [
+            Paragraph(plan_desc, cell_wrap_style),
+            Paragraph("998314", cell_wrap_style),
+            Paragraph(f"\u20B9{gst['base_amount']:,.2f}", cell_right_style),
+        ],
         ["", "", ""],
-        ["Subtotal", "", f"₹{gst['base_amount']:,.2f}"],
-        [f"CGST @ {gst['cgst_rate']}%", "", f"₹{gst['cgst']:,.2f}"],
-        [f"SGST @ {gst['sgst_rate']}%", "", f"₹{gst['sgst']:,.2f}"],
+        [
+            Paragraph("Subtotal", cell_wrap_style),
+            "",
+            Paragraph(f"\u20B9{gst['base_amount']:,.2f}", cell_right_style),
+        ],
+        [
+            Paragraph(f"CGST @ {gst['cgst_rate']}%", cell_wrap_style),
+            "",
+            Paragraph(f"\u20B9{gst['cgst']:,.2f}", cell_right_style),
+        ],
+        [
+            Paragraph(f"SGST @ {gst['sgst_rate']}%", cell_wrap_style),
+            "",
+            Paragraph(f"\u20B9{gst['sgst']:,.2f}", cell_right_style),
+        ],
         ["", "", ""],
-        ["Total Amount", "", f"₹{gst['total_amount']:,.2f}"]
+        [
+            Paragraph("<b>Total Amount</b>", cell_wrap_bold),
+            "",
+            Paragraph(f"<b>\u20B9{gst['total_amount']:,.2f}</b>", cell_right_bold),
+        ],
     ]
-    
-    service_table = Table(service_data, colWidths=[280, 80, 100])
+
+    # A4 minus margins ≈ 174mm ≈ 493pt → 300 + 70 + 123 = 493
+    service_table = Table(service_data, colWidths=[300, 70, 123])
     service_table.setStyle(TableStyle([
         # Header row
         ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.2, 0.3, 0.5)),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 11),
-        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
-        
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+
         # Body
         ('FONTSIZE', (0, 1), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ('TOPPADDING', (0, 0), (-1, -1), 8),
-        
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+
         # Total row
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
         ('BACKGROUND', (0, -1), (-1, -1), colors.Color(0.9, 0.95, 1)),
         ('FONTSIZE', (0, -1), (-1, -1), 12),
-        
+
         # Grid
         ('GRID', (0, 0), (-1, 0), 1, colors.white),
         ('LINEBELOW', (0, 0), (-1, 0), 2, colors.darkblue),
@@ -227,40 +335,46 @@ def generate_invoice_pdf(invoice_data: dict) -> bytes:
         ('LINEBELOW', (0, -1), (-1, -1), 2, colors.darkblue),
     ]))
     elements.append(service_table)
-    elements.append(Spacer(1, 30))
-    
+    elements.append(Spacer(1, 22))
+
     # Amount in Words
     amount_words = number_to_words(int(gst['total_amount']))
     elements.append(Paragraph(f"<b>Amount in Words:</b> {amount_words} Only", normal_style))
-    elements.append(Spacer(1, 20))
-    
+    elements.append(Spacer(1, 18))
+
     # Terms
     terms_style = ParagraphStyle(
         'Terms',
         parent=styles['Normal'],
+        fontName=_FONT_REG,
         fontSize=8,
         textColor=colors.grey
     )
-    elements.append(Paragraph("<b>Terms & Conditions:</b>", terms_style))
+    elements.append(Paragraph("<b>Terms &amp; Conditions:</b>", terms_style))
     elements.append(Paragraph("1. This is a computer-generated invoice and does not require a signature.", terms_style))
     elements.append(Paragraph("2. Payment once made is non-refundable.", terms_style))
     elements.append(Paragraph("3. This invoice is for digital platform access services only.", terms_style))
-    elements.append(Spacer(1, 20))
-    
+    elements.append(Spacer(1, 18))
+
     # Footer
     footer_style = ParagraphStyle(
         'Footer',
         parent=styles['Normal'],
+        fontName=_FONT_REG,
         fontSize=9,
         alignment=TA_CENTER,
-        textColor=colors.darkblue
+        textColor=colors.darkblue,
+        leading=12,
     )
     elements.append(Paragraph("Thank you for your subscription!", footer_style))
-    elements.append(Paragraph(f"Contact: {COMPANY_EMAIL} | {COMPANY_PHONE}", footer_style))
-    
+    elements.append(Paragraph(
+        f"Email: {COMPANY_EMAIL} &nbsp;|&nbsp; Website: {COMPANY_WEBSITE} &nbsp;|&nbsp; Phone: {COMPANY_PHONE}",
+        footer_style,
+    ))
+
     # Build PDF
     doc.build(elements)
-    
+
     return buffer.getvalue()
 
 
