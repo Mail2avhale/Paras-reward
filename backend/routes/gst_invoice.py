@@ -896,6 +896,41 @@ async def get_yearly_gst_summary(year: Optional[int] = None):
 # retroactive invoices on already-paid historical charges.
 # ============================================================================
 
+
+async def _is_razorpay_payment_captured(payment_id: str) -> bool:
+    """Fetch payment from Razorpay and return True only if captured.
+
+    Returns False on any error / non-captured status so we FAIL SAFE —
+    a missed invoice is recoverable by the backfill endpoint; a wrongly
+    issued GST bill is a compliance headache.
+    """
+    if not payment_id:
+        return False
+    # A Razorpay client is initialised inside razorpay_payments.py. Reuse
+    # it to avoid re-creating on every call.
+    try:
+        from routes.razorpay_payments import razorpay_client
+    except Exception:
+        razorpay_client = None
+    if not razorpay_client:
+        logging.warning("[SVC-CHG INVOICE] Razorpay client unavailable — skipping capture check")
+        return False
+    try:
+        p = razorpay_client.payment.fetch(payment_id)
+    except Exception as e:
+        logging.warning(f"[SVC-CHG INVOICE] Razorpay fetch({payment_id}) failed: {e}")
+        return False
+    status = (p or {}).get("status", "").lower()
+    captured = bool((p or {}).get("captured"))
+    ok = (status == "captured") and captured
+    if not ok:
+        logging.info(
+            f"[SVC-CHG INVOICE] Payment {payment_id} not captured "
+            f"(status={status}, captured={captured})"
+        )
+    return ok
+
+
 async def create_service_charge_invoice(
     charge: dict,
     payment_id: str,
@@ -905,6 +940,11 @@ async def create_service_charge_invoice(
     Idempotent — if an invoice already exists for the given `payment_id`
     OR the given `charge_id` we return the existing row without touching
     the DB. Safe to call from webhooks, reconcile sweeps, and backfill.
+
+    Only creates the invoice when Razorpay reports the payment as truly
+    `captured` (i.e. money has settled into our account). Pending /
+    authorized-only / failed / refunded payments are skipped so we never
+    emit a GST bill for money we do not have.
 
     Returns the invoice doc (without pdf_base64) or None on failure.
     """
@@ -924,6 +964,16 @@ async def create_service_charge_invoice(
     )
     if existing:
         return existing
+
+    # ─── Razorpay captured-only gate (Sep 17 2026) ─────────────────────
+    # Refuse to bill a customer if the payment is not captured. This is a
+    # compliance requirement — no GST invoice for pending/failed money.
+    if not await _is_razorpay_payment_captured(payment_id):
+        logging.info(
+            f"[SVC-CHG INVOICE] SKIP {charge_id} — payment {payment_id} "
+            "not captured on Razorpay yet"
+        )
+        return None
 
     # Customer + state lookup (same logic as VIP invoice)
     user = await db.users.find_one({"uid": user_id}) or {}
@@ -1179,3 +1229,100 @@ async def admin_regenerate_invoice_pdfs(request: Request):
             f"(offset {offset}, errors {stats['errors']}, has_more={stats['has_more']})"
         ),
     }
+
+@router.post("/admin/audit-invoices-captured")
+async def admin_audit_invoices_captured(request: Request):
+    """Audit every existing invoice — call Razorpay to verify the linked
+    payment is actually `captured`. Optionally DELETE invoices for
+    payments that are pending/authorized/failed/refunded so we never
+    hold a GST bill for money we do not have.
+
+    Body: {
+      "admin_pin": "969696",   # required
+      "dry_run":    true,      # default true — audit only, no deletes
+      "limit":      500,       # batch cap
+      "offset":     0
+    }
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="DB not configured")
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    if data.get("admin_pin") != "969696":
+        raise HTTPException(status_code=403, detail="Admin PIN required")
+
+    dry_run = bool(data.get("dry_run", True))
+    limit = int(data.get("limit", 500))
+    offset = int(data.get("offset", 0))
+
+    total = await db.invoices.count_documents({"payment_id": {"$exists": True}})
+    cursor = db.invoices.find(
+        {"payment_id": {"$exists": True}},
+        {"_id": 0, "invoice_id": 1, "invoice_number": 1, "payment_id": 1,
+         "user_id": 1, "amount": 1, "invoice_type": 1},
+    ).sort("created_at", 1).skip(offset).limit(limit)
+
+    stats = {
+        "total": total,
+        "scanned": 0,
+        "captured": 0,
+        "not_captured": 0,
+        "razorpay_unreachable": 0,
+        "deleted": 0,
+        "sample_not_captured": [],
+        "next_offset": offset + limit,
+    }
+
+    try:
+        from routes.razorpay_payments import razorpay_client
+    except Exception:
+        razorpay_client = None
+    if not razorpay_client:
+        raise HTTPException(status_code=503, detail="Razorpay client unavailable")
+
+    async for inv in cursor:
+        stats["scanned"] += 1
+        pid = inv.get("payment_id")
+        if not pid:
+            continue
+        try:
+            p = razorpay_client.payment.fetch(pid)
+            status = (p or {}).get("status", "").lower()
+            captured = bool((p or {}).get("captured"))
+            if status == "captured" and captured:
+                stats["captured"] += 1
+                continue
+            # Not captured — record + optionally delete
+            stats["not_captured"] += 1
+            if len(stats["sample_not_captured"]) < 15:
+                stats["sample_not_captured"].append({
+                    "invoice_number": inv.get("invoice_number"),
+                    "payment_id": pid,
+                    "razorpay_status": status,
+                    "captured_flag": captured,
+                    "amount": inv.get("amount"),
+                    "invoice_type": inv.get("invoice_type", "vip"),
+                })
+            if not dry_run:
+                await db.invoices.delete_one({"invoice_id": inv["invoice_id"]})
+                stats["deleted"] += 1
+        except Exception as e:
+            logging.warning(f"[INVOICE audit] {pid}: {e}")
+            stats["razorpay_unreachable"] += 1
+
+    stats["has_more"] = stats["next_offset"] < total
+    return {
+        "success": True,
+        "dry_run": dry_run,
+        "stats": stats,
+        "message": (
+            f"DRY-RUN: {stats['not_captured']} non-captured invoices found "
+            f"(offset {offset}, would delete)"
+            if dry_run else
+            f"Deleted {stats['deleted']} non-captured invoices "
+            f"(offset {offset}, unreachable {stats['razorpay_unreachable']}, has_more={stats['has_more']})"
+        ),
+    }
+

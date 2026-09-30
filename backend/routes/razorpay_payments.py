@@ -47,6 +47,14 @@ else:
     razorpay_client = None
     logging.warning("Razorpay credentials not configured")
 
+
+class _SkipInvoice(Exception):
+    """Sentinel raised inside verify_payment when the Razorpay payment
+    is not `captured` and we must silently skip GST-invoice generation."""
+    pass
+
+
+
 if RAZORPAY_WEBHOOK_SECRET:
     logging.info("Razorpay webhook secret configured")
 else:
@@ -524,6 +532,16 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         
         # ==================== STEP 11: GENERATE GST INVOICE ====================
         try:
+            # Only issue a GST bill when Razorpay has truly captured the
+            # money. Step 3 above accepts `authorized` for subscription
+            # activation UX, but for tax invoices we insist on `captured`
+            # — no bill for pending / authorized-only / failed / refunded.
+            if payment_status != "captured" or not payment_captured:
+                logging.info(
+                    f"[INVOICE] SKIP GST invoice — payment {request.razorpay_payment_id} "
+                    f"not captured (status={payment_status}, captured={payment_captured})"
+                )
+                raise _SkipInvoice()
             from routes.gst_invoice import calculate_gst, get_next_invoice_number, generate_invoice_pdf
             import base64
             
@@ -577,6 +595,8 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             else:
                 logging.info(f"[INVOICE] Invoice already exists for payment {request.razorpay_payment_id}")
                 
+        except _SkipInvoice:
+            pass  # Not captured — silently skip
         except Exception as invoice_error:
             logging.error(f"[INVOICE] Invoice generation error: {invoice_error}")
             # Don't fail payment verification if invoice generation fails
