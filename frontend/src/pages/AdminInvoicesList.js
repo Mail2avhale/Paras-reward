@@ -161,7 +161,7 @@ const AdminInvoicesList = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Invoice#, name, phone, payment ID..."
+              placeholder="Invoice#, Payment ID (pay_...), name, phone, email..."
               data-testid="invoices-search-input"
               className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
               style={{ color: '#14532D' }}
@@ -272,6 +272,16 @@ const AdminInvoicesList = () => {
                       <div className="text-xs" style={{ color: '#4B5563' }}>
                         {inv.customer_phone || inv.customer_email || inv.user_id?.slice(0, 8)}
                       </div>
+                      {inv.payment_id && (
+                        <div
+                          className="text-xs mt-1 font-mono truncate"
+                          style={{ color: '#3B82F6', maxWidth: '200px' }}
+                          title={inv.payment_id}
+                          data-testid={`invoice-payment-id-${inv.invoice_number}`}
+                        >
+                          {inv.payment_id}
+                        </div>
+                      )}
                     </td>
                     <td className="p-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeBadgeClass(inv)}`}>
