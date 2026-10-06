@@ -1,34 +1,36 @@
-# Test Credentials
+# Test Credentials for Paras Rewards
 
-## Primary Test User (Cash/INR)
-- Mobile: 9970100782
-- PIN: 997010
-- UID: 76b75808-47fa-48dd-ad7c-8074678e3607
-- Plan: Elite (cash)
+## Admin (preview + production)
+- **Email**: admin@test.com
+- **Password / PIN**: 153759
+- **Role**: admin
 
-## PRC Test User
-- Mobile: 9421331342
-- PIN: (unknown — set via admin reset if needed)
-- UID: 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21
-- Plan: Elite (prc - payment method deprecated)
+## Production Admin
+- **Mobile**: 9696969696
+- **PIN**: 969696
+- **UID**: e2edbfbb-38f3-4fd1-96d3-454a5334f45c
+- **Email**: bo@paras.com
+- **Role**: admin (Company Manager)
 
-## Admin
-- Email: admin@test.com
-- PIN: 153759
-- Mobile: 9999999999
-- UID: admin-test-123
-- Role: admin (promoted Jul 2026)
+## Admin Operation PINs (backend env)
+- `ADMIN_OPERATION_PIN=123456`
+- `ADMIN_OVERRIDE_PIN=153759`
 
-## Admin Operation PINs (backend/.env)
-- ADMIN_OPERATION_PIN=123456 (for bulk-fail, admin-credit, approve-all type guards)
-- ADMIN_OVERRIDE_PIN=153759 (for force-activate-elite-prc override)
+## Admin PIN for Backfill / Migration Endpoints
+- `admin_pin: "969696"` — used by:
+  - POST `/api/admin/redemption-limit/reset-all-anchors`
+  - POST `/api/admin/redemption-service-charge/backfill-missing`
+  - POST `/api/invoice/admin/backfill-service-charges`
+  - POST `/api/invoice/admin/regenerate-pdfs`
+  - POST `/api/invoice/admin/audit-invoices-captured`
 
-## Partner Store Test Account (Paras Reward v2.0 — Feb 16 2026)
-- **Business**: Sharma Kirana Store (Grocery, Nagpur MH)
-- **Store ID**: 100001
-- **Mobile (Login)**: 8888800001
-- **Login PIN**: 999888
-- **UID**: pstore-100001
-- **Verification Status**: verified + active
-- **Bank**: Ramesh Sharma · A/c 12345678901 · IFSC HDFC0001234
-- **Role**: partner_store → auto-redirects to /partner-store/dashboard
+## Email Service
+- `EMERGENT_EMAIL_KEY` set in `/app/backend/.env`
+- `EMAIL_FROM_NAME=Paras Rewards`
+- `EMAIL_REPLY_TO=info@parasreward.com`
+- Resend proxy URL (hardcoded): https://integrations.emergentagent.com
+
+## Notes
+- Production URL: https://parasreward.com
+- Preview backend: use `REACT_APP_BACKEND_URL` from `/app/frontend/.env`
+- Password reset admin PIN auto-restored after pytest test suite runs
