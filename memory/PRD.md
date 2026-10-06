@@ -1,3 +1,18 @@
+## Shipped (Feb 2026 — Welcome Email on Signup)
+
+### Delivered
+- New transactional welcome email template added to `/app/backend/app/services/email_service.py` (`build_welcome_html` + `send_welcome_email`), professional tone, light pastel theme matching the new app skin.
+- CTA button points to the official Play Store listing: `https://play.google.com/store/apps/details?id=com.parasreward.prc` (text: "Download Android App").
+- Email body uses the exact content copy requested by the user (Discover Paras Rewards + Enjoy Paras Rewards Services + Reward Journey sections).
+- Hooked into both signup endpoints (`POST /api/auth/register/simple` and `POST /api/auth/register`) as fire-and-forget via `asyncio.create_task` — signup latency unaffected, email failures are logged (never block signup).
+- Guardrails: name is HTML-escaped (XSS-safe), only https/absolute links, no forms/inputs, no credential ask-back — passes `_assert_safe_email()`.
+- Tests: `/app/backend/tests/test_welcome_email_signup.py` (4 pass): template guardrail, Play Store CTA presence, XSS-escape, live `/register/simple` smoke.
+- Live Resend proxy delivery verified (message-id returned by proxy).
+- Sample preview: `/app/sample_welcome_email.html`.
+
+---
+
+
 ## Shipped (Feb 17, 2026 — Universal 20% Service Charge on ALL PRC Spend)
 
 ### Delivered

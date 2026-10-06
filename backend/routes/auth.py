@@ -305,6 +305,23 @@ async def simple_register(request: Request):
         await db.notifications.insert_one(welcome_notification)
     except Exception as e:
         logging.error(f"Failed to send welcome notification: {e}")
+
+    # Fire-and-forget welcome email (Resend proxy). Never blocks signup;
+    # delivery failures are logged and do not surface to the user.
+    try:
+        if user_data.get("email"):
+            from app.services.email_service import send_welcome_email as _send_welcome
+            async def _bg_welcome_email_simple():
+                try:
+                    await _send_welcome(
+                        to=user_data["email"],
+                        customer_name=user_data.get("name") or "there",
+                    )
+                except Exception as _em_err:
+                    logging.error(f"[WELCOME-EMAIL] simple-register send failed: {_em_err}")
+            asyncio.create_task(_bg_welcome_email_simple())
+    except Exception as _we_err:
+        logging.error(f"[WELCOME-EMAIL] simple-register schedule failed: {_we_err}")
     
     if referrer:
         await db.users.update_one(
@@ -488,6 +505,22 @@ async def register_user(request: Request):
         user_dict["network_parent"] = None
     
     await db.users.insert_one(user_dict)
+
+    # Fire-and-forget welcome email (Resend proxy). Never blocks signup;
+    # delivery failures are logged and do not surface to the user.
+    try:
+        _welcome_to = (user_dict.get("email") or data.get("email") or "").strip().lower()
+        if _welcome_to and "@" in _welcome_to:
+            from app.services.email_service import send_welcome_email as _send_welcome
+            _welcome_name = user_dict.get("name") or data.get("name") or "there"
+            async def _bg_welcome_email_full():
+                try:
+                    await _send_welcome(to=_welcome_to, customer_name=_welcome_name)
+                except Exception as _em_err:
+                    logging.error(f"[WELCOME-EMAIL] register send failed: {_em_err}")
+            asyncio.create_task(_bg_welcome_email_full())
+    except Exception as _we_err:
+        logging.error(f"[WELCOME-EMAIL] register schedule failed: {_we_err}")
 
     # ── DEVICE BINDING post-write (Feb 7 2026) ───────────────────────────
     # Now that the user row exists, create the canonical binding for their
