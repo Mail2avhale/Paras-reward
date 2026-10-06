@@ -1360,12 +1360,22 @@ async def forgot_password(email: str):
         {"email": email},
         {"$set": {"reset_token": reset_token, "reset_token_expiry": reset_expiry.isoformat()}}
     )
-    
-    # SECURITY: Do NOT return reset_token in response!
-    # Token should only be sent via email/SMS
-    # TODO: Implement actual email sending with reset link
-    logging.info(f"[SECURITY] Password reset requested for: {email}")
-    
+
+    # Send branded password-reset email through Emergent-managed Resend
+    # proxy (G1-G5 guardrails enforced inside the service). Failures are
+    # logged but we still return the same generic message so attackers
+    # can't learn whether an email exists based on the HTTP timing.
+    try:
+        from app.services.email_service import send_password_reset_email
+        await send_password_reset_email(
+            to=email,
+            customer_name=user.get("name", "Customer"),
+            reset_token=reset_token,
+        )
+        logging.info(f"[SECURITY] Password reset email sent to: {email}")
+    except Exception as e:
+        logging.error(f"[SECURITY] Password reset email FAILED for {email}: {e}")
+
     return {"message": "If the email exists, a reset link has been sent"}
 
 

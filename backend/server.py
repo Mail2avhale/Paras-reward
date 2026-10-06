@@ -7122,16 +7122,14 @@ async def login(
     return response_data
 
 async def forgot_password(email: str):
-    """Request password reset"""
+    """Request password reset — SECURE (sends email, never returns token)"""
     user = await db.users.find_one({"email": email})
     if not user:
-        # Don't reveal if email exists
         return {"message": "If the email exists, a reset link has been sent"}
-    
-    # Generate reset token
+
     reset_token = generate_reset_token()
     reset_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
-    
+
     await db.users.update_one(
         {"email": email},
         {
@@ -7141,13 +7139,20 @@ async def forgot_password(email: str):
             }
         }
     )
-    
-    # In production, send email here
-    # For now, return token (remove in production)
-    return {
-        "message": "Reset token generated",
-        "reset_token": reset_token  # Remove in production
-    }
+
+    # Deliver reset link over email through Emergent-managed Resend proxy.
+    # Guardrails + branded template live in app/services/email_service.py.
+    try:
+        from app.services.email_service import send_password_reset_email
+        await send_password_reset_email(
+            to=email,
+            customer_name=user.get("name", "Customer"),
+            reset_token=reset_token,
+        )
+    except Exception as e:
+        logging.error(f"[SECURITY] Password reset email FAILED for {email}: {e}")
+
+    return {"message": "If the email exists, a reset link has been sent"}
 
 # ========== FORGOT PIN WITH MSG91 OTP ==========
 
