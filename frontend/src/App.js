@@ -494,6 +494,7 @@ const Login = lazy(() => import("@/pages/LoginNew"));
 const RegisterSimple = lazy(() => import("@/pages/RegisterSimple"));
 const SetNewPin = lazy(() => import("@/pages/SetNewPin"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPasswordNew"));
+const ResetPassword = lazy(() => import(/* webpackChunkName: "auth" */ "@/pages/ResetPassword"));
 const ForgotPin = lazy(() => import("@/pages/ForgotPin"));
 const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
 // Dashboard.js, DashboardNew.js, DashboardPremium.js removed - not in use
@@ -759,6 +760,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/register" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RegisterSimple />} />
             <Route path="/set-new-pin" element={<SetNewPin onLogin={handleLogin} />} />
             <Route path="/forgot-password" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <ForgotPassword />} />
+            <Route path="/reset-password" element={<Suspense fallback={<LoadingFallback />}><ResetPassword /></Suspense>} />
             <Route path="/forgot-pin" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <ForgotPin />} />
             <Route path="/setup" element={<Setup />} />
             

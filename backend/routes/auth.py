@@ -2072,25 +2072,33 @@ async def delete_biometric_credential(credential_id: str, user_id: str):
 @router.post("/reset-password-request")
 async def reset_password_request(email: str):
     """Request password reset — SECURE (token NEVER returned in response).
-    Token is stored in DB and must be delivered to user via email/SMS only.
+    Token is stored in DB and delivered to user via Emergent-managed email.
     Same response whether email exists or not (prevents email enumeration).
     """
     user = await db.users.find_one({"email": email})
     if not user:
         return {"message": "If the email exists, a reset link has been sent"}
-    
+
     reset_token = generate_reset_token()
     reset_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
-    
+
     await db.users.update_one(
         {"email": email},
         {"$set": {"reset_token": reset_token, "reset_token_expiry": reset_expiry.isoformat()}}
     )
-    
-    # SECURITY: Do NOT return reset_token in response.
-    # TODO: Send via email — integrate SendGrid/Resend.
-    logging.info(f"[SECURITY] Password reset requested for: {email}")
-    
+
+    # Deliver branded reset link via Resend-managed proxy.
+    try:
+        from app.services.email_service import send_password_reset_email
+        await send_password_reset_email(
+            to=email,
+            customer_name=user.get("name", "Customer"),
+            reset_token=reset_token,
+        )
+        logging.info(f"[SECURITY] Password reset email sent to: {email}")
+    except Exception as e:
+        logging.error(f"[SECURITY] Password reset email FAILED for {email}: {e}")
+
     return {"message": "If the email exists, a reset link has been sent"}
 
 

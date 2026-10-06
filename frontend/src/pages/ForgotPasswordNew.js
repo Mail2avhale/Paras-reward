@@ -27,6 +27,24 @@ const ForgotPasswordNew = () => {
     { id: 'name', label: 'Full Name', placeholder: 'John Doe' }
   ];
 
+  const handleEmailLinkSend = async () => {
+    if (!email || !email.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    setLoading(true);
+    try {
+      // Backend reads `email` as a query param.
+      await axios.post(`${API}/auth/forgot-password?email=${encodeURIComponent(email)}`);
+      toast.success('If this email is registered, a reset link has been sent to your inbox.', { duration: 6000 });
+    } catch (err) {
+      // Even on error we show the generic message to avoid email enumeration
+      toast.success('If this email is registered, a reset link has been sent to your inbox.', { duration: 6000 });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleEmailSubmit = (e) => {
     e.preventDefault();
     if (!email) {
@@ -168,9 +186,31 @@ const ForgotPasswordNew = () => {
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 rounded-xl text-lg font-semibold"
+              data-testid="forgot-continue-fields-btn"
             >
-              Continue
+              Continue with Verification Fields
             </Button>
+
+            {/* Alternative: Email-link reset (Sep 17 2026 — Emergent managed) */}
+            <div className="relative flex items-center justify-center my-2">
+              <div className="flex-grow border-t border-gray-200"></div>
+              <span className="mx-3 text-xs text-gray-500">OR</span>
+              <div className="flex-grow border-t border-gray-200"></div>
+            </div>
+            <Button
+              type="button"
+              onClick={handleEmailLinkSend}
+              disabled={loading}
+              variant="outline"
+              className="w-full py-6 rounded-xl text-base font-semibold"
+              style={{ borderColor: '#3B82F6', color: '#3B82F6' }}
+              data-testid="forgot-send-email-link-btn"
+            >
+              {loading ? 'Sending...' : '📧 Send Reset Link to My Email'}
+            </Button>
+            <p className="text-xs text-center text-gray-500 mt-1">
+              We'll email you a secure link that lets you set a new password directly.
+            </p>
           </form>
         )}
 
