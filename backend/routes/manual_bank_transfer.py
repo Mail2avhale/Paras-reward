@@ -562,6 +562,14 @@ async def verify_ifsc(ifsc: str):
         "bank_details": result
     }
 
+async def _release_bank_transfer_limit(user_id: str, request_id: str):
+    try:
+        from app.services.redemption_limit_service import release
+        await release(db, user_id, f"bank_transfer:{request_id}")
+    except Exception as e:
+        logging.warning(f"[BANK TRANSFER] redeem limit release failed for {request_id}: {e}")
+
+
 @router.post("/request")
 async def create_redeem_request(request: RedeemRequest):
     """
@@ -883,6 +891,15 @@ async def create_redeem_request(request: RedeemRequest):
                     )
                 return claim
 
+        # 9a. Atomically reserve the unified progressive redeem limit
+        from app.services.redemption_limit_service import reserve as _rl_reserve, release as _rl_release
+        rl_note = f"bank_transfer:{request_id}"
+        rl_ok, _rl_snap, rl_reason = await _rl_reserve(db, user_id, float(amount) * 10.0, rl_note)
+        if not rl_ok:
+            if client_request_id:
+                await release_idempotency_key(client_request_id, idem_scope)
+            raise HTTPException(status_code=400, detail=rl_reason)
+
         # 9. Deduct PRC using WalletServiceV2
         debit_result = WalletServiceV2.debit(
             user_id=user_id,
@@ -894,6 +911,7 @@ async def create_redeem_request(request: RedeemRequest):
         )
         
         if not debit_result.get("success"):
+            await _rl_release(db, user_id, rl_note)
             if client_request_id:
                 await release_idempotency_key(client_request_id, idem_scope)
             raise HTTPException(status_code=400, detail=debit_result.get("error", "Failed to deduct PRC"))
@@ -937,12 +955,6 @@ async def create_redeem_request(request: RedeemRequest):
         }
         
         await db.bank_transfer_requests.insert_one(request_data)
-
-        try:
-            from app.services.redemption_limit_service import deduct as _rl_deduct
-            await _rl_deduct(db, user_id, float(amount) * 10.0, note=f"bank_transfer:{request_id}")
-        except Exception as _rl_e:
-            logging.warning(f"[BANK TRANSFER] redemption limit deduct failed: {_rl_e}")
         
         logging.info(f"[BANK TRANSFER] New request: {request_id} | User: {user_id} | Amount: ₹{amount} | PRC: {total_prc}")
         
@@ -1773,6 +1785,7 @@ async def mark_request_failed(action: AdminActionRequest):
         )
         
         logging.info(f"[BANK TRANSFER] Marked FAILED: {action.request_id} | Admin: {action.admin_id} | Refund: {prc_to_refund} PRC")
+        await _release_bank_transfer_limit(user_id, action.request_id)
         
         # Send in-app notification (non-fatal)
         try:
@@ -1955,6 +1968,8 @@ async def bulk_mark_failed(action: BulkActionRequest):
                         }
                     }
                 )
+                if user_id:
+                    await _release_bank_transfer_limit(user_id, request_id)
                 
                 failed_count += 1
                 
@@ -2533,6 +2548,7 @@ async def admin_benefit_cap_cleanup_execute(body: BenefitCapCleanupRequest):
                     "cancel_reason": "Lifetime ₹2,500 benefits cap reached — auto-cancelled by admin cleanup.",
                 }},
             )
+            await _release_bank_transfer_limit(uid, req_id)
             if prc_amt > 0:
                 await db.users.update_one(
                     {"uid": uid},

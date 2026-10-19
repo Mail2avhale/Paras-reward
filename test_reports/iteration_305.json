@@ -1,0 +1,43 @@
+{
+  "summary": "Tested the unified Progressive Daily Redeem Limit (Bank Redeem + Recharge) plus the object-storage and misc regressions. Backend: 10/10 pytest pass (the 2 admin tests needed an admin token, which I added to the test). POST /api/bank-transfer/request returns 400 'Available PRC LIMIT = X PRC' (checked with X=500 and X=0). It returns 403 with the stored reason when bank_redeem_blocked is set. The ₹2,500 lifetime message is gone, invalid amounts get 400, and no request document is created when the request is rejected. Investor doc upload, download (bytes match) and delete work. Community image upload and GET work (bytes match). /api/public/tests/assignments returns JSON. GET /api/admin/accounting/admin/video-ads returns 200 JSON. Admin ledger POST /subscription-income returns an entry without _id. Frontend (430x900): /bank-redeem shows the progressive card with Day 40, Total 8,200, Used 0, Remaining 8,200, all matching the API. There is no Lifetime/Tier text, no quota meter and no unified-redeem-limit card. Chips: with 8,200 available only ₹1000 is disabled; with 1,000 available (used_prc temporarily set to 7200) ₹200–₹1000 are disabled and ₹100 is enabled. When I delayed the status API and picked ₹1000 before the limit loaded, amount-error appeared in English and submit-request-btn was disabled. Dashboard RechargeCard shows 'Remaining Redeem Limit: 1,000 PRC'. Entering ₹200 shows the red recharge-limit-error and disables recharge-submit-btn; ₹50 clears the error. Profile quick picture upload returns 200 with the 'Profile picture updated!' toast and no fetchProfilePicture ReferenceError. All DB changes were restored.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/admin/video-ads", "issue": "Returns 405 Method Not Allowed. admin_settings.py only registers POST /admin/video-ads, and the admin_accounting GET is mounted at /api/admin/accounting/admin/video-ads (double 'admin'). The frontend AdminVideoAds.js:41 calls GET `${API}/admin/video-ads`, so the admin video ads list is probably broken. Its PUT and DELETE calls are probably affected the same way."},
+      {"endpoint": "POST /api/bank-transfer/request", "issue": "The redeem limit is never given back when a request is rejected or refunded. Bank-transfer reject/refund, failed recharge and the bank_redeem flows never decrement redemption_limit_used_prc; the code only ever increments it. A rejected ₹1000 request still uses up 10,000 PRC of the user's limit."},
+      {"endpoint": "POST /api/bank-transfer/request + /api/eko recharge", "issue": "The limit check is not atomic: ensure_can_spend only reads, and deduct runs later. Two requests sent at the same time can both pass and together go over the cap. Fix: a conditional find_one_and_update ($inc only when used_prc + amt <= cap)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/bank-redeem ProgressiveRedeemLimit card + page header", "issues": [
+        "Low contrast, hard to read. A global override in index.css:75-76 forces .text-white to dark green rgb(20,83,45). On the dark purple card, the 'Total Limit' value (progressive-total-limit), the 'REMAINING' label and the 'Redeem to Bank' title are nearly invisible. Use explicit colours (e.g. style={{color:'#fff'}}, or a scoped override like admin-theme does) inside ProgressiveRedeemLimit.",
+        "bg-white/8 is not in Tailwind's default opacity scale, so the row background is probably not applied. Use bg-white/10 or bg-white/[0.08]."
+      ]},
+      {"screen": "Dashboard RechargeCard", "issues": ["The text typed in the amount input and the 'Quick Recharge' title also render dark green on the dark navy card (same .text-white override). Likely existed before this change, but they are hard to read."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_progressive_limit_iter305.py", "/app/test_reports/pytest/pytest_iter305.xml"],
+  "action_items": [
+    "Fix the contrast of the white text inside ProgressiveRedeemLimit and the BankRedeem header: the global index.css .text-white → dark green override makes it unreadable on the purple background",
+    "Fix the AdminVideoAds GET route: frontend /api/admin/video-ads returns 405; the backend GET lives at /api/admin/accounting/admin/video-ads",
+    "Decide whether rejected/refunded bank redeem and failed recharge should give the redeem limit back (decrement redemption_limit_used_prc)",
+    "Make the limit check and deduction atomic to prevent race-condition overspend",
+    "User asked for the old Tier/Lifetime code to be fully deleted: components/RedeemTierBadge.js and components/CategoryLimitsDisplay.js are still in the repo (not imported anywhere). The backend still has LIFETIME_BANK_REDEEM_CAP_INR = 2500 and its quota/auto-cancel code in manual_bank_transfer.py (lines ~126-300, ~522, ~2499-2560)"
+  ],
+  "critical_code_review_comments": [
+    "The frontend BankRedeemPage exceedsLimit uses config.prc_rate, while the backend always uses amount*10. They match today (prc_rate=10) but will drift if the admin changes prc_rate.",
+    "POST /api/bank-transfer/request and the investor document upload/delete endpoints take user_id/admin_id from the request body and have no auth dependency. This existed before, but it is a security risk: anyone can create or delete on behalf of others.",
+    "DEFAULT_EXISTING_USER_START is the hardcoded '2026-09-10'. Comments in the service still say 'Sep 2 2026'; this is inconsistent but harmless.",
+    "manual_bank_transfer.py is 2,583 lines; it should be split into smaller modules."
+  ],
+  "updated_files": ["/app/backend/tests/test_progressive_limit_iter305.py"],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% functional; contrast design issue open"},
+  "test_credentials": "User 9970100782 / PIN 997010. NOTE: the logged-in uid is 76b75808-47fa-48dd-ad7c-8074678e3607, not cbdf46d7-... (the user doc with mobile=9970100782). Admin admin@test.com/153759 via POST /api/auth/login {identifier,password}.",
+  "seed_data_creation": "None persisted. I temporarily set redemption_limit_used_prc and bank_redeem_blocked on both uids and restored them (used_prc=0). The test investor doc and community post were deleted. The test profile picture was removed from user_profile_pictures and users.profile_picture was reset to ''. The TEST_ledger subscription_income entries were deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "UI tests: the browser login user uid is 76b75808-47fa-48dd-ad7c-8074678e3607 (day 40, cap 8200). To test exceed cases, set users.redemption_limit_used_prc in Mongo and restore it to 0. The amount-error on /bank-redeem can only appear by delaying the status API (page.route) and selecting a chip before the limit loads, because chips over the limit are disabled."
+}

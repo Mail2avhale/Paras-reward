@@ -518,6 +518,14 @@ class RechargeRequest(BaseModel):
     billfetchresponse: str = ""  # Required for operators with fetchBill=1
 
 
+async def _release_recharge_limit(user_id, request_id=None, tid=None):
+    try:
+        from app.services.redemption_limit_service import release
+        await release(db, user_id, f"recharge:{request_id}" if request_id else None, f"recharge:{tid}" if tid else None)
+    except Exception as e:
+        logging.warning(f"[RECHARGE] redeem limit release failed for {request_id or tid}: {e}")
+
+
 @router.post("/initiate")
 async def initiate_recharge(data: RechargeRequest):
     """
@@ -738,6 +746,18 @@ async def initiate_recharge(data: RechargeRequest):
         await db.users.update_one({"uid": data.user_id}, {"$inc": {"prc_balance": total_prc}})
         return {"success": False, "message": GENERIC_ERROR}
 
+    # ===== Step 8.6: Atomically reserve the unified progressive redeem limit =====
+    from app.services.redemption_limit_service import reserve as _rl_reserve
+    _rl_ok, _rl_snap, _rl_reason = await _rl_reserve(db, data.user_id, _prc_needed, f"recharge:{request_id}")
+    if not _rl_ok:
+        await db.users.update_one({"uid": data.user_id}, {"$inc": {"prc_balance": total_prc}})
+        await db.recharge_transactions.update_one(
+            {"request_id": request_id},
+            {"$set": {"status": "failed", "total_prc_deducted": 0, "prc_refunded": True,
+                      "eko_error": _rl_reason, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        return {"success": False, "message": _rl_reason, "error_ref": "R08R"}
+
     # ===== Step 9: Call Eko paybill API =====
     timestamp = str(round(time.time() * 1000))
     amount_str = str(int_amount)
@@ -855,15 +875,6 @@ async def initiate_recharge(data: RechargeRequest):
     user_mobile = user.get("mobile", "")
 
     if final_status in ("success", "pending"):
-        # Daily redemption limit — deduct PRC on confirmed-success/pending
-        # so the growing cap tracks real spend even if the user retries
-        # via idempotency. `ensure_can_spend` above already gate-kept.
-        try:
-            from app.services.redemption_limit_service import deduct as _rl_deduct
-            await _rl_deduct(db, data.user_id, float(int_amount) * 10.0,
-                             note=f"recharge:{tid}")
-        except Exception as _rl_e:
-            logging.warning(f"[RECHARGE] redemption limit deduct failed: {_rl_e}")
         # CRITICAL: Once Eko confirms success, ALWAYS return success to user.
         # Even if our DB recording fails, the recharge already went through.
         try:
@@ -1024,6 +1035,7 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
         {"$inc": {"prc_balance": total_prc}}
     )
     logging.info(f"[RECHARGE] PRC refunded: {total_prc:.2f} to user {data.user_id}")
+    await _release_recharge_limit(data.user_id, request_id, tid)
 
     # Reverse any sustainability auto-burn applied for this transaction
     try:
@@ -1303,7 +1315,7 @@ async def admin_enquiry_status(request_id: str):
             if new_status in ("failed", "refund_pending", "refunded") and old_status in ("pending", "processing"):
                 full_txn = await db.recharge_transactions.find_one(
                     {"request_id": request_id},
-                    {"_id": 0, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1}
+                    {"_id": 0, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1, "eko_tid": 1}
                 )
                 if full_txn and not full_txn.get("prc_refunded") and full_txn.get("total_prc_deducted", 0) > 0:
                     prc_amt = full_txn["total_prc_deducted"]
@@ -1311,6 +1323,7 @@ async def admin_enquiry_status(request_id: str):
                         {"uid": full_txn["user_id"]},
                         {"$inc": {"prc_balance": prc_amt}}
                     )
+                    await _release_recharge_limit(full_txn["user_id"], request_id, full_txn.get("eko_tid"))
                     await db.recharge_transactions.update_one(
                         {"request_id": request_id},
                         {"$set": {"prc_refunded": True, "refund_at": now_iso, "total_prc_deducted": 0}}
@@ -1421,7 +1434,7 @@ async def admin_check_all_pending():
                 if new_status in ("failed", "refund_pending", "refunded"):
                     full_txn = await db.recharge_transactions.find_one(
                         {"request_id": req_id},
-                        {"_id": 0, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1}
+                        {"_id": 0, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1, "eko_tid": 1}
                     )
                     if full_txn and not full_txn.get("prc_refunded") and full_txn.get("total_prc_deducted", 0) > 0:
                         prc_amt = full_txn["total_prc_deducted"]
@@ -1429,6 +1442,7 @@ async def admin_check_all_pending():
                             {"uid": full_txn["user_id"]},
                             {"$inc": {"prc_balance": prc_amt}}
                         )
+                        await _release_recharge_limit(full_txn["user_id"], req_id, full_txn.get("eko_tid"))
                         await db.recharge_transactions.update_one(
                             {"request_id": req_id},
                             {"$set": {"prc_refunded": True, "refund_at": now_iso, "total_prc_deducted": 0}}
@@ -1501,6 +1515,7 @@ async def admin_refund_prc(request_id: str, data: RefundRequest = RefundRequest(
     )
     if refund_result.modified_count == 0:
         return {"success": False, "error": "User not found or PRC update failed"}
+    await _release_recharge_limit(user_id, request_id)
 
     # Mark transaction as refunded
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -1643,6 +1658,7 @@ async def _mark_refunded(tid: str, user_id: str, refund_data: dict, txn: dict):
                 {"$set": {"prc_refunded": True, "refund_at": now_iso}}
             )
         logging.info(f"[USER REFUND] PRC refund: {prc_amt} → user {user_id}, tid={tid}")
+        await _release_recharge_limit(user_id, txn.get("request_id"), tid)
 
     # Audit log
     await db.eko_refund_logs.insert_one({

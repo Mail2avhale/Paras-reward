@@ -160,6 +160,11 @@ async def execute_25k_lock(body: ExecuteLockRequest):
                         "auto_cancelled_by_lock": True,
                     }}
                 )
+                try:
+                    from app.services.redemption_limit_service import release as _rl_release
+                    await _rl_release(db, uid, f"bank_transfer:{pending['request_id']}")
+                except Exception as _rl_e:
+                    logging.warning(f"[PRC-LOCK] redeem limit release failed: {_rl_e}")
                 pending_redeems_refunded_count += 1
 
             pending_prc_refunded += refund_for_this_user

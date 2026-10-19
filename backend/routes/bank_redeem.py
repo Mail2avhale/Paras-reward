@@ -586,6 +586,14 @@ async def check_withdrawal_eligibility(user_id: str):
     }
 
 
+async def _release_bank_redeem_limit(user_id: str, request_id: str):
+    try:
+        from app.services.redemption_limit_service import release
+        await release(db, user_id, f"bank_redeem:{request_id}")
+    except Exception as e:
+        logging.warning(f"[bank-redeem] redeem limit release failed for {request_id}: {e}")
+
+
 @router.post("/bank-redeem/request/{user_id}")
 async def create_withdrawal_request(user_id: str, request: Request):
     """Create a new bank withdrawal request"""
@@ -803,11 +811,20 @@ async def create_withdrawal_request(user_id: str, request: Request):
             # Completed — return cached
             return claim
 
+    from app.services.redemption_limit_service import reserve as _rl_reserve, release as _rl_release
+    rl_note = f"bank_redeem:{request_id}"
+    rl_ok, _rl_snap, rl_reason = await _rl_reserve(db, user_id, float(amount_inr) * 10.0, rl_note)
+    if not rl_ok:
+        if client_request_id:
+            await release_idempotency_key(client_request_id, idem_scope)
+        raise HTTPException(status_code=400, detail=rl_reason)
+
     cas_result = await db.users.update_one(
         {"uid": user_id, "prc_balance": {"$gte": total_prc}},
         {"$inc": {"prc_balance": -total_prc}}
     )
     if cas_result.modified_count == 0:
+        await _rl_release(db, user_id, rl_note)
         # Fetch current balance for a user-friendly error
         fresh = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
         fresh_bal = float((fresh or {}).get("prc_balance", 0) or 0)
@@ -835,15 +852,6 @@ async def create_withdrawal_request(user_id: str, request: Request):
         "created_at": now.isoformat()
     }
     await db.transactions.insert_one(transaction)
-
-    # Daily redemption limit — deduct PRC-equivalent from the growing cap
-    # so today's remaining budget shrinks by exactly what was withdrawn.
-    try:
-        from app.services.redemption_limit_service import deduct as _rl_deduct
-        await _rl_deduct(db, user_id, float(amount_inr) * 10.0,
-                         note=f"bank_redeem:{request_id}")
-    except Exception as _rl_e:
-        logging.warning(f"[bank-redeem] redemption limit deduct failed: {_rl_e}")
 
     # Create notification
     if create_notification:
@@ -1086,6 +1094,7 @@ async def cancel_pending_request(user_id: str, request_id: str):
             "cancelled_by": "user"
         }}
     )
+    await _release_bank_redeem_limit(user_id, request_id)
     
     # Refund PRC
     if prc_to_refund > 0:
@@ -1616,6 +1625,7 @@ async def reject_withdrawal(request_id: str, request: Request):
             "rejection_reason": reason
         }}
     )
+    await _release_bank_redeem_limit(user_id, request_id)
     
     # Notify user
     if create_notification:

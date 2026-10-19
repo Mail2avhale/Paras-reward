@@ -481,8 +481,8 @@ const RechargeCard = ({ user, stats }) => {
           </p>
         )}
         {limitAvailablePrc != null && (
-          <p className="text-gray-400 text-[10px] mt-1 pl-1" data-testid="recharge-limit-remaining">
-            Remaining Redeem Limit: <span className="text-cyan-300 font-semibold tabular-nums">{limitAvailablePrc.toLocaleString('en-IN')} PRC</span>
+          <p className="text-[10px] mt-1 pl-1" style={{ color: '#CBD5E1' }} data-testid="recharge-limit-remaining">
+            Remaining Redeem Limit: <span className="font-semibold tabular-nums" style={{ color: '#67E8F9' }}>{limitAvailablePrc.toLocaleString('en-IN')} PRC (₹{(limitAvailablePrc / prcRate).toLocaleString('en-IN', { maximumFractionDigits: 2 })})</span>
           </p>
         )}
         {limitExceeded && (

@@ -1,23 +1,17 @@
-/**
- * ProgressiveRedeemLimit
- * ─────────────────────────────────────────────────────────────────
- * Shows the shared daily Redeem Limit for Recharge + Bank Redeem.
- *
- * Backend formula (see /app/backend/app/services/redemption_limit_service.py):
- *   day_cap(N)    = 10 × N
- *   cumulative(N) = 5 × N × (N + 1)      PRC unlocked by day N
- *   cycle length  = 365 days (auto-rolls over)
- *
- * The same `used_prc` counter is incremented by BOTH flows (recharge
- * utility + bank redeem), so the number shown here is the *single*
- * shared ceiling for the user — exactly matching the business rule
- * ("Recharge + Redeem to Bank दोन्हीसाठी एकच limit").
- */
-
+// Shared progressive Redeem Limit (Recharge + Bills + Bank Redeem) from /redemption-limit/status
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Zap } from 'lucide-react';
 import { API } from '../lib/api';
+
+const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+const Row = ({ label, value, testId, valueColor, strong }) => (
+  <div className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: strong ? '#ECFDF5' : '#FFFFFF', border: '1px solid #D1FAE5' }}>
+    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: strong ? '#14532D' : '#4B5563' }}>{label}</span>
+    <span data-testid={testId} className={`${strong ? 'text-base' : 'text-sm'} font-extrabold tabular-nums`} style={{ color: valueColor }}>{value}</span>
+  </div>
+);
 
 const ProgressiveRedeemLimit = ({ userId, onLimitCheck }) => {
   const [data, setData] = useState(null);
@@ -42,17 +36,13 @@ const ProgressiveRedeemLimit = ({ userId, onLimitCheck }) => {
       }
     })();
     return () => { alive = false; };
-  }, [userId]);
+  }, [userId, onLimitCheck]);
 
   if (loading) {
     return (
-      <div
-        data-testid="progressive-redeem-limit-loading"
-        className="rounded-2xl p-4 animate-pulse"
-        style={{ background: 'linear-gradient(145deg, #2e1065, #4c1d95)' }}
-      >
-        <div className="h-4 bg-white/10 rounded w-1/2 mb-3"></div>
-        <div className="h-8 bg-white/10 rounded w-full"></div>
+      <div data-testid="progressive-redeem-limit-loading" className="rounded-2xl p-4 animate-pulse" style={{ background: '#F0FDF4', border: '1px solid #D1FAE5' }}>
+        <div className="h-4 rounded w-1/2 mb-3" style={{ background: '#D1FAE5' }}></div>
+        <div className="h-8 rounded w-full" style={{ background: '#D1FAE5' }}></div>
       </div>
     );
   }
@@ -61,94 +51,49 @@ const ProgressiveRedeemLimit = ({ userId, onLimitCheck }) => {
 
   const cap = Number(data.cumulative_cap || 0);
   const used = Number(data.used_prc || 0);
-  const available = Number(data.available_prc || 0);
-  const dayNumber = Number(data.day_number || 0);
   const daysRemaining = Number(data.days_remaining || 0);
+  const rate = Number(data.prc_rate) || 10;
+  const both = (prc) => `${fmt(prc)} PRC (₹${fmt(prc / rate)})`;
   const progressPct = cap > 0 ? Math.min(100, (used / cap) * 100) : 0;
-
-  const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
   return (
     <div
       data-testid="progressive-redeem-limit"
-      className="rounded-2xl p-5 border border-purple-500/30"
-      style={{
-        background: 'linear-gradient(145deg, #2e1065 0%, #4c1d95 40%, #5b21b6 70%, #1e1b4b 100%)',
-        boxShadow: '0 10px 30px -8px rgba(139, 92, 246, 0.3)',
-      }}
+      className="rounded-2xl p-5"
+      style={{ background: 'linear-gradient(145deg, #F0FDF4 0%, #FEFCE8 55%, #F0F9FF 100%)', border: '1px solid #BBF7D0', boxShadow: '0 10px 28px -12px rgba(22, 101, 52, 0.25)' }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-white/90 flex items-center gap-2">
-          <Zap className="h-4 w-4 text-yellow-300" />
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: '#14532D' }}>
+          <Zap className="h-4 w-4" style={{ color: '#CA8A04' }} />
           Redeem Limit
         </h3>
-        <span
-          data-testid="progressive-day-badge"
-          className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-yellow-400/20 text-yellow-300 border border-yellow-400/30"
-        >
-          Day {dayNumber}
+        <span data-testid="progressive-rate-badge" className="px-2.5 py-1 rounded-full text-xs font-extrabold tabular-nums" style={{ background: '#FEF9C3', color: '#854D0E', border: '1px solid #FDE68A' }}>
+          {rate} PRC = ₹1
         </span>
       </div>
 
-      {/* Shared-limit note */}
-      <p className="text-[11px] text-white/60 mb-3 leading-snug">
-        Shared across Recharge, Bill Payments &amp; Redeem to Bank
+      <p className="text-[11px] mb-3 leading-snug" style={{ color: '#4B5563' }}>
+        One shared limit for Recharge, Bill Payments &amp; Redeem to Bank
       </p>
 
-      {/* Progress bar: used / cap */}
       <div className="mb-4">
-        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: '#DCFCE7' }}>
           <div
             data-testid="progressive-progress-bar"
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${progressPct}%`,
-              background: 'linear-gradient(90deg, #fbbf24, #a78bfa, #38bdf8)',
-            }}
+            className="h-full rounded-full transition-[width] duration-700"
+            style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg, #22C55E, #38BDF8)' }}
           />
         </div>
-        <div className="flex justify-between mt-1">
-          <span className="text-[9px] text-white/40 font-medium">0 PRC</span>
-          <span className="text-[9px] text-white/40 font-medium">
-            Cycle resets in {daysRemaining} day{daysRemaining === 1 ? '' : 's'}
-          </span>
+        <div className="flex justify-between mt-1 text-[10px] font-medium" style={{ color: '#6B7280' }}>
+          <span>0 PRC</span>
+          <span>Cycle resets in {daysRemaining} day{daysRemaining === 1 ? '' : 's'}</span>
         </div>
       </div>
 
-      {/* 3-row breakdown */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between bg-white/8 rounded-xl p-3">
-          <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Total Limit</span>
-          <span
-            data-testid="progressive-total-limit"
-            className="text-white text-sm font-extrabold tabular-nums"
-          >
-            {fmt(cap)} PRC
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between bg-white/8 rounded-xl p-3">
-          <span className="text-white/60 text-xs font-bold uppercase tracking-wider">Used</span>
-          <span
-            data-testid="progressive-used"
-            className="text-red-300 text-sm font-extrabold tabular-nums"
-          >
-            {used > 0 ? '- ' : ''}{fmt(used)} PRC
-          </span>
-        </div>
-
-        <div className="border-t border-white/20"></div>
-
-        <div className="flex items-center justify-between bg-white/8 rounded-xl p-3">
-          <span className="text-white text-xs font-extrabold uppercase tracking-wider">Remaining</span>
-          <span
-            data-testid="progressive-remaining"
-            className="text-yellow-300 text-base font-extrabold tabular-nums"
-          >
-            {fmt(available)} PRC
-          </span>
-        </div>
+        <Row label="Total Limit" value={both(cap)} testId="progressive-total-limit" valueColor="#14532D" />
+        <Row label="Used" value={`${used > 0 ? '- ' : ''}${both(used)}`} testId="progressive-used" valueColor="#DC2626" />
+        <Row label="Remaining" value={both(data.available_prc)} testId="progressive-remaining" valueColor="#15803D" strong />
       </div>
     </div>
   );

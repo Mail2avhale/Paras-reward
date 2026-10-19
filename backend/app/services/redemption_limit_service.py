@@ -182,31 +182,66 @@ async def ensure_can_spend(db, user_id: str, prc_amount: float) -> Tuple[bool, d
     if prc_amount <= 0:
         return False, snap, "Invalid amount"
     if prc_amount > snap["available_prc"] + 1e-6:
-        available_prc = int(snap["available_prc"]) if snap["available_prc"] == int(snap["available_prc"]) else round(snap["available_prc"], 2)
-        return False, snap, f"Available PRC LIMIT = {available_prc} PRC"
+        return False, snap, _limit_reason(snap)
     return True, snap, ""
 
 
-async def deduct(db, user_id: str, prc_amount: float, note: str = "") -> dict:
-    """Atomic increment of `redemption_limit_used_prc`. Idempotent WRT
-    total — callers should only invoke this on the CONFIRMED success
-    path of a spend, right after their own balance debit succeeded.
-    Returns the fresh snapshot.
+def _limit_reason(snap: dict) -> str:
+    avail = snap["available_prc"]
+    avail = int(avail) if avail == int(avail) else round(avail, 2)
+    return f"Available PRC LIMIT = {avail} PRC"
+
+
+async def reserve(db, user_id: str, prc_amount: float, note: str) -> Tuple[bool, dict, str]:
+    """Atomically consume `prc_amount` from the limit only if it still fits under today's cap.
+
+    Concurrent requests cannot jointly overshoot the cap. Call `release(note)` if the spend later fails.
     """
+    snap = await get_status(db, user_id)
     if prc_amount <= 0:
-        return await get_status(db, user_id)
-    await db.users.update_one(
-        {"uid": user_id},
+        return False, snap, "Invalid amount"
+    res = await db.users.update_one(
+        {"uid": user_id, "$expr": {"$lte": [
+            {"$add": [{"$ifNull": ["$redemption_limit_used_prc", 0]}, float(prc_amount)]},
+            snap["cumulative_cap"] + 1e-6,
+        ]}},
         {"$inc": {"redemption_limit_used_prc": float(prc_amount)}},
     )
-    # Audit trail so admin can trace every deduction back to a request
-    try:
-        await db.redemption_limit_audit.insert_one({
-            "user_id": user_id,
-            "prc_amount": float(prc_amount),
-            "note": note,
-            "ts": datetime.now(timezone.utc).isoformat(),
-        })
-    except Exception:
-        pass
-    return await get_status(db, user_id)
+    if res.modified_count == 0:
+        fresh = await get_status(db, user_id)
+        return False, fresh, _limit_reason(fresh)
+    await db.redemption_limit_audit.insert_one({
+        "user_id": user_id,
+        "prc_amount": float(prc_amount),
+        "note": note,
+        "released": False,
+        "ts": datetime.now(timezone.utc).isoformat(),
+    })
+    return True, await get_status(db, user_id), ""
+
+
+async def release(db, user_id: str, *notes: str) -> float:
+    """Give back the limit consumed under `note` (failed / rejected / refunded spend). Idempotent."""
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "redemption_limit_start_date": 1})
+    cycle_start = (user or {}).get("redemption_limit_start_date") or ""
+    audit = await db.redemption_limit_audit.find_one_and_update(
+        {"user_id": user_id, "note": {"$in": [n for n in notes if n]},
+         "prc_amount": {"$gt": 0}, "released": {"$ne": True}, "ts": {"$gte": cycle_start}},
+        {"$set": {"released": True, "released_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    if not audit:
+        return 0.0
+    amt = float(audit["prc_amount"])
+    await db.users.update_one(
+        {"uid": user_id},
+        [{"$set": {"redemption_limit_used_prc": {"$max": [
+            0, {"$subtract": [{"$ifNull": ["$redemption_limit_used_prc", 0]}, amt]},
+        ]}}}],
+    )
+    await db.redemption_limit_audit.insert_one({
+        "user_id": user_id,
+        "prc_amount": -amt,
+        "note": f"release:{audit['note']}",
+        "ts": datetime.now(timezone.utc).isoformat(),
+    })
+    return amt

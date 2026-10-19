@@ -381,8 +381,8 @@ const BankRedeemPage = ({ user: initialUser }) => {
               <Banknote className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">Redeem to Bank</h1>
-              <p className="text-white/80 text-sm">Transfer PRC to your bank account</p>
+              <h1 className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>Redeem to Bank</h1>
+              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.85)' }}>Transfer PRC to your bank account</p>
             </div>
           </div>
           
