@@ -323,8 +323,8 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
           <p className="text-[color:var(--paras-text-mute)] text-xs text-center mb-2 tracking-wider">{t('timeRemaining') || 'Time Remaining'}</p>
           <div className="flex items-center justify-center gap-0.5 mb-4">
             {formatTime(sessionTimeRemaining).split('').map((char, i) => (
-              <div key={i} className={char === ':' ? 'w-3 text-center' : 'w-8 h-10 rounded-md flex items-center justify-center'} style={char !== ':' ? { background: 'var(--paras-obsidian-deep)', border: '1px solid var(--paras-gold-border)' } : {}}>
-                <span className={`font-mono font-bold ${char === ':' ? `text-lg` : 'text-xl'}`} style={{ color: char === ':' ? 'var(--paras-gold)' : '#FFFFFF' }}>{char}</span>
+              <div key={i} className={char === ':' ? 'w-3 text-center' : 'w-8 h-10 rounded-md flex items-center justify-center'} style={char !== ':' ? { background: '#FFFFFF', border: '1px solid #BFDBFE', boxShadow: '0 2px 6px -2px rgba(30, 64, 175, 0.18)' } : {}}>
+                <span className={`font-mono font-bold ${char === ':' ? `text-lg` : 'text-xl'}`} style={{ color: char === ':' ? '#3B82F6' : '#1E3A8A' }}>{char}</span>
               </div>
             ))}
           </div>
@@ -338,12 +338,12 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
                 <motion.div
                   key={`${i}-${char}`}
                   className={char === '.' ? 'w-2 flex items-end justify-center pb-0.5' : 'w-7 h-9 rounded-md flex items-center justify-center'}
-                  style={char !== '.' ? { background: 'rgba(0,0,0,0.35)', border: '1px solid var(--paras-gold-border)' } : {}}
+                  style={char !== '.' ? { background: '#FFFFFF', border: '1px solid #BFDBFE', boxShadow: '0 2px 6px -2px rgba(30, 64, 175, 0.18)' } : {}}
                   initial={{ y: -3, opacity: 0.6 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <span className="font-mono font-bold text-lg" style={{ color: 'var(--paras-gold)' }}>{char}</span>
+                  <span className="font-mono font-bold text-lg" style={{ color: '#1D4ED8' }}>{char}</span>
                 </motion.div>
               ))}
               <span className="font-semibold text-sm ml-1" style={{ color: 'var(--paras-gold)' }}>PRC</span>

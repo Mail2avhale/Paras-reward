@@ -711,33 +711,33 @@ const DashboardModern = ({ user, onLogout }) => {
                 >
                   {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
-                <p className="text-[color:var(--paras-text-mute)] text-[10px] tracking-widest">REWARD POINTS</p>
+                <p className="text-[10px] tracking-widest" style={{ color: '#CBD5E1' }}>REWARD POINTS</p>
               </div>
               <div className="flex items-baseline gap-2">
                 <span 
                   className="text-4xl font-black tracking-tight"
                   style={{
-                    color: 'var(--paras-gold)',
-                    textShadow: '0 2px 12px rgba(255, 193, 7, 0.28)'
+                    color: '#93C5FD',
+                    textShadow: '0 2px 12px rgba(59, 130, 246, 0.35)'
                   }}
                 >
                   {showBalance ? stats.prcBalance.toFixed(2) : '••••••'}
                 </span>
-                <span className="text-lg font-semibold" style={{ color: 'var(--paras-gold)', opacity: 0.85 }}>PRC</span>
+                <span className="text-lg font-semibold" style={{ color: '#93C5FD', opacity: 0.9 }}>PRC</span>
               </div>
             </div>
 
             {/* Bottom Row - Card Holder & Mining Speed */}
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-[color:var(--paras-text-mute)] text-[8px] tracking-widest mb-0.5">CARD HOLDER</p>
-                <p className="text-paras text-sm font-semibold tracking-wide uppercase truncate max-w-[180px]">
+                <p className="text-[8px] tracking-widest mb-0.5" style={{ color: '#CBD5E1' }}>CARD HOLDER</p>
+                <p className="text-sm font-semibold tracking-wide uppercase truncate max-w-[180px]" style={{ color: '#F8FAFC' }} data-testid="dashboard-card-holder-name">
                   {userData?.name || user?.email?.split('@')[0] || 'USER'}
                 </p>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-1 justify-end">
-                  <p className="text-[color:var(--paras-text-mute)] text-[8px] tracking-widest mb-0.5">REWARD RATE</p>
+                  <p className="text-[8px] tracking-widest mb-0.5" style={{ color: '#CBD5E1' }}>REWARD RATE</p>
                 </div>
                 <p className="text-sm font-bold flex items-center gap-1" style={{ color: 'var(--paras-mint)' }}>
                   {stats.subscriptionPlan === 'elite' || stats.subscriptionPlan === 'growth' || stats.subscriptionPlan === 'vip' ? 
@@ -791,10 +791,10 @@ const DashboardModern = ({ user, onLogout }) => {
             className="rounded-xl p-4 border overflow-hidden relative"
             style={{
               background: stats.subscriptionPlan === 'elite' 
-                ? 'linear-gradient(145deg, #1a1505 0%, #2d2008 50%, #1f1604 100%)'
+                ? 'linear-gradient(145deg, #FFFBEB 0%, #FEF9C3 50%, #FFFDF5 100%)'
                 : stats.subscriptionPlan === 'growth'
-                ? 'linear-gradient(145deg, #051a10 0%, #082d15 50%, #041f0c 100%)'
-                : 'linear-gradient(145deg, #050d1a 0%, #081a2d 50%, #04101f 100%)',
+                ? 'linear-gradient(145deg, #ECFDF5 0%, #F0FDF4 50%, #FFFFFF 100%)'
+                : 'linear-gradient(145deg, #EFF6FF 0%, #F0F9FF 50%, #FFFFFF 100%)',
               border: stats.subscriptionPlan === 'elite'
                 ? '1px solid rgba(212, 175, 55, 0.35)'
                 : stats.subscriptionPlan === 'growth'
@@ -810,14 +810,14 @@ const DashboardModern = ({ user, onLogout }) => {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Crown className={`w-5 h-5 ${
-                  stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
-                  stats.subscriptionPlan === 'growth' ? 'text-emerald-400' :
-                  'text-blue-400'
+                  stats.subscriptionPlan === 'elite' ? 'text-amber-700' :
+                  stats.subscriptionPlan === 'growth' ? 'text-emerald-700' :
+                  'text-blue-700'
                 }`} />
                 <span className={`font-bold ${
-                  stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
-                  stats.subscriptionPlan === 'growth' ? 'text-emerald-400' :
-                  'text-blue-400'
+                  stats.subscriptionPlan === 'elite' ? 'text-amber-700' :
+                  stats.subscriptionPlan === 'growth' ? 'text-emerald-700' :
+                  'text-blue-700'
                 }`}>
                   {stats.subscriptionPlan?.charAt(0).toUpperCase() + stats.subscriptionPlan?.slice(1)} {t('planActive')}
                 </span>
@@ -825,11 +825,11 @@ const DashboardModern = ({ user, onLogout }) => {
               <span className={`text-xs px-2 py-1 rounded-full ${
                 stats.subscriptionExpiry 
                   ? (new Date(stats.subscriptionExpiry) > new Date() 
-                    ? 'bg-green-500/20 text-green-400' 
-                    : 'bg-red-500/20 text-red-400')
+                    ? 'bg-green-500/20 text-green-700' 
+                    : 'bg-red-500/20 text-red-600')
                   : (stats.subscriptionPlan !== 'explorer' 
-                    ? 'bg-green-500/20 text-green-400' 
-                    : 'bg-gray-500/20 text-gray-400')
+                    ? 'bg-green-500/20 text-green-700' 
+                    : 'bg-gray-500/20 text-gray-600')
               }`}>
                 {stats.subscriptionExpiry 
                   ? (new Date(stats.subscriptionExpiry) > new Date() ? `✓ ${t('active')}` : `⚠ ${t('expired')}`)
@@ -840,27 +840,27 @@ const DashboardModern = ({ user, onLogout }) => {
             
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider">{t('started')}</p>
-                <p className="text-white text-sm font-medium">
+                <p className="text-slate-600 text-[10px] uppercase tracking-wider">{t('started')}</p>
+                <p className="text-sm font-semibold text-slate-900">
                   {stats.subscriptionStart 
                     ? new Date(stats.subscriptionStart).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
                     : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider">{t('expires')}</p>
-                <p className="text-white text-sm font-medium">
+                <p className="text-slate-600 text-[10px] uppercase tracking-wider">{t('expires')}</p>
+                <p className="text-sm font-semibold text-slate-900">
                   {stats.subscriptionExpiry 
                     ? new Date(stats.subscriptionExpiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
                     : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider">{t('daysLeft')}</p>
+                <p className="text-slate-600 text-[10px] uppercase tracking-wider">{t('daysLeft')}</p>
                 <p className={`text-sm font-bold ${
                   stats.subscriptionExpiry && Math.ceil((new Date(stats.subscriptionExpiry) - new Date()) / (1000 * 60 * 60 * 24)) <= 7
-                    ? 'text-red-400'
-                    : 'text-green-400'
+                    ? 'text-red-600'
+                    : 'text-green-700'
                 }`}>
                   {stats.subscriptionExpiry 
                     ? Math.max(0, Math.ceil((new Date(stats.subscriptionExpiry) - new Date()) / (1000 * 60 * 60 * 24)))
@@ -880,36 +880,36 @@ const DashboardModern = ({ user, onLogout }) => {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
-                      <svg className="h-3 w-3 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg className="h-3 w-3 text-green-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                     </div>
-                    <span className="text-green-400 font-semibold text-sm">Next Renewal: Paid & Confirmed</span>
+                    <span className="text-green-700 font-semibold text-sm">Next Renewal: Paid & Confirmed</span>
                   </div>
                   {stats.upcomingPlansCount > 1 && (
-                    <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-medium">+{stats.upcomingPlansCount - 1} more</span>
+                    <span className="text-[10px] bg-green-500/20 text-green-700 px-2 py-0.5 rounded-full font-medium">+{stats.upcomingPlansCount - 1} more</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-xs">
                   <div className="flex-1">
-                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-0.5">Starts</p>
-                    <p className="text-white font-medium">
+                    <p className="text-slate-600 text-[10px] uppercase tracking-wider mb-0.5">Starts</p>
+                    <p className="font-semibold text-slate-900">
                       {stats.upcomingPlan.scheduled_start 
                         ? new Date(stats.upcomingPlan.scheduled_start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
                         : 'After current plan'}
                     </p>
                   </div>
-                  <div className="text-zinc-600">→</div>
+                  <div className="text-slate-500">→</div>
                   <div className="flex-1">
-                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-0.5">Ends</p>
-                    <p className="text-white font-medium">
+                    <p className="text-slate-600 text-[10px] uppercase tracking-wider mb-0.5">Ends</p>
+                    <p className="font-semibold text-slate-900">
                       {stats.upcomingPlan.scheduled_end
                         ? new Date(stats.upcomingPlan.scheduled_end).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
                         : `${stats.upcomingPlan.duration_days || 28} days`}
                     </p>
                   </div>
-                  <div className="text-zinc-600">·</div>
+                  <div className="text-slate-500">·</div>
                   <div className="flex-1 text-right">
-                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-0.5">Paid</p>
-                    <p className="text-green-400 font-semibold">
+                    <p className="text-slate-600 text-[10px] uppercase tracking-wider mb-0.5">Paid</p>
+                    <p className="text-green-700 font-semibold">
                       {stats.upcomingPlan.prc_amount 
                         ? `${Number(stats.upcomingPlan.prc_amount).toLocaleString()} PRC`
                         : stats.upcomingPlan.amount_inr || stats.upcomingPlan.amount
@@ -918,7 +918,7 @@ const DashboardModern = ({ user, onLogout }) => {
                     </p>
                   </div>
                 </div>
-                <p className="text-zinc-500 text-[10px] mt-2 text-center">
+                <p className="text-slate-600 text-[10px] mt-2 text-center">
                   Auto-renews on {stats.upcomingPlan.scheduled_start 
                     ? new Date(stats.upcomingPlan.scheduled_start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                     : 'plan expiry'}. No action needed.
@@ -947,25 +947,25 @@ const DashboardModern = ({ user, onLogout }) => {
           className="w-full rounded-xl p-4 relative overflow-hidden text-left backdrop-blur-xl"
           style={{
             // Sophisticated dark emerald glassmorphism — muted, not neon.
-            background: 'linear-gradient(135deg, rgba(6,78,59,0.85) 0%, rgba(6,95,70,0.72) 50%, rgba(6,78,59,0.85) 100%)',
-            border: '1px solid rgba(46, 196, 182, 0.35)',
-            boxShadow: '0 8px 25px -6px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(46, 196, 182, 0.08)'
+            background: 'linear-gradient(135deg, #ECFDF5 0%, #F0FDF4 50%, #EFF6FF 100%)',
+            border: '1px solid #A7F3D0',
+            boxShadow: '0 8px 22px -10px rgba(22, 101, 52, 0.25)'
           }}
         >
           {/* Ambient glass sheen */}
           <div className="absolute inset-0 pointer-events-none opacity-40" style={{ background: 'radial-gradient(circle at 20% 0%, rgba(46,196,182,0.14), transparent 55%)' }} />
           <div className="relative flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(46, 196, 182, 0.18)', border: '1px solid rgba(46, 196, 182, 0.35)' }}>
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#D1FAE5', border: '1px solid #A7F3D0' }}>
               <svg className="w-5 h-5" style={{ color: 'var(--paras-mint)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="text-paras font-bold text-sm">Pay to Partner Store</p>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,193,7,0.18)', color: 'var(--paras-gold)', border: '1px solid var(--paras-gold-border)' }}>NEW</span>
+                <p className="font-bold text-sm" style={{ color: '#14532D' }}>Pay to Partner Store</p>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: '#FEF9C3', color: '#854D0E', border: '1px solid #FDE68A' }}>NEW</span>
               </div>
-              <p className="text-paras-mute text-[11px] mt-0.5 truncate">
+              <p className="text-[11px] mt-0.5 truncate" style={{ color: '#4B5563' }}>
                 Use PRC at verified local shops via mobile or Store ID
               </p>
             </div>

@@ -1,3 +1,9 @@
+## Shipped (Oct 2026 — Dashboard Contrast Fix)
+- MiningWidget: timer and session-earnings digit cells changed to white with navy/blue numerals (they were invisible white-on-pastel before).
+- Dashboard: CARD HOLDER, REWARD POINTS and REWARD RATE labels are now light text on the dark wallet card. The subscription plan card and the Pay to Partner Store banner moved to the pastel style with readable dark text.
+- Checked with screenshots of the active session (430x900).
+
+
 ## Shipped (Oct 2026 — Unified Progressive Redeem Limit + Object Storage)
 
 ### Delivered
