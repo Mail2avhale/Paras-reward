@@ -21,6 +21,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 
+from app.services.object_storage import put_object, get_object, mime_for
+
 router = APIRouter(prefix="/community", tags=["Community"])
 
 db = None
@@ -753,19 +755,17 @@ async def upload_post_image(post_id: str, file: UploadFile = File(...)):
         if len(contents) > 3 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="Image must be under 3MB")
 
-        upload_dir = "/app/backend/uploads/community"
-        os.makedirs(upload_dir, exist_ok=True)
         ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-        filename = f"{post_id}.{ext}"
-        filepath = os.path.join(upload_dir, filename)
-
-        with open(filepath, "wb") as f:
-            f.write(contents)
+        storage_path = await put_object(
+            f"community/{post_id}-{uuid.uuid4().hex[:8]}.{ext}", contents,
+            file.content_type or mime_for(file.filename),
+        )
 
         image_url = f"/api/community/image/{post_id}"
         await db.community_posts.update_one(
             {"post_id": post_id},
-            {"$set": {"image_url": image_url, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            {"$set": {"image_url": image_url, "image_storage_path": storage_path,
+                      "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
 
         return {"success": True, "image_url": image_url}
@@ -777,7 +777,15 @@ async def upload_post_image(post_id: str, file: UploadFile = File(...)):
 
 @router.get("/image/{post_id}")
 async def get_post_image(post_id: str):
-    from fastapi.responses import FileResponse
+    from fastapi.responses import FileResponse, Response
+    post = await db.community_posts.find_one({"post_id": post_id}, {"_id": 0, "image_storage_path": 1})
+    if post and post.get("image_storage_path"):
+        try:
+            data, content_type = await get_object(post["image_storage_path"])
+            return Response(content=data, media_type=content_type)
+        except Exception as e:
+            logging.warning(f"[COMMUNITY] image fetch failed for {post_id}: {e}")
+            raise HTTPException(status_code=404, detail="Image not found")
     upload_dir = "/app/backend/uploads/community"
     for ext in ["jpg", "jpeg", "png", "webp", "gif"]:
         filepath = os.path.join(upload_dir, f"{post_id}.{ext}")

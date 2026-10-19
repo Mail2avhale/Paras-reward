@@ -67,7 +67,7 @@ async def seed_holidays():
         
         # Remove old wrong government holidays and upsert correct ones
         correct_dates = {h["date"] for h in INDIA_HOLIDAYS_2026}
-        await db.holidays.delete_many({"type": "government", "date": {"$regex": "^2026-"}, "date": {"$nin": list(correct_dates)}})
+        await db.holidays.delete_many({"type": "government", "date": {"$regex": "^2026-", "$nin": list(correct_dates)}})
         for h in INDIA_HOLIDAYS_2026:
             await db.holidays.update_one(
                 {"date": h["date"], "type": "government"},

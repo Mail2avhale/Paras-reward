@@ -259,7 +259,7 @@ class TestDisabledServiceBlocking:
                     print("✅ Disabled bank_redeem correctly blocks requests with English error message")
                 else:
                     print(f"⚠️ Bank redeem: Got {request_response.status_code} - {error_detail}")
-            except:
+            except Exception:
                 print(f"⚠️ Bank redeem: Got {request_response.status_code} - non-JSON response")
         
         # Re-enable the service
@@ -294,7 +294,7 @@ class TestDisabledServiceBlocking:
                 assert "Service temporarily down. Please try again later." in error_detail, \
                     f"Expected English error message, got: {error_detail}"
                 print("✅ Disabled gift_voucher correctly blocks requests with 503 and English error message")
-            except:
+            except Exception:
                 print(f"⚠️ Gift voucher: Got 503 but non-JSON response")
         elif request_response.status_code == 404:
             # User not found - gift_voucher checks user after service check, so this shouldn't happen
@@ -306,7 +306,7 @@ class TestDisabledServiceBlocking:
                     print("✅ Disabled gift_voucher correctly blocks requests with English error message")
                 else:
                     print(f"⚠️ Gift voucher: Got {request_response.status_code} - {error_detail}")
-            except:
+            except Exception:
                 print(f"⚠️ Gift voucher: Got {request_response.status_code} - non-JSON response")
         
         # Re-enable the service
@@ -367,5 +367,5 @@ def ensure_services_enabled():
                 f"{LOCAL_BASE_URL}/api/admin/service-toggles/{service_key}",
                 json={"enabled": True, "admin_id": "test_cleanup"}
             )
-        except:
+        except Exception:
             pass

@@ -195,7 +195,7 @@ async def get_liability_ledger(page: int = 1, limit: int = 50):
                     ageing["warning"] += inr_value
                 else:
                     ageing["critical"] += inr_value
-            except:
+            except Exception:
                 pass
         
         return {
@@ -1192,7 +1192,7 @@ async def get_all_video_ads(
         if is_active is not None:
             query["is_active"] = is_active
         
-        video_ads = await db.video_ads.find(query).sort("created_at", -1).to_list(length=1000)
+        video_ads = await db.video_ads.find(query, {"_id": 0}).sort("created_at", -1).to_list(length=1000)
         
         return {
             "success": True,
@@ -1231,7 +1231,7 @@ async def get_active_video_ads(
             ]
         }
         
-        video_ads = await db.video_ads.find(query).sort("created_at", -1).limit(5).to_list(length=5)
+        video_ads = await db.video_ads.find(query, {"_id": 0}).sort("created_at", -1).limit(5).to_list(length=5)
         
         return {
             "success": True,
@@ -1911,7 +1911,7 @@ def _get_time_ago(timestamp_str):
             return f"{int(diff.total_seconds() / 3600)}h ago"
         else:
             return f"{int(diff.total_seconds() / 86400)}d ago"
-    except:
+    except Exception:
         return "recently"
 
 
@@ -1962,7 +1962,7 @@ async def get_user_insights(uid: str):
                     today_earned += entry.get("amount", 0)
                 elif entry_date >= yesterday and entry_date < today:
                     yesterday_earned += entry.get("amount", 0)
-            except:
+            except Exception:
                 pass
         
         # Calculate mining streak
@@ -1979,7 +1979,7 @@ async def get_user_insights(uid: str):
                         mining_streak += 1
                     else:
                         break
-                except:
+                except Exception:
                     pass
         
         # Get referral count
@@ -2250,7 +2250,7 @@ async def get_user_statement(uid: str, request: Request, format: str = "csv", pe
                         date = entry_date.strftime("%Y-%m-%d")
                         amount = entry.get("amount", 0)
                         lines.append(f"{date},mining,Mining Reward,{amount}")
-                except:
+                except Exception:
                     pass
             
             content = "\n".join(lines)

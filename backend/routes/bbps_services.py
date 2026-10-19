@@ -129,7 +129,7 @@ async def check_subscription_for_redeem(user_id: str, service_name: str = "bill 
     if isinstance(last_time, str):
         try:
             last_time = datetime.fromisoformat(last_time.replace('Z', '+00:00'))
-        except:
+        except Exception:
             return {"allowed": True, "wait_hours": 0}
     
     if not last_time:
@@ -744,7 +744,7 @@ async def fetch_bill(data: FetchBillRequest):
                 error_data = response.json()
                 error_msg = error_data.get("message", "Server error")
                 logging.error(f"[BBPS FETCH] Eko Error: {error_msg}")
-            except:
+            except Exception:
                 error_msg = "Server error"
             return create_error_response(500, error_msg, "Eko server error. Please try again in a few minutes.")
         
@@ -1761,7 +1761,7 @@ async def activate_service(service_code: int = 53):
         
         try:
             result = response.json()
-        except:
+        except Exception:
             result = {"raw": response.text, "parse_error": True}
         
         eko_status = result.get("status")
@@ -2639,7 +2639,7 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
                 amt = float(e.get("amount", "0").replace(",", ""))
                 if amt > 0:
                     all_amounts.add(amt)
-            except:
+            except Exception:
                 pass
             mob = e.get("customer_id", "")
             if mob and mob not in ("N/A", "None", ""):
@@ -2718,7 +2718,7 @@ async def reconcile_eko_excel(file: UploadFile = File(...)):
             
             try:
                 eko_amount_num = float(eko_amount.replace(",", ""))
-            except:
+            except Exception:
                 eko_amount_num = 0
             
             # Fast lookup from pre-fetched batch data
@@ -2946,7 +2946,7 @@ async def apply_reconciliation_fixes(request: Request):
                 
                 try:
                     eko_amount_num = float(str(eko_amount).replace(",", ""))
-                except:
+                except Exception:
                     eko_amount_num = 0
                 
                 new_request_id = f"RECON-{eko_tid or int(datetime.now(timezone.utc).timestamp())}"

@@ -8,16 +8,29 @@ Both pages are PUBLIC (no auth required for viewing)
 
 import logging
 import uuid
-import os
 from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from app.services.object_storage import put_object, read_stored_file, mime_for
 from utils.id_counters import (
     next_application_id, next_job_code, slugify, unique_slug,
 )
+
+
+async def _stream_file(path: str, download_name: str, not_found_msg: str) -> Response:
+    try:
+        data, content_type = await read_stored_file(path)
+    except Exception as e:
+        logging.warning(f"[CAREERS] file fetch failed for {path}: {e}")
+        raise HTTPException(status_code=404, detail=not_found_msg)
+    return Response(
+        content=data,
+        media_type=mime_for(download_name) if content_type == "application/octet-stream" else content_type,
+        headers={"Content-Disposition": f'attachment; filename="{download_name}"'},
+    )
 
 router = APIRouter(prefix="/public", tags=["Public Pages"])
 
@@ -489,16 +502,13 @@ async def apply_for_job(
         if len(contents) > 5 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="Resume must be under 5MB")
 
-        upload_dir = "/app/backend/uploads/resumes"
-        os.makedirs(upload_dir, exist_ok=True)
         ext = resume.filename.split(".")[-1] if "." in resume.filename else "pdf"
         # Phase A: spec-compliant sequential Application ID (spec §8)
         app_id = await next_application_id(db)
-        filename = f"{app_id}.{ext}"
-        filepath = os.path.join(upload_dir, filename)
-
-        with open(filepath, "wb") as f:
-            f.write(contents)
+        filepath = await put_object(
+            f"resumes/{app_id}-{uuid.uuid4().hex[:8]}.{ext}", contents,
+            resume.content_type or mime_for(resume.filename),
+        )
 
         # Supporting-doc helper — each doc is optional, capped at 5 MB.
         async def _save_supporting(up: Optional[UploadFile], kind: str) -> Optional[str]:
@@ -507,13 +517,11 @@ async def apply_for_job(
             data = await up.read()
             if len(data) > 5 * 1024 * 1024:
                 raise HTTPException(status_code=400, detail=f"{kind} must be under 5MB")
-            docs_dir = "/app/backend/uploads/documents"
-            os.makedirs(docs_dir, exist_ok=True)
             ext2 = up.filename.split(".")[-1] if "." in up.filename else "pdf"
-            fpath = os.path.join(docs_dir, f"{app_id}-{kind}.{ext2}")
-            with open(fpath, "wb") as f:
-                f.write(data)
-            return fpath
+            return await put_object(
+                f"documents/{app_id}-{kind}-{uuid.uuid4().hex[:8]}.{ext2}", data,
+                up.content_type or mime_for(up.filename),
+            )
 
         aadhaar_path = await _save_supporting(aadhaar, "aadhaar")
         pan_path = await _save_supporting(pan, "pan")
@@ -688,13 +696,7 @@ async def download_resume(app_id: str):
         if not app or not app.get("resume_path"):
             raise HTTPException(status_code=404, detail="Resume not found")
         
-        if os.path.exists(app["resume_path"]):
-            return FileResponse(
-                app["resume_path"],
-                filename=app.get("resume_filename", f"{app_id}.pdf"),
-                media_type="application/pdf"
-            )
-        raise HTTPException(status_code=404, detail="Resume file not found")
+        return await _stream_file(app["resume_path"], app.get("resume_filename", f"{app_id}.pdf"), "Resume file not found")
     except HTTPException:
         raise
     except Exception as e:
@@ -723,17 +725,11 @@ async def download_supporting_document(app_id: str, kind: str):
             raise HTTPException(status_code=404, detail="Application not found")
 
         path = app.get(f"{kind}_path")
-        if not path or not os.path.exists(path):
-            raise HTTPException(status_code=404, detail=f"{kind.title()} document not uploaded for this application")
-
-        ext = os.path.splitext(path)[1].lower().lstrip(".") or "pdf"
-        media = {
-            "pdf": "application/pdf",
-            "jpg": "image/jpeg", "jpeg": "image/jpeg",
-            "png": "image/png", "webp": "image/webp",
-        }.get(ext, "application/octet-stream")
-
-        return FileResponse(path, filename=f"{app_id}-{kind}.{ext}", media_type=media)
+        missing = f"{kind.title()} document not uploaded for this application"
+        if not path:
+            raise HTTPException(status_code=404, detail=missing)
+        ext = path.rsplit(".", 1)[-1].lower() if "." in path else "pdf"
+        return await _stream_file(path, f"{app_id}-{kind}.{ext}", missing)
     except HTTPException:
         raise
     except Exception as e:
@@ -1065,15 +1061,12 @@ async def upload_investor_document(
         if len(contents) > 20 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="File must be under 20MB")
 
-        upload_dir = "/app/backend/uploads/investor_docs"
-        os.makedirs(upload_dir, exist_ok=True)
         doc_id = f"DOC-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
         ext = file.filename.split(".")[-1] if "." in file.filename else "pdf"
-        filename = f"{doc_id}.{ext}"
-        filepath = os.path.join(upload_dir, filename)
-
-        with open(filepath, "wb") as f:
-            f.write(contents)
+        filepath = await put_object(
+            f"investor_docs/{doc_id}.{ext}", contents,
+            file.content_type or mime_for(file.filename),
+        )
 
         now = datetime.now(timezone.utc).isoformat()
         doc = {
@@ -1124,9 +1117,7 @@ async def download_investor_document(doc_id: str, request: Request):
 
         await db.investor_documents.update_one({"doc_id": doc_id}, {"$inc": {"download_count": 1}})
 
-        if os.path.exists(doc["filepath"]):
-            return FileResponse(doc["filepath"], filename=doc.get("filename", f"{doc_id}.pdf"))
-        raise HTTPException(status_code=404, detail="File not found")
+        return await _stream_file(doc["filepath"], doc.get("filename", f"{doc_id}.pdf"), "File not found")
     except HTTPException:
         raise
     except Exception as e:
@@ -1136,9 +1127,6 @@ async def download_investor_document(doc_id: str, request: Request):
 @router.delete("/investors/documents/{doc_id}")
 async def delete_investor_document(doc_id: str):
     try:
-        doc = await db.investor_documents.find_one({"doc_id": doc_id})
-        if doc and doc.get("filepath") and os.path.exists(doc["filepath"]):
-            os.remove(doc["filepath"])
         await db.investor_documents.delete_one({"doc_id": doc_id})
         return {"success": True, "message": "Document deleted"}
     except Exception as e:

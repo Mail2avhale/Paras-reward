@@ -44,7 +44,7 @@ class TestAdminBankRedeemTracking:
         try:
             # First check if admin exists, if not this is expected
             pass
-        except:
+        except Exception:
             pass
         yield
     

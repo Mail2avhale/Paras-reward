@@ -161,7 +161,7 @@ async def get_transaction_detail(request_id: str):
         
         async for rel in cursor:
             related.append(sanitize_doc(rel))
-    except:
+    except Exception:
         pass
     
     txn["related_transactions"] = related

@@ -335,7 +335,7 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
                 error_data = {}
                 try:
                     error_data = response.json()
-                except:
+                except Exception:
                     pass
                 return {
                     "success": False,
@@ -439,7 +439,7 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, access_key: str = No
                 error_data = {}
                 try:
                     error_data = response.json()
-                except:
+                except Exception:
                     pass
                 msg = error_data.get("message", "Invalid OTP. Please check and try again.")
                 if "expired" in msg.lower():
@@ -454,7 +454,7 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, access_key: str = No
                 error_data = {}
                 try:
                     error_data = response.json()
-                except:
+                except Exception:
                     pass
                 return {
                     "success": False,

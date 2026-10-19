@@ -222,7 +222,7 @@ async def _ranks(root_uid: str, total_members: int) -> dict:
     # Count of *direct* downlines per user, sorted desc — ranking uses
     # this proxy. Fast: single group-by across the users collection.
     direct_counts = db.users.aggregate([
-        {"$match": {"referred_by": {"$exists": True, "$ne": None, "$ne": ""}}},
+        {"$match": {"referred_by": {"$exists": True, "$nin": [None, ""]}}},
         {"$group": {"_id": "$referred_by", "cnt": {"$sum": 1}}},
     ])
     counts = []

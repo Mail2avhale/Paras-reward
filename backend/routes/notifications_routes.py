@@ -397,7 +397,7 @@ async def get_grouped_notifications(uid: str, limit: int = 50):
                 grouped["this_week"].append(notif)
             else:
                 grouped["older"].append(notif)
-        except:
+        except Exception:
             grouped["older"].append(notif)
     
     unread_count = await db.notifications.count_documents({"user_uid": uid, "read": False})
@@ -1455,7 +1455,7 @@ async def get_user_full_debug(user_id: str):
             session_active = now < end_time
             if session_active:
                 remaining_hours = (end_time - now).total_seconds() / 3600
-        except:
+        except Exception:
             pass
     
     # Calculate mining rate

@@ -19,6 +19,8 @@ from pydantic import BaseModel, Field
 import calendar
 import os
 
+from app.services.object_storage import put_object, get_object, mime_for
+
 router = APIRouter(prefix="/employees", tags=["Employee Management"])
 
 db = None
@@ -917,20 +919,17 @@ async def upload_employee_photo(employee_id: str, file: UploadFile = File(...)):
         if len(contents) > 2 * 1024 * 1024:  # 2MB limit
             raise HTTPException(status_code=400, detail="Photo must be under 2MB")
 
-        # Save to disk
-        upload_dir = "/app/backend/uploads/employee_photos"
-        os.makedirs(upload_dir, exist_ok=True)
         ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-        filename = f"{employee_id}.{ext}"
-        filepath = os.path.join(upload_dir, filename)
-
-        with open(filepath, "wb") as f:
-            f.write(contents)
+        storage_path = await put_object(
+            f"employee_photos/{employee_id}-{uuid.uuid4().hex[:8]}.{ext}", contents,
+            file.content_type or mime_for(file.filename),
+        )
 
         photo_url = f"/api/employees/photo/{employee_id}"
         await db.employees.update_one(
             {"employee_id": employee_id},
-            {"$set": {"photo_url": photo_url, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            {"$set": {"photo_url": photo_url, "photo_storage_path": storage_path,
+                      "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
 
         return {"success": True, "photo_url": photo_url}
@@ -942,7 +941,15 @@ async def upload_employee_photo(employee_id: str, file: UploadFile = File(...)):
 
 @router.get("/photo/{employee_id}")
 async def get_employee_photo(employee_id: str):
-    from fastapi.responses import FileResponse
+    from fastapi.responses import FileResponse, Response
+    emp = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0, "photo_storage_path": 1})
+    if emp and emp.get("photo_storage_path"):
+        try:
+            data, content_type = await get_object(emp["photo_storage_path"])
+            return Response(content=data, media_type=content_type)
+        except Exception as e:
+            logging.warning(f"[EMPLOYEE] photo fetch failed for {employee_id}: {e}")
+            raise HTTPException(status_code=404, detail="Photo not found")
     upload_dir = "/app/backend/uploads/employee_photos"
     for ext in ["jpg", "jpeg", "png", "webp"]:
         filepath = os.path.join(upload_dir, f"{employee_id}.{ext}")

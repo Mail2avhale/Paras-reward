@@ -8,8 +8,9 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 // PRCRateDisplay removed (June 2026) - fixed 10 PRC = ₹1, no dynamic rate.
-import CategoryLimitsDisplay from '../components/CategoryLimitsDisplay';
-import { RedeemTierBadge } from '../components/RedeemTierBadge';
+import ProgressiveRedeemLimit from '../components/ProgressiveRedeemLimit';
+
+const ALLOWED_AMOUNTS = [100, 200, 400, 800, 1000];
 import {
   ArrowLeft, Banknote, Building2, CheckCircle, Clock, XCircle, 
   AlertCircle, Info, Loader2, RefreshCw, IndianRupee, CreditCard,
@@ -83,15 +84,9 @@ const BankRedeemPage = ({ user: initialUser }) => {
   const [agreedToPolicy, setAgreedToPolicy] = useState(false);
   const [showPolicy, setShowPolicy] = useState(false);
   
-  // Redeem limit info
-  const [redeemLimit, setRedeemLimit] = useState(null);
-
-  // ── Lifetime quota state (Feb 2026 cap of ₹2,500) ────────────────────
-  // Hydrated from /api/bank-transfer/lifetime-quota/{uid}. While loading
-  // this is null; once loaded it has shape:
-  //   { lifetime_redeemed_inr, lifetime_cap_inr, remaining_quota_inr,
-  //     is_blocked, allowed_amounts: [], enabled_amounts: [], block_reason }
-  const [lifetimeQuota, setLifetimeQuota] = useState(null);
+  // Unified progressive redeem limit (PRC) — shared with Recharge / Bills
+  const [limitAvailablePrc, setLimitAvailablePrc] = useState(null);
+  const handleLimitCheck = useCallback(({ available }) => setLimitAvailablePrc(available), []);
 
   // Load user and config
   useEffect(() => {
@@ -108,48 +103,19 @@ const BankRedeemPage = ({ user: initialUser }) => {
           return;
         }
         
-        // Fetch fresh user data, config, and redeem limit
-        // IMPORTANT: redeem-limit is fetched WITHOUT a silent catch so a transient
-        // error doesn't produce a false "Available: 0 PRC" block at submit time.
-        // If it fails, we retry; after retries it remains null and the frontend
-        // guard falls back to user.prc_balance + server-side authoritative check.
-        const fetchRedeemLimit = async (attempt = 1) => {
-          try {
-            return await axios.get(`${API}/user/${userData.uid}/redeem-limit`);
-          } catch (err) {
-            if (attempt < 3) {
-              await new Promise(r => setTimeout(r, 400 * attempt));
-              return fetchRedeemLimit(attempt + 1);
-            }
-            console.error('[BankRedeem] redeem-limit fetch failed after retries:', err?.response?.status, err?.message);
-            return { data: null, _error: true };
-          }
-        };
-        
-        const [userRes, configRes, limitRes, burnRes, quotaRes] = await Promise.all([
+        const [userRes, configRes, burnRes] = await Promise.all([
           axios.get(`${API}/users/${userData.uid}`),
           axios.get(`${API}/bank-transfer/config?user_id=${userData.uid}`),
-          fetchRedeemLimit(),
           axios.get(`${API}/redemption/calculate-charges?amount_inr=100&user_id=${userData.uid}`).catch(() => ({ data: null })),
-          axios.get(`${API}/bank-transfer/lifetime-quota/${userData.uid}`).catch(() => ({ data: null })),
         ]);
 
         setUser(userRes.data);
         setConfig(configRes.data);
-        if (quotaRes.data) setLifetimeQuota(quotaRes.data);
         
         // Set burn rate from backend
         if (burnRes.data?.burn_rate_percent !== undefined) {
           setBurnRatePercent(burnRes.data.burn_rate_percent);
           setBurnPaymentType(burnRes.data.burn_payment_type || 'cash');
-        }
-        
-        // Set redeem limit info
-        if (limitRes.data?.success) {
-          setRedeemLimit(limitRes.data.limit);
-        } else if (limitRes._error) {
-          // Surface the error but don't block UX — backend will enforce at submit
-          toast.error('Could not load redeem limit. You can still submit — limit will be verified by server.');
         }
         
         // Pre-fill account holder name
@@ -189,17 +155,18 @@ const BankRedeemPage = ({ user: initialUser }) => {
     }
   }, [activeTab, loadRequests]);
 
+  const prcPerInr = Number(config?.prc_rate) || 10;
+  const exceedsLimit = (amt) => limitAvailablePrc != null && amt * prcPerInr > limitAvailablePrc;
+
   // Amount validation error message
   const amountError = (() => {
     if (!amount || isNaN(amount)) return '';
     const amt = parseInt(amount);
-    const allowed = lifetimeQuota?.allowed_amounts || [100, 200, 400, 800, 1000];
-    if (!allowed.includes(amt)) {
-      return `Please choose one of: ₹${allowed.join(', ₹')}`;
+    if (!ALLOWED_AMOUNTS.includes(amt)) {
+      return `Please choose one of: ₹${ALLOWED_AMOUNTS.join(', ₹')}`;
     }
-    const enabled = lifetimeQuota?.enabled_amounts;
-    if (enabled && !enabled.includes(amt)) {
-      return `Only ₹${lifetimeQuota.remaining_quota_inr} of your ₹${lifetimeQuota.lifetime_cap_inr} lifetime cap remains. Pick a smaller amount.`;
+    if (exceedsLimit(amt)) {
+      return `This amount needs ${(amt * prcPerInr).toLocaleString('en-IN')} PRC but only ${Number(limitAvailablePrc).toLocaleString('en-IN')} PRC of your redeem limit is remaining. Pick a smaller amount.`;
     }
     return '';
   })();
@@ -212,8 +179,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
     }
 
     const amt = parseInt(amount);
-    const allowed = lifetimeQuota?.allowed_amounts || [100, 200, 400, 800, 1000];
-    if (!allowed.includes(amt)) {
+    if (!ALLOWED_AMOUNTS.includes(amt)) {
       setFees(null);
       return;
     }
@@ -302,21 +268,9 @@ const BankRedeemPage = ({ user: initialUser }) => {
       return;
     }
     
-    // Check Available Redeem Limit (NOT prc_balance)
-    // If redeemLimit failed to load, skip the client-side guard and let the
-    // server-side check_redeem_limit validate on submit — prevents a false
-    // "Available: 0 PRC" block caused by a transient /redeem-limit fetch error.
-    if (redeemLimit) {
-      const availableLimit = Math.max(
-        Number(redeemLimit.effective_available) || 0,
-        Number(redeemLimit.effective_remaining) || 0,
-        Number(redeemLimit.remaining_limit) || 0,
-        Number(redeemLimit.available) || 0
-      );
-      if (availableLimit > 0 && availableLimit < fees.total_prc) {
-        toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${fees.total_prc.toLocaleString()} PRC`);
-        return;
-      }
+    if (amountError) {
+      toast.error(amountError);
+      return;
     }
     
     // Check KYC
@@ -432,10 +386,9 @@ const BankRedeemPage = ({ user: initialUser }) => {
             </div>
           </div>
           
-          {/* Category-wise Limit - BANK - (Main limit card removed per user request) */}
           {user?.uid && (
             <div className="mt-4">
-              <CategoryLimitsDisplay userId={user.uid} />
+              <ProgressiveRedeemLimit userId={user.uid} onLimitCheck={handleLimitCheck} />
             </div>
           )}
         </div>
@@ -479,14 +432,6 @@ const BankRedeemPage = ({ user: initialUser }) => {
 
         {activeTab === 'new' ? (
           <form onSubmit={handleSubmit} data-testid="bank-redeem-form" className="space-y-4">
-            {/* Gamified Redeem Tier Badge */}
-            {config?.progressive?.minimum != null && (
-              <RedeemTierBadge
-                minimum={config.progressive.minimum}
-                nextPreview={config.progressive.next_minimum_preview}
-              />
-            )}
-
             {/* KYC Check */}
             {user?.kyc_status !== 'verified' && (
               <Card data-testid="kyc-warning" className="bg-yellow-500/10 border-yellow-500/30 p-4">
@@ -511,59 +456,14 @@ const BankRedeemPage = ({ user: initialUser }) => {
               </Card>
             )}
 
-            {/* Amount Selection — Feb 2026: 5 fixed amounts + ₹2,500 lifetime cap */}
+            {/* Amount Selection — 5 fixed amounts, gated by the unified progressive limit */}
             <Card className="bg-slate-800/50 border-slate-700 p-4">
-              {/* Lifetime cap progress meter — covers bank redeems + recharges + bills */}
-              {lifetimeQuota && (
-                <div className="mb-4" data-testid="bank-redeem-quota-meter">
-                  <div className="flex items-baseline justify-between mb-1.5">
-                    <span className="text-slate-300 text-sm font-medium">Lifetime Benefit Limit</span>
-                    <span className="text-slate-400 text-xs tabular-nums">
-                      ₹{Number(lifetimeQuota.lifetime_redeemed_inr).toLocaleString('en-IN')} / ₹{Number(lifetimeQuota.lifetime_cap_inr).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-slate-900 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all ${
-                        lifetimeQuota.is_blocked
-                          ? 'bg-red-500'
-                          : lifetimeQuota.remaining_quota_inr <= 500
-                          ? 'bg-amber-500'
-                          : 'bg-emerald-500'
-                      }`}
-                      style={{
-                        width: `${Math.min(100, (lifetimeQuota.lifetime_redeemed_inr / lifetimeQuota.lifetime_cap_inr) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                  <p className="text-slate-500 text-xs mt-1.5">
-                    {lifetimeQuota.is_blocked
-                      ? '🚫 You have reached the lifetime cap. Bank redeem is disabled.'
-                      : `Remaining: ₹${Number(lifetimeQuota.remaining_quota_inr).toLocaleString('en-IN')} • Includes recharges, bill payments & redeems (subscription excluded, charges extra)`}
-                  </p>
-                </div>
-              )}
-
               <Label className="text-slate-300 mb-2 block">Select Withdrawal Amount</Label>
 
-              {lifetimeQuota?.is_blocked ? (
-                <div
-                  className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-center"
-                  data-testid="bank-redeem-blocked-banner"
-                >
-                  <XCircle className="w-7 h-7 text-red-400 mx-auto mb-2" />
-                  <p className="text-red-200 font-semibold mb-1">Bank Redeem Disabled</p>
-                  <p className="text-red-200/80 text-sm">
-                    {lifetimeQuota.block_reason}
-                  </p>
-                </div>
-              ) : (
                 <>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-2" data-testid="bank-redeem-amount-chips">
-                    {(lifetimeQuota?.allowed_amounts || [100, 200, 400, 800, 1000]).map((amt) => {
-                      const isEnabled = lifetimeQuota
-                        ? lifetimeQuota.enabled_amounts.includes(amt)
-                        : true;
+                    {ALLOWED_AMOUNTS.map((amt) => {
+                      const isEnabled = !exceedsLimit(amt);
                       const isSelected = parseInt(amount) === amt;
                       return (
                         <button
@@ -580,7 +480,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
                               : 'bg-slate-900/40 border-slate-700 text-slate-600 cursor-not-allowed line-through'
                           }`}
                           title={
-                            isEnabled ? `Redeem ₹${amt}` : `Exceeds remaining ₹${lifetimeQuota?.remaining_quota_inr || 0} quota`
+                            isEnabled ? `Redeem ₹${amt}` : `Exceeds your remaining ${Number(limitAvailablePrc).toLocaleString('en-IN')} PRC redeem limit`
                           }
                         >
                           ₹{amt.toLocaleString('en-IN')}
@@ -595,14 +495,14 @@ const BankRedeemPage = ({ user: initialUser }) => {
                     </p>
                   )}
                   <p className="text-slate-500 text-xs mt-3">
-                    Rate: 1 INR = {config.prc_rate} PRC &middot; Fee: ₹{config.transaction_fee} + {config.admin_fee_percent}% (extra, not in ₹2,500 cap)
+                    Rate: 1 INR = {config.prc_rate} PRC &middot; Fee: ₹{config.transaction_fee} + {config.admin_fee_percent}% (extra)
                   </p>
 
                   {/* PRC Redemption Service Charge preview (Feb 2026) — informs
                       the user that a 20% cash service fee will apply AFTER
                       admin marks the request PAID. Only shown when a valid
                       amount is selected. */}
-                  {amount && !isNaN(amount) && (lifetimeQuota?.allowed_amounts || [100, 200, 400, 800, 1000]).includes(parseInt(amount)) && (
+                  {amount && !isNaN(amount) && ALLOWED_AMOUNTS.includes(parseInt(amount)) && (
                     <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3" data-testid="svc-charge-preview">
                       <p className="text-amber-300 text-xs font-bold flex items-center gap-1.5">
                         <IndianRupee className="w-3.5 h-3.5" />
@@ -618,7 +518,6 @@ const BankRedeemPage = ({ user: initialUser }) => {
                     </div>
                   )}
                 </>
-              )}
             </Card>
 
             {/* Fee Breakdown card removed (June 2026) - rate now fixed 10 PRC = ₹1.
@@ -773,7 +672,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
             <Button
               data-testid="submit-request-btn"
               type="submit"
-              disabled={submitting || !agreedToPolicy || !ifscVerified || !fees || user?.kyc_status !== 'verified'}
+              disabled={submitting || !agreedToPolicy || !ifscVerified || !fees || !!amountError || user?.kyc_status !== 'verified'}
               className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-6 text-lg font-semibold"
             >
               {submitting ? (

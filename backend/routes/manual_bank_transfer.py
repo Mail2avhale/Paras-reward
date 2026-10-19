@@ -638,21 +638,20 @@ async def create_redeem_request(request: RedeemRequest):
                 ),
             )
 
-        quota = await compute_lifetime_redeem_quota(user_id)
-        if quota["is_blocked"]:
+        blocked_user = await db.users.find_one(
+            {"uid": user_id}, {"_id": 0, "bank_redeem_blocked": 1, "bank_redeem_blocked_reason": 1}
+        )
+        if blocked_user and blocked_user.get("bank_redeem_blocked"):
             raise HTTPException(
                 status_code=403,
-                detail=quota["block_reason"] or "Bank redeem option is disabled for your account.",
+                detail=blocked_user.get("bank_redeem_blocked_reason") or "Bank redeem option is disabled for your account.",
             )
-        if amount > quota["remaining_quota_inr"]:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"This amount would exceed your lifetime cap of "
-                    f"₹{LIFETIME_BANK_REDEEM_CAP_INR:,}. You have "
-                    f"₹{quota['remaining_quota_inr']:,} remaining — please pick a smaller amount."
-                ),
-            )
+
+        # Unified progressive daily redeem limit (shared with recharge / bills)
+        from app.services.redemption_limit_service import ensure_can_spend
+        ok, _snap, reason = await ensure_can_spend(db, user_id, float(amount) * 10.0)
+        if not ok:
+            raise HTTPException(status_code=400, detail=reason)
 
         # 1b. Legacy progressive ceiling — RETIRED Feb 5 2026 in favour of
         # admin-configurable limits (1c below). Kept only for the API response
@@ -938,6 +937,12 @@ async def create_redeem_request(request: RedeemRequest):
         }
         
         await db.bank_transfer_requests.insert_one(request_data)
+
+        try:
+            from app.services.redemption_limit_service import deduct as _rl_deduct
+            await _rl_deduct(db, user_id, float(amount) * 10.0, note=f"bank_transfer:{request_id}")
+        except Exception as _rl_e:
+            logging.warning(f"[BANK TRANSFER] redemption limit deduct failed: {_rl_e}")
         
         logging.info(f"[BANK TRANSFER] New request: {request_id} | User: {user_id} | Amount: ₹{amount} | PRC: {total_prc}")
         
@@ -1061,7 +1066,7 @@ async def get_all_requests(
                 try:
                     from_date = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
                     date_query["$gte"] = from_date.isoformat()
-                except:
+                except Exception:
                     date_query["$gte"] = date_from
             if date_to:
                 try:
@@ -1069,7 +1074,7 @@ async def get_all_requests(
                     # Include full day
                     to_date = to_date.replace(hour=23, minute=59, second=59)
                     date_query["$lte"] = to_date.isoformat()
-                except:
+                except Exception:
                     date_query["$lte"] = date_to + "T23:59:59"
             if date_query:
                 query["created_at"] = date_query

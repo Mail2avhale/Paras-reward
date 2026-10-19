@@ -101,6 +101,13 @@ async def list_tests(active_only: bool = False):
     return {"tests": tests, "total": len(tests)}
 
 
+@router.get("/tests/assignments")
+async def list_assignments(application_id: Optional[str] = None):
+    q = {"application_id": application_id} if application_id else {}
+    rows = await db.test_assignments.find(q, {"_id": 0, "attempt.answers": 0}).sort("assigned_at", -1).to_list(500)
+    return {"assignments": rows, "total": len(rows)}
+
+
 @router.get("/tests/{test_id}")
 async def get_test(test_id: str, include_answers: bool = False):
     t = await db.test_bank.find_one({"test_id": test_id}, {"_id": 0})
@@ -293,13 +300,6 @@ async def submit_attempt(data: TestSubmission):
     except Exception as e:
         logging.error(f"[TESTS] submit error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/tests/assignments")
-async def list_assignments(application_id: Optional[str] = None):
-    q = {"application_id": application_id} if application_id else {}
-    rows = await db.test_assignments.find(q, {"_id": 0, "attempt.answers": 0}).sort("assigned_at", -1).to_list(500)
-    return {"assignments": rows, "total": len(rows)}
 
 
 # ==================== Interviews + Scorecards (§16-18) ====================

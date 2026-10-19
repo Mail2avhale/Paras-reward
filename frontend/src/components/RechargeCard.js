@@ -76,6 +76,21 @@ const RechargeCard = ({ user, stats }) => {
     }
   }, [user?.uid]);
 
+  const [limitAvailablePrc, setLimitAvailablePrc] = useState(null);
+  const fetchRedeemLimit = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const res = await axios.get(`${API}/redemption-limit/status/${user.uid}`);
+      setLimitAvailablePrc(Number(res.data?.available_prc || 0));
+    } catch (err) {
+      console.error('[RechargeCard] redeem limit fetch failed:', err);
+    }
+  }, [user?.uid]);
+
+  useEffect(() => {
+    fetchRedeemLimit();
+  }, [fetchRedeemLimit]);
+
   useEffect(() => {
     fetchOperators(rechargeType);
   }, [rechargeType, fetchOperators]);
@@ -232,6 +247,7 @@ const RechargeCard = ({ user, stats }) => {
         setAmount('');
         setBillData(null);
         fetchRecentTxns();
+        fetchRedeemLimit();
         if (res.data.amount) {
           setDailyRemaining(prev => Math.max(0, prev - res.data.amount));
         }
@@ -252,7 +268,9 @@ const RechargeCard = ({ user, stats }) => {
     ? Math.ceil((parseInt(amount, 10) * 1.2 + 10) * prcRate)
     : 0;
 
-  const isFormValid = number && selectedOperator && amount && parseInt(amount, 10) > 0 && parseInt(amount, 10) <= maxAllowed && !numberError
+  const limitExceeded = limitAvailablePrc != null && amount && parseInt(amount, 10) * prcRate > limitAvailablePrc;
+
+  const isFormValid = number && selectedOperator && amount && parseInt(amount, 10) > 0 && parseInt(amount, 10) <= maxAllowed && !numberError && !limitExceeded
     && (rechargeType !== 'dth' || !fetchBillRequired || billData);
 
   // View receipt for a transaction
@@ -460,6 +478,16 @@ const RechargeCard = ({ user, stats }) => {
         {prcEstimate > 0 && (
           <p className="text-gray-500 text-[10px] mt-1 pl-1" data-testid="recharge-prc-estimate">
             Estimated: ~{prcEstimate.toLocaleString('en-IN')} PRC (incl. charges)
+          </p>
+        )}
+        {limitAvailablePrc != null && (
+          <p className="text-gray-400 text-[10px] mt-1 pl-1" data-testid="recharge-limit-remaining">
+            Remaining Redeem Limit: <span className="text-cyan-300 font-semibold tabular-nums">{limitAvailablePrc.toLocaleString('en-IN')} PRC</span>
+          </p>
+        )}
+        {limitExceeded && (
+          <p className="text-red-400 text-[11px] mt-1 pl-1" data-testid="recharge-limit-error">
+            This recharge needs {(parseInt(amount, 10) * prcRate).toLocaleString('en-IN')} PRC of redeem limit, but only {limitAvailablePrc.toLocaleString('en-IN')} PRC is remaining. Enter a smaller amount.
           </p>
         )}
       </div>

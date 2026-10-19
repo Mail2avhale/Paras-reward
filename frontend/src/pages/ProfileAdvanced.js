@@ -328,6 +328,16 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   };
 
   // fetchUserData kept for profile update/save refresh
+  const fetchProfilePicture = async () => {
+    try {
+      const res = await axios.get(`${API}/users/${user.uid}/profile-picture`, { timeout: 4000 });
+      if (res.data?.profile_picture) setProfilePicture(res.data.profile_picture);
+    } catch (err) {
+      console.error('Profile picture fetch error:', err);
+    }
+  };
+
+
   const fetchUserData = async () => {
     try {
       const response = await axios.get(`${API}/user/${user.uid}`, { timeout: 4000 });

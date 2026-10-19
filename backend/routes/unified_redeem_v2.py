@@ -538,7 +538,7 @@ async def execute_eko_bbps(request_doc: dict, service_type: str) -> dict:
         
         try:
             result = response.json()
-        except:
+        except Exception:
             logging.error(f"[BBPS-{service_type}] Non-JSON response: {response.text[:200]}")
             return {
                 "success": False,
@@ -3133,7 +3133,7 @@ async def fail_single_request(body: FailRequestBody, request: Request):
                 try:
                     from bson import ObjectId
                     doc = await coll.find_one({"_id": ObjectId(request_id)})
-                except:
+                except Exception:
                     pass
             
             if doc:

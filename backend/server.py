@@ -1175,7 +1175,7 @@ async def check_service_cooldown(user_id: str, service_type: str) -> dict:
     if isinstance(last_time, str):
         try:
             last_time = datetime.fromisoformat(last_time.replace('Z', '+00:00'))
-        except:
+        except Exception:
             return {"allowed": True, "wait_hours": 0, "last_request": None}
     
     if not last_time:
@@ -1596,7 +1596,7 @@ async def db_health_detailed():
                     "size_mb": round(stats.get("size", 0) / 1024 / 1024, 2),
                     "indexes": stats.get("nindexes", 0)
                 }
-            except:
+            except Exception:
                 collection_stats[coll_name] = {"error": "not found"}
         
         return {
@@ -1629,7 +1629,7 @@ async def get_performance_status():
     try:
         from performance_optimizer import get_circuit_status
         circuit_status = get_circuit_status()
-    except:
+    except Exception:
         circuit_status = {"error": "not available"}
     
     return {
@@ -2453,7 +2453,7 @@ async def clear_admin_cache():
             try:
                 await cache.delete(key)
                 cleared.append(key)
-            except:
+            except Exception:
                 pass
         
         return {
@@ -2729,7 +2729,7 @@ async def auto_sync_razorpay_payments():
                             if isinstance(existing_expiry, str):
                                 try:
                                     existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                                except:
+                                except Exception:
                                     existing_expiry = None
                             
                             if existing_expiry:
@@ -3027,7 +3027,7 @@ async def auto_sync_captured_from_razorpay():
                             exp_date = exp_date.replace(tzinfo=timezone.utc)
                         if exp_date > now:
                             remaining_days = (exp_date - now).days
-                    except:
+                    except Exception:
                         pass
                 
                 total_days = duration_days + remaining_days
@@ -4449,7 +4449,7 @@ async def get_user_subscription_info(user: dict) -> dict:
                 subscription_plan = "explorer"  # Downgrade to explorer
             else:
                 days_remaining = (expiry - now).days
-        except:
+        except Exception:
             pass
     
     plan_config = SUBSCRIPTION_PLANS.get(subscription_plan, SUBSCRIPTION_PLANS["explorer"])
@@ -4563,7 +4563,7 @@ async def get_service_status(service_type: str = None) -> dict:
         if service_type:
             return {"enabled": result.get(service_type, True), "service": service_type}
         return result
-    except:
+    except Exception:
         return DEFAULT_SERVICE_STATUS if not service_type else {"enabled": True, "service": service_type}
 
 async def check_service_enabled(service_type: str) -> bool:
@@ -5072,7 +5072,7 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
             cycle_start = start + timedelta(days=30 * months_diff)
             if cycle_start > now:
                 cycle_start = start + timedelta(days=30 * (months_diff - 1))
-        except:
+        except Exception:
             # Fallback to calendar month
             cycle_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     else:
@@ -5577,7 +5577,7 @@ async def calculate_carry_forward_limit(user: dict, base_monthly_limit: float) -
         start = datetime.fromisoformat(subscription_start.replace('Z', '+00:00'))
         if start.tzinfo is None:
             start = start.replace(tzinfo=timezone.utc)
-    except:
+    except Exception:
         return {"carry_forward": 0, "months_calculated": 0, "breakdown": []}
     
     # Calculate number of complete months since subscription
@@ -5710,7 +5710,7 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
                     "remaining": 0,
                     "checks": {"subscription": "expired"}
                 }
-        except:
+        except Exception:
             pass
     checks_passed["subscription_active"] = True
     
@@ -5745,7 +5745,7 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
                     "remaining": 0,
                     "checks": {"account_age": account_age_days}
                 }
-        except:
+        except Exception:
             pass
     checks_passed["account_age_ok"] = True
     
@@ -6982,7 +6982,7 @@ async def login(
                     user["subscription_expired"] = True
                     user["subscription_days_expired"] = days_expired
                     user["subscription_expiry_message"] = subscription_expiry_message
-            except:
+            except Exception:
                 pass
     
     # ========== SIMPLIFIED PRC CHECK using helper function ==========
@@ -7089,7 +7089,7 @@ async def login(
         if user.get(field) and isinstance(user[field], str):
             try:
                 user[field] = datetime.fromisoformat(user[field])
-            except:
+            except Exception:
                 pass
     
     # Remove sensitive/large fields from response
@@ -7331,7 +7331,7 @@ async def forgot_pin_reset(request: ResetPinRequest):
             expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) > expiry:
                 raise HTTPException(status_code=400, detail="Reset token expired")
-        except:
+        except Exception:
             pass
     
     # Hash new PIN and update
@@ -7641,7 +7641,7 @@ async def forgot_pin_verify_security_pin(request: Request):
             expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) > expiry:
                 raise HTTPException(status_code=400, detail="Reset token expired. Please start again.")
-        except:
+        except Exception:
             pass
     
     # Verify security PIN
@@ -7727,7 +7727,7 @@ async def forgot_pin_set_new_pin(request: Request):
             expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) > expiry:
                 raise HTTPException(status_code=400, detail="Reset token expired. Please start again.")
-        except:
+        except Exception:
             pass
     
     # Hash new PIN and update
@@ -8461,7 +8461,7 @@ async def reset_password(reset_token: str, new_password: str):
     
     return {"message": "Password reset successful"}
 
-async def change_password(uid: str, old_password: str, new_password: str):
+async def change_password_v2(uid: str, old_password: str, new_password: str):
     """Change password for logged in user"""
     user = await db.users.find_one({"uid": uid})
     
@@ -9015,7 +9015,7 @@ async def get_user_data(uid: str, request: Request):
         if user.get(field) and isinstance(user[field], str):
             try:
                 user[field] = datetime.fromisoformat(user[field].replace('Z', '+00:00'))
-            except:
+            except Exception:
                 pass
     
     # Check mining session validity
@@ -9807,7 +9807,7 @@ async def get_user_subscription_history(uid: str, request: Request):
         if paid_at and isinstance(paid_at, str):
             try:
                 paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
-            except:
+            except Exception:
                 paid_at = None
         
         created_at = payment.get("created_at")
@@ -10385,7 +10385,7 @@ async def manual_sync_razorpay_payments():
                                         exp_date = exp_date.replace(tzinfo=timezone.utc)
                                     if exp_date > now:
                                         remaining_days = (exp_date - now).days
-                                except:
+                                except Exception:
                                     pass
                         
                         total_days = duration_days + remaining_days
@@ -10503,7 +10503,7 @@ async def search_razorpay_payment(request: Request):
                 search_date = datetime.strptime(date_str, "%Y-%m-%d")
                 search_params["from"] = int(search_date.timestamp())
                 search_params["to"] = int((search_date + timedelta(days=1)).timestamp())
-            except:
+            except Exception:
                 pass
         
         # FIXED: Use asyncio.to_thread() to prevent blocking
@@ -10652,7 +10652,7 @@ async def manual_activate_subscription(request: Request):
                     exp_date = exp_date.replace(tzinfo=timezone.utc)
                 if exp_date > now:
                     remaining_days = (exp_date - now).days
-            except:
+            except Exception:
                 pass
         
         total_days = duration_days + remaining_days
@@ -10902,7 +10902,7 @@ async def bulk_sync_captured_payments(request: Request):
                                 exp_date = exp_date.replace(tzinfo=timezone.utc)
                             if exp_date > now:
                                 remaining_days = (exp_date - now).days
-                        except:
+                        except Exception:
                             pass
                 
                 total_days = duration_days + remaining_days
@@ -11138,7 +11138,7 @@ async def sync_single_razorpay_order(request: Request):
                         exp_date = exp_date.replace(tzinfo=timezone.utc)
                     if exp_date > now:
                         remaining_days = (exp_date - now).days
-                except:
+                except Exception:
                     pass
         
         total_days = duration_days + remaining_days
@@ -11346,7 +11346,7 @@ async def restore_users_from_vip_payments(request: Request):
                     if isinstance(approved_at, str):
                         try:
                             approved_at = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
-                        except:
+                        except Exception:
                             approved_at = datetime.now(timezone.utc)
                     expiry_date = approved_at + timedelta(days=duration_days)
                 else:
@@ -12784,7 +12784,7 @@ async def get_current_rate_info():
                             "expires_at": expires_at,
                             "set_at": override.get("set_at")
                         }
-                except:
+                except Exception:
                     pass
             else:
                 override_active = True
@@ -12981,7 +12981,7 @@ async def get_expiring_subscriptions():
                 if now < expiry <= expiry_threshold:
                     user["days_until_expiry"] = (expiry - now).days
                     expiring_users.append(user)
-            except:
+            except Exception:
                 pass
     
     return {"expiring_users": expiring_users, "count": len(expiring_users)}
@@ -13065,7 +13065,7 @@ async def upgrade_subscription(uid: str, request: Request):
                 expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
             # Extend from current expiry
             new_expiry = (expiry_dt + timedelta(days=extend_days)).isoformat() if extend_days > 0 else current_expiry
-        except:
+        except Exception:
             new_expiry = (now + timedelta(days=28)).isoformat()
     else:
         new_expiry = (now + timedelta(days=28)).isoformat()
@@ -13297,7 +13297,7 @@ async def subscription_pay_with_prc(request: Request):
                     expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
                 if expiry_dt > now:
                     has_active_plan = True
-            except:
+            except Exception:
                 pass
         
         # Determine if this should be an upcoming plan or immediate activation
@@ -13508,7 +13508,7 @@ async def subscription_pay_with_prc(request: Request):
             await create_notification(user_id=user_id, 
                 title="Elite Subscription Queued!" if is_upcoming else "Elite Subscription Activated!",
                 message=notify_msg, notification_type="subscription")
-        except:
+        except Exception:
             pass
         
         if is_upcoming:
@@ -15431,7 +15431,7 @@ async def get_user_fraud_score(uid: str):
             elif account_age_days < 30:
                 score += 10
                 risk_factors.append("Account less than 30 days old")
-        except:
+        except Exception:
             pass
     
     # 2. KYC Status
@@ -15513,7 +15513,7 @@ async def get_user_fraud_score(uid: str):
             if login_time.hour >= 0 and login_time.hour <= 5:
                 score += 5
                 risk_factors.append("Frequent night activity (12 AM - 5 AM)")
-        except:
+        except Exception:
             pass
     
     # 10. Subscription anomaly
@@ -15765,7 +15765,7 @@ async def check_subscription_fraud(user_id: str, days: int = 10):
                     try:
                         approved_date = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
                         days_ago = (now - approved_date).days
-                    except:
+                    except Exception:
                         days_ago = 0
                 else:
                     days_ago = 0
@@ -15811,7 +15811,7 @@ async def check_subscription_fraud(user_id: str, days: int = 10):
                             "expiry": current_expiry if isinstance(current_expiry, str) else current_expiry.isoformat(),
                             "remaining_days": remaining_days
                         })
-                except:
+                except Exception:
                     pass
         
         has_fraud_risk = len(warnings) > 0
@@ -16946,7 +16946,7 @@ async def delete_vip_payment(payment_id: str, request: Request):
         try:
             await cache.delete("admin_vip_payments:pending:p1:l50")
             await cache.delete("admin_vip_payments:all:p1:l50")
-        except:
+        except Exception:
             pass
         
         return {
@@ -18052,7 +18052,7 @@ async def get_smart_diagnostic_context(uid: str, user: dict) -> str:
                 is_expired = True
             else:
                 days_until_expiry = (expiry_date - now).days
-        except:
+        except Exception:
             pass
     
     # 6. Pending subscription payments
@@ -20026,7 +20026,7 @@ async def find_today_double_subscriptions():
                             "current_expiry": exp_date.isoformat(),
                             "payment_id": u.get("last_payment_id")
                         })
-                except:
+                except Exception:
                     pass
         
         return {
@@ -21637,7 +21637,7 @@ async def admin_update_user_subscription(uid: str, request: Request):
             if expiry_date.tzinfo is None:
                 expiry_date = expiry_date.replace(tzinfo=timezone.utc)
             expiry_date = expiry_date.isoformat()
-        except:
+        except Exception:
             # If parsing fails, calculate from days
             expiry_date = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
     else:
@@ -21746,7 +21746,7 @@ async def admin_delete_user_subscription(uid: str, payment_id: str):
     try:
         obj_id = ObjectId(payment_id)
         is_object_id = True
-    except:
+    except Exception:
         pass
     
     # Try deleting from vip_payments collection
@@ -21861,7 +21861,7 @@ async def admin_delete_all_user_subscriptions(uid: str):
     }
 
 
-async def get_user_subscription_history(uid: str, page: int = 1, limit: int = 20):
+async def get_user_subscription_history_internal(uid: str, page: int = 1, limit: int = 20):
     """
     Get subscription/payment history for a specific user.
     Returns all past plan changes and payments.
@@ -22840,7 +22840,7 @@ async def get_user_360_view(query: str, request: Request):
                     "description": f"Subscription expires in {days_until_expiry} days ({days_until_expiry//30} months)",
                     "action": "Verify if this is legitimate multi-year purchase"
                 })
-        except:
+        except Exception:
             pass
     
     # Calculate fraud score
@@ -23522,7 +23522,7 @@ async def run_bulk_fix_background(job_id: str, batch_size: int = 50):
                                 )
                                 results["issues_fixed"] += 1
                                 user_fixed = True
-                        except:
+                        except Exception:
                             pass
                     
                     # 3. Membership type mismatch
@@ -23568,7 +23568,7 @@ async def run_bulk_fix_background(job_id: str, batch_size: int = 50):
                                 )
                                 results["issues_fixed"] += 1
                                 user_fixed = True
-                        except:
+                        except Exception:
                             pass
                     
                     # 6. Referral code
@@ -23827,7 +23827,7 @@ async def admin_bulk_diagnose_all_users(
                                 user_fixes.append("✅ Subscription reset to explorer")
                                 results["fixes_by_category"]["subscription_expired"] += 1
                             results["issues_fixed"] += 1
-                    except:
+                    except Exception:
                         pass
                 
                 # Membership type mismatch
@@ -24027,7 +24027,7 @@ async def admin_bulk_diagnose_all_users(
                                     user_fixes.append("✅ Lockout cleared")
                                     results["fixes_by_category"]["lockout_clear"] += 1
                                 results["issues_fixed"] += 1
-                        except:
+                        except Exception:
                             pass
                 
                 # ========== 8. STUCK MINING ==========
@@ -24046,7 +24046,7 @@ async def admin_bulk_diagnose_all_users(
                                 user_fixes.append("✅ Mining reset")
                                 results["fixes_by_category"]["mining_reset"] += 1
                             results["issues_fixed"] += 1
-                    except:
+                    except Exception:
                         pass
                 
                 # ========== 9. REFERRAL CODE ==========
@@ -24217,7 +24217,7 @@ async def admin_diagnose_user(uid: str, auto_fix: bool = True):
                         {"$set": {"subscription_plan": "explorer", "membership_type": "free"}}
                     )
                     auto_fixed.append("✅ Subscription reset to explorer")
-        except:
+        except Exception:
             pass
     
     # Membership type mismatch
@@ -24433,7 +24433,7 @@ async def admin_diagnose_user(uid: str, auto_fix: bool = True):
                 if auto_fix:
                     await db.login_attempts.delete_one({"identifier": user.get("mobile") or user.get("email")})
                     auto_fixed.append("✅ Login lockout cleared")
-        except:
+        except Exception:
             pass
     
     # ========== 6. MINING ISSUES ==========
@@ -24457,7 +24457,7 @@ async def admin_diagnose_user(uid: str, auto_fix: bool = True):
                         {"$set": {"mining_active": False, "mining_start_time": None}}
                     )
                     auto_fixed.append("✅ Mining session reset")
-        except:
+        except Exception:
             pass
     
     # ========== 7. REFERRAL CODE ==========
@@ -24637,7 +24637,7 @@ async def admin_fix_user_issue(uid: str, request: Request):
                     expiry_dt = current_expiry
                 if expiry_dt.tzinfo is None:
                     expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-            except:
+            except Exception:
                 pass
         
         if expiry_dt and expiry_dt > now:
@@ -24737,7 +24737,7 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
                     {"$set": {"membership_type": "free", "subscription_plan": "explorer"}}
                 )
                 fixed_issues.append(f"Expired subscription ({subscription_plan}) reset to explorer")
-        except:
+        except Exception:
             pass
     
     # ========== 3. Fix membership type mismatch ==========
@@ -24764,7 +24764,7 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
             if isinstance(approved_at, str):
                 try:
                     approved_at = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
-                except:
+                except Exception:
                     approved_at = datetime.now(timezone.utc)
         else:
             approved_at = datetime.now(timezone.utc)
@@ -24804,7 +24804,7 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
                 if isinstance(paid_at, str):
                     try:
                         paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
-                    except:
+                    except Exception:
                         paid_at = datetime.now(timezone.utc)
             else:
                 paid_at = datetime.now(timezone.utc)
@@ -25313,6 +25313,7 @@ async def user_360_quick_action(request: Request):
             },
         )
         
+        is_pin_user = bool(user and user.get("pin_migrated"))
         if is_pin_user:
             result_message = f"Password & PIN reset successful. Temporary credential: {temp_password}. User should use this as their new PIN."
         else:
@@ -25557,7 +25558,7 @@ async def user_360_quick_action(request: Request):
         try:
             expiry_dt = datetime.fromisoformat(expiry_date.replace('Z', '+00:00')) if 'T' in expiry_date else datetime.strptime(expiry_date, "%Y-%m-%d")
             expiry_dt = expiry_dt.replace(hour=23, minute=59, second=59)
-        except:
+        except Exception:
             raise HTTPException(status_code=400, detail="Invalid expiry date format")
         
         # Update user subscription
@@ -25881,7 +25882,7 @@ async def submit_vip_payment_new(request: Request):
     }
 
 @api_router.post("/membership/submit-payment")
-async def submit_vip_payment(request: Request):
+async def submit_vip_payment_v2(request: Request):
     """Submit VIP payment proof"""
     data = await request.json()
     
@@ -26894,7 +26895,7 @@ async def get_comprehensive_analytics(
         try:
             range_start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
             range_end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-        except:
+        except Exception:
             range_start = today_start - timedelta(days=30)
             range_end = now
     else:
@@ -27613,7 +27614,7 @@ async def get_withdrawal_report_old(status: Optional[str] = None):
 # ========== AUDIT LOGGING SYSTEM ==========
 
 @api_router.post("/admin/audit/log")
-async def create_audit_log(request: Request):
+async def create_audit_log_v2(request: Request):
     """Create audit log entry (Internal use)"""
     data = await request.json()
     
@@ -27632,7 +27633,7 @@ async def create_audit_log(request: Request):
     return {"message": "Audit log created", "log_id": log_entry["log_id"]}
 
 @api_router.get("/admin/audit/logs")
-async def get_audit_logs(
+async def get_audit_logs_v2(
     action: Optional[str] = None,
     entity_type: Optional[str] = None,
     performed_by: Optional[str] = None,
@@ -28129,7 +28130,7 @@ async def update_user_admin(uid: str, request: UserUpdateRequest):
         try:
             expiry_date = datetime.fromisoformat(request.membership_expiry.replace('Z', '+00:00'))
             update_data["membership_expiry"] = expiry_date.isoformat()
-        except:
+        except Exception:
             # If it's a date-only string (YYYY-MM-DD), add time
             update_data["membership_expiry"] = f"{request.membership_expiry}T23:59:59+00:00"
     if request.vip_plan_type:
@@ -28167,7 +28168,7 @@ async def check_duplicate_data():
     
     # Check duplicate Aadhaar numbers
     pipeline = [
-        {"$match": {"aadhaar_number": {"$ne": None, "$ne": ""}}},
+        {"$match": {"aadhaar_number": {"$nin": [None, ""]}}},
         {"$group": {"_id": "$aadhaar_number", "count": {"$sum": 1}, "users": {"$push": {"uid": "$uid", "name": "$name", "email": "$email"}}}},
         {"$match": {"count": {"$gt": 1}}}
     ]
@@ -28176,7 +28177,7 @@ async def check_duplicate_data():
     
     # Check duplicate PAN numbers
     pipeline = [
-        {"$match": {"pan_number": {"$ne": None, "$ne": ""}}},
+        {"$match": {"pan_number": {"$nin": [None, ""]}}},
         {"$group": {"_id": "$pan_number", "count": {"$sum": 1}, "users": {"$push": {"uid": "$uid", "name": "$name", "email": "$email"}}}},
         {"$match": {"count": {"$gt": 1}}}
     ]
@@ -28185,7 +28186,7 @@ async def check_duplicate_data():
     
     # Check duplicate Mobile numbers
     pipeline = [
-        {"$match": {"mobile": {"$ne": None, "$ne": ""}}},
+        {"$match": {"mobile": {"$nin": [None, ""]}}},
         {"$group": {"_id": "$mobile", "count": {"$sum": 1}, "users": {"$push": {"uid": "$uid", "name": "$name", "email": "$email"}}}},
         {"$match": {"count": {"$gt": 1}}}
     ]
@@ -28194,7 +28195,7 @@ async def check_duplicate_data():
     
     # Check duplicate UTR numbers in subscriptions
     pipeline = [
-        {"$match": {"utr_number": {"$ne": None, "$ne": ""}}},
+        {"$match": {"utr_number": {"$nin": [None, ""]}}},
         {"$group": {"_id": "$utr_number", "count": {"$sum": 1}, "payments": {"$push": {"payment_id": "$payment_id", "user_id": "$user_id", "amount": "$amount"}}}},
         {"$match": {"count": {"$gt": 1}}}
     ]
@@ -32184,7 +32185,7 @@ async def audit_subscription_expiry(days: int = 30, dry_run: bool = True):
                     start_date = sub_start
                 if start_date.tzinfo is None:
                     start_date = start_date.replace(tzinfo=timezone.utc)
-            except:
+            except Exception:
                 continue
             
             # Get actual expiry
@@ -32199,7 +32200,7 @@ async def audit_subscription_expiry(days: int = 30, dry_run: bool = True):
                     exp_date = actual_expiry
                 if exp_date.tzinfo is None:
                     exp_date = exp_date.replace(tzinfo=timezone.utc)
-            except:
+            except Exception:
                 continue
             
             # Calculate expected duration
@@ -32312,7 +32313,7 @@ async def fix_subscription_expiry(days: int = 30, dry_run: bool = True):
                     start_date = sub_start
                 if start_date.tzinfo is None:
                     start_date = start_date.replace(tzinfo=timezone.utc)
-            except:
+            except Exception:
                 continue
             
             # Get actual expiry
@@ -32327,7 +32328,7 @@ async def fix_subscription_expiry(days: int = 30, dry_run: bool = True):
                     exp_date = actual_expiry
                 if exp_date.tzinfo is None:
                     exp_date = exp_date.replace(tzinfo=timezone.utc)
-            except:
+            except Exception:
                 continue
             
             # Calculate expected duration
@@ -33934,7 +33935,7 @@ async def process_bill_payment_request(request: Request):
                                 "user_code": EKO_USER_CODE
                             }
                         )
-                    except:
+                    except Exception:
                         pass
                     
                     # Initiate transfer
@@ -34003,7 +34004,7 @@ async def process_bill_payment_request(request: Request):
                         processing_time_str = f"{hours}h {minutes}m"
                     else:
                         processing_time_str = f"{minutes}m"
-                except:
+                except Exception:
                     pass
             
             await db.bill_payment_requests.update_one(
@@ -34102,7 +34103,7 @@ async def process_bill_payment_request(request: Request):
                     processing_time_str = f"{hours}h {minutes}m"
                 else:
                     processing_time_str = f"{minutes}m"
-            except:
+            except Exception:
                 pass
         
         await db.bill_payment_requests.update_one(
@@ -35110,30 +35111,26 @@ async def upload_logo(file: UploadFile = File(...), logo_type: str = Form("logo"
 
 @api_router.post("/upload/qr-code")
 async def upload_qr_code(file: UploadFile = File(...)):
-    """Upload payment QR code image"""
+    """Upload payment QR code image.
+
+    Stores the QR as a base64 data-URL inside `db.settings` instead of
+    writing to pod-local disk. QR images are tiny (< 50 KB) and admin-only,
+    so inline storage is simplest and survives pod restarts/redeploys.
+    """
     try:
-        # Validate file type
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="Only image files are allowed")
-        
-        # Create upload directory
-        upload_dir = Path("/app/frontend/public/uploads/qr-codes")
-        upload_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Generate unique filename
-        ext = file.filename.split('.')[-1] if '.' in file.filename else 'png'
-        filename = f"payment_qr_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{ext}"
-        filepath = upload_dir / filename
-        
-        # Save file
+
         content = await file.read()
-        with open(filepath, "wb") as f:
-            f.write(content)
-        
-        # Return URL
-        image_url = f"/uploads/qr-codes/{filename}"
+        if len(content) > 512 * 1024:  # 512 KB hard cap
+            raise HTTPException(status_code=413, detail="QR image too large (max 512 KB)")
+
+        import base64
+        b64 = base64.b64encode(content).decode("ascii")
+        image_url = f"data:{file.content_type};base64,{b64}"
+
         return {"success": True, "url": image_url, "message": "QR code uploaded successfully"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -35244,7 +35241,7 @@ async def get_users_at_risk_of_burn():
                     mining_time = datetime.fromisoformat(entry.get("timestamp", "").replace('Z', '+00:00'))
                     if mining_time < warning_threshold:
                         at_risk_prc += entry.get("amount", 0)
-                except:
+                except Exception:
                     pass
         
         if at_risk_prc > 0:
@@ -35341,6 +35338,9 @@ async def get_settings():
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
         await db.settings.insert_one(default_settings)
+        # Strip Mongo _id (added by insert_one) before returning — ObjectId
+        # is not JSON serialisable.
+        default_settings.pop("_id", None)
         return default_settings
     return settings
 
@@ -35464,13 +35464,13 @@ async def create_ticket(uid: str, subject: str, category: str, description: str,
     return {"message": "Ticket created", "ticket_id": ticket_data["ticket_id"]}
 
 @api_router.get("/v2/support/tickets/{uid}")
-async def get_user_tickets(uid: str):
+async def get_user_tickets_v2(uid: str):
     """Get user's support tickets"""
     tickets = await db.support_tickets.find({"user_id": uid}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return {"tickets": tickets}
 
 @api_router.get("/v2/support/tickets")
-async def get_all_tickets(status: Optional[str] = None):
+async def get_all_tickets_v2(status: Optional[str] = None):
     """Get all support tickets (Admin)"""
     query = {}
     if status:
@@ -35480,7 +35480,7 @@ async def get_all_tickets(status: Optional[str] = None):
     return {"tickets": tickets}
 
 @api_router.patch("/v2/support/ticket/{ticket_id}")
-async def update_ticket(
+async def update_ticket_v2(
     ticket_id: str,
     status: Optional[str] = None,
     admin_response: Optional[str] = None,
@@ -35942,7 +35942,7 @@ async def get_user_recent_activity(uid: str, limit: int = 10):
                 if parsed.tzinfo is None:
                     parsed = parsed.replace(tzinfo=timezone.utc)
                 return parsed
-            except:
+            except Exception:
                 return datetime.min.replace(tzinfo=timezone.utc)
         
         # Handle datetime objects
@@ -36275,7 +36275,7 @@ async def get_global_live_activity(limit: int = 20):
         if isinstance(ts, str):
             try:
                 return datetime.fromisoformat(ts.replace('Z', '+00:00'))
-            except:
+            except Exception:
                 return datetime.min.replace(tzinfo=timezone.utc)
         return ts
     
@@ -37050,7 +37050,7 @@ async def revert_payment_request_status(request: Request):
             from bson import ObjectId
             try:
                 request_id = ObjectId(request_id)
-            except:
+            except Exception:
                 pass
         else:
             raise HTTPException(status_code=400, detail="Invalid request_type. Must be 'bank', 'rd', or 'emi'")
@@ -38597,6 +38597,7 @@ async def _background_db_init():
     # Pool Wallet — auto-repair legacy Core Team Bonus balance_after=0 entries
     try:
         import asyncio
+        from utils.pool_wallet_repair import pool_auto_repair_balance_after  # type: ignore
         asyncio.create_task(pool_auto_repair_balance_after())
         print("Pool Wallet balance_after auto-repair scheduled")
     except Exception as e:

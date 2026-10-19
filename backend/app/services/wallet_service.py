@@ -321,7 +321,7 @@ class WalletService:
             config = db.prc_economy_config.find_one({"_id": "economy_config"})
             if config:
                 return config.get("prc_rate", 100)
-        except:
+        except Exception:
             pass
         return 100  # Default: 100 PRC = ₹1
     

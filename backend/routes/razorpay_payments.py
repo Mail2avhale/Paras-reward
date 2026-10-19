@@ -845,7 +845,7 @@ async def razorpay_webhook(request: Request):
                     if isinstance(existing_expiry, str):
                         try:
                             existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                        except:
+                        except Exception:
                             existing_expiry = None
                     
                     if existing_expiry:
@@ -1217,7 +1217,7 @@ async def sync_payments_from_razorpay(request: Request):
                                 if isinstance(existing_expiry, str):
                                     try:
                                         existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                                    except:
+                                    except Exception:
                                         existing_expiry = None
                                 
                                 if existing_expiry:
@@ -1431,7 +1431,7 @@ async def fix_user_subscription(request: Request):
                                             if isinstance(existing_expiry, str):
                                                 try:
                                                     existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                                                except:
+                                                except Exception:
                                                     existing_expiry = None
                                             
                                             if existing_expiry and existing_expiry.tzinfo is None:
@@ -1519,7 +1519,7 @@ async def fix_user_subscription(request: Request):
                 if isinstance(existing_expiry, str):
                     try:
                         existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                    except:
+                    except Exception:
                         existing_expiry = None
                 
                 if existing_expiry and existing_expiry.tzinfo is None:
@@ -1642,7 +1642,7 @@ async def manual_activate_by_email(request: Request):
             if isinstance(existing_expiry, str):
                 try:
                     existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                except:
+                except Exception:
                     existing_expiry = None
             
             if existing_expiry:
@@ -1762,12 +1762,12 @@ async def find_unfixed_subscriptions(request: Request):
             if isinstance(payment, str):
                 try:
                     payment = datetime.fromisoformat(payment.replace('Z', '+00:00'))
-                except:
+                except Exception:
                     continue
             if isinstance(expiry, str):
                 try:
                     expiry = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
-                except:
+                except Exception:
                     continue
             
             if payment.tzinfo is None:
@@ -2014,13 +2014,13 @@ async def fix_double_activation_subscriptions(request: Request):
             if isinstance(correct_start, str):
                 try:
                     correct_start = datetime.fromisoformat(correct_start.replace('Z', '+00:00'))
-                except:
+                except Exception:
                     continue
             
             if isinstance(current_expiry, str):
                 try:
                     current_expiry = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
-                except:
+                except Exception:
                     continue
             
             if correct_start.tzinfo is None:
@@ -3689,13 +3689,13 @@ async def get_orders_by_date_range(
                 try:
                     from_date = datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc)
                     date_query["$gte"] = from_date
-                except:
+                except Exception:
                     pass
             if date_to:
                 try:
                     to_date = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
                     date_query["$lte"] = to_date
-                except:
+                except Exception:
                     pass
             if date_query:
                 query["$or"] = [
@@ -3794,7 +3794,7 @@ async def generate_invoice(order_id: str):
         if isinstance(paid_at, str):
             try:
                 paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
-            except:
+            except Exception:
                 paid_at = datetime.now(timezone.utc)
         
         invoice_number = f"PR-{paid_at.strftime('%Y%m%d')}-{order_id[-6:].upper()}"

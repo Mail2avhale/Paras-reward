@@ -666,7 +666,7 @@ async def admin_login_as_user(request: Request):
     """
     try:
         data = await request.json()
-    except:
+    except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON body")
     
     admin_uid = data.get("admin_uid", "")
@@ -801,7 +801,7 @@ async def end_impersonation_session(request: Request):
     """End an active impersonation session"""
     try:
         data = await request.json()
-    except:
+    except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
     
     token = data.get("token", "")
@@ -1253,7 +1253,7 @@ async def admin_activate_prc_subscription(request: Request):
         try:
             from server import record_service_usage
             await record_service_usage(target_uid, "subscription", {"plan_name": plan_name, "prc_amount": prc_amount, "admin_activated": True})
-        except:
+        except Exception:
             pass
 
         if log_admin_action:

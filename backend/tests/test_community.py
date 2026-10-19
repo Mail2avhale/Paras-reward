@@ -54,7 +54,7 @@ class TestCommunityPosts:
                     f"{BASE_URL}/api/community/posts/{self.test_post_id}",
                     json={"user_id": self.test_user_id}
                 )
-            except:
+            except Exception:
                 pass
     
     def test_create_post_success(self):

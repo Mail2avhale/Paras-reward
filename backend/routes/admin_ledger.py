@@ -74,7 +74,7 @@ async def add_subscription_income(request: Request):
             "status": data.get("status", "completed"),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.subscription_income_ledger.insert_one(entry)
+        await db.subscription_income_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -125,7 +125,7 @@ async def add_commission_income(request: Request):
             "date": data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.commission_income_ledger.insert_one(entry)
+        await db.commission_income_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -165,7 +165,7 @@ async def add_penalty_income(request: Request):
             "date": data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.penalty_income_ledger.insert_one(entry)
+        await db.penalty_income_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -202,7 +202,7 @@ async def add_interest_income(request: Request):
             "date_received": data.get("date_received", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.interest_income_ledger.insert_one(entry)
+        await db.interest_income_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -245,7 +245,7 @@ async def add_ad_revenue(request: Request):
             "net_amount": gross - charges,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.ad_revenue_ledger.insert_one(entry)
+        await db.ad_revenue_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -292,7 +292,7 @@ async def add_redeem_payout(request: Request):
             "date": data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.redeem_payout_ledger.insert_one(entry)
+        await db.redeem_payout_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -347,7 +347,7 @@ async def add_expense(request: Request):
             "date": data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.expense_ledger.insert_one(entry)
+        await db.expense_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -400,7 +400,7 @@ async def add_cash_entry(request: Request):
             "remarks": data.get("remarks", ""),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.cash_ledger.insert_one(entry)
+        await db.cash_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -454,7 +454,7 @@ async def add_bank_entry(request: Request):
             "remarks": data.get("remarks", ""),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.bank_ledger.insert_one(entry)
+        await db.bank_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -497,7 +497,7 @@ async def add_deposit(request: Request):
             "status": "active",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.deposit_ledger.insert_one(entry)
+        await db.deposit_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -562,7 +562,7 @@ async def add_renewal_fee(request: Request):
             "date": data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.renewal_fees_ledger.insert_one(entry)
+        await db.renewal_fees_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
@@ -625,7 +625,7 @@ async def add_product_purchase(request: Request):
             "date": data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.product_purchase_ledger.insert_one(entry)
+        await db.product_purchase_ledger.insert_one(dict(entry))
         return {"success": True, "entry": entry}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")

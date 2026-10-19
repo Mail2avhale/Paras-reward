@@ -361,7 +361,7 @@ class FraudDetector:
                 
                 if datetime.now(timezone.utc) - referrer_created < min_age:
                     return False, "Referrer account is too new. Please try a different referral code.", RISK_MEDIUM
-            except:
+            except Exception:
                 pass
         
         return True, "ok", risk_level
@@ -420,7 +420,7 @@ class FraudDetector:
             
             if is_new and is_high_value and not is_kyc_verified:
                 return False, f"High-value transactions require KYC verification for new accounts."
-        except:
+        except Exception:
             pass
         
         return True, "ok"
