@@ -1,3 +1,23 @@
+## Shipped (Oct 2026 — Unified Progressive Redeem Limit + Object Storage)
+
+### Delivered
+- ONE progressive redeem limit (cap = 5×N×(N+1) PRC, 10 PRC = ₹1) shared by Recharge + Redeem to Bank (`users.redemption_limit_used_prc`).
+- `POST /api/bank-transfer/request` no longer uses the old ₹2,500 lifetime cap; it uses the progressive limit (admin `bank_redeem_blocked` still returns 403).
+- `redemption_limit_service.reserve()` is atomic (conditional `$expr` update) and `release()` is idempotent per note. The old `deduct()` is removed.
+- The limit is given back on: bank-transfer mark-failed / bulk-fail / cleanup-cancel / prc_lock auto-cancel, legacy bank_redeem cancel and reject, recharge failure, status-check, bulk-enquiry, admin refund and user refund. Admin edit-amount adjusts the reserved limit.
+- Bank Redeem UI: removed the RedeemTierBadge, the Lifetime Benefit card and the old CategoryLimitsDisplay. Added a pastel `ProgressiveRedeemLimit` card with a "10 PRC = ₹1" badge (no Day N) and Total / Used / Remaining in PRC (₹). Chips over the limit are disabled, and the submit button is disabled while an English error is shown.
+- RechargeCard: added the "Remaining Redeem Limit: X PRC (₹Y)" line. If the amount is over the limit, a red error shows and the button is disabled.
+- Upload endpoints (resumes, docs, investor docs, community images, employee photos) now use Emergent Object Storage (`app/services/object_storage.py`). Old files on disk can still be read.
+- Lint fixes: ObjectId leaks (video_ads, admin_ledger), route shadowing `/tests/assignments`, missing `fetchProfilePicture`, and removed the stale `frontend/build-user`.
+- Tests: iteration_305 and iteration_306 pass 100%.
+
+### Backlog
+- P1: Admin Video Ads GET 405 (the frontend calls `/admin/video-ads`, but the route is mounted at `/admin/accounting/admin/video-ads`). User deferred this.
+- P1: Run invoice cleanup audit (`/api/invoice/admin/audit-invoices-captured`) on prod. User deferred this.
+- P2: Used-PRC ledger counting bugs; release the limit and PRC if the insert fails after the debit (edge case).
+- P3: Desktop max-width; legacy auth field cleanup; dark-header contrast on other pages (global `.text-white` override).
+
+
 ## Shipped (Feb 2026 — Welcome Email on Signup)
 
 ### Delivered

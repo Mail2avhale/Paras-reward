@@ -397,7 +397,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
       <div className="max-w-lg mx-auto px-4 -mt-4">
         {/* Verified Member Notice - Blinking at top */}
         <div className="mb-4 py-3.5 px-4 bg-purple-600/20 border-2 border-purple-500 rounded-xl text-center" data-testid="verified-partner-notice">
-          <p className="text-white font-extrabold text-base animate-pulse tracking-wide">
+          <p className="font-extrabold text-base animate-pulse tracking-wide" style={{ color: '#FFFFFF' }}>
             This Service is available only for verified Community Members
           </p>
         </div>

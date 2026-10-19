@@ -1867,6 +1867,15 @@ async def edit_withdrawal_amount(data: EditAmountRequest):
         )
         
         logging.info(f"[BANK TRANSFER] Amount edited: {data.request_id} | ₹{old_amount} → ₹{new_amount} | Admin: {data.admin_id}")
+        audit = await db.redemption_limit_audit.find_one_and_update(
+            {"note": f"bank_transfer:{data.request_id}", "prc_amount": {"$gt": 0}, "released": {"$ne": True}},
+            {"$set": {"prc_amount": float(new_amount) * 10.0, "original_prc_amount": float(old_amount) * 10.0}},
+        )
+        if audit:
+            await db.users.update_one(
+                {"uid": audit["user_id"]},
+                {"$inc": {"redemption_limit_used_prc": -float(old_amount - new_amount) * 10.0}},
+            )
         
         return {
             "success": True,

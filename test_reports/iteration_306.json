@@ -1,0 +1,35 @@
+{
+  "summary": "Tested the atomic reserve/release of the unified progressive redeem limit and the new limit-card UI. Backend: 8/8 pytest pass. Service: reserve() writes an audit doc {note, prc_amount, released:false}. It rejects amounts over the cap with 'Available PRC LIMIT = X PRC'. release() is idempotent (first call returns 100, second returns 0), writes a negative 'release:' audit doc, and never lets used go below 0. Concurrency: 8 parallel reserve() calls of 1000 PRC with 2500 PRC of room left → exactly 2 succeeded and used stayed ≤ cap (7700/8200). The deduct() function no longer exists and nothing imports it. API: POST /api/bank-transfer/request returns 400 'Available PRC LIMIT = 500 PRC' when 500 is left. Creating ₹100 raised used by 1000. admin/mark-failed released it back to 0 and set audit released=true. Creating ₹200 raised used by 2000; admin/bulk-mark-failed (with request_ids) released it back to 0. 5 parallel API requests with room for one → 1×200 and 4×400 (pending guard); used was correct and was restored after mark-failed. Eko recharge (Step 3.6 precheck → 8.6 reserve after the pending insert; release in _handle_failure, status-check, bulk-enquiry, admin refund and user refund), legacy bank_redeem (reserve before CAS, release on CAS fail / user cancel / admin reject) and the prc_lock auto-cancel were checked by code review only and look correct. Frontend (430x900, used temporarily set to 7200): the /bank-redeem card shows the badge '10 PRC = ₹1' and no 'Day N' text anywhere on the page. Total 8,200 PRC (₹820), Used - 7,200 PRC (₹720), Remaining 1,000 PRC (₹100). The card is readable (dark text on pastel). Chip ₹100 is enabled and ₹200–₹1000 are disabled. Dashboard recharge-limit-remaining shows 'Remaining Redeem Limit: 1,000 PRC (₹100)'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/bank-transfer/request", "issue": "If anything throws after a successful debit (e.g. the bank_transfer_requests insert fails), the reserved limit and the PRC are not released. This is an edge case. The same applies to the bank_redeem path after the CAS."},
+      {"endpoint": "POST /api/bank-transfer/admin/edit-amount", "issue": "Changing the amount of a pending request does not adjust the reserved limit (the audit still holds the original amount*10)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/bank-redeem", "issues": ["The verified-partner-notice ('This Service is available only for Verified Community Members') renders dark green text on the purple/dark background, so contrast is low. This existed before (global .text-white override)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_redeem_limit_release_iter306.py", "/app/test_reports/pytest/pytest_iter306.xml"],
+  "action_items": [
+    "Optional: wrap the post-debit steps of create_redeem_request in try/except that releases the limit and refunds PRC on unexpected failure",
+    "Optional: make admin edit-amount re-sync the limit reservation",
+    "Optional: fix contrast of verified-partner-notice on /bank-redeem"
+  ],
+  "critical_code_review_comments": [
+    "The recharge test could not be run live (Eko is not exercised). The release paths were checked by code review only.",
+    "release() filters audits by ts >= redemption_limit_start_date (ISO string comparison). This works for the current ISO formats, but would break if the start date were ever stored in a non-ISO format.",
+    "Admin bank-transfer endpoints (mark-failed, bulk-mark-failed) take admin_id from the request body and have no auth dependency. This existed before and is a security risk."
+  ],
+  "updated_files": ["/app/backend/tests/test_redeem_limit_release_iter306.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100%"},
+  "test_credentials": "User 9970100782 / PIN 997010 (uid 76b75808-47fa-48dd-ad7c-8074678e3607). Admin uid admin-test-123.",
+  "seed_data_creation": "None persisted. The test fixture temporarily renames the user's PENDING redemption_service_charges to TEST_HOLD_PENDING (otherwise the endpoint returns 402) and restores them. The created BTR requests and the user's redemption_limit_audit docs were deleted. used_prc was restored to 0 and prc_balance to 20261.972162. Wallet ledger debit/credit pairs from the 3 test requests remain (net zero).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "To create a bank transfer for the test user you must first neutralise the pending 20% service charge (402) — see the fixture in test_redeem_limit_release_iter306.py. Use only request_ids with bulk-mark-failed, never mark_all_pending. Cap on day 40 = 8200."
+}
