@@ -1430,6 +1430,11 @@ async def google_session_login(request: Request):
             detail="Google sign-in is for member accounts only. Please sign in with your PIN.",
         )
 
+    real_ip = get_client_ip(request) or "unknown"
+    response_data = await _complete_login(
+        user, data, identifier=email, device_id=data.get("device_id"), ip_address=None,
+        real_ip=real_ip, user_agent=request.headers.get("user-agent", "unknown"), login_type="google",
+    )
     await db.users.update_one(
         {"uid": user["uid"]},
         {"$set": {
@@ -1438,11 +1443,6 @@ async def google_session_login(request: Request):
             "google_picture": profile.get("picture"),
             "google_last_login_at": datetime.now(timezone.utc).isoformat(),
         }},
-    )
-    real_ip = get_client_ip(request) or "unknown"
-    response_data = await _complete_login(
-        user, data, identifier=email, device_id=data.get("device_id"), ip_address=None,
-        real_ip=real_ip, user_agent=request.headers.get("user-agent", "unknown"), login_type="google",
     )
     response_data["status"] = "ok"
     return response_data

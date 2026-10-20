@@ -1,3 +1,13 @@
+## Shipped (Oct 2026 — Emergent Google Sign-In)
+- `POST /api/auth/google/session` checks the Emergent `session_id` on the server and matches the user by email (case-insensitive).
+  - Existing account: returns the same payload as PIN login (JWT plus session_token). The `_complete_login` helper is now shared, so ban, device-binding, single-session, subscription-expiry and history logic apply to Google logins too.
+  - Unknown email: returns `register_required`, and the user goes to /register with name and email prefilled (email read-only) and the referral code auto-filled.
+  - Admin/sub_admin/super_admin/manager: 403 (must use PIN).
+  - `google_linked` fields are set only after a successful login.
+- Frontend: `GoogleSignInButton` is on Login and Register, and `GoogleAuthGate` in App.js routes the `#session_id` return to `GoogleAuthCallback`. PIN login is unchanged.
+- Test: iteration_309, backend and frontend 100%. The real Google round-trip was not automated: login callback outcomes used a mocked session endpoint, and backend happy paths used unit tests with the Emergent call patched. /app/auth_testing.md has the details.
+
+
 ## Shipped (Oct 2026 — Pastel Refer & Earn Page)
 - /referrals (ReferralsEnhanced + CommunityDashboard) moved to ivory/green. GlassCard now uses `.pr-card`. The new `.pr-light-scope` remaps pale accent text and translucent surfaces; `.pr-on-solid` sets white text on solid tiles.
 - Brand-blue primary buttons (Copy, View Live Activity, empty-state Share Now). Green share banner with a gold CTA. Green enter-referral card. Leadership, health and promotion cards are now white or pale blue.

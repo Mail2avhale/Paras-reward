@@ -1,0 +1,23 @@
+{
+  "summary": "Tested Emergent Google sign-in added alongside PIN login. Backend: 7/7 pytest pass. Error paths ran against the public URL: missing session_id gives 400, invalid gives 401 with the expected message. Happy paths ran as in-process unit tests with httpx.AsyncClient monkeypatched. (a) Existing user (email in upper case) returns status ok with token, session_token, uid and role. The users doc gets google_linked=true and a new session_token, and a login_history row with login_type='google' is written. (b) Unknown email returns register_required with the email lowercased. (c) admin@test.com gets 403 and google_linked is not set. Regression: user and admin PIN login via the API still work. Frontend (mobile 390px): /login shows an OR divider and 'Continue with Google' (login-google-btn); clicking it opens auth.emergentagent.com/?redirect=<origin>/login, which reaches Google sign-in. /register shows register-google-btn, and ?ref=TESTREF1 pre-fills the referral field. Callback with the mocked POST: register_required lands on /register with name and email prefilled, email read-only, register-google-notice shown, Google button hidden, and the referral auto-filled from localStorage paras_ref_code. status ok lands on /dashboard with the token stored, URL hash cleared and exactly 1 API call (no loop). 403 shows a toast with the detail and stays on /login. The 2-step PIN login in the UI still reaches /dashboard.",
+  "backend_issues": {"critical": [], "minor": [
+    {"endpoint": "/api/auth/google/session", "issue": "google_linked/google_* fields are written BEFORE _complete_login runs its ban/device-binding checks, so a banned or device-locked user still gets marked google_linked even though login is refused with 403. Low impact; move the update after _complete_login succeeds."}
+  ]},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_google_auth_iter309.py", "/app/test_reports/pytest/pytest_google_iter309.xml"],
+  "action_items": [
+    "Optional: move the google_linked $set to after the _complete_login call in google_session_login",
+    "Optional/security: the register flow trusts the email from router state (read-only only on the client). The backend register endpoint does not check that the email was Google-verified. That is fine as long as Google-registered users are treated the same as normal email registrations."
+  ],
+  "critical_code_review_comments": [
+    "routes/auth.py is 2464 lines; consider splitting the google auth code into its own module",
+    "The ban check happens after the google_* fields are written (see minor issue)"
+  ],
+  "updated_files": ["/app/backend/tests/test_google_auth_iter309.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "user 9970100782/997010, admin admin@test.com/153759 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None. The unit test unsets the google_* fields and deletes the google login_history rows for user 9970100782 afterwards. That user's session_token was rotated by the tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Happy paths for Google auth are covered by in-process unit tests in tests/test_google_auth_iter309.py, which monkeypatch httpx.AsyncClient. UI callback is tested with page.route('**/api/auth/google/session'). localStorage paras_ref_code accepts JSON {code, ts}."
+}
