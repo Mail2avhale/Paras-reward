@@ -8,6 +8,14 @@ import { ArrowLeft, FileText, Shield, RefreshCw, Save, Loader } from 'lucide-rea
 
 import { API } from "../lib/api";
 
+const SESSION_PRC_CLAUSE_TITLE = '4.5 Session-Based PRC Eligibility';
+const SESSION_PRC_CLAUSE = `### ${SESSION_PRC_CLAUSE_TITLE}
+PRC points collected through eligible reward sessions shall become eligible for redemption and other permitted uses under the Paras Reward platform only after completion of one (1) year from the date on which such PRC points are credited to the User's account.
+
+Each session-based PRC credit shall have its own one-year eligibility period, calculated separately from its respective credit date.
+
+The one-year period specified in this clause is an eligibility waiting period and does not, by itself, mean that the PRC points expire after one year. Upon completion of this period, the eligible PRC points may be used through the redemption facilities available on the platform, subject to the applicable redemption rules, eligibility requirements and applicable laws.`;
+
 const AdminPolicies = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -27,7 +35,17 @@ const AdminPolicies = ({ user, onLogout }) => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/admin/policies`);
-      setPolicies(response.data);
+      const data = response.data || {};
+      let terms = data.terms || getDefaultTerms();
+      if (!terms.includes(SESSION_PRC_CLAUSE_TITLE)) {
+        terms = `${terms.trimEnd()}\n\n${SESSION_PRC_CLAUSE}\n`;
+        toast.info('Clause 4.5 (Session-Based PRC Eligibility) was added to Terms. Click Save to publish it.');
+      }
+      setPolicies({
+        terms,
+        privacy: data.privacy || getDefaultPrivacy(),
+        refund: data.refund || getDefaultRefund()
+      });
     } catch (error) {
       console.error('Error fetching policies:', error);
       // Set default content if not found
@@ -77,6 +95,8 @@ By accessing or using PARAS REWARDS, you agree to be bound by these Terms and Co
 - 10 PRC = ₹1 INR
 - PRC can be earned through mining, referrals, and games
 - PRC can be redeemed for products, bill payments, and vouchers
+
+${SESSION_PRC_CLAUSE}
 
 ## 4. Elite Membership
 - Elite membership unlocks premium features
