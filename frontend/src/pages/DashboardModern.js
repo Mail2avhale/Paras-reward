@@ -363,6 +363,7 @@ const DashboardModern = ({ user, onLogout }) => {
   return (
     <PullToRefresh onRefresh={fetchDashboardData}>
     <div className="min-h-screen pb-24 bg-paras-app">
+    <div className="w-full max-w-xl mx-auto" data-testid="dashboard-root">
 
       {/* Refund Blocker Modal - blocks entire dashboard */}
       {requiresRefundAction && (
@@ -394,7 +395,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 {greeting.text}
               </p>
             </div>
-            <h1 className="text-paras text-xl font-bold">
+            <h1 className="text-xl font-bold" style={{ color: 'var(--pr-green)' }}>
               {userData?.name || user?.email?.split('@')[0] || 'User'}
             </h1>
           </div>
@@ -411,15 +412,10 @@ const DashboardModern = ({ user, onLogout }) => {
           animate={{ opacity: 1, rotateX: 0 }}
           whileHover={{ rotateY: 3, rotateX: -2, scale: 1.01 }}
           transition={{ duration: 0.6, type: "spring" }}
-          className="relative overflow-hidden rounded-2xl"
+          className="pr-dark-scope relative overflow-hidden rounded-2xl"
+          data-testid="dashboard-wallet-card"
           style={{
-            background: stats.subscriptionPlan === 'elite' 
-              ? 'linear-gradient(145deg, #1a1505 0%, #2d2008 30%, #1f1604 70%, #0d0a02 100%)'
-              : stats.subscriptionPlan === 'growth'
-              ? 'linear-gradient(145deg, #051a10 0%, #082d15 30%, #041f0c 70%, #020d05 100%)'
-              : stats.subscriptionPlan === 'startup'
-              ? 'linear-gradient(145deg, #050d1a 0%, #081a2d 30%, #04101f 70%, #02080d 100%)'
-              : 'linear-gradient(145deg, #1c1c1c 0%, #0d0d0d 30%, #1a1a1a 70%, #0a0a0a 100%)',
+            background: 'linear-gradient(145deg, #2A303A 0%, #20252D 55%, #1A1E25 100%)',
             boxShadow: stats.subscriptionPlan === 'elite'
               ? '0 25px 50px -12px rgba(212, 175, 55, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
               : stats.subscriptionPlan === 'growth'
@@ -429,13 +425,7 @@ const DashboardModern = ({ user, onLogout }) => {
               : '0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
             transformStyle: 'preserve-3d',
             aspectRatio: '1.586',
-            border: stats.subscriptionPlan === 'elite'
-              ? '1.5px solid rgba(212, 175, 55, 0.4)'
-              : stats.subscriptionPlan === 'growth'
-              ? '1.5px solid rgba(16, 185, 129, 0.4)'
-              : stats.subscriptionPlan === 'startup'
-              ? '1.5px solid rgba(59, 130, 246, 0.4)'
-              : '1.5px solid rgba(100, 100, 100, 0.3)'
+            border: '1.5px solid rgba(214, 166, 56, 0.45)'
           }}
         >
           {/* Animated border glow - Plan specific */}
@@ -674,24 +664,9 @@ const DashboardModern = ({ user, onLogout }) => {
               </div>
               
               {/* Plan Badge */}
-              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${
-                stats.subscriptionPlan === 'elite' ? 'bg-amber-500/20 border border-amber-500/30' :
-                stats.subscriptionPlan === 'growth' ? 'bg-emerald-500/20 border border-emerald-500/30' :
-                stats.subscriptionPlan === 'startup' ? 'bg-blue-500/20 border border-blue-500/30' :
-                'bg-gray-500/20 border border-gray-500/30'
-              }`}>
-                <Crown className={`w-3 h-3 ${
-                  stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
-                  stats.subscriptionPlan === 'growth' ? 'text-emerald-400' :
-                  stats.subscriptionPlan === 'startup' ? 'text-blue-400' :
-                  'text-gray-400'
-                }`} />
-                <span className={`text-[10px] font-bold tracking-wide ${
-                  stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
-                  stats.subscriptionPlan === 'growth' ? 'text-emerald-400' :
-                  stats.subscriptionPlan === 'startup' ? 'text-blue-400' :
-                  'text-gray-400'
-                }`}>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ background: 'rgba(214, 166, 56, 0.16)', border: '1px solid rgba(214, 166, 56, 0.5)' }} data-testid="dashboard-plan-badge">
+                <Crown className="w-3 h-3" style={{ color: 'var(--pr-gold)' }} />
+                <span className="text-[10px] font-bold tracking-wide" style={{ color: 'var(--pr-gold)' }}>
                   {getPlanDisplayName(stats.subscriptionPlan).toUpperCase()}
                 </span>
               </div>
@@ -717,13 +692,14 @@ const DashboardModern = ({ user, onLogout }) => {
                 <span 
                   className="text-4xl font-black tracking-tight"
                   style={{
-                    color: '#93C5FD',
-                    textShadow: '0 2px 12px rgba(59, 130, 246, 0.35)'
+                    color: '#3D82E0',
+                    textShadow: '0 2px 14px rgba(36, 107, 206, 0.45)'
                   }}
+                  data-testid="dashboard-prc-balance"
                 >
                   {showBalance ? stats.prcBalance.toFixed(2) : '••••••'}
                 </span>
-                <span className="text-lg font-semibold" style={{ color: '#93C5FD', opacity: 0.9 }}>PRC</span>
+                <span className="text-lg font-semibold" style={{ color: 'var(--pr-gold)' }}>PRC</span>
               </div>
             </div>
 
@@ -739,7 +715,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 <div className="flex items-center gap-1 justify-end">
                   <p className="text-[8px] tracking-widest mb-0.5" style={{ color: '#CBD5E1' }}>REWARD RATE</p>
                 </div>
-                <p className="text-sm font-bold flex items-center gap-1" style={{ color: 'var(--paras-mint)' }}>
+                <p className="text-sm font-bold flex items-center gap-1" style={{ color: '#4CC38A' }} data-testid="dashboard-reward-rate">
                   {stats.subscriptionPlan === 'elite' || stats.subscriptionPlan === 'growth' || stats.subscriptionPlan === 'vip' ? 
                     (userData?.subscription_payment_type === 'prc' ? '100%' : <>100% + 30%<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 ml-0.5 inline-block" fill="none"><path d="M7 8C7 5.5 8.5 3 12 3C15.5 3 17 5.5 17 8" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/><path d="M5.5 8C4.5 8 3 8.5 3 10.5C3 12 4 12.5 5 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/><path d="M18.5 8C19.5 8 21 8.5 21 10.5C21 12 20 12.5 19 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round"/><path d="M5 12.5L7 21H17L19 12.5" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="10" cy="8" r="1.5" fill="#fbbf24"/><circle cx="14" cy="8" r="1.5" fill="#fbbf24"/><circle cx="12" cy="6.5" r="1.2" fill="#fbbf24"/></svg></>) : 
                     '0%'}
@@ -788,7 +764,8 @@ const DashboardModern = ({ user, onLogout }) => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl p-4 border overflow-hidden relative"
+            className="rounded-2xl p-4 border overflow-hidden relative"
+            data-testid="dashboard-subscription-card"
             style={{
               background: stats.subscriptionPlan === 'elite' 
                 ? 'linear-gradient(145deg, #FFFBEB 0%, #FEF9C3 50%, #FFFDF5 100%)'
@@ -796,9 +773,9 @@ const DashboardModern = ({ user, onLogout }) => {
                 ? 'linear-gradient(145deg, #ECFDF5 0%, #F0FDF4 50%, #FFFFFF 100%)'
                 : 'linear-gradient(145deg, #EFF6FF 0%, #F0F9FF 50%, #FFFFFF 100%)',
               border: stats.subscriptionPlan === 'elite'
-                ? '1px solid rgba(212, 175, 55, 0.35)'
+                ? '1px solid rgba(214, 166, 56, 0.55)'
                 : stats.subscriptionPlan === 'growth'
-                ? '1px solid rgba(16, 185, 129, 0.35)'
+                ? '1px solid rgba(7, 92, 59, 0.3)'
                 : '1px solid rgba(59, 130, 246, 0.35)',
               boxShadow: stats.subscriptionPlan === 'elite'
                 ? '0 8px 25px -5px rgba(212, 175, 55, 0.15)'
@@ -944,32 +921,31 @@ const DashboardModern = ({ user, onLogout }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.12 }}
           onClick={() => navigate('/pay-partner-store')}
-          className="w-full rounded-xl p-4 relative overflow-hidden text-left backdrop-blur-xl"
+          className="w-full rounded-2xl p-4 relative overflow-hidden text-left transition-transform active:scale-[0.99]"
+          data-testid="dashboard-pay-partner-store-btn"
           style={{
-            // Sophisticated dark emerald glassmorphism — muted, not neon.
-            background: 'linear-gradient(135deg, #ECFDF5 0%, #F0FDF4 50%, #EFF6FF 100%)',
-            border: '1px solid #A7F3D0',
-            boxShadow: '0 8px 22px -10px rgba(22, 101, 52, 0.25)'
+            background: 'var(--pr-pale)',
+            border: '1px solid #C7D9F3',
+            borderLeft: '4px solid var(--pr-green)',
+            boxShadow: 'var(--paras-shadow-card)'
           }}
         >
-          {/* Ambient glass sheen */}
-          <div className="absolute inset-0 pointer-events-none opacity-40" style={{ background: 'radial-gradient(circle at 20% 0%, rgba(46,196,182,0.14), transparent 55%)' }} />
           <div className="relative flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#D1FAE5', border: '1px solid #A7F3D0' }}>
-              <svg className="w-5 h-5" style={{ color: 'var(--paras-mint)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--pr-green)' }}>
+              <svg className="w-5 h-5" style={{ color: '#FFFFFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="font-bold text-sm" style={{ color: '#14532D' }}>Pay to Partner Store</p>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: '#FEF9C3', color: '#854D0E', border: '1px solid #FDE68A' }}>NEW</span>
+                <p className="font-bold text-sm" style={{ color: 'var(--pr-green)' }}>Pay to Partner Store</p>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'var(--pr-gold)', color: 'var(--pr-charcoal)' }}>NEW</span>
               </div>
-              <p className="text-[11px] mt-0.5 truncate" style={{ color: '#4B5563' }}>
+              <p className="text-[11px] mt-0.5 truncate" style={{ color: '#5B6670' }}>
                 Use PRC at verified local shops via mobile or Store ID
               </p>
             </div>
-            <svg className="w-4 h-4 opacity-80" style={{ color: 'var(--paras-mint)' }} fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4" style={{ color: 'var(--pr-green)' }} fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
             </svg>
           </div>
@@ -977,27 +953,24 @@ const DashboardModern = ({ user, onLogout }) => {
       </div>
 
       {/* Redeem Limit Card */}
-      {redeemLimit && (
+      {redeemLimit && stats.subscriptionPlan && stats.subscriptionPlan.toLowerCase() !== 'explorer' && (
         <div className="px-5 mb-4" data-testid="dashboard-redeem-limit-card">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="rounded-xl p-4 cursor-pointer overflow-hidden relative bg-paras-card border shadow-paras-card"
-            style={{
-              borderColor: 'var(--paras-gold-border)',
-            }}
+            className="pr-card p-4 cursor-pointer overflow-hidden relative"
             onClick={() => navigate('/bank-redeem')}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255,193,7,0.12)', border: '1px solid var(--paras-gold-border)' }}>
-                  <Building2 className="w-4 h-4" style={{ color: 'var(--paras-gold)' }} />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(7, 92, 59, 0.1)' }}>
+                  <Building2 className="w-4 h-4" style={{ color: 'var(--pr-green)' }} />
                 </div>
-                <span className="text-paras font-semibold text-sm">Redeem Limit</span>
+                <span className="font-bold text-sm" style={{ color: 'var(--pr-green)' }}>Redeem Limit</span>
               </div>
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,193,7,0.14)', color: 'var(--paras-gold)', border: '1px solid var(--paras-gold-border)' }}>
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: 'rgba(7, 92, 59, 0.1)', color: 'var(--pr-green)', border: '1px solid rgba(7, 92, 59, 0.3)' }} data-testid="dashboard-redeem-unlocked">
                 {(redeemLimit.unlock_percent || 0).toFixed(2)}% Unlocked
               </span>
             </div>
@@ -1009,8 +982,7 @@ const DashboardModern = ({ user, onLogout }) => {
                   className="h-full rounded-full transition-all duration-500"
                   style={{ 
                     width: `${Math.min(100, Math.max(0, redeemLimit.unlock_percent || 0))}%`,
-                    background: 'linear-gradient(90deg, #FFD54F, #FFC107 60%, #C9971A)',
-                    boxShadow: '0 0 10px rgba(255,193,7,0.55)'
+                    background: 'linear-gradient(90deg, var(--pr-green), var(--pr-blue))'
                   }}
                 />
               </div>
@@ -1025,21 +997,21 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="flex items-center justify-between">
                 <span className="text-paras-mute text-xs uppercase tracking-wider">Total Limit</span>
                 <div className="text-right">
-                  <span className="text-paras text-sm font-bold">{Number(redeemLimit.total_limit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRC</span>
+                  <span className="text-sm font-bold" style={{ color: 'var(--pr-blue)' }} data-testid="dashboard-redeem-total">{Number(redeemLimit.total_limit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRC</span>
                   <span className="text-paras-mute text-[10px] ml-1.5">₹{(Number(redeemLimit.total_limit || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </div>
               </div>
               <div className="flex items-center justify-between cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/usage-history'); }}>
                 <span className="text-paras-mute text-xs uppercase tracking-wider">Used</span>
                 <div className="text-right">
-                  <span className="text-sm font-bold" style={{ color: 'var(--paras-gold)' }}>- {Number(redeemLimit.total_redeemed || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRC</span>
+                  <span className="text-sm font-bold" style={{ color: 'var(--pr-ink)' }} data-testid="dashboard-redeem-used">- {Number(redeemLimit.total_redeemed || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PRC</span>
                   <span className="text-paras-mute text-[10px] ml-1.5">₹{(Number(redeemLimit.total_redeemed || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </div>
               </div>
               <div className="border-t pt-2 flex items-center justify-between" style={{ borderColor: 'var(--paras-slate-line)' }}>
-                <span className="text-paras font-bold text-xs uppercase tracking-wider">Remaining</span>
+                <span className="font-bold text-xs uppercase tracking-wider" style={{ color: 'var(--pr-green)' }}>Remaining</span>
                 <div className="text-right">
-                  <span className="text-sm font-extrabold" style={{ color: 'var(--paras-gold)' }}>{Number(redeemLimit.effective_available || redeemLimit.available || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} PRC</span>
+                  <span className="text-base font-extrabold" style={{ color: 'var(--pr-blue)' }} data-testid="dashboard-redeem-remaining">{Number(redeemLimit.effective_available || redeemLimit.available || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} PRC</span>
                   <span className="text-paras-mute text-[10px] ml-1.5">₹{(Number(redeemLimit.effective_available || redeemLimit.available || 0) / (stats.prcRate || 10)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                 </div>
               </div>
@@ -1055,14 +1027,14 @@ const DashboardModern = ({ user, onLogout }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="rounded-xl p-4 bg-paras-card border border-paras-card shadow-paras-card"
+            className="pr-card p-4"
           >
             {/* Header */}
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(46,196,182,0.12)', border: '1px solid rgba(46,196,182,0.3)' }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(7, 92, 59, 0.1)' }}>
                 <TrendingUp className="w-4 h-4" style={{ color: 'var(--paras-mint)' }} />
               </div>
-              <span className="text-paras font-semibold text-sm" data-testid="perf-title">Performance Summary</span>
+              <span className="font-bold text-sm" style={{ color: 'var(--pr-green)' }} data-testid="perf-title">Performance Summary</span>
             </div>
 
             {/* Fields */}
@@ -1187,6 +1159,7 @@ const DashboardModern = ({ user, onLogout }) => {
       {/* Bottom padding for fixed BottomNav rendered by App.js */}
       <div className="pb-24" />
       
+    </div>
     </div>
     </PullToRefresh>
   );

@@ -40,13 +40,13 @@ const BottomNav = () => {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40" data-testid="bottom-nav">
       <div
-        className="backdrop-blur-xl border-t"
+        className="border-t"
         style={{
-          backgroundColor: 'rgba(15, 17, 21, 0.92)',
-          borderTopColor: 'var(--paras-slate-line)',
+          backgroundColor: 'var(--pr-charcoal)',
+          borderTopColor: '#353C47',
         }}
       >
-        <div className="max-w-md mx-auto">
+        <div className="max-w-xl mx-auto">
           <div
             className="flex items-center justify-around px-1"
             style={{
@@ -72,27 +72,24 @@ const BottomNav = () => {
                     <span
                       className="absolute -top-px w-8 h-[3px] rounded-full"
                       style={{
-                        background:
-                          'linear-gradient(90deg, #FFD54F 0%, #FFC107 50%, #C9971A 100%)',
-                        boxShadow: '0 0 12px rgba(255, 193, 7, 0.55)',
+                        background: 'var(--pr-gold)',
+                        boxShadow: '0 0 10px rgba(214, 166, 56, 0.55)',
                       }}
                     />
                   )}
 
                   {/* Icon pill */}
                   <div
-                    className="relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-300"
+                    className="relative flex items-center justify-center w-10 h-10 rounded-2xl transition-[background-color,box-shadow] duration-300"
                     style={{
-                      backgroundColor: isActive ? 'rgba(255, 193, 7, 0.14)' : 'transparent',
-                      boxShadow: isActive
-                        ? '0 0 18px -4px rgba(255, 193, 7, 0.55), inset 0 0 0 1px rgba(255, 193, 7, 0.35)'
-                        : 'none',
+                      backgroundColor: isActive ? 'rgba(214, 166, 56, 0.14)' : 'transparent',
+                      boxShadow: isActive ? 'inset 0 0 0 1px rgba(214, 166, 56, 0.4)' : 'none',
                     }}
                   >
                     <Icon
                       className="transition-colors duration-300"
                       style={{
-                        color: isActive ? 'var(--paras-gold)' : 'var(--paras-text-mute)',
+                        color: isActive ? 'var(--pr-gold)' : '#8A94A3',
                         width: 22,
                         height: 22,
                       }}
@@ -106,7 +103,7 @@ const BottomNav = () => {
                   <span
                     className="text-[10px] mt-0.5 tracking-wide transition-colors duration-300"
                     style={{
-                      color: isActive ? 'var(--paras-gold)' : 'var(--paras-text-mute)',
+                      color: isActive ? 'var(--pr-gold)' : '#8A94A3',
                       fontWeight: isActive ? 700 : 500,
                     }}
                   >

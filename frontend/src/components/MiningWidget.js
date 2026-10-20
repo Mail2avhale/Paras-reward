@@ -65,7 +65,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
   const cardBg = 'var(--paras-slate)';
   const cardBorder = `1px solid var(--paras-slate-line)`;
   const cardShadow = 'var(--paras-shadow-card)';
-  const accentColor = isElite ? '#FFC107' : isGrowth ? '#2EC4B6' : '#94A3B8';
+  const accentColor = isElite ? '#D6A638' : isGrowth ? '#075C3B' : '#246BCE';
   const accentLight = isElite ? 'text-[color:var(--paras-gold)]' : isGrowth ? 'text-[color:var(--paras-mint)]' : 'text-[color:var(--paras-text-mute)]';
 
   const fetchMiningStatus = useCallback(async (isInitial = false) => {
@@ -320,30 +320,30 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
 
         <div className="relative z-10">
           {/* Time Remaining — Silver-grey label, crisp white numerals in deep charcoal cells */}
-          <p className="text-[color:var(--paras-text-mute)] text-xs text-center mb-2 tracking-wider">{t('timeRemaining') || 'Time Remaining'}</p>
+          <p className="text-xs text-center mb-2 tracking-wider font-semibold uppercase" style={{ color: 'var(--pr-green)' }}>{t('timeRemaining') || 'Time Remaining'}</p>
           <div className="flex items-center justify-center gap-0.5 mb-4">
             {formatTime(sessionTimeRemaining).split('').map((char, i) => (
-              <div key={i} className={char === ':' ? 'w-3 text-center' : 'w-8 h-10 rounded-md flex items-center justify-center'} style={char !== ':' ? { background: '#FFFFFF', border: '1px solid #BFDBFE', boxShadow: '0 2px 6px -2px rgba(30, 64, 175, 0.18)' } : {}}>
-                <span className={`font-mono font-bold ${char === ':' ? `text-lg` : 'text-xl'}`} style={{ color: char === ':' ? '#3B82F6' : '#1E3A8A' }}>{char}</span>
+              <div key={i} className={char === ':' ? 'w-3 text-center' : 'w-8 h-10 rounded-md flex items-center justify-center'} style={char !== ':' ? { background: '#FFFFFF', border: '1px solid #C7D9F3', boxShadow: '0 2px 6px -3px rgba(36, 107, 206, 0.35)' } : {}}>
+                <span className={`font-mono font-bold tabular-nums ${char === ':' ? `text-lg` : 'text-xl'}`} style={{ color: char === ':' ? 'var(--pr-gold)' : 'var(--pr-ink)' }}>{char}</span>
               </div>
             ))}
           </div>
 
           {/* Session Earnings Card */}
-          <div className="rounded-xl p-4 mb-4" style={{ background: 'var(--paras-obsidian-deep)', border: '1px solid var(--paras-slate-line)' }}>
-            <p className="text-[color:var(--paras-text-mute)] text-xs text-center mb-2 tracking-wider">{t('sessionEarnings') || 'Session Earnings'}</p>
+          <div className="rounded-2xl p-4 mb-4" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3' }} data-testid="session-earnings-card">
+            <p className="text-xs text-center mb-2 tracking-wider font-semibold uppercase" style={{ color: 'var(--pr-green)' }}>{t('sessionEarnings') || 'Session Earnings'}</p>
             <div className="flex items-center justify-center gap-1">
-              <Coins className="w-4 h-4 mr-1" style={{ color: 'var(--paras-gold)' }} />
+              <Coins className="w-4 h-4 mr-1" style={{ color: 'var(--pr-gold)' }} />
               {sessionPRC.toFixed(2).split('').map((char, i) => (
                 <motion.div
                   key={`${i}-${char}`}
                   className={char === '.' ? 'w-2 flex items-end justify-center pb-0.5' : 'w-7 h-9 rounded-md flex items-center justify-center'}
-                  style={char !== '.' ? { background: '#FFFFFF', border: '1px solid #BFDBFE', boxShadow: '0 2px 6px -2px rgba(30, 64, 175, 0.18)' } : {}}
+                  style={char !== '.' ? { background: '#FFFFFF', border: '1px solid #C7D9F3', boxShadow: '0 2px 6px -3px rgba(36, 107, 206, 0.35)' } : {}}
                   initial={{ y: -3, opacity: 0.6 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <span className="font-mono font-bold text-lg" style={{ color: '#1D4ED8' }}>{char}</span>
+                  <span className="font-mono font-bold text-lg tabular-nums" style={{ color: 'var(--pr-blue)' }}>{char}</span>
                 </motion.div>
               ))}
               <span className="font-semibold text-sm ml-1" style={{ color: 'var(--paras-gold)' }}>PRC</span>
@@ -351,12 +351,12 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
 
             {/* PRC/sec + PRC/hr rate — mint green rate, gold hour, silver labels */}
             <div className="flex items-center justify-center gap-3 mt-3">
-              <div className="rounded-lg px-4 py-2 text-center min-w-[100px]" style={{ background: 'rgba(46,196,182,0.08)', border: '1px solid rgba(46,196,182,0.25)' }}>
+              <div className="rounded-lg px-4 py-2 text-center min-w-[100px]" style={{ background: '#FFFFFF', border: '1px solid rgba(7, 92, 59, 0.25)' }}>
                 <p className="text-sm font-bold font-mono leading-tight" style={{ color: 'var(--paras-mint)' }}>+{(miningRate / 3600).toFixed(4)}</p>
                 <p className="text-[10px] font-semibold tracking-wider mt-0.5 text-[color:var(--paras-text-mute)]">PRC/SEC</p>
               </div>
-              <div className="rounded-lg px-4 py-2 text-center min-w-[100px]" style={{ background: 'rgba(255,193,7,0.08)', border: '1px solid var(--paras-gold-border)' }}>
-                <p className="text-sm font-bold font-mono leading-tight" style={{ color: 'var(--paras-gold)' }}>{miningRate.toFixed(1)}</p>
+              <div className="rounded-lg px-4 py-2 text-center min-w-[100px]" style={{ background: '#FFFFFF', border: '1px solid #C7D9F3' }}>
+                <p className="text-sm font-bold font-mono leading-tight" style={{ color: 'var(--pr-blue)' }}>{miningRate.toFixed(1)}</p>
                 <p className="text-[10px] font-semibold tracking-wider mt-0.5 text-[color:var(--paras-text-mute)]">PRC/HOUR</p>
               </div>
             </div>
@@ -365,14 +365,14 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
             <div className="mt-3">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-[color:var(--paras-text-mute)]">Session Progress</span>
-                <span className="font-mono" style={{ color: 'var(--paras-gold)' }}>{sessionProgress.toFixed(1)}%</span>
+                <span className="font-mono font-semibold" style={{ color: 'var(--pr-green)' }}>{sessionProgress.toFixed(1)}%</span>
               </div>
               <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--paras-slate-track)' }}>
                 <motion.div
                   className="h-full rounded-full"
                   animate={{ width: `${sessionProgress}%` }}
                   transition={{ duration: 0.5 }}
-                  style={{ background: 'linear-gradient(90deg, #FFD54F, #FFC107 60%, #C9971A)', boxShadow: '0 0 10px rgba(255,193,7,0.55)' }}
+                  style={{ background: 'linear-gradient(90deg, var(--pr-green), var(--pr-blue))' }}
                 />
               </div>
             </div>
@@ -380,12 +380,12 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
 
           {/* Collect Button — sophisticated metallic gold gradient */}
           {isFreeUser ? (
-            <div className="rounded-xl p-3" style={{ background: 'rgba(255,193,7,0.08)', border: '1px solid var(--paras-gold-border)' }}>
-              <div className="flex items-center gap-2 mb-2">
-                <Crown className="w-4 h-4" style={{ color: 'var(--paras-gold)' }} />
-                <p className="font-medium text-xs" style={{ color: 'var(--paras-gold)' }}>Upgrade to Collect PRC</p>
+            <div className="rounded-2xl p-3.5" style={{ background: '#FFF6DC', border: '1px solid rgba(214, 166, 56, 0.5)' }} data-testid="upgrade-to-collect-box">
+              <div className="flex items-center gap-2 mb-2.5">
+                <Crown className="w-4 h-4" style={{ color: 'var(--pr-gold)' }} />
+                <p className="font-semibold text-xs" style={{ color: '#7A5A10' }}>Upgrade to Collect PRC</p>
               </div>
-              <Button disabled className="w-full font-semibold py-2.5 rounded-xl cursor-not-allowed text-sm" style={{ background: 'var(--paras-obsidian-deep)', color: 'var(--paras-text-mute)', border: '1px solid var(--paras-slate-line)' }} data-testid="collect-disabled-btn">
+              <Button disabled className="pr-btn-disabled w-full font-semibold py-2.5 rounded-xl text-sm disabled:opacity-100" data-testid="collect-disabled-btn">
                 <CheckCircle className="w-4 h-4 mr-1" /> Collect ({sessionPRC.toFixed(2)} PRC)
               </Button>
             </div>
@@ -393,12 +393,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
             <Button
               onClick={collectRewards}
               disabled={!canCollect || isCollecting}
-              className={`w-full py-3 rounded-xl font-semibold text-base transition-all active:scale-[0.98] ${canCollect ? 'btn-paras-gold' : ''}`}
-              style={canCollect ? undefined : {
-                background: 'var(--paras-obsidian-deep)',
-                color: 'var(--paras-text-mute)',
-                border: '1px solid var(--paras-slate-line)'
-              }}
+              className={`w-full py-3 rounded-xl font-semibold text-base active:scale-[0.98] disabled:opacity-100 ${canCollect ? 'btn-pr-primary' : 'pr-btn-disabled'}`}
               data-testid="collect-rewards-btn"
             >
               {isCollecting ? (
@@ -439,7 +434,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
       <div className="text-center">
         <motion.div
           className="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+          style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3' }}
           animate={{ scale: [1, 1.04, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
@@ -454,24 +449,13 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
         <Button
           onClick={startSession}
           disabled={isStarting || startCooldown > 0}
-          className="w-full font-semibold py-3 rounded-xl text-base active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{
-            background: startCooldown > 0
-              ? 'linear-gradient(135deg, #4b5563, #374151)'
-              : isElite 
-              ? 'linear-gradient(135deg, #d4af37, #b8960c)' 
-              : isGrowth 
-              ? 'linear-gradient(135deg, #10b981, #059669)' 
-              : 'linear-gradient(135deg, #3b82f6, #2563eb)',
-            color: startCooldown > 0 ? '#e5e7eb' : (isElite ? '#000' : '#fff'),
-            boxShadow: startCooldown > 0 ? 'none' : `0 0 15px ${accentColor}30`,
-            border: `1px solid ${accentColor}50`
-          }}
+          className={`w-full font-semibold py-3 rounded-xl text-base active:scale-[0.98] disabled:opacity-100 ${isStarting || startCooldown > 0 ? 'pr-btn-disabled' : 'btn-pr-primary'}`}
+
           data-testid="start-mining-btn"
         >
           {isStarting ? (
             <span className="flex items-center gap-2 justify-center">
-              <motion.div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
+              <motion.div className="w-4 h-4 border-2 border-[#7C8794] border-t-transparent rounded-full" animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
               Starting...
             </span>
           ) : startCooldown > 0 ? (
@@ -492,7 +476,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
         )}
 
         {isFreeUser && (
-          <p className="text-xs mt-2" style={{ color: `${accentColor}80` }}>Upgrade to Elite to collect earned PRC</p>
+          <p className="text-xs mt-2 font-medium" style={{ color: '#7A5A10' }}>Upgrade to Elite to collect earned PRC</p>
         )}
       </div>
 

@@ -336,23 +336,23 @@ const RechargeCard = ({ user, stats }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.25 }}
       data-testid="recharge-card"
-      className="rounded-xl p-4 overflow-hidden relative"
+      className="pr-dark-scope rounded-2xl p-5 overflow-hidden relative"
       style={{
-        background: 'linear-gradient(145deg, #0a1628 0%, #0f2035 50%, #0a1a2e 100%)',
-        border: '1px solid rgba(56, 189, 248, 0.15)',
-        boxShadow: '0 8px 25px -5px rgba(14, 165, 233, 0.08)'
+        background: 'var(--pr-charcoal)',
+        border: '1px solid #353C47',
+        boxShadow: '0 10px 26px -14px rgba(32, 37, 45, 0.6)'
       }}
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
-          <Zap className="w-4 h-4 text-cyan-400" />
+        <div className="w-8 h-8 rounded-lg bg-[#246BCE]/20 flex items-center justify-center">
+          <Zap className="w-4 h-4 text-[#7FB0F5]" />
         </div>
         <span className="text-white font-semibold text-sm">Quick Recharge</span>
       </div>
 
       {/* Mobile / DTH Toggle */}
-      <div className="flex bg-zinc-800/60 rounded-lg p-0.5 mb-4" data-testid="recharge-type-toggle">
+      <div className="flex bg-[#2A313B] rounded-lg p-1 mb-4" data-testid="recharge-type-toggle">
         {[
           { key: 'mobile', label: 'Mobile', icon: Smartphone },
           { key: 'dth', label: 'DTH', icon: Tv }
@@ -363,8 +363,8 @@ const RechargeCard = ({ user, stats }) => {
             data-testid={`recharge-toggle-${key}`}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all ${
               rechargeType === key
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                : 'text-gray-500 hover:text-gray-300'
+                ? 'bg-[#246BCE] text-white border border-[#246BCE]'
+                : 'text-gray-400 hover:text-white border border-transparent'
             }`}
           >
             <Icon className="w-3.5 h-3.5" />
@@ -393,8 +393,8 @@ const RechargeCard = ({ user, stats }) => {
             setBillData(null);
           }}
           data-testid="recharge-number-input"
-          className={`w-full bg-zinc-800/60 border rounded-lg px-3 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors ${
-            numberError ? 'border-red-500/50 focus:border-red-500/70' : 'border-zinc-700/50 focus:border-cyan-500/50'
+          className={`w-full bg-[#2A313B] border rounded-lg px-3 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors ${
+            numberError ? 'border-red-500/50 focus:border-red-500/70' : 'border-[#3E4754] focus:border-[#4F8DE0]'
           }`}
         />
         {numberError && (
@@ -410,8 +410,8 @@ const RechargeCard = ({ user, stats }) => {
           data-testid="fetch-bill-btn"
           className={`w-full py-2 rounded-lg text-xs font-semibold mb-3 flex items-center justify-center gap-2 transition-all ${
             fetchingBill || !number || !!numberError
-              ? 'bg-zinc-700/60 text-zinc-500 cursor-not-allowed'
-              : 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25'
+              ? 'pr-btn-disabled'
+              : 'bg-[#D6A638]/15 text-amber-400 border border-[#D6A638]/40 hover:bg-[#D6A638]/25'
           }`}
         >
           {fetchingBill ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Fetching Bill...</> : 'Fetch Bill Details'}
@@ -420,9 +420,9 @@ const RechargeCard = ({ user, stats }) => {
 
       {/* DTH: Bill Details Display */}
       {billData && (
-        <div className="mb-3 p-2.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20" data-testid="bill-details">
+        <div className="mb-3 p-2.5 rounded-lg bg-[#246BCE]/15 border border-[#246BCE]/30" data-testid="bill-details">
           {billData.customer_name && (
-            <p className="text-cyan-300 text-xs font-medium">{billData.customer_name}</p>
+            <p className="text-[#A9C9F8] text-xs font-medium">{billData.customer_name}</p>
           )}
           {billData.amount && (
             <p className="text-gray-400 text-[10px] mt-0.5">Bill Amount: ₹{billData.amount}</p>
@@ -436,17 +436,17 @@ const RechargeCard = ({ user, stats }) => {
           value={selectedOperator}
           onChange={(e) => handleOperatorChange(e.target.value)}
           data-testid="recharge-operator-select"
-          className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2.5 text-sm appearance-none focus:outline-none focus:border-cyan-500/50 transition-colors"
-          style={{ color: selectedOperator ? '#fff' : '#6b7280' }}
+          className="w-full bg-[#2A313B] border border-[#3E4754] rounded-lg px-3 py-3 text-sm appearance-none focus:outline-none focus:border-[#4F8DE0] transition-colors"
+          style={{ color: selectedOperator ? '#F3F5F8' : '#98A2B0' }}
         >
-          <option value="" style={{ background: '#18181b', color: '#6b7280' }}>
+          <option value="" style={{ background: '#20252D', color: '#98A2B0' }}>
             {operatorsLoading ? 'Loading operators...' : 'Select Operator'}
           </option>
           {operators.map(op => (
             <option
               key={op.operator_id}
               value={op.operator_id}
-              style={{ background: '#18181b', color: '#fff' }}
+              style={{ background: '#20252D', color: '#F3F5F8' }}
             >
               {op.name}
             </option>
@@ -472,7 +472,7 @@ const RechargeCard = ({ user, stats }) => {
             value={amount}
             onChange={handleAmountChange}
             data-testid="recharge-amount-input"
-            className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-7 pr-3 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
+            className="w-full bg-[#2A313B] border border-[#3E4754] rounded-lg pl-7 pr-3 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#4F8DE0] transition-colors"
           />
         </div>
         {prcEstimate > 0 && (
@@ -481,8 +481,8 @@ const RechargeCard = ({ user, stats }) => {
           </p>
         )}
         {limitAvailablePrc != null && (
-          <p className="text-[10px] mt-1 pl-1" style={{ color: '#CBD5E1' }} data-testid="recharge-limit-remaining">
-            Remaining Redeem Limit: <span className="font-semibold tabular-nums" style={{ color: '#67E8F9' }}>{limitAvailablePrc.toLocaleString('en-IN')} PRC (₹{(limitAvailablePrc / prcRate).toLocaleString('en-IN', { maximumFractionDigits: 2 })})</span>
+          <p className="text-[10px] mt-1 pl-1" style={{ color: '#B4BDC9' }} data-testid="recharge-limit-remaining">
+            Remaining Redeem Limit: <span className="font-semibold tabular-nums" style={{ color: '#7FB0F5' }}>{limitAvailablePrc.toLocaleString('en-IN')} PRC (₹{(limitAvailablePrc / prcRate).toLocaleString('en-IN', { maximumFractionDigits: 2 })})</span>
           </p>
         )}
         {limitExceeded && (
@@ -497,10 +497,10 @@ const RechargeCard = ({ user, stats }) => {
         onClick={handleRecharge}
         disabled={loading || !isFormValid}
         data-testid="recharge-submit-btn"
-        className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+        className={`w-full py-3 rounded-xl text-sm font-semibold transition-[background-color,transform] flex items-center justify-center gap-2 ${
           loading || !isFormValid
-            ? 'bg-zinc-700/60 text-zinc-500 cursor-not-allowed'
-            : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-400 hover:to-blue-400 active:scale-[0.98]'
+            ? 'pr-btn-disabled'
+            : 'btn-pr-primary active:scale-[0.98]'
         }`}
       >
         {loading ? (
@@ -541,14 +541,14 @@ const RechargeCard = ({ user, stats }) => {
 
       {/* Recent Successful Recharges + View All */}
       {(recentTxns.length > 0 || allTxns.length > 0) && (
-        <div className="mt-4 pt-3 border-t border-zinc-700/40" data-testid="recent-recharges">
+        <div className="mt-4 pt-3 border-t border-[#353C47]" data-testid="recent-recharges">
           <div className="flex items-center justify-between mb-2">
             <p className="text-gray-500 text-[10px] uppercase tracking-wider">Recent Recharges</p>
             {allTxns.length > 0 && (
               <button
                 onClick={() => setShowHistory(!showHistory)}
                 data-testid="toggle-history-btn"
-                className="text-cyan-400 text-[10px] font-medium flex items-center gap-1 hover:text-cyan-300 transition-colors"
+                className="text-[#7FB0F5] text-[10px] font-medium flex items-center gap-1 hover:text-[#A9C9F8] transition-colors"
               >
                 {showHistory ? <>Hide <ChevronUp className="w-3 h-3" /></> : <>View All ({allTxns.length}) <ChevronDown className="w-3 h-3" /></>}
               </button>
@@ -565,8 +565,8 @@ const RechargeCard = ({ user, stats }) => {
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     {txn.recharge_type === 'dth'
-                      ? <Tv className="w-3.5 h-3.5 text-cyan-500/60 flex-shrink-0" />
-                      : <Smartphone className="w-3.5 h-3.5 text-cyan-500/60 flex-shrink-0" />
+                      ? <Tv className="w-3.5 h-3.5 text-[#7FB0F5]/70 flex-shrink-0" />
+                      : <Smartphone className="w-3.5 h-3.5 text-[#7FB0F5]/70 flex-shrink-0" />
                     }
                     <span className="text-white/70 text-xs truncate">{txn.number}</span>
                   </div>
@@ -588,14 +588,14 @@ const RechargeCard = ({ user, stats }) => {
                 return (
                   <div
                     key={txn.request_id}
-                    className={`p-2 rounded-lg ${sd.bg} border border-zinc-700/30`}
+                    className={`p-2 rounded-lg ${sd.bg} border border-[#353C47]`}
                     data-testid={`history-txn-${txn.request_id}`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5 min-w-0">
                         {txn.recharge_type === 'dth'
-                          ? <Tv className="w-3 h-3 text-cyan-500/60 flex-shrink-0" />
-                          : <Smartphone className="w-3 h-3 text-cyan-500/60 flex-shrink-0" />
+                          ? <Tv className="w-3 h-3 text-[#7FB0F5]/70 flex-shrink-0" />
+                          : <Smartphone className="w-3 h-3 text-[#7FB0F5]/70 flex-shrink-0" />
                         }
                         <span className="text-white/80 text-[11px] truncate">{txn.number}</span>
                       </div>
@@ -610,7 +610,7 @@ const RechargeCard = ({ user, stats }) => {
                         <button
                           onClick={() => handleViewReceipt(txn.request_id)}
                           data-testid={`receipt-btn-${txn.request_id}`}
-                          className="text-cyan-400/70 hover:text-cyan-300 p-0.5"
+                          className="text-[#7FB0F5] hover:text-[#A9C9F8] p-0.5"
                           title="View Receipt"
                         >
                           <FileText className="w-3 h-3" />
@@ -651,7 +651,7 @@ const RechargeCard = ({ user, stats }) => {
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
               data-testid="receipt-modal"
-              className="bg-[#0f1a2e] border border-cyan-500/20 rounded-xl p-5 w-full max-w-sm shadow-2xl"
+              className="pr-dark-scope bg-[#20252D] border border-[#353C47] rounded-2xl p-5 w-full max-w-sm shadow-2xl"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-white font-semibold text-sm">Transaction Receipt</h3>
@@ -703,7 +703,7 @@ const RechargeCard = ({ user, stats }) => {
                     toast.success('Receipt copied!');
                   }}
                   data-testid="copy-receipt-btn"
-                  className="w-full py-2 rounded-lg bg-cyan-500/15 text-cyan-400 text-xs font-medium border border-cyan-500/20 hover:bg-cyan-500/25 flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full py-2 rounded-lg bg-[#246BCE]/20 text-[#7FB0F5] text-xs font-medium border border-[#246BCE]/30 hover:bg-[#246BCE]/30 flex items-center justify-center gap-1.5 transition-colors"
                 >
                   <Copy className="w-3 h-3" /> Copy Receipt
                 </button>

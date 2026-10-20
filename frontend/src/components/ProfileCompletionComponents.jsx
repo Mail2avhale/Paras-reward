@@ -45,29 +45,29 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
   const offset = circumference - (percentage / 100) * circumference;
   
   // Get color based on percentage
-  const getColor = () => {
-    if (percentage >= 100) return '#10b981'; // emerald
-    if (percentage >= 70) return '#8b5cf6'; // purple
-    if (percentage >= 40) return '#f59e0b'; // amber
-    return '#ef4444'; // red
-  };
 
   // Don't show if profile is complete (100%)
   if (isComplete) return null;
 
   return (
-    <Card className="p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30 mb-4">
+    <Card className="p-4 mb-4" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3', borderRadius: 'var(--pr-radius)', boxShadow: 'var(--paras-shadow-card)' }} data-testid="profile-completion-card">
       <div className="flex items-center gap-3">
         {/* Progress Ring */}
         <div className="relative flex-shrink-0">
           <svg width={size} height={size} className="transform -rotate-90">
+            <defs>
+              <linearGradient id="profileRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#075C3B" />
+                <stop offset="100%" stopColor="#D6A638" />
+              </linearGradient>
+            </defs>
             {/* Background circle */}
             <circle
               cx={size / 2}
               cy={size / 2}
               r={radius}
               fill="none"
-              stroke="#374151"
+              stroke="#DCE6F5"
               strokeWidth={strokeWidth}
             />
             {/* Progress circle */}
@@ -76,7 +76,7 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
               cy={size / 2}
               r={radius}
               fill="none"
-              stroke={getColor()}
+              stroke="url(#profileRingGradient)"
               strokeWidth={strokeWidth}
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -88,7 +88,7 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
           </svg>
           {/* Percentage text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-xl font-bold text-white">{percentage}%</span>
+            <span className="text-xl font-bold" style={{ color: 'var(--pr-green)' }} data-testid="profile-completion-percent">{percentage}%</span>
           </div>
         </div>
         
@@ -99,7 +99,7 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
             {incompleteChecks.slice(0, 3).map(check => (
               <span 
                 key={check.id}
-                className="px-2 py-0.5 bg-gray-800 text-gray-400 text-[10px] rounded-full flex items-center gap-1"
+                className="px-2 py-0.5 text-[10px] font-medium rounded-full flex items-center gap-1" style={{ background: '#FFFFFF', color: 'var(--pr-ink)', border: '1px solid #C7D9F3' }}
               >
                 <check.icon className="w-3 h-3" />
                 {check.label}
@@ -110,7 +110,8 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
           <Button 
             size="sm" 
             onClick={() => navigate('/profile?edit=true')}
-            className="h-7 text-xs bg-purple-600 hover:bg-purple-700"
+            className="btn-pr-primary h-8 px-4 text-xs rounded-full"
+            data-testid="profile-completion-complete-btn"
           >
             Complete
             <ChevronRight className="w-3 h-3 ml-1" />
@@ -122,7 +123,8 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
           {checks.map(check => (
             <div 
               key={check.id}
-              className={`w-2 h-2 rounded-full ${check.done ? 'bg-emerald-500' : 'bg-gray-600'}`}
+              className="w-2 h-2 rounded-full"
+              style={{ background: check.done ? 'var(--pr-green)' : '#C5CCD6' }}
               title={check.label}
             />
           ))}
@@ -214,16 +216,16 @@ export const ProfileFloatingReminder = ({ user, userData, onDismiss }) => {
         exit={{ opacity: 0, y: 50, scale: 0.9 }}
         className="fixed bottom-24 left-4 right-4 z-40"
       >
-        <Card className="p-3 bg-gradient-to-r from-gray-900 to-gray-800 border-purple-500/30 shadow-xl shadow-purple-500/10">
+        <Card className="p-3 shadow-xl" style={{ background: '#FFFFFF', border: '1px solid var(--pr-line)', borderRadius: 'var(--pr-radius)' }}>
           <div className="flex items-center gap-3">
             {/* Avatar */}
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--pr-green)' }}>
+              <User className="w-4 h-4" style={{ color: '#FFFFFF' }} />
             </div>
             
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-300">
+              <p className="text-sm font-medium" style={{ color: 'var(--pr-ink)' }}>
                 {firstName}, complete your profile
               </p>
             </div>
@@ -232,7 +234,8 @@ export const ProfileFloatingReminder = ({ user, userData, onDismiss }) => {
             <Button 
               size="sm"
               onClick={handleComplete}
-              className="h-7 text-xs bg-purple-600 hover:bg-purple-700"
+              className="btn-pr-primary h-7 text-xs rounded-full"
+              data-testid="profile-reminder-complete-btn"
             >
               Complete
             </Button>

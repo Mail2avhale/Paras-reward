@@ -9,31 +9,40 @@
    Text uses Dark Forest Green (#14532D) — black avoided everywhere.
    ─────────────────────────────────────────────────────────────────── */
 :root {
-  /* Base surfaces */
-  --paras-obsidian:      #FFF9E6; /* Cream — full-page background     */
-  --paras-obsidian-deep: #EFF6FF; /* Very-soft blue — deep surfaces   */
-  --paras-slate:         #FFFFFF; /* Pure White — primary card body   */
-  --paras-slate-alt:     #FEFCE8; /* Warm cream — alt card variant    */
-  --paras-slate-line:    #D1FAE5; /* Mint hairline — card borders     */
-  --paras-slate-track:   #DBEAFE; /* Soft blue — progress track       */
+  /* Brand palette (Oct 2026) */
+  --pr-green:    #075C3B;
+  --pr-blue:     #246BCE;
+  --pr-blue-hover: #1D5AB0;
+  --pr-gold:     #D6A638;
+  --pr-ivory:    #FFF9E8;
+  --pr-pale:     #EDF4FF;
+  --pr-charcoal: #20252D;
+  --pr-ink:      #263238;
+  --pr-line:     #E7E0CC;
+  --pr-radius:   16px;
 
-  /* Accents — user choice 2c: Blue = actions, Green = success */
-  --paras-gold:          #3B82F6; /* Primary action — sky blue         */
-  --paras-gold-warm:     #60A5FA; /* Softer gradient blue              */
-  --paras-gold-border:   #BFDBFE; /* Muted blue hairline               */
-  --paras-gold-deep:     #FFFFFF; /* Text on blue action buttons       */
+  /* Legacy token names mapped onto the brand palette */
+  --paras-obsidian:      var(--pr-ivory);
+  --paras-obsidian-deep: var(--pr-pale);
+  --paras-slate:         #FFFFFF;
+  --paras-slate-alt:     #FFFDF5;
+  --paras-slate-line:    var(--pr-line);
+  --paras-slate-track:   #DCE6F5;
 
-  --paras-mint:          #22C55E; /* Success / positive / rewards      */
-  --paras-red:           #DC2626; /* Warnings / errors                 */
+  --paras-gold:          var(--pr-blue);
+  --paras-gold-warm:     #3D7FDB;
+  --paras-gold-border:   #C7D9F3;
+  --paras-gold-deep:     #FFFFFF;
 
-  /* Typography — user choice 1c: Dark Forest Green */
-  --paras-text:           #14532D; /* Primary text                     */
-  --paras-text-secondary: #166534; /* Secondary text                   */
-  --paras-text-mute:      #4B5563; /* Muted labels / helper text       */
+  --paras-mint:          var(--pr-green);
+  --paras-red:           #C62828;
 
-  /* Elevations */
-  --paras-shadow-card: 0 8px 24px -12px rgba(20, 83, 45, 0.15);
-  --paras-shadow-gold: 0 0 24px -6px rgba(59, 130, 246, 0.35);
+  --paras-text:           var(--pr-ink);
+  --paras-text-secondary: var(--pr-green);
+  --paras-text-mute:      #5B6670;
+
+  --paras-shadow-card: 0 6px 20px -12px rgba(32, 37, 45, 0.22);
+  --paras-shadow-gold: 0 0 20px -6px rgba(36, 107, 206, 0.35);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -77,7 +86,7 @@
 .text-gray-50, .text-slate-50, .text-neutral-50,
 .text-gray-100, .text-slate-100, .text-neutral-100,
 .text-gray-200, .text-slate-200 {
-  color: #14532D !important; /* Dark Forest Green */
+  color: #263238 !important; /* Brand dark text */
 }
 
 /* Muted-on-dark text → gray-600 on light */
@@ -118,7 +127,7 @@
 .bg-pink-500, .bg-pink-600, .bg-pink-700, .bg-pink-800,
 .bg-violet-500, .bg-violet-600, .bg-violet-700, .bg-violet-800,
 .bg-fuchsia-500, .bg-fuchsia-600, .bg-fuchsia-700 {
-  background-color: #3B82F6 !important; /* Sky-blue action */
+  background-color: #246BCE !important; /* Sky-blue action */
   color: #FFFFFF !important;
 }
 .from-purple-500, .from-purple-600, .from-purple-700,
@@ -131,7 +140,7 @@
 .to-indigo-500, .to-indigo-600, .to-indigo-700,
 .to-pink-500, .to-pink-600, .to-pink-700,
 .to-violet-500, .to-violet-600, .to-fuchsia-500, .to-fuchsia-600 {
-  --tw-gradient-to: #3B82F6 var(--tw-gradient-to-position) !important;
+  --tw-gradient-to: #246BCE var(--tw-gradient-to-position) !important;
 }
 .via-purple-500, .via-purple-600, .via-indigo-500, .via-indigo-600,
 .via-pink-500, .via-pink-600, .via-violet-500, .via-fuchsia-500 {
@@ -141,34 +150,34 @@
 .text-indigo-400, .text-indigo-500, .text-indigo-600,
 .text-pink-400, .text-pink-500, .text-pink-600,
 .text-violet-400, .text-violet-500 {
-  color: #3B82F6 !important;
+  color: #246BCE !important;
 }
 
 /* Emerald / teal (existing success color) — keep aligned to mint-green */
 .text-emerald-400, .text-emerald-500, .text-teal-400, .text-teal-500,
 .text-green-400, .text-green-500 {
-  color: #22C55E !important; /* Success green */
+  color: #075C3B !important; /* Brand green */
 }
 
 /* Amber / gold accents (existing brand) — remap to sky blue action */
 .text-amber-400, .text-amber-500, .text-amber-600, .text-yellow-400, .text-yellow-500 {
-  color: #3B82F6 !important; /* Sky-500 */
+  color: #9A7215 !important; /* Premium gold, darkened for light surfaces */
 }
 .bg-amber-500, .bg-amber-600, .bg-yellow-500 {
-  background-color: #3B82F6 !important;
-  color: #FFFFFF !important;
+  background-color: #D6A638 !important;
+  color: #20252D !important;
 }
 .from-amber-500, .from-yellow-500 {
   --tw-gradient-from: #60A5FA var(--tw-gradient-from-position) !important;
 }
 .to-amber-600, .to-yellow-600 {
-  --tw-gradient-to: #3B82F6 var(--tw-gradient-to-position) !important;
+  --tw-gradient-to: #246BCE var(--tw-gradient-to-position) !important;
 }
 .border-amber-500, .border-amber-500\/30, .border-amber-500\/40 {
-  border-color: #BFDBFE !important;
+  border-color: rgba(214, 166, 56, 0.45) !important;
 }
 .bg-amber-500\/10, .bg-amber-500\/20 {
-  background-color: rgba(59, 130, 246, 0.08) !important;
+  background-color: rgba(214, 166, 56, 0.12) !important;
 }
 
 /* Convenience utilities so we don't spread hex codes across JSX */
@@ -186,18 +195,47 @@
 .ring-paras-gold     { box-shadow: var(--paras-shadow-gold); }
 .shadow-paras-card   { box-shadow: var(--paras-shadow-card); }
 
-/* Metallic action button (was gold, now sky-blue) — reusable */
-.btn-paras-gold {
-  background: linear-gradient(135deg, #93C5FD 0%, #3B82F6 45%, #1D4ED8 100%);
-  color: var(--paras-gold-deep);
+/* Primary action button — one style app-wide (Royal Blue) */
+.btn-paras-gold, .btn-pr-primary {
+  background: var(--pr-blue) !important;
+  color: #FFFFFF !important;
   font-weight: 700;
-  border: 1px solid var(--paras-gold-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35),
-              0 8px 22px -8px rgba(59, 130, 246, 0.55);
-  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+  border: 1px solid var(--pr-blue);
+  box-shadow: 0 6px 16px -8px rgba(36, 107, 206, 0.6);
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
 }
-.btn-paras-gold:hover  { filter: brightness(1.06); }
-.btn-paras-gold:active { transform: translateY(1px); }
+.btn-paras-gold:hover, .btn-pr-primary:hover { background: var(--pr-blue-hover) !important; }
+.btn-paras-gold:active, .btn-pr-primary:active { transform: translateY(1px); }
+
+/* Disabled action — clearly muted, never mistaken for an active button */
+.pr-btn-disabled {
+  background: #E9ECF1 !important;
+  color: #7C8794 !important;
+  border: 1px dashed #C5CCD6 !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+
+/* Standard dashboard card */
+.pr-card {
+  background: #FFFFFF;
+  border: 1px solid var(--pr-line);
+  border-radius: var(--pr-radius);
+  box-shadow: var(--paras-shadow-card);
+}
+
+/* Dark surfaces (wallet card, recharge form, bottom nav): undo the light-theme text remaps */
+.pr-dark-scope { color: #F3F5F8; }
+.pr-dark-scope .text-white, .pr-dark-scope .text-white\/70, .pr-dark-scope .text-white\/80 { color: #F3F5F8 !important; }
+.pr-dark-scope .text-gray-300, .pr-dark-scope .text-gray-400 { color: #B4BDC9 !important; }
+.pr-dark-scope .text-gray-500, .pr-dark-scope .text-gray-600, .pr-dark-scope .text-zinc-500 { color: #98A2B0 !important; }
+.pr-dark-scope .text-emerald-400, .pr-dark-scope .text-emerald-500, .pr-dark-scope .text-green-400 { color: #4CC38A !important; }
+.pr-dark-scope .text-amber-400, .pr-dark-scope .text-yellow-400 { color: #D6A638 !important; }
+.pr-dark-scope .text-blue-400 { color: #7FB0F5 !important; }
+.pr-dark-scope .bg-amber-500\/20 { background-color: rgba(214, 166, 56, 0.16) !important; }
+.pr-dark-scope .border-amber-500\/30 { border-color: rgba(214, 166, 56, 0.45) !important; }
+.pr-dark-scope input::placeholder { color: #8E99A8; }
+.pr-dark-scope .pr-btn-disabled { background: #2C333D !important; color: #7D8896 !important; border-color: #47505C !important; }
 
 /* Sonner toast positioning — top-center with proper safe-area padding
    so the toast clears the Android status bar / iOS notch. The App.js
